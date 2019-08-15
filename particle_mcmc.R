@@ -77,18 +77,18 @@ particle_filter = function(y,num_particles,inputs,initial_step_simulator,step_si
   pf_states = list(list()[rep(1:num_particles)])[rep(1,T)]
   pf_data = list(list()[rep(1:num_particles)])[rep(1,T)]#array(0,dim=c(dim_x,num_particles,T))
   
-  input_list = mclapply(as.list(c(1:num_particles)),function(x){c(inputs,x)})
+  input_list = lapply(as.list(c(1:num_particles)),function(x){c(inputs,x)})
   
-  output = mclapply(input_list,function(th){initial_step_simulator(th)})
+  output = lapply(input_list,function(th){initial_step_simulator(th)})
   pf_data[[1]] = lapply(output, `[[`, 1)
   pf_states[[1]] = lapply(output, `[[`, 2)
   
   pf_log_weights = matrix(-log(num_particles),num_particles)
   
   if (T>1)
-    pf_log_weights = pf_log_weights + sapply(mclapply(pf_data[[1]],measurement_model_logevaluate,y[1,],inputs[measurement_model_parameter_index]),c)
+    pf_log_weights = pf_log_weights + sapply(lapply(pf_data[[1]],measurement_model_logevaluate,y[1,],inputs[measurement_model_parameter_index]),c)
   else
-    pf_log_weights = pf_log_weights + sapply(mclapply(pf_data[[1]],measurement_model_logevaluate,y,inputs[measurement_model_parameter_index]),c)
+    pf_log_weights = pf_log_weights + sapply(lapply(pf_data[[1]],measurement_model_logevaluate,y,inputs[measurement_model_parameter_index]),c)
   
   log_sum_weights = logsumexp(pf_log_weights)
   current_log_llhd_estimate = current_log_llhd_estimate + log_sum_weights
@@ -121,7 +121,7 @@ particle_filter = function(y,num_particles,inputs,initial_step_simulator,step_si
     pf_data[[t+1]] = lapply(1:num_particles,function(x){result[[1,x]]})
     pf_states[[t+1]] = lapply(1:num_particles,function(x){result[[2,x]]})
     
-    pf_log_weights = pf_log_weights + sapply(mclapply(pf_data[[t+1]],measurement_model_logevaluate,y[t+1,],inputs[measurement_model_parameter_index]),c)
+    pf_log_weights = pf_log_weights + sapply(lapply(pf_data[[t+1]],measurement_model_logevaluate,y[t+1,],inputs[measurement_model_parameter_index]),c)
     
     log_sum_weights = logsumexp(pf_log_weights)
     current_log_llhd_estimate = current_log_llhd_estimate + log_sum_weights
@@ -155,9 +155,8 @@ particle_filter = function(y,num_particles,inputs,initial_step_simulator,step_si
   return(list(current_log_llhd_estimate,current_data,current_state))
 }
 
-particle_mcmc = function(num_mcmc,y,step_simulator,initial_step_simulator,measurement_model_logevaluate,max_measurement_model=function(x){0},inputs,priors_logevaluate,priors_index=list(),proposals_simulate,proposals_logevaluate,proposals_index=list(),measurement_model_parameter_index,num_particles,resample_threshold=0.5,store_states=FALSE,store_data=TRUE,cores=1)
+particle_mcmc = function(num_mcmc,y,step_simulator,initial_step_simulator,measurement_model_logevaluate,max_measurement_model=function(x){0},inputs,priors_logevaluate,priors_index=list(),proposals_simulate,proposals_logevaluate,proposals_index=list(),measurement_model_parameter_index,num_particles,resample_threshold=0.5,store_states=FALSE,store_data=TRUE)
 {
-  options(mc.cores=cores)
   # Check dimensions of priors_evaluate,proposals_simulate,proposals_logevaluate,parameter_index
   
   # Case 1 - we have a single prior and single proposal, no inputs and no parameter index
@@ -422,12 +421,6 @@ particle_mcmc = function(num_mcmc,y,step_simulator,initial_step_simulator,measur
   else
     data = matrix(0,0,0)
   
-  # if (is.infinite(current_log_llhd_estimate))
-  # {
-  #   # throw error
-  #   browser()
-  # }
-  
   sample[,1] = inputs[index_of_input_in_param_order]
   
   current_inputs_for_simulator = inputs
@@ -437,6 +430,7 @@ particle_mcmc = function(num_mcmc,y,step_simulator,initial_step_simulator,measur
     if (i%%1==0)
     {
       print(sprintf("Current iteration: %i", i))
+      #write.matrix(sample[,1:(i-1)],file=paste("paper_sr02longest_sample_pf_alwaysresample_",num_internal_particles,"_",obs_noise_var,"_",experiment_number,".txt",sep=""))
     }
     sample[,i] = sample[,i-1]
     if (store_states==TRUE)

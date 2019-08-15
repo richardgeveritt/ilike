@@ -66,7 +66,7 @@ ess <- function(log_weights)
   }
 }
 
-enkf = function(y,num_particles,inputs,initial_step_simulator,step_simulator,H,measurement_model_parameter_index,dim_x,resample_threshold=0.5,termination_criterion=-Inf)
+enkf = function(y,num_particles,inputs,initial_step_simulator,step_simulator,H,measurement_model_parameter_index,dim_x,resample_threshold=0.5,termination_criterion=-Inf,shift=TRUE)
 {
   # Run initial step of EnKF.
   meas_dim = nrow(H)
@@ -98,50 +98,62 @@ enkf = function(y,num_particles,inputs,initial_step_simulator,step_simulator,H,m
   kepty = unique(which((!is.na(raw_state_vec))&(!is.infinite(raw_state_vec)),arr.ind = TRUE)[,2])
   
   state_vec[keptx,kepty] = raw_state_vec[keptx,kepty]
-  # kept = unique(which(!is.na(state_vec),arr.ind = TRUE)[,2])
-  # if (length(kept)!=0)
-  #   state_vec[,kept] = raw_state_vec[,kept]
-  # else
-  # {
-  #   current_log_llhd_estimate = -Inf
-  #   return(list(current_log_llhd_estimate,matrix(0,0,0),matrix(0,0,0)))
-  # }
-    
+
   mu_tilde = rowMeans(state_vec)
   Sigma_tilde = cov(t(state_vec))
   
+  latter_part = Sigma_tilde%*%t(H)
+  latter_part[is.nan(latter_part)] = 0
+  HSH = H%*%latter_part
+  
+  Hbymu = H%*%mu_tilde
+  Hbymu[is.nan(Hbymu)] = 0
+  
   if (T>1)
-    current_log_llhd_estimate = current_log_llhd_estimate + dmvnorm(y[1,], H%*%mu_tilde, H%*%Sigma_tilde%*%t(H) + R,log=TRUE) - max_measurement_model
+    current_log_llhd_estimate = current_log_llhd_estimate + dmvnorm(y[1,], Hbymu, HSH + R,log=TRUE) - max_measurement_model
   else
-    current_log_llhd_estimate = current_log_llhd_estimate + dmvnorm(y, H%*%mu_tilde, H%*%Sigma_tilde%*%t(H) + R,log=TRUE) - max_measurement_model
+    current_log_llhd_estimate = current_log_llhd_estimate + dmvnorm(y, Hbymu, HSH + R,log=TRUE) - max_measurement_model
   
   if (is.infinite(current_log_llhd_estimate))
   {
     return(list(current_log_llhd_estimate,matrix(0,0,0),matrix(0,0,0)))
   }
+
   if (current_log_llhd_estimate<termination_criterion)
   {
     return(list(current_log_llhd_estimate,matrix(0,0,0),matrix(0,0,0)))
   }
   
-  K = Sigma_tilde%*%t(H)%*%solve(H%*%Sigma_tilde%*%t(H) + R)
-  if (T>1)
-    mu_hat = mu_tilde + K%*%(y[1,] - H%*%mu_tilde)
-  else
-    mu_hat = mu_tilde + K%*%(y - H%*%mu_tilde)
-  
-  Sigma_hat = (diag(1,nrow(raw_state_vec)) - K%*%H)%*%Sigma_tilde
+  K = latter_part%*%solve(HSH + R)
   
   state_store = list()
-  state_store[[1]]= mu_hat
-  
   data_store = matrix(0,nrow(y),ncol(y))
-  data_store[1,] = H%*%mu_hat
+  
+  if (shift==FALSE)
+  {
+    if (T>1)
+      mu_hat = mu_tilde + K%*%(y[1,] - Hbymu)
+    else
+      mu_hat = mu_tilde + K%*%(y - Hbymu)
+    
+    Sigma_hat = (diag(1,nrow(raw_state_vec)) - K%*%H)%*%Sigma_tilde
+    Sigma_hat = as.matrix(forceSymmetric(Sigma_hat))
+    
+    state_store[[1]]= mu_hat
+    
+    data_store[1,] = H%*%mu_hat
+  }
   
   # Run the rest of the EnKF.
   for (t in 1:(T-1))
   {
-    pf_states[[t]] = split(rmvnorm(num_particles,mu_hat,Sigma_hat),row(t(state_vec)))
+    if (shift==TRUE)
+    {
+      pf_states[[t]] = lapply(pf_states[[t]],function(x){state = x; state[is.infinite(state)] = 0; Hx = H%*%state; y_p = rmvnorm(1,Hx,R); x+K%*%(y[t,]-y_p)})
+    }
+    else {
+      pf_states[[t]] = split(rmvnorm(num_particles,mu_hat,Sigma_hat),row(t(state_vec)))
+    }
     
     result = mapply(function(inp,sta){step_simulator(inp,sta,t+1)},input_list,pf_states[[t]])
     pf_data[[t+1]] = lapply(1:num_particles,function(x){result[[1,x]]})
@@ -156,47 +168,47 @@ enkf = function(y,num_particles,inputs,initial_step_simulator,step_simulator,H,m
     
     state_vec[keptx,kepty] = raw_state_vec[keptx,kepty]
     
-    #if (length(kept)!=0)
-    #  state_vec = raw_state_vec[,kept]
-    #else
-    #{
-    #  current_log_llhd_estimate = -Inf
-    #  return(list(current_log_llhd_estimate,matrix(0,0,0),matrix(0,0,0)))
-    #}
-    
     mu_tilde = rowMeans(state_vec)
     Sigma_tilde = cov(t(state_vec))
     if (any(is.nan(Sigma_tilde)))
       browser()
     
-    if(is.na(dmvnorm(y[t+1,], H%*%mu_tilde, H%*%Sigma_tilde%*%t(H) + R,log=TRUE)))
+    latter_part = Sigma_tilde%*%t(H)
+    latter_part[is.nan(latter_part)] = 0
+    
+    HSH = H%*%latter_part
+    
+    Hbymu = H%*%mu_tilde
+    Hbymu[is.nan(Hbymu)] = 0
+    
+    if(is.na(dmvnorm(y[t+1,], Hbymu, HSH + R,log=TRUE)))
       browser()
-    current_log_llhd_estimate = current_log_llhd_estimate + dmvnorm(y[t+1,], H%*%mu_tilde, H%*%Sigma_tilde%*%t(H) + R,log=TRUE) - max_measurement_model
+    current_log_llhd_estimate = current_log_llhd_estimate + dmvnorm(y[t+1,], Hbymu, HSH + R,log=TRUE) - max_measurement_model
     
     if (is.infinite(current_log_llhd_estimate))
     {
       return(list(current_log_llhd_estimate,matrix(0,0,0),matrix(0,0,0)))
     }
+
     if (current_log_llhd_estimate<termination_criterion)
     {
       return(list(current_log_llhd_estimate,matrix(0,0,0),matrix(0,0,0)))
     }
     
-    K = Sigma_tilde%*%t(H)%*%solve(H%*%Sigma_tilde%*%t(H) + R)
-    mu_hat = mu_tilde + K%*%(y[t+1,] - H%*%mu_tilde)
-    Sigma_hat = (diag(1,nrow(raw_state_vec)) - K%*%H)%*%Sigma_tilde
-    if (any(is.nan(Sigma_hat)))
-      browser()
+    K = latter_part%*%solve(HSH + R)
     
-    state_store[[t+1]]= mu_hat
-    data_store[t+1,] = H%*%mu_hat
+    if (shift==FALSE)
+    {
+      mu_hat = mu_tilde + K%*%(y[t+1,] - H%*%mu_tilde)
+      Sigma_hat = (diag(1,nrow(raw_state_vec)) - K%*%H)%*%Sigma_tilde
+      Sigma_hat = as.matrix(forceSymmetric(Sigma_hat))
+      if (any(is.nan(Sigma_hat)))
+        return(list(-Inf,matrix(0,0,0),matrix(0,0,0)))
+      
+      state_store[[t+1]]= mu_hat
+      data_store[t+1,] = H%*%mu_hat
+    }
   }
-  
-  # # Randomly sample one index to give the state to keep.
-  # index = sample(x = 1:num_particles, 1, replace = TRUE, prob = matrix(1/num_particles,num_particles))
-  # current_state = lapply(pf_states,`[`,index)
-  # current_data = lapply(pf_data,`[`,index)
-  # current_data = t(matrix(unlist(lapply(current_data, `[[`, 1)),dim_x,T))
   
   return(list(current_log_llhd_estimate,data_store,state_store))
 }
@@ -352,15 +364,8 @@ enkf_mcmc = function(num_mcmc,y,step_simulator,initial_step_simulator,H,inputs,p
   # Each block gets a list of priors to use.
   priors_index_in_proposal = list()
   
-  #browser()
-  #index_of_proposals_in_param = vector("list", length = length(proposals_index))
   for (j in 1:length(proposals_index))
   {
-    # current_index_of_proposals_in_param = c()
-    # for (l in 1:length(proposals_index[[j]]))
-    # {
-    #   current_index_of_proposals_in_param = c(current_index_of_proposals_in_param,num_params)
-    # }
     
     current_priors_index = c()
     for (i in 1:length(priors_index))
@@ -412,10 +417,9 @@ enkf_mcmc = function(num_mcmc,y,step_simulator,initial_step_simulator,H,inputs,p
     R = diag(inputs[measurement_model_parameter_index]^2,meas_dim)
   else
     R = diag(inputs[measurement_model_parameter_index]^2)
-  #R = diag(inputs[measurement_model_parameter_index],meas_dim)
+
   current_max_measurement_model = dmvnorm(t(matrix(0,meas_dim)), t(matrix(0,meas_dim)), R, log=TRUE)
-  #current_max_measurement_model = 0
-  
+
   # Check simulator doesn't throw error.
   # Check dimension of simulator output matches the real data.
   sim_data = matrix(0,0,0)
@@ -453,27 +457,22 @@ enkf_mcmc = function(num_mcmc,y,step_simulator,initial_step_simulator,H,inputs,p
   dim_x = length(sim_data)
   T = nrow(y)
   
-  #print(current_max_measurement_model*T)
-  
   logu = matrix(log(runif(num_mcmc*num_blocks)),num_blocks,num_mcmc)
   
   sample = matrix(0,num_params,num_mcmc)
   
-  # Run initial step of PF.
-  #input_list = list(inputs)[rep(1,num_particles)]
+  # Run initial step of EnKF.
   
   result = enkf(y,num_particles,inputs,initial_step_simulator,step_simulator,H,measurement_model_parameter_index,dim_x,resample_threshold)
   current_log_llhd_estimate = result[[1]]
   current_data = result[[2]]
   current_state = result[[3]]
   
-  #R = diag(inputs[measurement_model_parameter_index],meas_dim)
   if (length(measurement_model_parameter_index)==1)
     R = diag(inputs[measurement_model_parameter_index]^2,meas_dim)
   else
     R = diag(inputs[measurement_model_parameter_index]^2)
   max_measurement_model = dmvnorm(t(matrix(0,meas_dim)), t(matrix(0,meas_dim)), R, log=TRUE)
-  #max_measurement_model = 0
   
   current_log_llhd_estimate = current_log_llhd_estimate + T*max_measurement_model
   
@@ -494,12 +493,6 @@ enkf_mcmc = function(num_mcmc,y,step_simulator,initial_step_simulator,H,inputs,p
   else
     data = matrix(0,0,0)
   
-  # if (is.infinite(current_log_llhd_estimate))
-  # {
-  #   # throw error
-  #   browser()
-  # }
-  
   sample[,1] = inputs[index_of_input_in_param_order]
   
   current_inputs_for_simulator = inputs
@@ -509,6 +502,7 @@ enkf_mcmc = function(num_mcmc,y,step_simulator,initial_step_simulator,H,inputs,p
     if (i%%1==0)
     {
       print(sprintf("Current iteration: %i", i))
+      #write.matrix(sample[,1:(i-1)],file=paste("paper_sr02longest_sample_enkf_",num_internal_particles,"_",obs_noise_var,"_",experiment_number,".txt",sep=""))
     }
     sample[,i] = sample[,i-1]
     if (store_states==TRUE)
@@ -550,7 +544,7 @@ enkf_mcmc = function(num_mcmc,y,step_simulator,initial_step_simulator,H,inputs,p
       
       if (!is.infinite(proposed_log_llhd_estimate))
       {
-        if (proposed_log_llhd_estimate>termination_criterion)#if (proposed_log_llhd_estimate>test_termination_criterion)
+        if (proposed_log_llhd_estimate>termination_criterion)
         {
           sample[,i] = proposed_parameter
           current_inputs_for_simulator = proposed_inputs_for_simulator
