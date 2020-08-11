@@ -1,0 +1,20 @@
+---
+title: "Inferring the precision of a Gaussian"
+author: Richard G. Everitt
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{gaussian_precision}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(ilike)
+```

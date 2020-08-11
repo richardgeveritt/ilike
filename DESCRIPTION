@@ -1,18 +1,27 @@
-Package: IntractableLikelihood
-Title: What the Package Does (One Line, Title Case)
+Package: ilike
+Title: Methods for Bayesian computation when the likelihood is intractable.
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Richard",
+           family = "Everitt",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to
-    pick a license
+           email = "richard.g.everitt@gmail.com",
+           comment = c(ORCID = "0000-0002-0822-5648"))
+Description: Implements Monte Carlo methods for Bayesian computation when the likelihood is intractable.
+License: BSD_2_clause
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.1.9000
 URL: https://github.com/maugu/IntractableLikelihood
 BugReports: https://github.com/maugu/IntractableLikelihood/issues
+LinkingTo: Rcpp
+Imports: Rcpp,
+    future.apply
+Suggests:
+    knitr,
+    rmarkdown,
+    testthat
+VignetteBuilder: knitr
+Depends: 
+    R (>= 2.10)
