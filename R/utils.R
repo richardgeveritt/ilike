@@ -1,4 +1,4 @@
-LogSumExp <- function(x){
+log_sum_exp <- function(x){
   xmax = which.max(x)
   if (sum(xmax)==0)
   {
@@ -18,7 +18,7 @@ LogSumExp <- function(x){
   }
 }
 
-StratifiedResampleU<-function(log_weights,u)
+stratified_resample_u<-function(log_weights,u)
 {
   P = length(log_weights)
   W = exp(log_weights)

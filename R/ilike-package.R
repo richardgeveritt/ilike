@@ -2,9 +2,13 @@
 #'
 #' It contains some really useful stuff.
 #'
-#' @section Functions
+#' @section Functions:
 #' Some functions.
 #'
 #' @docType package
 #' @name ilike
+#'
+#' @useDynLib ilike, .registration = TRUE
+#'
+#' @importFrom Rcpp sourceCpp
 NULL
