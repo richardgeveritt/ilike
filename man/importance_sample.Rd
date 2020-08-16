@@ -18,13 +18,12 @@ importance_sample(
 \item{model}{A model.}
 
 \item{algorithm}{algorithm details.}
+
+\item{max_vector_size}{If any vector/list has more than this many entries, we need to split the algorithm into multiple batches.}
 }
 \value{
 Importance points.
 }
 \description{
 Importance sampler.
-}
-\examples{
-importance_sample(10000,my_model,my_algorithm)
 }

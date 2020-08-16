@@ -310,6 +310,7 @@ simulate_batch = function(batch_number,
 #' @param number_of_points The number of importance points.
 #' @param model A model.
 #' @param algorithm algorithm details.
+#' @param max_vector_size If any vector/list has more than this many entries, we need to split the algorithm into multiple batches.
 #' @return Importance points.
 #' @export
 importance_sample = function(number_of_points,
