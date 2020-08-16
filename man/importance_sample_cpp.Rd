@@ -17,13 +17,12 @@ importance_sample_cpp(
 \item{model}{A model.}
 
 \item{algorithm}{Algorithm details.}
+
+\item{max_vector_size}{If any vector/list has more than this many entries, we need to split the algorithm into multiple batches.}
 }
 \value{
 Importance points.
 }
 \description{
 Importance sampler using cpp functions.
-}
-\examples{
-importance_sample_cpp(10000, my_model ,my_algorithm)
 }

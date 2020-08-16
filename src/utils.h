@@ -43,7 +43,7 @@ double log_sum_exp(const NumericVector &log_weights)
   NumericVector AllButOnelog_weights = log_weights[all_but_one];
 
   double result = log1p(sum(exp(AllButOnelog_weights-log_weights[xmax])))+log_weights[xmax];
-  if (isnan(result))
+  if (R_isnancpp(result))
   {
     return R_NegInf;
   }

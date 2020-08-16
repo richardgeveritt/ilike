@@ -8,7 +8,8 @@ importance_sample(
   number_of_points,
   model,
   algorithm = list(),
-  max_vector_size = 4e+09
+  max_vector_size = 4e+09,
+  messages = FALSE
 )
 }
 \arguments{

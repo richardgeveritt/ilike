@@ -61,7 +61,8 @@ check_inputs = function(model,
 
 check_IS = function(model,
                     algorithm,
-                    is_cpp = FALSE)
+                    is_cpp = FALSE,
+                    messages = FALSE)
 {
   # Check that any information in the model about the dimension of the parameter is consistent.
   if ( (is.null(model$parameter_dimension) ) && (!is.null(model$parameter_index) ) ) {
@@ -99,7 +100,8 @@ check_IS = function(model,
       # In this case, the IS will use the prior as the proposal.
       algorithm$prior_is_proposal = TRUE
       algorithm$simulate_proposal = model$simulate_prior
-      print("No method specified for simulating from the proposal. Using the prior as the proposal.")
+      if (messages == TRUE)
+        print("No method specified for simulating from the proposal. Using the prior as the proposal.")
 
     }
   }
@@ -122,7 +124,8 @@ check_IS = function(model,
 
     # We have a standard importance sampler with a different proposal and prior.
     algorithm$prior_is_proposal = FALSE
-    print("Importance points will be simuulate from the specified proposal.")
+    if (messaages == TRUE)
+      print("Importance points will be simuulate from the specified proposal.")
 
   }
 
@@ -194,10 +197,12 @@ check_IS = function(model,
   if (is.null(model$likelihood_method))
   {
     if (likelihood_methods[1] == 1) {
-      print("model$evaluate_log_likelihood is specified, so we will use this to evaluate the likelihood.")
+      if (messages == TRUE)
+        print("model$evaluate_log_likelihood is specified, so we will use this to evaluate the likelihood.")
       model$likelihood_method = "analytic"
     } else if (likelihood_methods[2] == 1) {
-      print("model$simulate_model is specified, so we will use ABC as an approximate likelihood.")
+      if (messages == TRUE)
+        print("model$simulate_model is specified, so we will use ABC as an approximate likelihood.")
       model$likelihood_method = "abc"
     }
 
@@ -312,7 +317,8 @@ simulate_batch = function(batch_number,
 importance_sample = function(number_of_points,
                              model,
                              algorithm = list(),
-                             max_vector_size = 4e+9)
+                             max_vector_size = 4e+9,
+                             messages = FALSE)
 {
   # Check that inputs make sense.
   # Need also to:
@@ -393,9 +399,8 @@ importance_sample = function(number_of_points,
 #' @param number_of_points The number of importance points.
 #' @param model A model.
 #' @param algorithm Algorithm details.
+#' @param max_vector_size If any vector/list has more than this many entries, we need to split the algorithm into multiple batches.
 #' @return Importance points.
-#' @examples
-#' importance_sample_cpp(10000, my_model ,my_algorithm)
 #' @export
 importance_sample_cpp = function(number_of_points,
                                  model,
