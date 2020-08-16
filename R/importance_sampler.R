@@ -311,6 +311,7 @@ simulate_batch = function(batch_number,
 #' @param model A model.
 #' @param algorithm algorithm details.
 #' @param max_vector_size If any vector/list has more than this many entries, we need to split the algorithm into multiple batches.
+#' @param messages Set to TRUE to have messages printed to console.
 #' @return Importance points.
 #' @export
 importance_sample = function(number_of_points,
@@ -399,12 +400,14 @@ importance_sample = function(number_of_points,
 #' @param model A model.
 #' @param algorithm Algorithm details.
 #' @param max_vector_size If any vector/list has more than this many entries, we need to split the algorithm into multiple batches.
+#' @param messages Set to TRUE to have messages printed to console.
 #' @return Importance points.
 #' @export
 importance_sample_cpp = function(number_of_points,
                                  model,
                                  algorithm = list(),
-                                 max_vector_size = 4e+9)
+                                 max_vector_size = 4e+9,
+                                 messages = FALSE)
 {
   # Check that inputs make sense.
   # Need also to:
@@ -412,7 +415,7 @@ importance_sample_cpp = function(number_of_points,
   # - get dimensions of aux variables
   # - make sure indexing of inputs/parameters is stored if necessary
   # - make sure prior is in standard format and store it
-  output = check_IS(model, algorithm, is_cpp = TRUE)
+  output = check_IS(model, algorithm, is_cpp = TRUE, messages = messages)
 
   model = output$model
   algorithm = output$algorithm

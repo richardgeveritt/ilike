@@ -8,7 +8,8 @@ importance_sample_cpp(
   number_of_points,
   model,
   algorithm = list(),
-  max_vector_size = 4e+09
+  max_vector_size = 4e+09,
+  messages = FALSE
 )
 }
 \arguments{
@@ -19,6 +20,8 @@ importance_sample_cpp(
 \item{algorithm}{Algorithm details.}
 
 \item{max_vector_size}{If any vector/list has more than this many entries, we need to split the algorithm into multiple batches.}
+
+\item{messages}{Set to TRUE to have messages printed to console.}
 }
 \value{
 Importance points.

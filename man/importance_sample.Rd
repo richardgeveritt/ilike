@@ -20,6 +20,8 @@ importance_sample(
 \item{algorithm}{algorithm details.}
 
 \item{max_vector_size}{If any vector/list has more than this many entries, we need to split the algorithm into multiple batches.}
+
+\item{messages}{Set to TRUE to have messages printed to console.}
 }
 \value{
 Importance points.
