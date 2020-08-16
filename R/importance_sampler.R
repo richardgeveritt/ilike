@@ -311,8 +311,6 @@ simulate_batch = function(batch_number,
 #' @param model A model.
 #' @param algorithm algorithm details.
 #' @return Importance points.
-#' @examples
-#' importance_sample(10000,my_model,my_algorithm)
 #' @export
 importance_sample = function(number_of_points,
                              model,
