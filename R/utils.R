@@ -40,3 +40,9 @@ stratified_resample_u<-function(log_weights,u)
 
   indices
 }
+
+
+setup_likelihood_estimator_analytic = function(analytic_evaluate_log_likelihood)
+{
+  return(function(point,data,auxiliary_variables){return(analytic_evaluate_log_likelihood(point,data))})
+}

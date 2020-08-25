@@ -1,6 +1,8 @@
 #include <Rcpp.h>
 using namespace Rcpp;
 
+//#include "function_pointers.h"
+
 #ifndef UTILS_H
 #define UTILS_H
 
@@ -52,5 +54,17 @@ double log_sum_exp(const NumericVector &log_weights)
     return result;
   }
 }
+
+
+// double EstimateLogLikelihoodUsingEvaluate(const NumericVector &inputs, const NumericVector &data, const List &auxiliary_variables)
+// {
+//   return 1;
+// }
+//
+//
+// EstimateLogLikelihoodPtr make_estimate_log_likelihood_function_from_evaluate(const EvaluateLogLikelihoodPtr &evaluate_log_likelihood)
+// {
+//
+// }
 
 #endif

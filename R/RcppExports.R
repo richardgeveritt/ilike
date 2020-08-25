@@ -13,6 +13,10 @@ evaluate_log_likelihood_cpp <- function(evaluate_log_likelihood_SEXP, parameter,
     .Call(`_ilike_evaluate_log_likelihood_cpp`, evaluate_log_likelihood_SEXP, parameter, data)
 }
 
+estimate_log_likelihood_cpp <- function(estimate_log_likelihood_SEXP, parameter, data, auxiliary_variables) {
+    .Call(`_ilike_estimate_log_likelihood_cpp`, estimate_log_likelihood_SEXP, parameter, data, auxiliary_variables)
+}
+
 simulate_model_cpp <- function(simulate_model_SEXP, parameter, data) {
     .Call(`_ilike_simulate_model_cpp`, simulate_model_SEXP, parameter, data)
 }

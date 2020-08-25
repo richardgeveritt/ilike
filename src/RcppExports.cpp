@@ -41,6 +41,20 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// estimate_log_likelihood_cpp
+double estimate_log_likelihood_cpp(const SEXP& estimate_log_likelihood_SEXP, const NumericVector& parameter, const NumericVector& data, const List& auxiliary_variables);
+RcppExport SEXP _ilike_estimate_log_likelihood_cpp(SEXP estimate_log_likelihood_SEXPSEXP, SEXP parameterSEXP, SEXP dataSEXP, SEXP auxiliary_variablesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const SEXP& >::type estimate_log_likelihood_SEXP(estimate_log_likelihood_SEXPSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type parameter(parameterSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< const List& >::type auxiliary_variables(auxiliary_variablesSEXP);
+    rcpp_result_gen = Rcpp::wrap(estimate_log_likelihood_cpp(estimate_log_likelihood_SEXP, parameter, data, auxiliary_variables));
+    return rcpp_result_gen;
+END_RCPP
+}
 // simulate_model_cpp
 List simulate_model_cpp(const SEXP& simulate_model_SEXP, const NumericVector& parameter, const NumericVector& data);
 RcppExport SEXP _ilike_simulate_model_cpp(SEXP simulate_model_SEXPSEXP, SEXP parameterSEXP, SEXP dataSEXP) {
@@ -86,6 +100,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ilike_simulate_distribution_cpp", (DL_FUNC) &_ilike_simulate_distribution_cpp, 1},
     {"_ilike_evaluate_log_distribution_cpp", (DL_FUNC) &_ilike_evaluate_log_distribution_cpp, 2},
     {"_ilike_evaluate_log_likelihood_cpp", (DL_FUNC) &_ilike_evaluate_log_likelihood_cpp, 3},
+    {"_ilike_estimate_log_likelihood_cpp", (DL_FUNC) &_ilike_estimate_log_likelihood_cpp, 4},
     {"_ilike_simulate_model_cpp", (DL_FUNC) &_ilike_simulate_model_cpp, 3},
     {"_ilike_simulate_auxiliary_variables_cpp", (DL_FUNC) &_ilike_simulate_auxiliary_variables_cpp, 3},
     {"_ilike_do_importance_sampler_cpp", (DL_FUNC) &_ilike_do_importance_sampler_cpp, 4},

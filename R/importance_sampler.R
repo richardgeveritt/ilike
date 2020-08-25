@@ -218,8 +218,8 @@ check_IS = function(model,
         tryCatch(
           if (is_cpp) {evaluate_log_likelihood_cpp(model$evaluate_log_likelihood,model$inputs,model$data)} else {model$evaluate_log_likelihood(model$inputs,model$data)},
           error = function(e) {stop("model$evaluate_log_likelihood generates an error when used on a vector of dimension model$inputs.")})
-        likelihood_estimator = list(evaluate_log_likelihood = model$evaluate_log_likelihood,
-                                    evaluate_log_likelihood_is_set = TRUE)
+
+        likelihood_estimator = list()
       }
       else
       {
@@ -237,7 +237,7 @@ check_IS = function(model,
 
         if (is.null(model$likelihood_options))
         {
-          # Need to specifiy function set up likelihood estimate. Info needs to be stored in a class-like object.
+          # Need to specify function set up likelihood estimate. Info needs to be stored in a class-like object.
           likelihood_estimator = list(simulate_auxiliary_variables = model$simulate,
                                    setup_likelihood_estimator = ABC$setup_likelihood_estimator)
         }
@@ -348,28 +348,35 @@ importance_sample = function(number_of_points,
     proposed_inputs = t(matrix(rep(model$inputs,number_of_points),length(model$inputs),number_of_points))
     proposed_inputs[,model$parameter_index] = proposed_points
     proposed_inputs = lapply(1:number_of_points,function(i){proposed_inputs[i,]})
-    if (is.null(algorithm$likelihood_estimator$evaluate_log_likelihood))
+
+    if (model$likelihood_method!="analytic")
     {
       proposed_auxiliary_variables = future.apply::future_lapply(proposed_inputs,
-                                                                  FUN=function(input){algorithm$likelihood_estimator$simulate_auxiliary_variables(input,model$data)},
-                                                                  future.seed = TRUE)
+                                                                 FUN=function(input){algorithm$likelihood_estimator$simulate_auxiliary_variables(input,model$data)},
+                                                                 future.seed = TRUE)
 
       # Now configure the likelihood estimator using all of the simulations, if needed.
-      algorithm$likelihood_estimator$evaluate_log_likelihood = tryCatch(algorithm$likelihood_estimator$setup_likelihood_estimator(proposed_points,proposed_auxiliary_variables),error = function(e) {stop("algorithm$likelihood_estimator$setup_likelihood_estimator throws an error when used on the proposed points.")})
+      algorithm$likelihood_estimator$estimate_log_likelihood = tryCatch(algorithm$likelihood_estimator$setup_likelihood_estimator(proposed_points,proposed_auxiliary_variables),error = function(e) {stop("algorithm$likelihood_estimator$setup_likelihood_estimator throws an error when used on the proposed points.")})
+
     }
     else
     {
-      proposed_auxiliary_variables = NULL
+      proposed_auxiliary_variables = as.list(rep(0,length(proposed_inputs)))
+
+      # Now configure the likelihood estimator using all of the simulations, if needed.
+      algorithm$likelihood_estimator$estimate_log_likelihood = tryCatch(setup_likelihood_estimator_analytic(model$evaluate_log_likelihood),error = function(e) {stop("algorithm$likelihood_estimator$setup_likelihood_estimator throws an error when used on the proposed points.")})
+
     }
 
+    log_likelihoods = unlist(future.apply::future_lapply(proposed_inputs,function(i){ algorithm$likelihood_estimator$estimate_log_likelihood(i, model$data, proposed_auxiliary_variables[[i]]) }))
     # Calculate weights.
     if (algorithm$prior_is_proposal==TRUE)
     {
-      log_weights = unlist(future.apply::future_lapply(proposed_inputs,function(i){ algorithm$likelihood_estimator$evaluate_log_likelihood(i,model$data) }))
+      log_weights = log_likelihoods
     }
     else
     {
-      log_weights = unlist(future.apply::future_lapply(proposed_inputs,function(p){ p = i[model$parameter_index]; model$evaluate_log_prior(p) - algorithm$evaluate_log_proposal(p) + algorithm$likelihood_estimator$evaluate_log_likelihood(i,model$data) }))
+      log_weights = unlist(future.apply::future_lapply(proposed_inputs,function(p){ p = i[model$parameter_index]; model$evaluate_log_prior(p) - algorithm$evaluate_log_proposal(p) })) + log_likelihoods
     }
 
     Results = list(proposed_points = proposed_points,
