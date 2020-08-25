@@ -6,12 +6,13 @@ using namespace Rcpp;
 #include "function_pointers.h"
 #include "utils.h"
 #include "exact_log_likelihood_estimator.h"
+#include "likelihood_maker.h"
 
 
 // [[Rcpp::export]]
 List do_importance_sampler_cpp(const unsigned int &number_of_points,
                                         const List &model,
-                                        List &algorithm,
+                                        const List &algorithm,
                                         const unsigned int &max_vector_size)
 {
   // Work out the number of batches to simulate.
@@ -46,24 +47,19 @@ List do_importance_sampler_cpp(const unsigned int &number_of_points,
       proposed_inputs(i,_) = proposed_inputs_row;
     }
 
-    List likelihood_estimator = algorithm["likelihood_estimator"];
+    //List likelihood_estimator = algorithm["likelihood_estimator"];
 
-    std::string likelihood_method = "analytic";//Rcpp::as<std::string>(algorithm["likelihood_method"]);
+    LogLikelihoodEstimator* likelihood_estimator = make_log_likelihood_estimator(model, algorithm);
 
-    std::vector<List> proposed_auxiliary_variables;
-    proposed_auxiliary_variables.reserve(number_of_points);
+    //if (likelihood_method!="analytic")
+    //{
+      //SEXP simulate_auxiliary_variables_SEXP = likelihood_estimator["simulate_auxiliary_variables"];
+      //SimulateAuxiliaryVariablesPtr simulate_auxiliary_variables = load_simulate_auxiliary_variables(simulate_auxiliary_variables_SEXP);
 
-    LogLikelihoodEstimator* estimate_log_likelihood = NULL;
-
-    if (likelihood_method!="analytic")
-    {
-      SEXP simulate_auxiliary_variables_SEXP = likelihood_estimator["simulate_auxiliary_variables"];
-      SimulateAuxiliaryVariablesPtr simulate_auxiliary_variables = load_simulate_auxiliary_variables(simulate_auxiliary_variables_SEXP);
-
-      for (unsigned int i=0; i<number_of_points; ++i)
-      {
-        proposed_auxiliary_variables.push_back(simulate_auxiliary_variables(proposed_inputs(i,_),data));
-      }
+      // for (unsigned int i=0; i<number_of_points; ++i)
+      // {
+      //   proposed_auxiliary_variables.push_back(simulate_auxiliary_variables(proposed_inputs(i,_),data));
+      // }
 
       // Now configure the likelihood estimator using all of the simulations.
       //SEXP setup_likelihood_estimator_SEXP = likelihood_estimator["setup_likelihood_estimator"];
@@ -73,22 +69,25 @@ List do_importance_sampler_cpp(const unsigned int &number_of_points,
       //SEXP estimate_log_likelihood_SEXP = SEXP(estimate_log_likelihood);
       //likelihood_estimator["estimate_log_likelihood"] = estimate_log_likelihood_SEXP;
       //algorithm["likelihood_estimator"] = likelihood_estimator;
-    }
-    else
-    {
-      SEXP evaluate_log_likelihood_SEXP = model["evaluate_log_likelihood"];
-      EvaluateLogLikelihoodPtr evaluate_log_likelihood = load_evaluate_log_likelihood(evaluate_log_likelihood_SEXP);
-
-      estimate_log_likelihood = new ExactLogLikelihoodEstimator(evaluate_log_likelihood);
-
-      for (unsigned int i=0; i<number_of_points; ++i)
-      {
-        proposed_auxiliary_variables.push_back(estimate_log_likelihood->simulate_auxiliary_variables());
-      }
+    //}
+    //else
+    //{
 
       //likelihood_estimator["estimate_log_likelihood"] = estimate_log_likelihood_SEXP;
       //algorithm["likelihood_estimator"] = likelihood_estimator;
+    //}
+
+    std::vector<List> proposed_auxiliary_variables;
+    proposed_auxiliary_variables.reserve(number_of_points);
+
+    for (unsigned int i=0; i<number_of_points; ++i)
+    {
+      proposed_auxiliary_variables.push_back(likelihood_estimator->simulate_auxiliary_variables(proposed_inputs,
+                                                                                                data));
     }
+
+    likelihood_estimator->setup_likelihood_estimator(proposed_points,
+                                                     proposed_auxiliary_variables);
 
     // Calculate weights.
     //SEXP estimate_log_likelihood_SEXP = likelihood_estimator["estimate_log_likelihood"];
@@ -100,7 +99,7 @@ List do_importance_sampler_cpp(const unsigned int &number_of_points,
     {
       for (unsigned int i=0; i<number_of_points; ++i)
       {
-        log_weights[i] = (*estimate_log_likelihood)(proposed_inputs(i,_), data, proposed_auxiliary_variables[i]);
+        log_weights[i] = likelihood_estimator->estimate_log_likelihood(proposed_inputs(i,_), data, proposed_auxiliary_variables[i]);
       }
     }
     else
@@ -113,12 +112,12 @@ List do_importance_sampler_cpp(const unsigned int &number_of_points,
 
       for (unsigned int i=0; i<number_of_points; ++i)
       {
-        log_weights[i] = (*estimate_log_likelihood)(NumericVector(proposed_inputs(i,_)), data, proposed_auxiliary_variables[i]) + evaluate_log_prior(NumericVector(proposed_points(i,_))) - evaluate_log_proposal(NumericVector(proposed_points(i,_)));
+        log_weights[i] = likelihood_estimator->estimate_log_likelihood(NumericVector(proposed_inputs(i,_)), data, proposed_auxiliary_variables[i]) + evaluate_log_prior(NumericVector(proposed_points(i,_))) - evaluate_log_proposal(NumericVector(proposed_points(i,_)));
       }
     }
 
-    if (estimate_log_likelihood != NULL)
-      delete estimate_log_likelihood;
+    if (likelihood_estimator != NULL)
+      delete likelihood_estimator;
 
     return List::create(Named("proposed_points") = proposed_points,
                         Named("proposed_auxiliary_variables") = wrap(proposed_auxiliary_variables),

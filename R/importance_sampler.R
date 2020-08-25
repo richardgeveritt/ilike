@@ -194,24 +194,24 @@ check_IS = function(model,
   }
 
   # Automatically find a method by checking likelihood_methods.
-  if (is.null(model$likelihood_method))
+  if (is.null(algorithm$likelihood_method))
   {
     if (likelihood_methods[1] == 1) {
       if (messages == TRUE)
         print("model$evaluate_log_likelihood is specified, so we will use this to evaluate the likelihood.")
-      model$likelihood_method = "analytic"
+      algorithm$likelihood_method = "analytic"
     } else if (likelihood_methods[2] == 1) {
       if (messages == TRUE)
         print("model$simulate_model is specified, so we will use ABC as an approximate likelihood.")
-      model$likelihood_method = "abc"
+      algorithm$likelihood_method = "abc"
     }
 
   }
 
 
-  if (!is.null(model$likelihood_method))
+  if (!is.null(algorithm$likelihood_method))
   {
-    if (model$likelihood_method=="analytic")
+    if (algorithm$likelihood_method=="analytic")
     {
       if (likelihood_methods[1] == 1)
       {
@@ -223,11 +223,11 @@ check_IS = function(model,
       }
       else
       {
-        stop("model$likelihood_method is analytic, but model$evaluate_log_likelihood is not defined.")
+        stop("algorithm$likelihood_method is analytic, but model$evaluate_log_likelihood is not defined.")
       }
     }
 
-    if (model$likelihood_method=="abc")
+    if (algorithm$likelihood_method=="abc")
     {
       if (likelihood_methods[2] == 1)
       {
@@ -251,7 +251,7 @@ check_IS = function(model,
       }
       else
       {
-        stop("model$likelihood_method is abc, but model$simulate is not defined.")
+        stop("algorithm$likelihood_method is abc, but model$simulate is not defined.")
       }
 
       # Also should check ABC info.
@@ -265,7 +265,7 @@ check_IS = function(model,
 
   algorithm$likelihood_estimator = likelihood_estimator
 
-  if (model$likelihood_method!="analytic")
+  if (algorithm$likelihood_method!="analytic")
   {
     # Test the generation of the auxiliary variables and store their dimension.
     auxiliary_variables = tryCatch(
@@ -349,26 +349,16 @@ importance_sample = function(number_of_points,
     proposed_inputs[,model$parameter_index] = proposed_points
     proposed_inputs = lapply(1:number_of_points,function(i){proposed_inputs[i,]})
 
-    if (model$likelihood_method!="analytic")
-    {
-      proposed_auxiliary_variables = future.apply::future_lapply(proposed_inputs,
-                                                                 FUN=function(input){algorithm$likelihood_estimator$simulate_auxiliary_variables(input,model$data)},
-                                                                 future.seed = TRUE)
+    likelihood_estimator = make_log_likelihood_estimator(model, algorithm)
 
-      # Now configure the likelihood estimator using all of the simulations, if needed.
-      algorithm$likelihood_estimator$estimate_log_likelihood = tryCatch(algorithm$likelihood_estimator$setup_likelihood_estimator(proposed_points,proposed_auxiliary_variables),error = function(e) {stop("algorithm$likelihood_estimator$setup_likelihood_estimator throws an error when used on the proposed points.")})
+    proposed_auxiliary_variables = future.apply::future_lapply(proposed_inputs,
+                                                               FUN=function(input){likelihood_estimator$simulate_auxiliary_variables(input,model$data)},
+                                                               future.seed = TRUE)
 
-    }
-    else
-    {
-      proposed_auxiliary_variables = as.list(rep(0,length(proposed_inputs)))
+    # Now configure the likelihood estimator using all of the simulations, if needed.
+    likelihood_estimator$estimate_log_likelihood = tryCatch(likelihood_estimator$setup_likelihood_estimator(proposed_points,proposed_auxiliary_variables),error = function(e) {stop("likelihood_estimator$setup_likelihood_estimator throws an error when used on the proposed points.")})
 
-      # Now configure the likelihood estimator using all of the simulations, if needed.
-      algorithm$likelihood_estimator$estimate_log_likelihood = tryCatch(setup_likelihood_estimator_analytic(model$evaluate_log_likelihood),error = function(e) {stop("algorithm$likelihood_estimator$setup_likelihood_estimator throws an error when used on the proposed points.")})
-
-    }
-
-    log_likelihoods = unlist(future.apply::future_lapply(proposed_inputs,function(i){ algorithm$likelihood_estimator$estimate_log_likelihood(i, model$data, proposed_auxiliary_variables[[i]]) }))
+    log_likelihoods = unlist(future.apply::future_lapply(proposed_inputs,function(i){ likelihood_estimator$estimate_log_likelihood(i, model$data, proposed_auxiliary_variables[[i]]) }))
     # Calculate weights.
     if (algorithm$prior_is_proposal==TRUE)
     {

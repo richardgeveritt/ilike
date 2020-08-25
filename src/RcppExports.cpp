@@ -82,14 +82,14 @@ BEGIN_RCPP
 END_RCPP
 }
 // do_importance_sampler_cpp
-List do_importance_sampler_cpp(const unsigned int& number_of_points, const List& model, List& algorithm, const unsigned int& max_vector_size);
+List do_importance_sampler_cpp(const unsigned int& number_of_points, const List& model, const List& algorithm, const unsigned int& max_vector_size);
 RcppExport SEXP _ilike_do_importance_sampler_cpp(SEXP number_of_pointsSEXP, SEXP modelSEXP, SEXP algorithmSEXP, SEXP max_vector_sizeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const unsigned int& >::type number_of_points(number_of_pointsSEXP);
     Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< List& >::type algorithm(algorithmSEXP);
+    Rcpp::traits::input_parameter< const List& >::type algorithm(algorithmSEXP);
     Rcpp::traits::input_parameter< const unsigned int& >::type max_vector_size(max_vector_sizeSEXP);
     rcpp_result_gen = Rcpp::wrap(do_importance_sampler_cpp(number_of_points, model, algorithm, max_vector_size));
     return rcpp_result_gen;
