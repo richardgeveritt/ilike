@@ -352,13 +352,13 @@ importance_sample = function(number_of_points,
     likelihood_estimator = make_likelihood_estimator(model, algorithm)
 
     proposed_auxiliary_variables = future.apply::future_lapply(proposed_inputs,
-                                                               FUN=function(input){likelihood_estimator$simulate_auxiliary_variables(input,model$data)},
+                                                               FUN=function(input){likelihood_estimator$simulate_auxiliary_variables(input)},
                                                                future.seed = TRUE)
 
     # Now configure the likelihood estimator using all of the simulations, if needed.
     likelihood_estimator$estimate_log_likelihood = tryCatch(likelihood_estimator$setup_likelihood_estimator(proposed_points,proposed_auxiliary_variables),error = function(e) {stop("likelihood_estimator$setup_likelihood_estimator throws an error when used on the proposed points.")})
 
-    log_likelihoods = unlist(future.apply::future_lapply(proposed_inputs,function(i){ likelihood_estimator$estimate_log_likelihood(i, model$data, proposed_auxiliary_variables[[i]]) }))
+    log_likelihoods = unlist(future.apply::future_lapply(proposed_inputs,function(i){ likelihood_estimator$estimate_log_likelihood(i, proposed_auxiliary_variables[[i]]) }))
     # Calculate weights.
     if (algorithm$prior_is_proposal==TRUE)
     {

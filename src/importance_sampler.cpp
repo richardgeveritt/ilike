@@ -21,7 +21,6 @@ List do_importance_sampler_cpp(const unsigned int &number_of_points,
   IntegerVector parameter_index = model["parameter_index"];
   NumericVector data = model["data"];
   unsigned int inputs_dimension = inputs.length();
-  //unsigned int parameter_dimension = model["ParameterDimension"];
   unsigned int auxiliary_variables_dimension = algorithm["auxiliary_variables_dimension"];
   unsigned int total_dimension = inputs_dimension + auxiliary_variables_dimension;
   unsigned int number_of_batches_minus_one = floor(double(number_of_points*total_dimension-1)/max_vector_size);
@@ -47,35 +46,7 @@ List do_importance_sampler_cpp(const unsigned int &number_of_points,
       proposed_inputs(i,_) = proposed_inputs_row;
     }
 
-    //List likelihood_estimator = algorithm["likelihood_estimator"];
-
     LikelihoodEstimator* likelihood_estimator = make_likelihood_estimator(model, algorithm);
-
-    //if (likelihood_method!="analytic")
-    //{
-      //SEXP simulate_auxiliary_variables_SEXP = likelihood_estimator["simulate_auxiliary_variables"];
-      //SimulateAuxiliaryVariablesPtr simulate_auxiliary_variables = load_simulate_auxiliary_variables(simulate_auxiliary_variables_SEXP);
-
-      // for (unsigned int i=0; i<number_of_points; ++i)
-      // {
-      //   proposed_auxiliary_variables.push_back(simulate_auxiliary_variables(proposed_inputs(i,_),data));
-      // }
-
-      // Now configure the likelihood estimator using all of the simulations.
-      //SEXP setup_likelihood_estimator_SEXP = likelihood_estimator["setup_likelihood_estimator"];
-      //SetupLikelihoodEstimatorPtr setup_likelihood_estimator = load_setup_likelihood_estimator(setup_likelihood_estimator_SEXP);
-
-      //XPtr<EstimateLogLikelihoodPtr> estimate_log_likelihood = setup_likelihood_estimator(proposed_points,proposed_auxiliary_variables);
-      //SEXP estimate_log_likelihood_SEXP = SEXP(estimate_log_likelihood);
-      //likelihood_estimator["estimate_log_likelihood"] = estimate_log_likelihood_SEXP;
-      //algorithm["likelihood_estimator"] = likelihood_estimator;
-    //}
-    //else
-    //{
-
-      //likelihood_estimator["estimate_log_likelihood"] = estimate_log_likelihood_SEXP;
-      //algorithm["likelihood_estimator"] = likelihood_estimator;
-    //}
 
     std::vector<List> proposed_auxiliary_variables;
     proposed_auxiliary_variables.reserve(number_of_points);
@@ -87,10 +58,6 @@ List do_importance_sampler_cpp(const unsigned int &number_of_points,
 
     likelihood_estimator->setup_likelihood_estimator(proposed_points,
                                                      proposed_auxiliary_variables);
-
-    // Calculate weights.
-    //SEXP estimate_log_likelihood_SEXP = likelihood_estimator["estimate_log_likelihood"];
-    //EstimateLogLikelihoodPtr estimate_log_likelihood = load_estimate_log_likelihood(estimate_log_likelihood_SEXP);
 
     NumericVector log_weights(number_of_points);
     bool prior_is_proposal = algorithm["prior_is_proposal"];

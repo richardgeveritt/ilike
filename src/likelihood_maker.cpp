@@ -23,7 +23,7 @@ LikelihoodEstimator* make_likelihood_estimator(const List &model,
     SEXP simulate_model_SEXP = model["simulate_model"];
     SimulateModelPtr simulate_model = load_simulate_model(simulate_model_SEXP);
 
-    unsigned int number_of_simulations = algorithm["abc_tolerances"];
+    unsigned int number_of_simulations = algorithm["number_of_simulations"];
 
     SEXP evaluate_log_abc_kernel_SEXP = algorithm["evaluate_log_abc_kernel"];
     EvaluateLogABCKernelPtr evaluate_log_abc_kernel = load_evaluate_log_abc_kernel(evaluate_log_abc_kernel_SEXP);
@@ -31,7 +31,7 @@ LikelihoodEstimator* make_likelihood_estimator(const List &model,
     SEXP summary_statistic_SEXP = algorithm["summary_statistic"];
     SummaryStatisticPtr summary_statistic = load_summary_statistic(summary_statistic_SEXP);
 
-    NumericVector tolerances = algorithm["abc_tolerances"];
+    NumericVector abc_tolerances = algorithm["abc_tolerances"];
 
     NumericVector summary_statistic_scaling = algorithm["summary_statistic_scaling"];
 
@@ -42,7 +42,7 @@ LikelihoodEstimator* make_likelihood_estimator(const List &model,
                                       number_of_simulations,
                                       evaluate_log_abc_kernel,
                                       summary_statistic,
-                                      tolerances,
+                                      abc_tolerances,
                                       summary_statistic_scaling);
   }
 

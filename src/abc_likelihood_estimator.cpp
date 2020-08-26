@@ -6,7 +6,7 @@ ABCLikelihoodEstimator::ABCLikelihoodEstimator(const NumericVector &data_in,
                                                const double &number_of_simulations_in,
                                                const EvaluateLogABCKernelPtr &evaluate_log_abc_kernel_in,
                                                const SummaryStatisticPtr &summary_statistic_in,
-                                               const NumericVector &tolerances_in,
+                                               const NumericVector &abc_tolerances_in,
                                                const NumericVector &summary_statistic_scaling_in)
 :LikelihoodEstimator(data_in)
 {
@@ -14,7 +14,7 @@ ABCLikelihoodEstimator::ABCLikelihoodEstimator(const NumericVector &data_in,
   this->number_of_simulations = number_of_simulations_in;
   this->abc_likelihood = ABCLikelihood(evaluate_log_abc_kernel_in,
                                        summary_statistic_in,
-                                       tolerances_in,
+                                       abc_tolerances_in,
                                        summary_statistic_scaling_in,
                                        data_in);
 }
@@ -74,7 +74,7 @@ void ABCLikelihoodEstimator::setup_likelihood_estimator(const NumericMatrix &all
   NumericVector summary_statistic_scaling(sum_stat_length);
   for (unsigned int i=0; i<sum_stat_length; ++i)
   {
-    summary_statistic_scaling[i] = sd(all_sumstats(_,i));
+    summary_statistic_scaling[i] = 1.0/sd(all_sumstats(_,i));
   }
 
   this->abc_likelihood.set_summary_statistic_scaling(summary_statistic_scaling);

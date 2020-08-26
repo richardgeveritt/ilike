@@ -28,7 +28,7 @@ public:
                          const double &number_of_simulations_in,
                          const EvaluateLogABCKernelPtr &evaluate_log_abc_kernel_in,
                          const SummaryStatisticPtr &summary_statistic_in,
-                         const NumericVector &tolerances_in,
+                         const NumericVector &abc_tolerances_in,
                          const NumericVector &summary_statistic_scaling_in);
 
   virtual ~ABCLikelihoodEstimator();

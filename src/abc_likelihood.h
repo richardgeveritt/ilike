@@ -14,7 +14,7 @@ class ABCLikelihood
 
 private:
 
-  NumericVector tolerances;
+  NumericVector abc_tolerances;
 
   EvaluateLogABCKernelPtr evaluate_log_abc_kernel;
 
@@ -34,7 +34,7 @@ public:
 
   ABCLikelihood(const EvaluateLogABCKernelPtr &evaluate_log_abc_kernel_in,
                 const SummaryStatisticPtr &summary_statistic_in,
-                const NumericVector &tolerances_in,
+                const NumericVector &abc_tolerances_in,
                 const NumericVector &summary_statistic_scaling_in,
                 const NumericVector &data_in);
 
@@ -50,7 +50,7 @@ public:
 
   SummaryStatisticPtr get_summary_statistic() const;
 
-  void set_tolerances(const NumericVector &tolerances_in);
+  void set_abc_tolerances(const NumericVector &abc_tolerances_in);
 
   void set_summary_statistic_scaling(const NumericVector &summary_statistic_scaling_in);
 
