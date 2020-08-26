@@ -349,7 +349,7 @@ importance_sample = function(number_of_points,
     proposed_inputs[,model$parameter_index] = proposed_points
     proposed_inputs = lapply(1:number_of_points,function(i){proposed_inputs[i,]})
 
-    likelihood_estimator = make_log_likelihood_estimator(model, algorithm)
+    likelihood_estimator = make_likelihood_estimator(model, algorithm)
 
     proposed_auxiliary_variables = future.apply::future_lapply(proposed_inputs,
                                                                FUN=function(input){likelihood_estimator$simulate_auxiliary_variables(input,model$data)},

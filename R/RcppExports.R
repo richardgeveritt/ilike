@@ -25,6 +25,14 @@ simulate_auxiliary_variables_cpp <- function(simulate_auxiliary_variables_SEXP, 
     .Call(`_ilike_simulate_auxiliary_variables_cpp`, simulate_auxiliary_variables_SEXP, parameter, data)
 }
 
+evaluate_log_abc_kernel_cpp <- function(evaluate_log_abc_kernel_SEXP, simulated_data, data, tolerances) {
+    .Call(`_ilike_evaluate_log_abc_kernel_cpp`, evaluate_log_abc_kernel_SEXP, simulated_data, data, tolerances)
+}
+
+summary_statistic_cpp <- function(summary_statistic_SEXP, data) {
+    .Call(`_ilike_summary_statistic_cpp`, summary_statistic_SEXP, data)
+}
+
 do_importance_sampler_cpp <- function(number_of_points, model, algorithm, max_vector_size) {
     .Call(`_ilike_do_importance_sampler_cpp`, number_of_points, model, algorithm, max_vector_size)
 }

@@ -1,10 +1,7 @@
 #include <Rcpp.h>
 using namespace Rcpp;
 
-//#include "function_pointers.h"
-
-#ifndef UTILS_H
-#define UTILS_H
+#include "utils.h"
 
 
 
@@ -31,7 +28,29 @@ using namespace Rcpp;
 //   return iv;
 // }
 
-double log_sum_exp(const NumericVector &log_weights);
+double log_sum_exp(const NumericVector &log_weights)
+{
+  if (sum(is_na(log_weights))>0)
+  {
+    return R_NegInf;
+  }
+  unsigned int xmax = which_max(log_weights);
+  IntegerVector xmaxv = IntegerVector::create(xmax);
+  unsigned int num_weights = log_weights.length();
+  IntegerVector all_but_one = setdiff(IntegerVector(seq(0,num_weights-1)),xmaxv);
+
+  NumericVector AllButOnelog_weights = log_weights[all_but_one];
+
+  double result = log1p(sum(exp(AllButOnelog_weights-log_weights[xmax])))+log_weights[xmax];
+  if (R_isnancpp(result))
+  {
+    return R_NegInf;
+  }
+  else
+  {
+    return result;
+  }
+}
 
 
 // double EstimateLogLikelihoodUsingEvaluate(const NumericVector &inputs, const NumericVector &data, const List &auxiliary_variables)
@@ -45,4 +64,3 @@ double log_sum_exp(const NumericVector &log_weights);
 //
 // }
 
-#endif

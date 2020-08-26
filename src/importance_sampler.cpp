@@ -5,7 +5,7 @@ using namespace Rcpp;
 
 #include "function_pointers.h"
 #include "utils.h"
-#include "exact_log_likelihood_estimator.h"
+#include "likelihood_estimator.h"
 #include "likelihood_maker.h"
 
 
@@ -49,7 +49,7 @@ List do_importance_sampler_cpp(const unsigned int &number_of_points,
 
     //List likelihood_estimator = algorithm["likelihood_estimator"];
 
-    LogLikelihoodEstimator* likelihood_estimator = make_log_likelihood_estimator(model, algorithm);
+    LikelihoodEstimator* likelihood_estimator = make_likelihood_estimator(model, algorithm);
 
     //if (likelihood_method!="analytic")
     //{
@@ -82,8 +82,7 @@ List do_importance_sampler_cpp(const unsigned int &number_of_points,
 
     for (unsigned int i=0; i<number_of_points; ++i)
     {
-      proposed_auxiliary_variables.push_back(likelihood_estimator->simulate_auxiliary_variables(proposed_inputs,
-                                                                                                data));
+      proposed_auxiliary_variables.push_back(likelihood_estimator->simulate_auxiliary_variables(proposed_inputs));
     }
 
     likelihood_estimator->setup_likelihood_estimator(proposed_points,
@@ -99,7 +98,7 @@ List do_importance_sampler_cpp(const unsigned int &number_of_points,
     {
       for (unsigned int i=0; i<number_of_points; ++i)
       {
-        log_weights[i] = likelihood_estimator->estimate_log_likelihood(proposed_inputs(i,_), data, proposed_auxiliary_variables[i]);
+        log_weights[i] = likelihood_estimator->estimate_log_likelihood(proposed_inputs(i,_), proposed_auxiliary_variables[i]);
       }
     }
     else
@@ -112,7 +111,7 @@ List do_importance_sampler_cpp(const unsigned int &number_of_points,
 
       for (unsigned int i=0; i<number_of_points; ++i)
       {
-        log_weights[i] = likelihood_estimator->estimate_log_likelihood(NumericVector(proposed_inputs(i,_)), data, proposed_auxiliary_variables[i]) + evaluate_log_prior(NumericVector(proposed_points(i,_))) - evaluate_log_proposal(NumericVector(proposed_points(i,_)));
+        log_weights[i] = likelihood_estimator->estimate_log_likelihood(NumericVector(proposed_inputs(i,_)), proposed_auxiliary_variables[i]) + evaluate_log_prior(NumericVector(proposed_points(i,_))) - evaluate_log_proposal(NumericVector(proposed_points(i,_)));
       }
     }
 

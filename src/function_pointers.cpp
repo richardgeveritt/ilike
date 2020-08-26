@@ -45,6 +45,20 @@ SetupLikelihoodEstimatorPtr load_setup_likelihood_estimator(const SEXP &setup_li
   return *setup_likelihood_estimator_XPtr;
 }
 
+EvaluateLogABCKernelPtr load_evaluate_log_abc_kernel(const SEXP &evaluate_log_abc_kernel_SEXP)
+{
+  XPtr<EvaluateLogABCKernelPtr> evaluate_log_abc_kernel_XPtr(evaluate_log_abc_kernel_SEXP);
+  return *evaluate_log_abc_kernel_XPtr;
+}
+
+SummaryStatisticPtr load_summary_statistic(const SEXP &summary_statistic_SEXP)
+{
+  XPtr<SummaryStatisticPtr> summary_statistic_XPtr(summary_statistic_SEXP);
+  return *summary_statistic_XPtr;
+}
+
+
+
 // [[Rcpp::export]]
 NumericVector simulate_distribution_cpp(const SEXP &simulate_distribution_SEXP)
 {
@@ -95,4 +109,22 @@ List simulate_auxiliary_variables_cpp(const SEXP &simulate_auxiliary_variables_S
 {
   SimulateModelPtr simulate_auxiliary_variables = load_simulate_auxiliary_variables(simulate_auxiliary_variables_SEXP);
   return simulate_auxiliary_variables(parameter,data);
+}
+
+// [[Rcpp::export]]
+double evaluate_log_abc_kernel_cpp(const SEXP &evaluate_log_abc_kernel_SEXP,
+                                   const NumericVector &simulated_data,
+                                   const NumericVector &data,
+                                   const NumericVector &tolerances)
+{
+  EvaluateLogABCKernelPtr evaluate_log_abc_kernel = load_evaluate_log_abc_kernel(evaluate_log_abc_kernel_SEXP);
+  return evaluate_log_abc_kernel(simulated_data, data, tolerances);
+}
+
+// [[Rcpp::export]]
+NumericVector summary_statistic_cpp(const SEXP &summary_statistic_SEXP,
+                             const NumericVector &data)
+{
+  SummaryStatisticPtr summary_statistic = load_summary_statistic(summary_statistic_SEXP);
+  return summary_statistic(data);
 }

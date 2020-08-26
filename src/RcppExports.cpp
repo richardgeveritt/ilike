@@ -81,6 +81,32 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// evaluate_log_abc_kernel_cpp
+double evaluate_log_abc_kernel_cpp(const SEXP& evaluate_log_abc_kernel_SEXP, const NumericVector& simulated_data, const NumericVector& data, const NumericVector& tolerances);
+RcppExport SEXP _ilike_evaluate_log_abc_kernel_cpp(SEXP evaluate_log_abc_kernel_SEXPSEXP, SEXP simulated_dataSEXP, SEXP dataSEXP, SEXP tolerancesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const SEXP& >::type evaluate_log_abc_kernel_SEXP(evaluate_log_abc_kernel_SEXPSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type simulated_data(simulated_dataSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type data(dataSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type tolerances(tolerancesSEXP);
+    rcpp_result_gen = Rcpp::wrap(evaluate_log_abc_kernel_cpp(evaluate_log_abc_kernel_SEXP, simulated_data, data, tolerances));
+    return rcpp_result_gen;
+END_RCPP
+}
+// summary_statistic_cpp
+NumericVector summary_statistic_cpp(const SEXP& summary_statistic_SEXP, const NumericVector& data);
+RcppExport SEXP _ilike_summary_statistic_cpp(SEXP summary_statistic_SEXPSEXP, SEXP dataSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const SEXP& >::type summary_statistic_SEXP(summary_statistic_SEXPSEXP);
+    Rcpp::traits::input_parameter< const NumericVector& >::type data(dataSEXP);
+    rcpp_result_gen = Rcpp::wrap(summary_statistic_cpp(summary_statistic_SEXP, data));
+    return rcpp_result_gen;
+END_RCPP
+}
 // do_importance_sampler_cpp
 List do_importance_sampler_cpp(const unsigned int& number_of_points, const List& model, const List& algorithm, const unsigned int& max_vector_size);
 RcppExport SEXP _ilike_do_importance_sampler_cpp(SEXP number_of_pointsSEXP, SEXP modelSEXP, SEXP algorithmSEXP, SEXP max_vector_sizeSEXP) {
@@ -103,6 +129,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ilike_estimate_log_likelihood_cpp", (DL_FUNC) &_ilike_estimate_log_likelihood_cpp, 4},
     {"_ilike_simulate_model_cpp", (DL_FUNC) &_ilike_simulate_model_cpp, 3},
     {"_ilike_simulate_auxiliary_variables_cpp", (DL_FUNC) &_ilike_simulate_auxiliary_variables_cpp, 3},
+    {"_ilike_evaluate_log_abc_kernel_cpp", (DL_FUNC) &_ilike_evaluate_log_abc_kernel_cpp, 4},
+    {"_ilike_summary_statistic_cpp", (DL_FUNC) &_ilike_summary_statistic_cpp, 2},
     {"_ilike_do_importance_sampler_cpp", (DL_FUNC) &_ilike_do_importance_sampler_cpp, 4},
     {NULL, NULL, 0}
 };
