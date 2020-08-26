@@ -52,37 +52,41 @@ abc_setup_likelihood_estimator = function(all_points,
                                           evaluate_log_abc_kernel,
                                           summary_statistic,
                                           summary_data,
-                                          abc_tolerances)
+                                          abc_tolerances,
+                                          summary_statistic_scaling=matrix(0,0,0))
 {
   # Resulting function is the standard ABC estimator: it will take some simulated data variables and find the average of an ABC kernel at these values.
 
   sum_stat_length = length(summary_data)
 
-  if (length(all_auxiliary_variables)==0)
+  if (length(summary_statistic_scaling)!=sum_stat_length)
   {
-    summary_statistic_scaling = matrix(1,sum_stat_length)
-  }
-  else
-  {
+    if (length(all_auxiliary_variables)==0)
+    {
+      summary_statistic_scaling = matrix(1,sum_stat_length)
+    }
+    else
+    {
 
-    data_length = ncol(all_auxiliary_variables[[1]])
+      data_length = ncol(all_auxiliary_variables[[1]])
 
-    # Use all_auxiliary_variables to find a good scaling for the summary statistics.
-    all_sumstats = matrix(0,
-                          length(all_auxiliary_variables)*number_of_simulations,
-                          sum_stat_length);
+      # Use all_auxiliary_variables to find a good scaling for the summary statistics.
+      all_sumstats = matrix(0,
+                            length(all_auxiliary_variables)*number_of_simulations,
+                            sum_stat_length);
 
-    simulated_data_matrix = t(matrix(unlist(all_auxiliary_variables),data_length,length(all_auxiliary_variables)))
+      simulated_data_matrix = t(matrix(unlist(all_auxiliary_variables),data_length,length(all_auxiliary_variables)))
 
-    simulated_data_rows = lapply(1:num_points,function(i){simulated_data_matrix[i,]})
+      simulated_data_rows = lapply(1:num_points,function(i){simulated_data_matrix[i,]})
 
-    sumstats = future.apply::future_lapply(simulated_data_rows,
-                                           FUN=summary_statistic)
+      sumstats = future.apply::future_lapply(simulated_data_rows,
+                                             FUN=summary_statistic)
 
-    sumstats_vec = sapply(sumstats,c)
+      sumstats_vec = sapply(sumstats,c)
 
-    summary_statistic_scaling = 1/apply(sumstats_vec,1,sd,na.rm=TRUE)
+      summary_statistic_scaling = 1/apply(sumstats_vec,1,sd,na.rm=TRUE)
 
+    }
   }
 
   return(function(point,auxiliary_variables){return(abc_estimate_log_likelihood(auxiliary_variables,

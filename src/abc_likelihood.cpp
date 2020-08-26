@@ -46,7 +46,9 @@ void ABCLikelihood::MakeCopy(const ABCLikelihood &another)
 
 double ABCLikelihood::evaluate(const NumericVector &simulated_data) const
 {
-  return this->evaluate_log_abc_kernel(this->summary_statistic(simulated_data), this->summary_data, this->abc_tolerances);
+  return this->evaluate_log_abc_kernel(this->summary_statistic_scaling * this->summary_statistic(simulated_data),
+                                       this->summary_statistic_scaling * this->summary_data,
+                                       this->abc_tolerances);
 }
 
 NumericVector ABCLikelihood::get_summary_data() const

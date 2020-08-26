@@ -36,13 +36,14 @@ make_likelihood_estimator = function(model, algorithm)
                                                                                       number_of_simulations,
                                                                                       simulate_model) }
 
-    setup_likelihood_estimator = function(all_points, all_auxiliary_variables){return(function(point,auxiliary_variables){return(abc_setup_likelihood_estimatorn(all_points,
-                                               all_auxiliary_variables,
-                                               number_of_simulations,
-                                               evaluate_log_abc_kernel,
-                                               summary_statistic,
-                                               summary_data,
-                                               abc_tolerances))})}
+    setup_likelihood_estimator = function(all_points, all_auxiliary_variables){return(function(point,auxiliary_variables){return(abc_setup_likelihood_estimator(all_points,
+                                              all_auxiliary_variables,
+                                              number_of_simulations,
+                                              evaluate_log_abc_kernel,
+                                              summary_statistic,
+                                              summary_data,
+                                              abc_tolerances,
+                                              summary_statistic_scaling))})}
 
     likelihood_estimator = list(simulate_auxiliary_variables = simulate_auxiliary_variables,
                                 setup_likelihood_estimator = setup_likelihood_estimator)
