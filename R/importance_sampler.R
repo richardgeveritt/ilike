@@ -1,68 +1,4 @@
-
-
-check_model_dimension_consistent_with_simulation = function(stored_parameter_dimension,
-                                                            sample_parameter)
-{
-  sample_parameter_dimension = length(sample_parameter)
-  if (is.null(stored_parameter_dimension)) {
-    stored_parameter_dimension = sample_parameter_dimension
-  }
-  else {
-    if (stored_parameter_dimension != sample_parameter_dimension) {
-      stop("simulated parameter is inconsistent with information in the specified model about the parameter dimension.")
-    }
-  }
-
-  return(stored_parameter_dimension)
-}
-
-check_inputs = function(model,
-                        algorithm,
-                        is_cpp = FALSE)
-{
-  # Check that the "inputs" and parameter index are consistent.
-  if ( (is.null(model$inputs) ) && (!is.null(model$parameter_index) ) ) {
-    # If inputs are not set, simulate them from the proposal.
-    if (is_cpp)
-    {
-      model$inputs = simulate_distribution_cpp(algorithm$simulate_proposal)
-    }
-    else
-    {
-      model$inputs = algorithm$simulate_proposal()
-    }
-  } else if ( (!is.null(model$inputs) ) && (is.null(model$parameter_index) ) ) {
-    # If parameter index is not set, simply index all of the inputs.
-    model$parameter_index = 1:length(model$inputs)
-  } else if ( (!is.null(model$inputs) ) && (!is.null(model$parameter_index) ) ) {
-    if (length(model$parameter_index)>length(model$inputs) ) {
-      stop("model$parameter_index should be <= the length of model$inputs.")
-    }
-  } else {
-    if (is_cpp)
-    {
-      model$inputs = simulate_distribution_cpp(algorithm$simulate_proposal)
-    }
-    else
-    {
-      model$inputs = algorithm$simulate_proposal()
-    }
-    model$parameter_index = 1:length(model$inputs)
-  }
-
-  if (is_cpp)
-  {
-    model$parameter_index = model$parameter_index - 1
-  }
-
-  return(model)
-}
-
-
-check_IS = function(model,
-                    algorithm,
-                    is_cpp = FALSE,
-                    messages = FALSE)
+check_parameter_dimension_and_parameter_index = function(model)
 {
   # Check that any information in the model about the dimension of the parameter is consistent.
   if ( (is.null(model$parameter_dimension) ) && (!is.null(model$parameter_index) ) ) {
@@ -82,6 +18,29 @@ check_IS = function(model,
       stored_parameter_dimension = NULL
   }
 
+  return(stored_parameter_dimension)
+}
+
+
+check_model_dimension_consistent_with_simulation = function(stored_parameter_dimension,
+                                                            sample_parameter)
+{
+  sample_parameter_dimension = length(sample_parameter)
+  if (is.null(stored_parameter_dimension)) {
+    stored_parameter_dimension = sample_parameter_dimension
+  }
+  else {
+    if (stored_parameter_dimension != sample_parameter_dimension) {
+      stop("simulated parameter is inconsistent with information in the specified model about the parameter dimension.")
+    }
+  }
+
+  return(stored_parameter_dimension)
+}
+
+
+check_is_simulate_proposal = function(model, algorithm, stored_parameter_dimension, is_cpp, messages)
+{
   # Simulation cases:
   # Neither prior nor proposal simulator defined.
   # Prior simulator defined; proposal not.
@@ -143,8 +102,12 @@ check_IS = function(model,
 
   model$parameter_dimension = stored_parameter_dimension
 
-  model = check_inputs(model, algorithm, is_cpp)
+  return(list(model,algorithm))
+}
 
+
+check_is_evaluate_proposal_and_prior = function(model, algorithm, is_cpp)
+{
   # Check that we can evaluate the prior and the proposal, and that they take as their argument something of dimension length(inputs).
   if (algorithm$prior_is_proposal==FALSE)
   {
@@ -155,7 +118,7 @@ check_IS = function(model,
     else
     {
       tryCatch(
-        if (is_cpp) {evaluate_log_distribution_cpp(algorithm$evaluate_log_proposal,sample_parameter)} else {algorithm$evaluate_log_proposal(sample_parameter)},
+        if (is_cpp) {evaluate_log_distribution_cpp(algorithm$evaluate_log_proposal,model$inputs)} else {algorithm$evaluate_log_proposal(model$inputs)},
         error = function(e) {stop("algorithm$evaluate_log_proposal generates an error when used on a vector of the dimension of the parameter.")})
     }
 
@@ -166,18 +129,57 @@ check_IS = function(model,
     else
     {
       tryCatch(
-        if (is_cpp) {evaluate_log_distribution_cpp(algorithm$evaluate_log_prior,sample_parameter)} else {algorithm$evaluate_log_prior(sample_parameter)},
+        if (is_cpp) {evaluate_log_distribution_cpp(model$evaluate_log_prior,model$inputs)} else {algorithm$evaluate_log_prior(model$inputs)},
         error = function(e) {stop("model$evaluate_log_prior generates an error when used on a vector of the dimension of the parameter.")})
     }
   }
+}
 
-  # Check that the method for evaluating the likelihood makes sense, and that it takes something of the right dimension.
-
-  if (is.null(model$data))
-  {
-    stop("model$data not specified.")
+check_inputs = function(model,
+                        algorithm,
+                        is_cpp = FALSE)
+{
+  # Check that the "inputs" and parameter index are consistent.
+  if ( (is.null(model$inputs) ) && (!is.null(model$parameter_index) ) ) {
+    # If inputs are not set, simulate them from the proposal.
+    if (is_cpp)
+    {
+      model$inputs = simulate_distribution_cpp(algorithm$simulate_proposal)
+    }
+    else
+    {
+      model$inputs = algorithm$simulate_proposal()
+    }
+  } else if ( (!is.null(model$inputs) ) && (is.null(model$parameter_index) ) ) {
+    # If parameter index is not set, simply index all of the inputs.
+    model$parameter_index = 1:length(model$inputs)
+  } else if ( (!is.null(model$inputs) ) && (!is.null(model$parameter_index) ) ) {
+    if (length(model$parameter_index)>length(model$inputs) ) {
+      stop("model$parameter_index should be <= the length of model$inputs.")
+    }
+  } else {
+    if (is_cpp)
+    {
+      model$inputs = simulate_distribution_cpp(algorithm$simulate_proposal)
+    }
+    else
+    {
+      model$inputs = algorithm$simulate_proposal()
+    }
+    model$parameter_index = 1:length(model$inputs)
   }
 
+  if (is_cpp)
+  {
+    model$parameter_index = model$parameter_index - 1
+  }
+
+  return(model)
+}
+
+
+check_likelihood_method = function(model, algorithm, is_cpp, messages)
+{
   # Check which methods for evaluating the likelihood are available given the specification.
   # Method 1: analytic likelihood.
   # Method 2: standard ABC
@@ -205,9 +207,7 @@ check_IS = function(model,
         print("model$simulate_model is specified, so we will use ABC as an approximate likelihood.")
       algorithm$likelihood_method = "abc"
     }
-
   }
-
 
   if (!is.null(algorithm$likelihood_method))
   {
@@ -239,7 +239,7 @@ check_IS = function(model,
         {
           # Need to specify function set up likelihood estimate. Info needs to be stored in a class-like object.
           likelihood_estimator = list(simulate_auxiliary_variables = model$simulate,
-                                   setup_likelihood_estimator = ABC$setup_likelihood_estimator)
+                                      setup_likelihood_estimator = ABC$setup_likelihood_estimator)
         }
         else
         {
@@ -263,8 +263,6 @@ check_IS = function(model,
     stop("No method for evaluating or estimating the likelihood is specified.")
   }
 
-  algorithm$likelihood_estimator = likelihood_estimator
-
   if (algorithm$likelihood_method!="analytic")
   {
     # Test the generation of the auxiliary variables and store their dimension.
@@ -279,9 +277,42 @@ check_IS = function(model,
     algorithm$auxiliary_variables_dimension = 0
   }
 
+  algorithm$likelihood_estimator = likelihood_estimator
 
+  return(algorithm)
+}
+
+
+check_IS = function(model,
+                    algorithm,
+                    is_cpp = FALSE,
+                    messages = FALSE)
+{
+  # Check consistency of optional arguments.
+  stored_parameter_dimension = check_parameter_dimension_and_parameter_index(model)
+
+  # Check mechanism for simulating proposal and make sure it is consistent with other information about the parameter dimension.
+  output = check_is_simulate_proposal(model, algorithm, stored_parameter_dimension, is_cpp, messages)
+  model = output[[1]]
+  algorithm = output[[2]]
+
+  # Check model$inputs (if specified) is consistent with simulated parameters.
+  model = check_inputs(model, algorithm, is_cpp)
+
+  # Check methods for evaluating proposal and prior.
+  check_is_evaluate_proposal_and_prior(model, algorithm)
+
+  # Check data is specified.
+  if (is.null(model$data))
+  {
+    stop("model$data not specified.")
+  }
+
+  # Check that the method for evaluating the likelihood makes sense, and that it takes something of the right dimension.
+  algorithm = check_likelihood_method(model, algorithm, is_cpp, messages)
+
+  # Things to do:
   # Need to check that algorithm$simulate_proposal(2) gives something of the right dimension.
-
   # Need to check that all of the algorithm$ parts exist.
 
   list(model=model,algorithm=algorithm)
