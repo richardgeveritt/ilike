@@ -1,7 +1,7 @@
 #include <Rcpp.h>
 using namespace Rcpp;
 
-//#include "function_pointers.h"
+#include "function_pointers.h"
 
 #ifndef UTILS_H
 #define UTILS_H
@@ -33,6 +33,36 @@ using namespace Rcpp;
 
 double log_sum_exp(const NumericVector &log_weights);
 
+NumericVector get_first_element_of_list_as_numeric_vector(const List &a_list);
+SEXP store_get_first_element_of_list_as_numeric_vector();
+
+NumericVector identity_statistic(const NumericVector &simulated);
+SEXP store_identity_statistic();
+
+double Lp_uniform_evaluate_log_abc_kernel(const NumericVector &simulated_summary_stats,
+                                          const NumericVector &observed_summary_stats,
+                                          const double &abc_tolerance,
+                                          const double &p);
+
+double L1_uniform_evaluate_log_abc_kernel(const NumericVector &simulated_summary_stats,
+                                          const NumericVector &observed_summary_stats,
+                                          const double &abc_tolerance);
+SEXP store_L1_uniform_evaluate_log_abc_kernel();
+
+double L2_uniform_evaluate_log_abc_kernel(const NumericVector &simulated_summary_stats,
+                                          const NumericVector &observed_summary_stats,
+                                          const double &abc_tolerance);
+SEXP store_L2_uniform_evaluate_log_abc_kernel();
+
+double Linf_uniform_evaluate_log_abc_kernel(const NumericVector &simulated_summary_stats,
+                                            const NumericVector &observed_summary_stats,
+                                            const double &abc_tolerance);
+SEXP store_Lint_uniform_evaluate_log_abc_kernel();
+
+double gaussian_evaluate_log_abc_kernel(const NumericVector &simulated_summary_stats,
+                                        const NumericVector &observed_summary_stats,
+                                        const double &abc_tolerance);
+SEXP store_gaussian_uniform_evaluate_log_abc_kernel();
 
 // double EstimateLogLikelihoodUsingEvaluate(const NumericVector &inputs, const NumericVector &data, const List &auxiliary_variables)
 // {

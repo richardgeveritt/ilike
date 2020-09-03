@@ -82,42 +82,113 @@ BEGIN_RCPP
 END_RCPP
 }
 // evaluate_log_abc_kernel_cpp
-double evaluate_log_abc_kernel_cpp(const SEXP& evaluate_log_abc_kernel_SEXP, const NumericVector& simulated_data, const NumericVector& data, const NumericVector& tolerances);
-RcppExport SEXP _ilike_evaluate_log_abc_kernel_cpp(SEXP evaluate_log_abc_kernel_SEXPSEXP, SEXP simulated_dataSEXP, SEXP dataSEXP, SEXP tolerancesSEXP) {
+double evaluate_log_abc_kernel_cpp(const SEXP& evaluate_log_abc_kernel_SEXP, const NumericVector& simulated_data, const NumericVector& data, const double& abc_tolerance);
+RcppExport SEXP _ilike_evaluate_log_abc_kernel_cpp(SEXP evaluate_log_abc_kernel_SEXPSEXP, SEXP simulated_dataSEXP, SEXP dataSEXP, SEXP abc_toleranceSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const SEXP& >::type evaluate_log_abc_kernel_SEXP(evaluate_log_abc_kernel_SEXPSEXP);
     Rcpp::traits::input_parameter< const NumericVector& >::type simulated_data(simulated_dataSEXP);
     Rcpp::traits::input_parameter< const NumericVector& >::type data(dataSEXP);
-    Rcpp::traits::input_parameter< const NumericVector& >::type tolerances(tolerancesSEXP);
-    rcpp_result_gen = Rcpp::wrap(evaluate_log_abc_kernel_cpp(evaluate_log_abc_kernel_SEXP, simulated_data, data, tolerances));
+    Rcpp::traits::input_parameter< const double& >::type abc_tolerance(abc_toleranceSEXP);
+    rcpp_result_gen = Rcpp::wrap(evaluate_log_abc_kernel_cpp(evaluate_log_abc_kernel_SEXP, simulated_data, data, abc_tolerance));
     return rcpp_result_gen;
 END_RCPP
 }
-// summary_statistic_cpp
-NumericVector summary_statistic_cpp(const SEXP& summary_statistic_SEXP, const NumericVector& data);
-RcppExport SEXP _ilike_summary_statistic_cpp(SEXP summary_statistic_SEXPSEXP, SEXP dataSEXP) {
+// summary_statistics_cpp
+NumericVector summary_statistics_cpp(const SEXP& summary_statistics_SEXP, const NumericVector& data);
+RcppExport SEXP _ilike_summary_statistics_cpp(SEXP summary_statistics_SEXPSEXP, SEXP dataSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const SEXP& >::type summary_statistic_SEXP(summary_statistic_SEXPSEXP);
+    Rcpp::traits::input_parameter< const SEXP& >::type summary_statistics_SEXP(summary_statistics_SEXPSEXP);
     Rcpp::traits::input_parameter< const NumericVector& >::type data(dataSEXP);
-    rcpp_result_gen = Rcpp::wrap(summary_statistic_cpp(summary_statistic_SEXP, data));
+    rcpp_result_gen = Rcpp::wrap(summary_statistics_cpp(summary_statistics_SEXP, data));
+    return rcpp_result_gen;
+END_RCPP
+}
+// get_data_from_simulation_cpp
+NumericVector get_data_from_simulation_cpp(const SEXP& get_data_from_simulation_SEXP, const List& simulation);
+RcppExport SEXP _ilike_get_data_from_simulation_cpp(SEXP get_data_from_simulation_SEXPSEXP, SEXP simulationSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const SEXP& >::type get_data_from_simulation_SEXP(get_data_from_simulation_SEXPSEXP);
+    Rcpp::traits::input_parameter< const List& >::type simulation(simulationSEXP);
+    rcpp_result_gen = Rcpp::wrap(get_data_from_simulation_cpp(get_data_from_simulation_SEXP, simulation));
     return rcpp_result_gen;
 END_RCPP
 }
 // do_importance_sampler_cpp
-List do_importance_sampler_cpp(const unsigned int& number_of_points, const List& model, const List& algorithm, const unsigned int& max_vector_size);
-RcppExport SEXP _ilike_do_importance_sampler_cpp(SEXP number_of_pointsSEXP, SEXP modelSEXP, SEXP algorithmSEXP, SEXP max_vector_sizeSEXP) {
+List do_importance_sampler_cpp(const List& model, const List& algorithm, const unsigned int& max_vector_size);
+RcppExport SEXP _ilike_do_importance_sampler_cpp(SEXP modelSEXP, SEXP algorithmSEXP, SEXP max_vector_sizeSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const unsigned int& >::type number_of_points(number_of_pointsSEXP);
     Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
     Rcpp::traits::input_parameter< const List& >::type algorithm(algorithmSEXP);
     Rcpp::traits::input_parameter< const unsigned int& >::type max_vector_size(max_vector_sizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(do_importance_sampler_cpp(number_of_points, model, algorithm, max_vector_size));
+    rcpp_result_gen = Rcpp::wrap(do_importance_sampler_cpp(model, algorithm, max_vector_size));
+    return rcpp_result_gen;
+END_RCPP
+}
+// store_get_first_element_of_list_as_numeric_vector
+SEXP store_get_first_element_of_list_as_numeric_vector();
+RcppExport SEXP _ilike_store_get_first_element_of_list_as_numeric_vector() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(store_get_first_element_of_list_as_numeric_vector());
+    return rcpp_result_gen;
+END_RCPP
+}
+// store_identity_statistic
+SEXP store_identity_statistic();
+RcppExport SEXP _ilike_store_identity_statistic() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(store_identity_statistic());
+    return rcpp_result_gen;
+END_RCPP
+}
+// store_L1_uniform_evaluate_log_abc_kernel
+SEXP store_L1_uniform_evaluate_log_abc_kernel();
+RcppExport SEXP _ilike_store_L1_uniform_evaluate_log_abc_kernel() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(store_L1_uniform_evaluate_log_abc_kernel());
+    return rcpp_result_gen;
+END_RCPP
+}
+// store_L2_uniform_evaluate_log_abc_kernel
+SEXP store_L2_uniform_evaluate_log_abc_kernel();
+RcppExport SEXP _ilike_store_L2_uniform_evaluate_log_abc_kernel() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(store_L2_uniform_evaluate_log_abc_kernel());
+    return rcpp_result_gen;
+END_RCPP
+}
+// store_Linf_uniform_evaluate_log_abc_kernel
+SEXP store_Linf_uniform_evaluate_log_abc_kernel();
+RcppExport SEXP _ilike_store_Linf_uniform_evaluate_log_abc_kernel() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(store_Linf_uniform_evaluate_log_abc_kernel());
+    return rcpp_result_gen;
+END_RCPP
+}
+// store_gaussian_uniform_evaluate_log_abc_kernel
+SEXP store_gaussian_uniform_evaluate_log_abc_kernel();
+RcppExport SEXP _ilike_store_gaussian_uniform_evaluate_log_abc_kernel() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(store_gaussian_uniform_evaluate_log_abc_kernel());
     return rcpp_result_gen;
 END_RCPP
 }
@@ -130,8 +201,15 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ilike_simulate_model_cpp", (DL_FUNC) &_ilike_simulate_model_cpp, 3},
     {"_ilike_simulate_auxiliary_variables_cpp", (DL_FUNC) &_ilike_simulate_auxiliary_variables_cpp, 3},
     {"_ilike_evaluate_log_abc_kernel_cpp", (DL_FUNC) &_ilike_evaluate_log_abc_kernel_cpp, 4},
-    {"_ilike_summary_statistic_cpp", (DL_FUNC) &_ilike_summary_statistic_cpp, 2},
-    {"_ilike_do_importance_sampler_cpp", (DL_FUNC) &_ilike_do_importance_sampler_cpp, 4},
+    {"_ilike_summary_statistics_cpp", (DL_FUNC) &_ilike_summary_statistics_cpp, 2},
+    {"_ilike_get_data_from_simulation_cpp", (DL_FUNC) &_ilike_get_data_from_simulation_cpp, 2},
+    {"_ilike_do_importance_sampler_cpp", (DL_FUNC) &_ilike_do_importance_sampler_cpp, 3},
+    {"_ilike_store_get_first_element_of_list_as_numeric_vector", (DL_FUNC) &_ilike_store_get_first_element_of_list_as_numeric_vector, 0},
+    {"_ilike_store_identity_statistic", (DL_FUNC) &_ilike_store_identity_statistic, 0},
+    {"_ilike_store_L1_uniform_evaluate_log_abc_kernel", (DL_FUNC) &_ilike_store_L1_uniform_evaluate_log_abc_kernel, 0},
+    {"_ilike_store_L2_uniform_evaluate_log_abc_kernel", (DL_FUNC) &_ilike_store_L2_uniform_evaluate_log_abc_kernel, 0},
+    {"_ilike_store_Linf_uniform_evaluate_log_abc_kernel", (DL_FUNC) &_ilike_store_Linf_uniform_evaluate_log_abc_kernel, 0},
+    {"_ilike_store_gaussian_uniform_evaluate_log_abc_kernel", (DL_FUNC) &_ilike_store_gaussian_uniform_evaluate_log_abc_kernel, 0},
     {NULL, NULL, 0}
 };
 

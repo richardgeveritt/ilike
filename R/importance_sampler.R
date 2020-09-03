@@ -209,17 +209,26 @@ check_likelihood_method = function(model, algorithm, is_cpp, messages)
     }
   }
 
+  # Check that all of the necessary things are specified and working.
+  # Provide sensible defaults for things that are not specified.
+
   if (!is.null(algorithm$likelihood_method))
   {
+    ##########################################################
+    # Exact likelihood                                       #
+    ##########################################################
+    # Check:                                                 #
+    # - evaluate_log_likelihood                              #
+    ##########################################################
+
     if (algorithm$likelihood_method=="analytic")
     {
       if (likelihood_methods[1] == 1)
       {
+        # Check evaluate_log_likelihood.
         tryCatch(
           if (is_cpp) {evaluate_log_likelihood_cpp(model$evaluate_log_likelihood,model$inputs,model$data)} else {model$evaluate_log_likelihood(model$inputs,model$data)},
           error = function(e) {stop("model$evaluate_log_likelihood generates an error when used on a vector of dimension model$inputs.")})
-
-        likelihood_estimator = list()
       }
       else
       {
@@ -227,26 +236,209 @@ check_likelihood_method = function(model, algorithm, is_cpp, messages)
       }
     }
 
+    ##########################################################
+    # ABC                                                    #
+    ##########################################################
+    # Check:                                                 #
+    # - simulate_model                                       #
+    # - number_of_likelihood_particles                       #
+    # - get_data_from_simulation                             #
+    # - summary_statistic                                    #
+    # - summary_statistic_scaling                            #
+    # - evaluate_log_abc_kernel                              #
+    # - abc_tolerance or abc_desired_cess                   #
+    ##########################################################
+
     if (algorithm$likelihood_method=="abc")
     {
       if (likelihood_methods[2] == 1)
       {
-        tryCatch(
-          if (is_cpp) {simulate_model_cpp(model$simulate_model,model$inputs,model$data)} else {model$simulate_model(model$inputs)},
-          error = function(e) {stop("model$simulate generates an error when used on a vector of dimension model$inputs.")})
 
-        if (is.null(model$likelihood_options))
+        # Check simulate_model.
+        tryCatch(
+          if (is_cpp) {simulated = simulate_model_cpp(model$simulate_model, model$inputs, model$data)} else {simulated = model$simulate_model(model$inputs, model$data)},
+          error = function(e) {stop("model$simulate generates an error when used on a vector of dimension model$inputs, together with data model$data.")})
+
+
+        # Check number_of_likelihood_particles.
+        if (is.null(algorithm$number_of_likelihood_particles))
         {
-          # Need to specify function set up likelihood estimate. Info needs to be stored in a class-like object.
-          likelihood_estimator = list(simulate_auxiliary_variables = model$simulate,
-                                      setup_likelihood_estimator = ABC$setup_likelihood_estimator)
+          if (messages == TRUE)
+            print("algorithm$number_of_likelihood_particles is not set for ABC. Setting it to 1.")
+          algorithm$number_of_likelihood_particles = 1
+        }
+
+
+        # Check method for extracting data from simulation.
+        if (is.null(algorithm$get_data_from_simulation))
+        {
+          if (messages == TRUE)
+            print("algorithm$get_data_from_simulation is not set for ABC. Setting it to get the first element of the simulated list.")
+          if (is_cpp)
+          {
+            algorithm$get_data_from_simulation = store_get_first_element_of_list_as_numeric_vector()
+          }
+          else
+          {
+            algorithm$get_data_from_simulation = function(s){return(s[[1]])}
+          }
+        }
+        tryCatch(
+          if (is_cpp) {simulated_data = get_data_from_simulation_cpp(algorithm$get_data_from_simulation, simulated)} else {simulated_data = algorithm$get_data_from_simulation(simulated)},
+          error = function(e) {stop("algorithm$get_data_from_simulation generates an error when used on a simulation.")})
+
+
+        # Check summary_statistics.
+        if (is.null(algorithm$summary_statistics))
+        {
+          if (messages == TRUE)
+            print("algorithm$summary_statistics is not set for ABC. Setting it to be the identity.")
+          if (is_cpp)
+          {
+            algorithm$summary_statistics = store_identity_statistic()
+          }
+          else
+          {
+            algorithm$summary_statistics = function(d){return(d)}
+          }
+        }
+        tryCatch(
+          if (is_cpp) {summary_simulated = summary_statistics_cpp(algorithm$summary_statistics, simulated_data)} else {summary_simulated = algorithm$summary_statistics(simulated_data)},
+          error = function(e) {stop("algorithm$summary_statistics generates an error when used on simulated data.")})
+        tryCatch(
+          if (is_cpp) {summary_observed = summary_statistics_cpp(algorithm$summary_statistics, model$data)} else {summary_observed = algorithm$summary_statistics(model$data)},
+          error = function(e) {stop("algorithm$summary_statistics generates an error when used on observed data.")})
+
+
+        # Check summary_statistic_scaling.
+        if (is.null(algorithm$summary_statistic_scaling))
+        {
+          if (messages == TRUE)
+            print("algorithm$statistic_scaling is not set for ABC. Setting it to ones.")
+          algorithm$statistic_scaling = matrix(1,length(summary_simulated))
+        }
+        if (length(algorithm$summary_statistic_scaling)!=length(summary_simulated))
+          stop("algorithm$summary_statistic_scaling is not the same length as the summary statistic vector.")
+
+        # Check evaluate_log_abc_kernel.
+        if (is.null(algorithm$evaluate_log_abc_kernel))
+        {
+          if (is.null(algorithm$abc_kernel_method))
+          {
+            if (messages == TRUE)
+              print("algorithm$evaluate_log_abc_kernel is not set for ABC. Setting it to uniform, with L2 norm.")
+            algorithm$abc_kernel_method = "L2_uniform"
+          }
+
+          if (algorithm$abc_kernel_method=="L1_uniform")
+          {
+            if (is_cpp)
+            {
+              algorithm$evaluate_log_abc_kernel = store_L1_uniform_evaluate_log_abc_kernel()
+            }
+            else
+            {
+              algorithm$evaluate_log_abc_kernel = function(simulated_summary_stats,s_o,tol){return(Lp_uniform_evaluate_log_abc_kernel(simulated_summary_stats,observed_summary_stats,abc_tolerance,1))}
+            }
+          }
+          else if (algorithm$abc_kernel_method=="L2_uniform")
+          {
+            if (is_cpp)
+            {
+              algorithm$evaluate_log_abc_kernel = store_L2_uniform_evaluate_log_abc_kernel()
+            }
+            else
+            {
+              algorithm$evaluate_log_abc_kernel = function(simulated_summary_stats,s_o,tol){return(Lp_uniform_evaluate_log_abc_kernel(simulated_summary_stats,observed_summary_stats,abc_tolerance,2))}
+            }
+          }
+          else if (algorithm$abc_kernel_method=="Linf_uniform")
+          {
+            if (is_cpp)
+            {
+              algorithm$evaluate_log_abc_kernel = store_Linf_uniform_evaluate_log_abc_kernel()
+            }
+            else
+            {
+              algorithm$evaluate_log_abc_kernel = function(simulated_summary_stats,s_o,tol){return(Linf_uniform_evaluate_log_abc_kernel(simulated_summary_stats,observed_summary_stats,abc_tolerance))}
+            }
+          }
+          else if (algorithm$abc_kernel_method=="gaussian")
+          {
+            if (is_cpp)
+            {
+              algorithm$evaluate_log_abc_kernel = store_gaussian_evaluate_log_abc_kernel()
+            }
+            else
+            {
+              algorithm$evaluate_log_abc_kernel = function(simulated_summary_stats,s_o,tol){return(gaussian_evaluate_log_abc_kernel(simulated_summary_stats,observed_summary_stats,abc_tolerance))}
+            }
+          }
+          else
+          {
+            stop("algorithm$abc_kernel_method set to an invalid option.")
+          }
         }
         else
         {
-          stop("Not written yet. Should be checking for: M; epsilon; distance.")
+
+          if (messages == TRUE)
+            print("algorithm$evaluate_log_abc_kernel is set, so ignoring algorithm$abc_kernel_method.")
+
+          tryCatch(
+            if (is_cpp) {evaluate_log_abc_kernel_cpp(algorithm$evaluate_log_abc_kernel, algorithm$summary_statistic_scaling*summary_simulated, algorithm$summary_statistic_scaling*summary_simulated, 1)} else {algorithm$evaluate_log_abc_kernel(algorithm$summary_statistic_scaling*summary_simulated, algorithm$summary_statistic_scaling*summary_observed, 1)},
+            error = function(e) {stop("algorithm$evaluate_log_abc_kernel generates an error when used on simulated data and model$data.")})
         }
 
-        # Estimator itself needs to take aux variables as an arg, then do the calculation using a method specified in a different file, all of which should be included at the top of this file. Specified after we have sampled all of the thetas, to set thresholds, etc.
+
+        # Check abc_tolerance - need either this or a percentage of effectively independent simulations to keep.
+        # Need also to add this into setup llhd.
+        # If not set, set to keep 100 effective points.
+        if (is.null(algorithm$abc_tolerance))
+        {
+          if (is.null(algorithm$abc_desired_cess))
+          {
+            if (messages == TRUE)
+              print("algorithm$abc_desired_cess and algorithm$abc_tolerance are not set for ABC. Setting algorithm$abc_desired_cess to 100.")
+            algorithm$abc_desired_cess = min(algorithm$number_of_points, 100)
+          }
+          else
+          {
+            if (messages == TRUE)
+              print("algorithm$abc_tolerance not set for ABC. Using algorithm$abc_desired_cess instead.")
+
+            if (algorithm$abc_desired_cess<1)
+            {
+              if (messages == TRUE)
+                print("algorithm$abc_desired_cess below 1. Set to 1.")
+              algorithm$abc_desired_cess = 1
+
+            }
+            else if (algorithm$abc_desired_cess>algorithm$number_of_points)
+            {
+              if (messages == TRUE)
+                print("algorithm$abc_desired_cess above algorithm$number_of_points. Set to algorithm$number_of_points.")
+              algorithm$abc_desired_cess = algorithm$number_of_points
+            }
+
+          }
+        }
+        else
+        {
+          if (is.null(algorithm$abc_desired_cess))
+          {
+            if (messages == TRUE)
+              print("algorithm$abc_desired_cess not set for ABC. Using algorithm$abc_tolerance instead.")
+
+            if (length(algorithm$abc_tolerance)!=1)
+              stop("algorithm$abc_tolerance is not a scalar.")
+
+            if (algorithm$abc_tolerance<0)
+              stop("algorithm$abc_tolerance is negative.")
+          }
+
+          stop("algorithm$abc_tolerance and algorithm$abc_desired_cess both defined. This is ambiguous, and you need to get rid of one of them.")
+        }
 
       }
       else
@@ -254,7 +446,6 @@ check_likelihood_method = function(model, algorithm, is_cpp, messages)
         stop("algorithm$likelihood_method is abc, but model$simulate is not defined.")
       }
 
-      # Also should check ABC info.
     }
 
   }
@@ -263,21 +454,21 @@ check_likelihood_method = function(model, algorithm, is_cpp, messages)
     stop("No method for evaluating or estimating the likelihood is specified.")
   }
 
-  if (algorithm$likelihood_method!="analytic")
-  {
-    # Test the generation of the auxiliary variables and store their dimension.
-    auxiliary_variables = tryCatch(
-      if (is_cpp) {simulate_auxiliary_variables_cpp(algorithm$likelihood_estimator$simulate_auxiliary_variables,model$inputs,model$data)} else {algorithm$likelihood_estimator$simulate_auxiliary_variables(model$inputs,model$data)},
-      error = function(e) {stop("algorithm$likelihood_estimator$simulate_auxiliary_variables generates an error when used on a vector of dimension model$inputs.")})
-
-    algorithm$auxiliary_variables_dimension = length(unlist(auxiliary_variables))
-  }
-  else
-  {
-    algorithm$auxiliary_variables_dimension = 0
-  }
-
-  algorithm$likelihood_estimator = likelihood_estimator
+  # if (algorithm$likelihood_method!="analytic")
+  # {
+  #   # Test the generation of the auxiliary variables and store their dimension.
+  #   auxiliary_variables = tryCatch(
+  #     if (is_cpp) {simulate_auxiliary_variables_cpp(algorithm$likelihood_estimator$simulate_auxiliary_variables,model$inputs,model$data)} else {algorithm$likelihood_estimator$simulate_auxiliary_variables(model$inputs,model$data)},
+  #     error = function(e) {stop("algorithm$likelihood_estimator$simulate_auxiliary_variables generates an error when used on a vector of dimension model$inputs.")})
+  #
+  #   algorithm$auxiliary_variables_dimension = length(unlist(auxiliary_variables))
+  # }
+  # else
+  # {
+  #   algorithm$auxiliary_variables_dimension = 0
+  # }
+  #
+  # algorithm$likelihood_estimator = likelihood_estimator
 
   return(algorithm)
 }
@@ -288,6 +479,15 @@ check_IS = function(model,
                     is_cpp = FALSE,
                     messages = FALSE)
 {
+
+  # Check data is specified.
+  if (is.null(algorithm$number_of_points))
+  {
+    if (messages == TRUE)
+      print("algorithm$number_of_points is not set. Setting it to 10000.")
+    algorithm$number_of_points = 10000
+  }
+
   # Check consistency of optional arguments.
   stored_parameter_dimension = check_parameter_dimension_and_parameter_index(model)
 
@@ -330,24 +530,18 @@ simulate_batch = function(batch_number,
   proposed_inputs = t(matrix(rep(model$inputs,num_batch_points),length(model$inputs),num_batch_points))
   proposed_inputs[,model$parameter_index] = proposed_points
   proposed_inputs = lapply(1:num_batch_points,function(i){proposed_inputs[i,]})
-  if (!is.null(algorithm$likelihood_estimator))
-  {
-    proposed_auxiliary_variables = future.apply::future_lapply(proposed_inputs,FUN=function(Input){algorithm$likelihood_estimator$simulate_auxiliary_variables(model$inputs,model$data)},future.seed = TRUE)
-  }
 }
 
 #' Importance sampler.
 #'
-#' @param number_of_points The number of importance points.
 #' @param model A model.
 #' @param algorithm algorithm details.
 #' @param max_vector_size If any vector/list has more than this many entries, we need to split the algorithm into multiple batches.
 #' @param messages Set to TRUE to have messages printed to console.
 #' @return Importance points.
 #' @export
-importance_sample = function(number_of_points,
-                             model,
-                             algorithm = list(),
+importance_sample = function(model,
+                             algorithm,
                              max_vector_size = 4e+9,
                              messages = FALSE)
 {
@@ -361,9 +555,11 @@ importance_sample = function(number_of_points,
   model = output$model
   algorithm = output$algorithm
 
+  number_of_points = algorithm$number_of_points
+
   # Work out the number of batches to simulate.
   # We will store the points and the auxiliary variables in files to avoid memory problems.
-  total_dimension = length(model$inputs) + algorithm$auxiliary_variables_dimension
+  total_dimension = length(model$inputs)# + algorithm$auxiliary_variables_dimension
   number_of_batches_minus_one = floor((number_of_points*total_dimension-1)/max_vector_size)
 
   # simulate batch of parameters and associated aux variables.
@@ -408,7 +604,7 @@ importance_sample = function(number_of_points,
   }
   else
   {
-    stop("Importance_sampler not yet set upt to use multiple batches.")
+    stop("Importance_sampler not yet set up to use multiple batches.")
 
     # We need to use multiple batches since we don't want to store big vectors in memory.
     most_batch_sizes = floor(number_of_points/number_of_batches_minus_one)
@@ -424,16 +620,14 @@ importance_sample = function(number_of_points,
 
 #' Importance sampler using cpp functions.
 #'
-#' @param number_of_points The number of importance points.
 #' @param model A model.
 #' @param algorithm Algorithm details.
 #' @param max_vector_size If any vector/list has more than this many entries, we need to split the algorithm into multiple batches.
 #' @param messages Set to TRUE to have messages printed to console.
 #' @return Importance points.
 #' @export
-importance_sample_cpp = function(number_of_points,
-                                 model,
-                                 algorithm = list(),
+importance_sample_cpp = function(model,
+                                 algorithm,
                                  max_vector_size = 4e+9,
                                  messages = FALSE)
 {
@@ -444,13 +638,11 @@ importance_sample_cpp = function(number_of_points,
   # - make sure indexing of inputs/parameters is stored if necessary
   # - make sure prior is in standard format and store it
   output = check_IS(model, algorithm, is_cpp = TRUE, messages = messages)
-
   model = output$model
   algorithm = output$algorithm
 
-  return(do_importance_sampler_cpp(number_of_points,
-                                 model,
-                                 algorithm,
-                                 max_vector_size))
+  return(do_importance_sampler_cpp(model,
+                                   algorithm,
+                                   max_vector_size))
 
 }

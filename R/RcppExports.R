@@ -25,15 +25,43 @@ simulate_auxiliary_variables_cpp <- function(simulate_auxiliary_variables_SEXP, 
     .Call(`_ilike_simulate_auxiliary_variables_cpp`, simulate_auxiliary_variables_SEXP, parameter, data)
 }
 
-evaluate_log_abc_kernel_cpp <- function(evaluate_log_abc_kernel_SEXP, simulated_data, data, tolerances) {
-    .Call(`_ilike_evaluate_log_abc_kernel_cpp`, evaluate_log_abc_kernel_SEXP, simulated_data, data, tolerances)
+evaluate_log_abc_kernel_cpp <- function(evaluate_log_abc_kernel_SEXP, simulated_data, data, abc_tolerance) {
+    .Call(`_ilike_evaluate_log_abc_kernel_cpp`, evaluate_log_abc_kernel_SEXP, simulated_data, data, abc_tolerance)
 }
 
-summary_statistic_cpp <- function(summary_statistic_SEXP, data) {
-    .Call(`_ilike_summary_statistic_cpp`, summary_statistic_SEXP, data)
+summary_statistics_cpp <- function(summary_statistics_SEXP, data) {
+    .Call(`_ilike_summary_statistics_cpp`, summary_statistics_SEXP, data)
 }
 
-do_importance_sampler_cpp <- function(number_of_points, model, algorithm, max_vector_size) {
-    .Call(`_ilike_do_importance_sampler_cpp`, number_of_points, model, algorithm, max_vector_size)
+get_data_from_simulation_cpp <- function(get_data_from_simulation_SEXP, simulation) {
+    .Call(`_ilike_get_data_from_simulation_cpp`, get_data_from_simulation_SEXP, simulation)
+}
+
+do_importance_sampler_cpp <- function(model, algorithm, max_vector_size) {
+    .Call(`_ilike_do_importance_sampler_cpp`, model, algorithm, max_vector_size)
+}
+
+store_get_first_element_of_list_as_numeric_vector <- function() {
+    .Call(`_ilike_store_get_first_element_of_list_as_numeric_vector`)
+}
+
+store_identity_statistic <- function() {
+    .Call(`_ilike_store_identity_statistic`)
+}
+
+store_L1_uniform_evaluate_log_abc_kernel <- function() {
+    .Call(`_ilike_store_L1_uniform_evaluate_log_abc_kernel`)
+}
+
+store_L2_uniform_evaluate_log_abc_kernel <- function() {
+    .Call(`_ilike_store_L2_uniform_evaluate_log_abc_kernel`)
+}
+
+store_Linf_uniform_evaluate_log_abc_kernel <- function() {
+    .Call(`_ilike_store_Linf_uniform_evaluate_log_abc_kernel`)
+}
+
+store_gaussian_uniform_evaluate_log_abc_kernel <- function() {
+    .Call(`_ilike_store_gaussian_uniform_evaluate_log_abc_kernel`)
 }
 

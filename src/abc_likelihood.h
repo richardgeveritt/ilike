@@ -9,18 +9,19 @@ using namespace Rcpp;
 #ifndef ABCLIKELIHOOD_H
 #define ABCLIKELIHOOD_H
 
+
 class ABCLikelihood
 {
 
 private:
 
-  NumericVector abc_tolerances;
+  double abc_tolerance;
 
   EvaluateLogABCKernelPtr evaluate_log_abc_kernel;
 
-  SummaryStatisticPtr summary_statistic;
+  SummaryStatisticsPtr summary_statistics;
 
-  NumericVector summary_statistic_scaling;
+  NumericVector summary_statistics_scaling;
 
   NumericVector summary_data;
 
@@ -33,9 +34,9 @@ public:
   ABCLikelihood();
 
   ABCLikelihood(const EvaluateLogABCKernelPtr &evaluate_log_abc_kernel_in,
-                const SummaryStatisticPtr &summary_statistic_in,
-                const NumericVector &abc_tolerances_in,
-                const NumericVector &summary_statistic_scaling_in,
+                const SummaryStatisticsPtr &summary_statistics_in,
+                const double &abc_tolerance_in,
+                const NumericVector &summary_statistics_scaling_in,
                 const NumericVector &data_in);
 
   ABCLikelihood(const ABCLikelihood &another);
@@ -48,11 +49,11 @@ public:
 
   NumericVector get_summary_data() const;
 
-  SummaryStatisticPtr get_summary_statistic() const;
+  SummaryStatisticsPtr get_summary_statistics() const;
 
-  void set_abc_tolerances(const NumericVector &abc_tolerances_in);
+  void set_abc_tolerance(const double &abc_tolerance_in);
 
-  void set_summary_statistic_scaling(const NumericVector &summary_statistic_scaling_in);
+  void set_summary_statistics_scaling(const NumericVector &summary_statistics_scaling_in);
 
 };
 

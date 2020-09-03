@@ -51,10 +51,16 @@ EvaluateLogABCKernelPtr load_evaluate_log_abc_kernel(const SEXP &evaluate_log_ab
   return *evaluate_log_abc_kernel_XPtr;
 }
 
-SummaryStatisticPtr load_summary_statistic(const SEXP &summary_statistic_SEXP)
+SummaryStatisticsPtr load_summary_statistics(const SEXP &summary_statistics_SEXP)
 {
-  XPtr<SummaryStatisticPtr> summary_statistic_XPtr(summary_statistic_SEXP);
-  return *summary_statistic_XPtr;
+  XPtr<SummaryStatisticsPtr> summary_statistics_XPtr(summary_statistics_SEXP);
+  return *summary_statistics_XPtr;
+}
+
+GetDataFromSimulationPtr load_get_data_from_simulation(const SEXP &get_data_from_simulation_SEXP)
+{
+  XPtr<GetDataFromSimulationPtr> get_data_from_simulation_XPtr(get_data_from_simulation_SEXP);
+  return *get_data_from_simulation_XPtr;
 }
 
 
@@ -115,16 +121,24 @@ List simulate_auxiliary_variables_cpp(const SEXP &simulate_auxiliary_variables_S
 double evaluate_log_abc_kernel_cpp(const SEXP &evaluate_log_abc_kernel_SEXP,
                                    const NumericVector &simulated_data,
                                    const NumericVector &data,
-                                   const NumericVector &tolerances)
+                                   const double &abc_tolerance)
 {
   EvaluateLogABCKernelPtr evaluate_log_abc_kernel = load_evaluate_log_abc_kernel(evaluate_log_abc_kernel_SEXP);
-  return evaluate_log_abc_kernel(simulated_data, data, tolerances);
+  return evaluate_log_abc_kernel(simulated_data, data, abc_tolerance);
 }
 
 // [[Rcpp::export]]
-NumericVector summary_statistic_cpp(const SEXP &summary_statistic_SEXP,
+NumericVector summary_statistics_cpp(const SEXP &summary_statistics_SEXP,
                              const NumericVector &data)
 {
-  SummaryStatisticPtr summary_statistic = load_summary_statistic(summary_statistic_SEXP);
-  return summary_statistic(data);
+  SummaryStatisticsPtr summary_statistics = load_summary_statistics(summary_statistics_SEXP);
+  return summary_statistics(data);
+}
+
+// [[Rcpp::export]]
+NumericVector get_data_from_simulation_cpp(const SEXP &get_data_from_simulation_SEXP,
+                                     const List &simulation)
+{
+  GetDataFromSimulationPtr get_data_from_simulation = load_get_data_from_simulation(get_data_from_simulation_SEXP);
+  return get_data_from_simulation(simulation);
 }

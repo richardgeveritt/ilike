@@ -18,7 +18,7 @@ make_likelihood_estimator = function(model, algorithm)
   {
     simulate_model = mode$simulate_model
 
-    number_of_simulations = algorithm$number_of_simulations
+    number_of_likelihood_particles = algorithm$number_of_likelihood_particles
 
     evaluate_log_abc_kernel = algorithm$evaluate_log_abc_kernel
 
@@ -33,12 +33,12 @@ make_likelihood_estimator = function(model, algorithm)
     summary_data = summary_statistic(data)
 
     simulate_auxiliary_variables = function(inputs){ abc_simulate_auxiliary_variables(inputs,
-                                                                                      number_of_simulations,
+                                                                                      number_of_likelihood_particles,
                                                                                       simulate_model) }
 
     setup_likelihood_estimator = function(all_points, all_auxiliary_variables){return(function(point,auxiliary_variables){return(abc_setup_likelihood_estimator(all_points,
                                               all_auxiliary_variables,
-                                              number_of_simulations,
+                                              number_of_likelihood_particles,
                                               evaluate_log_abc_kernel,
                                               summary_statistic,
                                               summary_data,

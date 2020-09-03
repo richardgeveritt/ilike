@@ -4,17 +4,9 @@
 \alias{importance_sample}
 \title{Importance sampler.}
 \usage{
-importance_sample(
-  number_of_points,
-  model,
-  algorithm = list(),
-  max_vector_size = 4e+09,
-  messages = FALSE
-)
+importance_sample(model, algorithm, max_vector_size = 4e+09, messages = FALSE)
 }
 \arguments{
-\item{number_of_points}{The number of importance points.}
-
 \item{model}{A model.}
 
 \item{algorithm}{algorithm details.}

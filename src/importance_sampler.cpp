@@ -10,19 +10,20 @@ using namespace Rcpp;
 
 
 // [[Rcpp::export]]
-List do_importance_sampler_cpp(const unsigned int &number_of_points,
-                                        const List &model,
-                                        const List &algorithm,
-                                        const unsigned int &max_vector_size)
+List do_importance_sampler_cpp(const List &model,
+                               const List &algorithm,
+                               const unsigned int &max_vector_size)
 {
+  unsigned int number_of_points = algorithm["number_of_points"];
+
   // Work out the number of batches to simulate.
   // We will store the points and the auxiliary variables in files to avoid memory problems.
   NumericVector inputs = model["inputs"];
   IntegerVector parameter_index = model["parameter_index"];
   NumericVector data = model["data"];
   unsigned int inputs_dimension = inputs.length();
-  unsigned int auxiliary_variables_dimension = algorithm["auxiliary_variables_dimension"];
-  unsigned int total_dimension = inputs_dimension + auxiliary_variables_dimension;
+  //unsigned int auxiliary_variables_dimension = algorithm["auxiliary_variables_dimension"];
+  unsigned int total_dimension = inputs_dimension;// + auxiliary_variables_dimension;
   unsigned int number_of_batches_minus_one = floor(double(number_of_points*total_dimension-1)/max_vector_size);
 
   // Simulate batch of parameters and associated aux variables.

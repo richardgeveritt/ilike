@@ -5,16 +5,13 @@
 \title{Importance sampler using cpp functions.}
 \usage{
 importance_sample_cpp(
-  number_of_points,
   model,
-  algorithm = list(),
+  algorithm,
   max_vector_size = 4e+09,
   messages = FALSE
 )
 }
 \arguments{
-\item{number_of_points}{The number of importance points.}
-
 \item{model}{A model.}
 
 \item{algorithm}{Algorithm details.}

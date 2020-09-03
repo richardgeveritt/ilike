@@ -17,7 +17,7 @@ private:
 
   SimulateModelPtr simulator;
 
-  unsigned int number_of_simulations;
+  unsigned int number_of_likelihood_particles;
 
   ABCLikelihood abc_likelihood;
 
@@ -25,11 +25,11 @@ public:
 
   ABCLikelihoodEstimator(const NumericVector &data_in,
                          const SimulateModelPtr &simulator_in,
-                         const double &number_of_simulations_in,
+                         const double &number_of_likelihood_particles_in,
                          const EvaluateLogABCKernelPtr &evaluate_log_abc_kernel_in,
-                         const SummaryStatisticPtr &summary_statistic_in,
-                         const NumericVector &abc_tolerances_in,
-                         const NumericVector &summary_statistic_scaling_in);
+                         const SummaryStatisticsPtr &summary_statistics_in,
+                         const double &abc_tolerance_in,
+                         const NumericVector &summary_statistics_scaling_in);
 
   virtual ~ABCLikelihoodEstimator();
 
