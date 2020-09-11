@@ -10,7 +10,7 @@ ABCLikelihood::ABCLikelihood(const EvaluateLogABCKernelPtr &evaluate_log_abc_ker
                              const SummaryStatisticsPtr &summary_statistics_in,
                              const double &abc_tolerance_in,
                              const NumericVector &summary_statistics_scaling_in,
-                             const NumericVector &data_in)
+                             const NumericMatrix &data_in)
 {
   this->evaluate_log_abc_kernel = evaluate_log_abc_kernel_in;
   this->summary_statistics = summary_statistics_in;
@@ -46,11 +46,29 @@ void ABCLikelihood::MakeCopy(const ABCLikelihood &another)
   this->summary_data = another.summary_data;
 }
 
-double ABCLikelihood::evaluate(const NumericVector &simulated_data) const
+double ABCLikelihood::evaluate(const NumericMatrix &simulated) const
 {
-  return this->evaluate_log_abc_kernel(this->summary_statistics_scaling * this->summary_statistics(simulated_data),
+  return this->evaluate_log_abc_kernel(this->summary_statistics_scaling * this->summary_statistics(simulated),
                                        this->summary_statistics_scaling * this->summary_data,
                                        this->abc_tolerance);
+}
+
+NumericVector ABCLikelihood::evaluate_multiple(const std::vector<NumericMatrix> &simulations) const
+{
+  unsigned int n = simulations.size();
+  NumericVector log_likelihoods(n);
+  unsigned int counter = 0;
+  for (std::vector<NumericMatrix>::const_iterator i=simulations.begin(); i!=simulations.end(); ++i)
+  {
+    log_likelihoods[counter] = this->evaluate(*i);
+    counter = counter + 1;
+  }
+  return log_likelihoods;
+}
+
+NumericVector ABCLikelihood::summary_from_data(const NumericMatrix &simulation) const
+{
+  return(this->summary_statistics(simulation));
 }
 
 NumericVector ABCLikelihood::get_summary_data() const
@@ -61,6 +79,11 @@ NumericVector ABCLikelihood::get_summary_data() const
 SummaryStatisticsPtr ABCLikelihood::get_summary_statistics() const
 {
   return this->summary_statistics;
+}
+
+double ABCLikelihood::get_abc_tolerance() const
+{
+  return this->abc_tolerance;
 }
 
 void ABCLikelihood::set_abc_tolerance(const double &abc_tolerance_in)

@@ -18,10 +18,12 @@ log_sum_exp <- function(x){
   }
 }
 
+
 stratified_resample_u<-function(log_weights,u)
 {
-  P = length(log_weights)
-  W = exp(log_weights)
+  norm_log_weights = log_weights - log_sum_exp(log_weights)
+  P = length(norm_log_weights)
+  W = exp(norm_log_weights)
   cw = cumsum(W / sum(W))
   n = length(W)
   u = u/n
@@ -38,5 +40,46 @@ stratified_resample_u<-function(log_weights,u)
     indices[i] = j
   }
 
-  indices
+  return(indices)
+}
+
+
+stratified_resample<-function(log_weights)
+{
+  n = length(log_weights)
+  u = runif(n,0,1)/n
+  return(stratified_resample_u(log_weights,u))
+}
+
+
+# can take unnormalised weights
+ess <- function(log_weights)
+{
+  the_ess = exp(2*logsumexp(log_weights) - logsumexp(2*log_weights))
+
+  if (is.nan(the_ess))
+  {
+    return(0)
+  }
+  else
+  {
+    return(the_ess)
+  }
+}
+
+
+cess <- function(normalised_log_weights, log_incremental_weights)
+{
+  if (all(log_incremental_weights==-Inf))
+  {
+    return(0)
+  }
+  else if (all(log_incremental_weights==Inf))
+  {
+    return(length(log_incremental_weights))
+  }
+  else
+  {
+    return(exp(log(length(log_incremental_weights)) + 2*(log_sum_exp(normalised_log_weights + log_incremental_weights)) - log_sum_exp(normalised_log_weights + 2*log_incremental_weights)))
+  }
 }

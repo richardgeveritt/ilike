@@ -1,6 +1,6 @@
 #include "exact_likelihood_estimator.h"
 
-ExactLikelihoodEstimator::ExactLikelihoodEstimator(const NumericVector &data_in,
+ExactLikelihoodEstimator::ExactLikelihoodEstimator(const NumericMatrix &data_in,
                                                    const EvaluateLogLikelihoodPtr &func_in)
 :LikelihoodEstimator(data_in)
 {
@@ -23,8 +23,8 @@ List ExactLikelihoodEstimator::simulate_auxiliary_variables(const NumericVector 
   return(0);
 }
 
-void ExactLikelihoodEstimator::setup_likelihood_estimator(const NumericMatrix &all_points,
-                                                          const std::vector<List> &all_auxiliary_variables)
+void ExactLikelihoodEstimator::is_setup_likelihood_estimator(const NumericMatrix &all_points,
+                                                             const std::vector<List> &all_auxiliary_variables)
 {
 
 }

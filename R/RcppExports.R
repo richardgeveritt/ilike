@@ -41,12 +41,12 @@ do_importance_sampler_cpp <- function(model, algorithm, max_vector_size) {
     .Call(`_ilike_do_importance_sampler_cpp`, model, algorithm, max_vector_size)
 }
 
-store_get_first_element_of_list_as_numeric_vector <- function() {
-    .Call(`_ilike_store_get_first_element_of_list_as_numeric_vector`)
+store_get_first_element_of_list_as_numeric_matrix <- function() {
+    .Call(`_ilike_store_get_first_element_of_list_as_numeric_matrix`)
 }
 
-store_identity_statistic <- function() {
-    .Call(`_ilike_store_identity_statistic`)
+store_make_vector_statistic <- function() {
+    .Call(`_ilike_store_make_vector_statistic`)
 }
 
 store_L1_uniform_evaluate_log_abc_kernel <- function() {

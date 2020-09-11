@@ -83,7 +83,7 @@ double evaluate_log_distribution_cpp(const SEXP &evaluate_log_distribution_SEXP,
 // [[Rcpp::export]]
 double evaluate_log_likelihood_cpp(const SEXP &evaluate_log_likelihood_SEXP,
                                    const NumericVector &parameter,
-                                   const NumericVector &data)
+                                   const NumericMatrix &data)
 {
   EvaluateLogLikelihoodPtr evaluate_log_likelihood = load_evaluate_log_likelihood(evaluate_log_likelihood_SEXP);
   return evaluate_log_likelihood(parameter, data);
@@ -92,7 +92,7 @@ double evaluate_log_likelihood_cpp(const SEXP &evaluate_log_likelihood_SEXP,
 // [[Rcpp::export]]
 double estimate_log_likelihood_cpp(const SEXP &estimate_log_likelihood_SEXP,
                                    const NumericVector &parameter,
-                                   const NumericVector &data,
+                                   const NumericMatrix &data,
                                    const List &auxiliary_variables)
 {
   EstimateLogLikelihoodPtr estimate_log_likelihood = load_estimate_log_likelihood(estimate_log_likelihood_SEXP);
@@ -102,7 +102,7 @@ double estimate_log_likelihood_cpp(const SEXP &estimate_log_likelihood_SEXP,
 // [[Rcpp::export]]
 List simulate_model_cpp(const SEXP &simulate_model_SEXP,
                         const NumericVector &parameter,
-                        const NumericVector &data)
+                        const NumericMatrix &data)
 {
   SimulateModelPtr simulate_model = load_simulate_model(simulate_model_SEXP);
   return simulate_model(parameter, data);
@@ -111,7 +111,7 @@ List simulate_model_cpp(const SEXP &simulate_model_SEXP,
 // [[Rcpp::export]]
 List simulate_auxiliary_variables_cpp(const SEXP &simulate_auxiliary_variables_SEXP,
                                       const NumericVector &parameter,
-                                      const NumericVector &data)
+                                      const NumericMatrix &data)
 {
   SimulateModelPtr simulate_auxiliary_variables = load_simulate_auxiliary_variables(simulate_auxiliary_variables_SEXP);
   return simulate_auxiliary_variables(parameter,data);
@@ -120,7 +120,7 @@ List simulate_auxiliary_variables_cpp(const SEXP &simulate_auxiliary_variables_S
 // [[Rcpp::export]]
 double evaluate_log_abc_kernel_cpp(const SEXP &evaluate_log_abc_kernel_SEXP,
                                    const NumericVector &simulated_data,
-                                   const NumericVector &data,
+                                   const NumericMatrix &data,
                                    const double &abc_tolerance)
 {
   EvaluateLogABCKernelPtr evaluate_log_abc_kernel = load_evaluate_log_abc_kernel(evaluate_log_abc_kernel_SEXP);
@@ -129,14 +129,14 @@ double evaluate_log_abc_kernel_cpp(const SEXP &evaluate_log_abc_kernel_SEXP,
 
 // [[Rcpp::export]]
 NumericVector summary_statistics_cpp(const SEXP &summary_statistics_SEXP,
-                             const NumericVector &data)
+                             const NumericMatrix &data)
 {
   SummaryStatisticsPtr summary_statistics = load_summary_statistics(summary_statistics_SEXP);
   return summary_statistics(data);
 }
 
 // [[Rcpp::export]]
-NumericVector get_data_from_simulation_cpp(const SEXP &get_data_from_simulation_SEXP,
+NumericMatrix get_data_from_simulation_cpp(const SEXP &get_data_from_simulation_SEXP,
                                      const List &simulation)
 {
   GetDataFromSimulationPtr get_data_from_simulation = load_get_data_from_simulation(get_data_from_simulation_SEXP);

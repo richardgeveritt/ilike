@@ -180,6 +180,7 @@ check_inputs = function(model,
 
 check_likelihood_method = function(model, algorithm, is_cpp, messages)
 {
+
   # Check which methods for evaluating the likelihood are available given the specification.
   # Method 1: analytic likelihood.
   # Method 2: standard ABC
@@ -243,10 +244,11 @@ check_likelihood_method = function(model, algorithm, is_cpp, messages)
     # - simulate_model                                       #
     # - number_of_likelihood_particles                       #
     # - get_data_from_simulation                             #
-    # - summary_statistic                                    #
-    # - summary_statistic_scaling                            #
+    # - summary_statistics                                  #
+    # - summary_statistics_scaling                           #
+    # - adapt_summary_statistics_scaling                     #
     # - evaluate_log_abc_kernel                              #
-    # - abc_tolerance or abc_desired_cess                   #
+    # - abc_tolerance or abc_desired_cess                    #
     ##########################################################
 
     if (algorithm$likelihood_method=="abc")
@@ -265,22 +267,32 @@ check_likelihood_method = function(model, algorithm, is_cpp, messages)
         {
           if (messages == TRUE)
             print("algorithm$number_of_likelihood_particles is not set for ABC. Setting it to 1.")
-          algorithm$number_of_likelihood_particles = 1
+          algorithm$number_of_likelihood_particles = 2
         }
 
 
         # Check method for extracting data from simulation.
         if (is.null(algorithm$get_data_from_simulation))
         {
-          if (messages == TRUE)
-            print("algorithm$get_data_from_simulation is not set for ABC. Setting it to get the first element of the simulated list.")
           if (is_cpp)
           {
-            algorithm$get_data_from_simulation = store_get_first_element_of_list_as_numeric_vector()
+            if (messages == TRUE)
+              print("algorithm$get_data_from_simulation is not set for ABC. Setting it to get the first element of the simulated list.")
+            algorithm$get_data_from_simulation = store_get_first_element_of_list_as_numeric_matrix()
           }
           else
           {
-            algorithm$get_data_from_simulation = function(s){return(s[[1]])}
+            if (is.list(simulated))
+            {
+              if (messages == TRUE)
+                print("algorithm$get_data_from_simulation is not set for ABC. Setting it to get the first element of the simulated list.")
+              algorithm$get_data_from_simulation = function(s){return(s[[1]])}
+            }
+            else
+            {
+              algorithm$get_data_from_simulation = function(s){return(s)}
+            }
+
           }
         }
         tryCatch(
@@ -310,15 +322,25 @@ check_likelihood_method = function(model, algorithm, is_cpp, messages)
           error = function(e) {stop("algorithm$summary_statistics generates an error when used on observed data.")})
 
 
-        # Check summary_statistic_scaling.
-        if (is.null(algorithm$summary_statistic_scaling))
+        # Check summary_statistics_scaling.
+        if (is.null(algorithm$summary_statistics_scaling))
         {
           if (messages == TRUE)
-            print("algorithm$statistic_scaling is not set for ABC. Setting it to ones.")
-          algorithm$statistic_scaling = matrix(1,length(summary_simulated))
+            print("algorithm$summary_statistics_scaling is not set for ABC. Setting it to ones.")
+          algorithm$summary_statistics_scaling = matrix(1,length(summary_simulated))
         }
-        if (length(algorithm$summary_statistic_scaling)!=length(summary_simulated))
-          stop("algorithm$summary_statistic_scaling is not the same length as the summary statistic vector.")
+        if (length(algorithm$summary_statistics_scaling)!=length(summary_simulated))
+          stop("algorithm$summary_statistics_scaling is not the same length as the summary statistic vector.")
+
+
+        # Check adapt_summary_statistics_scaling.
+        if (is.null(algorithm$adapt_summary_statistics_scaling))
+        {
+          if (messages == TRUE)
+            print("algorithm$adapt_summary_statistics_scaling is not set for ABC. Setting it to be TRUE.")
+          algorithm$adapt_summary_statistics_scaling = TRUE
+        }
+
 
         # Check evaluate_log_abc_kernel.
         if (is.null(algorithm$evaluate_log_abc_kernel))
@@ -338,7 +360,7 @@ check_likelihood_method = function(model, algorithm, is_cpp, messages)
             }
             else
             {
-              algorithm$evaluate_log_abc_kernel = function(simulated_summary_stats,s_o,tol){return(Lp_uniform_evaluate_log_abc_kernel(simulated_summary_stats,observed_summary_stats,abc_tolerance,1))}
+              algorithm$evaluate_log_abc_kernel = function(s_s,s_o,tol){return(Lp_uniform_evaluate_log_abc_kernel(s_s,s_o,tol,1))}
             }
           }
           else if (algorithm$abc_kernel_method=="L2_uniform")
@@ -349,7 +371,7 @@ check_likelihood_method = function(model, algorithm, is_cpp, messages)
             }
             else
             {
-              algorithm$evaluate_log_abc_kernel = function(simulated_summary_stats,s_o,tol){return(Lp_uniform_evaluate_log_abc_kernel(simulated_summary_stats,observed_summary_stats,abc_tolerance,2))}
+              algorithm$evaluate_log_abc_kernel = function(s_s,s_o,tol){return(Lp_uniform_evaluate_log_abc_kernel(s_s,s_o,tol,2))}
             }
           }
           else if (algorithm$abc_kernel_method=="Linf_uniform")
@@ -360,7 +382,7 @@ check_likelihood_method = function(model, algorithm, is_cpp, messages)
             }
             else
             {
-              algorithm$evaluate_log_abc_kernel = function(simulated_summary_stats,s_o,tol){return(Linf_uniform_evaluate_log_abc_kernel(simulated_summary_stats,observed_summary_stats,abc_tolerance))}
+              algorithm$evaluate_log_abc_kernel = function(s_s,s_o,tol){return(Linf_uniform_evaluate_log_abc_kernel(s_s,s_o,tol))}
             }
           }
           else if (algorithm$abc_kernel_method=="gaussian")
@@ -371,7 +393,7 @@ check_likelihood_method = function(model, algorithm, is_cpp, messages)
             }
             else
             {
-              algorithm$evaluate_log_abc_kernel = function(simulated_summary_stats,s_o,tol){return(gaussian_evaluate_log_abc_kernel(simulated_summary_stats,observed_summary_stats,abc_tolerance))}
+              algorithm$evaluate_log_abc_kernel = function(s_s,s_o,tol){return(gaussian_evaluate_log_abc_kernel(s_s,s_o,tol))}
             }
           }
           else
@@ -386,7 +408,7 @@ check_likelihood_method = function(model, algorithm, is_cpp, messages)
             print("algorithm$evaluate_log_abc_kernel is set, so ignoring algorithm$abc_kernel_method.")
 
           tryCatch(
-            if (is_cpp) {evaluate_log_abc_kernel_cpp(algorithm$evaluate_log_abc_kernel, algorithm$summary_statistic_scaling*summary_simulated, algorithm$summary_statistic_scaling*summary_simulated, 1)} else {algorithm$evaluate_log_abc_kernel(algorithm$summary_statistic_scaling*summary_simulated, algorithm$summary_statistic_scaling*summary_observed, 1)},
+            if (is_cpp) {evaluate_log_abc_kernel_cpp(algorithm$evaluate_log_abc_kernel, algorithm$summary_statistics_scaling*summary_simulated, algorithm$summary_statistics_scaling*summary_simulated, 1)} else {algorithm$evaluate_log_abc_kernel(algorithm$summary_statistics_scaling*summary_simulated, algorithm$summary_statistics_scaling*summary_observed, 1)},
             error = function(e) {stop("algorithm$evaluate_log_abc_kernel generates an error when used on simulated data and model$data.")})
         }
 
@@ -394,8 +416,19 @@ check_likelihood_method = function(model, algorithm, is_cpp, messages)
         # Check abc_tolerance - need either this or a percentage of effectively independent simulations to keep.
         # Need also to add this into setup llhd.
         # If not set, set to keep 100 effective points.
+        # There are three options:
+        # 1. Set a fixed ABC tolerance.
+        # 2. Set a desired CESS.
+        # 3. Estimate it from the data.
+        # Only one of these should be set. Throw an error if more than one of them is.
+        # If it is estimated:
+        # - the other options are not possible
+        # - we need to have some inputs index set. If no inputs are set, it should be tagged onto the end, and some default prior set
         if (is.null(algorithm$abc_tolerance))
         {
+          algorithm$adapt_abc_tolerance_to_cess = TRUE
+          #algorithm$abc_tolerance = -1
+
           if (is.null(algorithm$abc_desired_cess))
           {
             if (messages == TRUE)
@@ -425,6 +458,8 @@ check_likelihood_method = function(model, algorithm, is_cpp, messages)
         }
         else
         {
+          algorithm$adapt_abc_tolerance_to_cess = FALSE
+
           if (is.null(algorithm$abc_desired_cess))
           {
             if (messages == TRUE)
@@ -470,15 +505,42 @@ check_likelihood_method = function(model, algorithm, is_cpp, messages)
   #
   # algorithm$likelihood_estimator = likelihood_estimator
 
-  return(algorithm)
+  return(list(model=model, algorithm=algorithm))
 }
 
 
-check_IS = function(model,
+check_is = function(model,
                     algorithm,
                     is_cpp = FALSE,
                     messages = FALSE)
 {
+
+  # Check data is specified.
+  if ( (is.null(algorithm$future_type)) && (is.null(algorithm$internal_future_type)) )
+  {
+    if (messages == TRUE)
+      print("algorithm$future_type is not set. Setting it to sequential.")
+    future::plan(list("sequential"))
+    likelihood_use_future <<- FALSE
+  }
+  else if ( (is.null(algorithm$future_type)) && (!is.null(algorithm$internal_future_type)) )
+  {
+    tryCatch(future::plan(list("sequential", algorithm$internal_future_type)),
+             error = function(e) {stop("algorithm$internal_future_type is defined but of an invalid type.")})
+    likelihood_use_future <<- TRUE
+  }
+  else if ( (!is.null(algorithm$future_type)) && (is.null(algorithm$internal_future_type)) )
+  {
+    tryCatch(future::plan(list(algorithm$future_type)),
+             error = function(e) {stop("algorithm$future_type is defined but of an invalid type.")})
+    likelihood_use_future <<- FALSE
+  }
+  else if ( (!is.null(algorithm$future_type)) && (!is.null(algorithm$internal_future_type)) )
+  {
+    tryCatch(future::plan(list(algorithm$future_type, algorithm$internal_future_type)),
+             error = function(e) {stop("algorithm$future_type and algorithm$internal_future_type is defined but at least one of them is an invalid type.")})
+    likelihood_use_future <<- TRUE
+  }
 
   # Check data is specified.
   if (is.null(algorithm$number_of_points))
@@ -507,15 +569,21 @@ check_IS = function(model,
   {
     stop("model$data not specified.")
   }
+  else
+  {
+    model$data = as.matrix(model$data)
+  }
 
   # Check that the method for evaluating the likelihood makes sense, and that it takes something of the right dimension.
-  algorithm = check_likelihood_method(model, algorithm, is_cpp, messages)
+  output = check_likelihood_method(model, algorithm, is_cpp, messages)
+  model = output$model
+  algorithm = output$algorithm
 
   # Things to do:
   # Need to check that algorithm$simulate_proposal(2) gives something of the right dimension.
   # Need to check that all of the algorithm$ parts exist.
 
-  list(model=model,algorithm=algorithm)
+  list(model=model, algorithm=algorithm)
 
 }
 
@@ -551,7 +619,7 @@ importance_sample = function(model,
   # - get dimensions of aux variables
   # - make sure indexing of inputs/parameters is stored if necessary
   # - make sure prior is in standard format and store it
-  output = check_IS(model,algorithm)
+  output = check_is(model,algorithm)
   model = output$model
   algorithm = output$algorithm
 
@@ -583,9 +651,10 @@ importance_sample = function(model,
                                                                future.seed = TRUE)
 
     # Now configure the likelihood estimator using all of the simulations, if needed.
-    likelihood_estimator$estimate_log_likelihood = tryCatch(likelihood_estimator$setup_likelihood_estimator(proposed_points,proposed_auxiliary_variables),error = function(e) {stop("likelihood_estimator$setup_likelihood_estimator throws an error when used on the proposed points.")})
+    likelihood_estimator$estimate_log_likelihood = likelihood_estimator$setup_likelihood_estimator(proposed_points,proposed_auxiliary_variables)#tryCatch(likelihood_estimator$setup_likelihood_estimator(proposed_points,proposed_auxiliary_variables),error = function(e) {stop("likelihood_estimator$setup_likelihood_estimator throws an error when used on the proposed points.")})
 
-    log_likelihoods = unlist(future.apply::future_lapply(proposed_inputs,function(i){ likelihood_estimator$estimate_log_likelihood(i, proposed_auxiliary_variables[[i]]) }))
+    log_likelihoods = unlist(future.apply::future_lapply(1:length(proposed_inputs),function(i){ likelihood_estimator$estimate_log_likelihood(proposed_inputs[[i]], proposed_auxiliary_variables[[i]]) }))
+
     # Calculate weights.
     if (algorithm$prior_is_proposal==TRUE)
     {
@@ -637,7 +706,7 @@ importance_sample_cpp = function(model,
   # - get dimensions of aux variables
   # - make sure indexing of inputs/parameters is stored if necessary
   # - make sure prior is in standard format and store it
-  output = check_IS(model, algorithm, is_cpp = TRUE, messages = messages)
+  output = check_is(model, algorithm, is_cpp = TRUE, messages = messages)
   model = output$model
   algorithm = output$algorithm
 

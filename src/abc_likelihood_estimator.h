@@ -21,15 +21,42 @@ private:
 
   ABCLikelihood abc_likelihood;
 
+  GetDataFromSimulationPtr get_data_from_simulation;
+
+  double abc_desired_cess;
+
+  bool adapt_abc_tolerance_to_cess;
+
+  bool adapt_summary_statistics_scaling;
+
+  double cess_score(const double &current_epsilon,
+                    const NumericMatrix &all_points,
+                    const std::vector<List> &all_auxiliary_variables,
+                    const NumericVector &current_log_weights);
+
+  double epsilon_bisection(const double &current_epsilon,
+                           const NumericMatrix &all_points,
+                           const std::vector<List> &all_auxiliary_variables,
+                           const NumericVector &current_log_weights);
+
+  double epsilon_doubling(const double &current_epsilon,
+                          const NumericMatrix &all_points,
+                          const std::vector<List> &all_auxiliary_variables,
+                          const NumericVector &current_log_weights);
+
 public:
 
-  ABCLikelihoodEstimator(const NumericVector &data_in,
+  ABCLikelihoodEstimator(const NumericMatrix &data_in,
                          const SimulateModelPtr &simulator_in,
                          const double &number_of_likelihood_particles_in,
+                         const GetDataFromSimulationPtr &get_data_from_simulation_in,
                          const EvaluateLogABCKernelPtr &evaluate_log_abc_kernel_in,
                          const SummaryStatisticsPtr &summary_statistics_in,
                          const double &abc_tolerance_in,
-                         const NumericVector &summary_statistics_scaling_in);
+                         const double &abc_desired_cess_in,
+                         const NumericVector &summary_statistics_scaling_in,
+                         const bool &adapt_abc_tolerance_to_cess_in,
+                         const bool &adapt_summary_statistics_scaling_in);
 
   virtual ~ABCLikelihoodEstimator();
 
@@ -38,8 +65,8 @@ public:
 
   List simulate_auxiliary_variables(const NumericVector &inputs) const;
 
-  void setup_likelihood_estimator(const NumericMatrix &all_points,
-                                  const std::vector<List> &all_auxiliary_variables);
+  void is_setup_likelihood_estimator(const NumericMatrix &all_points,
+                                     const std::vector<List> &all_auxiliary_variables);
 };
 
 #endif

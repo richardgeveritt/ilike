@@ -13,23 +13,23 @@ typedef double (*EvaluateLogDistributionPtr)(const NumericVector &inputs);
 
 typedef NumericVector (*SimulateDistributionPtr)(void);
 
-typedef double (*EvaluateLogLikelihoodPtr)(const NumericVector &inputs, const NumericVector &data);
+typedef double (*EvaluateLogLikelihoodPtr)(const NumericVector &inputs, const NumericMatrix &data);
 
-typedef double (*EstimateLogLikelihoodPtr)(const NumericVector &inputs, const NumericVector &data, const List &auxiliary_variables);
+typedef double (*EstimateLogLikelihoodPtr)(const NumericVector &inputs, const NumericMatrix &data, const List &auxiliary_variables);
 
-typedef List (*SimulateModelPtr)(const NumericVector &inputs, const NumericVector &data);
+typedef List (*SimulateModelPtr)(const NumericVector &inputs, const NumericMatrix &data);
 
-typedef List (*SimulateAuxiliaryVariablesPtr)(const NumericVector &inputs, const NumericVector &data);
+typedef List (*SimulateAuxiliaryVariablesPtr)(const NumericVector &inputs, const NumericMatrix &data);
 
 typedef XPtr<EstimateLogLikelihoodPtr> (*SetupLikelihoodEstimatorPtr)(const NumericMatrix &inputs, const List &auxiliary_variables);
 
-typedef double (*EvaluateLogABCKernelPtr)(const NumericVector &simulated_data,
-                const NumericVector &data,
+typedef double (*EvaluateLogABCKernelPtr)(const NumericVector &simulated_stats,
+                const NumericVector &observed_stats,
                 const double &abc_tolerance);
 
-typedef NumericVector (*SummaryStatisticsPtr)(const NumericVector &data);
+typedef NumericVector (*SummaryStatisticsPtr)(const NumericMatrix &data);
 
-typedef NumericVector (*GetDataFromSimulationPtr)(const List &simulation);
+typedef NumericMatrix (*GetDataFromSimulationPtr)(const List &simulation);
 
 
 EvaluateLogDistributionPtr load_evaluate_log_distribution(const SEXP &evaluate_log_distribution_SEXP);
@@ -60,30 +60,30 @@ double evaluate_log_distribution_cpp(const SEXP &evaluate_log_distribution_SEXP,
 
 double evaluate_log_likelihood_cpp(const SEXP &evaluate_log_likelihood_SEXP,
                                    const NumericVector &parameter,
-                                   const NumericVector &data);
+                                   const NumericMatrix &data);
 
 double estimate_log_likelihood_cpp(const SEXP &estimate_log_likelihood_SEXP,
                                    const NumericVector &parameter,
-                                   const NumericVector &data,
+                                   const NumericMatrix &data,
                                    const List &auxiliary_variables);
 
 List simulate_model_cpp(const SEXP &simulate_model_SEXP,
                         const NumericVector &parameter,
-                        const NumericVector &data);
+                        const NumericMatrix &data);
 
 List simulate_auxiliary_variables_cpp(const SEXP &simulate_auxiliary_variables_SEXP,
                                       const NumericVector &parameter,
-                                      const NumericVector &data);
+                                      const NumericMatrix &data);
 
 double evaluate_log_abc_kernel_cpp(const SEXP &evaluate_log_abc_kernel_SEXP,
                                    const NumericVector &simulated_data,
-                                   const NumericVector &data,
+                                   const NumericMatrix &data,
                                    const double &abc_tolerance);
 
 NumericVector summary_statistics_cpp(const SEXP &summary_statistics_SEXP,
-                             const NumericVector &data);
+                             const NumericMatrix &data);
 
-NumericVector get_data_from_simulation_cpp(const SEXP &get_data_from_simulation_SEXP,
+NumericMatrix get_data_from_simulation_cpp(const SEXP &get_data_from_simulation_SEXP,
                                      const List &simulation);
 
 #endif

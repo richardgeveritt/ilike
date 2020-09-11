@@ -33,11 +33,14 @@ using namespace Rcpp;
 
 double log_sum_exp(const NumericVector &log_weights);
 
-NumericVector get_first_element_of_list_as_numeric_vector(const List &a_list);
-SEXP store_get_first_element_of_list_as_numeric_vector();
+double cess(const NumericVector &log_weights,
+            const NumericVector &log_incremental_weights);
 
-NumericVector identity_statistic(const NumericVector &simulated);
-SEXP store_identity_statistic();
+NumericMatrix get_first_element_of_list_as_numeric_matrix(const List &a_list);
+SEXP store_get_first_element_of_list_as_numeric_matrix();
+
+NumericVector make_vector_statistic(const NumericMatrix &simulated);
+SEXP store_make_vector_statistic();
 
 double Lp_uniform_evaluate_log_abc_kernel(const NumericVector &simulated_summary_stats,
                                           const NumericVector &observed_summary_stats,

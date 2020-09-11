@@ -11,11 +11,11 @@ class LikelihoodEstimator
 
 protected:
 
-  NumericVector data;
+  NumericMatrix data;
 
 public:
 
-  LikelihoodEstimator(const NumericVector &data_in);
+  LikelihoodEstimator(const NumericMatrix &data_in);
 
   virtual ~LikelihoodEstimator();
 
@@ -24,8 +24,8 @@ public:
 
   virtual List simulate_auxiliary_variables(const NumericVector &inputs) const=0;
 
-  virtual void setup_likelihood_estimator(const NumericMatrix &all_points,
-                                          const std::vector<List> &all_auxiliary_variables)=0;
+  virtual void is_setup_likelihood_estimator(const NumericMatrix &all_points,
+                                             const std::vector<List> &all_auxiliary_variables)=0;
 };
 
 #endif

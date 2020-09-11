@@ -20,7 +20,7 @@ List do_importance_sampler_cpp(const List &model,
   // We will store the points and the auxiliary variables in files to avoid memory problems.
   NumericVector inputs = model["inputs"];
   IntegerVector parameter_index = model["parameter_index"];
-  NumericVector data = model["data"];
+  NumericMatrix data = model["data"];
   unsigned int inputs_dimension = inputs.length();
   //unsigned int auxiliary_variables_dimension = algorithm["auxiliary_variables_dimension"];
   unsigned int total_dimension = inputs_dimension;// + auxiliary_variables_dimension;
@@ -57,8 +57,8 @@ List do_importance_sampler_cpp(const List &model,
       proposed_auxiliary_variables.push_back(likelihood_estimator->simulate_auxiliary_variables(proposed_inputs));
     }
 
-    likelihood_estimator->setup_likelihood_estimator(proposed_points,
-                                                     proposed_auxiliary_variables);
+    likelihood_estimator->is_setup_likelihood_estimator(proposed_points,
+                                                        proposed_auxiliary_variables);
 
     NumericVector log_weights(number_of_points);
     bool prior_is_proposal = algorithm["prior_is_proposal"];

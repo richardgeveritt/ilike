@@ -37,7 +37,7 @@ public:
                 const SummaryStatisticsPtr &summary_statistics_in,
                 const double &abc_tolerance_in,
                 const NumericVector &summary_statistics_scaling_in,
-                const NumericVector &data_in);
+                const NumericMatrix &data_in);
 
   ABCLikelihood(const ABCLikelihood &another);
 
@@ -45,11 +45,17 @@ public:
 
   void operator=(const ABCLikelihood &another);
 
-  double evaluate(const NumericVector &simulated_data) const;
+  double evaluate(const NumericMatrix &simulated_data) const;
+
+  NumericVector evaluate_multiple(const std::vector<NumericMatrix> &auxiliary_variables) const;
+
+  NumericVector summary_from_data(const NumericMatrix &simulation) const;
 
   NumericVector get_summary_data() const;
 
   SummaryStatisticsPtr get_summary_statistics() const;
+
+  double get_abc_tolerance() const;
 
   void set_abc_tolerance(const double &abc_tolerance_in);
 

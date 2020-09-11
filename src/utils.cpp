@@ -52,26 +52,53 @@ double log_sum_exp(const NumericVector &log_weights)
   }
 }
 
-NumericVector get_first_element_of_list_as_numeric_vector(const List &a_list)
+double cess(const NumericVector &normalised_log_weights,
+            const NumericVector &log_incremental_weights)
+{
+  if ( sum(log_incremental_weights==R_NegInf)==normalised_log_weights.length() )
+  {
+    return(0);
+  }
+  else if ( sum(log_incremental_weights==R_PosInf)==normalised_log_weights.length() )
+  {
+    return(log_incremental_weights.length());
+  }
+  else
+  {
+    return(exp(log(log_incremental_weights.length()) + 2.0*(log_sum_exp(normalised_log_weights + log_incremental_weights)) - log_sum_exp(normalised_log_weights + 2.0*log_incremental_weights)));
+  }
+}
+
+NumericMatrix get_first_element_of_list_as_numeric_matrix(const List &a_list)
 {
   return a_list[0];
 }
 
 // [[Rcpp::export]]
-SEXP store_get_first_element_of_list_as_numeric_vector()
+SEXP store_get_first_element_of_list_as_numeric_matrix()
 {
-  return(XPtr<GetDataFromSimulationPtr>(new GetDataFromSimulationPtr(&get_first_element_of_list_as_numeric_vector)));
+  return(XPtr<GetDataFromSimulationPtr>(new GetDataFromSimulationPtr(&get_first_element_of_list_as_numeric_matrix)));
 }
 
-NumericVector identity_statistic(const NumericVector &data)
+NumericVector make_vector_statistic(const NumericMatrix &data)
 {
-  return data;
+  NumericVector output(data.length());
+  unsigned int counter = 0;
+  for (unsigned int j=0; j<data.ncol(); ++j)
+  {
+    for (unsigned int i=0; i<data.nrow(); ++i)
+    {
+      output[counter] = data(i,j);
+      counter = counter + 1;
+    }
+  }
+  return output;
 }
 
 // [[Rcpp::export]]
-SEXP store_identity_statistic()
+SEXP store_make_vector_statistic()
 {
-  return(XPtr<SummaryStatisticsPtr>(new SummaryStatisticsPtr(&identity_statistic)));
+  return(XPtr<SummaryStatisticsPtr>(new SummaryStatisticsPtr(&make_vector_statistic)));
 }
 
 double Lp_uniform_evaluate_log_abc_kernel(const NumericVector &simulated_summary_stats,
