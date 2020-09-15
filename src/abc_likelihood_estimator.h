@@ -39,8 +39,7 @@ private:
                            const std::vector<List> &all_auxiliary_variables,
                            const NumericVector &current_log_weights);
 
-  double epsilon_doubling(const double &current_epsilon,
-                          const NumericMatrix &all_points,
+  double epsilon_doubling(const NumericMatrix &all_points,
                           const std::vector<List> &all_auxiliary_variables,
                           const NumericVector &current_log_weights);
 

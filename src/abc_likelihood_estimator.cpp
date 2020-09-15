@@ -14,6 +14,7 @@ ABCLikelihoodEstimator::ABCLikelihoodEstimator(const NumericMatrix &data_in,
                                                const bool &adapt_summary_statistics_scaling_in)
 :LikelihoodEstimator(data_in)
 {
+  this->get_data_from_simulation = get_data_from_simulation_in;
   this->simulator = simulator_in;
   this->number_of_likelihood_particles = number_of_likelihood_particles_in;
   this->abc_likelihood = ABCLikelihood(evaluate_log_abc_kernel_in,
@@ -108,8 +109,7 @@ void ABCLikelihoodEstimator::is_setup_likelihood_estimator(const NumericMatrix &
       current_log_weights[i] = -log(double(n));
     }
 
-    double abc_tolerance_local = epsilon_doubling(this->abc_likelihood.get_abc_tolerance(),
-                                                  all_points,
+    double abc_tolerance_local = epsilon_doubling(all_points,
                                                   all_auxiliary_variables,
                                                   current_log_weights);
 
@@ -129,8 +129,7 @@ double ABCLikelihoodEstimator::cess_score(const double &current_epsilon,
                                           const std::vector<List> &all_auxiliary_variables,
                                           const NumericVector &current_log_weights)
 {
-  ABCLikelihood local_abc_likelihood = this->abc_likelihood;
-  local_abc_likelihood.set_abc_tolerance(current_epsilon);
+  this->abc_likelihood.set_abc_tolerance(current_epsilon);
   unsigned int n = current_log_weights.length();
   NumericVector log_likelihoods(n);
   //unsigned int sum = 0;
@@ -201,16 +200,11 @@ double ABCLikelihoodEstimator::epsilon_bisection(const double &current_epsilon,
 }
 
 
-double ABCLikelihoodEstimator::epsilon_doubling(const double &current_epsilon,
-                                                const NumericMatrix &all_points,
+double ABCLikelihoodEstimator::epsilon_doubling(const NumericMatrix &all_points,
                                                 const std::vector<List> &all_auxiliary_variables,
                                                 const NumericVector &current_log_weights)
 {
-  double current_bisect_epsilon;
-  if (current_epsilon<0)
-    current_bisect_epsilon = 1;
-  else
-    current_bisect_epsilon = current_epsilon;
+  double current_bisect_epsilon = 1;
 
   double old_score = this->cess_score(current_bisect_epsilon,
                                       all_points,
@@ -223,7 +217,7 @@ double ABCLikelihoodEstimator::epsilon_doubling(const double &current_epsilon,
   double new_bisect_epsilon;
   double the_score;
 
-  for (unsigned int i=0; i<200; ++i)
+  for (unsigned int i=0; i<100; ++i)
   {
     new_bisect_epsilon = 2.0*current_bisect_epsilon;
 

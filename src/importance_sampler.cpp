@@ -54,7 +54,7 @@ List do_importance_sampler_cpp(const List &model,
 
     for (unsigned int i=0; i<number_of_points; ++i)
     {
-      proposed_auxiliary_variables.push_back(likelihood_estimator->simulate_auxiliary_variables(proposed_inputs));
+      proposed_auxiliary_variables.push_back(likelihood_estimator->simulate_auxiliary_variables(proposed_inputs(i,_)));
     }
 
     likelihood_estimator->is_setup_likelihood_estimator(proposed_points,

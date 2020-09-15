@@ -107,7 +107,7 @@ double Lp_uniform_evaluate_log_abc_kernel(const NumericVector &simulated_summary
                                           const double &p)
 {
   unsigned int n = simulated_summary_stats.length();
-  double Lp_log_distance = (1.0/p)*log_sum_exp(log(abs(simulated_summary_stats-observed_summary_stats)));
+  double Lp_log_distance = (1.0/p)*log_sum_exp(p*log(abs(simulated_summary_stats-observed_summary_stats)));
   double Lp_ball_log_volume = n*(log(2.0) + lgamma((1.0/p)+1.0) + log(abc_tolerance)) - lgamma((n/p)+1.0);
   if (Lp_log_distance<=log(abc_tolerance))
     return(-Lp_ball_log_volume);

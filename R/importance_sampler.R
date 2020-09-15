@@ -259,7 +259,7 @@ check_likelihood_method = function(model, algorithm, is_cpp, messages)
         # Check simulate_model.
         tryCatch(
           if (is_cpp) {simulated = simulate_model_cpp(model$simulate_model, model$inputs, model$data)} else {simulated = model$simulate_model(model$inputs, model$data)},
-          error = function(e) {stop("model$simulate generates an error when used on a vector of dimension model$inputs, together with data model$data.")})
+          error = function(e) {stop("model$simulate generates an error when used on a vector of dimension model$inputs together with data model$data. Maybe the output of the simulation is not a NumericMatrix.")})
 
 
         # Check number_of_likelihood_particles.
@@ -307,11 +307,11 @@ check_likelihood_method = function(model, algorithm, is_cpp, messages)
             print("algorithm$summary_statistics is not set for ABC. Setting it to be the identity.")
           if (is_cpp)
           {
-            algorithm$summary_statistics = store_identity_statistic()
+            algorithm$summary_statistics = store_make_vector_statistic()
           }
           else
           {
-            algorithm$summary_statistics = function(d){return(d)}
+            algorithm$summary_statistics = function(d){return(matrix(d, length(d)))}
           }
         }
         tryCatch(
@@ -427,7 +427,7 @@ check_likelihood_method = function(model, algorithm, is_cpp, messages)
         if (is.null(algorithm$abc_tolerance))
         {
           algorithm$adapt_abc_tolerance_to_cess = TRUE
-          #algorithm$abc_tolerance = -1
+          algorithm$abc_tolerance = Inf
 
           if (is.null(algorithm$abc_desired_cess))
           {

@@ -63,8 +63,7 @@ multiple_evaluate_abc_likelihood = function(simulations,
                                                                                                  summary_statistics,
                                                                                                  summary_data,
                                                                                                  abc_tolerance,
-                                                                                                 summary_statistics_scaling)},
-                                                       future.seed = TRUE)))
+                                                                                                 summary_statistics_scaling)})))
   }
   else
   {
@@ -169,15 +168,14 @@ abc_is_setup_likelihood_estimator = function(all_points,
 
     all_abc_estimate_log_likelihoods_tol = function(tol)
     {
-      return(unlist(future.apply::future_lapply(1:length(all_auxiliary_variables),function(i){
+      return(unlist(lapply(1:length(all_auxiliary_variables),function(i){
         abc_estimate_log_likelihood(all_auxiliary_variables[[i]], get_data_from_simulation, evaluate_log_abc_kernel, summary_statistics, summary_data, tol, summary_statistics_scaling) })))
     }
 
     current_log_weights = matrix(-log(length(all_auxiliary_variables)), length(all_auxiliary_variables))
 
     # Use doubling to find abc_tolerance that gives ESS above desired ESS.
-    abc_tolerance = epsilon_doubling(abc_tolerance,
-                                     all_auxiliary_variables,
+    abc_tolerance = epsilon_doubling(all_auxiliary_variables,
                                      abc_desired_cess,
                                      current_log_weights,
                                      all_abc_estimate_log_likelihoods_tol)
@@ -229,7 +227,7 @@ epsilon_bisection <- function(current_epsilon,
   #                        current_log_weights,
   #                        all_abc_estimate_log_likelihoods_tol)
 
-  for (i in 1:200)
+  for (i in 1:100)
   {
     new_bisect_epsilon = current_bisect_epsilon + direction*bisect_size
 
@@ -256,14 +254,12 @@ epsilon_bisection <- function(current_epsilon,
 }
 
 
-epsilon_doubling <- function(current_epsilon,
-                             all_auxiliary_variables,
+epsilon_doubling <- function(all_auxiliary_variables,
                              abc_desired_cess,
                              current_log_weights,
                              all_abc_estimate_log_likelihoods_tol)
 {
-  if (is.null(current_epsilon))
-    current_epsilon = 1
+  current_epsilon = 1
   current_bisect_epsilon = current_epsilon
 
   old_score = cess_score(current_bisect_epsilon,
