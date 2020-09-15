@@ -42,7 +42,9 @@ double ABCLikelihoodEstimator::estimate_log_likelihood(const NumericVector &inpu
   {
     simulated_data.push_back(this->get_data_from_simulation(*i));
   }
+
   NumericVector abc_evaluations = this->abc_likelihood.evaluate_multiple(simulated_data);
+
   return log_sum_exp(abc_evaluations) - log(this->number_of_likelihood_particles);
 }
 
@@ -204,6 +206,7 @@ double ABCLikelihoodEstimator::epsilon_doubling(const NumericMatrix &all_points,
                                                 const std::vector<List> &all_auxiliary_variables,
                                                 const NumericVector &current_log_weights)
 {
+
   double current_bisect_epsilon = 1;
 
   double old_score = this->cess_score(current_bisect_epsilon,

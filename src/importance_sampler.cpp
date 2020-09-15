@@ -14,6 +14,7 @@ List do_importance_sampler_cpp(const List &model,
                                const List &algorithm,
                                const unsigned int &max_vector_size)
 {
+
   unsigned int number_of_points = algorithm["number_of_points"];
 
   // Work out the number of batches to simulate.

@@ -34,14 +34,15 @@ double log_sum_exp(const NumericVector &log_weights)
   {
     return R_NegInf;
   }
-  unsigned int xmax = which_max(log_weights);
-  IntegerVector xmaxv = IntegerVector::create(xmax);
-  unsigned int num_weights = log_weights.length();
-  IntegerVector all_but_one = setdiff(IntegerVector(seq(0,num_weights-1)),xmaxv);
+  //unsigned int xmax = which_max(log_weights);
+  //IntegerVector xmaxv = IntegerVector::create(xmax);
+  //unsigned int num_weights = log_weights.length();
+  //IntegerVector all_but_one = setdiff(IntegerVector(seq(0,num_weights-1)),xmaxv);
+  //NumericVector AllButOnelog_weights = log_weights[all_but_one];
+  //double result = log1p(sum(exp(AllButOnelog_weights-log_weights[xmax])))+log_weights[xmax];
+  double xmax = max(log_weights);
+  double result = xmax + log(sum(exp(log_weights-xmax)));
 
-  NumericVector AllButOnelog_weights = log_weights[all_but_one];
-
-  double result = log1p(sum(exp(AllButOnelog_weights-log_weights[xmax])))+log_weights[xmax];
   if (R_isnancpp(result))
   {
     return R_NegInf;
@@ -50,6 +51,23 @@ double log_sum_exp(const NumericVector &log_weights)
   {
     return result;
   }
+
+}
+
+double log_sum_exp_fast(const std::vector<double> &log_weights)
+{
+  double xmax = log_weights[0];
+  for (std::vector<double>::const_iterator i = log_weights.begin(); i!=log_weights.end(); ++i)
+  {
+    if ((*i)>xmax)
+      xmax = *i;
+  }
+  double the_sum = 0;
+  for (std::vector<double>::const_iterator i = log_weights.begin(); i!=log_weights.end(); ++i)
+  {
+    the_sum = the_sum + exp((*i)-xmax);
+  }
+  return(log(the_sum));
 }
 
 double cess(const NumericVector &normalised_log_weights,

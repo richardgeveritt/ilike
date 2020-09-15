@@ -58,11 +58,13 @@ NumericVector ABCLikelihood::evaluate_multiple(const std::vector<NumericMatrix> 
   unsigned int n = simulations.size();
   NumericVector log_likelihoods(n);
   unsigned int counter = 0;
+
   for (std::vector<NumericMatrix>::const_iterator i=simulations.begin(); i!=simulations.end(); ++i)
   {
     log_likelihoods[counter] = this->evaluate(*i);
     counter = counter + 1;
   }
+
   return log_likelihoods;
 }
 

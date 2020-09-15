@@ -33,6 +33,8 @@ using namespace Rcpp;
 
 double log_sum_exp(const NumericVector &log_weights);
 
+double log_sum_exp_fast(const std::vector<double> &log_weights);
+
 double cess(const NumericVector &log_weights,
             const NumericVector &log_incremental_weights);
 
