@@ -267,7 +267,7 @@ check_likelihood_method = function(model, algorithm, is_cpp, messages)
         {
           if (messages == TRUE)
             print("algorithm$number_of_likelihood_particles is not set for ABC. Setting it to 1.")
-          algorithm$number_of_likelihood_particles = 2
+          algorithm$number_of_likelihood_particles = 1
         }
 
 

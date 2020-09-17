@@ -1,4 +1,4 @@
-#include <Rcpp.h>
+#include <RcppArmadillo.h>
 using namespace Rcpp;
 
 #include <vector>
@@ -32,16 +32,16 @@ private:
   double cess_score(const double &current_epsilon,
                     const NumericMatrix &all_points,
                     const std::vector<List> &all_auxiliary_variables,
-                    const NumericVector &current_log_weights);
+                    const arma::colvec &current_log_weights);
 
   double epsilon_bisection(const double &current_epsilon,
                            const NumericMatrix &all_points,
                            const std::vector<List> &all_auxiliary_variables,
-                           const NumericVector &current_log_weights);
+                           const arma::colvec &current_log_weights);
 
   double epsilon_doubling(const NumericMatrix &all_points,
                           const std::vector<List> &all_auxiliary_variables,
-                          const NumericVector &current_log_weights);
+                          const arma::colvec &current_log_weights);
 
 public:
 
@@ -53,7 +53,7 @@ public:
                          const SummaryStatisticsPtr &summary_statistics_in,
                          const double &abc_tolerance_in,
                          const double &abc_desired_cess_in,
-                         const NumericVector &summary_statistics_scaling_in,
+                         const arma::colvec &summary_statistics_scaling_in,
                          const bool &adapt_abc_tolerance_to_cess_in,
                          const bool &adapt_summary_statistics_scaling_in);
 

@@ -1,6 +1,3 @@
-#include <Rcpp.h>
-using namespace Rcpp;
-
 #include "function_pointers.h"
 
 EvaluateLogDistributionPtr load_evaluate_log_distribution(const SEXP &evaluate_log_distribution_SEXP)
@@ -119,8 +116,8 @@ List simulate_auxiliary_variables_cpp(const SEXP &simulate_auxiliary_variables_S
 
 // [[Rcpp::export]]
 double evaluate_log_abc_kernel_cpp(const SEXP &evaluate_log_abc_kernel_SEXP,
-                                   const NumericVector &simulated_data,
-                                   const NumericMatrix &data,
+                                   const arma::colvec &simulated_data,
+                                   const arma::colvec &data,
                                    const double &abc_tolerance)
 {
   EvaluateLogABCKernelPtr evaluate_log_abc_kernel = load_evaluate_log_abc_kernel(evaluate_log_abc_kernel_SEXP);
@@ -128,8 +125,8 @@ double evaluate_log_abc_kernel_cpp(const SEXP &evaluate_log_abc_kernel_SEXP,
 }
 
 // [[Rcpp::export]]
-NumericVector summary_statistics_cpp(const SEXP &summary_statistics_SEXP,
-                             const NumericMatrix &data)
+arma::colvec summary_statistics_cpp(const SEXP &summary_statistics_SEXP,
+                                    const NumericMatrix &data)
 {
   SummaryStatisticsPtr summary_statistics = load_summary_statistics(summary_statistics_SEXP);
   return summary_statistics(data);
@@ -137,7 +134,7 @@ NumericVector summary_statistics_cpp(const SEXP &summary_statistics_SEXP,
 
 // [[Rcpp::export]]
 NumericMatrix get_data_from_simulation_cpp(const SEXP &get_data_from_simulation_SEXP,
-                                     const List &simulation)
+                                           const List &simulation)
 {
   GetDataFromSimulationPtr get_data_from_simulation = load_get_data_from_simulation(get_data_from_simulation_SEXP);
   return get_data_from_simulation(simulation);

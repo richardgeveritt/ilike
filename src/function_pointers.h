@@ -1,6 +1,8 @@
-#include <Rcpp.h>
-using namespace Rcpp;
+//#include <Rcpp.h>
+//using namespace Rcpp;
 
+#include <RcppArmadillo.h>
+using namespace Rcpp;
 
 
 // typedefs for function pointers
@@ -23,11 +25,11 @@ typedef List (*SimulateAuxiliaryVariablesPtr)(const NumericVector &inputs, const
 
 typedef XPtr<EstimateLogLikelihoodPtr> (*SetupLikelihoodEstimatorPtr)(const NumericMatrix &inputs, const List &auxiliary_variables);
 
-typedef double (*EvaluateLogABCKernelPtr)(const NumericVector &simulated_stats,
-                const NumericVector &observed_stats,
+typedef double (*EvaluateLogABCKernelPtr)(const arma::colvec &simulated_stats,
+                const arma::colvec &observed_stats,
                 const double &abc_tolerance);
 
-typedef NumericVector (*SummaryStatisticsPtr)(const NumericMatrix &data);
+typedef arma::colvec (*SummaryStatisticsPtr)(const NumericMatrix &data);
 
 typedef NumericMatrix (*GetDataFromSimulationPtr)(const List &simulation);
 
@@ -76,14 +78,14 @@ List simulate_auxiliary_variables_cpp(const SEXP &simulate_auxiliary_variables_S
                                       const NumericMatrix &data);
 
 double evaluate_log_abc_kernel_cpp(const SEXP &evaluate_log_abc_kernel_SEXP,
-                                   const NumericVector &simulated_data,
-                                   const NumericMatrix &data,
+                                   const arma::colvec &simulated_data,
+                                   const arma::colvec &data,
                                    const double &abc_tolerance);
 
-NumericVector summary_statistics_cpp(const SEXP &summary_statistics_SEXP,
-                             const NumericMatrix &data);
+arma::colvec summary_statistics_cpp(const SEXP &summary_statistics_SEXP,
+                                    const NumericMatrix &data);
 
 NumericMatrix get_data_from_simulation_cpp(const SEXP &get_data_from_simulation_SEXP,
-                                     const List &simulation);
+                                           const List &simulation);
 
 #endif

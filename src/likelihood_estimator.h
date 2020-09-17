@@ -1,4 +1,6 @@
-#include <Rcpp.h>
+//#include <Rcpp.h>
+
+#include <RcppArmadillo.h>
 using namespace Rcpp;
 
 #include <vector>

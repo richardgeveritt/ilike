@@ -1,4 +1,7 @@
-#include <Rcpp.h>
+//#include <Rcpp.h>
+//using namespace Rcpp;
+
+#include <RcppArmadillo.h>
 using namespace Rcpp;
 
 #include <vector>
@@ -21,9 +24,11 @@ private:
 
   SummaryStatisticsPtr summary_statistics;
 
-  NumericVector summary_statistics_scaling;
+  //NumericVector summary_statistics_scaling;
+  arma::colvec summary_statistics_scaling;
 
-  NumericVector summary_data;
+  //NumericVector summary_data;
+  arma::colvec summary_data;
 
 protected:
 
@@ -36,7 +41,7 @@ public:
   ABCLikelihood(const EvaluateLogABCKernelPtr &evaluate_log_abc_kernel_in,
                 const SummaryStatisticsPtr &summary_statistics_in,
                 const double &abc_tolerance_in,
-                const NumericVector &summary_statistics_scaling_in,
+                const arma::colvec &summary_statistics_scaling_in,
                 const NumericMatrix &data_in);
 
   ABCLikelihood(const ABCLikelihood &another);
@@ -47,11 +52,11 @@ public:
 
   double evaluate(const NumericMatrix &simulated_data) const;
 
-  NumericVector evaluate_multiple(const std::vector<NumericMatrix> &auxiliary_variables) const;
+  arma::colvec evaluate_multiple(const std::vector<NumericMatrix> &auxiliary_variables) const;
 
-  NumericVector summary_from_data(const NumericMatrix &simulation) const;
+  arma::colvec summary_from_data(const NumericMatrix &simulation) const;
 
-  NumericVector get_summary_data() const;
+  arma::colvec get_summary_data() const;
 
   SummaryStatisticsPtr get_summary_statistics() const;
 
@@ -59,7 +64,7 @@ public:
 
   void set_abc_tolerance(const double &abc_tolerance_in);
 
-  void set_summary_statistics_scaling(const NumericVector &summary_statistics_scaling_in);
+  void set_summary_statistics_scaling(const arma::colvec &summary_statistics_scaling_in);
 
 };
 

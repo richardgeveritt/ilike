@@ -1,6 +1,3 @@
-#include <Rcpp.h>
-using namespace Rcpp;
-
 #include "exact_likelihood_estimator.h"
 #include "abc_likelihood_estimator.h"
 #include "function_pointers.h"

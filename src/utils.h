@@ -1,4 +1,7 @@
-#include <Rcpp.h>
+//#include <Rcpp.h>
+//using namespace Rcpp;
+
+#include <RcppArmadillo.h>
 using namespace Rcpp;
 
 #include "function_pointers.h"
@@ -31,41 +34,56 @@ using namespace Rcpp;
 //   return iv;
 // }
 
-double log_sum_exp(const NumericVector &log_weights);
+//double log_sum_exp(const NumericVector &log_weights);
 
-double log_sum_exp_fast(const std::vector<double> &log_weights);
+double log_sum_exp(const std::vector<double> &log_weights);
 
-double cess(const NumericVector &log_weights,
-            const NumericVector &log_incremental_weights);
+double log_sum_exp(const arma::colvec &log_weights);
+
+std::vector<double> operator*(const std::vector<double> &first,
+                              const std::vector<double> &second);
+
+std::vector<double> operator-(const std::vector<double> &first,
+                              const std::vector<double> &second);
+
+std::vector<double> abs(const std::vector<double> &first);
+
+std::vector<double> log(const std::vector<double> &first);
+
+std::vector<double> operator*(const double &c,
+                              const std::vector<double> &first);
+
+double cess(const arma::colvec &log_weights,
+            const arma::colvec &log_incremental_weights);
 
 NumericMatrix get_first_element_of_list_as_numeric_matrix(const List &a_list);
 SEXP store_get_first_element_of_list_as_numeric_matrix();
 
-NumericVector make_vector_statistic(const NumericMatrix &simulated);
+arma::colvec make_vector_statistic(const NumericMatrix &simulated);
 SEXP store_make_vector_statistic();
 
-double Lp_uniform_evaluate_log_abc_kernel(const NumericVector &simulated_summary_stats,
-                                          const NumericVector &observed_summary_stats,
+double Lp_uniform_evaluate_log_abc_kernel(const arma::colvec &simulated_summary_stats,
+                                          const arma::colvec &observed_summary_stats,
                                           const double &abc_tolerance,
                                           const double &p);
 
-double L1_uniform_evaluate_log_abc_kernel(const NumericVector &simulated_summary_stats,
-                                          const NumericVector &observed_summary_stats,
+double L1_uniform_evaluate_log_abc_kernel(const arma::colvec &simulated_summary_stats,
+                                          const arma::colvec &observed_summary_stats,
                                           const double &abc_tolerance);
 SEXP store_L1_uniform_evaluate_log_abc_kernel();
 
-double L2_uniform_evaluate_log_abc_kernel(const NumericVector &simulated_summary_stats,
-                                          const NumericVector &observed_summary_stats,
+double L2_uniform_evaluate_log_abc_kernel(const arma::colvec &simulated_summary_stats,
+                                          const arma::colvec &observed_summary_stats,
                                           const double &abc_tolerance);
 SEXP store_L2_uniform_evaluate_log_abc_kernel();
 
-double Linf_uniform_evaluate_log_abc_kernel(const NumericVector &simulated_summary_stats,
-                                            const NumericVector &observed_summary_stats,
+double Linf_uniform_evaluate_log_abc_kernel(const arma::colvec &simulated_summary_stats,
+                                            const arma::colvec &observed_summary_stats,
                                             const double &abc_tolerance);
 SEXP store_Lint_uniform_evaluate_log_abc_kernel();
 
-double gaussian_evaluate_log_abc_kernel(const NumericVector &simulated_summary_stats,
-                                        const NumericVector &observed_summary_stats,
+double gaussian_evaluate_log_abc_kernel(const arma::colvec &simulated_summary_stats,
+                                        const arma::colvec &observed_summary_stats,
                                         const double &abc_tolerance);
 SEXP store_gaussian_uniform_evaluate_log_abc_kernel();
 

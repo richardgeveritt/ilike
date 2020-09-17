@@ -9,7 +9,7 @@ ABCLikelihoodEstimator::ABCLikelihoodEstimator(const NumericMatrix &data_in,
                                                const SummaryStatisticsPtr &summary_statistics_in,
                                                const double &abc_tolerance_in,
                                                const double &abc_desired_cess_in,
-                                               const NumericVector &summary_statistics_scaling_in,
+                                               const arma::colvec &summary_statistics_scaling_in,
                                                const bool &adapt_abc_tolerance_to_cess_in,
                                                const bool &adapt_summary_statistics_scaling_in)
 :LikelihoodEstimator(data_in)
@@ -43,7 +43,7 @@ double ABCLikelihoodEstimator::estimate_log_likelihood(const NumericVector &inpu
     simulated_data.push_back(this->get_data_from_simulation(*i));
   }
 
-  NumericVector abc_evaluations = this->abc_likelihood.evaluate_multiple(simulated_data);
+  arma::colvec abc_evaluations = this->abc_likelihood.evaluate_multiple(simulated_data);
 
   return log_sum_exp(abc_evaluations) - log(this->number_of_likelihood_particles);
 }
@@ -67,10 +67,10 @@ void ABCLikelihoodEstimator::is_setup_likelihood_estimator(const NumericMatrix &
 
   if (this->adapt_summary_statistics_scaling)
   {
-    unsigned int sum_stat_length = this->abc_likelihood.get_summary_data().length();
+    unsigned int sum_stat_length = this->abc_likelihood.get_summary_data().size();
 
     // Use all_auxiliary_variables to find a good scaling for the summary statistics.
-    NumericMatrix all_sumstats(all_auxiliary_variables.size()*this->number_of_likelihood_particles,
+    arma::mat all_sumstats(all_auxiliary_variables.size()*this->number_of_likelihood_particles,
                                sum_stat_length);
 
     unsigned int counter = 0;
@@ -85,17 +85,17 @@ void ABCLikelihoodEstimator::is_setup_likelihood_estimator(const NumericMatrix &
       for (std::vector<List>::const_iterator j=current_simulations.begin(); j!=current_simulations.end(); ++j)
       {
         NumericMatrix a_simulation = this->get_data_from_simulation(*j);
-        all_sumstats(counter,_) = this->abc_likelihood.summary_from_data(a_simulation);
+        all_sumstats.row(counter) = this->abc_likelihood.summary_from_data(a_simulation).t();
         current_simulated_data.push_back(a_simulation);
         counter = counter + 1;
       }
       all_simulated_data.push_back(current_simulated_data);
     }
 
-    NumericVector summary_statistics_scaling(sum_stat_length);
+    arma::colvec summary_statistics_scaling(sum_stat_length);
     for (unsigned int i=0; i<sum_stat_length; ++i)
     {
-      summary_statistics_scaling[i] = 1.0/sd(all_sumstats(_,i));
+      summary_statistics_scaling[i] = 1.0/arma::stddev(all_sumstats.col(i));
     }
 
     this->abc_likelihood.set_summary_statistics_scaling(summary_statistics_scaling);
@@ -105,7 +105,7 @@ void ABCLikelihoodEstimator::is_setup_likelihood_estimator(const NumericMatrix &
   {
 
     unsigned int n = all_auxiliary_variables.size();
-    NumericVector current_log_weights(n);
+    arma::colvec current_log_weights(n);
     for (unsigned int i=0; i<n; ++i)
     {
       current_log_weights[i] = -log(double(n));
@@ -129,10 +129,10 @@ void ABCLikelihoodEstimator::is_setup_likelihood_estimator(const NumericMatrix &
 double ABCLikelihoodEstimator::cess_score(const double &current_epsilon,
                                           const NumericMatrix &all_points,
                                           const std::vector<List> &all_auxiliary_variables,
-                                          const NumericVector &current_log_weights)
+                                          const arma::colvec &current_log_weights)
 {
   this->abc_likelihood.set_abc_tolerance(current_epsilon);
-  unsigned int n = current_log_weights.length();
+  unsigned int n = current_log_weights.size();
   NumericVector log_likelihoods(n);
   //unsigned int sum = 0;
   for (unsigned int i=0; i<n; ++i)
@@ -159,7 +159,7 @@ double ABCLikelihoodEstimator::cess_score(const double &current_epsilon,
 double ABCLikelihoodEstimator::epsilon_bisection(const double &current_epsilon,
                                                  const NumericMatrix &all_points,
                                                  const std::vector<List> &all_auxiliary_variables,
-                                                 const NumericVector &current_log_weights)
+                                                 const arma::colvec &current_log_weights)
 {
   double current_bisect_epsilon = current_epsilon;
   double bisect_size = current_bisect_epsilon/2.0;
@@ -204,7 +204,7 @@ double ABCLikelihoodEstimator::epsilon_bisection(const double &current_epsilon,
 
 double ABCLikelihoodEstimator::epsilon_doubling(const NumericMatrix &all_points,
                                                 const std::vector<List> &all_auxiliary_variables,
-                                                const NumericVector &current_log_weights)
+                                                const arma::colvec &current_log_weights)
 {
 
   double current_bisect_epsilon = 1;
