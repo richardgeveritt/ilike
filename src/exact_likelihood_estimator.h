@@ -18,17 +18,17 @@ private:
 
 public:
 
-  ExactLikelihoodEstimator(const NumericMatrix &data_in,
+  ExactLikelihoodEstimator(const List &observed_data_in,
                            const EvaluateLogLikelihoodPtr &func_in);
 
   virtual ~ExactLikelihoodEstimator();
 
-  double estimate_log_likelihood(const NumericVector &inputs,
+  double estimate_log_likelihood(const List &inputs,
                                  const List &auxiliary_variables) const;
 
-  List simulate_auxiliary_variables(const NumericVector &inputs) const;
+  List simulate_auxiliary_variables(const List &inputs) const;
 
-  void is_setup_likelihood_estimator(const NumericMatrix &all_points,
+  void is_setup_likelihood_estimator(const std::vector<List> &all_points,
                                      const std::vector<List> &all_auxiliary_variables);
 };
 

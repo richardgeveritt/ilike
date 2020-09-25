@@ -4,11 +4,11 @@ make_likelihood_estimator = function(model, algorithm)
   {
     evaluate_log_likelihood = model$evaluate_log_likelihood
 
-    data = model$data
+    observed_data = model$observed_data
 
     simulate_auxiliary_variables = function(inputs){return(0)}
 
-    setup_likelihood_estimator = function(all_points, all_auxiliary_variables){return(function(point,auxiliary_variables){return(evaluate_log_likelihood(point,data))})}
+    setup_likelihood_estimator = function(all_points, all_auxiliary_variables){return(function(point,auxiliary_variables){return(evaluate_log_likelihood(point,observed_data))})}
 
     likelihood_estimator = list(simulate_auxiliary_variables = simulate_auxiliary_variables,
                                 setup_likelihood_estimator = setup_likelihood_estimator)
@@ -17,7 +17,7 @@ make_likelihood_estimator = function(model, algorithm)
   {
     simulate_model = model$simulate_model
 
-    get_data_from_simulation = algorithm$get_data_from_simulation
+    #get_data_from_simulation = algorithm$get_data_from_simulation
 
     number_of_likelihood_particles = algorithm$number_of_likelihood_particles
 
@@ -35,19 +35,18 @@ make_likelihood_estimator = function(model, algorithm)
 
     adapt_summary_statistics_scaling = algorithm$adapt_summary_statistics_scaling
 
-    data = model$data
+    observed_data = model$observed_data
 
-    summary_data = summary_statistics(data)
+    summary_data = summary_statistics(observed_data)
 
     simulate_auxiliary_variables = function(inputs){ abc_simulate_auxiliary_variables(inputs,
                                                                                       number_of_likelihood_particles,
                                                                                       simulate_model,
-                                                                                      data) }
+                                                                                      observed_data) }
 
     setup_likelihood_estimator = function(all_points, all_auxiliary_variables){return(abc_is_setup_likelihood_estimator(all_points,
                                               all_auxiliary_variables,
                                               number_of_likelihood_particles,
-                                              get_data_from_simulation,
                                               evaluate_log_abc_kernel,
                                               summary_statistics,
                                               summary_data,

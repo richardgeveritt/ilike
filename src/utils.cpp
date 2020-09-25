@@ -170,11 +170,11 @@ NumericMatrix get_first_element_of_list_as_numeric_matrix(const List &a_list)
   return a_list[0];
 }
 
-// [[Rcpp::export]]
-SEXP store_get_first_element_of_list_as_numeric_matrix()
-{
-  return(XPtr<GetDataFromSimulationPtr>(new GetDataFromSimulationPtr(&get_first_element_of_list_as_numeric_matrix)));
-}
+// // [[Rcpp::export]]
+// SEXP store_get_first_element_of_list_as_numeric_matrix()
+// {
+//   return(XPtr<GetDataFromSimulationPtr>(new GetDataFromSimulationPtr(&get_first_element_of_list_as_numeric_matrix)));
+// }
 
 arma::colvec make_vector_statistic(const NumericMatrix &data)
 {
@@ -191,11 +191,11 @@ arma::colvec make_vector_statistic(const NumericMatrix &data)
   return output;
 }
 
-// [[Rcpp::export]]
-SEXP store_make_vector_statistic()
-{
-  return(XPtr<SummaryStatisticsPtr>(new SummaryStatisticsPtr(&make_vector_statistic)));
-}
+// // [[Rcpp::export]]
+// SEXP store_make_vector_statistic()
+// {
+//   return(XPtr<SummaryStatisticsPtr>(new SummaryStatisticsPtr(&make_vector_statistic)));
+// }
 
 double Lp_uniform_evaluate_log_abc_kernel(const arma::colvec &simulated_summary_stats,
                                           const arma::colvec &observed_summary_stats,

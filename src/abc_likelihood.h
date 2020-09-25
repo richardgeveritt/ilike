@@ -42,7 +42,7 @@ public:
                 const SummaryStatisticsPtr &summary_statistics_in,
                 const double &abc_tolerance_in,
                 const arma::colvec &summary_statistics_scaling_in,
-                const NumericMatrix &data_in);
+                const List &observed_data_in);
 
   ABCLikelihood(const ABCLikelihood &another);
 
@@ -50,11 +50,11 @@ public:
 
   void operator=(const ABCLikelihood &another);
 
-  double evaluate(const NumericMatrix &simulated_data) const;
+  double evaluate(const List &simulated_data) const;
 
-  arma::colvec evaluate_multiple(const std::vector<NumericMatrix> &auxiliary_variables) const;
+  arma::colvec evaluate_multiple(const std::vector<List> &auxiliary_variables) const;
 
-  arma::colvec summary_from_data(const NumericMatrix &simulation) const;
+  arma::colvec summary_from_data(const List &simulation) const;
 
   arma::colvec get_summary_data() const;
 

@@ -10,13 +10,13 @@ ABCLikelihood::ABCLikelihood(const EvaluateLogABCKernelPtr &evaluate_log_abc_ker
                              const SummaryStatisticsPtr &summary_statistics_in,
                              const double &abc_tolerance_in,
                              const arma::colvec &summary_statistics_scaling_in,
-                             const NumericMatrix &data_in)
+                             const List &observed_data_in)
 {
   this->evaluate_log_abc_kernel = evaluate_log_abc_kernel_in;
   this->summary_statistics = summary_statistics_in;
   this->summary_statistics_scaling = summary_statistics_scaling_in;
   this->abc_tolerance = abc_tolerance_in;
-  this->summary_data = this->summary_statistics(data_in);
+  this->summary_data = this->summary_statistics(observed_data_in);
 }
 
 ABCLikelihood::ABCLikelihood(const ABCLikelihood &another)
@@ -47,9 +47,9 @@ void ABCLikelihood::MakeCopy(const ABCLikelihood &another)
   this->summary_data = another.summary_data;
 }
 
-double ABCLikelihood::evaluate(const NumericMatrix &simulated) const
+double ABCLikelihood::evaluate(const List &simulated_data) const
 {
-  arma::colvec simulated_summary_stats = this->summary_statistics_scaling % this->summary_statistics(simulated);
+  arma::colvec simulated_summary_stats = this->summary_statistics_scaling % this->summary_statistics(simulated_data);
   arma::colvec observed_summary_stats = this->summary_statistics_scaling % this->summary_data;
   double p = 2.0;
   unsigned int n = simulated_summary_stats.size();
@@ -65,13 +65,13 @@ double ABCLikelihood::evaluate(const NumericMatrix &simulated) const
   //                                      this->abc_tolerance);
 }
 
-arma::colvec ABCLikelihood::evaluate_multiple(const std::vector<NumericMatrix> &simulations) const
+arma::colvec ABCLikelihood::evaluate_multiple(const std::vector<List> &simulations) const
 {
   unsigned int n = simulations.size();
   arma::colvec log_likelihoods(n);
   unsigned int counter = 0;
 
-  for (std::vector<NumericMatrix>::const_iterator i=simulations.begin(); i!=simulations.end(); ++i)
+  for (std::vector<List>::const_iterator i=simulations.begin(); i!=simulations.end(); ++i)
   {
     log_likelihoods[counter] = this->evaluate(*i);
     counter = counter + 1;
@@ -80,7 +80,7 @@ arma::colvec ABCLikelihood::evaluate_multiple(const std::vector<NumericMatrix> &
   return log_likelihoods;
 }
 
-arma::colvec ABCLikelihood::summary_from_data(const NumericMatrix &simulation) const
+arma::colvec ABCLikelihood::summary_from_data(const List &simulation) const
 {
   return(this->summary_statistics(simulation));
 }

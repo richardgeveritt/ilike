@@ -31,7 +31,7 @@ gaussian_evaluate_log_abc_kernel = function(simulated_summary_stats,
                                             observed_summary_stats,
                                             abc_tolerance)
 {
-  log_probs = apply(simulated_summary_stats-observed_summary_stats,1,dnorm,0,abc_tolerance,TRUE)
+  log_probs = apply(simulated_summary_stats-observed_summary_stats, 1, dnorm, 0, abc_tolerance, TRUE)
   return(sum(log_probs))
 }
 
@@ -49,64 +49,66 @@ evaluate_abc_likelihood = function(simulated_data,
 }
 
 multiple_evaluate_abc_likelihood = function(simulations,
-                                   evaluate_log_abc_kernel,
-                                   summary_statistics,
-                                   summary_data,
-                                   abc_tolerance,
-                                   summary_statistics_scaling)
+                                            evaluate_log_abc_kernel,
+                                            summary_statistics,
+                                            summary_data,
+                                            abc_tolerance,
+                                            summary_statistics_scaling)
 {
   if (likelihood_use_future==TRUE)
   {
     return(unlist(future.apply::future_lapply(simulations,
-                                                       FUN = function(i){evaluate_abc_likelihood(i,
-                                                                                                 evaluate_log_abc_kernel,
-                                                                                                 summary_statistics,
-                                                                                                 summary_data,
-                                                                                                 abc_tolerance,
-                                                                                                 summary_statistics_scaling)})))
+                                              FUN = function(i){
+                                                evaluate_abc_likelihood(i,
+                                                                        evaluate_log_abc_kernel,
+                                                                        summary_statistics,
+                                                                        summary_data,
+                                                                        abc_tolerance,
+                                                                        summary_statistics_scaling)})))
   }
   else
   {
-    return(unlist(lapply(simulations, FUN = function(i){evaluate_abc_likelihood(i,
-                                                                                evaluate_log_abc_kernel,
-                                                                                summary_statistics,
-                                                                                summary_data,
-                                                                                abc_tolerance,
-                                                                                summary_statistics_scaling)})))
+    return(unlist(lapply(simulations, FUN = function(i){
+      evaluate_abc_likelihood(i,
+                              evaluate_log_abc_kernel,
+                              summary_statistics,
+                              summary_data,
+                              abc_tolerance,
+                              summary_statistics_scaling)})))
   }
 }
 
 abc_simulate_auxiliary_variables = function(inputs,
                                             number_of_likelihood_particles,
                                             simulator,
-                                            data)
+                                            observed_data)
 {
-  repeated_inputs = lapply(1:number_of_likelihood_particles,FUN = function(i){inputs})
+  repeated_inputs = lapply(1:number_of_likelihood_particles, FUN = function(i){inputs})
 
   if (likelihood_use_future==TRUE)
   {
     simulations = future.apply::future_lapply(repeated_inputs,
-                              FUN = function(i){simulator(i,data)},
+                              FUN = function(i){simulator(i, observed_data)},
                               future.seed = TRUE)
   }
   else
   {
     simulations = lapply(repeated_inputs,
-                         FUN = function(i){simulator(i,data)})
+                         FUN = function(i){simulator(i, observed_data)})
   }
 
-  return(simulations)
+  return(list(simulations))
 }
 
 abc_estimate_log_likelihood = function(auxiliary_variables,
-                                       get_data_from_simulation,
                                        evaluate_log_abc_kernel,
                                        summary_statistics,
                                        summary_data,
                                        abc_tolerance,
                                        summary_statistics_scaling)
 {
-  simulations = lapply(auxiliary_variables, function(a_v){return(get_data_from_simulation(a_v))})
+  simulations = auxiliary_variables[[1]]
+  #simulated_data = lapply(simulations, function(s){return(s["data"])})
   abc_evaluations = multiple_evaluate_abc_likelihood(simulations,
                                                      evaluate_log_abc_kernel,
                                                      summary_statistics,
@@ -120,7 +122,6 @@ abc_estimate_log_likelihood = function(auxiliary_variables,
 abc_is_setup_likelihood_estimator = function(all_points,
                                              all_auxiliary_variables,
                                              number_of_likelihood_particles,
-                                             get_data_from_simulation,
                                              evaluate_log_abc_kernel,
                                              summary_statistics,
                                              summary_data,
@@ -148,8 +149,8 @@ abc_is_setup_likelihood_estimator = function(all_points,
       # Use all_auxiliary_variables to find a good scaling for the summary statistics.
 
       list_of_list_of_sumstats = lapply(all_auxiliary_variables, FUN = function(aux_vars){
-         return(lapply(aux_vars, FUN = function(a_simulation){
-          summary_statistics(get_data_from_simulation(a_simulation))
+         return(lapply(aux_vars[[1]], FUN = function(a_simulation){
+          summary_statistics(a_simulation)
         }))
       })
 
@@ -162,14 +163,13 @@ abc_is_setup_likelihood_estimator = function(all_points,
     }
   }
 
-
   if (adapt_abc_tolerance_to_cess==TRUE)
   {
 
     all_abc_estimate_log_likelihoods_tol = function(tol)
     {
       return(unlist(lapply(1:length(all_auxiliary_variables),function(i){
-        abc_estimate_log_likelihood(all_auxiliary_variables[[i]], get_data_from_simulation, evaluate_log_abc_kernel, summary_statistics, summary_data, tol, summary_statistics_scaling) })))
+        abc_estimate_log_likelihood(all_auxiliary_variables[[i]], evaluate_log_abc_kernel, summary_statistics, summary_data, tol, summary_statistics_scaling) })))
     }
 
     current_log_weights = matrix(-log(length(all_auxiliary_variables)), length(all_auxiliary_variables))
@@ -190,7 +190,6 @@ abc_is_setup_likelihood_estimator = function(all_points,
   }
 
   return(function(point,auxiliary_variables){return(abc_estimate_log_likelihood(auxiliary_variables,
-                                                                                get_data_from_simulation,
                                                                                 evaluate_log_abc_kernel,
                                                                                 summary_statistics,
                                                                                 summary_data,

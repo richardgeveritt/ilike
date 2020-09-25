@@ -9,28 +9,28 @@ evaluate_log_distribution_cpp <- function(evaluate_log_distribution_SEXP, parame
     .Call(`_ilike_evaluate_log_distribution_cpp`, evaluate_log_distribution_SEXP, parameter)
 }
 
-evaluate_log_likelihood_cpp <- function(evaluate_log_likelihood_SEXP, parameter, data) {
-    .Call(`_ilike_evaluate_log_likelihood_cpp`, evaluate_log_likelihood_SEXP, parameter, data)
+evaluate_log_likelihood_cpp <- function(evaluate_log_likelihood_SEXP, parameter, observed_data) {
+    .Call(`_ilike_evaluate_log_likelihood_cpp`, evaluate_log_likelihood_SEXP, parameter, observed_data)
 }
 
-estimate_log_likelihood_cpp <- function(estimate_log_likelihood_SEXP, parameter, data, auxiliary_variables) {
-    .Call(`_ilike_estimate_log_likelihood_cpp`, estimate_log_likelihood_SEXP, parameter, data, auxiliary_variables)
+estimate_log_likelihood_cpp <- function(estimate_log_likelihood_SEXP, parameter, observed_data, auxiliary_variables) {
+    .Call(`_ilike_estimate_log_likelihood_cpp`, estimate_log_likelihood_SEXP, parameter, observed_data, auxiliary_variables)
 }
 
-simulate_model_cpp <- function(simulate_model_SEXP, parameter, data) {
-    .Call(`_ilike_simulate_model_cpp`, simulate_model_SEXP, parameter, data)
+simulate_model_cpp <- function(simulate_model_SEXP, parameter, observed_data) {
+    .Call(`_ilike_simulate_model_cpp`, simulate_model_SEXP, parameter, observed_data)
 }
 
-simulate_auxiliary_variables_cpp <- function(simulate_auxiliary_variables_SEXP, parameter, data) {
-    .Call(`_ilike_simulate_auxiliary_variables_cpp`, simulate_auxiliary_variables_SEXP, parameter, data)
+simulate_auxiliary_variables_cpp <- function(simulate_auxiliary_variables_SEXP, parameter, observed_data) {
+    .Call(`_ilike_simulate_auxiliary_variables_cpp`, simulate_auxiliary_variables_SEXP, parameter, observed_data)
 }
 
-evaluate_log_abc_kernel_cpp <- function(evaluate_log_abc_kernel_SEXP, simulated_data, data, abc_tolerance) {
-    .Call(`_ilike_evaluate_log_abc_kernel_cpp`, evaluate_log_abc_kernel_SEXP, simulated_data, data, abc_tolerance)
+evaluate_log_abc_kernel_cpp <- function(evaluate_log_abc_kernel_SEXP, simulated_data, observed_data, abc_tolerance) {
+    .Call(`_ilike_evaluate_log_abc_kernel_cpp`, evaluate_log_abc_kernel_SEXP, simulated_data, observed_data, abc_tolerance)
 }
 
-summary_statistics_cpp <- function(summary_statistics_SEXP, data) {
-    .Call(`_ilike_summary_statistics_cpp`, summary_statistics_SEXP, data)
+summary_statistics_cpp <- function(summary_statistics_SEXP, observed_data) {
+    .Call(`_ilike_summary_statistics_cpp`, summary_statistics_SEXP, observed_data)
 }
 
 get_data_from_simulation_cpp <- function(get_data_from_simulation_SEXP, simulation) {
@@ -39,14 +39,6 @@ get_data_from_simulation_cpp <- function(get_data_from_simulation_SEXP, simulati
 
 do_importance_sampler_cpp <- function(model, algorithm, max_vector_size) {
     .Call(`_ilike_do_importance_sampler_cpp`, model, algorithm, max_vector_size)
-}
-
-store_get_first_element_of_list_as_numeric_matrix <- function() {
-    .Call(`_ilike_store_get_first_element_of_list_as_numeric_matrix`)
-}
-
-store_make_vector_statistic <- function() {
-    .Call(`_ilike_store_make_vector_statistic`)
 }
 
 store_L1_uniform_evaluate_log_abc_kernel <- function() {

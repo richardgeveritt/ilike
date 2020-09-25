@@ -56,11 +56,11 @@ std::vector<double> operator*(const double &c,
 double cess(const arma::colvec &log_weights,
             const arma::colvec &log_incremental_weights);
 
-NumericMatrix get_first_element_of_list_as_numeric_matrix(const List &a_list);
-SEXP store_get_first_element_of_list_as_numeric_matrix();
-
-arma::colvec make_vector_statistic(const NumericMatrix &simulated);
-SEXP store_make_vector_statistic();
+// NumericMatrix get_first_element_of_list_as_numeric_matrix(const List &a_list);
+// SEXP store_get_first_element_of_list_as_numeric_matrix();
+//
+// arma::colvec make_vector_statistic(const NumericMatrix &simulated);
+// SEXP store_make_vector_statistic();
 
 double Lp_uniform_evaluate_log_abc_kernel(const arma::colvec &simulated_summary_stats,
                                           const arma::colvec &observed_summary_stats,
