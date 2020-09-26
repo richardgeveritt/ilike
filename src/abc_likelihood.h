@@ -32,7 +32,7 @@ private:
 
 protected:
 
-  void MakeCopy(const ABCLikelihood &another);
+  void make_copy(const ABCLikelihood &another);
 
 public:
 

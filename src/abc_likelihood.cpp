@@ -21,7 +21,7 @@ ABCLikelihood::ABCLikelihood(const EvaluateLogABCKernelPtr &evaluate_log_abc_ker
 
 ABCLikelihood::ABCLikelihood(const ABCLikelihood &another)
 {
-  this->MakeCopy(another);
+  this->make_copy(another);
 }
 
 ABCLikelihood::~ABCLikelihood()
@@ -35,10 +35,10 @@ void ABCLikelihood::operator=(const ABCLikelihood &another)
     return;
   }
 
-  this->MakeCopy(another);
+  this->make_copy(another);
 }
 
-void ABCLikelihood::MakeCopy(const ABCLikelihood &another)
+void ABCLikelihood::make_copy(const ABCLikelihood &another)
 {
   this->abc_tolerance = another.abc_tolerance;
   this->evaluate_log_abc_kernel = another.evaluate_log_abc_kernel;
