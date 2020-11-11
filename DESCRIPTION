@@ -1,6 +1,6 @@
 Package: ilike
 Title: Methods for Bayesian computation when the likelihood is intractable.
-Version: 0.0.0.9001
+Version: 0.0.0.9002
 Authors@R: 
     person(given = "Richard",
            family = "Everitt",
@@ -16,7 +16,7 @@ RoxygenNote: 7.1.1.9000
 URL: https://github.com/maugu/ilike
 BugReports: https://github.com/maugu/ilike/issues
 LinkingTo: Rcpp, RcppArmadillo
-Imports: Rcpp, RcppArmadillo, future.apply, future
+Imports: Rcpp, future.apply, future
 Suggests: knitr, rmarkdown, testthat
 VignetteBuilder: knitr
 Depends: 
