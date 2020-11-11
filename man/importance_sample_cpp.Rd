@@ -4,19 +4,12 @@
 \alias{importance_sample_cpp}
 \title{Importance sampler using cpp functions.}
 \usage{
-importance_sample_cpp(
-  model,
-  algorithm,
-  max_vector_size = 4e+09,
-  messages = FALSE
-)
+importance_sample_cpp(model, algorithm, messages = FALSE)
 }
 \arguments{
 \item{model}{A model.}
 
 \item{algorithm}{Algorithm details.}
-
-\item{max_vector_size}{If any vector/list has more than this many entries, we need to split the algorithm into multiple batches.}
 
 \item{messages}{Set to TRUE to have messages printed to console.}
 }
