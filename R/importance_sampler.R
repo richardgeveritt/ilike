@@ -571,13 +571,11 @@ check_is = function(model,
 #'
 #' @param model A model.
 #' @param algorithm algorithm details.
-#' @param max_vector_size If any vector/list has more than this many entries, we need to split the algorithm into multiple batches.
 #' @param messages Set to TRUE to have messages printed to console.
 #' @return Importance points.
 #' @export
 importance_sample = function(model,
                              algorithm,
-                             max_vector_size = 4e+9,
                              messages = FALSE)
 {
   # Check that inputs make sense.
@@ -594,62 +592,61 @@ importance_sample = function(model,
 
   # Work out the number of batches to simulate.
   # We will store the points and the auxiliary variables in files to avoid memory problems.
-  total_dimension = length(model$inputs)# + algorithm$auxiliary_variables_dimension
-  number_of_batches_minus_one = floor((number_of_points*total_dimension-1)/max_vector_size)
+  #total_dimension = length(model$inputs)# + algorithm$auxiliary_variables_dimension
+  #number_of_batches_minus_one = floor((number_of_points*total_dimension-1)/max_vector_size)
 
   # simulate batch of parameters and associated aux variables.
   # Save all in file if multiple batches
   # Assume proposal is easy to simulate, and use user-provided function for simulating n times, rather than parallelising.
   # Assume it is expensive to generate the auxiliary variables, and parallelise over this.
-  if (number_of_batches_minus_one==0)
+
+  # Do the simulation.
+  proposed_points = lapply(1:number_of_points,FUN=function(i) {algorithm$simulate_proposal()})
+  #proposed_inputs = t(matrix(rep(model$inputs,number_of_points),length(model$inputs),number_of_points))
+  #proposed_inputs[,model$parameter_index] = proposed_points
+  #proposed_inputs = lapply(1:number_of_points,function(i){proposed_inputs[i,]})
+
+  likelihood_estimator = make_likelihood_estimator(model, algorithm)
+
+  proposed_auxiliary_variables = future.apply::future_lapply(proposed_points,
+                                                             FUN=function(input){likelihood_estimator$simulate_auxiliary_variables(input)},
+                                                             future.seed = TRUE)
+
+  # Now configure the likelihood estimator using all of the simulations, if needed.
+  likelihood_estimator$estimate_log_likelihood = likelihood_estimator$setup_likelihood_estimator(proposed_points,proposed_auxiliary_variables)#tryCatch(likelihood_estimator$setup_likelihood_estimator(proposed_points,proposed_auxiliary_variables),error = function(e) {stop("likelihood_estimator$setup_likelihood_estimator throws an error when used on the proposed points.")})
+
+  log_likelihoods = unlist(future.apply::future_lapply(1:length(proposed_points),function(i){ likelihood_estimator$estimate_log_likelihood(proposed_points[[i]], proposed_auxiliary_variables[[i]]) }))
+
+  # Calculate weights.
+  if (algorithm$prior_is_proposal==TRUE)
   {
-    # Everything can be done in one batch, so things are more straightforward.
-
-    # Do the simulation.
-    proposed_points = lapply(1:number_of_points,FUN=function(i) {algorithm$simulate_proposal()})
-    #proposed_inputs = t(matrix(rep(model$inputs,number_of_points),length(model$inputs),number_of_points))
-    #proposed_inputs[,model$parameter_index] = proposed_points
-    #proposed_inputs = lapply(1:number_of_points,function(i){proposed_inputs[i,]})
-
-    likelihood_estimator = make_likelihood_estimator(model, algorithm)
-
-    proposed_auxiliary_variables = future.apply::future_lapply(proposed_points,
-                                                               FUN=function(input){likelihood_estimator$simulate_auxiliary_variables(input)},
-                                                               future.seed = TRUE)
-
-    # Now configure the likelihood estimator using all of the simulations, if needed.
-    likelihood_estimator$estimate_log_likelihood = likelihood_estimator$setup_likelihood_estimator(proposed_points,proposed_auxiliary_variables)#tryCatch(likelihood_estimator$setup_likelihood_estimator(proposed_points,proposed_auxiliary_variables),error = function(e) {stop("likelihood_estimator$setup_likelihood_estimator throws an error when used on the proposed points.")})
-
-    log_likelihoods = unlist(future.apply::future_lapply(1:length(proposed_points),function(i){ likelihood_estimator$estimate_log_likelihood(proposed_points[[i]], proposed_auxiliary_variables[[i]]) }))
-
-    # Calculate weights.
-    if (algorithm$prior_is_proposal==TRUE)
-    {
-      log_weights = log_likelihoods
-    }
-    else
-    {
-      log_weights = unlist(future.apply::future_lapply(proposed_points,function(p){ model$evaluate_log_prior(p) - algorithm$evaluate_log_proposal(p) })) + log_likelihoods
-    }
-
-    Results = list(proposed_points = proposed_points,
-                   proposed_auxiliary_variables = proposed_auxiliary_variables,
-                   log_weights = log_weights,
-                   log_normalising_constant = log_sum_exp(log_weights))
-
+    log_weights = log_likelihoods
   }
   else
   {
-    stop("Importance_sampler not yet set up to use multiple batches.")
-
-    # We need to use multiple batches since we don't want to store big vectors in memory.
-    most_batch_sizes = floor(number_of_points/number_of_batches_minus_one)
-    last_batch_size = ((number_of_points*total_dimension)%%max_vector_size)/total_dimension
-
-    # This will store the results to a file.
-    lapply(1:number_of_batches_minus_one,FUN=function(i) {simulate_batch(i,most_batch_sizes,model,algorithm); return(NULL)})
-    simulate_batch(number_of_batches_minus_one+1,last_batch_size,model,algorithm)
+    log_weights = unlist(future.apply::future_lapply(proposed_points,function(p){ model$evaluate_log_prior(p) - algorithm$evaluate_log_proposal(p) })) + log_likelihoods
   }
+
+  results = list(proposed_points = proposed_points,
+                 proposed_auxiliary_variables = proposed_auxiliary_variables,
+                 log_weights = log_weights,
+                 log_normalising_constant = log_sum_exp(log_weights))
+
+  return(results)
+
+  # }
+  # else
+  # {
+  #   stop("Importance_sampler not yet set up to use multiple batches.")
+  #
+  #   # We need to use multiple batches since we don't want to store big vectors in memory.
+  #   most_batch_sizes = floor(number_of_points/number_of_batches_minus_one)
+  #   last_batch_size = ((number_of_points*total_dimension)%%max_vector_size)/total_dimension
+  #
+  #   # This will store the results to a file.
+  #   lapply(1:number_of_batches_minus_one,FUN=function(i) {simulate_batch(i,most_batch_sizes,model,algorithm); return(NULL)})
+  #   simulate_batch(number_of_batches_minus_one+1,last_batch_size,model,algorithm)
+  # }
 
 }
 
@@ -658,13 +655,11 @@ importance_sample = function(model,
 #'
 #' @param model A model.
 #' @param algorithm Algorithm details.
-#' @param max_vector_size If any vector/list has more than this many entries, we need to split the algorithm into multiple batches.
 #' @param messages Set to TRUE to have messages printed to console.
 #' @return Importance points.
 #' @export
 importance_sample_cpp = function(model,
                                  algorithm,
-                                 max_vector_size = 4e+9,
                                  messages = FALSE)
 {
   # Check that inputs make sense.
@@ -678,8 +673,7 @@ importance_sample_cpp = function(model,
   model = output$model
   algorithm = output$algorithm
 
-  return(do_importance_sampler_cpp(model,
-                                   algorithm,
-                                   max_vector_size))
+  return(do_importance_sampler(model,
+                               algorithm))
 
 }

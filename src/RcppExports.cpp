@@ -120,16 +120,27 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// do_importance_sampler_cpp
-List do_importance_sampler_cpp(const List& model, const List& algorithm, const unsigned int& max_vector_size);
-RcppExport SEXP _ilike_do_importance_sampler_cpp(SEXP modelSEXP, SEXP algorithmSEXP, SEXP max_vector_sizeSEXP) {
+// do_importance_sampler
+List do_importance_sampler(const List& model, const List& algorithm);
+RcppExport SEXP _ilike_do_importance_sampler(SEXP modelSEXP, SEXP algorithmSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
     Rcpp::traits::input_parameter< const List& >::type algorithm(algorithmSEXP);
-    Rcpp::traits::input_parameter< const unsigned int& >::type max_vector_size(max_vector_sizeSEXP);
-    rcpp_result_gen = Rcpp::wrap(do_importance_sampler_cpp(model, algorithm, max_vector_size));
+    rcpp_result_gen = Rcpp::wrap(do_importance_sampler(model, algorithm));
+    return rcpp_result_gen;
+END_RCPP
+}
+// do_smc
+List do_smc(const List& model, const List& algorithm);
+RcppExport SEXP _ilike_do_smc(SEXP modelSEXP, SEXP algorithmSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
+    Rcpp::traits::input_parameter< const List& >::type algorithm(algorithmSEXP);
+    rcpp_result_gen = Rcpp::wrap(do_smc(model, algorithm));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -184,7 +195,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ilike_evaluate_log_abc_kernel_cpp", (DL_FUNC) &_ilike_evaluate_log_abc_kernel_cpp, 4},
     {"_ilike_summary_statistics_cpp", (DL_FUNC) &_ilike_summary_statistics_cpp, 2},
     {"_ilike_get_data_from_simulation_cpp", (DL_FUNC) &_ilike_get_data_from_simulation_cpp, 2},
-    {"_ilike_do_importance_sampler_cpp", (DL_FUNC) &_ilike_do_importance_sampler_cpp, 3},
+    {"_ilike_do_importance_sampler", (DL_FUNC) &_ilike_do_importance_sampler, 2},
+    {"_ilike_do_smc", (DL_FUNC) &_ilike_do_smc, 2},
     {"_ilike_store_L1_uniform_evaluate_log_abc_kernel", (DL_FUNC) &_ilike_store_L1_uniform_evaluate_log_abc_kernel, 0},
     {"_ilike_store_L2_uniform_evaluate_log_abc_kernel", (DL_FUNC) &_ilike_store_L2_uniform_evaluate_log_abc_kernel, 0},
     {"_ilike_store_Linf_uniform_evaluate_log_abc_kernel", (DL_FUNC) &_ilike_store_Linf_uniform_evaluate_log_abc_kernel, 0},

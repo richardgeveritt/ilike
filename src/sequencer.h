@@ -18,6 +18,14 @@ public:
 protected:
 
   void make_copy(const Sequencer &another);
+
+  unsigned int current_phase;
+  double current_target;
+
+  std::vector< std::vector<double> > schedule;
+
+  std::vector<double> desired_cess;
+
 };
 
 #endif

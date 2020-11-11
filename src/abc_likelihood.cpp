@@ -49,20 +49,20 @@ void ABCLikelihood::make_copy(const ABCLikelihood &another)
 
 double ABCLikelihood::evaluate(const List &simulated_data) const
 {
-  arma::colvec simulated_summary_stats = this->summary_statistics_scaling % this->summary_statistics(simulated_data);
-  arma::colvec observed_summary_stats = this->summary_statistics_scaling % this->summary_data;
-  double p = 2.0;
-  unsigned int n = simulated_summary_stats.size();
-  double Lp_log_distance = (1.0/p)*log_sum_exp(p*log(abs(simulated_summary_stats-observed_summary_stats)));
-  double Lp_ball_log_volume = double(n)*(log(2.0) + lgamma((1.0/p)+1.0) + log(abc_tolerance)) - lgamma((double(n)/p)+1.0);
-  if (Lp_log_distance<=log(abc_tolerance))
-    return(-Lp_ball_log_volume);
-  else
-    return(R_NegInf);
+  // arma::colvec simulated_summary_stats = this->summary_statistics_scaling % this->summary_statistics(simulated_data);
+  // arma::colvec observed_summary_stats = this->summary_statistics_scaling % this->summary_data;
+  // double p = 2.0;
+  // unsigned int n = simulated_summary_stats.size();
+  // double Lp_log_distance = (1.0/p)*log_sum_exp(p*log(abs(simulated_summary_stats-observed_summary_stats)));
+  // double Lp_ball_log_volume = double(n)*(log(2.0) + lgamma((1.0/p)+1.0) + log(abc_tolerance)) - lgamma((double(n)/p)+1.0);
+  // if (Lp_log_distance<=log(abc_tolerance))
+  //   return(-Lp_ball_log_volume);
+  // else
+  //   return(R_NegInf);
 
-  // return this->evaluate_log_abc_kernel(this->summary_statistics_scaling % this->summary_statistics(simulated),
-  //                                      this->summary_statistics_scaling % this->summary_data,
-  //                                      this->abc_tolerance);
+  return this->evaluate_log_abc_kernel(this->summary_statistics_scaling % this->summary_statistics(simulated_data),
+                                       this->summary_statistics_scaling % this->summary_data,
+                                       this->abc_tolerance);
 }
 
 arma::colvec ABCLikelihood::evaluate_multiple(const std::vector<List> &simulations) const

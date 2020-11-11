@@ -37,8 +37,12 @@ get_data_from_simulation_cpp <- function(get_data_from_simulation_SEXP, simulati
     .Call(`_ilike_get_data_from_simulation_cpp`, get_data_from_simulation_SEXP, simulation)
 }
 
-do_importance_sampler_cpp <- function(model, algorithm, max_vector_size) {
-    .Call(`_ilike_do_importance_sampler_cpp`, model, algorithm, max_vector_size)
+do_importance_sampler <- function(model, algorithm) {
+    .Call(`_ilike_do_importance_sampler`, model, algorithm)
+}
+
+do_smc <- function(model, algorithm) {
+    .Call(`_ilike_do_smc`, model, algorithm)
 }
 
 store_L1_uniform_evaluate_log_abc_kernel <- function() {
