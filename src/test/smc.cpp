@@ -5,8 +5,9 @@
 #include "likelihood_estimator.h"
 #include "likelihood_maker.h"
 
-SMC::SMC(void)
+SMC::SMC(const ModelAndAlgorithm* model_and_algorithm_in)
 {
+  this->model_and_algorithm = model_and_algorithm_in;
 }
 
 SMC::SMC(const SMC &another)
@@ -28,13 +29,29 @@ void SMC::operator=(const SMC &another)
 
 void SMC::make_copy(const SMC &another)
 {
-  //Does nothing since no member variables to copy.
+  this->model_and_algorithm = another.model_and_algorithm;
 }
 
-// [[Rcpp::export]]
-List do_smc(const List &model,
-            const List &algorithm)
+Particles SMC::is_step() const
 {
+  // The way in which this is done is determined by what is set in model_and_algorithm.
+  //this->model_and_algorithm;
+
+  // One choice will use an RcppParallel worker.
+  return Particles();
+}
+
+Parameters SMC::single_particle_is_step() const
+{
+  //Parameters result = this->model_and_algorithm->simulate_priors->simulate();
+
+  return Parameters();
+
+}
+
+SMCOutput SMC::do_smc()
+{
+  /*
   unsigned int number_of_points = algorithm["number_of_points"];
 
   List observed_data = model["observed_data"];
@@ -95,4 +112,7 @@ List do_smc(const List &model,
                       Named("proposed_auxiliary_variables") = wrap(proposed_auxiliary_variables),
                       Named("log_weights") = log_weights,
                       Named("log_normalising_constant") = log_sum_exp(log_weights));
+   */
+
+  return SMCOutput();
 }

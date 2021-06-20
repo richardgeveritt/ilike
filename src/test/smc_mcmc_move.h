@@ -7,7 +7,7 @@ class SMCMCMCMove : public SMC
 {
 public:
 
-  SMCMCMCMove(void);
+  SMCMCMCMove(const ModelAndAlgorithm* model_and_algorithm_in);
   SMCMCMCMove(const SMCMCMCMove &another);
   virtual ~SMCMCMCMove(void);
 
@@ -17,6 +17,8 @@ public:
 protected:
 
   void make_copy(const SMCMCMCMove &another);
+
+  SMCOutput smc_step() const;
 };
 
 #endif

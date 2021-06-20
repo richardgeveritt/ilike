@@ -1,0 +1,211 @@
+/*
+ Original C Code written in 2016 and 2018 by David Blackman and Sebastiano Vigna (vigna@acm.org)
+ Adapted to C++ in 2018-2019 by Ralf Stubner (daqana GmbH)
+ To the extent possible under law, the author has dedicated all copyright
+ and related and neighboring rights to this software to the public domain
+ worldwide. This software is distributed without any warranty.
+ See <http://creativecommons.org/publicdomain/zero/1.0/>. */
+
+#include <RcppCommon.h>
+
+#ifndef XOSHIRO_H
+#define XOSHIRO_H 1
+
+#include <array>
+#include <mystdint.h>
+#include <functional>
+#include <algorithm>
+#include <type_traits>
+
+//template<size_t N, int_fast8_t A, int_fast8_t B, int_fast8_t C>
+class xoshiro256plus {
+
+public:
+
+  //using result_type = uint64_t;
+
+private:
+
+  // int_fast8_t A;
+  // int_fast8_t B;
+  // int_fast8_t C;
+  //
+  // std::array<uint64_t, 4> state;
+  //
+  // struct SplitMix {
+  //   SplitMix(const uint64_t& k) : state(k) {}
+  //
+  //   uint64_t operator() () {
+  //     uint64_t z = (state += 0x9e3779b97f4a7c15ULL);
+  //     z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ULL;
+  //     z = (z ^ (z >> 27)) * 0x94d049bb133111ebULL;
+  //     return z ^ (z >> 31);
+  //   }
+  //
+  // private:
+  //   uint64_t state;
+  // };
+  //
+  // uint64_t rotl(const uint64_t x, int k);
+  //
+  // uint64_t next();
+
+public:
+  // inline static constexpr uint64_t min() {return 0.0;};
+  // inline static constexpr uint64_t max() {return UINT64_MAX;};
+
+  xoshiro256plus();
+  virtual ~xoshiro256plus();
+  //xoshiro256plus(uint64_t _seed = 0x85c6ea9eb065ebeeULL);
+
+  // void seed(std::function<uint64_t(void)> rng);
+  //
+  // void seed(uint64_t _seed);
+  //
+  // uint64_t operator() ();
+  //
+  // void jump();
+  // void jump(uint64_t n);
+  // void long_jump();
+  // void long_jump(uint64_t n);
+};
+
+RCPP_EXPOSED_WRAP(xoshiro256plus);
+
+#include <Rcpp.h>
+
+
+// inline uint64_t xoshiro256plus::rotl(const uint64_t x, int k) {
+//   return (x << k) | (x >> (64 - k));
+// }
+//
+// inline uint64_t xoshiro256plus::next() {
+//   size_t N_ = 4;
+//   const uint64_t result = state[0] + state[N_ - 1];
+//
+//   const uint64_t t = state[1] << A;
+//
+//   state[2] ^= state[0];
+//   state[3] ^= state[1];
+//   state[1] ^= state[2];
+//   state[0] ^= state[3];
+//
+//   state[2] ^= t;
+//
+//   state[3] = rotl(state[3], B);
+//
+//   return result;
+// }
+
+inline xoshiro256plus::xoshiro256plus()
+{
+  //seed(_seed);
+  //this->A = 17;
+  //this->B = 45;
+  //this->C = 0;
+}
+
+inline xoshiro256plus::~xoshiro256plus()
+{
+  //seed(_seed);
+  //this->A = 17;
+  //this->B = 45;
+  //this->C = 0;
+}
+
+// inline xoshiro256plus::xoshiro256plus(uint64_t _seed) {
+//   //seed(_seed);
+//   //this->A = 17;
+//   //this->B = 45;
+//   //this->C = 0;
+// }
+
+// inline void xoshiro256plus::seed(std::function<uint64_t(void)> rng) {
+//   std::generate(state.begin(), state.end(), rng);
+// }
+//
+// inline void xoshiro256plus::seed(uint64_t _seed) {
+//   seed(SplitMix(_seed));
+// }
+//
+// inline uint64_t xoshiro256plus::operator() () {
+//   return next();
+// }
+//
+// inline void xoshiro256plus::jump(uint64_t n) {
+//   for( ; n > 0; --n) jump();
+// }
+//
+// inline void xoshiro256plus::long_jump(uint64_t n) {
+//   for( ; n > 0; --n) long_jump();
+// }
+//
+// /* This is xoshiro256+ 1.0, our best and fastest generator for floating-point
+//  numbers. We suggest to use its upper bits for floating-point
+//  generation, as it is slightly faster than xoshiro256**. It passes all
+//  tests we are aware of except for the lowest three bits, which might
+//  fail linearity tests (and just those), so if low linear complexity is
+//  not considered an issue (as it is usually the case) it can be used to
+//  generate 64-bit outputs, too.
+//  We suggest to use a sign test to extract a random Boolean value, and
+//  right shifts to extract subsets of bits.
+//  The state must be seeded so that it is not everywhere zero. If you have
+//  a 64-bit seed, we suggest to seed a splitmix64 generator and use its
+//  output to fill s. */
+//
+// /* This is the jump function for the generator. It is equivalent
+//  to 2^128 calls to next(); it can be used to generate 2^128
+//  non-overlapping subsequences for parallel computations. */
+// inline void xoshiro256plus::jump() {
+//   static const uint64_t JUMP[] = { 0x180ec6d33cfd0aba, 0xd5a61266f0c9392c, 0xa9582618e03fc9aa, 0x39abdc4529b1661c };
+//
+//   uint64_t s0 = 0;
+//   uint64_t s1 = 0;
+//   uint64_t s2 = 0;
+//   uint64_t s3 = 0;
+//   for(unsigned int i = 0; i < sizeof JUMP / sizeof *JUMP; i++)
+//     for(unsigned int b = 0; b < 64; b++) {
+//       if (JUMP[i] & uint64_t(1) << b) {
+//         s0 ^= state[0];
+//         s1 ^= state[1];
+//         s2 ^= state[2];
+//         s3 ^= state[3];
+//       }
+//       operator()();
+//     }
+//
+//     state[0] = s0;
+//   state[1] = s1;
+//   state[2] = s2;
+//   state[3] = s3;
+// }
+//
+// /* This is the long-jump function for the generator. It is equivalent to
+//  2^192 calls to next(); it can be used to generate 2^64 starting points,
+//  from each of which jump() will generate 2^64 non-overlapping
+//  subsequences for parallel distributed computations. */
+// inline void xoshiro256plus::long_jump(void) {
+//   static const uint64_t LONG_JUMP[] = { 0x76e15d3efefdcbbf, 0xc5004e441c522fb3, 0x77710069854ee241, 0x39109bb02acbe635 };
+//
+//   uint64_t s0 = 0;
+//   uint64_t s1 = 0;
+//   uint64_t s2 = 0;
+//   uint64_t s3 = 0;
+//   for(unsigned int i = 0; i < sizeof LONG_JUMP / sizeof *LONG_JUMP; i++)
+//     for(unsigned int b = 0; b < 64; b++) {
+//       if (LONG_JUMP[i] & uint64_t(1) << b) {
+//         s0 ^= state[0];
+//         s1 ^= state[1];
+//         s2 ^= state[2];
+//         s3 ^= state[3];
+//       }
+//       operator()();
+//     }
+//
+//     state[0] = s0;
+//   state[1] = s1;
+//   state[2] = s2;
+//   state[3] = s3;
+// }
+
+#endif // XOSHIRO_H

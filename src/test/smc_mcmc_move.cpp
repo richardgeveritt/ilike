@@ -1,8 +1,8 @@
 #include "smc_mcmc_move.h"
 
 ///Default constructor, Shape and Scale parameters have no values.
-SMCMCMCMove::SMCMCMCMove(void)
-  :SMC()
+SMCMCMCMove::SMCMCMCMove(const ModelAndAlgorithm* model_and_algorithm_in)
+  :SMC(model_and_algorithm_in)
 {
 }
 
@@ -36,4 +36,9 @@ SMC* SMCMCMCMove::duplicate(void)const
 void SMCMCMCMove::make_copy(const SMCMCMCMove &another)
 {
 
+}
+
+SMCOutput SMCMCMCMove::smc_step() const
+{
+  return SMCOutput();
 }
