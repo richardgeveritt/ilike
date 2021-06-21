@@ -30,17 +30,17 @@ ABCLikelihoodEstimator::~ABCLikelihoodEstimator()
 
 }
 
-double ABCLikelihoodEstimator::estimate_log_likelihood(const List &inputs,
-                                                       const List &auxiliary_variables) const
-{
-  std::vector<List> simulations = auxiliary_variables[0];
+// double ABCLikelihoodEstimator::estimate_log_likelihood(const List &inputs,
+//                                                        const List &auxiliary_variables) const
+// {
+//   std::vector<List> simulations = auxiliary_variables[0];
+//
+//   arma::colvec abc_evaluations = this->abc_likelihood.evaluate_multiple(simulations);
+//
+//   return log_sum_exp(abc_evaluations) - log(this->number_of_likelihood_particles);
+// }
 
-  arma::colvec abc_evaluations = this->abc_likelihood.evaluate_multiple(simulations);
-
-  return log_sum_exp(abc_evaluations) - log(this->number_of_likelihood_particles);
-}
-
-List ABCLikelihoodEstimator::simulate_auxiliary_variables(const List &inputs) const
+LikelihoodEstimatorOutput* ABCLikelihoodEstimator::simulate(const Parameters &parameters) const
 {
   std::vector<List> output;
   output.reserve(this->number_of_likelihood_particles);
@@ -50,72 +50,74 @@ List ABCLikelihoodEstimator::simulate_auxiliary_variables(const List &inputs) co
     output.push_back(this->simulator(inputs, this->observed_data));
   }
 
+  // Also find summary, and distance here? Adaptive part should be part of SMC.
+
   return(List::create(output));
 }
 
-void ABCLikelihoodEstimator::is_setup_likelihood_estimator(const std::vector<List> &all_points,
-                                                           const std::vector<List> &all_auxiliary_variables)
-{
-
-  if (this->adapt_summary_statistics_scaling)
-  {
-    unsigned int sum_stat_length = this->abc_likelihood.get_summary_data().size();
-
-    // Use all_auxiliary_variables to find a good scaling for the summary statistics.
-    arma::mat all_sumstats(all_auxiliary_variables.size()*this->number_of_likelihood_particles,
-                               sum_stat_length);
-
-    unsigned int counter = 0;
-
-    //std::vector< std::vector<List> > all_simulated_data;
-    //all_simulated_data.reserve(all_auxiliary_variables.size());
-    for (std::vector<List>::const_iterator i=all_auxiliary_variables.begin(); i!=all_auxiliary_variables.end(); ++i)
-    {
-      std::vector<List> current_simulations = (*i)[0];
-      //std::vector<List> current_simulated_data;
-      //current_simulated_data.reserve(current_simulations.size());
-      for (std::vector<List>::const_iterator j=current_simulations.begin(); j!=current_simulations.end(); ++j)
-      {
-        List a_simulation = (*j)["data"];
-        all_sumstats.row(counter) = this->abc_likelihood.summary_from_data(*j).t();
-        //current_simulated_data.push_back(a_simulation);
-        counter = counter + 1;
-      }
-      //all_simulated_data.push_back(current_simulated_data);
-    }
-
-    arma::colvec summary_statistics_scaling(sum_stat_length);
-    for (unsigned int i=0; i<sum_stat_length; ++i)
-    {
-      summary_statistics_scaling[i] = 1.0/arma::stddev(all_sumstats.col(i));
-    }
-
-    this->abc_likelihood.set_summary_statistics_scaling(summary_statistics_scaling);
-  }
-
-  if (this->adapt_abc_tolerance_to_cess)
-  {
-
-    unsigned int n = all_auxiliary_variables.size();
-    arma::colvec current_log_weights(n);
-    for (unsigned int i=0; i<n; ++i)
-    {
-      current_log_weights[i] = -log(double(n));
-    }
-
-    double abc_tolerance_local = epsilon_doubling(all_points,
-                                                  all_auxiliary_variables,
-                                                  current_log_weights);
-
-    abc_tolerance_local = epsilon_bisection(abc_tolerance_local,
-                                            all_points,
-                                            all_auxiliary_variables,
-                                            current_log_weights);
-
-    this->abc_likelihood.set_abc_tolerance(abc_tolerance_local);
-  }
-
-}
+// void ABCLikelihoodEstimator::is_setup_likelihood_estimator(const std::vector<List> &all_points,
+//                                                            const std::vector<List> &all_auxiliary_variables)
+// {
+//
+//   if (this->adapt_summary_statistics_scaling)
+//   {
+//     unsigned int sum_stat_length = this->abc_likelihood.get_summary_data().size();
+//
+//     // Use all_auxiliary_variables to find a good scaling for the summary statistics.
+//     arma::mat all_sumstats(all_auxiliary_variables.size()*this->number_of_likelihood_particles,
+//                                sum_stat_length);
+//
+//     unsigned int counter = 0;
+//
+//     //std::vector< std::vector<List> > all_simulated_data;
+//     //all_simulated_data.reserve(all_auxiliary_variables.size());
+//     for (std::vector<List>::const_iterator i=all_auxiliary_variables.begin(); i!=all_auxiliary_variables.end(); ++i)
+//     {
+//       std::vector<List> current_simulations = (*i)[0];
+//       //std::vector<List> current_simulated_data;
+//       //current_simulated_data.reserve(current_simulations.size());
+//       for (std::vector<List>::const_iterator j=current_simulations.begin(); j!=current_simulations.end(); ++j)
+//       {
+//         List a_simulation = (*j)["data"];
+//         all_sumstats.row(counter) = this->abc_likelihood.summary_from_data(*j).t();
+//         //current_simulated_data.push_back(a_simulation);
+//         counter = counter + 1;
+//       }
+//       //all_simulated_data.push_back(current_simulated_data);
+//     }
+//
+//     arma::colvec summary_statistics_scaling(sum_stat_length);
+//     for (unsigned int i=0; i<sum_stat_length; ++i)
+//     {
+//       summary_statistics_scaling[i] = 1.0/arma::stddev(all_sumstats.col(i));
+//     }
+//
+//     this->abc_likelihood.set_summary_statistics_scaling(summary_statistics_scaling);
+//   }
+//
+//   if (this->adapt_abc_tolerance_to_cess)
+//   {
+//
+//     unsigned int n = all_auxiliary_variables.size();
+//     arma::colvec current_log_weights(n);
+//     for (unsigned int i=0; i<n; ++i)
+//     {
+//       current_log_weights[i] = -log(double(n));
+//     }
+//
+//     double abc_tolerance_local = epsilon_doubling(all_points,
+//                                                   all_auxiliary_variables,
+//                                                   current_log_weights);
+//
+//     abc_tolerance_local = epsilon_bisection(abc_tolerance_local,
+//                                             all_points,
+//                                             all_auxiliary_variables,
+//                                             current_log_weights);
+//
+//     this->abc_likelihood.set_abc_tolerance(abc_tolerance_local);
+//   }
+//
+// }
 
 
 double ABCLikelihoodEstimator::cess_score(const double &current_epsilon,

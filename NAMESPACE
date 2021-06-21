@@ -2,5 +2,7 @@
 
 export(importance_sample)
 export(importance_sample_cpp)
+export(tester)
 importFrom(Rcpp,sourceCpp)
+importFrom(RcppParallel,RcppParallelLibs)
 useDynLib(ilike, .registration = TRUE)

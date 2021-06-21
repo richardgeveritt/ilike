@@ -1,6 +1,8 @@
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 
+#include "parameters.h"
+
 #ifndef SEQUENCER_H
 #define SEQUENCER_H
 
@@ -14,6 +16,9 @@ public:
 
   void operator=(const Sequencer &another);
   virtual Sequencer* duplicate() const=0;
+
+  Parameters thing;
+  double badger;
 
 protected:
 
