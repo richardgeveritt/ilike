@@ -8,10 +8,10 @@
 //#include <xoshiro.h>
 #include <RcppCommon.h>
 
-#define BOOST_DISABLE_ASSERTS
-
 #ifndef SIMULATION
 #define SIMULATION
+
+#define BOOST_DISABLE_ASSERTS 1
 
 using random_number_generator = dqrng::random_64bit_wrapper<dqrng::xoshiro256plus>;
 //using Binomial = boost::random::binomial_distribution<int>;

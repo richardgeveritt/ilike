@@ -7,7 +7,7 @@
 tester(model)
 }
 \arguments{
-\item{thing}{A thing.}
+\item{model}{A model.}
 }
 \value{
 Not much.

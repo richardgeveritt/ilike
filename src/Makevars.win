@@ -5,3 +5,4 @@ PKG_LIBS += $(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe" \
               -e "RcppParallel::RcppParallelLibs()")
 
 PKG_CPPFLAGS += -I../inst/include/
+PKG_CPPFLAGS += -DBOOST_DISABLE_ASSERTS

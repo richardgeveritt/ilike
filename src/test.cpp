@@ -130,7 +130,7 @@ double a_test(const List &model)
 
   //double testing = 4.0;//my_sqrt(test_params);
 
-  std::vector<Parameters> input_vec(10);
+  std::vector<Parameters> input_vec(10000);
   // input_vec[0] = test_params;
   // input_vec[1] = test_params;
   // input_vec[2] = test_params;
@@ -142,7 +142,7 @@ double a_test(const List &model)
   // input_vec[8] = test_params;
   // input_vec[9] = test_params;
   //
-  std::vector<double> dummy_input_vec(10);
+  std::vector<double> dummy_input_vec(10000);
   // dummy_input_vec[0] = 0.0;
   // dummy_input_vec[1] = 0.0;
   // dummy_input_vec[2] = 0.0;
@@ -161,14 +161,14 @@ double a_test(const List &model)
   // //  answer = evaluate_log_prior(test_params);
   // return a_worker.output[0];
 
-  for (unsigned int i=0; i<10; ++i)
+  for (unsigned int i=0; i<10000; ++i)
     Rcout << a_worker.simulate_output[i] << std::endl;
 
   Rcout << std::endl << std::endl;
 
   parallelFor(0, dummy_input_vec.size(), a_worker);
 
-  for (unsigned int i=0; i<10; ++i)
+  for (unsigned int i=0; i<10000; ++i)
     Rcout << a_worker.simulate_output[i] << std::endl;
   return 1.0;
 }
