@@ -8,18 +8,20 @@
 //#include <xoshiro.h>
 #include <RcppCommon.h>
 
+#define BOOST_DISABLE_ASSERTS
+
 #ifndef SIMULATION
 #define SIMULATION
 
-using rng_ptr = std::shared_ptr<dqrng::random_64bit_wrapper<dqrng::xoshiro256plus>>;
+using random_number_generator = dqrng::random_64bit_wrapper<dqrng::xoshiro256plus>;
 //using Binomial = boost::random::binomial_distribution<int>;
 using Normal = dqrng::normal_distribution;
 //using RNG = dqrng::xoshiro256plus;
 
-inline double simulate_normal(rng_ptr rng, double mean, double sd)
+inline double simulate_normal(random_number_generator &rng, double mean, double sd)
 {
   Normal my_normal;
-  return my_normal(*rng, Normal::param_type(mean, sd));
+  return my_normal(rng, Normal::param_type(mean, sd));
 }
 
 // namespace Rcpp {

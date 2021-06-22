@@ -13,9 +13,7 @@ using namespace Rcpp;
 
 typedef double (*EvaluateLogDistributionPtr)(const Parameters &inputs);
 
-typedef Parameters (*SimulateDistributionPtr)(rng_ptr rng);
-
-
+typedef Parameters (*SimulateDistributionPtr)(random_number_generator &rng);
 
 typedef double (*EvaluateLogLikelihoodPtr)(const List &inputs, const List &observed_data);
 

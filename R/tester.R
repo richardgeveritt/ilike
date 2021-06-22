@@ -1,6 +1,6 @@
 #' Importance sampler.
 #'
-#' @param thing A thing.
+#' @param model A model.
 #' @return Not much.
 #' @export
 tester = function(model)

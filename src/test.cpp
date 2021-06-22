@@ -57,11 +57,8 @@ public:
     //                this->input.begin() + end,
     //                this->output.begin() + begin,
     //                this->evaluate_log_prior);
-    //dqrng::random_64bit_wrapper<dqrng::xoshiro256plus> local_rng(rng);
-    //local_rng.seed(seed,end);
-    rng_ptr local_rng = std::make_shared<dqrng::random_64bit_wrapper<dqrng::xoshiro256plus>>();
-    local_rng->seed(seed,end);
-    //this->rng->seed(seed,end);
+    random_number_generator local_rng(rng);
+    local_rng.seed(seed,end);
     for (std::size_t i = begin; i < end; ++i)
     {
       this->simulate_output[i] = this->simulate_prior(this->rng);
@@ -84,7 +81,7 @@ private:
 
   SimulateDistributionPtr simulate_prior;
 
-  rng_ptr rng;
+  random_number_generator rng;
 
 };
 
@@ -97,7 +94,6 @@ MyWorker::MyWorker(uint64_t seed_in,
   this->seed = seed_in;
   this->input = input_in;
   //this-rng = dqrng::random_64bit_wrapper<dqrng::xoshiro256plus>();
-  this->rng = std::make_shared<dqrng::random_64bit_wrapper<dqrng::xoshiro256plus>>();
   this->dummy_input = dummy_input_in;
   this->output = std::vector<double>(this->input.size());
   this->simulate_output = std::vector<Parameters>(this->dummy_input.size());
