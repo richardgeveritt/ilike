@@ -11,6 +11,10 @@
 // At some point, we might need a more flexible container for data and/or parameters.
 // At this point, make another class that includes this one.
 
+class Parameters;
+
+RCPP_EXPOSED_CLASS(Parameters);
+
 class Parameters
 {
 
@@ -38,7 +42,7 @@ protected:
 
 typedef Parameters Data;
 
-RCPP_EXPOSED_WRAP(Parameters);
+//RCPP_EXPOSED_WRAP(Parameters);
 
 #include <RcppArmadillo.h>
 

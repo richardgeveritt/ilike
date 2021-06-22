@@ -4,16 +4,18 @@
 using namespace Rcpp;
 
 #include "parameters.h"
+#include "simulation.h"
 
 // typedefs for function pointers
 
 #ifndef TYPEDEFS
 #define TYPEDEFS
 
-
 typedef double (*EvaluateLogDistributionPtr)(const Parameters &inputs);
 
-typedef Parameters (*SimulateDistributionPtr)(double dummy);
+typedef Parameters (*SimulateDistributionPtr)(rng_ptr rng);
+
+
 
 typedef double (*EvaluateLogLikelihoodPtr)(const List &inputs, const List &observed_data);
 
