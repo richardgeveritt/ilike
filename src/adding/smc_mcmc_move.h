@@ -14,11 +14,15 @@ public:
   void operator=(const SMCMCMCMove &another);
   SMC* duplicate() const;
 
+  SMCOutput do_smc();
+
 protected:
 
   void make_copy(const SMCMCMCMove &another);
 
-  SMCOutput smc_step() const;
+  void smc_step();
+
+  void weight_update();
 };
 
 #endif

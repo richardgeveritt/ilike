@@ -41,13 +41,13 @@ Particles SMC::is_step() const
   return Particles();
 }
 
-Parameters SMC::single_particle_is_step() const
-{
-  //Parameters result = this->model_and_algorithm->simulate_priors->simulate();
-
-  return Parameters();
-
-}
+// Parameters SMC::single_particle_is_step() const
+// {
+//   //Parameters result = this->model_and_algorithm->simulate_priors->simulate();
+//
+//   return Parameters();
+//
+// }
 
 SMCOutput SMC::do_smc()
 {

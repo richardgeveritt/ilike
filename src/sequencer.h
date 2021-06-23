@@ -17,9 +17,6 @@ public:
   void operator=(const Sequencer &another);
   virtual Sequencer* duplicate() const=0;
 
-  Parameters thing;
-  double badger;
-
 protected:
 
   void make_copy(const Sequencer &another);

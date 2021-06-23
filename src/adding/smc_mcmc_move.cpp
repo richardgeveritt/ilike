@@ -38,7 +38,12 @@ void SMCMCMCMove::make_copy(const SMCMCMCMove &another)
 
 }
 
-SMCOutput SMCMCMCMove::smc_step() const
+void SMCMCMCMove::smc_step()
 {
-  return SMCOutput();
+
+}
+
+void SMCMCMCMove::weight_update()
+{
+
 }

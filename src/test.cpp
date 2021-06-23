@@ -161,14 +161,14 @@ double a_test(const List &model)
   // //  answer = evaluate_log_prior(test_params);
   // return a_worker.output[0];
 
-  for (unsigned int i=0; i<10000; ++i)
+  for (unsigned int i=0; i<10; ++i)
     Rcout << a_worker.simulate_output[i] << std::endl;
 
   Rcout << std::endl << std::endl;
 
   parallelFor(0, dummy_input_vec.size(), a_worker);
 
-  for (unsigned int i=0; i<10000; ++i)
+  for (unsigned int i=0; i<10; ++i)
     Rcout << a_worker.simulate_output[i] << std::endl;
   return 1.0;
 }

@@ -18,7 +18,7 @@ public:
   void operator=(const SMC &another);
   virtual SMC* duplicate() const=0;
 
-  SMCOutput do_smc();
+  virtual SMCOutput do_smc()=0;
 
 protected:
 
@@ -26,9 +26,13 @@ protected:
 
   Particles is_step() const;
 
-  Parameters single_particle_is_step() const;
+  //Parameters single_particle_is_step() const;
 
-  virtual SMCOutput smc_step() const=0;
+  virtual void smc_step()=0;
+
+  virtual void weight_update()=0;
+
+  //virtual double single_particle_weight_update() const=0;
 
   const ModelAndAlgorithm* model_and_algorithm;
 

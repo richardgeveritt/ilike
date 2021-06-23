@@ -23,9 +23,53 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// store_L1_uniform_evaluate_log_abc_kernel
+SEXP store_L1_uniform_evaluate_log_abc_kernel();
+RcppExport SEXP _ilike_store_L1_uniform_evaluate_log_abc_kernel() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(store_L1_uniform_evaluate_log_abc_kernel());
+    return rcpp_result_gen;
+END_RCPP
+}
+// store_L2_uniform_evaluate_log_abc_kernel
+SEXP store_L2_uniform_evaluate_log_abc_kernel();
+RcppExport SEXP _ilike_store_L2_uniform_evaluate_log_abc_kernel() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(store_L2_uniform_evaluate_log_abc_kernel());
+    return rcpp_result_gen;
+END_RCPP
+}
+// store_Linf_uniform_evaluate_log_abc_kernel
+SEXP store_Linf_uniform_evaluate_log_abc_kernel();
+RcppExport SEXP _ilike_store_Linf_uniform_evaluate_log_abc_kernel() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(store_Linf_uniform_evaluate_log_abc_kernel());
+    return rcpp_result_gen;
+END_RCPP
+}
+// store_gaussian_uniform_evaluate_log_abc_kernel
+SEXP store_gaussian_uniform_evaluate_log_abc_kernel();
+RcppExport SEXP _ilike_store_gaussian_uniform_evaluate_log_abc_kernel() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(store_gaussian_uniform_evaluate_log_abc_kernel());
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_ilike_a_test", (DL_FUNC) &_ilike_a_test, 1},
+    {"_ilike_store_L1_uniform_evaluate_log_abc_kernel", (DL_FUNC) &_ilike_store_L1_uniform_evaluate_log_abc_kernel, 0},
+    {"_ilike_store_L2_uniform_evaluate_log_abc_kernel", (DL_FUNC) &_ilike_store_L2_uniform_evaluate_log_abc_kernel, 0},
+    {"_ilike_store_Linf_uniform_evaluate_log_abc_kernel", (DL_FUNC) &_ilike_store_Linf_uniform_evaluate_log_abc_kernel, 0},
+    {"_ilike_store_gaussian_uniform_evaluate_log_abc_kernel", (DL_FUNC) &_ilike_store_gaussian_uniform_evaluate_log_abc_kernel, 0},
     {NULL, NULL, 0}
 };
 

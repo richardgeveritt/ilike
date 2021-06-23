@@ -3,7 +3,7 @@
 using namespace Rcpp;
 using namespace RcppParallel;
 
-#include "parameters.h"
+#include "particle.h"
 #include "likelihood_estimator.h"
 
 #ifndef PARTICLES_H
@@ -26,7 +26,7 @@ protected:
 
   void make_copy(const Particles &another);
 
-  std::vector<Parameters> particles;
+  std::vector<Particle> particles;
 
   // Also store anything that needs to be stored in a different structure across all particles.
 
@@ -34,8 +34,8 @@ protected:
   // Will loop through these functions to simulate.
   //std::vector<simulatorfiunction> parameters;
 
-  // Stored here.
-  std::vector<LikelihoodEstimator*> likelihood_estimators;
+  // Stored here. // moved to model_and_algorithm
+  //std::vector<LikelihoodEstimator*> likelihood_estimators;
 
 };
 

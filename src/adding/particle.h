@@ -27,7 +27,7 @@ protected:
 
 public:
 
-  Particle();
+  Particle(const Parameters &parameters_in);
 
   virtual ~Particle();
 

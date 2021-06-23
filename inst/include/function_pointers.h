@@ -15,7 +15,7 @@ typedef double (*EvaluateLogDistributionPtr)(const Parameters &inputs);
 
 typedef Parameters (*SimulateDistributionPtr)(random_number_generator &rng);
 
-typedef double (*EvaluateLogLikelihoodPtr)(const List &inputs, const List &observed_data);
+typedef double (*EvaluateLogLikelihoodPtr)(const Parameters &inputs, const Data &observed_data);
 
 typedef double (*EstimateLogLikelihoodPtr)(const List &inputs, const List &observed_data, const List &auxiliary_variables);
 

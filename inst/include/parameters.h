@@ -27,6 +27,7 @@ public:
   arma::colvec& operator[](const std::string &variable);
   arma::colvec operator[](const std::string &variable) const;
 
+  Parameters(const Parameters &another);
   void operator=(const Parameters &another);
   Parameters* duplicate() const;
 
@@ -54,6 +55,12 @@ inline Parameters::Parameters()
 inline Parameters::~Parameters()
 {
 
+}
+
+//Copy constructor for the Parameters class.
+inline Parameters::Parameters(const Parameters &another)
+{
+  this->make_copy(another);
 }
 
 inline void Parameters::operator=(const Parameters &another)
