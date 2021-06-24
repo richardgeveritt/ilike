@@ -28,7 +28,7 @@ void SMCMCMCMove::operator=(const SMCMCMCMove &another)
   this->make_copy(another);
 }
 
-SMC* SMCMCMCMove::duplicate(void)const
+SMC* SMCMCMCMove::duplicate(void) const
 {
   return( new SMCMCMCMove(*this));
 }
@@ -38,12 +38,12 @@ void SMCMCMCMove::make_copy(const SMCMCMCMove &another)
 
 }
 
-void SMCMCMCMove::smc_step()
+void SMCMCMCMove::smc_step(void)
 {
 
 }
 
-void SMCMCMCMove::weight_update()
+void SMCMCMCMove::weight_update(void)
 {
 
 }

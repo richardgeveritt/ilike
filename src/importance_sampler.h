@@ -24,7 +24,7 @@ protected:
 
   void weight_update();
 
-  double single_particle_weight_update() const;
+  //double single_particle_weight_update() const;
 };
 
 #endif

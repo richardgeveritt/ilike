@@ -18,7 +18,7 @@ public:
   void operator=(const SMC &another);
   virtual SMC* duplicate() const=0;
 
-  virtual SMCOutput do_smc()=0;
+  SMCOutput do_smc();
 
 protected:
 
