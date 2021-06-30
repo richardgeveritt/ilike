@@ -9,7 +9,30 @@ LikelihoodEstimatorOutput::~LikelihoodEstimatorOutput()
 
 }
 
-void LikelihoodEstimatorOutput::simulate(const Parameters &parameters)
-{
+// void LikelihoodEstimatorOutput::simulate(const Parameters &parameters)
+// {
+//
+// }
 
+LikelihoodEstimatorOutput::LikelihoodEstimatorOutput(const LikelihoodEstimatorOutput &another)
+{
+  this->make_copy(another);
+}
+
+void LikelihoodEstimatorOutput::operator=(const LikelihoodEstimatorOutput &another)
+{
+  if(this == &another)
+    return;
+
+  this->make_copy(another);
+}
+
+LikelihoodEstimatorOutput* LikelihoodEstimatorOutput::duplicate() const
+{
+  return( new LikelihoodEstimatorOutput(*this));
+}
+
+void LikelihoodEstimatorOutput::make_copy(const LikelihoodEstimatorOutput &another)
+{
+  this->log_likelihood = another.log_likelihood;
 }

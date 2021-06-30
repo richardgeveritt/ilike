@@ -57,7 +57,7 @@ public:
     //                this->input.begin() + end,
     //                this->output.begin() + begin,
     //                this->evaluate_log_prior);
-    random_number_generator local_rng(rng);
+    RandomNumberGenerator local_rng(rng);
     local_rng.seed(seed,end);
     for (std::size_t i = begin; i < end; ++i)
     {
@@ -81,7 +81,7 @@ private:
 
   SimulateDistributionPtr simulate_prior;
 
-  random_number_generator rng;
+  RandomNumberGenerator rng;
 
 };
 

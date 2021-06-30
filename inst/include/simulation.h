@@ -1,3 +1,6 @@
+#ifndef SIMULATION
+#define SIMULATION
+
 //#include <random>
 //#include <boost/random/binomial_distribution.hpp>
 //#include <boost/random/mersenne_twister.hpp>
@@ -8,17 +11,16 @@
 //#include <xoshiro.h>
 #include <RcppCommon.h>
 
-#ifndef SIMULATION
-#define SIMULATION
+
 
 #define BOOST_DISABLE_ASSERTS 1
 
-using random_number_generator = dqrng::random_64bit_wrapper<dqrng::xoshiro256plus>;
+using RandomNumberGenerator = dqrng::random_64bit_wrapper<dqrng::xoshiro256plus>;
 //using Binomial = boost::random::binomial_distribution<int>;
 using Normal = dqrng::normal_distribution;
 //using RNG = dqrng::xoshiro256plus;
 
-inline double simulate_normal(random_number_generator &rng, double mean, double sd)
+inline double simulate_normal(RandomNumberGenerator &rng, double mean, double sd)
 {
   Normal my_normal;
   return my_normal(rng, Normal::param_type(mean, sd));

@@ -1,3 +1,6 @@
+#ifndef PARAMETERS_H
+#define PARAMETERS_H
+
 #include <RcppArmadilloForward.h>
 #include <RcppCommon.h>
 
@@ -5,8 +8,6 @@
 #include <vector>
 #include <boost/unordered_map.hpp>
 
-#ifndef PARAMETERS_H
-#define PARAMETERS_H
 
 // At some point, we might need a more flexible container for data and/or parameters.
 // At this point, make another class that includes this one.

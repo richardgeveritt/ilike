@@ -1,22 +1,23 @@
+#ifndef PARTICLES_H
+#define PARTICLES_H
+
 #include <RcppParallel.h>
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 using namespace RcppParallel;
 
 #include "particle.h"
-#include "likelihood_estimator.h"
-
-#ifndef PARTICLES_H
-#define PARTICLES_H
 
 class Particles
 {
 public:
 
   Particles(void);
-  Particles(const Particles &another);
+  Particles(const std::vector<Particle> &particles_in);
+
   virtual ~Particles(void);
 
+  Particles(const Particles &another);
   void operator=(const Particles &another);
 
   //virtual List& operator[](int index)=0;

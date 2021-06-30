@@ -1,11 +1,11 @@
+#ifndef SMCWORKER_H
+#define SMCWORKER_H
+
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 
 #include "particles.h"
 #include "simulation.h"
-
-#ifndef SMCWORKER_H
-#define SMCWORKER_H
 
 class SMCWorker
 {

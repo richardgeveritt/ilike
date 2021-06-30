@@ -1,3 +1,6 @@
+#ifndef TYPEDEFS
+#define TYPEDEFS
+
 // [[Rcpp::interfaces(r, cpp)]]
 
 #include <RcppArmadillo.h>
@@ -8,12 +11,9 @@ using namespace Rcpp;
 
 // typedefs for function pointers
 
-#ifndef TYPEDEFS
-#define TYPEDEFS
-
 typedef double (*EvaluateLogDistributionPtr)(const Parameters &inputs);
 
-typedef Parameters (*SimulateDistributionPtr)(random_number_generator &rng);
+typedef Parameters (*SimulateDistributionPtr)(RandomNumberGenerator &rng);
 
 typedef double (*EvaluateLogLikelihoodPtr)(const Parameters &inputs, const Data &observed_data);
 

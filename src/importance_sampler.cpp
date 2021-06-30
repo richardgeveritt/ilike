@@ -1,8 +1,9 @@
 #include "importance_sampler.h"
 
 ///Default constructor, Shape and Scale parameters have no values.
-ImportanceSampler::ImportanceSampler(const ModelAndAlgorithm* model_and_algorithm_in)
-  :SMC(model_and_algorithm_in)
+ImportanceSampler::ImportanceSampler(const ModelAndAlgorithm &model_and_algorithm_in,
+                                     const Data* data_in)
+  :SMC(model_and_algorithm_in, data_in)
 {
 }
 
@@ -28,7 +29,12 @@ void ImportanceSampler::operator=(const ImportanceSampler &another)
   this->make_copy(another);
 }
 
-SMC* ImportanceSampler::duplicate(void)const
+SMC* ImportanceSampler::smc_duplicate(void)const
+{
+  return( new ImportanceSampler(*this));
+}
+
+LikelihoodEstimator* ImportanceSampler::duplicate(void)const
 {
   return( new ImportanceSampler(*this));
 }

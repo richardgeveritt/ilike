@@ -1,11 +1,11 @@
+#ifndef SEQUENTIALSMCWORKER_H
+#define SEQUENTIALSMCWORKER_H
+
 #include "smc_worker.h"
 
 #include <vector>
 
-//#include "simulator.h"
-
-#ifndef SEQUENTIALSMCWORKER_H
-#define SEQUENTIALSMCWORKER_H
+#include "particles.h"
 
 class SequentialSMCWorker : public SMCWorker
 {

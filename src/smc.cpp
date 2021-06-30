@@ -1,16 +1,19 @@
 #include "smc.h"
 
-#include "function_pointers.h"
+//#include "function_pointers.h"
 #include "utils.h"
-#include "likelihood_estimator.h"
-#include "likelihood_maker.h"
+//#include "likelihood_estimator.h"
+//#include "likelihood_maker.h"
 
-SMC::SMC(const ModelAndAlgorithm* model_and_algorithm_in)
+SMC::SMC(const ModelAndAlgorithm &model_and_algorithm_in,
+         const Data* data_in)
+  :LikelihoodEstimator(model_and_algorithm_in, data_in)
 {
   this->model_and_algorithm = model_and_algorithm_in;
 }
 
 SMC::SMC(const SMC &another)
+  :LikelihoodEstimator(another)
 {
   this->make_copy(another);
 }
@@ -29,7 +32,7 @@ void SMC::operator=(const SMC &another)
 
 void SMC::make_copy(const SMC &another)
 {
-  this->model_and_algorithm = another.model_and_algorithm;
+  this->output = another.output;
 }
 
 Particles SMC::is_step() const
@@ -49,7 +52,7 @@ Particles SMC::is_step() const
 //
 // }
 
-SMCOutput SMC::do_smc()
+SMCOutput* SMC::do_smc()
 {
   /*
   unsigned int number_of_points = algorithm["number_of_points"];
@@ -114,5 +117,10 @@ SMCOutput SMC::do_smc()
                       Named("log_normalising_constant") = log_sum_exp(log_weights));
    */
 
-  return SMCOutput();
+  return new SMCOutput();
+}
+
+LikelihoodEstimatorOutput* SMC::simulate(const Parameters &parameters)
+{
+  return this->do_smc();
 }

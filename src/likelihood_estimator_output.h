@@ -1,12 +1,10 @@
+#ifndef LIKELIHOODESTIMATOROUTPUT_H
+#define LIKELIHOODESTIMATOROUTPUT_H
+
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 
 #include <vector>
-
-#include "parameters.h"
-
-#ifndef LIKELIHOODESTIMATOROUTPUT_H
-#define LIKELIHOODESTIMATOROUTPUT_H
 
 class LikelihoodEstimatorOutput
 {
@@ -17,7 +15,12 @@ public:
 
   virtual ~LikelihoodEstimatorOutput();
 
-  virtual void simulate(const Parameters &parameters);
+  //virtual void simulate(const Parameters &parameters);
+
+  LikelihoodEstimatorOutput(const LikelihoodEstimatorOutput &another);
+
+  void operator=(const LikelihoodEstimatorOutput &another);
+  virtual LikelihoodEstimatorOutput* duplicate() const;
 
   // virtual double estimate_log_likelihood(const List &inputs,
   //                                        const List &auxiliary_variables) const=0;
@@ -30,6 +33,8 @@ public:
 protected:
 
   double log_likelihood;
+
+  void make_copy(const LikelihoodEstimatorOutput &another);
 
 };
 

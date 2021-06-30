@@ -1,38 +1,38 @@
+#ifndef PARTICLE_H
+#define PARTICLE_H
+
 //#include <Rcpp.h>
 
 #include <RcppArmadillo.h>
 using namespace Rcpp;
-
 #include <vector>
-
 #include "parameters.h"
-#include "likelihood_estimator_output.h"
-#include "likelihood_estimator.h"
 
-#ifndef PARTICLE_H
-#define PARTICLE_H
+class ModelAndAlgorithm;
+class LikelihoodEstimatorOutput;
 
 class Particle
 {
 
-protected:
-
-  Parameters parameters;
-
-  // Stored here.
-  std::vector<LikelihoodEstimatorOutput*> likelihood_estimators;
-
-  // Pointer, not stored here.
-  LikelihoodEstimator* estimator;
-
 public:
 
+  Particle();
   Particle(const Parameters &parameters_in);
 
   virtual ~Particle();
 
   // Simulate parameters, then all llhd estimators
   void simulate();
+
+protected:
+
+  Parameters parameters;
+
+  // Stored here.
+  std::vector<LikelihoodEstimatorOutput*> likelihood_estimator_outputs;
+
+  // Pointer, not stored here.
+  const ModelAndAlgorithm* model_and_algorithm;
 
 };
 

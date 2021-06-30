@@ -1,8 +1,6 @@
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 
-#include "parameters.h"
-
 #ifndef SEQUENCER_H
 #define SEQUENCER_H
 

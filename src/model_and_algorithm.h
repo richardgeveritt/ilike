@@ -1,4 +1,5 @@
-//#include <Rcpp.h>
+#ifndef MODELANDALGORITHM_H
+#define MODELANDALGORITHM_H
 
 #include <RcppArmadillo.h>
 using namespace Rcpp;
@@ -7,13 +8,13 @@ using namespace Rcpp;
 #include <string>
 
 #include "simulation.h"
-#include "particle.h"
 #include "function_pointers.h"
 
-#ifndef MODELANDALGORITHM_H
-#define MODELANDALGORITHM_H
 
-typedef Particle (*SimulateParticlePtr)(random_number_generator &rng);
+class LikelihoodEstimator;
+
+
+//typedef Particle (*SimulateParticlePtr)(random_number_generator &rng);
 
 
 
@@ -35,17 +36,15 @@ public:
 
   ModelAndAlgorithm(const ModelAndAlgorithm &another);
   void operator=(const ModelAndAlgorithm &another);
-  ModelAndAlgorithm* duplicate() const;
 
   void SetIS(const SimulateDistributionPtr simulate_distribution_in,
              const EvaluateLogLikelihoodPtr evaluate_log_likelihood_in);
 
 protected:
 
-  SimulateParticlePtr simulate_particle;
-
   void make_copy(const ModelAndAlgorithm &another);
 
+  // Stored here.
   std::vector<LikelihoodEstimator*> likelihood_estimators;
 
 };

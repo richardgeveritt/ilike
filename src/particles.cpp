@@ -1,9 +1,14 @@
 #include "particles.h"
 
-#include <array>
+//#include <array>
 
 Particles::Particles()
 {
+}
+
+Particles::Particles(const std::vector<Particle> &particles_in)
+{
+  this->particles = particles_in;
 }
 
 Particles::Particles(const Particles &another)

@@ -1,24 +1,29 @@
+#ifndef SMC_H
+#define SMC_H
+
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 
 #include "smc_output.h"
 #include "model_and_algorithm.h"
+#include "likelihood_estimator.h"
+#include "particles.h"
 
-#ifndef SMC_H
-#define SMC_H
-
-class SMC
+class SMC : public LikelihoodEstimator
 {
 public:
 
-  SMC(const ModelAndAlgorithm* model_and_algorithm_in);
+  SMC(const ModelAndAlgorithm &model_and_algorithm_in,
+      const Data* data_in);
   SMC(const SMC &another);
   virtual ~SMC(void);
 
   void operator=(const SMC &another);
-  virtual SMC* duplicate() const=0;
+  virtual SMC* smc_duplicate() const=0;
 
-  SMCOutput do_smc();
+  SMCOutput* do_smc();
+
+  LikelihoodEstimatorOutput* simulate(const Parameters &parameters);
 
 protected:
 
@@ -33,8 +38,6 @@ protected:
   virtual void weight_update()=0;
 
   //virtual double single_particle_weight_update() const=0;
-
-  const ModelAndAlgorithm* model_and_algorithm;
 
   SMCOutput output;
 };
