@@ -4,7 +4,7 @@
 #include <RcppParallel.h>
 
 #include "smc_worker.h"
-#include "simulation.h"
+#include "distributions.h"
 
 class RcppParallelSMCWorker;
 class ParticleSimulator;

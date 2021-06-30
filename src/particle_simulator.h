@@ -4,7 +4,7 @@
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 
-#include "simulation.h"
+#include "distributions.h"
 #include "particle.h"
 
 class ParticleSimulator

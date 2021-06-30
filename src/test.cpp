@@ -110,6 +110,10 @@ double a_test(const List &model)
   SEXP simulate_prior_SEXP = model["simulate_prior"];
   SimulateDistributionPtr simulate_prior = load_simulate_distribution(simulate_prior_SEXP);
 
+  SEXP observed_data_SEXP = model["observed_data"];
+  Data observed_data = load_observed_data(observed_data_SEXP);
+  Rcout << observed_data << std::endl;
+
   //Parameters input;
   //dqrng::random_64bit_wrapper<dqrng::xoshiro256plus> rng = dqrng::random_64bit_wrapper<dqrng::xoshiro256plus>();
   //rng.seed(1,3);

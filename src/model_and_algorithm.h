@@ -7,7 +7,7 @@ using namespace Rcpp;
 #include <vector>
 #include <string>
 
-#include "simulation.h"
+#include "distributions.h"
 #include "function_pointers.h"
 
 

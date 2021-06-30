@@ -7,7 +7,7 @@
 using namespace Rcpp;
 
 #include "parameters.h"
-#include "simulation.h"
+#include "distributions.h"
 
 // typedefs for function pointers
 
@@ -33,6 +33,8 @@ typedef arma::colvec (*SummaryStatisticsPtr)(const List &observed_data);
 
 typedef List (*GetDataFromSimulationPtr)(const List &simulation);
 
+typedef Data (*ObservedDataPtr)(void);
+
 
 EvaluateLogDistributionPtr load_evaluate_log_distribution(const SEXP &evaluate_log_distribution_SEXP);
 
@@ -54,6 +56,9 @@ SummaryStatisticsPtr load_summary_statistics(const SEXP &summary_statistic_SEXP)
 
 GetDataFromSimulationPtr load_get_data_from_simulation(const SEXP &get_data_from_simulation_SEXP);
 
+//Data load_observed_data(const SEXP &observed_data_SEXP);
+
+Data load_observed_data(const SEXP &observed_data_SEXP);
 
 // List simulate_distribution_cpp(const SEXP &simulate_distribution_SEXP);
 //
@@ -146,6 +151,18 @@ inline GetDataFromSimulationPtr load_get_data_from_simulation(const SEXP &get_da
 {
   XPtr<GetDataFromSimulationPtr> get_data_from_simulation_XPtr(get_data_from_simulation_SEXP);
   return *get_data_from_simulation_XPtr;
+}
+
+// inline Data load_observed_data(const SEXP &observed_data_SEXP)
+// {
+//   XPtr<Data> observed_data_XPtr(observed_data_SEXP);
+//   return *observed_data_XPtr;
+// }
+
+inline Data load_observed_data(const SEXP &observed_data_SEXP)
+{
+  XPtr<ObservedDataPtr> observed_data_XPtr(observed_data_SEXP);
+  return (*observed_data_XPtr)();
 }
 
 

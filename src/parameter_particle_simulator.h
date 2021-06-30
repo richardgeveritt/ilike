@@ -4,7 +4,7 @@
 #include "particle_simulator.h"
 
 #include "function_pointers.h"
-#include "simulation.h"
+#include "distributions.h"
 
 class ParameterParticleSimulator : public ParticleSimulator
 {

@@ -5,9 +5,16 @@
 //#include <boost/random/binomial_distribution.hpp>
 //#include <boost/random/mersenne_twister.hpp>
 //#include <boost/random/normal_distribution.hpp>
+#include <math.h>
 #include <dqrng_distribution.h>
 #include <dqrng_generator.h>
-#include <pcg_random.hpp>
+#include <boost/random/gamma_distribution.hpp>
+#include <boost/math/distributions.hpp>
+//#include <boost/math/distributions/gamma.hpp>
+//#include <boost/math/distributions/normal.hpp>
+#include <boost/math/special_functions/gamma.hpp>
+
+//#include <pcg_random.hpp>
 //#include <xoshiro.h>
 #include <RcppCommon.h>
 
@@ -15,15 +22,82 @@
 
 #define BOOST_DISABLE_ASSERTS 1
 
-using RandomNumberGenerator = dqrng::random_64bit_wrapper<dqrng::xoshiro256plus>;
+//using RandomNumberGenerator = dqrng::random_64bit_wrapper<dqrng::xoshiro256plus>;
+typedef dqrng::random_64bit_wrapper<dqrng::xoshiro256plus> RandomNumberGenerator;
 //using Binomial = boost::random::binomial_distribution<int>;
-using Normal = dqrng::normal_distribution;
+
+
+using Gamma = boost::math::gamma_distribution<double>;
 //using RNG = dqrng::xoshiro256plus;
 
-inline double simulate_normal(RandomNumberGenerator &rng, double mean, double sd)
+inline double normal_simulate(RandomNumberGenerator &rng, double mean, double sd)
 {
-  Normal my_normal;
-  return my_normal(rng, Normal::param_type(mean, sd));
+  dqrng::normal_distribution my_normal;
+  return my_normal(rng, dqrng::normal_distribution::param_type(mean, sd));
+}
+
+inline double normal_logpdf(double x, double mean, double sd)
+{
+  if (sd<0)
+  {
+    return NAN;
+  }
+  if (sd==0)
+  {
+    if (x==mean)
+      return arma::datum::inf;
+    else
+      return -arma::datum::inf;
+  }
+  return -log(sd) - 0.5*log(2.0*M_PI) - 0.5*pow((x-mean)/sd,2.0);
+}
+
+inline arma::colvec normal_logpdf(const arma::colvec &x, double mean, double sd)
+{
+  size_t n = x.size();
+  arma::colvec result(n);
+
+  if (sd<0)
+  {
+    for (size_t i = 0; i<n; ++i)
+      result[i] = NAN;
+    return result;
+  }
+  if (sd==0)
+  {
+    for (size_t i = 0; i<n; ++i)
+    {
+      if (x[i]==mean)
+      {
+        result[i] = arma::datum::inf;
+      }
+      else
+      {
+        result[i] = -arma::datum::inf;
+      }
+    }
+    return result;
+  }
+
+  for (size_t i = 0; i<n; ++i)
+    result[i] = -log(sd) - 0.5*log(2.0*M_PI) - 0.5*pow((x[i]-mean)/sd,2.0);
+  return result;
+
+}
+
+inline double gamma_simulate(RandomNumberGenerator &rng, double shape, double scale)
+{
+  boost::random::gamma_distribution<double> my_gamma(shape, scale);
+  return my_gamma(rng);
+}
+
+inline double gamma_logpdf(double x, double shape, double scale)
+{
+  if ( (shape<=0) || (scale<=0) )
+    return double(NAN);
+  if (x<0)
+    return -arma::datum::inf;
+  return -boost::math::lgamma<double>(shape) - shape*log(scale) + (shape-1.0)*log(x) - x/scale;
 }
 
 // namespace Rcpp {

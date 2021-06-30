@@ -5,7 +5,7 @@
 using namespace Rcpp;
 
 #include "particles.h"
-#include "simulation.h"
+#include "distributions.h"
 
 class SMCWorker
 {
