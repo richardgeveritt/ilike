@@ -33,7 +33,7 @@ typedef arma::colvec (*SummaryStatisticsPtr)(const List &observed_data);
 
 typedef List (*GetDataFromSimulationPtr)(const List &simulation);
 
-typedef Data (*ObservedDataPtr)(void);
+typedef Data (*DataPtr)(void);
 
 
 EvaluateLogDistributionPtr load_evaluate_log_distribution(const SEXP &evaluate_log_distribution_SEXP);
@@ -58,7 +58,7 @@ GetDataFromSimulationPtr load_get_data_from_simulation(const SEXP &get_data_from
 
 //Data load_observed_data(const SEXP &observed_data_SEXP);
 
-Data load_observed_data(const SEXP &observed_data_SEXP);
+Data load_data(const SEXP &data_SEXP);
 
 // List simulate_distribution_cpp(const SEXP &simulate_distribution_SEXP);
 //
@@ -159,10 +159,10 @@ inline GetDataFromSimulationPtr load_get_data_from_simulation(const SEXP &get_da
 //   return *observed_data_XPtr;
 // }
 
-inline Data load_observed_data(const SEXP &observed_data_SEXP)
+inline Data load_data(const SEXP &data_SEXP)
 {
-  XPtr<ObservedDataPtr> observed_data_XPtr(observed_data_SEXP);
-  return (*observed_data_XPtr)();
+  XPtr<DataPtr> data_XPtr(data_SEXP);
+  return (*data_XPtr)();
 }
 
 

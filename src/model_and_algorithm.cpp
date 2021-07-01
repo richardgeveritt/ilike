@@ -1,5 +1,6 @@
 #include "model_and_algorithm.h"
 #include "likelihood_estimator.h"
+#include "importance_sampler.h"
 //#include "parameter_particle_simulator.h"
 
 //using namespace std::placeholders;
@@ -51,11 +52,13 @@ void ModelAndAlgorithm::make_copy(const ModelAndAlgorithm &another)
   }
 }
 
-void ModelAndAlgorithm::SetIS(const SimulateDistributionPtr simulate_distribution_in,
+ImportanceSampler* ModelAndAlgorithm::GetIS(const SimulateDistributionPtr simulate_distribution_in,
                               const EvaluateLogLikelihoodPtr evaluate_log_likelihood_in)
 {
   // Need to construct LikelihoodEstimator to read in to this constructor.
   //ParameterParticleSimulator parameter_particle_simulator(simulate_distribution_in);
 
   //auto thing = std::bind(simulate_particle_from_simulate_parameters, simulate_distribution_in, _2);
+
+  return new ImportanceSampler();
 }

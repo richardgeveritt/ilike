@@ -5,6 +5,11 @@
 //#include "likelihood_estimator.h"
 //#include "likelihood_maker.h"
 
+SMC::SMC()
+  :LikelihoodEstimator()
+{
+}
+
 SMC::SMC(const ModelAndAlgorithm &model_and_algorithm_in,
          const Data* data_in)
   :LikelihoodEstimator(model_and_algorithm_in, data_in)

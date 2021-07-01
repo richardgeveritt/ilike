@@ -1,6 +1,10 @@
 #include "importance_sampler.h"
 
-///Default constructor, Shape and Scale parameters have no values.
+ImportanceSampler::ImportanceSampler()
+  :SMC()
+{
+}
+
 ImportanceSampler::ImportanceSampler(const ModelAndAlgorithm &model_and_algorithm_in,
                                      const Data* data_in)
   :SMC(model_and_algorithm_in, data_in)

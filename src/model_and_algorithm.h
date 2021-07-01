@@ -12,7 +12,7 @@ using namespace Rcpp;
 
 
 class LikelihoodEstimator;
-
+class ImportanceSampler;
 
 //typedef Particle (*SimulateParticlePtr)(random_number_generator &rng);
 
@@ -37,8 +37,8 @@ public:
   ModelAndAlgorithm(const ModelAndAlgorithm &another);
   void operator=(const ModelAndAlgorithm &another);
 
-  void SetIS(const SimulateDistributionPtr simulate_distribution_in,
-             const EvaluateLogLikelihoodPtr evaluate_log_likelihood_in);
+  ImportanceSampler* GetIS(const SimulateDistributionPtr simulate_distribution_in,
+                           const EvaluateLogLikelihoodPtr evaluate_log_likelihood_in);
 
 protected:
 

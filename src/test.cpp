@@ -5,7 +5,7 @@ using namespace Rcpp;
 
 #include "parameters.h"
 #include "function_pointers.h"
-
+#include "model_and_algorithm.h"
 
 
 // class Tester {
@@ -110,9 +110,12 @@ double a_test(const List &model)
   SEXP simulate_prior_SEXP = model["simulate_prior"];
   SimulateDistributionPtr simulate_prior = load_simulate_distribution(simulate_prior_SEXP);
 
-  SEXP observed_data_SEXP = model["observed_data"];
-  Data observed_data = load_observed_data(observed_data_SEXP);
-  Rcout << observed_data << std::endl;
+  SEXP data_SEXP = model["data"];
+  Data data = load_data(data_SEXP);
+  Rcout << data << std::endl;
+
+  ModelAndAlgorithm test_IS;
+
 
   //Parameters input;
   //dqrng::random_64bit_wrapper<dqrng::xoshiro256plus> rng = dqrng::random_64bit_wrapper<dqrng::xoshiro256plus>();
@@ -134,7 +137,7 @@ double a_test(const List &model)
 
   //double testing = 4.0;//my_sqrt(test_params);
 
-  std::vector<Parameters> input_vec(10000);
+  std::vector<Parameters> input_vec(10);
   // input_vec[0] = test_params;
   // input_vec[1] = test_params;
   // input_vec[2] = test_params;
@@ -146,7 +149,7 @@ double a_test(const List &model)
   // input_vec[8] = test_params;
   // input_vec[9] = test_params;
   //
-  std::vector<double> dummy_input_vec(10000);
+  std::vector<double> dummy_input_vec(10);
   // dummy_input_vec[0] = 0.0;
   // dummy_input_vec[1] = 0.0;
   // dummy_input_vec[2] = 0.0;
@@ -165,14 +168,14 @@ double a_test(const List &model)
   // //  answer = evaluate_log_prior(test_params);
   // return a_worker.output[0];
 
-  for (unsigned int i=0; i<10; ++i)
-    Rcout << a_worker.simulate_output[i] << std::endl;
-
-  Rcout << std::endl << std::endl;
-
-  parallelFor(0, dummy_input_vec.size(), a_worker);
-
-  for (unsigned int i=0; i<10; ++i)
-    Rcout << a_worker.simulate_output[i] << std::endl;
+  // for (unsigned int i=0; i<10; ++i)
+  //   Rcout << a_worker.simulate_output[i] << std::endl;
+  //
+  // Rcout << std::endl << std::endl;
+  //
+  // parallelFor(0, dummy_input_vec.size(), a_worker);
+  //
+  // for (unsigned int i=0; i<10; ++i)
+  //   Rcout << a_worker.simulate_output[i] << std::endl;
   return 1.0;
 }

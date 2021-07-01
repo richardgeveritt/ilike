@@ -13,6 +13,7 @@ class SMC : public LikelihoodEstimator
 {
 public:
 
+  SMC();
   SMC(const ModelAndAlgorithm &model_and_algorithm_in,
       const Data* data_in);
   SMC(const SMC &another);

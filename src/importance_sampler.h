@@ -7,6 +7,7 @@ class ImportanceSampler : public SMC
 {
 public:
 
+  ImportanceSampler();
   ImportanceSampler(const ModelAndAlgorithm &model_and_algorithm_in,
                     const Data* data_in);
   ImportanceSampler(const ImportanceSampler &another);
