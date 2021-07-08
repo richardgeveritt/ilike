@@ -7,8 +7,10 @@ using namespace Rcpp;
 #include <vector>
 #include "parameters.h"
 #include "model_and_algorithm.h"
+#include "distributions.h"
 
 class LikelihoodEstimatorOutput;
+class SMCWorker;
 
 class LikelihoodEstimator
 {
@@ -16,8 +18,9 @@ class LikelihoodEstimator
 public:
 
   LikelihoodEstimator();
-  LikelihoodEstimator(const ModelAndAlgorithm &model_and_algorithm_in,
-                      const Data* observed_data_in);
+  LikelihoodEstimator(RandomNumberGenerator* rng_in,
+                      size_t* seed_in,
+                      const Data* data_in);
   virtual ~LikelihoodEstimator();
 
   LikelihoodEstimator(const LikelihoodEstimator &another);
@@ -25,14 +28,21 @@ public:
   void operator=(const LikelihoodEstimator &another);
   virtual LikelihoodEstimator* duplicate() const=0;
 
-  virtual LikelihoodEstimatorOutput* simulate(const Parameters &parameters)=0;
+  virtual LikelihoodEstimatorOutput* initial_simulate(const Parameters &parameters)=0;
 
 protected:
 
-  // Not stored here.
-  const Data* observed_data;
+  friend SMCWorker;
 
-  // Stored here.
+  // Not stored here. Stored in "main'.
+  const Data* data;
+
+  // Not stored here. Stored in "main'.
+  RandomNumberGenerator* rng;
+
+  // Not stored here. Stored in "main'.
+  size_t* seed;
+
   ModelAndAlgorithm model_and_algorithm;
 
   void make_copy(const LikelihoodEstimator &another);

@@ -6,6 +6,7 @@
 #include "smc_worker.h"
 #include "distributions.h"
 
+class SMC;
 class RcppParallelSMCWorker;
 class ParticleSimulator;
 
@@ -15,9 +16,7 @@ public:
 
   SimulateWorker();
 
-  SimulateWorker(RcppParallelSMCWorker* smc_worker_in,
-                 const ParticleSimulator* particle_simulator_in,
-                 const size_t num_particles_in);
+  SimulateWorker(RcppParallelSMCWorker* smc_worker_in);
 
   ~SimulateWorker();
 
@@ -33,8 +32,6 @@ private:
 
   friend class RcppParallelSMCWorker;
   RcppParallelSMCWorker* smc_worker;
-
-  const ParticleSimulator* particle_simulator;
 
   void make_copy(const SimulateWorker &another);
 
@@ -57,23 +54,29 @@ class RcppParallelSMCWorker : public SMCWorker
 {
 public:
 
-  RcppParallelSMCWorker(uint64_t seed_in,
-                        const ParticleSimulator* particle_simulator_in,
-                        const size_t num_particles_in);
+  RcppParallelSMCWorker();
+  RcppParallelSMCWorker(SMC* the_smc,
+                        ParticleSimulator* particle_simulator_in);
   virtual ~RcppParallelSMCWorker();
 
   RcppParallelSMCWorker(const RcppParallelSMCWorker &another);
   void operator=(const RcppParallelSMCWorker &another);
   SMCWorker* duplicate() const;
 
-  Particles simulate() const;
+  std::vector<Particle> get_particles() const;
+
+  // Simulate from the proposal and weight.
+  void simulate_and_weight();
 
 protected:
 
+  // Just does the simulation from the proposal.
+  void specific_simulate();
+
   void make_copy(const RcppParallelSMCWorker &another);
 
-  uint64_t seed;
-  RandomNumberGenerator rng;
+  //uint64_t seed;
+  //RandomNumberGenerator rng;
 
   friend class SimulateWorker;
   SimulateWorker simulate_worker;

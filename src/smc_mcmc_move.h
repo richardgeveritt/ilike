@@ -7,8 +7,14 @@ class SMCMCMCMove : public SMC
 {
 public:
 
-  SMCMCMCMove(const ModelAndAlgorithm &model_and_algorithm_in,
-              const Data* data_in);
+  SMCMCMCMove();
+
+  SMCMCMCMove(RandomNumberGenerator* rng_in,
+              size_t* seed_in,
+              const Data* data_in,
+              size_t number_of_particles_in,
+              size_t lag_in,
+              size_t lag_proposed_in);
   SMCMCMCMove(const SMCMCMCMove &another);
   virtual ~SMCMCMCMove(void);
 
@@ -16,15 +22,15 @@ public:
   SMC* smc_duplicate() const;
   LikelihoodEstimator* duplicate() const;
 
-  SMCOutput do_smc();
-
 protected:
+
+  void smc_update(SMCOutput* current_state);
 
   void make_copy(const SMCMCMCMove &another);
 
-  void smc_step();
+  //void smc_step();
 
-  void weight_update();
+  //void weight_update();
 };
 
 #endif

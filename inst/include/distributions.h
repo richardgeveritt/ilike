@@ -27,8 +27,14 @@ typedef dqrng::random_64bit_wrapper<dqrng::xoshiro256plus> RandomNumberGenerator
 //using Binomial = boost::random::binomial_distribution<int>;
 
 
-using Gamma = boost::math::gamma_distribution<double>;
+//using Gamma = boost::math::gamma_distribution<double>;
 //using RNG = dqrng::xoshiro256plus;
+
+inline size_t rdtsc(){
+  size_t lo,hi;
+  __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
+  return ((size_t)hi << 32) | lo;
+}
 
 inline double normal_simulate(RandomNumberGenerator &rng, double mean, double sd)
 {

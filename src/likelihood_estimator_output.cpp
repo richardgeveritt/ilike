@@ -27,11 +27,6 @@ void LikelihoodEstimatorOutput::operator=(const LikelihoodEstimatorOutput &anoth
   this->make_copy(another);
 }
 
-LikelihoodEstimatorOutput* LikelihoodEstimatorOutput::duplicate() const
-{
-  return( new LikelihoodEstimatorOutput(*this));
-}
-
 void LikelihoodEstimatorOutput::make_copy(const LikelihoodEstimatorOutput &another)
 {
   this->log_likelihood = another.log_likelihood;

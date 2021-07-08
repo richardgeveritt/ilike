@@ -1,17 +1,23 @@
 #include "exact_likelihood_estimator.h"
-#include "likelihood_estimator_output.h"
+#include "exact_likelihood_estimator_output.h"
 
-ExactLikelihoodEstimator::ExactLikelihoodEstimator(const ModelAndAlgorithm &model_and_algorithm_in,
-                                                   const Data* observed_data_in,
+ExactLikelihoodEstimator::ExactLikelihoodEstimator()
+  :LikelihoodEstimator()
+{
+}
+
+ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
+                                                   size_t* seed_in,
+                                                   const Data* data_in,
                                                    EvaluateLogLikelihoodPtr func_in)
-:LikelihoodEstimator(model_and_algorithm_in,observed_data_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in)
 {
   this->func = func_in;
+  //this->output = new ExactLikelihoodEstimatorOutput();
 }
 
 ExactLikelihoodEstimator::~ExactLikelihoodEstimator()
 {
-
 }
 
 //Copy constructor for the ExactLikelihoodEstimator class.
@@ -39,6 +45,8 @@ LikelihoodEstimator* ExactLikelihoodEstimator::duplicate(void)const
 void ExactLikelihoodEstimator::make_copy(const ExactLikelihoodEstimator &another)
 {
   this->func = another.func;
+  //if (this->output!=NULL)
+  //  this->output = another.output->duplicate();
 }
 
 // double ExactLikelihoodEstimator::estimate_log_likelihood(const List &inputs,
@@ -47,9 +55,9 @@ void ExactLikelihoodEstimator::make_copy(const ExactLikelihoodEstimator &another
 //   return this->func(inputs,this->observed_data);
 // }
 
-LikelihoodEstimatorOutput* ExactLikelihoodEstimator::simulate(const Parameters &parameters)
+LikelihoodEstimatorOutput* ExactLikelihoodEstimator::initial_simulate(const Parameters &parameters)
 {
-  return(new LikelihoodEstimatorOutput());
+  return new ExactLikelihoodEstimatorOutput(this);
 }
 
 // void ExactLikelihoodEstimator::is_setup_likelihood_estimator(const std::vector<List> &all_points,

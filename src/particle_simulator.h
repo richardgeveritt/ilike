@@ -18,7 +18,7 @@ public:
   void operator=(const ParticleSimulator &another);
   virtual ParticleSimulator* duplicate() const=0;
 
-  virtual Particle operator()(RandomNumberGenerator &rng) const=0;
+  virtual Particle operator()(RandomNumberGenerator &rng)=0;
 
 protected:
 

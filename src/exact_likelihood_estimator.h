@@ -10,15 +10,18 @@ using namespace Rcpp;
 #include "function_pointers.h"
 #include "parameters.h"
 
-class LikelihoodEstimatorOutput;
+class ExactLikelihoodEstimatorOutput;
 
 class ExactLikelihoodEstimator : public LikelihoodEstimator
 {
 
 public:
 
-  ExactLikelihoodEstimator(const ModelAndAlgorithm &model_and_algorithm_in,
-                           const Data* observed_data_in,
+  ExactLikelihoodEstimator();
+
+  ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
+                           size_t* seed_in,
+                           const Data* sdata_in,
                            EvaluateLogLikelihoodPtr func_in);
 
   virtual ~ExactLikelihoodEstimator();
@@ -31,14 +34,19 @@ public:
   // double estimate_log_likelihood(const List &inputs,
   //                                const List &auxiliary_variables) const;
 
-  LikelihoodEstimatorOutput* simulate(const Parameters &parameters);
+  LikelihoodEstimatorOutput* initial_simulate(const Parameters &parameters);
 
   // void is_setup_likelihood_estimator(const std::vector<List> &all_points,
   //                                    const std::vector<List> &all_auxiliary_variables);
 
 private:
 
+  friend ExactLikelihoodEstimatorOutput;
+
   EvaluateLogLikelihoodPtr func;
+
+  // Stored here.
+  //ExactLikelihoodEstimatorOutput* output;
 
   void make_copy(const ExactLikelihoodEstimator &another);
 

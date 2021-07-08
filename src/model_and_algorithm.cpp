@@ -1,7 +1,8 @@
 #include "model_and_algorithm.h"
 #include "likelihood_estimator.h"
 #include "importance_sampler.h"
-//#include "parameter_particle_simulator.h"
+#include "parameter_particle_simulator.h"
+#include "exact_likelihood_estimator.h"
 
 //using namespace std::placeholders;
 
@@ -12,6 +13,9 @@
 
 ModelAndAlgorithm::ModelAndAlgorithm()
 {
+  this->likelihood_estimators.resize(0);
+  this->particle_simulator = NULL;
+  this->observed_data = NULL;
 }
 
 ModelAndAlgorithm::ModelAndAlgorithm(const ModelAndAlgorithm &another)
@@ -28,6 +32,8 @@ ModelAndAlgorithm::~ModelAndAlgorithm(void)
     if (*i!=NULL)
       delete *i;
   }
+  if (this->particle_simulator!=NULL)
+    delete this->particle_simulator;
 }
 
 void ModelAndAlgorithm::operator=(const ModelAndAlgorithm &another)
@@ -48,17 +54,27 @@ void ModelAndAlgorithm::make_copy(const ModelAndAlgorithm &another)
        i!=another.likelihood_estimators.end();
        ++i)
   {
-    this->likelihood_estimators.push_back((*i)->duplicate());
+    if (*i!=NULL)
+      this->likelihood_estimators.push_back((*i)->duplicate());
   }
+  this->particle_simulator = another.particle_simulator->duplicate();
+  this->observed_data = another.observed_data;
+  //this->initial_seed = another.initial_seed;
 }
 
-ImportanceSampler* ModelAndAlgorithm::GetIS(const SimulateDistributionPtr simulate_distribution_in,
-                              const EvaluateLogLikelihoodPtr evaluate_log_likelihood_in)
-{
-  // Need to construct LikelihoodEstimator to read in to this constructor.
-  //ParameterParticleSimulator parameter_particle_simulator(simulate_distribution_in);
-
-  //auto thing = std::bind(simulate_particle_from_simulate_parameters, simulate_distribution_in, _2);
-
-  return new ImportanceSampler();
-}
+// ImportanceSampler* ModelAndAlgorithm::get_is(RandomNumberGenerator* rng_in,
+//                                              size_t* seed_in,
+//                                              bool parallel_in,
+//                                              const Data* data_in,
+//                                              size_t number_of_particles_in,
+//                                              SimulateDistributionPtr simulate_distribution_in,
+//                                              EvaluateLogLikelihoodPtr evaluate_log_likelihood_in)
+// {
+//
+//
+//
+//
+//   //auto thing = std::bind(simulate_particle_from_simulate_parameters, simulate_distribution_in, _2);
+//
+//   return new ImportanceSampler(rng_in, seed_in, parallel_in, data_in, number_of_particles_in, *this);
+// }

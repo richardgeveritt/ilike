@@ -18,13 +18,16 @@ public:
 
   Particle();
   Particle(const Parameters &parameters_in);
-
+  Particle(const Parameters &parameters_in,
+           const std::vector<LikelihoodEstimatorOutput*> &outputs_in);
   virtual ~Particle();
 
-  // Simulate parameters, then all llhd estimators
-  void simulate();
+  Particle(const Particle &another);
+  void operator=(const Particle &another);
 
 protected:
+
+  void make_copy(const Particle &another);
 
   Parameters parameters;
 
@@ -32,7 +35,7 @@ protected:
   std::vector<LikelihoodEstimatorOutput*> likelihood_estimator_outputs;
 
   // Pointer, not stored here.
-  const ModelAndAlgorithm* model_and_algorithm;
+  //const ModelAndAlgorithm* model_and_algorithm;
 
 };
 

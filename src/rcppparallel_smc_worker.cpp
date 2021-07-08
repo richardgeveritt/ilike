@@ -1,17 +1,15 @@
 #include "rcppparallel_smc_worker.h"
 #include "particle_simulator.h"
+#include "smc.h"
 
 SimulateWorker::SimulateWorker()
 {
 }
 
-SimulateWorker::SimulateWorker(RcppParallelSMCWorker* smc_worker_in,
-               const ParticleSimulator* particle_simulator_in,
-               const size_t num_particles_in)
+SimulateWorker::SimulateWorker(RcppParallelSMCWorker* smc_worker_in)
 {
   this->smc_worker = smc_worker_in;
-  this->particle_simulator = particle_simulator_in;
-  this->simulate_output = std::vector<Particle>(num_particles_in);
+  this->simulate_output = std::vector<Particle>(this->smc_worker->get_number_of_particles());
 }
 
 SimulateWorker::~SimulateWorker()
@@ -35,30 +33,30 @@ void SimulateWorker::operator=(const SimulateWorker &another)
 
 void SimulateWorker::operator()(std::size_t begin, std::size_t end)
 {
-  RandomNumberGenerator local_rng(this->smc_worker->rng);
-  local_rng.seed(this->smc_worker->seed,end);
+  RandomNumberGenerator local_rng(*this->smc_worker->get_rng());
+  local_rng.seed(this->smc_worker->get_seed(),end);
   for (std::size_t i = begin; i < end; ++i)
   {
-    this->simulate_output[i] = (*this->particle_simulator)(this->smc_worker->rng);
+    this->simulate_output[i] = (*this->smc_worker->particle_simulator)(local_rng);
   }
 }
 
 void SimulateWorker::make_copy(const SimulateWorker &another)
 {
   this->smc_worker = another.smc_worker;
-  this->particle_simulator = another.particle_simulator;//->duplicate();
+  this->simulate_output = another.simulate_output;
 }
 
 //Default constructor.
-RcppParallelSMCWorker::RcppParallelSMCWorker(uint64_t seed_in,
-                                             const ParticleSimulator* particle_simulator_in,
-                                             const size_t num_particles_in)
-  :SMCWorker(), simulate_worker()
+RcppParallelSMCWorker::RcppParallelSMCWorker()
 {
-  this->seed = seed_in;
-  this->simulate_worker = SimulateWorker(this,
-                                         particle_simulator_in,
-                                         num_particles_in);
+}
+
+RcppParallelSMCWorker::RcppParallelSMCWorker(SMC* the_smc_in,
+                                             ParticleSimulator* particle_simulator_in)
+  :SMCWorker(the_smc_in, particle_simulator_in)
+{
+  this->simulate_worker = SimulateWorker(this);
 }
 
 //Copy constructor for the RcppParallelSMCWorker class.
@@ -71,8 +69,6 @@ RcppParallelSMCWorker::RcppParallelSMCWorker(const RcppParallelSMCWorker &anothe
 //Destructor for the RcppParallelSMCWorker class.
 RcppParallelSMCWorker::~RcppParallelSMCWorker(void)
 {
-  // if (this->particle_simulator!=NULL)
-  //   delete this->particle_simulator;
 }
 
 void RcppParallelSMCWorker::operator=(const RcppParallelSMCWorker &another)
@@ -92,12 +88,23 @@ SMCWorker* RcppParallelSMCWorker::duplicate(void)const
 
 void RcppParallelSMCWorker::make_copy(const RcppParallelSMCWorker &another)
 {
-  this->seed = another.seed;
-  this->rng = another.rng;
+  //this->seed = another.seed;
+  //this->rng = another.rng;
   this->simulate_worker = another.simulate_worker;
+  //this->particle_simulator = another.particle_simulator->duplicate();
 }
 
-Particles RcppParallelSMCWorker::simulate(void) const
+std::vector<Particle> RcppParallelSMCWorker::get_particles() const
 {
-  return Particles();
+  return this->simulate_worker.simulate_output;
+}
+
+void RcppParallelSMCWorker::specific_simulate()
+{
+  parallelFor(0, this->get_number_of_particles(), this->simulate_worker);
+}
+
+void RcppParallelSMCWorker::simulate_and_weight()
+{
+
 }

@@ -5,7 +5,10 @@ using namespace Rcpp;
 
 #include "parameters.h"
 #include "function_pointers.h"
-#include "model_and_algorithm.h"
+#include "distributions.h"
+#include "importance_sampler.h"
+#include "likelihood_estimator_output.h"
+
 
 
 // class Tester {
@@ -104,18 +107,36 @@ MyWorker::MyWorker(uint64_t seed_in,
 // [[Rcpp::export]]
 double a_test(const List &model)
 {
-  SEXP evaluate_log_prior_SEXP = model["evaluate_log_prior"];
-  EvaluateLogDistributionPtr evaluate_log_prior = load_evaluate_log_distribution(evaluate_log_prior_SEXP);
+  //SEXP evaluate_log_prior_SEXP = model["evaluate_log_prior"];
+  //EvaluateLogDistributionPtr evaluate_log_prior = load_evaluate_log_distribution(evaluate_log_prior_SEXP);
 
   SEXP simulate_prior_SEXP = model["simulate_prior"];
   SimulateDistributionPtr simulate_prior = load_simulate_distribution(simulate_prior_SEXP);
+
+  SEXP evaluate_log_likelihood_SEXP = model["evaluate_log_likelihood"];
+  EvaluateLogLikelihoodPtr evaluate_log_likelihood = load_evaluate_log_likelihood(evaluate_log_likelihood_SEXP);
 
   SEXP data_SEXP = model["data"];
   Data data = load_data(data_SEXP);
   Rcout << data << std::endl;
 
-  ModelAndAlgorithm test_IS;
+  RandomNumberGenerator rng;
+  size_t seed = rdtsc();
 
+  bool parallel = FALSE;
+
+  size_t number_of_particles = 10;
+
+  ImportanceSampler is(&rng,
+                       &seed,
+                       parallel,
+                       &data,
+                       number_of_particles,
+                       simulate_prior,
+                       evaluate_log_likelihood);
+  LikelihoodEstimatorOutput* output = is.run();
+  //Rcout << *output << std::endl;
+  delete output;
 
   //Parameters input;
   //dqrng::random_64bit_wrapper<dqrng::xoshiro256plus> rng = dqrng::random_64bit_wrapper<dqrng::xoshiro256plus>();
@@ -137,7 +158,7 @@ double a_test(const List &model)
 
   //double testing = 4.0;//my_sqrt(test_params);
 
-  std::vector<Parameters> input_vec(10);
+  //std::vector<Parameters> input_vec(10);
   // input_vec[0] = test_params;
   // input_vec[1] = test_params;
   // input_vec[2] = test_params;
@@ -149,7 +170,7 @@ double a_test(const List &model)
   // input_vec[8] = test_params;
   // input_vec[9] = test_params;
   //
-  std::vector<double> dummy_input_vec(10);
+  //std::vector<double> dummy_input_vec(10);
   // dummy_input_vec[0] = 0.0;
   // dummy_input_vec[1] = 0.0;
   // dummy_input_vec[2] = 0.0;
@@ -161,8 +182,8 @@ double a_test(const List &model)
   // dummy_input_vec[8] = 0.0;
   // dummy_input_vec[9] = 0.0;
   //
-  MyWorker a_worker(42, input_vec, dummy_input_vec, evaluate_log_prior, simulate_prior);
-  parallelFor(0, dummy_input_vec.size(), a_worker);
+  //MyWorker a_worker(42, input_vec, dummy_input_vec, evaluate_log_prior, simulate_prior);
+  //parallelFor(0, dummy_input_vec.size(), a_worker);
   // //double answer = 0.0;
   // //for (unsigned int i=0; i<10; ++i)
   // //  answer = evaluate_log_prior(test_params);
