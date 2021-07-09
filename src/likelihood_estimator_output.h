@@ -5,6 +5,7 @@
 using namespace Rcpp;
 
 #include <vector>
+#include <iostream>
 #include "parameters.h"
 
 class LikelihoodEstimatorOutput
@@ -27,6 +28,10 @@ public:
   virtual void estimate(const Parameters &parameters)=0;
 
   double log_likelihood;
+
+  friend std::ostream& operator<<(std::ostream& os, const LikelihoodEstimatorOutput &p);
+
+  virtual void print(std::ostream &os) const;
 
   // virtual double estimate_log_likelihood(const List &inputs,
   //                                        const List &auxiliary_variables) const=0;

@@ -60,3 +60,24 @@ void Particle::make_copy(const Particle &another)
       this->likelihood_estimator_outputs.push_back((*i)->duplicate());
   }
 }
+
+std::ostream& operator<<(std::ostream& os, const Particle &p)
+{
+  os << p.parameters << std::endl;
+
+  os << "{" << std::endl;
+
+  std::vector<LikelihoodEstimatorOutput*>::const_iterator it;
+
+  for (it=p.likelihood_estimator_outputs.begin();it!=p.likelihood_estimator_outputs.end();++it)
+  {
+    if (it==p.likelihood_estimator_outputs.begin())
+      os << *it << std::endl;
+    else
+      os << "," << *it << std::endl;
+  }
+
+  os << "}";
+
+  return os;
+}

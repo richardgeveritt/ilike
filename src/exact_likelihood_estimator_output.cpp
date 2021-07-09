@@ -53,3 +53,8 @@ void ExactLikelihoodEstimatorOutput::estimate(const Parameters &parameters)
 {
   this->log_likelihood = this->estimator->func(parameters, *this->estimator->data);
 }
+
+void ExactLikelihoodEstimatorOutput::print(std::ostream &os) const
+{
+
+}

@@ -32,3 +32,18 @@ void Particles::make_copy(const Particles &another)
 {
   this->particles = another.particles;
 }
+
+std::ostream& operator<<(std::ostream& os, const Particles &p)
+{
+  std::vector<Particle>::const_iterator it;
+
+  for (it=p.particles.begin();it!=p.particles.end();++it)
+  {
+    if (it==p.particles.begin())
+      os << *it;
+    else
+      os << std::endl << *it;
+  }
+
+  return os;
+}

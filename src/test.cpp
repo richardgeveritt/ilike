@@ -134,9 +134,9 @@ double a_test(const List &model)
                        number_of_particles,
                        simulate_prior,
                        evaluate_log_likelihood);
-  LikelihoodEstimatorOutput* output = is.run();
+  //LikelihoodEstimatorOutput* output = is.run();
   //Rcout << *output << std::endl;
-  delete output;
+  //delete output;
 
   //Parameters input;
   //dqrng::random_64bit_wrapper<dqrng::xoshiro256plus> rng = dqrng::random_64bit_wrapper<dqrng::xoshiro256plus>();

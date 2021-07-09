@@ -37,9 +37,11 @@ public:
   void add_proposed_particles(const Particles &latest_proposals);
   void add_weights(const arma::colvec &latest_unnormalised_log_weight_updates);
 
+  void print(std::ostream &os) const;
+
 protected:
 
-  // Ssored in ModelAndAlgorithm or in main.
+  // Stored in ModelAndAlgorithm or in main.
   SMC* estimator;
 
   std::deque<Particles> all_particles;

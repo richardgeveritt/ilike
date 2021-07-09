@@ -6,6 +6,7 @@
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 #include <vector>
+#include <iostream>
 #include "parameters.h"
 
 class ModelAndAlgorithm;
@@ -24,6 +25,8 @@ public:
 
   Particle(const Particle &another);
   void operator=(const Particle &another);
+
+  friend std::ostream& operator<<(std::ostream& os, const Particle &p);
 
 protected:
 

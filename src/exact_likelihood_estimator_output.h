@@ -29,6 +29,8 @@ public:
   void continue_simulate(const Parameters &parameters);
   void estimate(const Parameters &parameters);
 
+  void print(std::ostream &os) const;
+
 protected:
 
   // Stored in ModelAndAlgorithm.

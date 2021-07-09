@@ -31,3 +31,13 @@ void LikelihoodEstimatorOutput::make_copy(const LikelihoodEstimatorOutput &anoth
 {
   this->log_likelihood = another.log_likelihood;
 }
+
+std::ostream& operator<<(std::ostream& os, const LikelihoodEstimatorOutput &output)
+{
+  output.print(os);
+  return os;
+}
+
+void LikelihoodEstimatorOutput::print(std::ostream &os) const
+{
+}

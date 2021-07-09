@@ -3,6 +3,8 @@
 
 #include <RcppParallel.h>
 #include <RcppArmadillo.h>
+#include <iostream>
+
 using namespace Rcpp;
 using namespace RcppParallel;
 
@@ -22,6 +24,8 @@ public:
 
   //virtual List& operator[](int index)=0;
   //virtual List operator[](int index) const=0;
+
+  friend std::ostream& operator<<(std::ostream& os, const Particles &p);
 
 protected:
 

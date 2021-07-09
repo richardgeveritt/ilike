@@ -115,3 +115,60 @@ void SMCOutput::add_weights(const arma::colvec &latest_unnormalised_log_weight_u
     this->normalised_log_weights.pop_back();
   }
 }
+
+void SMCOutput::print(std::ostream &os) const
+{
+  os << "all_particles" << std::endl << "(" << std::endl;
+  std::deque<Particles>::const_iterator it;
+  for (it=this->all_particles.begin();it!=this->all_particles.end();++it)
+  {
+    if (it==this->all_particles.begin())
+      os << *it;
+    else
+      os << std::endl << "," << std::endl << *it;
+  }
+  os << std::endl << ")" << std::endl;
+
+  os << "all_proposed" << std::endl << "(" << std::endl;
+  for (it=this->all_proposed.begin();it!=this->all_proposed.end();++it)
+  {
+    if (it==this->all_proposed.begin())
+      os << *it;
+    else
+      os << std::endl << "," << std::endl << *it;
+  }
+  os << std::endl << ")" << std::endl;
+
+  os << "unnormalised_log_weights" << std::endl << "(" << std::endl;
+  std::deque<arma::colvec>::const_iterator itd;
+  for (itd=this->unnormalised_log_weights.begin();itd!=this->unnormalised_log_weights.end();++itd)
+  {
+    if (itd==this->unnormalised_log_weights.begin())
+      os << *itd;
+    else
+      os << std::endl << "," << std::endl << *itd;
+  }
+  os << std::endl << ")" << std::endl;
+
+  os << "normalised_log_weights" << std::endl << "(" << std::endl;
+  for (itd=this->normalised_log_weights.begin();itd!=this->normalised_log_weights.end();++itd)
+  {
+    if (itd==this->normalised_log_weights.begin())
+      os << *itd;
+    else
+      os << std::endl << "," << std::endl << *itd;
+  }
+  os << std::endl << ")" << std::endl;
+
+  os << "log_normalising_constant_ratios" << std::endl << "(" << std::endl;
+  std::vector<double>::const_iterator i;
+  for (i=this->log_normalising_constant_ratios.begin();i!=this->log_normalising_constant_ratios.end();++i)
+  {
+    if (i==this->log_normalising_constant_ratios.begin())
+      os << *i;
+    else
+      os << std::endl << "," << std::endl << *i;
+  }
+  os << std::endl << ")" << std::endl;
+
+}
