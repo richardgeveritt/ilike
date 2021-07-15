@@ -57,7 +57,8 @@ void ModelAndAlgorithm::make_copy(const ModelAndAlgorithm &another)
     if (*i!=NULL)
       this->likelihood_estimators.push_back((*i)->duplicate());
   }
-  this->particle_simulator = another.particle_simulator->duplicate();
+  if (another.particle_simulator!=NULL)
+    this->particle_simulator = another.particle_simulator->duplicate();
   this->observed_data = another.observed_data;
   //this->initial_seed = another.initial_seed;
 }

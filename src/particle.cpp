@@ -16,7 +16,7 @@ Particle::Particle(const Parameters &parameters_in)
 Particle::Particle(const Parameters &parameters_in,
                    const std::vector<LikelihoodEstimatorOutput*> &outputs_in)
 {
-  this->parameters = parameters_in;
+  this->parameters = parameters_in; 
   this->likelihood_estimator_outputs = outputs_in;
 }
 
@@ -72,9 +72,9 @@ std::ostream& operator<<(std::ostream& os, const Particle &p)
   for (it=p.likelihood_estimator_outputs.begin();it!=p.likelihood_estimator_outputs.end();++it)
   {
     if (it==p.likelihood_estimator_outputs.begin())
-      os << *it << std::endl;
+      os << **it << std::endl;
     else
-      os << "," << *it << std::endl;
+      os << "," << *  *it << std::endl;
   }
 
   os << "}";

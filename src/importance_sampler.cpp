@@ -1,6 +1,6 @@
 #include "importance_sampler.h"
 #include "smc_worker.h"
-#include "rcppparallel_smc_worker.h"
+//#include "rcppparallel_smc_worker.h"
 #include "sequential_smc_worker.h"
 #include "smc_output.h"
 #include "exact_likelihood_estimator.h"
@@ -26,21 +26,21 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                                                       seed_in,
                                                                       data_in,
                                                                       evaluate_log_likelihood_in));
-
+   
    // Need to construct LikelihoodEstimator to read in to this constructor.
    this->model_and_algorithm.particle_simulator = new ParameterParticleSimulator(simulate_distribution_in,
                                                              this->model_and_algorithm.likelihood_estimators);
-
-   if (parallel_in==TRUE)
-   {
-      this->the_worker = new RcppParallelSMCWorker(this,
-                                                   this->model_and_algorithm.particle_simulator);
-   }
-   else
-   {
-      this->the_worker = new SequentialSMCWorker(this,
+   
+   //if (parallel_in==TRUE)
+   //{
+   //    this->the_worker = new RcppParallelSMCWorker(this,
+   //                                                 this->model_and_algorithm.particle_simulator);
+   // }
+   // else
+   // {
+   this->the_worker = new SequentialSMCWorker(this,
                                                  this->model_and_algorithm.particle_simulator);
-   }
+   // }
 
 }
 

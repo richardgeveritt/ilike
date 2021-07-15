@@ -1,12 +1,12 @@
 #ifndef PARTICLES_H
 #define PARTICLES_H
 
-#include <RcppParallel.h>
+//#include <RcppParallel.h>
 #include <RcppArmadillo.h>
 #include <iostream>
 
 using namespace Rcpp;
-using namespace RcppParallel;
+//using namespace RcppParallel;
 
 #include "particle.h"
 

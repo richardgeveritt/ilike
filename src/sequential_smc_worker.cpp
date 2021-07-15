@@ -1,5 +1,6 @@
 #include "sequential_smc_worker.h"
 #include "particle_simulator.h"
+#include "smc.h"
 
 //Default constructor.
 SequentialSMCWorker::SequentialSMCWorker(void)
@@ -11,6 +12,7 @@ SequentialSMCWorker::SequentialSMCWorker(SMC* the_smc_in,
                                          ParticleSimulator* particle_simulator_in)
   :SMCWorker(the_smc_in, particle_simulator_in)
 {
+  this->simulate_output = std::vector<Particle>(this->get_number_of_particles());
 }
 
 //Copy constructor for the SequentialSMCWorker class.
@@ -54,6 +56,7 @@ void SequentialSMCWorker::specific_simulate()
 {
   RandomNumberGenerator local_rng(*this->get_rng());
   local_rng.seed(this->get_seed(),this->get_number_of_particles());
+  
   for (size_t i = 0; i < this->get_number_of_particles(); ++i)
   {
     this->simulate_output[i] = (*this->particle_simulator)(local_rng);
