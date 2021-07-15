@@ -53,10 +53,12 @@ RcppParallelSMCWorker::RcppParallelSMCWorker()
 }
 
 RcppParallelSMCWorker::RcppParallelSMCWorker(SMC* the_smc_in,
-                                             ParticleSimulator* particle_simulator_in)
+                                             ParticleSimulator* particle_simulator_in,
+                                             size_t grain_size_in)
   :SMCWorker(the_smc_in, particle_simulator_in)
 {
   this->simulate_worker = SimulateWorker(this);
+  this->grain_size = grain_size_in;
 }
 
 //Copy constructor for the RcppParallelSMCWorker class.
@@ -91,6 +93,7 @@ void RcppParallelSMCWorker::make_copy(const RcppParallelSMCWorker &another)
   //this->seed = another.seed;
   //this->rng = another.rng;
   this->simulate_worker = another.simulate_worker;
+  this->grain_size = another.grain_size;
   //this->particle_simulator = another.particle_simulator->duplicate();
 }
 
@@ -101,7 +104,7 @@ std::vector<Particle> RcppParallelSMCWorker::get_particles() const
 
 void RcppParallelSMCWorker::specific_simulate()
 {
-  parallelFor(0, this->get_number_of_particles(), this->simulate_worker);
+  parallelFor(0, this->get_number_of_particles(), this->simulate_worker, this->grain_size);
 }
 
 void RcppParallelSMCWorker::simulate_and_weight()

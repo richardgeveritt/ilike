@@ -13,11 +13,12 @@ public:
   ImportanceSampler();
   ImportanceSampler(RandomNumberGenerator* rng_in,
                     size_t* seed_in,
-                    bool parallel_in,
                     const Data* data_in,
                     size_t number_of_particles_in,
                     SimulateDistributionPtr simulate_distribution_in,
-                    EvaluateLogLikelihoodPtr evaluate_log_likelihood_in);
+                    EvaluateLogLikelihoodPtr evaluate_log_likelihood_in,
+                    bool parallel_in,
+                    size_t grain_size_in = 1);
 
   ImportanceSampler(const ImportanceSampler &another);
   virtual ~ImportanceSampler(void);

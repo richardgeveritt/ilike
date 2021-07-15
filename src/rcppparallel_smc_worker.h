@@ -56,7 +56,8 @@ public:
 
   RcppParallelSMCWorker();
   RcppParallelSMCWorker(SMC* the_smc,
-                        ParticleSimulator* particle_simulator_in);
+                        ParticleSimulator* particle_simulator_in,
+                        size_t grain_size_in);
   virtual ~RcppParallelSMCWorker();
 
   RcppParallelSMCWorker(const RcppParallelSMCWorker &another);
@@ -77,6 +78,8 @@ protected:
 
   //uint64_t seed;
   //RandomNumberGenerator rng;
+
+  size_t grain_size;
 
   friend class SimulateWorker;
   SimulateWorker simulate_worker;

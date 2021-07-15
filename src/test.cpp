@@ -125,15 +125,15 @@ double a_test(const List &model)
 
   bool parallel = FALSE;
 
-  size_t number_of_particles = 1000000;
+  size_t number_of_particles = 1000;
 
   ImportanceSampler is(&rng,
                        &seed,
-                       parallel,
                        &data,
                        number_of_particles,
                        simulate_prior,
-                       evaluate_log_likelihood);
+                       evaluate_log_likelihood,
+                       parallel);
   LikelihoodEstimatorOutput* output = is.run();
   //Rcout << *output << std::endl;
   delete output;
