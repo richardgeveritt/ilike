@@ -6,6 +6,7 @@
 #include "function_pointers.h"
 #include "distributions.h"
 
+class IndependentProposalKernel;
 class LikelihoodEstimator;
 
 class ParameterParticleSimulator : public ParticleSimulator
@@ -13,22 +14,44 @@ class ParameterParticleSimulator : public ParticleSimulator
 public:
 
   ParameterParticleSimulator();
-  ParameterParticleSimulator(SimulateDistributionPtr simulate_parameters_in,
+  ParameterParticleSimulator(IndependentProposalKernel* proposal_in,
                              const std::vector<LikelihoodEstimator*> &likelihood_estimators_in);
-  virtual ~ParameterParticleSimulator(void);
+  //ParameterParticleSimulator(SimulateDistributionPtr simulate_parameters_in,
+  //                           const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
+   //                          const std::string &resample_variable_name_in);
+  virtual ~ParameterParticleSimulator();
 
   ParameterParticleSimulator(const ParameterParticleSimulator &another);
   void operator=(const ParameterParticleSimulator &another);
   ParticleSimulator* duplicate() const;
 
-  Particle operator()(RandomNumberGenerator &rng);
+  Particle simulate(RandomNumberGenerator &rng,
+                    Factors* factors) const;
+  Particle simulate(RandomNumberGenerator &rng,
+                    Factors* factors,
+                    const Parameters &conditioned_on_parameters) const;
+  
+  Particle subsample_simulate(RandomNumberGenerator &rng,
+                              Factors* factors,
+                              const Parameters &conditioned_on_parameters) const;
+  
+  double evaluate(Particle &input) const;
+  double evaluate(Particle &input,
+                  const Parameters &conditioned_on_parameters) const;
+  
+  double subsample_evaluate(Particle &input,
+                            const Parameters &conditioned_on_parameters) const;
 
 protected:
 
   void make_copy(const ParameterParticleSimulator &another);
 
-  SimulateDistributionPtr simulate_parameters;
+  //SimulateDistributionPtr simulate_parameters;
+  
+  // stored here
+  IndependentProposalKernel* proposal;
 
+  // Not stored here.
   std::vector<LikelihoodEstimator*> likelihood_estimators;
 };
 

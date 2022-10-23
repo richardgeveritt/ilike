@@ -8,6 +8,7 @@ using namespace Rcpp;
 #include "distributions.h"
 #include "importance_sampler.h"
 #include "likelihood_estimator_output.h"
+#include "smc_output.h"
 
 
 
@@ -111,31 +112,48 @@ double a_test(const List &model)
   //EvaluateLogDistributionPtr evaluate_log_prior = load_evaluate_log_distribution(evaluate_log_prior_SEXP);
 
   SEXP simulate_prior_SEXP = model["simulate_prior"];
-  SimulateDistributionPtr simulate_prior = load_simulate_distribution(simulate_prior_SEXP);
+  SimulateIndependentProposalPtr simulate_prior_func = load_simulate_independent_proposal(simulate_prior_SEXP);
 
   SEXP evaluate_log_likelihood_SEXP = model["evaluate_log_likelihood"];
-  EvaluateLogLikelihoodPtr evaluate_log_likelihood = load_evaluate_log_likelihood(evaluate_log_likelihood_SEXP);
+  EvaluateLogLikelihoodPtr evaluate_log_likelihood_func = load_evaluate_log_likelihood(evaluate_log_likelihood_SEXP);
 
   SEXP data_SEXP = model["data"];
   Data data = load_data(data_SEXP);
+  Data* data_pointer = &data;
   Rcout << data << std::endl;
 
   RandomNumberGenerator rng;
   size_t seed = rdtsc();
 
   bool parallel = FALSE;
+  bool smcfixed_flag = TRUE;
+  size_t grain_size = 1;
 
-  size_t number_of_particles = 1000;
+  size_t number_of_particles = 1000000;
 
   ImportanceSampler is(&rng,
                        &seed,
-                       &data,
+                       data_pointer,
                        number_of_particles,
-                       simulate_prior,
-                       evaluate_log_likelihood,
-                       parallel);
-  LikelihoodEstimatorOutput* output = is.run();
-  //Rcout << *output << std::endl;
+                       evaluate_log_likelihood_func,
+                       simulate_prior_func,
+                       smcfixed_flag,
+                       parallel,
+                       grain_size);
+
+  clock_t start, end;
+  int max;
+  start = clock();
+
+
+  SMCOutput* output = is.run();
+
+  end = clock();
+  printf ("time: %0.8f sec, max = %d\n",
+          ((float) end - start)/CLOCKS_PER_SEC, max);
+
+
+  std::cout << output->log_likelihood << std::endl;
   delete output;
 
   //Parameters input;

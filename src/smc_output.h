@@ -10,8 +10,14 @@ using namespace Rcpp;
 
 #include "likelihood_estimator_output.h"
 #include "particles.h"
+#include "sequencer.h"
 
 class SMC;
+class ImportanceSampler;
+class SMCMCMCMove;
+class SMCMarginal;
+class SMCGeneric;
+class ParticleFilter;
 
 class SMCOutput : public LikelihoodEstimatorOutput
 {
@@ -30,29 +36,65 @@ public:
   LikelihoodEstimatorOutput* duplicate() const;
   SMCOutput* smc_duplicate() const;
 
-  void continue_simulate(const Parameters &parameters);
-  void estimate(const Parameters &parameters);
-
-  void add_particles(const Particles &latest_particles);
+  // Additional functions compared to some other LikelihoodEstimators, since we often run SMC without it simply being to estimate a likelihood.
+  void simulate();
+  void evaluate_smcfixed_part();
+  void evaluate_smcadaptive_part_given_smcfixed();
+  
+  void simulate(const Parameters &parameters);
+  void evaluate_smcfixed_part(const Parameters &parameters);
+  void evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters);
+  
+  void subsample_simulate(const Parameters &parameters);
+  void subsample_evaluate_smcfixed_part(const Parameters &parameters);
+  void subsample_evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters);
+  
+  Particles back() const;
+  Particles& back();
+  
+  std::deque<Particles>::iterator end();
+  std::deque<Particles>::const_iterator end() const;
+  
+  double latest_log_normalising_constant_ratio() const;
+  
+  arma::mat get_gradient_of_log(const std::string &variable,
+                                const Parameters &x);
+  arma::mat subsample_get_gradient_of_log(const std::string &variable,
+                                          const Parameters &x);
+  
+  Particles* add_particles();
   void add_proposed_particles(const Particles &latest_proposals);
-  void add_weights(const arma::colvec &latest_unnormalised_log_weight_updates);
+  //void initialise_unnormalised_log_incremental_weights(const arma::colvec &latest_unnormalised_log_incremental_weights);
+  //void initialise_next_step();
+  void update_weights(const arma::colvec &latest_unnormalised_log_incremental_weights);
+  void normalise_weights();
+  void resample();
+  void mcmc_move();
+  
+  LikelihoodEstimator* get_likelihood_estimator() const;
+  
+  size_t number_of_smc_iterations() const;
 
   void print(std::ostream &os) const;
+  
+  double log_likelihood_pre_last_step;
 
 protected:
-
+  
+  //friend ImportanceSampler;
+  //friend SMCMCMCMove;
+  //friend SMC;
+  //friend SMCMarginal;
+  //friend SMCGeneric;
+  //friend Sequencer;
+  //friend ParticleFilter;
+  
   // Stored in ModelAndAlgorithm or in main.
   SMC* estimator;
 
   std::deque<Particles> all_particles;
 
   std::deque<Particles> all_proposed;
-
-  std::deque<arma::colvec> unnormalised_log_weights;
-
-  std::deque<arma::colvec> normalised_log_weights;
-
-  std::vector<double> log_normalising_constant_ratios;
 
   size_t lag;
 

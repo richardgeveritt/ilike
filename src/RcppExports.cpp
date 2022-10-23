@@ -4,8 +4,6 @@
 #include "../inst/include/ilike.h"
 #include <RcppArmadillo.h>
 #include <Rcpp.h>
-#include <string>
-#include <set>
 
 using namespace Rcpp;
 
@@ -25,68 +23,9 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// store_L1_uniform_evaluate_log_abc_kernel
-SEXP store_L1_uniform_evaluate_log_abc_kernel();
-RcppExport SEXP _ilike_store_L1_uniform_evaluate_log_abc_kernel() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(store_L1_uniform_evaluate_log_abc_kernel());
-    return rcpp_result_gen;
-END_RCPP
-}
-// store_L2_uniform_evaluate_log_abc_kernel
-SEXP store_L2_uniform_evaluate_log_abc_kernel();
-RcppExport SEXP _ilike_store_L2_uniform_evaluate_log_abc_kernel() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(store_L2_uniform_evaluate_log_abc_kernel());
-    return rcpp_result_gen;
-END_RCPP
-}
-// store_Linf_uniform_evaluate_log_abc_kernel
-SEXP store_Linf_uniform_evaluate_log_abc_kernel();
-RcppExport SEXP _ilike_store_Linf_uniform_evaluate_log_abc_kernel() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(store_Linf_uniform_evaluate_log_abc_kernel());
-    return rcpp_result_gen;
-END_RCPP
-}
-// store_gaussian_uniform_evaluate_log_abc_kernel
-SEXP store_gaussian_uniform_evaluate_log_abc_kernel();
-RcppExport SEXP _ilike_store_gaussian_uniform_evaluate_log_abc_kernel() {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    rcpp_result_gen = Rcpp::wrap(store_gaussian_uniform_evaluate_log_abc_kernel());
-    return rcpp_result_gen;
-END_RCPP
-}
-
-// validate (ensure exported C++ functions exist before calling them)
-static int _ilike_RcppExport_validate(const char* sig) { 
-    static std::set<std::string> signatures;
-    if (signatures.empty()) {
-    }
-    return signatures.find(sig) != signatures.end();
-}
-
-// registerCCallable (register entry points for exported C++ functions)
-RcppExport SEXP _ilike_RcppExport_registerCCallable() { 
-    R_RegisterCCallable("ilike", "_ilike_RcppExport_validate", (DL_FUNC)_ilike_RcppExport_validate);
-    return R_NilValue;
-}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_ilike_a_test", (DL_FUNC) &_ilike_a_test, 1},
-    {"_ilike_store_L1_uniform_evaluate_log_abc_kernel", (DL_FUNC) &_ilike_store_L1_uniform_evaluate_log_abc_kernel, 0},
-    {"_ilike_store_L2_uniform_evaluate_log_abc_kernel", (DL_FUNC) &_ilike_store_L2_uniform_evaluate_log_abc_kernel, 0},
-    {"_ilike_store_Linf_uniform_evaluate_log_abc_kernel", (DL_FUNC) &_ilike_store_Linf_uniform_evaluate_log_abc_kernel, 0},
-    {"_ilike_store_gaussian_uniform_evaluate_log_abc_kernel", (DL_FUNC) &_ilike_store_gaussian_uniform_evaluate_log_abc_kernel, 0},
-    {"_ilike_RcppExport_registerCCallable", (DL_FUNC) &_ilike_RcppExport_registerCCallable, 0},
     {NULL, NULL, 0}
 };
 

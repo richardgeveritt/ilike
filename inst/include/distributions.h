@@ -8,7 +8,10 @@
 #include <math.h>
 #include <dqrng_distribution.h>
 #include <dqrng_generator.h>
+#include <boost/random/uniform_real_distribution.hpp>
 #include <boost/random/gamma_distribution.hpp>
+#include <boost/random/discrete_distribution.hpp>
+#include <boost/random/normal_distribution.hpp>
 #include <boost/math/distributions.hpp>
 //#include <boost/math/distributions/gamma.hpp>
 //#include <boost/math/distributions/normal.hpp>
@@ -16,6 +19,8 @@
 
 //#include <pcg_random.hpp>
 //#include <xoshiro.h>
+
+#include <RcppArmadilloForward.h>
 #include <RcppCommon.h>
 
 
@@ -30,19 +35,157 @@ typedef dqrng::random_64bit_wrapper<dqrng::xoshiro256plus> RandomNumberGenerator
 //using Gamma = boost::math::gamma_distribution<double>;
 //using RNG = dqrng::xoshiro256plus;
 
-inline size_t rdtsc(){
-  size_t lo,hi;
-  __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
-  return ((size_t)hi << 32) | lo;
+//inline size_t rdtsc(){
+//  size_t lo,hi;
+//  __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
+//  return ((size_t)hi << 32) | lo;
+//}
+
+#include <chrono>
+
+inline size_t rdtsc() {
+  return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
 
-inline double normal_simulate(RandomNumberGenerator &rng, double mean, double sd)
+inline double runif(RandomNumberGenerator &rng)
 {
-  dqrng::normal_distribution my_normal;
-  return my_normal(rng, dqrng::normal_distribution::param_type(mean, sd));
+  boost::random::uniform_real_distribution<double> my_uniform;
+  return my_uniform(rng);
+  //return dqrng::uniform01(rng);
 }
 
-inline double normal_logpdf(double x, double mean, double sd)
+inline double runif(RandomNumberGenerator &rng, double min, double max)
+{
+  boost::random::uniform_real_distribution<double> my_uniform(min, max);
+  return my_uniform(rng);
+}
+
+inline arma::mat runif(RandomNumberGenerator &rng,
+                    const arma::mat &lower,
+                    const arma::mat &upper)
+{
+  arma::mat output(arma::size(lower));
+  for (size_t j=0; j<lower.n_cols; ++j)
+  {
+    for (size_t i=0; i<lower.n_rows; ++i)
+    {
+      output.at(i,j) = runif(rng,
+                             lower.at(i,j),
+                             upper.at(i,j));
+    }
+  }
+  return output;
+}
+
+inline double dunif(double point,
+                    double lower_bound,
+                    double upper_bound)
+{
+  if ( (point<lower_bound) || (point>upper_bound) )
+    return -arma::datum::inf;
+  else
+  {
+    return -log(upper_bound-lower_bound);
+  }
+}
+
+inline double dunif(const arma::mat &point,
+                    const arma::mat &lower_bounds,
+                    const arma::mat &upper_bounds)
+{
+  double output = 0.0;
+  for (size_t j=0; j<point.n_cols; ++j)
+  {
+    for (size_t i=0; i<point.n_rows; ++i)
+    {
+      output = output + dunif(point.at(i,j),
+                              lower_bounds.at(i,j),
+                              upper_bounds.at(i,j));
+    }
+  }
+  return output;
+}
+
+inline arma::rowvec multiple_runif(RandomNumberGenerator &rng,
+                                   size_t n)
+{
+  boost::random::uniform_real_distribution<double> my_uniform;
+  arma::rowvec output(n);
+  for (auto i=output.begin();
+       i!=output.end();
+       ++i)
+  {
+    *i = my_uniform(rng);
+  }
+  return output;
+}
+
+inline arma::rowvec multiple_runif(RandomNumberGenerator &rng,
+                                   size_t n,
+                                   double min,
+                                   double max)
+{
+  boost::random::uniform_real_distribution<double> my_uniform(min, max);
+  arma::rowvec output(n);
+  for (auto i=output.begin();
+       i!=output.end();
+       ++i)
+  {
+    *i = my_uniform(rng);
+  }
+  return output;
+}
+
+inline size_t rdis(RandomNumberGenerator &rng,
+                   const arma::colvec &probabilities)
+{
+  boost::random::discrete_distribution<size_t> my_discrete(probabilities);
+  return my_discrete(rng);
+}
+
+inline arma::uvec multiple_rdis(RandomNumberGenerator &rng,
+                                size_t n,
+                                const arma::colvec &probabilities)
+{
+  boost::random::discrete_distribution<size_t> my_discrete(probabilities);
+  arma::uvec output(n);
+  for (auto i=output.begin();
+       i!=output.end();
+       ++i)
+  {
+    *i = my_discrete(rng);
+  }
+  return output;
+}
+
+inline double rnorm(RandomNumberGenerator &rng)
+{
+  boost::random::uniform_real_distribution<double> my_normal(0.0,1.0);
+  return my_normal(rng);
+}
+
+inline arma::mat rnorm(RandomNumberGenerator &rng,
+                       std::pair<size_t,size_t> dimensions)
+{
+  boost::random::uniform_real_distribution<double> my_normal(0.0,1.0);
+  arma::mat output(dimensions.first,dimensions.second);
+  for (size_t j=0; j<dimensions.second; ++j)
+  {
+    for (size_t i=0; i<dimensions.first; ++i)
+    {
+      output(i,j) = my_normal(rng);
+    }
+  }
+  return output;
+}
+
+inline double rnorm(RandomNumberGenerator &rng, double mean, double sd)
+{
+  boost::random::uniform_real_distribution<double> my_normal(mean, sd);
+  return my_normal(rng);
+}
+
+inline double dnorm(double x, double mean, double sd)
 {
   if (sd<0)
   {
@@ -58,7 +201,7 @@ inline double normal_logpdf(double x, double mean, double sd)
   return -log(sd) - 0.5*log(2.0*M_PI) - 0.5*pow((x-mean)/sd,2.0);
 }
 
-inline arma::colvec normal_logpdf(const arma::colvec &x, double mean, double sd)
+inline arma::colvec dnorm(const arma::colvec &x, double mean, double sd)
 {
   size_t n = x.size();
   arma::colvec result(n);
@@ -91,13 +234,177 @@ inline arma::colvec normal_logpdf(const arma::colvec &x, double mean, double sd)
 
 }
 
-inline double gamma_simulate(RandomNumberGenerator &rng, double shape, double scale)
+inline arma::mat chol2inv(const arma::mat &chol)
+{
+  arma::mat inv_chol = arma::inv(chol);
+  return inv_chol*arma::trans(inv_chol);
+}
+
+inline double chol2logdet(const arma::mat &chol)
+{;
+  return 2.0*log(trace(chol));
+}
+
+// rmvnorm from https://gallery.rcpp.org/articles/simulate-multivariate-normal/
+
+inline arma::colvec rmvnorm(RandomNumberGenerator &rng,
+                            const arma::colvec &mu,
+                            const arma::mat &sigma,
+                            bool sigma_is_chol=false)
+{
+  size_t n = 1;
+  int ncols = sigma.n_cols;
+  arma::mat Y = rnorm(rng,
+                      std::pair<size_t,size_t>(n, ncols));
+  if (sigma_is_chol)
+    return (arma::repmat(mu, n, 1) + Y * arma::chol(sigma)).as_col();
+  else
+    return (arma::repmat(mu, n, 1) + Y * sigma).as_col();
+}
+
+inline double dmvnorm_using_precomp(const arma::colvec &x,
+                                    const arma::colvec &mu,
+                                    const arma::mat &inv_sigma,
+                                    double log_det)
+{
+  arma::colvec x_minus_mean = x-mu;
+  double result = -((arma::size(inv_sigma)[0]/2.0) * log(2.0*M_PI)) - 0.5*log_det;
+  //double thing = double(x_minus_mean.t()*arma::inv_sympd(c)*x_minus_mean(0,0));
+  arma::mat b = x_minus_mean.t()*inv_sigma*x_minus_mean;
+  return result - 0.5*b(0,0);
+}
+
+inline double dmvnorm(const arma::colvec &x,
+                      const arma::colvec &mu,
+                      const arma::mat &sigma)
+{
+  double result;
+  arma::colvec x_minus_mean = x-mu;
+  try
+  {
+    result = -((arma::size(sigma)[0]/2.0) * log(2.0*M_PI)) - 0.5*arma::log_det_sympd(sigma);
+    //double thing = double(x_minus_mean.t()*arma::inv_sympd(c)*x_minus_mean(0,0));
+    arma::mat b = x_minus_mean.t()*arma::inv_sympd(sigma)*x_minus_mean;
+    result = result - 0.5*b(0,0);
+  }
+  catch(std::runtime_error)
+  {
+    throw std::runtime_error("mvnormal_logpdf - covariance is not positive definite.");
+  }
+  return result;
+}
+
+/*
+// dmvnorm from https://gallery.rcpp.org/articles/dmvnorm_arma/
+static double const log2pi = std::log(2.0 * M_PI);
+
+inline void inplace_tri_mat_mult(arma::rowvec &x, arma::mat const &trimat){
+  arma::uword const n = trimat.n_cols;
+  
+  for(unsigned j = n; j-- > 0;){
+    double tmp(0.);
+    for(unsigned i = 0; i <= j; ++i)
+      tmp += trimat.at(i, j) * x[i];
+    x[j] = tmp;
+  }
+}
+
+inline arma::vec dmvnorm(const arma::rowvec &x,
+                  const arma::rowvec &mean,
+                  const arma::mat &sigma)
+{
+  using arma::uword;
+  uword const n = x.n_rows,
+  xdim = x.n_cols;
+  arma::vec out(n);
+  arma::mat const rooti = arma::inv(trimatu(arma::chol(sigma)));
+  double const rootisum = arma::sum(log(rooti.diag())),
+  constants = -(double)xdim/2.0 * log2pi,
+  other_terms = rootisum + constants;
+  
+  arma::rowvec z;
+  for (uword i = 0; i < n; i++) {
+    z = (x.row(i) - mean);
+    inplace_tri_mat_mult(z, rooti);
+    out(i) = other_terms - 0.5 * arma::dot(z, z);
+  }
+  
+  return out;
+}
+
+inline arma::vec dmvnorm(const arma::mat &x,
+                  const arma::rowvec &mean,
+                  const arma::mat &sigma) {
+  using arma::uword;
+  uword const n = x.n_rows,
+  xdim = x.n_cols;
+  arma::vec out(n);
+  arma::mat const rooti = arma::inv(trimatu(arma::chol(sigma)));
+  double const rootisum = arma::sum(log(rooti.diag())),
+  constants = -(double)xdim/2.0 * log2pi,
+  other_terms = rootisum + constants;
+  
+  arma::rowvec z;
+  for (uword i = 0; i < n; i++) {
+    z = (x.row(i) - mean);
+    inplace_tri_mat_mult(z, rooti);
+    out(i) = other_terms - 0.5 * arma::dot(z, z);
+  }
+  
+  return out;
+}
+*/
+
+
+inline double log_c(size_t k, size_t nu)
+{
+  double num = -(double(k*nu)/2.0)*log(2.0) - (double(k*(k-1))/4.0)*log(M_PI);
+  double denom = 0.0;
+  for (size_t i=0; i<k; ++i)
+  {
+    denom = denom + lgamma(0.5*double(nu-i+1));
+  }
+  return(num - denom);
+}
+
+inline double dmvnorm_estimated_params(const arma::colvec &x,
+                                       const arma::colvec &estimated_mean,
+                                       const arma::mat &estimated_covariance,
+                                       size_t n)
+{
+  size_t d = estimated_mean.n_rows;
+  try
+  {
+    double first_line = -(double(d)/2.0)*log(2.0*M_PI) + log_c(d,n-2) - log_c(d,n-1) - (double(d)/2.0)*log(1.0-(1.0/double(n))) - (double(n-d-2)/2.0)*arma::log_det_sympd(double(n-1)*estimated_covariance);
+    arma::colvec x_minus_mean = x-estimated_mean;
+    arma::mat inner_bracket = double(n-1)*estimated_covariance - x_minus_mean*x_minus_mean.t()/(1.0-(1.0/double(n)));
+    double log_phi;
+    if (inner_bracket.is_sympd())
+    {
+      log_phi = arma::log_det_sympd(inner_bracket);
+    }
+    else
+    {
+      log_phi = -arma::datum::inf;
+    }
+    double second_line = (double(n-d-3)/2.0)*log_phi;
+    
+    return(first_line + second_line);
+  }
+  catch(std::runtime_error)
+  {
+    throw std::runtime_error("mvnormal_logpdf_unbiased_with_estimated_params - it might be that n<=d-3.");
+  }
+
+}
+
+inline double rgamma(RandomNumberGenerator &rng, double shape, double scale)
 {
   boost::random::gamma_distribution<double> my_gamma(shape, scale);
   return my_gamma(rng);
 }
 
-inline double gamma_logpdf(double x, double shape, double scale)
+inline double dgamma(double x, double shape, double scale)
 {
   if ( (shape<=0) || (scale<=0) )
     return double(NAN);

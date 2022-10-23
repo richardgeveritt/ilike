@@ -8,6 +8,7 @@ using namespace Rcpp;
 
 #include "parameters.h"
 #include "distributions.h"
+#include "data.h"
 
 // typedefs for function pointers
 
@@ -15,7 +16,64 @@ typedef double (*EvaluateLogDistributionPtr)(const Parameters &inputs);
 
 typedef Parameters (*SimulateDistributionPtr)(RandomNumberGenerator &rng);
 
-typedef double (*EvaluateLogLikelihoodPtr)(const Parameters &inputs, const Data &observed_data);
+typedef double (*EvaluateLogLikelihoodPtr)(const Parameters &inputs,
+                                           const Data &observed_data);
+
+typedef arma::mat (*EvaluateGradientLogDistributionPtr)(const std::string &variable,
+                                                        const Parameters &inputs);
+
+typedef arma::mat (*EvaluateGradientLogLikelihoodPtr)(const std::string &variable,
+                                                      const Parameters &inputs,
+                                                      const Data &observed_data);
+
+typedef double (*EvaluateLogMCMCProposalPtr)(const Parameters &proposed_parameters,
+                                             const Parameters &old_parameters,
+                                             const Parameters &proposal_parameters);
+
+typedef Parameters (*SimulateMCMCProposalPtr)(RandomNumberGenerator &rng,
+                                              const Parameters &parameters,
+                                              const Parameters &proposal_parameters);
+
+typedef double (*EvaluateLogIndependentProposalPtr)(const Parameters &proposed_parameters,
+                                                    const Parameters &proposal_parameters);
+
+typedef Parameters (*SimulateIndependentProposalPtr)(RandomNumberGenerator &rng,
+                                                     const Parameters &proposal_parameters);
+
+typedef double (*GainPtr)(size_t n);
+
+typedef Parameters (*TransformPtr)(const Parameters &inputs);
+
+typedef arma::mat (*JacobianPtr)(const Parameters &inputs);
+
+typedef arma::mat (*GetProcessMatrixFromTimePtr)(double time_step);
+//typedef arma::mat (*GetProcessMatrixFromParametersPtr)(const Parameters &conditioned_on_parameters);
+typedef arma::mat (*GetProcessMatrixFromTimeParametersPtr)(double time_step,
+                                                           const Parameters &conditioned_on_parameters);
+
+typedef arma::colvec (*SimulateTransitionKernelPtr)(const arma::colvec &current_state);
+typedef arma::colvec (*SimulateTransitionKernelFromTimePtr)(const arma::colvec &current_state,
+                                                            double time_step);
+typedef arma::colvec (*SimulateTransitionKernelFromTimeParametersPtr)(const arma::colvec &current_state,
+                                                                      double time_step,
+                                                                      const Parameters &conditioned_on_parameters);
+
+typedef arma::mat (*GetMeasurementMatrixPtr)(const Parameters &conditioned_on_parameters);
+
+
+typedef arma::colvec (*MatrixSimulateMeasurementKernelPtr)(const arma::colvec &current_state);
+
+typedef arma::colvec (*GetMatrixSimulateMeasurementKernelPtr)(const arma::colvec &current_state,
+                                                              const Parameters &conditioned_on_parameters);
+
+typedef Parameters (*SimulateMeasurementKernelPtr)(const Parameters &current_state);
+
+typedef Parameters (*GetSimulateMeasurementKernelPtr)(const Parameters &current_state,
+                                                        const Parameters &conditioned_on_parameters);
+
+
+
+
 
 typedef double (*EstimateLogLikelihoodPtr)(const List &inputs, const List &observed_data, const List &auxiliary_variables);
 
@@ -103,6 +161,12 @@ inline SimulateDistributionPtr load_simulate_distribution(const SEXP &simulate_d
 {
   XPtr<SimulateDistributionPtr> simulate_distribution_XPtr(simulate_distribution_SEXP);
   return *simulate_distribution_XPtr;
+}
+
+inline SimulateIndependentProposalPtr load_simulate_independent_proposal(const SEXP &simulate_independent_proposal_SEXP)
+{
+  XPtr<SimulateIndependentProposalPtr> simulate_independent_proposal_XPtr(simulate_independent_proposal_SEXP);
+  return *simulate_independent_proposal_XPtr;
 }
 
 inline EvaluateLogLikelihoodPtr load_evaluate_log_likelihood(const SEXP &evaluate_log_likelihood_SEXP)

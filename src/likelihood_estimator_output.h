@@ -8,6 +8,9 @@ using namespace Rcpp;
 #include <iostream>
 #include "parameters.h"
 
+class LikelihoodEstimator;
+class Data;
+
 class LikelihoodEstimatorOutput
 {
 
@@ -23,15 +26,53 @@ public:
 
   void operator=(const LikelihoodEstimatorOutput &another);
   virtual LikelihoodEstimatorOutput* duplicate() const=0;
+  
+  // Simulate all auxilliary variables.
+  virtual void simulate()=0;
 
-  virtual void continue_simulate(const Parameters &parameters)=0;
-  virtual void estimate(const Parameters &parameters)=0;
-
-  double log_likelihood;
+  // Simulate all auxilliary variables.
+  virtual void simulate(const Parameters &parameters)=0;
+  
+  // Evaluate likelihood given auxiliary variables.
+  double evaluate(const Parameters &parameters);
+  
+  // Evaluate smcfixed part of likelihood given auxiliary variables.
+  virtual void evaluate_smcfixed_part(const Parameters &parameters)=0;
+  
+  // Evaluate adaptive part of likelihood given auxiliary variables.
+  virtual void evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters)=0;
+  
+  // Simulate all auxilliary variables.
+  virtual void subsample_simulate(const Parameters &parameters)=0;
+  
+  // Evaluate likelihood given auxiliary variables.
+  double subsample_evaluate(const Parameters &parameters);
+  
+  // Evaluate smcfixed part of likelihood given auxiliary variables.
+  virtual void subsample_evaluate_smcfixed_part(const Parameters &parameters)=0;
+  
+  // Evaluate adaptive part of likelihood given auxiliary variables.
+  virtual void subsample_evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters)=0;
+  
+  virtual LikelihoodEstimator* get_likelihood_estimator() const=0;
+  
+  void change_data();
+  void change_data(Data* new_data);
+  
+  // This will end up a little bit more complicated than we have at the moment, since there is an interaction with
+  // calling Simulate.
+  virtual arma::mat get_gradient_of_log(const std::string &variable,
+                                        const Parameters &x)=0;
+  virtual arma::mat subsample_get_gradient_of_log(const std::string &variable,
+                                                  const Parameters &x)=0;
 
   friend std::ostream& operator<<(std::ostream& os, const LikelihoodEstimatorOutput &p);
 
   virtual void print(std::ostream &os) const;
+  
+  double log_likelihood;
+  
+  double subsample_log_likelihood;
 
   // virtual double estimate_log_likelihood(const List &inputs,
   //                                        const List &auxiliary_variables) const=0;

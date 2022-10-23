@@ -1,7 +1,12 @@
 #include "particle_simulator.h"
 
-ParticleSimulator::ParticleSimulator(void)
+ParticleSimulator::ParticleSimulator()
 {
+}
+
+ParticleSimulator::ParticleSimulator(const std::string &resample_variable_name_in)
+{
+  this->resample_variable_name = resample_variable_name_in;
 }
 
 ParticleSimulator::ParticleSimulator(const ParticleSimulator &another)
@@ -9,7 +14,7 @@ ParticleSimulator::ParticleSimulator(const ParticleSimulator &another)
   this->make_copy(another);
 }
 
-ParticleSimulator::~ParticleSimulator(void)
+ParticleSimulator::~ParticleSimulator()
 {
 }
 
@@ -23,5 +28,5 @@ void ParticleSimulator::operator=(const ParticleSimulator &another)
 
 void ParticleSimulator::make_copy(const ParticleSimulator &another)
 {
-  //Does nothing since no member variables to copy.
+  this->resample_variable_name = another.resample_variable_name;
 }

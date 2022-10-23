@@ -5,23 +5,3 @@ a_test <- function(model) {
     .Call(`_ilike_a_test`, model)
 }
 
-store_L1_uniform_evaluate_log_abc_kernel <- function() {
-    .Call(`_ilike_store_L1_uniform_evaluate_log_abc_kernel`)
-}
-
-store_L2_uniform_evaluate_log_abc_kernel <- function() {
-    .Call(`_ilike_store_L2_uniform_evaluate_log_abc_kernel`)
-}
-
-store_Linf_uniform_evaluate_log_abc_kernel <- function() {
-    .Call(`_ilike_store_Linf_uniform_evaluate_log_abc_kernel`)
-}
-
-store_gaussian_uniform_evaluate_log_abc_kernel <- function() {
-    .Call(`_ilike_store_gaussian_uniform_evaluate_log_abc_kernel`)
-}
-
-# Register entry points for exported C++ functions
-methods::setLoadAction(function(ns) {
-    .Call('_ilike_RcppExport_registerCCallable', PACKAGE = 'ilike')
-})

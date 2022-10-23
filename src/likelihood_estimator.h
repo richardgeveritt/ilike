@@ -6,11 +6,14 @@ using namespace Rcpp;
 
 #include <vector>
 #include "parameters.h"
-#include "model_and_algorithm.h"
+//#include "model_and_algorithm.h"
 #include "distributions.h"
+#include "data_subsampler.h"
+#include "data.h"
 
 class LikelihoodEstimatorOutput;
 class SMCWorker;
+class Factors;
 
 class LikelihoodEstimator
 {
@@ -20,7 +23,7 @@ public:
   LikelihoodEstimator();
   LikelihoodEstimator(RandomNumberGenerator* rng_in,
                       size_t* seed_in,
-                      const Data* data_in);
+                      Data* data_in);
   virtual ~LikelihoodEstimator();
 
   LikelihoodEstimator(const LikelihoodEstimator &another);
@@ -28,22 +31,42 @@ public:
   void operator=(const LikelihoodEstimator &another);
   virtual LikelihoodEstimator* duplicate() const=0;
 
-  virtual LikelihoodEstimatorOutput* initial_simulate(const Parameters &parameters)=0;
+  // Initial simulate involves simulating any of the random variables that are needed in the estimator (except for cases where we will update thesee rvs iteratively.
+  virtual LikelihoodEstimatorOutput* initialise()=0;
+  virtual LikelihoodEstimatorOutput* initialise(const Parameters &parameters)=0;
+  
+  // To be called if we just want the likelihood, without splitting the estimation into multiple steps.
+  //double estimate();
+  double estimate(const Parameters &parameters);
+  
+  void change_data();
+  void change_data(Data* new_data);
+  
+  Data* get_data() const;
 
 protected:
 
   friend SMCWorker;
 
   // Not stored here. Stored in "main'.
-  const Data* data;
+  Data* data;
+  
+  // not stored here
+  Data* current_data;
 
   // Not stored here. Stored in "main'.
   RandomNumberGenerator* rng;
 
   // Not stored here. Stored in "main'.
   size_t* seed;
+  
+  // Not stored here. Stored in "main'.
+  DataSubsampler* subsampler;
 
-  ModelAndAlgorithm model_and_algorithm;
+  //ModelAndAlgorithm model_and_algorithm;
+  
+  // stored here
+  Factors* factors;
 
   void make_copy(const LikelihoodEstimator &another);
 

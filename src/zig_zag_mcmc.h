@@ -1,0 +1,92 @@
+#ifndef ZIGZAGMCMC_H
+#define ZIGZAGMCMC_H
+
+#include <RcppArmadillo.h>
+using namespace Rcpp;
+
+#include <vector>
+#include "mcmc.h"
+#include "proposal_kernel.h"
+
+class ZigZagMCMC : public MCMC
+{
+
+public:
+
+  ZigZagMCMC();
+  
+  // Gaussian random walk.
+  ZigZagMCMC(size_t number_of_iterations_in,
+                         const std::vector<Parameters> &initial_points_in,
+                         const Parameters &proposal_variances);
+  
+  ZigZagMCMC(size_t number_of_iterations_in,
+                         ProposalKernel* proposal_in);
+
+  virtual ~ZigZagMCMC();
+
+  ZigZagMCMC(const ZigZagMCMC &another);
+
+  void operator=(const ZigZagMCMC &another);
+  Kernel* duplicate() const;
+  MCMC* mcmc_duplicate() const;
+
+  // Zig zag can be run to produce a Particle, just as any MCMC can be. This way is can be combined with other MCMC moves.
+  // When we call "run" on it, as in the base class, it will use a succession of moves and produce a succession of particles, just as any other MCMC move would.
+  Particle move(RandomNumberGenerator &rng,
+                Particle &particle) const;
+  
+  Particle move(RandomNumberGenerator &rng,
+                Particle &particle,
+                const Parameters &conditioned_on_parameters) const;
+  
+  Particle subsample_move(RandomNumberGenerator &rng,
+                          Particle &particle,
+                          const Parameters &conditioned_on_parameters) const;
+  
+  /*
+  EnsembleMember move(RandomNumberGenerator &rng,
+                      const Index* index,
+                      EnsembleMember &particle) const;
+  
+  EnsembleMember move(RandomNumberGenerator &rng,
+                      const Index* index,
+                      EnsembleMember &particle,
+                      const Parameters &conditioned_on_parameters) const;
+  
+  EnsembleMember subsample_move(RandomNumberGenerator &rng,
+                                const Index* index,
+                                EnsembleMember &particle,
+                                const Parameters &conditioned_on_parameters) const;
+  */
+  
+  // Overrides that just run the PDMP, rather than calling run in the MCMC base class.
+  MoveOutput* run(RandomNumberGenerator &rng,
+                  
+                  Particle &particle) const;
+  
+  MoveOutput* run(RandomNumberGenerator &rng,
+                  Particle &particle,
+                  const Parameters &conditioned_on_parameters) const;
+  
+  MoveOutput* subsample_run(RandomNumberGenerator &rng,
+                            Particle &particle,
+                            const Parameters &conditioned_on_parameters) const;
+  
+  void smc_adapt(SMCOutput* current_state);
+  
+  void ensemble_adapt(EnsembleKalmanOutput* current_state);
+  
+protected:
+  
+  void specific_mcmc_adapt(Particle &current_particle,
+                           size_t iteration_counter);
+  
+  // stored here
+  ProposalKernel* proposal;
+
+  void make_copy(const ZigZagMCMC &another);
+
+};
+
+#endif

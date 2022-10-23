@@ -4,23 +4,45 @@
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 
+#include <string>
+
 #include "distributions.h"
 #include "particle.h"
+
+class Factors;
 
 class ParticleSimulator
 {
 public:
 
-  ParticleSimulator(void);
+  ParticleSimulator();
+  ParticleSimulator(const std::string &resample_variable_name_in);
   ParticleSimulator(const ParticleSimulator &another);
-  virtual ~ParticleSimulator(void);
+  virtual ~ParticleSimulator();
 
   void operator=(const ParticleSimulator &another);
   virtual ParticleSimulator* duplicate() const=0;
 
-  virtual Particle operator()(RandomNumberGenerator &rng)=0;
+  virtual Particle simulate(RandomNumberGenerator &rng,
+                            Factors* factors) const=0;
+  virtual Particle simulate(RandomNumberGenerator &rng,
+                            Factors* factors,
+                            const Parameters &conditioned_on_parameters) const=0;
+  
+  virtual Particle subsample_simulate(RandomNumberGenerator &rng,
+                                      Factors* factors,
+                                      const Parameters &conditioned_on_parameters) const=0;
+  
+  virtual double evaluate(Particle &input) const=0;
+  virtual double evaluate(Particle &input,
+                            const Parameters &conditioned_on_parameters) const=0;
+  
+  virtual double subsample_evaluate(Particle &input,
+                                    const Parameters &conditioned_on_parameters) const=0;
 
 protected:
+  
+  std::string resample_variable_name;
 
   void make_copy(const ParticleSimulator &another);
 
