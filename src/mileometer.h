@@ -13,6 +13,7 @@
 // etc.
 
 #include <vector>
+#include <stdexcept>
 
 class Sequencer;
 class EnsembleSequencer;
