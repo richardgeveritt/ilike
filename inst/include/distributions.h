@@ -6,7 +6,7 @@
 //#include <boost/random/mersenne_twister.hpp>
 //#include <boost/random/normal_distribution.hpp>
 #include <math.h>
-#include <stdexcept>
+//#include <stdexcept>
 #include <dqrng_distribution.h>
 #include <dqrng_generator.h>
 #include <boost/random/uniform_real_distribution.hpp>
@@ -281,18 +281,18 @@ inline double dmvnorm(const arma::colvec &x,
 {
   double result;
   arma::colvec x_minus_mean = x-mu;
-  try
-  {
-    result = -((arma::size(sigma)[0]/2.0) * log(2.0*M_PI)) - 0.5*arma::log_det_sympd(sigma);
-    //double thing = double(x_minus_mean.t()*arma::inv_sympd(c)*x_minus_mean(0,0));
-    arma::mat b = x_minus_mean.t()*arma::inv_sympd(sigma)*x_minus_mean;
-    result = result - 0.5*b(0,0);
-  }
-  catch (std::exception)
-  {
-    Rcpp::stop("mvnormal_logpdf - covariance is not positive definite.");
-    //Rcpp::stop("mvnormal_logpdf - covariance is not positive definite.");
-  }
+  //try
+  //{
+  result = -((arma::size(sigma)[0]/2.0) * log(2.0*M_PI)) - 0.5*arma::log_det_sympd(sigma);
+  //double thing = double(x_minus_mean.t()*arma::inv_sympd(c)*x_minus_mean(0,0));
+  arma::mat b = x_minus_mean.t()*arma::inv_sympd(sigma)*x_minus_mean;
+  result = result - 0.5*b(0,0);
+  //}
+  //catch (std::exception)
+  //{
+  //  Rcpp::stop("mvnormal_logpdf - covariance is not positive definite.");
+  //  //Rcpp::stop("mvnormal_logpdf - covariance is not positive definite.");
+  //}
   return result;
 }
 
@@ -375,28 +375,28 @@ inline double dmvnorm_estimated_params(const arma::colvec &x,
                                        size_t n)
 {
   size_t d = estimated_mean.n_rows;
-  try
+  //try
+  //{
+  double first_line = -(double(d)/2.0)*log(2.0*M_PI) + log_c(d,n-2) - log_c(d,n-1) - (double(d)/2.0)*log(1.0-(1.0/double(n))) - (double(n-d-2)/2.0)*arma::log_det_sympd(double(n-1)*estimated_covariance);
+  arma::colvec x_minus_mean = x-estimated_mean;
+  arma::mat inner_bracket = double(n-1)*estimated_covariance - x_minus_mean*x_minus_mean.t()/(1.0-(1.0/double(n)));
+  double log_phi;
+  if (inner_bracket.is_sympd())
   {
-    double first_line = -(double(d)/2.0)*log(2.0*M_PI) + log_c(d,n-2) - log_c(d,n-1) - (double(d)/2.0)*log(1.0-(1.0/double(n))) - (double(n-d-2)/2.0)*arma::log_det_sympd(double(n-1)*estimated_covariance);
-    arma::colvec x_minus_mean = x-estimated_mean;
-    arma::mat inner_bracket = double(n-1)*estimated_covariance - x_minus_mean*x_minus_mean.t()/(1.0-(1.0/double(n)));
-    double log_phi;
-    if (inner_bracket.is_sympd())
-    {
-      log_phi = arma::log_det_sympd(inner_bracket);
-    }
-    else
-    {
-      log_phi = -arma::datum::inf;
-    }
-    double second_line = (double(n-d-3)/2.0)*log_phi;
-    
-    return(first_line + second_line);
+    log_phi = arma::log_det_sympd(inner_bracket);
   }
-  catch(std::exception)
+  else
   {
-    Rcpp::stop("mvnormal_logpdf_unbiased_with_estimated_params - it might be that n<=d-3.");
+    log_phi = -arma::datum::inf;
   }
+  double second_line = (double(n-d-3)/2.0)*log_phi;
+  
+  return(first_line + second_line);
+  //}
+  //catch(std::exception)
+  //{
+  //  Rcpp::stop("mvnormal_logpdf_unbiased_with_estimated_params - it might be that n<=d-3.");
+  //}
 
 }
 
