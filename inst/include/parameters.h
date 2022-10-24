@@ -21,7 +21,7 @@ typedef boost::unordered_map< std::string, arma::mat>::const_iterator vector_par
 typedef boost::unordered_map< std::string, boost::spirit::hold_any>::iterator any_parameter_iterator;
 typedef boost::unordered_map< std::string, boost::spirit::hold_any>::const_iterator any_parameter_const_iterator;
 
-RCPP_EXPOSED_CLASS(Parameters);
+RCPP_EXPOSED_CLASS(Parameters)
 
 class Parameters
 {
