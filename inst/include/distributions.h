@@ -6,6 +6,7 @@
 //#include <boost/random/mersenne_twister.hpp>
 //#include <boost/random/normal_distribution.hpp>
 #include <math.h>
+#include <stdexcept>
 #include <dqrng_distribution.h>
 #include <dqrng_generator.h>
 #include <boost/random/uniform_real_distribution.hpp>
