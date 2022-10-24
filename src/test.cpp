@@ -153,7 +153,7 @@ double a_test(const List &model)
           ((float) end - start)/CLOCKS_PER_SEC, max);
 
 
-  std::cout << output->log_likelihood << std::endl;
+  Rcout << output->log_likelihood << std::endl;
   delete output;
 
   //Parameters input;
