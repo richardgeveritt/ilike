@@ -13,7 +13,14 @@
 #include <boost/random/gamma_distribution.hpp>
 #include <boost/random/discrete_distribution.hpp>
 #include <boost/random/normal_distribution.hpp>
+
+//save compiler switches
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 #include <boost/math/distributions.hpp>
+//restore compiler switches
+#pragma GCC diagnostic pop
+
 //#include <boost/math/distributions/gamma.hpp>
 //#include <boost/math/distributions/normal.hpp>
 #include <boost/math/special_functions/gamma.hpp>
