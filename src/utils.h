@@ -93,7 +93,7 @@ inline arma::rowvec mean_wt(const arma::mat &x,
                             const arma::colvec &wt)
 {
   if (wt.n_rows!=x.n_rows)
-    throw std::runtime_error("meanwt - matrix and weight sizes don't match.");
+    Rcpp::stop("meanwt - matrix and weight sizes don't match.");
   arma::mat wt_mat = repmat(wt,1,x.n_cols);
   return sum(wt_mat % x,1);
 }

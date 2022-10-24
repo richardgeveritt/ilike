@@ -189,7 +189,7 @@ arma::mat ReinforceGradientEstimator::subsample_get_gradient_of_log(const std::s
                                                                     Particle &particle)
 {
   // not used, since would need to have subsample of subsample, and need a different approach to doing the scaling
-  throw std::runtime_error("ReinforceGradientEstimator::subsample_get_gradient_of_log - not implemented.");
+  Rcpp::stop("ReinforceGradientEstimator::subsample_get_gradient_of_log - not implemented.");
 }
 
 arma::mat ReinforceGradientEstimator::subsample_get_gradient_of_log(const std::string &variable,
@@ -198,5 +198,5 @@ arma::mat ReinforceGradientEstimator::subsample_get_gradient_of_log(const std::s
                                                                     const Parameters &conditioned_on_parameters)
 {
   // not used, since would need to have subsample of subsample, and need a different approach to doing the scaling
-  throw std::runtime_error("ReinforceGradientEstimator::subsample_get_gradient_of_log - not implemented.");
+  Rcpp::stop("ReinforceGradientEstimator::subsample_get_gradient_of_log - not implemented.");
 }

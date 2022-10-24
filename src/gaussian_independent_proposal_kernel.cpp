@@ -239,11 +239,11 @@ Parameters GaussianIndependentProposalKernel::subsample_independent_simulate(Ran
 arma::mat GaussianIndependentProposalKernel::independent_gradient_of_log(const std::string &variable,
                                                                          const Parameters &proposed_particle)
 {
-  throw std::runtime_error("CustomIndependentProposalKernel::independent_gradient_of_log - not written yet.");
+  Rcpp::stop("CustomIndependentProposalKernel::independent_gradient_of_log - not written yet.");
 }
 
 arma::mat GaussianIndependentProposalKernel::subsample_independent_gradient_of_log(const std::string &variable,
                                                                                    const Parameters &proposed_particle)
 {
-  throw std::runtime_error("CustomIndependentProposalKernel::independent_gradient_of_log - not written yet.");
+  Rcpp::stop("CustomIndependentProposalKernel::independent_gradient_of_log - not written yet.");
 }

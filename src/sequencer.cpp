@@ -83,7 +83,7 @@ void Sequencer::setup(SMCWorker* the_worker_in,
   this->termination = termination_in;
   
   if ( (this->schedules.size()<1) || (this->schedules.size()<1) || (this->schedules.size()!=this->variable_names.size()) )
-      throw std::runtime_error("Sequencer::setup - invalid schedule.");
+      Rcpp::stop("Sequencer::setup - invalid schedule.");
       
   if (this->schedules.back().back()>=this->schedules.back().front())
   {
@@ -105,7 +105,7 @@ void Sequencer::setup(SMCWorker* the_worker_in,
        ++i)
   {
     if (i->size()<2)
-      throw std::runtime_error("Sequencer::setup - invalid schedule.");
+      Rcpp::stop("Sequencer::setup - invalid schedule.");
     
     this->current_values.push_back(i->front());
     sizes.push_back(i->size());

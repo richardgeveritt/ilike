@@ -49,5 +49,5 @@ Particle PDMPMCMCOutput::back() const
 
 std::vector<Parameters> PDMPMCMCOutput::get_vector_of_parameters() const
 {
-  throw std::runtime_error("PDMPMCMCOutput::get_vector_of_parameters() - not written yet.");
+  Rcpp::stop("PDMPMCMCOutput::get_vector_of_parameters() - not written yet.");
 }

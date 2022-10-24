@@ -132,7 +132,7 @@ Parameters CustomIndependentProposalKernel::subsample_independent_simulate(Rando
                                                                            const std::string &variable) const
 {
   // no difference since size of data set does not impact on proposal
-  throw std::runtime_error("CustomIndependentProposalKernel::subsample_independent_simulate - not written yet.");
+  Rcpp::stop("CustomIndependentProposalKernel::subsample_independent_simulate - not written yet.");
   return this->proposal_simulate(rng,
                                  this->proposal_parameters);
 }
@@ -142,7 +142,7 @@ Parameters CustomIndependentProposalKernel::subsample_independent_simulate(Rando
                                                                            const Parameters &conditioned_on_parameters) const
 {
   // no difference since size of data set does not impact on proposal
-  throw std::runtime_error("CustomIndependentProposalKernel::subsample_independent_simulate - not written yet.");
+  Rcpp::stop("CustomIndependentProposalKernel::subsample_independent_simulate - not written yet.");
   return this->proposal_simulate(rng,
                                  this->proposal_parameters);
 }
@@ -150,7 +150,7 @@ Parameters CustomIndependentProposalKernel::subsample_independent_simulate(Rando
 arma::mat CustomIndependentProposalKernel::independent_gradient_of_log(const std::string &variable,
                                                                        const Parameters &proposed_particle)
 {
-  throw std::runtime_error("CustomIndependentProposalKernel::independent_gradient_of_log - not written yet.");
+  Rcpp::stop("CustomIndependentProposalKernel::independent_gradient_of_log - not written yet.");
 }
 
 /*
@@ -158,14 +158,14 @@ arma::mat CustomIndependentProposalKernel::independent_gradient_of_log(const std
                                                                        Variables* proposed_particle,
                                                                        const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("CustomIndependentProposalKernel::independent_gradient_of_log - not written yet.");
+  Rcpp::stop("CustomIndependentProposalKernel::independent_gradient_of_log - not written yet.");
 }
 */
 
 arma::mat CustomIndependentProposalKernel::subsample_independent_gradient_of_log(const std::string &variable,
                                                                                  const Parameters &proposed_particle)
 {
-  throw std::runtime_error("CustomIndependentProposalKernel::subsample_independent_gradient_of_log - not written yet.");
+  Rcpp::stop("CustomIndependentProposalKernel::subsample_independent_gradient_of_log - not written yet.");
 }
 
 /*
@@ -173,6 +173,6 @@ arma::mat CustomIndependentProposalKernel::subsample_independent_gradient_of_log
                                              Variables* proposed_particle,
                                              const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("CustomIndependentProposalKernel::subsample_independent_gradient_of_log - not written yet.");
+  Rcpp::stop("CustomIndependentProposalKernel::subsample_independent_gradient_of_log - not written yet.");
 }
 */

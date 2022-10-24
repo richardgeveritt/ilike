@@ -216,7 +216,7 @@ arma::mat HMCProposalKernel::specific_gradient_of_log(const std::string &variabl
                                                            Particle &proposed_particle,
                                                            Particle &old_particle)
 {
-  throw std::runtime_error("LangevinProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("LangevinProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
 arma::mat HMCProposalKernel::specific_gradient_of_log(const std::string &variable,
@@ -224,7 +224,7 @@ arma::mat HMCProposalKernel::specific_gradient_of_log(const std::string &variabl
                                                            Particle &old_particle,
                                                            const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("LangevinProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("LangevinProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
 arma::mat HMCProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
@@ -232,5 +232,5 @@ arma::mat HMCProposalKernel::specific_subsample_gradient_of_log(const std::strin
                                                                      Particle &old_particle,
                                                                      const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("LangevinProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("LangevinProposalKernel::specific_gradient_of_log - not written yet.");
 }

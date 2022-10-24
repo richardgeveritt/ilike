@@ -17,7 +17,7 @@ VectorSingleIndex::VectorSingleIndex(size_t start_in,
 :SingleIndex()
 {
   if (start_in>end_in)
-    throw std::runtime_error("RangeSingleIndex(size_t start_in, size_t end_in): start is greater than end.");
+    Rcpp::stop("RangeSingleIndex(size_t start_in, size_t end_in): start is greater than end.");
   this->indices.reserve(end_in-start_in);
   for (size_t i=start_in; i<end_in; ++i)
   {

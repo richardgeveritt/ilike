@@ -135,7 +135,7 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate(EnsembleKalmanOutput* curren
 {
   if (!this->last_index_is_fixed)
   {
-    throw std::runtime_error("EnsembleKalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
+    Rcpp::stop("EnsembleKalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
   }
   
   this->ensemble_kalman_evaluate_smcfixed_part(current_state);
@@ -178,7 +178,7 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcadaptive_part_given_smcfi
 {
   // set sequencer to have values from conditioned_on_parameters
   if (!this->sequencer_limit_is_fixed)
-    std::runtime_error("EnsembleKalmanFilter::evaluate_smcadaptive_part_given_smcfixed_smc - need fixed sequencer limit if we are not conditioning on parameters.");
+    Rcpp::stop("EnsembleKalmanFilter::evaluate_smcadaptive_part_given_smcfixed_smc - need fixed sequencer limit if we are not conditioning on parameters.");
   
   // If first step, then weight then check termination. What to do about find desired criterion and find next target? See below - make it different in first iteration?
   
@@ -339,7 +339,7 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate(EnsembleKalmanOutput* curren
 {
   if (!this->last_index_is_fixed)
   {
-    throw std::runtime_error("EnsembleKalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
+    Rcpp::stop("EnsembleKalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
   }
   
   this->ensemble_kalman_evaluate_smcfixed_part(current_state,
@@ -447,7 +447,7 @@ void EnsembleKalmanFilter::subsample_ensemble_kalman_evaluate(EnsembleKalmanOutp
 {
   if (!this->last_index_is_fixed)
   {
-    throw std::runtime_error("EnsembleKalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
+    Rcpp::stop("EnsembleKalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
   }
   
   this->subsample_ensemble_kalman_evaluate_smcfixed_part(current_state,
@@ -540,7 +540,7 @@ void EnsembleKalmanFilter::subsample_ensemble_kalman_evaluate_smcadaptive_part_g
     this->current_index = this->first_index;
     this->last_index = size_t(conditioned_on_parameters[this->index_name][0]);
     if (this->first_index>this->last_index)
-      throw std::runtime_error("EnsembleKalmanFilter::evaluate - last index from parameters is before the current state of the filter.");
+      Rcpp::stop("EnsembleKalmanFilter::evaluate - last index from parameters is before the current state of the filter.");
   }
   
   // Set predictor and updater with parameters.
@@ -605,7 +605,7 @@ void EnsembleKalmanFilter::subsample_ensemble_kalman_evaluate_smcadaptive_part_g
    this->current_index = this->first_index;
    this->last_index = size_t(conditioned_on_parameters[this->index_name][0]);
    if (this->first_index>this->last_index)
-   throw std::runtime_error("EnsembleKalmanFilter::evaluate - last index from parameters is before the current state of the filter.");
+   Rcpp::stop("EnsembleKalmanFilter::evaluate - last index from parameters is before the current state of the filter.");
    }
    
    // Set predictor and updater with parameters.

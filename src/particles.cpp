@@ -33,7 +33,7 @@ Particles::Particles(const std::vector<Parameters> &initial_values_in,
 {
   if (initial_values_in.size()!=log_probabilities_of_initial_values_in.n_rows)
   {
-    throw std::runtime_error("Particles(initial_values,probs) constructor: values and probabilities need to be of the same length.");
+    Rcpp::stop("Particles(initial_values,probs) constructor: values and probabilities need to be of the same length.");
   }
   
   size_t number_of_particles_in = initial_values_in.size();
@@ -237,7 +237,7 @@ void Particles::update_weights(const arma::colvec &latest_unnormalised_log_incre
   if ( (latest_unnormalised_log_incremental_weights.size()>0) && (this->normalised_log_weights.size()>0) && (latest_unnormalised_log_incremental_weights.size()==this->normalised_log_weights.size()) )
     this->unnormalised_log_weights = this->previous_normalised_log_weights + latest_unnormalised_log_incremental_weights;
   else
-    throw std::runtime_error("SMCOutput::update_unnormalised_log_weights: weights have the wrong length.");
+    Rcpp::stop("SMCOutput::update_unnormalised_log_weights: weights have the wrong length.");
   
   this->incremental_log_weights = latest_unnormalised_log_incremental_weights;
   //this->unnormalised_log_weights = latest_unnormalised_log_weights;

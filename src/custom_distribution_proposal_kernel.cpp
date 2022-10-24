@@ -130,7 +130,7 @@ Parameters CustomDistributionProposalKernel::subsample_independent_simulate(Rand
                                                                            const std::string &variable) const
 {
   // no difference since size of data set does not impact on proposal
-  throw std::runtime_error("CustomDistributionProposalKernel::subsample_independent_simulate - not written yet.");
+  Rcpp::stop("CustomDistributionProposalKernel::subsample_independent_simulate - not written yet.");
   return this->proposal_simulate(rng,
                                  this->proposal_parameters);
 }
@@ -155,7 +155,7 @@ Parameters CustomDistributionProposalKernel::subsample_independent_simulate(Rand
                                                                             const Parameters &conditioned_on_parameters) const
 {
   // no difference since size of data set does not impact on proposal
-  throw std::runtime_error("CustomDistributionProposalKernel::subsample_independent_simulate - not written yet.");
+  Rcpp::stop("CustomDistributionProposalKernel::subsample_independent_simulate - not written yet.");
   return this->proposal_simulate(rng,
                                  this->proposal_parameters.merge(conditioned_on_parameters));
 }
@@ -166,7 +166,7 @@ Parameters CustomDistributionProposalKernel::subsample_independent_simulate(Rand
                                                                            const Parameters &conditioned_on_parameters) const
 {
   // no difference since size of data set does not impact on proposal
-  throw std::runtime_error("CustomDistributionProposalKernel::subsample_independent_simulate - not written yet.");
+  Rcpp::stop("CustomDistributionProposalKernel::subsample_independent_simulate - not written yet.");
   return this->proposal_simulate(rng,
                                  this->proposal_parameters);
 }
@@ -175,7 +175,7 @@ Parameters CustomDistributionProposalKernel::subsample_independent_simulate(Rand
 arma::mat CustomDistributionProposalKernel::independent_gradient_of_log(const std::string &variable,
                                                                         const Parameters &proposed_particle)
 {
-  throw std::runtime_error("CustomDistributionProposalKernel::independent_gradient_of_log - not written yet.");
+  Rcpp::stop("CustomDistributionProposalKernel::independent_gradient_of_log - not written yet.");
 }
 
 /*
@@ -183,14 +183,14 @@ arma::mat CustomDistributionProposalKernel::independent_gradient_of_log(const st
                                       Variables* proposed_particle,
                                       const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("CustomDistributionProposalKernel::independent_gradient_of_log - not written yet.");
+  Rcpp::stop("CustomDistributionProposalKernel::independent_gradient_of_log - not written yet.");
 }
 */
 
 arma::mat CustomDistributionProposalKernel::subsample_independent_gradient_of_log(const std::string &variable,
                                                                                   const Parameters &proposed_particle)
 {
-  throw std::runtime_error("CustomDistributionProposalKernel::independent_gradient_of_log - not written yet.");
+  Rcpp::stop("CustomDistributionProposalKernel::independent_gradient_of_log - not written yet.");
 }
 
 /*
@@ -198,6 +198,6 @@ arma::mat CustomDistributionProposalKernel::subsample_independent_gradient_of_lo
                                                 Variables* proposed_particle,
                                                 const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("CustomDistributionProposalKernel::independent_gradient_of_log - not written yet.");
+  Rcpp::stop("CustomDistributionProposalKernel::independent_gradient_of_log - not written yet.");
 }
 */

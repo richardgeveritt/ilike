@@ -123,7 +123,7 @@ Parameters CustomProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                     Particle &particle) const
 {
   // no difference since size of data set does not impact on proposal
-  throw std::runtime_error("CustomProposalKernel::subsample_simulate - not implemented.");
+  Rcpp::stop("CustomProposalKernel::subsample_simulate - not implemented.");
 }
 
 Parameters CustomProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
@@ -132,14 +132,14 @@ Parameters CustomProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                     const Parameters &conditioned_on_parameters) const
 {
   // no difference since size of data set does not impact on proposal
-  throw std::runtime_error("CustomProposalKernel::subsample_simulate - not implemented.");
+  Rcpp::stop("CustomProposalKernel::subsample_simulate - not implemented.");
 }
 
 arma::mat CustomProposalKernel::specific_gradient_of_log(const std::string &variable,
                                                            Particle &proposed_particle,
                                                            Particle &old_particle)
 {
-  throw std::runtime_error("CustomProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("CustomProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
 arma::mat CustomProposalKernel::specific_gradient_of_log(const std::string &variable,
@@ -147,7 +147,7 @@ arma::mat CustomProposalKernel::specific_gradient_of_log(const std::string &vari
                                                            Particle &old_particle,
                                                            const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("CustomProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("CustomProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
 arma::mat CustomProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
@@ -155,5 +155,5 @@ arma::mat CustomProposalKernel::specific_subsample_gradient_of_log(const std::st
                                                                      Particle &old_particle,
                                                                      const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("CustomProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("CustomProposalKernel::specific_gradient_of_log - not written yet.");
 }

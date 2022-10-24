@@ -1,6 +1,9 @@
 #ifndef MILEOMETER_H
 #define MILEOMETER_H
 
+#include <RcppArmadillo.h>
+using namespace Rcpp;
+
 // The point of this is to iterate through a vector of integers in the following way:
 // 0 0 0 0
 // 0 0 0 1

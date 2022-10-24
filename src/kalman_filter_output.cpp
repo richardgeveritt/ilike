@@ -206,13 +206,13 @@ size_t KalmanFilterOutput::predicted_size() const
 arma::mat KalmanFilterOutput::get_gradient_of_log(const std::string &variable,
                                                   const Parameters &x)
 {
-  throw std::runtime_error("KalmanFilterOutput::get_gradient_of_log - not yet implemented.");
+  Rcpp::stop("KalmanFilterOutput::get_gradient_of_log - not yet implemented.");
 }
 
 arma::mat KalmanFilterOutput::subsample_get_gradient_of_log(const std::string &variable,
                                                   const Parameters &x)
 {
-  throw std::runtime_error("KalmanFilterOutput::subsample_get_gradient_of_log - not yet implemented.");
+  Rcpp::stop("KalmanFilterOutput::subsample_get_gradient_of_log - not yet implemented.");
 }
 
 void KalmanFilterOutput::print(std::ostream &os) const

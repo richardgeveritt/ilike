@@ -188,7 +188,7 @@ arma::mat UniformRandomWalkProposalKernel::specific_gradient_of_log(const std::s
                                                                     Particle &proposed_particle,
                                                                     Particle &old_particle)
 {
-  throw std::runtime_error("UniformRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("UniformRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
 arma::mat UniformRandomWalkProposalKernel::specific_gradient_of_log(const std::string &variable,
@@ -196,7 +196,7 @@ arma::mat UniformRandomWalkProposalKernel::specific_gradient_of_log(const std::s
                                                                     Particle &old_particle,
                                                                     const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("UniformRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("UniformRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
 arma::mat UniformRandomWalkProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
@@ -204,5 +204,5 @@ arma::mat UniformRandomWalkProposalKernel::specific_subsample_gradient_of_log(co
                                                                               Particle &old_particle,
                                                                               const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("UniformRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("UniformRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
 }

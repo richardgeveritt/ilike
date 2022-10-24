@@ -217,7 +217,7 @@ arma::mat MirrorProposalKernel::specific_gradient_of_log(const std::string &vari
                                                                      Particle &proposed_particle,
                                                                      Particle &old_particle)
 {
-  throw std::runtime_error("MirrorProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("MirrorProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
 arma::mat MirrorProposalKernel::specific_gradient_of_log(const std::string &variable,
@@ -225,7 +225,7 @@ arma::mat MirrorProposalKernel::specific_gradient_of_log(const std::string &vari
                                                                      Particle &old_particle,
                                                                      const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("MirrorProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("MirrorProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
 arma::mat MirrorProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
@@ -233,5 +233,5 @@ arma::mat MirrorProposalKernel::specific_subsample_gradient_of_log(const std::st
                                                                                Particle &old_particle,
                                                                                const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("MirrorProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("MirrorProposalKernel::specific_gradient_of_log - not written yet.");
 }

@@ -223,7 +223,7 @@ arma::mat CompositeProposalKernel::specific_gradient_of_log(const std::string &v
                                            Particle &proposed_particle,
                                            Particle &old_particle)
 {
-  throw std::runtime_error("CompositeProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("CompositeProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
 arma::mat CompositeProposalKernel::specific_gradient_of_log(const std::string &variable,
@@ -231,7 +231,7 @@ arma::mat CompositeProposalKernel::specific_gradient_of_log(const std::string &v
                                            Particle &old_particle,
                                            const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("CompositeProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("CompositeProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
 //virtual arma::mat specific_subsample_gradient_of_log(const std::string &variable,
@@ -242,5 +242,5 @@ arma::mat CompositeProposalKernel::specific_subsample_gradient_of_log(const std:
                                                      Particle &old_particle,
                                                      const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("CompositeProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("CompositeProposalKernel::specific_gradient_of_log - not written yet.");
 }

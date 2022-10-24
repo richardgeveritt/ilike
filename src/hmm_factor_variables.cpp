@@ -103,7 +103,7 @@ void HMMFactorVariables::make_copy(const HMMFactorVariables &another)
 void HMMFactorVariables::evaluate_smcfixed_part_of_likelihoods(const Index* index)
 {
   if (index->size()>1)
-    throw std::runtime_error("HMMFactorVariables::evaluate_smcfixed_part_of_likelihoods - cannot break down likelihood estimation into two stages when using more than one measurement.");
+    Rcpp::stop("HMMFactorVariables::evaluate_smcfixed_part_of_likelihoods - cannot break down likelihood estimation into two stages when using more than one measurement.");
   
   if (*index->begin()==0)
   {
@@ -137,7 +137,7 @@ void HMMFactorVariables::evaluate_smcfixed_part_of_likelihoods(const Index* inde
   Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
   
   if (index->size()>1)
-    throw std::runtime_error("HMMFactorVariables::evaluate_smcfixed_part_of_likelihoods - cannot break down likelihood estimation into two stages when using more than one measurement.");
+    Rcpp::stop("HMMFactorVariables::evaluate_smcfixed_part_of_likelihoods - cannot break down likelihood estimation into two stages when using more than one measurement.");
   
   if (*index->begin()==0)
   {
@@ -166,7 +166,7 @@ void HMMFactorVariables::subsample_evaluate_smcfixed_part_of_likelihoods(const I
   Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
   
   if (index->size()>1)
-    throw std::runtime_error("HMMFactorVariables::subsample_evaluate_smcfixed_part_of_likelihoods - cannot break down likelihood estimation into two stages when using more than one measurement.");
+    Rcpp::stop("HMMFactorVariables::subsample_evaluate_smcfixed_part_of_likelihoods - cannot break down likelihood estimation into two stages when using more than one measurement.");
   
   if (*index->begin()==0)
   {
@@ -192,7 +192,7 @@ void HMMFactorVariables::subsample_evaluate_smcfixed_part_of_likelihoods(const I
 double HMMFactorVariables::evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index)
 {
   if (index->size()>1)
-    throw std::runtime_error("HMMFactorVariables::evaluate_smcfixed_part_of_likelihoods - cannot break down likelihood estimation into two stages when using more than one measurement.");
+    Rcpp::stop("HMMFactorVariables::evaluate_smcfixed_part_of_likelihoods - cannot break down likelihood estimation into two stages when using more than one measurement.");
   
   double result = 0.0;
   
@@ -233,7 +233,7 @@ double HMMFactorVariables::evaluate_smcadaptive_part_given_smcfixed_likelihoods(
   Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
   
   if (index->size()>1)
-    throw std::runtime_error("HMMFactorVariables::evaluate_smcfixed_part_of_likelihoods - cannot break down likelihood estimation into two stages when using more than one measurement.");
+    Rcpp::stop("HMMFactorVariables::evaluate_smcfixed_part_of_likelihoods - cannot break down likelihood estimation into two stages when using more than one measurement.");
   
   double result = 0.0;
   
@@ -275,7 +275,7 @@ double HMMFactorVariables::subsample_evaluate_smcadaptive_part_given_smcfixed_li
   Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
   
   if (index->size()>1)
-    throw std::runtime_error("HMMFactorVariables::subsample_evaluate_smcfixed_part_of_likelihoods - cannot break down likelihood estimation into two stages when using more than one measurement.");
+    Rcpp::stop("HMMFactorVariables::subsample_evaluate_smcfixed_part_of_likelihoods - cannot break down likelihood estimation into two stages when using more than one measurement.");
   
   double result = 0.0;
   
@@ -314,7 +314,7 @@ double HMMFactorVariables::subsample_evaluate_smcadaptive_part_given_smcfixed_li
 double HMMFactorVariables::evaluate_likelihoods(const Index* index)
 {
   if (index->size()>1)
-    throw std::runtime_error("HMMFactorVariables::evaluate_likelihoods - only one index allowed.");
+    Rcpp::stop("HMMFactorVariables::evaluate_likelihoods - only one index allowed.");
   
   double result = 0.0;
   if (*index->begin()==0)
@@ -346,7 +346,7 @@ double HMMFactorVariables::evaluate_likelihoods(const Index* index,
 {
   Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
   if (index->size()>1)
-    throw std::runtime_error("HMMFactorVariables::evaluate_likelihoods - only one index allowed.");
+    Rcpp::stop("HMMFactorVariables::evaluate_likelihoods - only one index allowed.");
   
   double result = 0.0;
   if (*index->begin()==0)
@@ -377,7 +377,7 @@ double HMMFactorVariables::evaluate_likelihoods(const Index* index,
 double HMMFactorVariables::subsample_evaluate_likelihoods(const Index* index)
 {
   if (index->size()>1)
-    throw std::runtime_error("HMMFactorVariables::subsample_evaluate_likelihoods - only one index allowed.");
+    Rcpp::stop("HMMFactorVariables::subsample_evaluate_likelihoods - only one index allowed.");
   
   double result = 0.0;
   if (*index->begin()==0)
@@ -409,7 +409,7 @@ double HMMFactorVariables::subsample_evaluate_likelihoods(const Index* index,
 {
   Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
   if (index->size()>1)
-    throw std::runtime_error("HMMFactorVariables::evaluate_likelihoods - only one index allowed.");
+    Rcpp::stop("HMMFactorVariables::evaluate_likelihoods - only one index allowed.");
   
   double result = 0.0;
   if (*index->begin()==0)
@@ -441,7 +441,7 @@ double HMMFactorVariables::subsample_evaluate_likelihoods(const Index* index,
 arma::mat HMMFactorVariables::direct_get_gradient_of_log(const std::string &variable)
 {
   if (index->size()>1)
-    throw std::runtime_error("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet since unrolled HMM not yet implemented.");
+    Rcpp::stop("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet since unrolled HMM not yet implemented.");
   
   arma::mat current_parameter = this->particle->parameters[variable];
   arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
@@ -478,7 +478,7 @@ arma::mat HMMFactorVariables::direct_get_gradient_of_log(const std::string &vari
 arma::mat HMMFactorVariables::direct_get_gradient_of_log(const std::string &variable,
                                                          const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet since unrolled HMM not yet implemented.");
+  Rcpp::stop("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet since unrolled HMM not yet implemented.");
   
   Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
   arma::mat current_parameter = this->particle->parameters[variable];
@@ -507,7 +507,7 @@ arma::mat HMMFactorVariables::direct_get_gradient_of_log(const std::string &vari
 
 arma::mat HMMFactorVariables::direct_subsample_get_gradient_of_log(const std::string &variable)
 {
-  throw std::runtime_error("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet since unrolled HMM not yet implemented.");
+  Rcpp::stop("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet since unrolled HMM not yet implemented.");
   
   arma::mat current_parameter = this->particle->parameters[variable];
   arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
@@ -534,7 +534,7 @@ arma::mat HMMFactorVariables::direct_subsample_get_gradient_of_log(const std::st
 arma::mat HMMFactorVariables::direct_subsample_get_gradient_of_log(const std::string &variable,
                                                                    const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet since unrolled HMM not yet implemented.");
+  Rcpp::stop("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet since unrolled HMM not yet implemented.");
   
   Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
   arma::mat current_parameter = this->particle->parameters[variable];
@@ -564,7 +564,7 @@ arma::mat HMMFactorVariables::direct_subsample_get_gradient_of_log(const std::st
 arma::mat HMMFactorVariables::direct_get_gradient_of_log(const Index* index,
                                                          const std::string &variable)
 {
-  throw std::runtime_error("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet..");
+  Rcpp::stop("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet..");
   
   arma::mat current_parameter = this->particle->parameters[variable];
   arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
@@ -602,7 +602,7 @@ arma::mat HMMFactorVariables::direct_get_gradient_of_log(const Index* index,
                                                          const std::string &variable,
                                                          const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet.");
+  Rcpp::stop("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet.");
   
   Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
   arma::mat current_parameter = this->particle->parameters[variable];
@@ -632,7 +632,7 @@ arma::mat HMMFactorVariables::direct_get_gradient_of_log(const Index* index,
 arma::mat HMMFactorVariables::direct_subsample_get_gradient_of_log(const Index* index,
                                                                    const std::string &variable)
 {
-  throw std::runtime_error("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet.");
+  Rcpp::stop("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet.");
   
   arma::mat current_parameter = this->particle->parameters[variable];
   arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
@@ -660,7 +660,7 @@ arma::mat HMMFactorVariables::direct_subsample_get_gradient_of_log(const Index* 
                                                                    const std::string &variable,
                                                                    const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet.");
+  Rcpp::stop("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet.");
   
   Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
   arma::mat current_parameter = this->particle->parameters[variable];

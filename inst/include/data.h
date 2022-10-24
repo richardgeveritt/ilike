@@ -225,14 +225,14 @@ inline arma::mat Data::operator[](const std::vector<std::string> &variables) con
       if (found != this->vector_data.end())
         concatenated_matrix = found->second;
       else
-        throw std::runtime_error("Data::operator[]: variable not found in Data.");
+        Rcpp::stop("Data::operator[]: variable not found in Data.");
     }
     else
     {
       if (found != this->vector_data.end())
         concatenated_matrix = join_rows(concatenated_matrix,found->second);
       else
-        throw std::runtime_error("Data::operator[]: variable not found in Data.");
+        Rcpp::stop("Data::operator[]: variable not found in Data.");
     }
   }
   
@@ -251,7 +251,7 @@ inline boost::spirit::hold_any Data::operator()(const std::string &variable) con
   if (found != this->any_data.end())
     return(found->second);
   else
-    throw std::runtime_error("Data::operator(): variable not found in Data.");
+    Rcpp::stop("Data::operator(): variable not found in Data.");
 }
 
 inline Data Data::merge(const Data &another) const

@@ -205,7 +205,7 @@ arma::mat GaussianRandomWalkProposalKernel::specific_gradient_of_log(const std::
                                                                     Particle &proposed_particle,
                                                                     Particle &old_particle)
 {
-  throw std::runtime_error("GaussianRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("GaussianRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
 arma::mat GaussianRandomWalkProposalKernel::specific_gradient_of_log(const std::string &variable,
@@ -213,7 +213,7 @@ arma::mat GaussianRandomWalkProposalKernel::specific_gradient_of_log(const std::
                                                                     Particle &old_particle,
                                                                     const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("GaussianRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("GaussianRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
 arma::mat GaussianRandomWalkProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
@@ -221,5 +221,5 @@ arma::mat GaussianRandomWalkProposalKernel::specific_subsample_gradient_of_log(c
                                                                               Particle &old_particle,
                                                                               const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("GaussianRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("GaussianRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
 }

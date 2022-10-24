@@ -251,7 +251,7 @@ void SMCGeneric::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current
 {
   // set sequencer to have values from conditioned_on_parameters
   if (!this->sequencer_limit_is_fixed)
-    std::runtime_error("SMCGeneric::evaluate_smcadaptive_part_given_smcfixed_smc - need fixed sequencer limit if we are not conditioning on parameters.");
+    Rcpp::stop("SMCGeneric::evaluate_smcadaptive_part_given_smcfixed_smc - need fixed sequencer limit if we are not conditioning on parameters.");
   
   // If first step, then weight then check termination. What to do about find desired criterion and find next target? See below - make it different in first iteration?
   

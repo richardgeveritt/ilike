@@ -122,7 +122,7 @@ arma::mat DensityLikelihoodEstimatorOutput::get_gradient_of_log(const std::strin
 {
   // need to use chain rule
   // need differential of llhd wrt parameters (easy) and differential of parameters wrt to theta (not easy)
-  throw std::runtime_error("DensityLikelihoodEstimatorOutput::get_gradient_of_log - not yet implemented.");
+  Rcpp::stop("DensityLikelihoodEstimatorOutput::get_gradient_of_log - not yet implemented.");
 }
 
 arma::mat DensityLikelihoodEstimatorOutput::subsample_get_gradient_of_log(const std::string &variable,
@@ -130,7 +130,7 @@ arma::mat DensityLikelihoodEstimatorOutput::subsample_get_gradient_of_log(const 
 {
   // need to use chain rule
   // need differential of llhd wrt parameters (easy) and differential of parameters wrt to theta (not easy)
-  throw std::runtime_error("DensityLikelihoodEstimatorOutput::subsample_get_gradient_of_log - not yet implemented.");
+  Rcpp::stop("DensityLikelihoodEstimatorOutput::subsample_get_gradient_of_log - not yet implemented.");
 }
 
 void DensityLikelihoodEstimatorOutput::print(std::ostream &os) const

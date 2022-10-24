@@ -53,7 +53,7 @@ void EnsembleSequencer::setup(EnsembleKalmanWorker* the_worker_in,
   this->termination = termination_in;
   
   if (this->schedule.size()<2)
-      throw std::runtime_error("EnsembleSequencer::setup - invalid schedule.");
+      Rcpp::stop("EnsembleSequencer::setup - invalid schedule.");
       
   if (this->schedule.back()>=this->schedule.front())
   {

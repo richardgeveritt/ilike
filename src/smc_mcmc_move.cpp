@@ -429,7 +429,7 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
 {
   // set sequencer to have values from conditioned_on_parameters
   if (!this->sequencer_limit_is_fixed)
-    std::runtime_error("SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc - need fixed sequencer limit if we are not conditioning on parameters.");
+    Rcpp::stop("SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc - need fixed sequencer limit if we are not conditioning on parameters.");
   
   // iterate until stop.
   bool terminate = FALSE;

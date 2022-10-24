@@ -283,7 +283,7 @@ Parameters BarkerDynamicsProposalKernel::simulate(RandomNumberGenerator &rng,
 Parameters BarkerDynamicsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                             Particle &particle) const
 {
-  throw std::runtime_error("BarkerDynamicsProposalKernel::subsample_simulate - not written yet.");
+  Rcpp::stop("BarkerDynamicsProposalKernel::subsample_simulate - not written yet.");
   /*
   Parameters proposed = this->proposal_simulate->subsample_simulate(rng,
                                                 particle);
@@ -316,7 +316,7 @@ Parameters BarkerDynamicsProposalKernel::subsample_simulate(RandomNumberGenerato
                                                             Particle &particle,
                                                             const Parameters &conditioned_on_parameters) const
 {
-  throw std::runtime_error("BarkerDynamicsProposalKernel::subsample_simulate - not written yet.");
+  Rcpp::stop("BarkerDynamicsProposalKernel::subsample_simulate - not written yet.");
   /*
   Parameters proposed = this->proposal_simulate->subsample_simulate(rng,
                                                 particle,
@@ -350,7 +350,7 @@ Parameters BarkerDynamicsProposalKernel::subsample_simulate(RandomNumberGenerato
                                                             const std::string &variable,
                                                             Particle &particle) const
 {
-  throw std::runtime_error("BarkerDynamicsProposalKernel::subsample_simulate - not written yet.");
+  Rcpp::stop("BarkerDynamicsProposalKernel::subsample_simulate - not written yet.");
   /*
   Parameters proposed = this->proposal_simulate->subsample_simulate(rng,
                                                           variable,
@@ -382,7 +382,7 @@ Parameters BarkerDynamicsProposalKernel::subsample_simulate(RandomNumberGenerato
                                                        Particle &particle,
                                                        const Parameters &conditioned_on_parameters) const
 {
-  throw std::runtime_error("BarkerDynamicsProposalKernel::subsample_simulate - not written yet.");
+  Rcpp::stop("BarkerDynamicsProposalKernel::subsample_simulate - not written yet.");
   /*
   Parameters proposed = this->proposal_simulate->subsample_simulate(rng,
                                                           variable,
@@ -414,7 +414,7 @@ arma::mat BarkerDynamicsProposalKernel::specific_gradient_of_log(const std::stri
                                    Particle &proposed_particle,
                                    Particle &old_particle)
 {
-  throw std::runtime_error("BarkerDynamicsProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("BarkerDynamicsProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
 arma::mat BarkerDynamicsProposalKernel::specific_gradient_of_log(const std::string &variable,
@@ -422,7 +422,7 @@ arma::mat BarkerDynamicsProposalKernel::specific_gradient_of_log(const std::stri
                                    Particle &old_particle,
                                    const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("BarkerDynamicsProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("BarkerDynamicsProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
 //virtual arma::mat specific_subsample_gradient_of_log(const std::string &variable,
@@ -433,5 +433,5 @@ arma::mat BarkerDynamicsProposalKernel::specific_subsample_gradient_of_log(const
                                              Particle &old_particle,
                                              const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("BarkerDynamicsProposalKernel::specific_gradient_of_log - not written yet.");
+  Rcpp::stop("BarkerDynamicsProposalKernel::specific_gradient_of_log - not written yet.");
 }

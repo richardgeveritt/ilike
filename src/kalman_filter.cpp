@@ -118,12 +118,12 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state)
   
   if ( (this->updater->set_using_parameters) || (this->updater->set_using_parameters) )
   {
-    throw std::runtime_error("KalmanFilter::evaluate - need to read in a parameter fix updater and/or predictor.");
+    Rcpp::stop("KalmanFilter::evaluate - need to read in a parameter fix updater and/or predictor.");
   }
   
   if (!this->last_index_is_fixed)
   {
-    throw std::runtime_error("KalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
+    Rcpp::stop("KalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
   }
   
   if (current_state->predicted_size()==0)
@@ -170,17 +170,17 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state)
 
 void KalmanFilter::subsample_evaluate(KalmanFilterOutput* current_state)
 {
-  throw std::runtime_error("KalmanFilter::subsample_evaluate - not written.");
+  Rcpp::stop("KalmanFilter::subsample_evaluate - not written.");
   
   /*
   if ( (this->updater->set_using_parameters) || (this->updater->set_using_parameters) )
   {
-    throw std::runtime_error("KalmanFilter::evaluate - need to read in a parameter fix updater and/or predictor.");
+    Rcpp::stop("KalmanFilter::evaluate - need to read in a parameter fix updater and/or predictor.");
   }
   
   if (!this->last_index_is_fixed)
   {
-    throw std::runtime_error("KalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
+    Rcpp::stop("KalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
   }
   
   if (current_state->predicted_size()==0)
@@ -229,16 +229,16 @@ void KalmanFilter::subsample_evaluate(KalmanFilterOutput* current_state)
 void KalmanFilter::subsample_evaluate(KalmanFilterOutput* current_state,
                                       const Parameters &conditioned_on_parameters)
 {
-  throw std::runtime_error("KalmanFilter::subsample_evaluate - not written.");
+  Rcpp::stop("KalmanFilter::subsample_evaluate - not written.");
   /*
   if ( (this->updater->set_using_parameters) || (this->updater->set_using_parameters) )
   {
-    throw std::runtime_error("KalmanFilter::evaluate - need to read in a parameter fix updater and/or predictor.");
+    Rcpp::stop("KalmanFilter::evaluate - need to read in a parameter fix updater and/or predictor.");
   }
   
   if (!this->last_index_is_fixed)
   {
-    throw std::runtime_error("KalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
+    Rcpp::stop("KalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
   }
   
   if (current_state->predicted_size()==0)
@@ -314,7 +314,7 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state,
     this->current_index = this->first_index;
     this->last_index = size_t(conditioned_on_parameters[this->index_name][0]);
     if (this->first_index>this->last_index)
-      throw std::runtime_error("KalmanFilter::evaluate - last index from parameters is before the current state of the filter.");
+      Rcpp::stop("KalmanFilter::evaluate - last index from parameters is before the current state of the filter.");
   }
   
   // Set predictor and updater with parameters.

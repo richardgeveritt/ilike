@@ -215,7 +215,7 @@ void ParticleFilter::evaluate_smc(SMCOutput* current_state)
 {
   if (!this->last_index_is_fixed)
   {
-    throw std::runtime_error("ParticleFilter::evaluate - need to read in a parameter to determine last measurement index.");
+    Rcpp::stop("ParticleFilter::evaluate - need to read in a parameter to determine last measurement index.");
   }
   
   this->evaluate_smcfixed_part_smc(current_state);
@@ -257,7 +257,7 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
 {
   // set sequencer to have values from conditioned_on_parameters
   if (!this->sequencer_limit_is_fixed)
-    std::runtime_error("ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc - need fixed sequencer limit if we are not conditioning on parameters.");
+    Rcpp::stop("ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc - need fixed sequencer limit if we are not conditioning on parameters.");
   
   // If first step, then weight then check termination. What to do about find desired criterion and find next target? See below - make it different in first iteration?
   

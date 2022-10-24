@@ -84,7 +84,7 @@ void CESSSMCCriterion::find_desired_criterion(SMCOutput* current_state,
 
 double CESSSMCCriterion::operator()(const Ensemble &particles) const
 {
-  throw std::runtime_error("ESSSMCCriterion::operator() - not written yet.");
+  Rcpp::stop("ESSSMCCriterion::operator() - not written yet.");
 }
 
 void CESSSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_state)

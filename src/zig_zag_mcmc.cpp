@@ -73,21 +73,21 @@ void ZigZagMCMC::make_copy(const ZigZagMCMC &another)
 Particle ZigZagMCMC::move(RandomNumberGenerator &rng,
                           Particle &particle) const
 {
-  throw std::runtime_error("ZigZagMCMC::move - not yet implemented.");
+  Rcpp::stop("ZigZagMCMC::move - not yet implemented.");
 }
 
 Particle ZigZagMCMC::move(RandomNumberGenerator &rng,
                           Particle &particle,
                           const Parameters &conditioned_on_parameters) const
 {
-  throw std::runtime_error("ZigZagMCMC::move - not yet implemented.");
+  Rcpp::stop("ZigZagMCMC::move - not yet implemented.");
 }
 
 Particle ZigZagMCMC::subsample_move(RandomNumberGenerator &rng,
                                     Particle &particle,
                                     const Parameters &conditioned_on_parameters) const
 {
-  throw std::runtime_error("ZigZagMCMC::move - not yet implemented.");
+  Rcpp::stop("ZigZagMCMC::move - not yet implemented.");
 }
 
 /*
@@ -95,7 +95,7 @@ EnsembleMember ZigZagMCMC::move(RandomNumberGenerator &rng,
                                 const Index* index,
                                 EnsembleMember &particle) const
 {
-  throw std::runtime_error("ZigZagMCMC::move - not yet implemented.");
+  Rcpp::stop("ZigZagMCMC::move - not yet implemented.");
 }
 
 EnsembleMember ZigZagMCMC::move(RandomNumberGenerator &rng,
@@ -103,7 +103,7 @@ EnsembleMember ZigZagMCMC::move(RandomNumberGenerator &rng,
                                 EnsembleMember &particle,
                                 const Parameters &conditioned_on_parameters) const
 {
-  throw std::runtime_error("ZigZagMCMC::move - not yet implemented.");
+  Rcpp::stop("ZigZagMCMC::move - not yet implemented.");
 }
 
 EnsembleMember ZigZagMCMC::subsample_move(RandomNumberGenerator &rng,
@@ -111,7 +111,7 @@ EnsembleMember ZigZagMCMC::subsample_move(RandomNumberGenerator &rng,
                                           EnsembleMember &particle,
                                           const Parameters &conditioned_on_parameters) const
 {
-  throw std::runtime_error("ZigZagMCMC::move - not yet implemented.");
+  Rcpp::stop("ZigZagMCMC::move - not yet implemented.");
 }
 */
 

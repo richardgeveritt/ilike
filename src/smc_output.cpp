@@ -270,13 +270,13 @@ size_t SMCOutput::number_of_smc_iterations() const
 arma::mat SMCOutput::get_gradient_of_log(const std::string &variable,
                                          const Parameters &x)
 {
-  throw std::runtime_error("SMCOutput::get_gradient_of_log - not yet implemented.");
+  Rcpp::stop("SMCOutput::get_gradient_of_log - not yet implemented.");
 }
 
 arma::mat SMCOutput::subsample_get_gradient_of_log(const std::string &variable,
                                          const Parameters &x)
 {
-  throw std::runtime_error("SMCOutput::get_gradient_of_log - not yet implemented.");
+  Rcpp::stop("SMCOutput::get_gradient_of_log - not yet implemented.");
 }
 
 void SMCOutput::print(std::ostream &os) const

@@ -57,7 +57,7 @@ void IIDDataSubsetter::subset(size_t num_pieces)
     if (this->subsampler->ratio!=0.0)
     {
       if (this->subsampler->ratio!=current_ratio)
-        throw std::runtime_error("IIDDataSubsetter::subset - not yet implemented where we have different subsetting ratios for different variables in the data.");
+        Rcpp::stop("IIDDataSubsetter::subset - not yet implemented where we have different subsetting ratios for different variables in the data.");
       this->subsampler->ratio = current_ratio;
     }
     else

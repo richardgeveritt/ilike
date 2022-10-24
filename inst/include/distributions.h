@@ -288,9 +288,10 @@ inline double dmvnorm(const arma::colvec &x,
     arma::mat b = x_minus_mean.t()*arma::inv_sympd(sigma)*x_minus_mean;
     result = result - 0.5*b(0,0);
   }
-  catch(std::runtime_error)
+  catch (std::exception)
   {
-    throw std::runtime_error("mvnormal_logpdf - covariance is not positive definite.");
+    Rcpp::stop("mvnormal_logpdf - covariance is not positive definite.");
+    //Rcpp::stop("mvnormal_logpdf - covariance is not positive definite.");
   }
   return result;
 }
@@ -392,9 +393,9 @@ inline double dmvnorm_estimated_params(const arma::colvec &x,
     
     return(first_line + second_line);
   }
-  catch(std::runtime_error)
+  catch(std::exception)
   {
-    throw std::runtime_error("mvnormal_logpdf_unbiased_with_estimated_params - it might be that n<=d-3.");
+    Rcpp::stop("mvnormal_logpdf_unbiased_with_estimated_params - it might be that n<=d-3.");
   }
 
 }

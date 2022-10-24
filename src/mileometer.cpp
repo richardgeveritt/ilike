@@ -8,13 +8,13 @@
 // Default constructor and destructor.
 
 // Comment about function.
-Mileometer::Mileometer(void)
+Mileometer::Mileometer()
 {
 	// Set all the pointers owned by this class to be something (possibly NULL).
 }
 
 // Comment about function.
-Mileometer::~Mileometer(void)
+Mileometer::~Mileometer()
 {
 	// Delete all the pointers owned by this class.
 }
@@ -92,7 +92,7 @@ bool Mileometer::at_start() const
 std::vector<double> Mileometer::get_current_values(const std::vector< std::vector<double> > &values) const
 {
   if (this->current_index.size()!=values.size())
-    throw std::runtime_error("Mileometer::get_current_value - index different length to values.");
+    Rcpp::stop("Mileometer::get_current_value - index different length to values.");
   std::vector<double> current_value;
   current_value.reserve(values.size());
   for (size_t i=0; i<values.size(); ++i)
