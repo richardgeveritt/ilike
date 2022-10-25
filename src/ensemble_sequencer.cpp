@@ -131,14 +131,14 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
                                                    const Index* index)
 {
   double current_bisect_value = this->current_value;
-  double previous_bisect_value = this->schedule.front();
+  //double previous_bisect_value;// = this->schedule.front();
   std::vector< std::vector<double> > schedules;
   schedules.push_back(this->schedule);
   std::vector<double> target_values = this->mileometer.get_current_values(schedules);
   double next_value = target_values.back()+this->extra_bit;
   double bisect_size = abs(next_value-current_bisect_value)/2.0;
   double current_direction = this->direction;
-  double new_bisect_value;
+  double new_bisect_value = 0.0;
   arma::colvec incremental_log_weights;
   
   for (size_t i=0; i<100; ++i)
@@ -158,7 +158,7 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
     
     current_direction = std::copysign(1.0,this->current_score)*this->direction;
     
-    previous_bisect_value = current_bisect_value;
+    //previous_bisect_value = current_bisect_value;
     current_bisect_value = new_bisect_value;
     
     if (this->current_score==0.0)
@@ -205,14 +205,14 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
                                                    const Parameters &conditioned_on_parameters)
 {
   double current_bisect_value = this->current_value;
-  double previous_bisect_value = this->schedule.front();
+  //double previous_bisect_value = this->schedule.front();
   std::vector< std::vector<double> > schedules;
   schedules.push_back(this->schedule);
   std::vector<double> target_values = this->mileometer.get_current_values(schedules);
   double next_value = target_values.back()+this->extra_bit;
   double bisect_size = abs(next_value-current_bisect_value)/2.0;
   double current_direction = this->direction;
-  double new_bisect_value;
+  double new_bisect_value = 0.0;
   arma::colvec incremental_log_weights;
   
   for (size_t i=0; i<100; ++i)
@@ -233,7 +233,7 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
     
     current_direction = std::copysign(1.0,this->current_score)*this->direction;
     
-    previous_bisect_value = current_bisect_value;
+    //previous_bisect_value = current_bisect_value;
     current_bisect_value = new_bisect_value;
     
     if (this->current_score==0.0)
@@ -270,14 +270,14 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
                                                              const Parameters &conditioned_on_parameters)
 {
   double current_bisect_value = this->current_value;
-  double previous_bisect_value = this->schedule.front();
+  //double previous_bisect_value;// = this->schedule.front();
   std::vector< std::vector<double> > schedules;
   schedules.push_back(this->schedule);
   std::vector<double> target_values = this->mileometer.get_current_values(schedules);
   double next_value = target_values.back()+this->extra_bit;
   double bisect_size = abs(next_value-current_bisect_value)/2.0;
   double current_direction = this->direction;
-  double new_bisect_value;
+  double new_bisect_value = 0.0;
   arma::colvec incremental_log_weights;
   
   for (size_t i=0; i<100; ++i)
@@ -298,7 +298,7 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
     
     current_direction = std::copysign(1.0,this->current_score)*this->direction;
     
-    previous_bisect_value = current_bisect_value;
+    //previous_bisect_value = current_bisect_value;
     current_bisect_value = new_bisect_value;
     
     if (this->current_score==0.0)

@@ -26,8 +26,8 @@ public:
   MeasurementCovarianceEstimatorOutput* duplicate() const;
   GaussianMeasurementCovarianceEstimatorOutput* gaussian_duplicate() const;
   
-  arma::rowvec get_measurement_state_for_covariance();
-  arma::rowvec get_measurement_random_shift();
+  //arma::rowvec get_measurement_state_for_covariance() const;
+  //arma::rowvec get_measurement_random_shift();
   
   void simulate(const Parameters &parameters);
   

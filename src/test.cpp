@@ -142,7 +142,7 @@ double a_test(const List &model)
                        grain_size);
 
   clock_t start, end;
-  int max;
+  int max = 0;
   start = clock();
 
 

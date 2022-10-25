@@ -564,8 +564,9 @@ arma::mat HMMFactorVariables::direct_subsample_get_gradient_of_log(const std::st
 arma::mat HMMFactorVariables::direct_get_gradient_of_log(const Index* index,
                                                          const std::string &variable)
 {
-  Rcpp::stop("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet..");
+  Rcpp::stop("HMMFactorVariables::direct_get_gradient_of_log - not written yet..");
   
+  /*
   arma::mat current_parameter = this->particle->parameters[variable];
   arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
   for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=this->likelihood_estimator_outputs.begin();
@@ -596,14 +597,16 @@ arma::mat HMMFactorVariables::direct_get_gradient_of_log(const Index* index,
   
   //this->target_gradients_of_log[variable] = result;
   return result;
+  */
 }
 
 arma::mat HMMFactorVariables::direct_get_gradient_of_log(const Index* index,
                                                          const std::string &variable,
                                                          const Parameters &conditioned_on_parameters)
 {
-  Rcpp::stop("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet.");
+  Rcpp::stop("HMMFactorVariables::direct_get_gradient_of_log - not written yet.");
   
+  /*
   Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
   arma::mat current_parameter = this->particle->parameters[variable];
   arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
@@ -627,13 +630,15 @@ arma::mat HMMFactorVariables::direct_get_gradient_of_log(const Index* index,
   
   //this->target_gradients_of_log[variable] = result;
   return result;
+  */
 }
 
 arma::mat HMMFactorVariables::direct_subsample_get_gradient_of_log(const Index* index,
                                                                    const std::string &variable)
 {
-  Rcpp::stop("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet.");
+  Rcpp::stop("HMMFactorVariables::direct_get_gradient_of_log - not written yet.");
   
+  /*
   arma::mat current_parameter = this->particle->parameters[variable];
   arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
   for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=this->likelihood_estimator_outputs.begin();
@@ -654,6 +659,7 @@ arma::mat HMMFactorVariables::direct_subsample_get_gradient_of_log(const Index* 
   
   //this->subsample_target_gradients_of_log[variable] = result;
   return result;
+  */
 }
 
 arma::mat HMMFactorVariables::direct_subsample_get_gradient_of_log(const Index* index,
@@ -662,6 +668,7 @@ arma::mat HMMFactorVariables::direct_subsample_get_gradient_of_log(const Index* 
 {
   Rcpp::stop("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet.");
   
+  /*
   Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
   arma::mat current_parameter = this->particle->parameters[variable];
   arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
@@ -684,6 +691,7 @@ arma::mat HMMFactorVariables::direct_subsample_get_gradient_of_log(const Index* 
   
   //this->subsample_target_gradients_of_log[variable] = result;
   return result;
+  */
 }
 
 Factors* HMMFactorVariables::get_factors()

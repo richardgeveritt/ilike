@@ -44,6 +44,7 @@ void EnKGaussianMeasurementCovarianceEstimatorOutput::make_copy(const EnKGaussia
 {
 }
 
+/*
 arma::rowvec EnKGaussianMeasurementCovarianceEstimatorOutput::get_measurement_state_for_covariance()
 {
   return arma::rowvec();
@@ -53,6 +54,7 @@ arma::rowvec EnKGaussianMeasurementCovarianceEstimatorOutput::get_measurement_ra
 {
   return arma::rowvec();
 }
+*/
 
 void EnKGaussianMeasurementCovarianceEstimatorOutput::simulate(const Parameters &parameters)
 {
