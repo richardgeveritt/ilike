@@ -1,4 +1,4 @@
 CXX_STD = CXX11
-PKG_LIBS += $(shell ${R_HOME}/bin/Rscript -e "RcppParallel::RcppParallelLibs()") $(BLAS_LIBS) $(FLIBS)
+PKG_LIBS += $(shell ${R_HOME}/bin/Rscript -e "RcppParallel::RcppParallelLibs()") $(LAPACK_LIBS) $(FLIBS)
 PKG_CPPFLAGS += -I../inst/include/
 PKG_CPPFLAGS += -DBOOST_DISABLE_ASSERTS
