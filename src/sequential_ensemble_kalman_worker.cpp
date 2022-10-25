@@ -133,7 +133,7 @@ void SequentialEnsembleKalmanWorker::pack(Ensemble* ensemble)
     else
     {
       ensemble->packed_members = join_rows(ensemble->packed_members,ensemble->partially_packed_members_row[i]);
-      for (auto j=0;
+      for (size_t j=0;
            j<ensemble->partially_packed_measurement_states[i].size();
            ++j)
       {
