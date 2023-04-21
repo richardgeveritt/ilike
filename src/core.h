@@ -40,6 +40,9 @@ extern "C" {
 #include <stdio.h>
 #include <limits.h>
 
+#include <RcppArmadillo.h>
+using namespace Rcpp;
+
 #ifdef __GNUC__
 #define TSK_WARN_UNUSED __attribute__((warn_unused_result))
 #define TSK_UNUSED(x) TSK_UNUSED_##x __attribute__((__unused__))
@@ -891,7 +894,7 @@ to point users to your issue tracker.
         if (!(condition)) {                                                             \
             fprintf(stderr, "Bug detected in %s at line %d. %s\n", __FILE__, __LINE__,  \
                 TSK_BUG_ASSERT_MESSAGE);                                                \
-            abort();                                                                    \
+            Rcpp::stop("Bug in TSK.");                                                  \
         }                                                                               \
     } while (0)
 
