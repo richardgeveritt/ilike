@@ -29,14 +29,26 @@ public:
   virtual double operator()(const Particles &particles) const=0;
   
   virtual void find_desired_criterion(SMCOutput* current_state)=0;
+  
+  virtual void subsample_find_desired_criterion(SMCOutput* current_state)=0;
+  
+  /*
   virtual void find_desired_criterion(SMCOutput* current_state,
                                       const Parameters &conditioned_on_parameters)=0;
+  virtual void subsample_find_desired_criterion(SMCOutput* current_state,
+                                                const Parameters &conditioned_on_parameters)=0;
+  */
   
   virtual double operator()(const Ensemble &particles) const=0;
   
   virtual void find_desired_criterion(EnsembleKalmanOutput* current_state)=0;
+  
+  /*
   virtual void find_desired_criterion(EnsembleKalmanOutput* current_state,
                                       const Parameters &conditioned_on_parameters)=0;
+  */
+  
+  virtual bool always_positive() const=0;
 
 protected:
 

@@ -1,6 +1,6 @@
 #include "data_subsetter.h"
 #include "distributions.h"
-#include "data.h"
+#include "parameters.h"
 #include "data_subsampler.h"
 
 DataSubsetter::DataSubsetter()

@@ -10,7 +10,7 @@ using namespace Rcpp;
 #include "symmetric_proposal_kernel.h"
 #include "particle.h"
 #include "distributions.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 #include "gaussian_proposal_info.h"
 
 class GaussianRandomWalkProposalKernel : public SymmetricProposalKernel
@@ -27,6 +27,10 @@ public:
   // make cov_names from var_names
   GaussianRandomWalkProposalKernel(const std::vector<std::string> &variable_names_in,
                                    const std::vector<arma::mat> &covariances_in);
+  
+  // make cov_names from var_names
+  GaussianRandomWalkProposalKernel(const std::string &variable_name_in,
+                                   const arma::mat &covariance_in);
 
   GaussianRandomWalkProposalKernel(const GaussianRandomWalkProposalKernel &another);
 
@@ -52,49 +56,71 @@ protected:
   
   double specific_evaluate_kernel(Particle &proposed_particle,
                                   Particle &old_particle) const;
+  
+  /*
   double specific_evaluate_kernel(Particle &proposed_particle,
                                   Particle &old_particle,
                                   const Parameters &conditioned_on_parameters) const;
+  */
+  
   double specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                             Particle &old_particle) const;
+  
+  /*
   double specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                             Particle &old_particle,
                                             const Parameters &conditioned_on_parameters) const;
+  */
   
   Parameters simulate(RandomNumberGenerator &rng,
                       Particle &particle) const;
   
+  /*
   Parameters simulate(RandomNumberGenerator &rng,
                       Particle &particle,
                       const Parameters &conditioned_on_parameters) const;
+  */
   
   Parameters subsample_simulate(RandomNumberGenerator &rng,
                                 Particle &particle) const;
   
+  /*
   Parameters subsample_simulate(RandomNumberGenerator &rng,
-                      Particle &particle,
-                      const Parameters &conditioned_on_parameters) const;
+                                Particle &particle,
+                                const Parameters &conditioned_on_parameters) const;
+  */
   
   Parameters subsample_simulate(RandomNumberGenerator &rng,
                                 const std::string &variable,
                                 Particle &particle) const;
   
+  /*
   Parameters subsample_simulate(RandomNumberGenerator &rng,
                                 const std::string &variable,
                                 Particle &particle,
                                 const Parameters &conditioned_on_parameters) const;
+  */
   
   arma::mat specific_gradient_of_log(const std::string &variable,
                                      Particle &proposed_particle,
                                      Particle &old_particle);
+  /*
   arma::mat specific_gradient_of_log(const std::string &variable,
                                      Particle &proposed_particle,
                                      Particle &old_particle,
                                      const Parameters &conditioned_on_parameters);
+  */
+  
+  arma::mat specific_subsample_gradient_of_log(const std::string &variable,
+                                               Particle &proposed_particle,
+                                               Particle &old_particle);
+  
+  /*
   arma::mat specific_subsample_gradient_of_log(const std::string &variable,
                                                Particle &proposed_particle,
                                                Particle &old_particle,
                                                const Parameters &conditioned_on_parameters);
+  */
 
   void make_copy(const GaussianRandomWalkProposalKernel &another);
   

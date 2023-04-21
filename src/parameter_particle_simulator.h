@@ -3,7 +3,7 @@
 
 #include "particle_simulator.h"
 
-#include "function_pointers.h"
+#include "ilike_header.h"
 #include "distributions.h"
 
 class IndependentProposalKernel;
@@ -27,20 +27,61 @@ public:
 
   Particle simulate(RandomNumberGenerator &rng,
                     Factors* factors) const;
+  
+  Particle subsample_simulate(RandomNumberGenerator &rng,
+                              Factors* factors) const;
+  
   Particle simulate(RandomNumberGenerator &rng,
                     Factors* factors,
-                    const Parameters &conditioned_on_parameters) const;
+                    const Parameters &sequencer_parameters) const;
   
   Particle subsample_simulate(RandomNumberGenerator &rng,
                               Factors* factors,
+                              const Parameters &sequencer_parameters) const;
+  
+  Particle simulate(RandomNumberGenerator &rng,
+                    Factors* factors,
+                    const Parameters &conditioned_on_parameters,
+                    const Parameters &sequencer_parameters) const;
+  
+  Particle subsample_simulate(RandomNumberGenerator &rng,
+                              Factors* factors,
+                              const Parameters &conditioned_on_parameters,
+                              const Parameters &sequencer_parameters) const;
+  
+  
+  /*
+  void simulate_and_transform(RandomNumberGenerator &rng,
+                              Particle* new_particle,
+                              Factors* factors,
+                              Transform* transform,
+                              bool store_raw) const;
+  void simulate_and_transform(RandomNumberGenerator &rng,
+                              Particle* new_particle,
+                              Factors* factors,
+                              Transform* transform,
+                              bool store_raw,
                               const Parameters &conditioned_on_parameters) const;
   
+  void subsample_simulate_and_transform(RandomNumberGenerator &rng,
+                                        Particle* new_particle,
+                                        Factors* factors,
+                                        Transform* transform,
+                                        bool store_raw,
+                                        const Parameters &conditioned_on_parameters) const;
+  */
+  
   double evaluate(Particle &input) const;
+  
+  double subsample_evaluate(Particle &input) const;
+  
+  /*
   double evaluate(Particle &input,
                   const Parameters &conditioned_on_parameters) const;
   
   double subsample_evaluate(Particle &input,
                             const Parameters &conditioned_on_parameters) const;
+  */
 
 protected:
 

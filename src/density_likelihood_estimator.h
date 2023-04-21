@@ -7,13 +7,15 @@ using namespace Rcpp;
 #include <vector>
 
 #include "likelihood_estimator.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 #include "parameters.h"
 
 class DensityLikelihoodEstimatorOutput;
 class DensityEstimator;
 class DensityLikelihoodEstimatorWorker;
 class SequentialDensityLikelihoodEstimatorWorker;
+class IndependentProposalKernel;
+//class Transform;
 
 class DensityLikelihoodEstimator : public LikelihoodEstimator
 {
@@ -29,8 +31,10 @@ public:
                              size_t number_of_points_in,
                              bool smcfixed_flag_in,
                              DensityEstimator* density_estimator_in,
-                             SimulateIndependentProposalPtr simulate_distribution_in,
-                             bool parallel_in);
+                             IndependentProposalKernel* proposal_in,
+                             bool make_subsample_version_in,
+                             bool parallel_in,
+                             size_t grain_size_in);
   
   virtual ~DensityLikelihoodEstimator();
 
@@ -44,6 +48,9 @@ public:
 
   LikelihoodEstimatorOutput* initialise();
   LikelihoodEstimatorOutput* initialise(const Parameters &parameters);
+  
+  void setup();
+  void setup(const Parameters &parameters);
 
   // void is_setup_likelihood_estimator(const std::vector<List> &all_points,
   //                                    const std::vector<List> &all_auxiliary_variables);
@@ -55,25 +62,33 @@ protected:
   friend SequentialDensityLikelihoodEstimatorWorker;
   //double evaluate(const Parameters &parameters);
   
-  // A flag to determine if the terms are deemed to be "smcfixed" (will not be reevaluated when finding the next target in adaptive SMC).
-  bool smcfixed_flag;
-
-  // Stored here.
+  // stored here, to make a deep copy for each Output we make
   DensityEstimator* density_estimator;
   DensityEstimator* subsample_density_estimator;
   
-  SimulateIndependentProposalPtr simulate_distribution;
-  SimulateIndependentProposalPtr subsample_simulate_distribution;
+  // stored here
+  IndependentProposalKernel* proposal;
+  IndependentProposalKernel* subsample_proposal;
+  
+  //SimulateIndependentProposalPtr simulate_distribution;
+  //SimulateIndependentProposalPtr subsample_simulate_distribution;
   
   size_t number_of_points;
 
+  //Transform* transform;
+  
   // Stored here.
   //DensityLikelihoodEstimatorOutput* output;
   
   // Stored here.
   DensityLikelihoodEstimatorWorker* the_worker;
+  
+  std::vector<std::string> variables;
 
   void make_copy(const DensityLikelihoodEstimator &another);
+  
+  std::ofstream log_likelihood_file_stream;
+  std::ofstream file_stream;
 
 };
 

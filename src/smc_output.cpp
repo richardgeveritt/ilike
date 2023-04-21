@@ -6,11 +6,15 @@
 #include "smc_mcmc_move.h"
 #include "smc_marginal.h"
 #include "smc_generic.h"
+#include "filesystem.h"
+#include "move_output.h"
 
 SMCOutput::SMCOutput()
   :LikelihoodEstimatorOutput()
 {
   this->estimator = NULL;
+  this->smc_iteration = 0;
+  this->iteration_written_to_file = -1;
 }
 
 SMCOutput::~SMCOutput()
@@ -20,13 +24,17 @@ SMCOutput::~SMCOutput()
 
 SMCOutput::SMCOutput(SMC* estimator_in,
                      size_t lag_in,
-                     size_t lag_proposed_in)
+                     size_t lag_proposed_in,
+                     const std::string &results_name_in)
   :LikelihoodEstimatorOutput()
 {
   this->log_likelihood_pre_last_step = 0.0;
   this->lag = lag_in;
   this->lag_proposed = lag_proposed_in;
   this->estimator = estimator_in;
+  this->results_name = results_name_in;
+  this->smc_iteration = 0;
+  this->iteration_written_to_file = -1;
 }
 
 //Copy constructor for the SMCOutput class.
@@ -72,6 +80,9 @@ void SMCOutput::make_copy(const SMCOutput &another)
   this->lag_proposed = another.lag_proposed;
   this->estimator = another.estimator;
   this->log_likelihood_pre_last_step = another.log_likelihood_pre_last_step;
+  this->results_name = another.results_name;
+  this->smc_iteration = another.smc_iteration;
+  this->iteration_written_to_file = another.iteration_written_to_file;
 }
 
 void SMCOutput::simulate()
@@ -131,6 +142,34 @@ void SMCOutput::evaluate_smcadaptive_part_given_smcfixed(const Parameters &param
   }
 }
 
+void SMCOutput::subsample_simulate()
+{
+  this->estimator->subsample_simulate_smc(this);
+}
+
+void SMCOutput::subsample_evaluate_smcfixed_part()
+{
+  if (this->estimator->smcfixed_flag)
+  {
+    this->estimator->subsample_evaluate_smc(this);
+    //this->log_likelihood_smcfixed_part = std::accumulate(this->log_normalising_constant_ratios.begin(),
+    //this->log_normalising_constant_ratios.end(),
+    //1.0);
+  }
+  else
+  {
+    this->estimator->subsample_evaluate_smcfixed_part_smc(this);
+  }
+}
+
+void SMCOutput::subsample_evaluate_smcadaptive_part_given_smcfixed()
+{
+  if (!this->estimator->smcfixed_flag)
+  {
+    this->estimator->subsample_evaluate_smcadaptive_part_given_smcfixed_smc(this);
+  }
+}
+
 void SMCOutput::subsample_simulate(const Parameters &parameters)
 {
   this->estimator->subsample_simulate_smc(this, parameters);
@@ -161,22 +200,44 @@ void SMCOutput::subsample_evaluate_smcadaptive_part_given_smcfixed(const Paramet
 
 Particles* SMCOutput::add_particles()
 {
-  size_t num_to_pop_back = std::max<int>(0,this->all_particles.size()-lag-1);
-  for (size_t i=0; i<num_to_pop_back; ++i)
+  size_t num_to_pop_front = std::max<int>(0,this->all_particles.size()-this->lag+1);
+  for (size_t i=0; i<num_to_pop_front; ++i)
   {
-    this->all_particles.pop_back();
+    this->all_particles.pop_front();
   }
   this->all_particles.push_back(Particles());
   this->all_particles.back().reserve(this->estimator->number_of_particles);
   return &this->all_particles.back();
 }
 
+Particles* SMCOutput::add_particles(Particles* most_recent_particles)
+{
+  size_t num_to_pop_front = std::max<int>(0,this->all_particles.size()-this->lag+1);
+  for (size_t i=0; i<num_to_pop_front; ++i)
+  {
+    this->all_particles.pop_front();
+  }
+  this->all_particles.push_back(Particles());
+  this->all_particles.back().reserve(this->estimator->number_of_particles);
+  
+  if ((this->all_particles.end()-2)->resampled_flag==true)
+  {
+    this->all_particles.back().previous_normalised_log_weights.fill(-log(double(this->estimator->number_of_particles)));
+  }
+  else
+  {
+    this->all_particles.back().previous_normalised_log_weights = most_recent_particles->normalised_log_weights;
+  }
+  
+  return &this->all_particles.back();
+}
+
 void SMCOutput::add_proposed_particles(const Particles &latest_proposed_particles)
 {
-  size_t num_to_pop_back = std::max<int>(0,this->all_proposed.size()-lag_proposed-1);
-  for (size_t i=0; i<num_to_pop_back; ++i)
+  size_t num_to_pop_front = std::max<int>(0,this->all_proposed.size()-lag_proposed-1);
+  for (size_t i=0; i<num_to_pop_front; ++i)
   {
-    this->all_proposed.pop_back();
+    this->all_proposed.pop_front();
   }
   this->all_proposed.push_back(latest_proposed_particles);
 }
@@ -201,9 +262,9 @@ std::deque<Particles>::const_iterator SMCOutput::end() const
   return this->all_particles.end();
 }
 
-double SMCOutput::latest_log_normalising_constant_ratio() const
+double SMCOutput::calculate_latest_log_normalising_constant_ratio()
 {
-  return this->all_particles.back().log_normalising_constant_ratio;
+  return this->all_particles.back().calculate_log_normalising_constant();
 }
 
 void SMCOutput::update_weights(const arma::colvec &latest_unnormalised_log_incremental_weights)
@@ -219,20 +280,20 @@ void SMCOutput::update_weights(const arma::colvec &latest_unnormalised_log_incre
   //else
   //  latest_unnormalised_log_weights = latest_unnormalised_log_weight_updates;
   //this->unnormalised_log_incremental_weights.push_back(latest_unnormalised_log_incremental_weights);
-  //size_t num_to_pop_back = std::max<int>(0,unnormalised_log_incremental_weights.size()-lag);
-  //for (size_t i=0; i<num_to_pop_back; ++i)
+  //size_t num_to_pop_front = std::max<int>(0,unnormalised_log_incremental_weights.size()-lag);
+  //for (size_t i=0; i<num_to_pop_front; ++i)
   //{
-  //  this->unnormalised_log_incremental_weights.pop_back();
+  //  this->unnormalised_log_incremental_weights.pop_front();
   //}
 //}
 
 //void SMCOutput::set_unnormalised_log_incremental_weights(const arma::colvec &latest_unnormalised_log_incremental_weights)
 //{
 //  this->unnormalised_log_incremental_weights.push_back(latest_unnormalised_log_incremental_weights);
-//  size_t num_to_pop_back = std::max<int>(0,this->unnormalised_log_incremental_weights.size()-lag);
-//  for (size_t i=0; i<num_to_pop_back; ++i)
+//  size_t num_to_pop_front = std::max<int>(0,this->unnormalised_log_incremental_weights.size()-lag);
+//  for (size_t i=0; i<num_to_pop_front; ++i)
 //  {
-//    this->unnormalised_log_incremental_weights.pop_back();
+//    this->unnormalised_log_incremental_weights.pop_front();
 //  }
 //}
 
@@ -246,10 +307,14 @@ void SMCOutput::update_weights(const arma::colvec &latest_unnormalised_log_incre
 //  this->log_normalising_constant_ratios.push_back(0.0);
 //}
 
-void SMCOutput::normalise_weights()
+void SMCOutput::normalise_and_resample_weights()
 {
   this->log_likelihood_pre_last_step = this->log_likelihood;
   this->all_particles.back().normalise_weights();
+  this->resample();
+  
+  if (this->results_name!="")
+    this->write(results_name);
 }
 
 void SMCOutput::resample()
@@ -277,6 +342,289 @@ arma::mat SMCOutput::subsample_get_gradient_of_log(const std::string &variable,
                                          const Parameters &x)
 {
   Rcpp::stop("SMCOutput::get_gradient_of_log - not yet implemented.");
+}
+
+void SMCOutput::write_to_file(const std::string &dir_name,
+                              const std::string &index)
+{
+  std::string directory_name = dir_name + "_smc";
+  
+  //if (index!="")
+  //  directory_name = directory_name + "_" + index;
+  
+  if (!directory_exists(directory_name))
+  {
+    make_directory(directory_name);
+  }
+  
+  // for each iteration left to write
+  for (size_t iteration = this->iteration_written_to_file+1;
+       iteration<this->smc_iteration+1;
+       ++iteration)
+  {
+    size_t distance_from_end = this->smc_iteration-iteration;
+    if (this->all_particles.size() > distance_from_end)
+    {
+      size_t deque_index = this->all_particles.size()-1-distance_from_end;
+      
+      if (!this->estimator->log_likelihood_file_stream.is_open())
+      {
+        this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
+      }
+      if (this->estimator->log_likelihood_file_stream.is_open())
+      {
+        this->estimator->log_likelihood_file_stream << this->log_likelihood << std::endl;
+        //log_likelihood_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + " cannot be opened.");
+      }
+      
+      if (!this->estimator->vector_variables_file_stream.is_open())
+      {
+        this->estimator->vector_variables_file_stream.open(directory_name + "/vector_variables.txt",std::ios::out | std::ios::app);
+      }
+      if (this->estimator->vector_variables_file_stream.is_open())
+      {
+        for (size_t i=0; i<this->estimator->vector_variables.size(); ++i)
+        {
+          this->estimator->vector_variables_file_stream << this->estimator->vector_variables[i] << ";";
+        }
+        this->estimator->vector_variables_file_stream << std::endl;
+        //vector_variables_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + directory_name + "/vector_variables.txt" + " cannot be opened.");
+      }
+      
+      if (!this->estimator->vector_variable_sizes_file_stream.is_open())
+      {
+        this->estimator->vector_variable_sizes_file_stream.open(directory_name + "/vector_variable_sizes.txt",std::ios::out | std::ios::app);
+      }
+      if (this->estimator->vector_variable_sizes_file_stream.is_open())
+      {
+        for (size_t i=0; i<this->estimator->vector_variable_sizes.size(); ++i)
+        {
+          this->estimator->vector_variable_sizes_file_stream << this->estimator->vector_variable_sizes[i] << ";";
+        }
+        this->estimator->vector_variable_sizes_file_stream << std::endl;
+        //vector_variable_sizes_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + directory_name + "/vector_variable_sizes.txt" + " cannot be opened.");
+      }
+      
+      /*
+      std::ofstream any_variables_file_stream;
+      any_variables_file_stream.open(directory_name + "/any_variables.txt",std::ios::out | std::ios::app);
+      if (any_variables_file_stream.is_open())
+      {
+        for (size_t i=0; i<this->estimator->any_variables.size(); ++i)
+        {
+          any_variables_file_stream << this->estimator->any_variables[i] << ";";
+        }
+        any_variables_file_stream << std::endl;
+        any_variables_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + directory_name + "/any_variables.txt" + " cannot be opened.");
+      }
+      */
+      
+      std::string smc_iteration_directory = directory_name + "/iteration" + std::to_string(iteration);
+      
+      if (!directory_exists(smc_iteration_directory))
+      {
+        make_directory(smc_iteration_directory);
+      }
+      
+      if (!this->estimator->incremental_log_likelihood_file_stream.is_open())
+      {
+        this->estimator->incremental_log_likelihood_file_stream.open(smc_iteration_directory + "/incremental_log_likelihood.txt",std::ios::out | std::ios::app);
+      }
+      if (this->estimator->incremental_log_likelihood_file_stream.is_open())
+      {
+        this->estimator->incremental_log_likelihood_file_stream << this->all_particles[deque_index].log_normalising_constant_ratio << std::endl;
+        //incremental_log_likelihood_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + smc_iteration_directory + "/incremental_log_likelihood.txt" + " cannot be opened.");
+      }
+      
+      if (!this->estimator->resampled_file_stream.is_open())
+      {
+        this->estimator->resampled_file_stream.open(smc_iteration_directory + "/resampled.txt",std::ios::out | std::ios::app);
+      }
+      if (this->estimator->resampled_file_stream.is_open())
+      {
+        this->estimator->resampled_file_stream << this->all_particles[deque_index].resampled_flag << std::endl;
+        //resampled_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + smc_iteration_directory + "/resampled.txt" + " cannot be opened.");
+      }
+      
+      if (!this->estimator->ess_file_stream.is_open())
+      {
+        this->estimator->ess_file_stream.open(smc_iteration_directory + "/ess.txt",std::ios::out | std::ios::app);
+      }
+      if (this->estimator->ess_file_stream.is_open())
+      {
+        this->estimator->ess_file_stream << this->all_particles[deque_index].ess << std::endl;
+        //ess_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + smc_iteration_directory + "/ess.txt" + " cannot be opened.");
+      }
+      
+      if (!this->estimator->schedule_parameters_file_stream.is_open())
+      {
+        this->estimator->schedule_parameters_file_stream.open(smc_iteration_directory + "/schedule_parameters.txt",std::ios::out | std::ios::app);
+      }
+      if (this->estimator->schedule_parameters_file_stream.is_open())
+      {
+        this->estimator->schedule_parameters_file_stream << this->all_particles[deque_index].schedule_parameters << std::endl;
+        //schedule_parameters_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + smc_iteration_directory + "/schedule_parameters.txt" + " cannot be opened.");
+      }
+      
+      if(!this->estimator->vector_points_file_stream.is_open())
+      {
+        this->estimator->vector_points_file_stream.open(smc_iteration_directory + "/vector_points.txt",std::ios::out | std::ios::app);
+      }
+      if(this->estimator->vector_points_file_stream.is_open())
+      {
+        for (auto i = this->all_particles[deque_index].particles.begin();
+             i!=this->all_particles[deque_index].particles.end();
+             ++i)
+        {
+          (*i)->write_vector_points(this->estimator->vector_variables,
+                                    this->estimator->vector_points_file_stream,
+                                    NULL);
+        }
+        //vector_points_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + smc_iteration_directory + "/vector_points.txt" + " cannot be opened.");
+      }
+      
+      if(!this->estimator->any_points_file_stream.is_open())
+      {
+        this->estimator->any_points_file_stream.open(smc_iteration_directory + "/any_points.txt",std::ios::out | std::ios::app);
+      }
+      if(this->estimator->any_points_file_stream.is_open())
+      {
+        for (auto i = this->all_particles[deque_index].particles.begin();
+             i!=this->all_particles[deque_index].particles.end();
+             ++i)
+        {
+          (*i)->write_any_points(this->estimator->any_variables,
+                                 this->estimator->any_points_file_stream);
+        }
+        //any_points_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + smc_iteration_directory + "/any_points.txt" + " cannot be opened.");
+      }
+      
+      if(!this->estimator->normalised_weights_file_stream.is_open())
+      {
+        this->estimator->normalised_weights_file_stream.open(smc_iteration_directory + "/normalised_log_weights.txt",std::ios::out | std::ios::app);
+      }
+      if(this->estimator->normalised_weights_file_stream.is_open())
+      {
+        this->estimator->normalised_weights_file_stream << this->all_particles[deque_index].normalised_log_weights;
+        //normalised_weights_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + smc_iteration_directory + "/normalised_log_weights.txt" + " cannot be opened.");
+      }
+      
+      if(!this->estimator->unnormalised_weights_file_stream.is_open())
+      {
+        this->estimator->unnormalised_weights_file_stream.open(smc_iteration_directory + "/unnormalised_log_weights.txt",std::ios::out | std::ios::app);
+      }
+      if(this->estimator->unnormalised_weights_file_stream.is_open())
+      {
+        this->estimator->unnormalised_weights_file_stream << this->all_particles[deque_index].unnormalised_log_weights;
+        //unnormalised_weights_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + smc_iteration_directory + "/unnormalised_log_weights.txt" + " cannot be opened.");
+      }
+      
+      // for any other info in Particles, write to a different file
+      
+      //for (auto i = this->all_particles[deque_index].particles.begin();
+      //     i!=this->all_particles[deque_index].particles.end();
+      //     ++i)
+      for (size_t i = 0;
+           i<this->all_particles[deque_index].particles.size();
+           ++i)
+      {
+        this->all_particles[deque_index].particles[i]->write_factors(smc_iteration_directory,
+                                                                     std::to_string(i));
+      }
+      
+      this->close_ofstreams(deque_index);
+    }
+    
+  }
+  
+  this->iteration_written_to_file = this->smc_iteration;
+  
+}
+
+void SMCOutput::close_ofstreams()
+{
+  this->estimator->incremental_log_likelihood_file_stream.close();
+  this->estimator->resampled_file_stream.close();
+  this->estimator->ess_file_stream.close();
+  this->estimator->schedule_parameters_file_stream.close();
+  this->estimator->vector_points_file_stream.close();
+  this->estimator->any_points_file_stream.close(); // should be one for each member of Parameters
+  this->estimator->normalised_weights_file_stream.close();
+  this->estimator->unnormalised_weights_file_stream.close();
+  
+  for (auto i = this->all_particles.begin();
+       i!=this->all_particles.end();
+       ++i)
+  {
+    i->close_ofstreams();
+  }
+}
+
+void SMCOutput::close_ofstreams(size_t deque_index)
+{
+  this->estimator->incremental_log_likelihood_file_stream.close();
+  this->estimator->resampled_file_stream.close();
+  this->estimator->ess_file_stream.close();
+  this->estimator->schedule_parameters_file_stream.close();
+  this->estimator->vector_points_file_stream.close();
+  this->estimator->any_points_file_stream.close(); // should be one for each member of Parameters
+  this->estimator->normalised_weights_file_stream.close();
+  this->estimator->unnormalised_weights_file_stream.close();
+  
+  this->all_particles[deque_index].close_ofstreams();
+}
+
+void SMCOutput::increment_smc_iteration()
+{
+  this->smc_iteration = this->smc_iteration + 1;
 }
 
 void SMCOutput::print(std::ostream &os) const

@@ -36,7 +36,7 @@ void CESSSMCCriterion::operator=(const CESSSMCCriterion &another)
   this->make_copy(another);
 }
 
-SMCCriterion* CESSSMCCriterion::duplicate(void)const
+SMCCriterion* CESSSMCCriterion::duplicate() const
 {
   return( new CESSSMCCriterion(*this));
 }
@@ -47,17 +47,18 @@ void CESSSMCCriterion::make_copy(const CESSSMCCriterion &another)
 
 double CESSSMCCriterion::operator()(const Particles &particles) const
 {
-  if ( sum(particles.incremental_log_weights==R_NegInf)==particles.previous_normalised_log_weights.size() )
+  if ( sum(particles.incremental_log_weights==-arma::datum::inf)==particles.previous_normalised_log_weights.size() )
   {
     return(-this->desired_criterion);
   }
-  else if ( sum(particles.incremental_log_weights==R_PosInf)==particles.previous_normalised_log_weights.size() )
+  else if ( sum(particles.incremental_log_weights==arma::datum::inf)==particles.previous_normalised_log_weights.size() )
   {
     return(double(particles.incremental_log_weights.size())-this->desired_criterion);
   }
   else
   {
-    return(exp(log(particles.incremental_log_weights.size()) + 2.0*(log_sum_exp(particles.previous_normalised_log_weights + particles.incremental_log_weights)) - log_sum_exp(particles.previous_normalised_log_weights + 2.0*particles.incremental_log_weights)) - this->desired_criterion);
+    double cess = exp(log(particles.incremental_log_weights.size()) + 2.0*(log_sum_exp(particles.previous_normalised_log_weights + particles.incremental_log_weights)) - log_sum_exp(particles.previous_normalised_log_weights + 2.0*particles.incremental_log_weights));
+    return(cess - this->desired_criterion);
   }
 }
 
@@ -71,6 +72,17 @@ void CESSSMCCriterion::find_desired_criterion(SMCOutput* current_state)
   // use current_particles.current_llhd
 }
 
+
+void CESSSMCCriterion::subsample_find_desired_criterion(SMCOutput* current_state)
+{
+  // use ratio method from https://arxiv.org/pdf/1907.01505.pdf
+  
+  // different at first step
+  
+  // use previous_particles.previous_llhd
+  // use current_particles.current_llhd
+}
+/*
 void CESSSMCCriterion::find_desired_criterion(SMCOutput* current_state,
                                               const Parameters &conditioned_on_parameters)
 {
@@ -81,6 +93,18 @@ void CESSSMCCriterion::find_desired_criterion(SMCOutput* current_state,
   // use previous_particles.previous_llhd
   // use current_particles.current_llhd
 }
+
+void CESSSMCCriterion::subsample_find_desired_criterion(SMCOutput* current_state,
+                                                        const Parameters &conditioned_on_parameters)
+{
+  // use ratio method from https://arxiv.org/pdf/1907.01505.pdf
+  
+  // different at first step
+  
+  // use previous_particles.previous_llhd
+  // use current_particles.current_llhd
+}
+*/
 
 double CESSSMCCriterion::operator()(const Ensemble &particles) const
 {
@@ -97,6 +121,7 @@ void CESSSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_stat
   // use current_particles.current_llhd
 }
 
+/*
 void CESSSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_state,
                                               const Parameters &conditioned_on_parameters)
 {
@@ -106,4 +131,10 @@ void CESSSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_stat
   
   // use previous_particles.previous_llhd
   // use current_particles.current_llhd
+}
+*/
+
+bool CESSSMCCriterion::always_positive() const
+{
+  return false;
 }

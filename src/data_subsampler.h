@@ -6,7 +6,7 @@ using namespace Rcpp;
 
 #include <vector>
 #include <string>
-#include "data.h"
+#include "parameters.h"
 #include "distributions.h"
 
 class DataSubsetter;

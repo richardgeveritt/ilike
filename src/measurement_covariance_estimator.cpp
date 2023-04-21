@@ -1,10 +1,27 @@
 #include "measurement_covariance_estimator.h"
 #include "measurement_covariance_estimator_output.h"
-#include "data.h"
+#include "parameters.h"
 
 MeasurementCovarianceEstimator::MeasurementCovarianceEstimator()
 {
-  // when we read in the data, get the vector corresponding to the measurement name and vectorise it, and store it in
+  this->transform = NULL;
+  this->summary_statistics = NULL;
+}
+
+MeasurementCovarianceEstimator::MeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
+                                                               size_t* seed_in,
+                                                               Data* data_in,
+                                                               std::shared_ptr<Transform> transform_in,
+                                                               std::shared_ptr<Transform> summary_statistics_in)
+{
+  this->data = data_in;
+  this->current_data = this->data;
+  this->rng = rng_in;
+  this->seed = seed_in;
+  this->measurement_variables = this->data->get_vector_variables();
+  this->set_using_parameters = false;
+  this->transform = transform_in;
+  this->summary_statistics = summary_statistics_in;
 }
 
 MeasurementCovarianceEstimator::~MeasurementCovarianceEstimator()
@@ -31,50 +48,22 @@ void MeasurementCovarianceEstimator::make_copy(const MeasurementCovarianceEstima
   this->data = another.data;
   this->current_data = another.current_data;
   this->measurement = another.measurement;
+  this->transform = another.transform;
+  this->summary_statistics = another.summary_statistics;
+  this->inv_sigma_precomp = another.inv_sigma_precomp;
+  this->log_det_precomp = another.log_det_precomp;
 }
 
 MeasurementCovarianceEstimatorOutput* MeasurementCovarianceEstimator::initialise()
 {
+  //this->setup_measurement_variables();
   return this->initialise_measurement_covariance_estimator();
 }
 
 MeasurementCovarianceEstimatorOutput* MeasurementCovarianceEstimator::initialise(const Parameters &conditioned_on_parameters)
 {
+  //this->setup_measurement_variables(conditioned_on_parameters);
   return this->initialise_measurement_covariance_estimator(conditioned_on_parameters);
-}
-
-void MeasurementCovarianceEstimator::change_data()
-{
-  this->current_data = this->data;
-  if (this->measurement_variables.size()>0)
-  {
-    this->measurement = (*this->current_data)[this->measurement_variables[0]].as_col();
-    
-    if (this->measurement_variables.size()>0)
-    {
-      for (size_t i=1; i<this->measurement_variables.size(); ++i)
-      {
-        this->measurement = join_rows(this->measurement,(*this->current_data)[this->measurement_variables[i]].as_col());
-      }
-    }
-  }
-}
-
-void MeasurementCovarianceEstimator::change_data(Data* new_data)
-{
-  this->current_data = new_data;
-  if (this->measurement_variables.size()>0)
-  {
-    this->measurement = (*this->current_data)[this->measurement_variables[0]].as_col();
-    
-    if (this->measurement_variables.size()>0)
-    {
-      for (size_t i=1; i<this->measurement_variables.size(); ++i)
-      {
-        this->measurement = join_rows(this->measurement,(*this->current_data)[this->measurement_variables[i]].as_col());
-      }
-    }
-  }
 }
 
 Data* MeasurementCovarianceEstimator::get_data() const

@@ -51,15 +51,15 @@ void SampleAverageGaussianRecursiveParameterEstimator::update(const std::string 
 {
   if (iteration_counter==0)
   {
-    arma::colvec current_point = latest_particle.move_parameters->get_vector(variable_name);
+    arma::colvec current_point = latest_particle.move_parameters->get_colvec(variable_name);
     this->estimated.get_mean() = current_point;
     this->estimated.get_covariance() = arma::mat(current_point.n_rows,current_point.n_rows,arma::fill::zeros);
   }
   else
   {
     double current_gain = this->gain(iteration_counter+1);
-    arma::colvec current_point = latest_particle.move_parameters->get_vector(variable_name);
-    this->estimated.get_mean() = this->estimated.get_mean() + current_gain*(latest_particle.move_parameters->get_vector(variable_name) - this->estimated.get_mean());
+    arma::colvec current_point = latest_particle.move_parameters->get_colvec(variable_name);
+    this->estimated.get_mean() = this->estimated.get_mean() + current_gain*(latest_particle.move_parameters->get_colvec(variable_name) - this->estimated.get_mean());
     
     arma::colvec current_difference = current_point - this->estimated.get_mean();
     this->estimated.get_covariance() = this->estimated.get_covariance() + current_gain*(current_difference*current_difference.t() - this->estimated.get_covariance());

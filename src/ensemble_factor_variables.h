@@ -9,7 +9,7 @@ using namespace Rcpp;
 class Particle;
 class Index;
 class EnsembleFactors;
-class IterativeEnsembleKalmanInversion;
+class EnsembleKalmanInversion;
 
 class EnsembleFactorVariables
 {
@@ -17,7 +17,7 @@ class EnsembleFactorVariables
 public:
 
   EnsembleFactorVariables();
-  EnsembleFactorVariables(EnsembleFactors* ensemble_factors_in);
+  //EnsembleFactorVariables(EnsembleFactors* ensemble_factors_in);
   virtual ~EnsembleFactorVariables();
 
   EnsembleFactorVariables(const EnsembleFactorVariables &another);
@@ -29,36 +29,44 @@ public:
   virtual std::vector<arma::rowvec> get_measurement_states_for_covariance() const=0;
   virtual std::vector<arma::colvec> get_shifts(double inverse_incremental_temperature) const=0;
   virtual std::vector<arma::colvec> get_deterministic_shifts() const=0;
-  virtual std::vector<arma::mat> get_kalman_gains(const std::vector<arma::mat> &Cxys,
-                                                  const std::vector<arma::mat> &Cyys,
-                                                  double inverse_incremental_temperature) const=0;
-  virtual std::vector<arma::colvec*> get_measurements() const=0;
-  
-  virtual std::vector<arma::mat> get_adjustments(const arma::mat &Zf,
-                                                 const arma::mat &Ginv,
-                                                 const arma::mat &Ftranspose,
-                                                 const std::vector<arma::mat> &Vs,
-                                                 double inverse_incremental_temperature) const=0;
+  //virtual std::vector<arma::mat> get_unconditional_measurement_covariances(const std::vector<arma::mat> &Cyys,
+  //                                                                         double inverse_incremental_temperature) const=0;
   
   virtual double evaluate_ensemble_likelihood_ratios(const Index* index,
                                                      double inverse_incremental_temperature)=0;
+  
+  virtual double subsample_evaluate_ensemble_likelihood_ratios(const Index* index,
+                                                               double inverse_incremental_temperature)=0;
+  
+  /*
   virtual double evaluate_ensemble_likelihood_ratios(const Index* index,
                                                      double inverse_incremental_temperature,
                                              const Parameters &conditioned_on_parameters)=0;
   virtual double subsample_evaluate_ensemble_likelihood_ratios(const Index* index,
                                                                double inverse_incremental_temperature,
                                                        const Parameters &conditioned_on_parameters)=0;
+  */
   
   virtual double evaluate_likelihoods(const Index* index)=0;
+  
+  virtual double subsample_evaluate_likelihoods(const Index* index)=0;
+  
+  /*
   virtual double evaluate_likelihoods(const Index* index,
                                       const Parameters &conditioned_on_parameters)=0;
   virtual double subsample_evaluate_likelihoods(const Index* index,
                                                 const Parameters &conditioned_on_parameters)=0;
+  */
   
-  EnsembleFactors* get_ensemble_factors();
+  virtual EnsembleFactors* get_ensemble_factors()=0;
   
   void set_particle(Particle* particle_in);
   Particle* get_particle();
+  
+  virtual void write_to_file(const std::string &directory_name,
+                             const std::string &index) const=0;
+  
+  virtual void close_ofstreams()=0;
   
   //void set_temperature(double temperature_in);
   
@@ -104,11 +112,11 @@ public:
 protected:
   
   friend Particle;
-  friend IterativeEnsembleKalmanInversion;
+  friend EnsembleKalmanInversion;
   
   // not stored here
   Particle* particle;
-  EnsembleFactors* ensemble_factors;
+  //EnsembleFactors* ensemble_factors;
 
   void make_copy(const EnsembleFactorVariables &another);
 

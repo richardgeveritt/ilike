@@ -15,10 +15,9 @@ KalmanFilter::KalmanFilter(RandomNumberGenerator* rng_in,
                            EvaluateLogLikelihoodPtr llhd_in,
                            double current_time_in,
                            bool smcfixed_flag_in)
-:LikelihoodEstimator(rng_in, seed_in, data_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
 {
   this->current_time = current_time_in;
-  this->smcfixed_flag = smcfixed_flag_in;
   this->lag = lag_in;
   //this->output = new KalmanFilterOutput();
 }
@@ -62,7 +61,6 @@ void KalmanFilter::operator=(const KalmanFilter &another)
 
 void KalmanFilter::make_copy(const KalmanFilter &another)
 {
-  this->smcfixed_flag = another.smcfixed_flag;
   this->prior_mean = another.prior_mean;
   this->prior_covariance = another.prior_mean;
   this->index_name = another.index_name;

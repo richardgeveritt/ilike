@@ -8,7 +8,7 @@ using namespace Rcpp;
 #include <string>
 
 #include "ensemble_kalman.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 #include "parameters.h"
 
 class EnsembleKalmanOutput;
@@ -27,9 +27,15 @@ public:
   EnsembleKalmanFilter(RandomNumberGenerator* rng_in,
                        size_t* seed_in,
                        Data* data_in,
+                       size_t number_of_ensemble_members_in,
+                       size_t lag_in,
+                       EnsembleShifter* shifter_in,
+                       std::shared_ptr<Transform> transform_in,
                        EvaluateLogLikelihoodPtr llhd_in,
                        double current_time_in,
-                       bool sequencer_limit_is_fixed_in);
+                       bool smcfixed_flag_in,
+                       bool sequencer_limit_is_fixed_in,
+                       const std::string &results_name_in);
 
   virtual ~EnsembleKalmanFilter();
 
@@ -44,14 +50,13 @@ public:
   EnsembleKalmanOutput* ensemble_kalman_initialise();
   EnsembleKalmanOutput* ensemble_kalman_initialise(const Parameters &parameters);
   
-  /*
-  void evaluate(EnsembleKalmanOutput* simulation);
+  //void evaluate(EnsembleKalmanOutput* simulation);
+  
   void evaluate(EnsembleKalmanOutput* simulation,
                 const Parameters &conditioned_on_parameters);
   
   void subsample_evaluate(EnsembleKalmanOutput* simulation,
                           const Parameters &conditioned_on_parameters);
-  */
 
   // void is_setup_likelihood_estimator(const std::vector<List> &all_points,
   //                                    const std::vector<List> &all_auxiliary_variables);
@@ -62,6 +67,10 @@ public:
   MoveOutput* move(RandomNumberGenerator &rng,
                    Particle &particle);
   
+  MoveOutput* subsample_move(RandomNumberGenerator &rng,
+                             Particle &particle);
+  
+  /*
   MoveOutput* move(RandomNumberGenerator &rng,
                    Particle &particle,
                    const Parameters &conditioned_on_parameters);
@@ -69,6 +78,7 @@ public:
   MoveOutput* subsample_move(RandomNumberGenerator &rng,
                              Particle &particle,
                              const Parameters &conditioned_on_parameters);
+  */
   
   //void weight_for_adapting_sequence(Ensemble &current_particles,
   //                                  double incremental_temperature);
@@ -76,6 +86,7 @@ public:
 protected:
   
   void ensemble_kalman_simulate(EnsembleKalmanOutput* simulation);
+  
   void ensemble_kalman_evaluate(EnsembleKalmanOutput* simulation);
   
   void ensemble_kalman_evaluate_smcfixed_part(EnsembleKalmanOutput* simulation);
@@ -83,6 +94,7 @@ protected:
   
   void ensemble_kalman_simulate(EnsembleKalmanOutput* simulation,
                                 const Parameters &conditioned_on_parameters);
+  
   void ensemble_kalman_evaluate(EnsembleKalmanOutput* simulation,
                                 const Parameters &conditioned_on_parameters);
   
@@ -91,6 +103,16 @@ protected:
   void ensemble_kalman_evaluate_smcadaptive_part_given_smcfixed(EnsembleKalmanOutput* simulation,
                                                                 const Parameters &conditioned_on_parameters);
   
+  void subsample_ensemble_kalman_simulate(EnsembleKalmanOutput* simulation);
+  //void subsample_ensemble_kalman_evaluate(EnsembleKalmanOutput* simulation);
+  
+  void subsample_ensemble_kalman_evaluate_smcfixed_part(EnsembleKalmanOutput* simulation);
+  void subsample_ensemble_kalman_evaluate_smcadaptive_part_given_smcfixed(EnsembleKalmanOutput* simulation);
+  
+  void subsample_ensemble_kalman_simulate(EnsembleKalmanOutput* simulation,
+                                          const Parameters &conditioned_on_parameters);
+  
+  /*
   void subsample_ensemble_kalman_simulate(EnsembleKalmanOutput* simulation,
                                           const Parameters &conditioned_on_parameters);
   void subsample_ensemble_kalman_evaluate(EnsembleKalmanOutput* simulation,
@@ -100,8 +122,12 @@ protected:
                                                         const Parameters &conditioned_on_parameters);
   void subsample_ensemble_kalman_evaluate_smcadaptive_part_given_smcfixed(EnsembleKalmanOutput* simulation,
                                                                           const Parameters &conditioned_on_parameters);
+  */
   
   bool check_termination() const;
+  
+  //
+  void setup_variables();
 
   friend EnsembleKalmanOutput;
   

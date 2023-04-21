@@ -112,8 +112,14 @@ void SMCWorker::move(Particles* next_particles,
   this->specific_move(next_particles,
                       current_particles);
   this->set_seed(this->get_seed() + this->get_number_of_particles());
+  
+  // Simulate random numbers for resampling.
+  this->the_smc->rng->seed(this->get_seed(),this->get_number_of_particles());
+  next_particles->simulate_resampling_variables(*this->the_smc->rng);
+  this->set_seed(this->get_seed() + this->get_number_of_particles());
 }
 
+/*
 void SMCWorker::move(Particles* next_particles,
                      const Particles* current_particles,
                      const Parameters &conditioned_on_parameters)
@@ -122,7 +128,13 @@ void SMCWorker::move(Particles* next_particles,
                       current_particles,
                       conditioned_on_parameters);
   this->set_seed(this->get_seed() + this->get_number_of_particles());
+  
+  // Simulate random numbers for resampling.
+  this->the_smc->rng->seed(this->get_seed(),this->get_number_of_particles());
+  next_particles->simulate_resampling_variables(*this->the_smc->rng);
+  this->set_seed(this->get_seed() + this->get_number_of_particles());
 }
+*/
 
 void SMCWorker::subsample_simulate(Particles* next_particles,
                                    const Parameters &conditioned_on_parameters)
@@ -142,6 +154,20 @@ void SMCWorker::subsample_simulate(Particles* next_particles,
 }
 
 void SMCWorker::subsample_move(Particles* next_particles,
+                               const Particles* current_particles)
+{
+  this->subsample_specific_move(next_particles,
+                                current_particles);
+  this->set_seed(this->get_seed() + this->get_number_of_particles());
+  
+  // Simulate random numbers for resampling.
+  this->the_smc->rng->seed(this->get_seed(),this->get_number_of_particles());
+  next_particles->simulate_resampling_variables(*this->the_smc->rng);
+  this->set_seed(this->get_seed() + this->get_number_of_particles());
+}
+
+/*
+void SMCWorker::subsample_move(Particles* next_particles,
                                const Particles* current_particles,
                                const Parameters &conditioned_on_parameters)
 {
@@ -149,7 +175,13 @@ void SMCWorker::subsample_move(Particles* next_particles,
                                 current_particles,
                                 conditioned_on_parameters);
   this->set_seed(this->get_seed() + this->get_number_of_particles());
+  
+  // Simulate random numbers for resampling.
+  this->the_smc->rng->seed(this->get_seed(),this->get_number_of_particles());
+  next_particles->simulate_resampling_variables(*this->the_smc->rng);
+  this->set_seed(this->get_seed() + this->get_number_of_particles());
 }
+*/
 
 //void SMCWorker::weight(const Parameters &conditioned_on_parameters)
 //{

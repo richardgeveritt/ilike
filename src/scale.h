@@ -22,8 +22,10 @@ public:
         size_t dimension_in);
   
   Scale(const Scale &another);
+  Scale& operator=(const Scale &another);
   
-  void operator=(const Scale &another);
+  Scale(Scale &&another);
+  Scale& operator=(Scale &&another);
   
   double operator()() const;
   
@@ -35,6 +37,7 @@ public:
 private:
   
   void make_copy(const Scale &another);
+  void make_copy(Scale &&another);
   
   double constant;
   bool divide_by_dimension;

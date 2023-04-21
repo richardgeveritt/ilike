@@ -6,7 +6,7 @@ using namespace Rcpp;
 
 #include <vector>
 #include "distributions.h"
-#include "data.h"
+#include "parameters.h"
 
 class DataSubsampler;
 

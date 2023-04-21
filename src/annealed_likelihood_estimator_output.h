@@ -42,6 +42,8 @@ public:
   arma::mat subsample_get_gradient_of_log(const std::string &variable,
                                 const Parameters &x);
 
+  void close_ofstreams();
+  
   void print(std::ostream &os) const;
 
 protected:
@@ -51,6 +53,9 @@ protected:
   
   // Stored here.
   LikelihoodEstimatorOutput* estimator_output;
+  
+  void write_to_file(const std::string &directory_name,
+                     const std::string &index = "");
 
   void make_copy(const AnnealedLikelihoodEstimatorOutput &another);
 

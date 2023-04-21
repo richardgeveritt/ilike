@@ -11,11 +11,6 @@ GaussianMeasurementCovarianceEstimatorOutput::~GaussianMeasurementCovarianceEsti
 {
 }
 
-GaussianMeasurementCovarianceEstimatorOutput::GaussianMeasurementCovarianceEstimatorOutput(GaussianMeasurementCovarianceEstimator* gaussian_estimator_in)
-:MeasurementCovarianceEstimatorOutput(gaussian_estimator_in)
-{
-}
-
 GaussianMeasurementCovarianceEstimatorOutput::GaussianMeasurementCovarianceEstimatorOutput(const GaussianMeasurementCovarianceEstimatorOutput &another)
   :MeasurementCovarianceEstimatorOutput(another)
 {
@@ -42,13 +37,6 @@ arma::rowvec GaussianMeasurementCovarianceEstimatorOutput::get_measurement_state
   return arma::conv_to<arma::rowvec>::from(this->measurement_state);
 }
 
-arma::mat GaussianMeasurementCovarianceEstimatorOutput::get_kalman_gain(const arma::mat &Cxy,
-                                                                        const arma::mat &Cyy,
-                                                                        double inverse_incremental_temperature)
-{
-  return Cxy*(Cyy + inverse_incremental_temperature*this->get_measurement_covariance()).i();
-}
-
 arma::colvec GaussianMeasurementCovarianceEstimatorOutput::get_shift(double inverse_incremental_temperature) const
 {
   return this->measurement_state + sqrt(inverse_incremental_temperature)*this->random_shift;
@@ -59,77 +47,83 @@ arma::colvec GaussianMeasurementCovarianceEstimatorOutput::get_deterministic_shi
   return this->measurement_state;
 }
 
-arma::mat GaussianMeasurementCovarianceEstimatorOutput::get_adjustment(const arma::mat &Zf,
-                                                                       const arma::mat &Ginv,
-                                                                       const arma::mat &Ftranspose,
-                                                                       const arma::mat &V,
-                                                                       double inverse_incremental_temperature)
-{
-  // follows https://arxiv.org/abs/2006.02941
-  arma::mat for_eig = V*(inverse_incremental_temperature*this->get_measurement_covariance())*V.t();
-  
-  arma::mat C;
-  arma::vec diagGamma;
-  arma::mat Ctrans;
-  arma::svd_econ(C,diagGamma,Ctrans,for_eig);
-  
-  arma::mat Gamma;
-  Gamma.diag() = diagGamma;
-  arma::mat I;
-  I.eye( arma::size(Gamma) );
-  
-  return Zf*C*arma::sqrtmat_sympd(arma::inv_sympd(I+Gamma))*Ginv*Ftranspose;
-}
-
 double GaussianMeasurementCovarianceEstimatorOutput::evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature)
 {
-  return dmvnorm(*this->estimator->get_measurement_pointer(),
-                 this->measurement_state,
-                 inverse_incremental_temperature*this->get_measurement_covariance());
+  return dmvnorm_using_precomp(*this->get_gaussian_estimator()->get_measurement_pointer(),
+                               this->measurement_state,
+                               this->get_gaussian_estimator()->inv_sigma_precomp,
+                               this->get_gaussian_estimator()->log_det_precomp);
 }
 
+/*
 double GaussianMeasurementCovarianceEstimatorOutput::evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
                                                                                         const Parameters &conditioned_on_parameters)
 {
   // parameters of covariance should already be set at this point, so second argument does nothing
-  return dmvnorm(*this->estimator->get_measurement_pointer(),
+  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
                  this->measurement_state,
-                 inverse_incremental_temperature*this->get_measurement_covariance());
+                 inverse_incremental_temperature*this->get_gaussian_estimator()->get_measurement_covariance());
+}
+*/
+
+double GaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature)
+{
+  // parameters of covariance should already be set at this point, so second argument does nothing
+  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
+                 this->measurement_state,
+                 inverse_incremental_temperature*this->get_gaussian_estimator()->get_measurement_covariance());
 }
 
+/*
 double GaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
                                                                                                   const Parameters &conditioned_on_parameters)
 {
   // parameters of covariance should already be set at this point, so second argument does nothing
-  return dmvnorm(*this->estimator->get_measurement_pointer(),
+  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
                  this->measurement_state,
-                 inverse_incremental_temperature*this->get_measurement_covariance());
+                 inverse_incremental_temperature*this->get_gaussian_estimator()->get_measurement_covariance());
 }
+*/
 
 double GaussianMeasurementCovarianceEstimatorOutput::evaluate_likelihood()
 {
-  return dmvnorm(*this->estimator->get_measurement_pointer(),
+  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
                  this->measurement_state,
-                 this->get_measurement_covariance());
+                 this->get_gaussian_estimator()->get_measurement_covariance());
 }
 
+/*
 double GaussianMeasurementCovarianceEstimatorOutput::evaluate_likelihood(const Parameters &conditioned_on_parameters)
 {
-  return dmvnorm(*this->estimator->get_measurement_pointer(),
+  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
                  this->measurement_state,
-                 this->get_measurement_covariance());
+                 this->get_gaussian_estimator()->get_measurement_covariance());
 }
+*/
 
 double GaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_likelihood()
 {
-  return dmvnorm(*this->estimator->get_measurement_pointer(),
+  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
                  this->measurement_state,
-                 this->get_measurement_covariance());
+                 this->get_gaussian_estimator()->get_measurement_covariance());
 }
 
+/*
 double GaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_likelihood(const Parameters &conditioned_on_parameters)
 {
-  return dmvnorm(*this->estimator->get_measurement_pointer(),
+  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
                  this->measurement_state,
-                 this->get_measurement_covariance());
+                 this->get_gaussian_estimator()->get_measurement_covariance());
+}
+*/
+
+void GaussianMeasurementCovarianceEstimatorOutput::write_to_file(const std::string &directory_name,
+                                                                 const std::string &index)
+{
+  
+}
+
+void GaussianMeasurementCovarianceEstimatorOutput::close_ofstreams()
+{
+  
 }

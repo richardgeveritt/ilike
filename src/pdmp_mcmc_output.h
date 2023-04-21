@@ -26,6 +26,19 @@ public:
   
   std::vector<Parameters> get_vector_of_parameters() const;
   
+  void write_vector_points(const std::vector<std::string> &variables,
+                           std::ofstream &file_stream,
+                           std::shared_ptr<Transform> transform) const;
+  void write_any_points(const std::vector<std::string> &variables,
+                        std::ofstream &file_stream) const;
+  
+  void write_factors(const std::string &directory_name,
+                     const std::string &index) const;
+  void write_ensemble_factors(const std::string &directory_name,
+                              const std::string &index) const;
+  
+  void close_ofstreams();
+  
 protected:
   
   Particle dummy;

@@ -1,9 +1,13 @@
 #include "exact_likelihood_estimator.h"
 #include "exact_likelihood_estimator_output.h"
 #include "independent_proposal_kernel.h"
+#include "distribution_factor.h"
+#include "likelihood_factor.h"
+#include "custom_distribution_factor.h"
+#include "custom_likelihood_factor.h"
 
 ExactLikelihoodEstimator::ExactLikelihoodEstimator()
-  :LikelihoodEstimator()
+:LikelihoodEstimator()
 {
 }
 
@@ -12,11 +16,10 @@ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in
                                                    Data* data_in,
                                                    EvaluateLogLikelihoodPtr llhd_in,
                                                    bool smcfixed_flag_in)
-:LikelihoodEstimator(rng_in, seed_in, data_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
 {
-  this->numerator_llhds.reserve(1);
-  this->numerator_llhds.push_back(llhd_in);
-  this->smcfixed_flag = smcfixed_flag_in;
+  this->numerator_likelihood_factors.push_back(new CustomLikelihoodFactor(llhd_in,
+                                                                          data_in));
   //this->output = new ExactLikelihoodEstimatorOutput();
 }
 
@@ -25,12 +28,30 @@ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in
                                                    Data* data_in,
                                                    EvaluateLogDistributionPtr dist_in,
                                                    bool smcfixed_flag_in)
-:LikelihoodEstimator(rng_in, seed_in, data_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
 {
-  this->numerator_distributions.reserve(1);
-  this->numerator_distributions.push_back(dist_in);
-  this->smcfixed_flag = smcfixed_flag_in;
+  this->numerator_distribution_factors.push_back(new CustomDistributionFactor(dist_in));
   //this->output = new ExactDistributionEstimatorOutput();
+}
+
+ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
+                                                   size_t* seed_in,
+                                                   Data* data_in,
+                                                   DistributionFactor* dist_in,
+                                                   bool smcfixed_flag_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
+{
+  this->numerator_distribution_factors.push_back(dist_in);
+}
+
+ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
+                                                   size_t* seed_in,
+                                                   Data* data_in,
+                                                   LikelihoodFactor* llhd_in,
+                                                   bool smcfixed_flag_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
+{
+  this->numerator_likelihood_factors.push_back(llhd_in);
 }
 
 ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
@@ -38,11 +59,9 @@ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in
                                                    Data* data_in,
                                                    IndependentProposalKernel* dist_in,
                                                    bool smcfixed_flag_in)
-:LikelihoodEstimator(rng_in, seed_in, data_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
 {
-  this->numerator_distributions.reserve(1);
   this->numerator_proposals.push_back(dist_in);
-  this->smcfixed_flag = smcfixed_flag_in;
 }
 
 ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
@@ -51,48 +70,67 @@ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in
                                                    EvaluateLogDistributionPtr prior_in,
                                                    EvaluateLogLikelihoodPtr llhd_in,
                                                    bool smcfixed_flag_in)
-:LikelihoodEstimator(rng_in, seed_in, data_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
 {
-  this->numerator_llhds.reserve(1);
-  this->numerator_llhds.push_back(llhd_in);
+  this->numerator_likelihood_factors.push_back(new CustomLikelihoodFactor(llhd_in,
+                                                                          data_in));
   
-  this->numerator_distributions.reserve(1);
-  this->numerator_distributions.push_back(prior_in);
-  
-  this->smcfixed_flag = smcfixed_flag_in;
+  this->numerator_distribution_factors.push_back(new CustomDistributionFactor(prior_in));
 }
 
 /*
-ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
-                                                   size_t* seed_in,
-                                                   const Data* data_in,
-                                                   EvaluateLogDistributionPtr prior_in,
-                                                   EvaluateLogLikelihoodPtr llhd_in,
-                                                   EvaluateLogDistributionPtr proposal_in,
-                                                   bool smcfixed_flag_in)
-:LikelihoodEstimator(rng_in, seed_in, data_in)
-{
-  this->numerator_llhds.reserve(1);
-  this->numerator_llhds.push_back(llhd_in);
-  
-  this->numerator_distributions.reserve(1);
-  this->numerator_distributions.push_back(prior_in);
-  
-  this->denominator_distributions.reserve(1);
-  this->denominator_distributions.push_back(proposal_in);
-  
-  this->smcfixed_flag = smcfixed_flag_in;
-}
+ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
+ size_t* seed_in,
+ const Data* data_in,
+ EvaluateLogDistributionPtr prior_in,
+ EvaluateLogLikelihoodPtr llhd_in,
+ EvaluateLogDistributionPtr proposal_in,
+ bool smcfixed_flag_in)
+ :LikelihoodEstimator(rng_in, seed_in, data_in)
+ {
+ this->numerator_llhds.reserve(1);
+ this->numerator_llhds.push_back(llhd_in);
+ 
+ this->numerator_distributions.reserve(1);
+ this->numerator_distributions.push_back(prior_in);
+ 
+ this->denominator_distributions.reserve(1);
+ this->denominator_distributions.push_back(proposal_in);
+ 
+ this->smcfixed_flag = smcfixed_flag_in;
+ }
  */
 
 ExactLikelihoodEstimator::~ExactLikelihoodEstimator()
 {
+  for (auto i=this->numerator_distribution_factors.begin();
+       i!=this->numerator_distribution_factors.end();
+       ++i)
+  {
+    if (*i!=NULL)
+      delete *i;
+  }
   
+  for (auto i=this->numerator_likelihood_factors.begin();
+       i!=this->numerator_likelihood_factors.end();
+       ++i)
+  {
+    if (*i!=NULL)
+      delete *i;
+  }
+  
+  for (auto i=this->numerator_proposals.begin();
+       i!=this->numerator_proposals.end();
+       ++i)
+  {
+    if (*i!=NULL)
+      delete *i;
+  }
 }
 
 //Copy constructor for the ExactLikelihoodEstimator class.
 ExactLikelihoodEstimator::ExactLikelihoodEstimator(const ExactLikelihoodEstimator &another)
-  :LikelihoodEstimator(another)
+:LikelihoodEstimator(another)
 {
   this->make_copy(another);
 }
@@ -103,41 +141,79 @@ void ExactLikelihoodEstimator::operator=(const ExactLikelihoodEstimator &another
     return;
   }
   
-  this->numerator_llhds.clear();
-  this->numerator_distributions.clear();
-  this->denominator_llhds.clear();
-  this->denominator_distributions.clear();
+  for (auto i=this->numerator_distribution_factors.begin();
+       i!=this->numerator_distribution_factors.end();
+       ++i)
+  {
+    if (*i!=NULL)
+      delete *i;
+  }
+  this->numerator_distribution_factors.clear();
   
-  this->gradient_numerator_llhds.clear();
-  this->gradient_numerator_distributions.clear();
-  this->gradient_denominator_llhds.clear();
-  this->gradient_denominator_distributions.clear();
+  for (auto i=this->numerator_likelihood_factors.begin();
+       i!=this->numerator_likelihood_factors.end();
+       ++i)
+  {
+    if (*i!=NULL)
+      delete *i;
+  }
+  this->numerator_likelihood_factors.clear();
+  
+  for (auto i=this->numerator_proposals.begin();
+       i!=this->numerator_proposals.end();
+       ++i)
+  {
+    if (*i!=NULL)
+      delete *i;
+  }
   this->numerator_proposals.clear();
-
+  
   LikelihoodEstimator::operator=(another);
   this->make_copy(another);
 }
 
-LikelihoodEstimator* ExactLikelihoodEstimator::duplicate(void)const
+LikelihoodEstimator* ExactLikelihoodEstimator::duplicate() const
 {
   return( new ExactLikelihoodEstimator(*this));
 }
 
 void ExactLikelihoodEstimator::make_copy(const ExactLikelihoodEstimator &another)
 {
-  this->numerator_llhds = another.numerator_llhds;
-  this->numerator_distributions = another.numerator_distributions;
-  this->denominator_llhds = another.denominator_llhds;
-  this->denominator_distributions = another.denominator_distributions;
+  this->numerator_distribution_factors.resize(0);
+  this->numerator_distribution_factors.reserve(another.numerator_distribution_factors.size());
+  for (auto i=another.numerator_distribution_factors.begin();
+       i!=numerator_distribution_factors.end();
+       ++i)
+  {
+    if (*i!=NULL)
+      this->numerator_distribution_factors.push_back((*i)->distribution_factor_duplicate());
+    else
+      this->numerator_distribution_factors.push_back(NULL);
+  }
   
-  this->gradient_numerator_llhds = another.gradient_numerator_llhds;
-  this->gradient_numerator_distributions = another.gradient_numerator_distributions;
-  this->gradient_denominator_llhds = another.gradient_denominator_llhds;
-  this->gradient_denominator_distributions = another.gradient_denominator_distributions;
+  this->numerator_likelihood_factors.resize(0);
+  this->numerator_likelihood_factors.reserve(another.numerator_likelihood_factors.size());
+  for (auto i=another.numerator_likelihood_factors.begin();
+       i!=numerator_likelihood_factors.end();
+       ++i)
+  {
+    if (*i!=NULL)
+      this->numerator_likelihood_factors.push_back((*i)->likelihood_factor_duplicate());
+    else
+      this->numerator_likelihood_factors.push_back(NULL);
+  }
   
-  this->numerator_proposals = another.numerator_proposals;
-  
-  this->smcfixed_flag = another.smcfixed_flag;
+  this->numerator_proposals.resize(0);
+  this->numerator_proposals.reserve(another.numerator_proposals.size());
+  for (auto i=another.numerator_proposals.begin();
+       i!=numerator_proposals.end();
+       ++i)
+  {
+    if (*i!=NULL)
+      this->numerator_proposals.push_back((*i)->independent_proposal_kernel_duplicate());
+    else
+      this->numerator_proposals.push_back(NULL);
+  }
   //if (this->output!=NULL)
   //  this->output = another.output->duplicate();
 }
@@ -158,43 +234,48 @@ LikelihoodEstimatorOutput* ExactLikelihoodEstimator::initialise(const Parameters
   return new ExactLikelihoodEstimatorOutput(this);
 }
 
+void ExactLikelihoodEstimator::setup()
+{
+  
+}
+
+void ExactLikelihoodEstimator::setup(const Parameters &parameters)
+{
+  
+}
+
 double ExactLikelihoodEstimator::evaluate(const Parameters &parameters)
 {
   double result = 0.0;
   
-  for (std::vector<EvaluateLogLikelihoodPtr>::iterator i=this->numerator_llhds.begin();
-       i!=this->numerator_llhds.end();
+  for (auto i=this->numerator_distribution_factors.begin();
+       i!=this->numerator_distribution_factors.end();
        ++i)
   {
-    result = result + (*i)(parameters,*this->data);
+    if (result!=-arma::datum::inf)
+    {
+      result = result + (*i)->evaluate(parameters);
+    }
   }
   
-  for (std::vector<EvaluateLogDistributionPtr>::iterator i=this->numerator_distributions.begin();
-       i!=this->numerator_distributions.end();
+  for (auto i=this->numerator_likelihood_factors.begin();
+       i!=this->numerator_likelihood_factors.end();
        ++i)
   {
-    result = result + (*i)(parameters);
+    if (result!=-arma::datum::inf)
+    {
+      result = result + (*i)->evaluate(parameters);
+    }
   }
   
   for (auto i=this->numerator_proposals.begin();
        i!=this->numerator_proposals.end();
        ++i)
   {
-    result = result + (*i)->evaluate_independent_kernel(parameters);
-  }
-  
-  for (std::vector<EvaluateLogLikelihoodPtr>::iterator i=this->denominator_llhds.begin();
-       i!=this->denominator_llhds.end();
-       ++i)
-  {
-    result = result - (*i)(parameters,*this->data);
-  }
-  
-  for (std::vector<EvaluateLogDistributionPtr>::iterator i=this->denominator_distributions.begin();
-       i!=this->denominator_distributions.end();
-       ++i)
-  {
-    result = result - (*i)(parameters);
+    if (result!=-arma::datum::inf)
+    {
+      result = result + (*i)->evaluate_independent_kernel(parameters);
+    }
   }
   
   return result;
@@ -204,39 +285,36 @@ double ExactLikelihoodEstimator::subsample_evaluate(const Parameters &parameters
 {
   double result = 0.0;
   
-  for (std::vector<EvaluateLogLikelihoodPtr>::iterator i=this->numerator_llhds.begin();
-       i!=this->numerator_llhds.end();
+  for (auto i=this->numerator_distribution_factors.begin();
+       i!=this->numerator_distribution_factors.end();
        ++i)
   {
-    result = result + this->subsampler->ratio*(*i)(parameters,*this->subsampler->small_data);
+    if (result!=-arma::datum::inf)
+    {
+      result = result + (*i)->evaluate(parameters);
+    }
   }
   
-  for (std::vector<EvaluateLogDistributionPtr>::iterator i=this->numerator_distributions.begin();
-       i!=this->numerator_distributions.end();
+  for (auto i=this->numerator_likelihood_factors.begin();
+       i!=this->numerator_likelihood_factors.end();
        ++i)
   {
-    result = result + (*i)(parameters);
+    if (result!=-arma::datum::inf)
+    {
+      (*i)->set_data(this->subsampler->small_data);
+      result = result + this->subsampler->ratio*(*i)->evaluate(parameters);
+      (*i)->set_data(this->data);
+    }
   }
   
   for (auto i=this->numerator_proposals.begin();
        i!=this->numerator_proposals.end();
        ++i)
   {
-    result = result + (*i)->subsample_evaluate_independent_kernel(parameters);
-  }
-  
-  for (std::vector<EvaluateLogLikelihoodPtr>::iterator i=this->denominator_llhds.begin();
-       i!=this->denominator_llhds.end();
-       ++i)
-  {
-    result = result - this->subsampler->ratio*(*i)(parameters,*this->subsampler->small_data);
-  }
-  
-  for (std::vector<EvaluateLogDistributionPtr>::iterator i=this->denominator_distributions.begin();
-       i!=this->denominator_distributions.end();
-       ++i)
-  {
-    result = result - (*i)(parameters);
+    if (result!=-arma::datum::inf)
+    {
+      result = result + (*i)->evaluate_independent_kernel(parameters);
+    }
   }
   
   return result;
@@ -248,23 +326,22 @@ arma::mat ExactLikelihoodEstimator::evaluate_gradient(const std::string &variabl
   
   arma::mat parameter = parameters[variable];
   arma::mat result(parameter.n_rows,parameter.n_cols);
-  result.fill(0);
+  result.fill(0.0);
   
-  for (std::vector<EvaluateGradientLogLikelihoodPtr>::iterator i=this->gradient_numerator_llhds.begin();
-       i!=this->gradient_numerator_llhds.end();
+  for (auto i=this->numerator_distribution_factors.begin();
+       i!=this->numerator_distribution_factors.end();
        ++i)
   {
-    result = result + (*i)(variable,
-                           parameters,
-                           *this->data);
+    result = result + (*i)->evaluate_gradient(variable,
+                                              parameters);
   }
   
-  for (std::vector<EvaluateGradientLogDistributionPtr>::iterator i=this->gradient_numerator_distributions.begin();
-       i!=this->gradient_numerator_distributions.end();
+  for (auto i=this->numerator_likelihood_factors.begin();
+       i!=this->numerator_likelihood_factors.end();
        ++i)
   {
-    result = result + (*i)(variable,
-                           parameters);
+    result = result + (*i)->evaluate_gradient(variable,
+                                              parameters);
   }
   
   for (auto i=this->numerator_proposals.begin();
@@ -273,22 +350,6 @@ arma::mat ExactLikelihoodEstimator::evaluate_gradient(const std::string &variabl
   {
     result = result + (*i)->independent_gradient_of_log(variable,
                                                         parameters);
-  }
-  
-  for (std::vector<EvaluateGradientLogLikelihoodPtr>::iterator i=this->gradient_denominator_llhds.begin();
-       i!=this->gradient_denominator_llhds.end();
-       ++i)
-  {
-    result = result - (*i)(variable,
-                           parameters,*this->data);
-  }
-  
-  for (std::vector<EvaluateGradientLogDistributionPtr>::iterator i=this->gradient_denominator_distributions.begin();
-       i!=this->gradient_denominator_distributions.end();
-       ++i)
-  {
-    result = result - (*i)(variable,
-                           parameters);
   }
   
   return result;
@@ -302,21 +363,22 @@ arma::mat ExactLikelihoodEstimator::subsample_evaluate_gradient(const std::strin
   arma::mat result(parameter.n_rows,parameter.n_cols);
   result.fill(0);
   
-  for (std::vector<EvaluateGradientLogLikelihoodPtr>::iterator i=this->gradient_numerator_llhds.begin();
-       i!=this->gradient_numerator_llhds.end();
+  for (auto i=this->numerator_distribution_factors.begin();
+       i!=this->numerator_distribution_factors.end();
        ++i)
   {
-    result = result + (*i)(variable,
-                           parameters,
-                           *this->subsampler->small_data);
+    result = result + (*i)->evaluate_gradient(variable,
+                                              parameters);
   }
   
-  for (std::vector<EvaluateGradientLogDistributionPtr>::iterator i=this->gradient_numerator_distributions.begin();
-       i!=this->gradient_numerator_distributions.end();
+  for (auto i=this->numerator_likelihood_factors.begin();
+       i!=this->numerator_likelihood_factors.end();
        ++i)
   {
-    result = result + (*i)(variable,
-                           parameters);
+    (*i)->set_data(this->subsampler->small_data);
+    result = result + (*i)->evaluate_gradient(variable,
+                                              parameters);
+    (*i)->set_data(this->data);
   }
   
   for (auto i=this->numerator_proposals.begin();
@@ -325,23 +387,6 @@ arma::mat ExactLikelihoodEstimator::subsample_evaluate_gradient(const std::strin
   {
     result = result + (*i)->subsample_independent_gradient_of_log(variable,
                                                                   parameters);
-  }
-  
-  for (std::vector<EvaluateGradientLogLikelihoodPtr>::iterator i=this->gradient_denominator_llhds.begin();
-       i!=this->gradient_denominator_llhds.end();
-       ++i)
-  {
-    result = result - (*i)(variable,
-                           parameters,
-                           *this->subsampler->small_data);
-  }
-  
-  for (std::vector<EvaluateGradientLogDistributionPtr>::iterator i=this->gradient_denominator_distributions.begin();
-       i!=this->gradient_denominator_distributions.end();
-       ++i)
-  {
-    result = result - (*i)(variable,
-                           parameters);
   }
   
   return result;

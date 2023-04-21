@@ -6,23 +6,23 @@ GaussianProposalInfo::GaussianProposalInfo()
 }
 
 GaussianProposalInfo::GaussianProposalInfo(const arma::mat &covariance_in)
+: scale(1.0)
 {
   this->set_covariance(covariance_in);
-  this->scale = Scale(1.0);
 }
 
 GaussianProposalInfo::GaussianProposalInfo(const arma::colvec &mean_in)
+: scale(1.0)
 {
   this->mean = mean_in;
-  this->scale = Scale(1.0);
 }
 
 GaussianProposalInfo::GaussianProposalInfo(const arma::colvec &mean_in,
                                            const arma::mat &covariance_in)
+: scale(1.0)
 {
   this->mean = mean_in;
   this->set_covariance(covariance_in);
-  this->scale = Scale(1.0);
 }
 
 GaussianProposalInfo::~GaussianProposalInfo()
@@ -36,16 +36,17 @@ GaussianProposalInfo::GaussianProposalInfo(const GaussianProposalInfo &another)
   this->make_copy(another);
 }
 
-void GaussianProposalInfo::operator=(const GaussianProposalInfo &another)
+GaussianProposalInfo& GaussianProposalInfo::operator=(const GaussianProposalInfo &another)
 {
   if(this == &another){ //if a==a
-    return;
+    return *this;
   }
   
   this->make_copy(another);
+  return *this;
 }
 
-GaussianProposalInfo* GaussianProposalInfo::duplicate(void)const
+GaussianProposalInfo* GaussianProposalInfo::duplicate() const
 {
   return( new GaussianProposalInfo(*this));
 }
@@ -59,6 +60,47 @@ void GaussianProposalInfo::make_copy(const GaussianProposalInfo &another)
   this->inv_chol = another.inv_chol;
   this->mean = another.mean;
   this->scale = another.scale;
+}
+
+//Move constructor for the GaussianProposalInfo class.
+GaussianProposalInfo::GaussianProposalInfo(GaussianProposalInfo &&another)
+: mean(), covariance(), scale(), chol(), inv(), inv_chol(), logdet()
+{
+  this->make_copy(std::move(another));
+}
+
+GaussianProposalInfo& GaussianProposalInfo::operator=(GaussianProposalInfo &&another)
+{
+  if(this == &another){ //if a==a
+    return *this;
+  }
+  
+  this->make_copy(std::move(another));
+  return *this;
+}
+
+void GaussianProposalInfo::make_copy(GaussianProposalInfo &&another)
+{
+  this->covariance = std::move(another.covariance);
+  this->chol = std::move(another.chol);
+  this->inv = std::move(another.inv);
+  this->logdet = std::move(another.logdet);
+  this->inv_chol = std::move(another.inv_chol);
+  this->mean = std::move(another.mean);
+  this->scale = std::move(another.scale);
+  
+  another.covariance = arma::mat();
+  another.chol = arma::mat();
+  another.inv = arma::mat();
+  another.logdet = 0.0;
+  another.inv_chol = arma::mat();
+  another.mean = arma::colvec();
+  another.scale = Scale();
+}
+
+void GaussianProposalInfo::set_mean(const arma::colvec &mean_in)
+{
+  this->mean = mean_in;
 }
 
 void GaussianProposalInfo::set_covariance(const arma::mat &covariance_in)

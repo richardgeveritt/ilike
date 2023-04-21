@@ -12,7 +12,7 @@
 #include "positive_smc_criterion.h"
 #include "move_output.h"
 #include "single_point_move_output.h"
-#include "custom_independent_proposal_kernel.h"
+//#include "custom_independent_proposal_kernel.h"
 #include "custom_distribution_proposal_kernel.h"
 #include "hmm_factors.h"
 #include "vector_single_index.h"
@@ -36,8 +36,9 @@ ParticleFilter::ParticleFilter(RandomNumberGenerator* rng_in,
                                SimulateDistributionPtr simulate_proposal_in,
                                EvaluateLogDistributionPtr evaluate_log_proposal_in,
                                bool parallel_in,
-                               size_t grain_size_in)
-  :SMC(rng_in, seed_in, data_in, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, true, false, true)
+                               size_t grain_size_in,
+                               const std::string &results_name_in)
+  :SMC(rng_in, seed_in, data_in, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, true, false, true, results_name_in)
 {
   /*
   std::vector<LikelihoodEstimator*> likelihood_estimators;
@@ -77,6 +78,13 @@ ParticleFilter::ParticleFilter(RandomNumberGenerator* rng_in,
   
   IndependentProposalKernel* initial_proposal = new CustomDistributionProposalKernel(simulate_proposal_in,
                                                                                      evaluate_log_proposal_in);
+   
+  for (auto i=likelihood_estimators.begin();
+            i!=likelihood_estimators.end();
+            ++i)
+  {
+      (*i)->setup(initial_proposal->independent_simulate(*this->rng));
+  }
   
   // Need to construct LikelihoodEstimator to read in to this constructor.
   this->model_and_algorithm.particle_simulator = new ParameterParticleSimulator(initial_proposal,
@@ -135,12 +143,12 @@ void ParticleFilter::operator=(const ParticleFilter &another)
   this->make_copy(another);
 }
 
-SMC* ParticleFilter::smc_duplicate(void) const
+SMC* ParticleFilter::smc_duplicate() const
 {
   return( new ParticleFilter(*this));
 }
 
-LikelihoodEstimator* ParticleFilter::duplicate(void) const
+LikelihoodEstimator* ParticleFilter::duplicate() const
 {
   return( new ParticleFilter(*this));
 }
@@ -148,6 +156,8 @@ LikelihoodEstimator* ParticleFilter::duplicate(void) const
 void ParticleFilter::make_copy(const ParticleFilter &another)
 {
   if (another.proposal_kernel!=NULL)
+    this->proposal_kernel = another.proposal_kernel;
+  else
     this->proposal_kernel = another.proposal_kernel;
   
   this->index_name = another.index_name;
@@ -168,13 +178,24 @@ SMCOutput* ParticleFilter::specific_run()
   SMCOutput* simulation = this->initialise_smc();
   this->simulate_smc(simulation);
   this->evaluate_smc(simulation);
-  simulation->normalise_weights();
+  simulation->normalise_and_resample_weights();
   return simulation;
 }
 
-SMCOutput* ParticleFilter::initialise_smc()
+/*
+SMCOutput* ParticleFilter::specific_run(const std::string &directory_name)
 {
-  SMCOutput* output = new SMCOutput(this, this->lag, this->lag_proposed);
+  SMCOutput* simulation = this->initialise_smc();
+  this->simulate_smc(simulation);
+  this->evaluate_smc(simulation);
+  simulation->normalise_and_resample_weights();
+  return simulation;
+}
+*/
+
+SMCOutput* ParticleFilter::specific_initialise_smc()
+{
+  SMCOutput* output = new SMCOutput(this, this->lag, this->lag_proposed, this->results_name);
   this->first_index = 0;
   this->current_index = this->first_index;
   this->factors->set_data(this->current_index);
@@ -193,8 +214,8 @@ void ParticleFilter::simulate_smc(SMCOutput* current_state)
     // update proposals
     this->proposal_kernel->smc_adapt(current_state);
     
-    current_state->normalise_weights();
-    current_state->resample();
+    current_state->normalise_and_resample_weights();
+    //current_state->resample();
     
     // Different at first step?
     //this->sequencer.find_desired_criterion(current_state);
@@ -202,10 +223,12 @@ void ParticleFilter::simulate_smc(SMCOutput* current_state)
     
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Particles* current_particles = &current_state->back();
-    Particles* next_particles = current_state->add_particles();
+    Particles* next_particles = current_state->add_particles(current_particles);
     this->the_worker->move(next_particles,
                            current_particles);
+    this->evaluate_smcfixed_part_smc(current_state);
     
+    current_state->increment_smc_iteration();
     // involves complete evaluation of weights using current adaptive param
   }
   
@@ -225,8 +248,23 @@ void ParticleFilter::evaluate_smc(SMCOutput* current_state)
 void ParticleFilter::evaluate_smcfixed_part_smc(SMCOutput* current_state)
 {
   VectorSingleIndex index(this->current_index);
+  
   this->the_worker->smcfixed_weight(&index,
                                     current_state->back());
+  
+  /*
+  if (this->sequencer_parameters!=NULL)
+  {
+    this->the_worker->smcfixed_weight(&index,
+                                      current_state->back(),
+                                      *this->sequencer_parameters);
+  }
+  else
+  {
+    this->the_worker->smcfixed_weight(&index,
+                                      current_state->back());
+  }
+  */
   //current_state->initialise_next_step();
 }
 
@@ -250,7 +288,7 @@ MoveOutput* ParticleFilter::move(RandomNumberGenerator &rng,
     }
       
   }
-  return new SinglePointMoveOutput(moved_particle);
+  return new SinglePointMoveOutput(std::move(moved_particle));
 }
 
 void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current_state)
@@ -291,6 +329,13 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
     }
     
     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
+    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
+    
+    //if (this->sequencer_parameters!=NULL)
+    //  current_state->back().schedule_parameters = *this->sequencer_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    
+    //current_state->back().set_previous_target_evaluated_to_target_evaluated();
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
@@ -298,7 +343,7 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
     // check termination, using sequencer
     if (this->check_termination())
     {
-      terminate = TRUE;
+      //terminate = TRUE;
       break;
     }
     
@@ -310,24 +355,36 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
   }
 }
 
-void ParticleFilter::weight_for_adapting_sequence(Particles &current_particles)
-{
+//void ParticleFilter::weight_for_adapting_sequence(Particles &current_particles)
+//{
   // no adaptation so don't do anything
   //this->the_worker->smcadaptive_given_smcfixed_evaluate_target(current_particles);
-}
+//}
 
 SMCOutput* ParticleFilter::specific_run(const Parameters &conditioned_on_parameters)
 {
   SMCOutput* simulation = this->initialise_smc(conditioned_on_parameters);
   this->simulate_smc(simulation, conditioned_on_parameters);
   this->evaluate_smc(simulation, conditioned_on_parameters);
-  simulation->normalise_weights();
+  simulation->normalise_and_resample_weights();
   return simulation;
 }
 
-SMCOutput* ParticleFilter::initialise_smc(const Parameters &conditioned_on_parameters)
+/*
+SMCOutput* ParticleFilter::specific_run(const std::string &directory_name,
+                                        const Parameters &conditioned_on_parameters)
 {
-  SMCOutput* output = new SMCOutput(this, this->lag, this->lag_proposed);
+  SMCOutput* simulation = this->initialise_smc(conditioned_on_parameters);
+  this->simulate_smc(simulation, conditioned_on_parameters);
+  this->evaluate_smc(simulation, conditioned_on_parameters);
+  simulation->normalise_and_resample_weights();
+  return simulation;
+}
+*/
+
+SMCOutput* ParticleFilter::specific_initialise_smc(const Parameters &conditioned_on_parameters)
+{
+  SMCOutput* output = new SMCOutput(this, this->lag, this->lag_proposed, this->results_name);
   this->first_index = 0;
   this->current_index = this->first_index;
   this->factors->set_data(this->current_index);
@@ -347,8 +404,8 @@ void ParticleFilter::simulate_smc(SMCOutput* current_state,
     // update proposals
     this->proposal_kernel->smc_adapt(current_state);
     
-    current_state->normalise_weights();
-    current_state->resample();
+    current_state->normalise_and_resample_weights();
+    //current_state->resample();
     
     // Different at first step?
     //this->sequencer.find_desired_criterion(current_state,
@@ -357,10 +414,16 @@ void ParticleFilter::simulate_smc(SMCOutput* current_state,
     
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Particles* current_particles = &current_state->back();
-    Particles* next_particles = current_state->add_particles();
+    Particles* next_particles = current_state->add_particles(current_particles);
+    //this->the_worker->move(next_particles,
+    //                       current_particles,
+    //                       conditioned_on_parameters);
     this->the_worker->move(next_particles,
-                           current_particles,
-                           conditioned_on_parameters);
+                           current_particles);
+    this->evaluate_smcfixed_part_smc(current_state,
+                                     conditioned_on_parameters);
+    
+    current_state->increment_smc_iteration();
     // involves complete evaluation of weights using current adaptive param
   }
 
@@ -380,8 +443,23 @@ void ParticleFilter::evaluate_smcfixed_part_smc(SMCOutput* current_state,
 {
   VectorSingleIndex index(this->current_index);
   this->the_worker->smcfixed_weight(&index,
-                                    current_state->back(),
-                                    conditioned_on_parameters);
+                                    current_state->back());
+  
+  /*
+  if (this->sequencer_parameters!=NULL)
+  {
+    Parameters all_parameters = conditioned_on_parameters.merge(*this->sequencer_parameters);
+    this->the_worker->smcfixed_weight(&index,
+                                      current_state->back(),
+                                      all_parameters);
+  }
+  else
+  {
+    this->the_worker->smcfixed_weight(&index,
+                                      current_state->back(),
+                                      conditioned_on_parameters);
+  }
+  */
   //current_state->initialise_next_step();
 }
 
@@ -391,6 +469,8 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
   // set sequencer to have values from conditioned_on_parameters
   if (!this->sequencer_limit_is_fixed)
     this->sequencer.set_next_with_parameter(conditioned_on_parameters);
+  else
+    this->sequencer.reset();
   
   // If first step, then weight then check termination. What to do about find desired criterion and find next target? See below - make it different in first iteration?
   
@@ -401,8 +481,7 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
    
     if (current_state->number_of_smc_iterations()==1)
     {
-      this->the_worker->pf_initial_weight(current_state->back(),
-                                          conditioned_on_parameters);
+      this->the_worker->pf_initial_weight(current_state->back());
     }
     else
     {
@@ -413,22 +492,40 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
         this->the_worker->pf_weight(&index,
                                     current_state->back(),
                                     *(current_state->end()-2),
+                                    this->proposal_kernel);
+        
+        /*
+        this->the_worker->pf_weight(&index,
+                                    current_state->back(),
+                                    *(current_state->end()-2),
                                     this->proposal_kernel,
                                     conditioned_on_parameters);
+        */
       }
       else
       {
         this->the_worker->pf_weight(&index,
                                     current_state->back(),
                                     *(current_state->end()-2),
+                                    NULL);
+        /*
+        this->the_worker->pf_weight(&index,
+                                    current_state->back(),
+                                    *(current_state->end()-2),
                                     NULL,
                                     conditioned_on_parameters);
+        */
       }
     }
 
     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
+    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
     
-    current_state->back().set_previous_target_evaluated_to_target_evaluated();
+    //if (this->sequencer_parameters!=NULL)
+    //  current_state->back().schedule_parameters = *this->sequencer_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    
+    //current_state->back().set_previous_target_evaluated_to_target_evaluated();
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
@@ -436,7 +533,7 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
     // check termination, using sequencer
     if (this->sequencer.check_termination())
     {
-      terminate = TRUE;
+      //terminate = TRUE;
       break;
     }
     
@@ -461,8 +558,8 @@ void ParticleFilter::subsample_simulate_smc(SMCOutput* current_state,
     // update proposals
     this->proposal_kernel->smc_adapt(current_state);
     
-    current_state->normalise_weights();
-    current_state->resample();
+    current_state->normalise_and_resample_weights();
+    //current_state->resample();
     
     // Different at first step?
     //this->sequencer.find_desired_criterion(current_state,
@@ -471,10 +568,164 @@ void ParticleFilter::subsample_simulate_smc(SMCOutput* current_state,
     
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Particles* current_particles = &current_state->back();
-    Particles* next_particles = current_state->add_particles();
+    Particles* next_particles = current_state->add_particles(current_particles);
+    this->the_worker->subsample_move(next_particles,
+                                     current_particles);
+    /*
+     this->the_worker->subsample_move(next_particles,
+     current_particles,
+     conditioned_on_parameters);
+     */
+    this->subsample_evaluate_smcfixed_part_smc(current_state,
+                                               conditioned_on_parameters);
+    
+    current_state->increment_smc_iteration();
+    // involves complete evaluation of weights using current adaptive param
+  }
+  
+}
+
+void ParticleFilter::subsample_evaluate_smc(SMCOutput* current_state)
+{
+  this->subsample_evaluate_smcfixed_part_smc(current_state);
+  this->subsample_evaluate_smcadaptive_part_given_smcfixed_smc(current_state);
+}
+
+void ParticleFilter::subsample_evaluate_smcfixed_part_smc(SMCOutput* current_state)
+{
+  VectorSingleIndex index(this->current_index);
+  /*
+   if (this->sequencer_parameters!=NULL)
+   {
+   Parameters all_parameters = conditioned_on_parameters.merge(*this->sequencer_parameters);
+   this->the_worker->subsample_smcfixed_weight(&index,
+   current_state->back(),
+   all_parameters);
+   }
+   else
+   {
+   this->the_worker->subsample_smcfixed_weight(&index,
+   current_state->back(),
+   conditioned_on_parameters);
+   }
+   */
+  this->the_worker->subsample_smcfixed_weight(&index,
+                                              current_state->back());
+  //current_state->initialise_next_step();
+}
+
+void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current_state)
+{
+  
+  // If first step, then weight then check termination. What to do about find desired criterion and find next target? See below - make it different in first iteration?
+  
+  // iterate until stop.
+  bool terminate = FALSE;
+  while (terminate==FALSE)
+  {
+    
+    if (current_state->number_of_smc_iterations()==1)
+    {
+      this->the_worker->subsample_pf_initial_weight(current_state->back());
+      /*
+       this->the_worker->subsample_pf_initial_weight(current_state->back(),
+       conditioned_on_parameters);
+       */
+      
+    }
+    else
+    {
+      VectorSingleIndex index(this->current_index);
+      if (this->dynamic_proposal_is_evaluated)
+      {
+        this->the_worker->subsample_pf_weight(&index,
+                                              current_state->back(),
+                                              *(current_state->end()-2),
+                                              this->proposal_kernel);
+        /*
+         this->the_worker->subsample_pf_weight(&index,
+         current_state->back(),
+         *(current_state->end()-2),
+         this->proposal_kernel,
+         conditioned_on_parameters);
+         */
+      }
+      else
+      {
+        this->the_worker->subsample_pf_weight(&index,
+                                              current_state->back(),
+                                              *(current_state->end()-2),
+                                              NULL);
+        /*
+         this->the_worker->subsample_pf_weight(&index,
+         current_state->back(),
+         *(current_state->end()-2),
+         NULL,
+         conditioned_on_parameters);
+         */
+      }
+    }
+    
+    current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
+    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
+    
+    //if (this->sequencer_parameters!=NULL)
+    //  current_state->back().schedule_parameters = *this->sequencer_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    
+    //current_state->back().subsample_set_previous_target_evaluated_to_target_evaluated();
+    
+    //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
+    //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
+    
+    // check termination, using sequencer
+    if (this->check_termination())
+    {
+      //terminate = TRUE;
+      break;
+    }
+    
+    this->current_index = this->current_index+1;
+    this->factors->set_data(this->current_index);
+    
+    this->subsample_simulate_smc(current_state);
+    
+  }
+}
+
+void ParticleFilter::subsample_simulate_smc(SMCOutput* current_state)
+{
+  if (current_state->number_of_smc_iterations()==0)
+  {
+    // Simulate from the proposal.
+    this->simulate_proposal(current_state);
+  }
+  else
+  {
+    // update proposals
+    this->proposal_kernel->smc_adapt(current_state);
+    
+    current_state->normalise_and_resample_weights();
+    //current_state->resample();
+    
+    // Different at first step?
+    //this->sequencer.find_desired_criterion(current_state,
+    //                                       conditioned_on_parameters);
+    //this->sequencer.subsample_find_next_target_bisection(current_state, conditioned_on_parameters);
+    
+    // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
+    Particles* current_particles = &current_state->back();
+    Particles* next_particles = current_state->add_particles(current_particles);
+    this->the_worker->subsample_move(next_particles,
+                                     current_particles);
+    /*
     this->the_worker->subsample_move(next_particles,
                                      current_particles,
                                      conditioned_on_parameters);
+    */
+    this->subsample_evaluate_smcfixed_part_smc(current_state);
+    
+    current_state->increment_smc_iteration();
     // involves complete evaluation of weights using current adaptive param
   }
   
@@ -493,9 +744,23 @@ void ParticleFilter::subsample_evaluate_smcfixed_part_smc(SMCOutput* current_sta
                                                           const Parameters &conditioned_on_parameters)
 {
   VectorSingleIndex index(this->current_index);
+  /*
+  if (this->sequencer_parameters!=NULL)
+  {
+    Parameters all_parameters = conditioned_on_parameters.merge(*this->sequencer_parameters);
+    this->the_worker->subsample_smcfixed_weight(&index,
+                                                current_state->back(),
+                                                all_parameters);
+  }
+  else
+  {
+    this->the_worker->subsample_smcfixed_weight(&index,
+                                                current_state->back(),
+                                                conditioned_on_parameters);
+  }
+  */
   this->the_worker->subsample_smcfixed_weight(&index,
-                                              current_state->back(),
-                                              conditioned_on_parameters);
+                                              current_state->back());
   //current_state->initialise_next_step();
 }
 
@@ -505,6 +770,8 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
   // set sequencer to have values from conditioned_on_parameters
   if (!this->sequencer_limit_is_fixed)
     this->sequencer.set_next_with_parameter(conditioned_on_parameters);
+  else
+    this->sequencer.reset();
   
   // If first step, then weight then check termination. What to do about find desired criterion and find next target? See below - make it different in first iteration?
   
@@ -515,8 +782,11 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
     
     if (current_state->number_of_smc_iterations()==1)
     {
+      this->the_worker->subsample_pf_initial_weight(current_state->back());
+      /*
       this->the_worker->subsample_pf_initial_weight(current_state->back(),
                                                     conditioned_on_parameters);
+      */
       
     }
     else
@@ -527,22 +797,39 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
         this->the_worker->subsample_pf_weight(&index,
                                               current_state->back(),
                                               *(current_state->end()-2),
+                                              this->proposal_kernel);
+        /*
+        this->the_worker->subsample_pf_weight(&index,
+                                              current_state->back(),
+                                              *(current_state->end()-2),
                                               this->proposal_kernel,
                                               conditioned_on_parameters);
+        */
       }
       else
       {
         this->the_worker->subsample_pf_weight(&index,
                                               current_state->back(),
                                               *(current_state->end()-2),
+                                              NULL);
+        /*
+        this->the_worker->subsample_pf_weight(&index,
+                                              current_state->back(),
+                                              *(current_state->end()-2),
                                               NULL,
                                               conditioned_on_parameters);
+        */
       }
     }
     
     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
+    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
     
-    current_state->back().subsample_set_previous_target_evaluated_to_target_evaluated();
+    //if (this->sequencer_parameters!=NULL)
+    //  current_state->back().schedule_parameters = *this->sequencer_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    
+    //current_state->back().subsample_set_previous_target_evaluated_to_target_evaluated();
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
@@ -550,7 +837,7 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
     // check termination, using sequencer
     if (this->check_termination())
     {
-      terminate = TRUE;
+      //terminate = TRUE;
       break;
     }
     
@@ -562,41 +849,26 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
   }
 }
 
-MoveOutput* ParticleFilter::move(RandomNumberGenerator &rng,
-                                 Particle &particle,
-                                 const Parameters &conditioned_on_parameters)
+void ParticleFilter::weight_for_adapting_sequence(const Index* index,
+                                                  Particles &current_particles)
 {
-  Particle moved_particle;
-  for (size_t i=0; i<this->predictions_per_update; ++i)
-  {
-    if (i==0)
-    {
-      //VectorSingleIndex index(0);
-      moved_particle = this->proposal_kernel->move(rng,
-                                                   particle,
-                                                   conditioned_on_parameters);
-    }
-    else
-    {
-      //VectorSingleIndex index(this->current_index);
-      moved_particle = this->proposal_kernel->move(rng,
-                                                   moved_particle,
-                                                   conditioned_on_parameters);
-    }
-  }
-  return new SinglePointMoveOutput(moved_particle);
+  this->the_worker->smcadaptive_given_smcfixed_evaluate_target(index,
+                                                               current_particles);
 }
 
-void ParticleFilter::weight_for_adapting_sequence(Particles &current_particles,
+/*
+void ParticleFilter::weight_for_adapting_sequence(const Index* index,
+                                                  Particles &current_particles,
                                                   const Parameters &conditioned_on_parameters)
 {
-  //this->the_worker->smcadaptive_given_smcfixed_evaluate_target(current_particles,
-  //                                                             conditioned_on_parameters);
+  this->the_worker->smcadaptive_given_smcfixed_evaluate_target(index,
+                                                               current_particles,
+                                                               conditioned_on_parameters);
 }
+*/
 
 MoveOutput* ParticleFilter::subsample_move(RandomNumberGenerator &rng,
-                                           Particle &particle,
-                                           const Parameters &conditioned_on_parameters)
+                                           Particle &particle)
 {
   Particle moved_particle;
   for (size_t i=0; i<this->predictions_per_update; ++i)
@@ -605,28 +877,35 @@ MoveOutput* ParticleFilter::subsample_move(RandomNumberGenerator &rng,
     {
       //VectorSingleIndex index(0);
       moved_particle = this->proposal_kernel->subsample_move(rng,
-                                                             particle,
-                                                             conditioned_on_parameters);
+                                                             particle);
     }
     else
     {
       //VectorSingleIndex index(this->current_index);
       moved_particle = this->proposal_kernel->subsample_move(rng,
-                                                             moved_particle,
-                                                             conditioned_on_parameters);
+                                                             moved_particle);
     }
   }
-  return new SinglePointMoveOutput(moved_particle);
+  return new SinglePointMoveOutput(std::move(moved_particle));
 }
 
-void ParticleFilter::subsample_weight_for_adapting_sequence(Particles &current_particles,
-                                                  const Parameters &conditioned_on_parameters)
+void ParticleFilter::subsample_weight_for_adapting_sequence(const Index* index,
+                                                            Particles &current_particles)
 {
-  VectorSingleIndex index(this->current_index);
-  this->the_worker->subsample_smcadaptive_given_smcfixed_evaluate_target(&index,
+  this->the_worker->subsample_smcadaptive_given_smcfixed_evaluate_target(index,
+                                                                         current_particles);
+}
+
+/*
+void ParticleFilter::subsample_weight_for_adapting_sequence(const Index* index,
+                                                            Particles &current_particles,
+                                                            const Parameters &conditioned_on_parameters)
+{
+  this->the_worker->subsample_smcadaptive_given_smcfixed_evaluate_target(index,
                                                                          current_particles,
                                                                          conditioned_on_parameters);
 }
+*/
 
 bool ParticleFilter::check_termination() const
 {

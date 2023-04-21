@@ -20,12 +20,13 @@ public:
   void operator=(const StochasticEnsembleShifter &another);
   EnsembleShifter* duplicate() const;
   
-  void setup(Ensemble* ensemble);
+  void setup(Ensemble* ensemble,
+             double inverse_incremental_temperature);
   
   void shift(const EnsembleFactorVariables* ensemble_factor_variables,
              arma::colvec &position,
-             const std::vector<arma::mat> &Cxys,
-             const std::vector<arma::mat> &Cyys,
+             const std::vector<arma::colvec*> &measurements,
+             const std::vector<arma::mat> &kalman_gains,
              double inverse_incremental_temperature) const;
   
 protected:

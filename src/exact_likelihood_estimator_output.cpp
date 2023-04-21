@@ -1,6 +1,7 @@
 #include "exact_likelihood_estimator_output.h"
 #include "exact_likelihood_estimator.h"
 #include "utils.h"
+#include "filesystem.h"
 
 ExactLikelihoodEstimatorOutput::ExactLikelihoodEstimatorOutput()
   :LikelihoodEstimatorOutput()
@@ -39,7 +40,7 @@ void ExactLikelihoodEstimatorOutput::operator=(const ExactLikelihoodEstimatorOut
   this->make_copy(another);
 }
 
-LikelihoodEstimatorOutput* ExactLikelihoodEstimatorOutput::duplicate(void)const
+LikelihoodEstimatorOutput* ExactLikelihoodEstimatorOutput::duplicate() const
 {
   return( new ExactLikelihoodEstimatorOutput(*this));
 }
@@ -111,4 +112,37 @@ arma::mat ExactLikelihoodEstimatorOutput::subsample_get_gradient_of_log(const st
 void ExactLikelihoodEstimatorOutput::print(std::ostream &os) const
 {
 
+}
+
+void ExactLikelihoodEstimatorOutput::write_to_file(const std::string &dir_name,
+                                                   const std::string &index)
+{
+  std::string directory_name = dir_name + "_exact";
+  
+  //if (index!="")
+  //  directory_name = directory_name + "_" + index;
+  
+  if (!directory_exists(directory_name))
+  {
+    make_directory(directory_name);
+  }
+  
+  if (!this->estimator->log_likelihood_file_stream.is_open())
+  {
+    this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
+  }
+  if (this->estimator->log_likelihood_file_stream.is_open())
+  {
+    this->estimator->log_likelihood_file_stream << this->log_likelihood << std::endl;
+    //log_likelihood_file_stream.close();
+  }
+  else
+  {
+    Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + "cannot be opened.");
+  }
+}
+
+void ExactLikelihoodEstimatorOutput::close_ofstreams()
+{
+  this->estimator->log_likelihood_file_stream.close();
 }

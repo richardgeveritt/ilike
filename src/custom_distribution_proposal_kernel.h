@@ -9,7 +9,7 @@ using namespace Rcpp;
 #include "independent_proposal_kernel.h"
 #include "particle.h"
 #include "distributions.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 
 class CustomDistributionProposalKernel : public IndependentProposalKernel
 {
@@ -19,10 +19,10 @@ public:
   CustomDistributionProposalKernel();
   virtual ~CustomDistributionProposalKernel();
   
-  CustomDistributionProposalKernel(SimulateIndependentProposalPtr proposal_simulate_in);
+  CustomDistributionProposalKernel(SimulateDistributionPtr proposal_simulate_in);
   
-  CustomDistributionProposalKernel(SimulateIndependentProposalPtr proposal_simulate_in,
-                                   EvaluateLogDistributionPtr proposal_evaluate_in);
+  CustomDistributionProposalKernel(SimulateDistributionPtr proposal_simulate_in,
+                                   EvaluateLogDistributionPtr proposal_log_evaluate_in);
 
   CustomDistributionProposalKernel(const CustomDistributionProposalKernel &another);
 
@@ -103,9 +103,9 @@ protected:
   
   EvaluateLogDistributionPtr proposal_evaluate;
   
-  SimulateIndependentProposalPtr proposal_simulate;
+  SimulateDistributionPtr proposal_simulate;
   
-  Parameters proposal_parameters;
+  //Parameters proposal_parameters;
   
 };
 

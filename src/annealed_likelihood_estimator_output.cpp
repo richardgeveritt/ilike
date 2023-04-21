@@ -1,6 +1,7 @@
 #include "annealed_likelihood_estimator_output.h"
 #include "annealed_likelihood_estimator.h"
 #include "utils.h"
+#include "filesystem.h"
 
 AnnealedLikelihoodEstimatorOutput::AnnealedLikelihoodEstimatorOutput()
   :LikelihoodEstimatorOutput()
@@ -41,7 +42,7 @@ void AnnealedLikelihoodEstimatorOutput::operator=(const AnnealedLikelihoodEstima
   this->make_copy(another);
 }
 
-LikelihoodEstimatorOutput* AnnealedLikelihoodEstimatorOutput::duplicate(void)const
+LikelihoodEstimatorOutput* AnnealedLikelihoodEstimatorOutput::duplicate() const
 {
   return( new AnnealedLikelihoodEstimatorOutput(*this));
 }
@@ -85,10 +86,20 @@ void AnnealedLikelihoodEstimatorOutput::evaluate_smcadaptive_part_given_smcfixed
   }
   
   if (this->estimator->use_constant)
-    this->log_likelihood = this->estimator->constant_power * this->estimator_output->log_likelihood;
+  {
+    if (this->estimator->constant_power!=0.0)
+      this->log_likelihood = this->estimator->constant_power * this->estimator_output->log_likelihood;
+    else
+      this->log_likelihood = 0.0;
+  }
   else
   {
-    this->log_likelihood = this->estimator->function_power(parameters) * this->estimator_output->log_likelihood;
+    double current_power = this->estimator->function_power(parameters,
+                                                           this->estimator->power_variable);
+    if (current_power!=0.0)
+      this->log_likelihood = current_power * this->estimator_output->log_likelihood;
+    else
+      this->log_likelihood = 0.0;
   }
 }
 
@@ -117,10 +128,24 @@ void AnnealedLikelihoodEstimatorOutput::subsample_evaluate_smcadaptive_part_give
   }
   
   if (this->estimator->use_constant)
-    this->log_likelihood = this->estimator->constant_power * this->estimator_output->subsample_log_likelihood;
+  {
+    if (this->estimator->constant_power!=0.0)
+    {
+      this->subsample_log_likelihood = this->estimator->constant_power * this->estimator_output->subsample_log_likelihood;
+    }
+    else
+    {
+      this->subsample_log_likelihood = 0.0;
+    }
+  }
   else
   {
-    this->log_likelihood = this->estimator->function_power(parameters) * this->estimator_output->subsample_log_likelihood;
+    double current_power = this->estimator->function_power(parameters,
+                                                           this->estimator->power_variable);
+    if (current_power!=0.0)
+      this->subsample_log_likelihood = current_power * this->estimator_output->subsample_log_likelihood;
+    else
+      this->subsample_log_likelihood = 0.0;
   }
 }
 
@@ -134,27 +159,75 @@ arma::mat AnnealedLikelihoodEstimatorOutput::get_gradient_of_log(const std::stri
 {
   arma::mat gradient;
   if (this->estimator->use_constant)
-    gradient = this->estimator->constant_power * this->estimator_output->get_gradient_of_log(variable,
-                                                                                             x);
+  {
+    if (this->estimator->constant_power!=0.0)
+    {
+      gradient = this->estimator->constant_power * this->estimator_output->get_gradient_of_log(variable,
+                                                                                               x);
+    }
+    else
+    {
+      arma::mat grad = this->estimator_output->get_gradient_of_log(variable,
+                                                                   x);
+      gradient = arma::mat(grad.n_rows,grad.n_cols);
+      gradient.fill(0.0);
+    }
+  }
   else
   {
-    gradient = this->estimator->function_power(x) * this->estimator_output->get_gradient_of_log(variable,
-                                                                                                x);
+    double current_power = this->estimator->function_power(x,
+                                                           this->estimator->power_variable);
+    if (current_power!=0.0)
+    {
+      gradient = current_power * this->estimator_output->get_gradient_of_log(variable,
+                                                                             x);
+    }
+    else
+    {
+      arma::mat grad = this->estimator_output->get_gradient_of_log(variable,
+                                                                   x);
+      gradient = arma::mat(grad.n_rows,grad.n_cols);
+      gradient.fill(0.0);
+    }
   }
   return gradient;
 }
 
 arma::mat AnnealedLikelihoodEstimatorOutput::subsample_get_gradient_of_log(const std::string &variable,
-                                                                 const Parameters &x)
+                                                                           const Parameters &x)
 {
   arma::mat gradient;
   if (this->estimator->use_constant)
-    gradient = this->estimator->constant_power * this->estimator_output->subsample_get_gradient_of_log(variable,
-                                                                                             x);
+  {
+    if (this->estimator->constant_power!=0.0)
+    {
+      gradient = this->estimator->constant_power * this->estimator_output->subsample_get_gradient_of_log(variable,
+                                                                                                         x);
+    }
+    else
+    {
+      arma::mat grad = this->estimator_output->subsample_get_gradient_of_log(variable,
+                                                                             x);
+      gradient = arma::mat(grad.n_rows,grad.n_cols);
+      gradient.fill(0.0);
+    }
+  }
   else
   {
-    gradient = this->estimator->function_power(x) * this->estimator_output->subsample_get_gradient_of_log(variable,
-                                                                                                x);
+    double current_power = this->estimator->function_power(x,
+                                                           this->estimator->power_variable);
+    if (current_power!=0.0)
+    {
+      gradient = current_power * this->estimator_output->subsample_get_gradient_of_log(variable,
+                                                                                       x);
+    }
+    else
+    {
+      arma::mat grad = this->estimator_output->subsample_get_gradient_of_log(variable,
+                                                                             x);
+      gradient = arma::mat(grad.n_rows,grad.n_cols);
+      gradient.fill(0.0);
+    }
   }
   return gradient;
 }
@@ -162,4 +235,40 @@ arma::mat AnnealedLikelihoodEstimatorOutput::subsample_get_gradient_of_log(const
 void AnnealedLikelihoodEstimatorOutput::print(std::ostream &os) const
 {
 
+}
+
+void AnnealedLikelihoodEstimatorOutput::write_to_file(const std::string &dir_name,
+                                                      const std::string &index)
+{
+  std::string directory_name = dir_name + "_annealed";
+  
+  //if (index!="")
+  //  directory_name = directory_name + "_" + index;
+  
+  if (!directory_exists(directory_name))
+  {
+    make_directory(directory_name);
+  }
+  
+  if (!this->estimator->log_likelihood_file_stream.is_open())
+  {
+    this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
+  }
+  if (this->estimator->log_likelihood_file_stream.is_open())
+  {
+    this->estimator->log_likelihood_file_stream << this->log_likelihood << std::endl;
+    //log_likelihood_file_stream.close();
+  }
+  else
+  {
+    Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + "cannot be opened.");
+  }
+  
+  this->estimator_output->write_to_file(directory_name,index);
+}
+
+void AnnealedLikelihoodEstimatorOutput::close_ofstreams()
+{
+  this->estimator->log_likelihood_file_stream.close();
+  this->estimator_output->close_ofstreams();
 }

@@ -1,8 +1,8 @@
 #ifndef DIRECTGAUSSIANMEASUREMENTCOVARIANCEESTIMATOROUTPUT_H
 #define DIRECTGAUSSIANMEASUREMENTCOVARIANCEESTIMATOROUTPUT_H
 
-#include <RcppArmadillo.h>
-using namespace Rcpp;
+//#include <RcppArmadillo.h>
+//using namespace Rcpp;
 
 #include <vector>
 #include "gaussian_measurement_covariance_estimator_output.h"
@@ -27,23 +27,20 @@ public:
   MeasurementCovarianceEstimatorOutput* duplicate() const;
   GaussianMeasurementCovarianceEstimatorOutput* gaussian_duplicate() const;
   
-  void simulate(const Parameters &parameters);
+  void specific_simulate(const Parameters &parameters);
+  void subsample_specific_simulate(const Parameters &parameters);
   
   //arma::rowvec get_measurement_random_shift();
   
   //arma::mat get_measurement_covariance() const;
-  arma::mat get_measurement_covariance();
+  
+  MeasurementCovarianceEstimator* get_estimator();
+  GaussianMeasurementCovarianceEstimator* get_gaussian_estimator();
 
 protected:
   
   // not stored here
   DirectGaussianMeasurementCovarianceEstimator* direct_estimator;
-  
-  void set_parameters(const Parameters &conditioned_on_parameters_in);
-  
-  // mean of zero
-  // stored here in case each ensemble member has its own parameters
-  GaussianIndependentProposalKernel kernel;
 
   void make_copy(const DirectGaussianMeasurementCovarianceEstimatorOutput &another);
 

@@ -24,14 +24,26 @@ public:
   double operator()(const Particles &particles) const;
   
   void find_desired_criterion(SMCOutput* current_state);
+  
+  void subsample_find_desired_criterion(SMCOutput* current_state);
+  
+  /*
   void find_desired_criterion(SMCOutput* current_state,
                               const Parameters &conditioned_on_parameters);
+  void subsample_find_desired_criterion(SMCOutput* current_state,
+                                        const Parameters &conditioned_on_parameters);
+  */
   
   double operator()(const Ensemble &particles) const;
   
   void find_desired_criterion(EnsembleKalmanOutput* current_state);
+                                        
+  /*
   void find_desired_criterion(EnsembleKalmanOutput* current_state,
                                       const Parameters &conditioned_on_parameters);
+  */
+  
+  bool always_positive() const;
   
 protected:
 

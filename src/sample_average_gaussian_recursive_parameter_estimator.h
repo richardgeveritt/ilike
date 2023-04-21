@@ -7,7 +7,7 @@ using namespace Rcpp;
 //#include <vector>
 #include "gaussian_recursive_parameter_estimator.h"
 #include "particle.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 
 class ProposalKernel;
 

@@ -6,7 +6,7 @@ using namespace Rcpp;
 
 #include <vector>
 #include "kalman_predictor.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 
 class ExactKalmanPredictor : public KalmanPredictor
 {

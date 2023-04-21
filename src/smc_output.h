@@ -29,7 +29,8 @@ public:
 
   SMCOutput(SMC* estimator_in,
             size_t lag_in,
-            size_t lag_proposed_in);
+            size_t lag_proposed_in,
+            const std::string &results_name_in);
 
   SMCOutput(const SMCOutput &another);
   void operator=(const SMCOutput &another);
@@ -45,6 +46,10 @@ public:
   void evaluate_smcfixed_part(const Parameters &parameters);
   void evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters);
   
+  void subsample_simulate();
+  void subsample_evaluate_smcfixed_part();
+  void subsample_evaluate_smcadaptive_part_given_smcfixed();
+  
   void subsample_simulate(const Parameters &parameters);
   void subsample_evaluate_smcfixed_part(const Parameters &parameters);
   void subsample_evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters);
@@ -55,7 +60,7 @@ public:
   std::deque<Particles>::iterator end();
   std::deque<Particles>::const_iterator end() const;
   
-  double latest_log_normalising_constant_ratio() const;
+  double calculate_latest_log_normalising_constant_ratio();
   
   arma::mat get_gradient_of_log(const std::string &variable,
                                 const Parameters &x);
@@ -63,21 +68,29 @@ public:
                                           const Parameters &x);
   
   Particles* add_particles();
+  Particles* add_particles(Particles* most_recent_particles);
   void add_proposed_particles(const Particles &latest_proposals);
   //void initialise_unnormalised_log_incremental_weights(const arma::colvec &latest_unnormalised_log_incremental_weights);
   //void initialise_next_step();
   void update_weights(const arma::colvec &latest_unnormalised_log_incremental_weights);
-  void normalise_weights();
+  void normalise_and_resample_weights();
   void resample();
   void mcmc_move();
   
   LikelihoodEstimator* get_likelihood_estimator() const;
   
   size_t number_of_smc_iterations() const;
+  
+  void increment_smc_iteration();
 
   void print(std::ostream &os) const;
   
   double log_likelihood_pre_last_step;
+  
+  void close_ofstreams();
+  
+  void write_to_file(const std::string &directory_name,
+                     const std::string &index = "");
 
 protected:
   
@@ -99,6 +112,14 @@ protected:
   size_t lag;
 
   size_t lag_proposed;
+  
+  size_t smc_iteration;
+  
+  int iteration_written_to_file;
+  
+  std::string results_name;
+  
+  void close_ofstreams(size_t deque_index);
 
   void make_copy(const SMCOutput &another);
 

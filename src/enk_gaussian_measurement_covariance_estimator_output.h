@@ -29,9 +29,11 @@ public:
   //arma::rowvec get_measurement_state_for_covariance() const;
   //arma::rowvec get_measurement_random_shift();
   
-  void simulate(const Parameters &parameters);
+  void specific_simulate(const Parameters &parameters);
+  void subsample_specific_simulate(const Parameters &parameters);
   
-  arma::mat get_measurement_covariance();
+  MeasurementCovarianceEstimator* get_estimator();
+  GaussianMeasurementCovarianceEstimator* get_gaussian_estimator();
 
 protected:
   

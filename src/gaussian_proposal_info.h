@@ -22,10 +22,13 @@ public:
   
   GaussianProposalInfo(const GaussianProposalInfo &another);
 
-  void operator=(const GaussianProposalInfo &another);
+  GaussianProposalInfo& operator=(const GaussianProposalInfo &another);
   GaussianProposalInfo* duplicate() const;
   
-  //void set_mean(const arma::colvec &mean_in);
+  GaussianProposalInfo(GaussianProposalInfo &&another);
+  GaussianProposalInfo& operator=(GaussianProposalInfo &&another);
+  
+  void set_mean(const arma::colvec &mean_in);
   void set_covariance(const arma::mat &covariance_in);
   //void set_only_covariance(const arma::mat &covariance_in);
   void set_covariance_info();
@@ -51,6 +54,8 @@ public:
 protected:
 
   void make_copy(const GaussianProposalInfo &another);
+  
+  void make_copy(GaussianProposalInfo &&another);
   
   arma::colvec mean;
   arma::mat covariance;

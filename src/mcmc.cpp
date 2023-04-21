@@ -80,6 +80,7 @@ MoveOutput* MCMC::run(RandomNumberGenerator &rng,
   return mcmc_output;
 }
 
+/*
 MoveOutput* MCMC::run(RandomNumberGenerator &rng,
                       Particle &particle,
                       const Parameters &conditioned_on_parameters)
@@ -99,7 +100,27 @@ MoveOutput* MCMC::run(RandomNumberGenerator &rng,
   }
   return mcmc_output;
 }
+*/
 
+MoveOutput* MCMC::subsample_run(RandomNumberGenerator &rng,
+                                Particle &particle)
+
+{
+  StandardMCMCOutput* mcmc_output = new StandardMCMCOutput();
+  Particle current_particle = particle;
+  while (!this->termination->terminate())
+  {
+    current_particle = this->subsample_move(rng,
+                                            current_particle);
+    this->mcmc_adapt(current_particle,
+                     this->iteration_counter);
+    this->iteration_counter = this->iteration_counter + 1;
+    mcmc_output->push_back(current_particle);
+  }
+  return mcmc_output;
+}
+
+/*
 MoveOutput* MCMC::subsample_run(RandomNumberGenerator &rng,
                                 Particle &particle,
                                 const Parameters &conditioned_on_parameters)
@@ -119,6 +140,7 @@ MoveOutput* MCMC::subsample_run(RandomNumberGenerator &rng,
   }
   return mcmc_output;
 }
+*/
 
 /*
 EnsembleMember MCMC::run(RandomNumberGenerator &rng,

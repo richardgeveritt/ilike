@@ -6,7 +6,7 @@ using namespace Rcpp;
 
 #include "ensemble.h"
 #include "distributions.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 #include "proposal_kernel.h"
 #include "sequencer.h"
 
@@ -42,30 +42,49 @@ public:
   
   void move(Ensemble* next_particles,
             Ensemble* current_particles);
+  
+  /*
   void move(Ensemble* next_particles,
             Ensemble* current_particles,
             const Parameters &conditioned_on_parameters);
+  */
+  
+  void subsample_move(Ensemble* next_particles,
+                      Ensemble* current_particles);
+  
+  /*
   void subsample_move(Ensemble* next_particles,
                       Ensemble* current_particles,
                       const Parameters &conditioned_on_parameters);
+  */
   
-  virtual void shift(Ensemble* ensemble,
-                     double inverse_incremental_temperature)=0;
+  virtual void shift(Ensemble* ensemble)=0;
   
   virtual void pack(Ensemble* ensemble)=0;
   virtual void unpack(Ensemble* ensemble)=0;
+  virtual void unpack_with_predicted(Ensemble* ensemble)=0;
   
   virtual void weight(Ensemble* ensemble,
                       const Index* index,
                       double incremental_temperature)=0;
+  
+  /*
   virtual void weight(Ensemble* ensemble,
                       const Index* index,
                       double incremental_temperature,
                       const Parameters &conditioned_on_parameters)=0;
+  */
+  
+  virtual void subsample_weight(Ensemble* ensemble,
+                                const Index* index,
+                                double incremental_temperature)=0;
+  
+  /*
   virtual void subsample_weight(Ensemble* ensemble,
                                 const Index* index,
                                 double incremental_temperature,
                                 const Parameters &conditioned_on_parameters)=0;
+  */
   
   virtual arma::colvec get_unnormalised_log_incremental_weights() const=0;
   /*
@@ -165,13 +184,20 @@ protected:
   virtual void specific_move(Ensemble* next_particles,
                              Ensemble* current_particles)=0;
   
+  /*
   virtual void specific_move(Ensemble* next_particles,
                              Ensemble* current_particles,
                              const Parameters &conditioned_on_parameters)=0;
+  */
   
+  virtual void subsample_specific_move(Ensemble* next_particles,
+                                       Ensemble* current_particles)=0;
+  
+  /*
   virtual void subsample_specific_move(Ensemble* next_particles,
                                        Ensemble* current_particles,
                                        const Parameters &conditioned_on_parameters)=0;
+  */
   
   /*
   virtual void subsample_specific_simulate(Particles* next_particles,

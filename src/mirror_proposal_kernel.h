@@ -10,7 +10,7 @@ using namespace Rcpp;
 #include "symmetric_proposal_kernel.h"
 #include "particle.h"
 #include "distributions.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 #include "gaussian_proposal_info.h"
 
 class MirrorProposalKernel : public SymmetricProposalKernel
@@ -53,52 +53,71 @@ protected:
   
   double specific_evaluate_kernel(Particle &proposed_particle,
                                   Particle &old_particle) const;
+  /*
   double specific_evaluate_kernel(Particle &proposed_particle,
                                   Particle &old_particle,
                                   const Parameters &conditioned_on_parameters) const;
+  */
   double specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                             Particle &old_particle) const;
+  /*
   double specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                             Particle &old_particle,
                                             const Parameters &conditioned_on_parameters) const;
+  */
   
   Parameters simulate(RandomNumberGenerator &rng,
                       Particle &particle) const;
   
+  /*
   Parameters simulate(RandomNumberGenerator &rng,
                       Particle &particle,
                       const Parameters &conditioned_on_parameters) const;
+  */
   
   Parameters subsample_simulate(RandomNumberGenerator &rng,
                                 Particle &particle) const;
   
+  /*
   Parameters subsample_simulate(RandomNumberGenerator &rng,
                       Particle &particle,
                       const Parameters &conditioned_on_parameters) const;
+  */
   
   Parameters subsample_simulate(RandomNumberGenerator &rng,
                                 const std::string &variable,
                                 Particle &particle) const;
   
+  /*
   Parameters subsample_simulate(RandomNumberGenerator &rng,
                                 const std::string &variable,
                                 Particle &particle,
                                 const Parameters &conditioned_on_parameters) const;
-  
+  */
+   
   arma::mat specific_gradient_of_log(const std::string &variable,
-                                             Particle &proposed_particle,
-                                             Particle &old_particle);
+                                     Particle &proposed_particle,
+                                     Particle &old_particle);
+  /*
   arma::mat specific_gradient_of_log(const std::string &variable,
                                              Particle &proposed_particle,
                                              Particle &old_particle,
                                              const Parameters &conditioned_on_parameters);
+  */
   //virtual arma::mat specific_subsample_gradient_of_log(const std::string &variable,
   //                                                     Particle &proposed_particle,
   //                                                     Particle &old_particle)=0;
+  
+  arma::mat specific_subsample_gradient_of_log(const std::string &variable,
+                                               Particle &proposed_particle,
+                                               Particle &old_particle);
+  
+  /*
   arma::mat specific_subsample_gradient_of_log(const std::string &variable,
                                                        Particle &proposed_particle,
                                                        Particle &old_particle,
                                                        const Parameters &conditioned_on_parameters);
+  */
 
   void make_copy(const MirrorProposalKernel &another);
   

@@ -100,6 +100,12 @@ void GaussianIndependentProposalKernel::make_copy(const GaussianIndependentPropo
   this->proposal_info = another.proposal_info;
 }
 
+void GaussianIndependentProposalKernel::set_mean(const std::string &variable,
+                                                 const arma::colvec &mean_in)
+{
+  this->proposal_info[variable].set_mean(mean_in);
+}
+
 void GaussianIndependentProposalKernel::set_covariance(const std::string &variable,
                                                        const arma::mat &covariance_in)
 {
@@ -151,7 +157,7 @@ double GaussianIndependentProposalKernel::evaluate_independent_kernel(const Para
     arma::colvec mean = i->second.get_mean();
     double scale = i->second.get_double_scale();
     double dim = double(mean.n_rows);
-    output = output + dmvnorm_using_precomp(proposed_particle.get_vector(i->first),
+    output = output + dmvnorm_using_precomp(proposed_particle.get_colvec(i->first),
                                             mean,
                                             (1.0/scale)*i->second.get_inv(),
                                             dim*log(scale)+i->second.get_logdet());
@@ -239,11 +245,11 @@ Parameters GaussianIndependentProposalKernel::subsample_independent_simulate(Ran
 arma::mat GaussianIndependentProposalKernel::independent_gradient_of_log(const std::string &variable,
                                                                          const Parameters &proposed_particle)
 {
-  Rcpp::stop("CustomIndependentProposalKernel::independent_gradient_of_log - not written yet.");
+  Rcpp::stop("GaussianIndependentProposalKernel::independent_gradient_of_log - not written yet.");
 }
 
 arma::mat GaussianIndependentProposalKernel::subsample_independent_gradient_of_log(const std::string &variable,
                                                                                    const Parameters &proposed_particle)
 {
-  Rcpp::stop("CustomIndependentProposalKernel::independent_gradient_of_log - not written yet.");
+  Rcpp::stop("GaussianIndependentProposalKernel::independent_gradient_of_log - not written yet.");
 }

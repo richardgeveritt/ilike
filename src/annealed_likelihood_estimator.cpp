@@ -10,15 +10,17 @@ AnnealedLikelihoodEstimator::AnnealedLikelihoodEstimator(RandomNumberGenerator* 
                                                          size_t* seed_in,
                                                          Data* data_in,
                                                          LikelihoodEstimator* estimator_in,
-                                                         EvaluateLogDistributionPtr function_power_in,
+                                                         PowerFunctionPtr function_power_in,
+                                                         const std::string &power_variable_in,
                                                          bool smcfixed_flag_in)
-:LikelihoodEstimator(rng_in, seed_in, data_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
 {
   this->estimator = estimator_in;
   this->function_power = function_power_in;
+  this->power_variable = power_variable_in;
   this->constant_power = 1.0;
   this->use_constant = FALSE;
-  this->smcfixed_flag = smcfixed_flag_in;
+  //this->smcfixed_flag = this->estimator->get_smcfixed_flag();
   //this->output = new AnnealedLikelihoodEstimatorOutput();
 }
 
@@ -28,13 +30,14 @@ AnnealedLikelihoodEstimator::AnnealedLikelihoodEstimator(RandomNumberGenerator* 
                                                          LikelihoodEstimator* estimator_in,
                                                          double constant_power_in,
                                                          bool smcfixed_flag_in)
-:LikelihoodEstimator(rng_in, seed_in, data_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
 {
   this->estimator = estimator_in;
-  this->function_power = EvaluateLogDistributionPtr();
+  this->function_power = PowerFunctionPtr();
+  this->power_variable = "";
   this->constant_power = constant_power_in;
   this->use_constant = FALSE;
-  this->smcfixed_flag = smcfixed_flag_in;
+  //this->smcfixed_flag = this->estimator->get_smcfixed_flag();
   //this->output = new AnnealedLikelihoodEstimatorOutput();
 }
 
@@ -64,7 +67,7 @@ void AnnealedLikelihoodEstimator::operator=(const AnnealedLikelihoodEstimator &a
   this->make_copy(another);
 }
 
-LikelihoodEstimator* AnnealedLikelihoodEstimator::duplicate(void)const
+LikelihoodEstimator* AnnealedLikelihoodEstimator::duplicate() const
 {
   return( new AnnealedLikelihoodEstimator(*this));
 }
@@ -76,9 +79,8 @@ void AnnealedLikelihoodEstimator::make_copy(const AnnealedLikelihoodEstimator &a
   else
     this->estimator = NULL;
   
-  this->smcfixed_flag = another.smcfixed_flag;
-  
   this->function_power = another.function_power;
+  this->power_variable = another.power_variable;
   this->constant_power = another.constant_power;
   this->use_constant = another.use_constant;
 }
@@ -99,6 +101,16 @@ LikelihoodEstimatorOutput* AnnealedLikelihoodEstimator::initialise(const Paramet
 {
   LikelihoodEstimatorOutput* estimator_output = this->estimator->initialise(parameters);
   return new AnnealedLikelihoodEstimatorOutput(this,estimator_output);
+}
+
+void AnnealedLikelihoodEstimator::setup()
+{
+  this->estimator->setup();
+}
+
+void AnnealedLikelihoodEstimator::setup(const Parameters &parameters)
+{
+  this->estimator->setup(parameters);
 }
 
 // void AnnealedLikelihoodEstimator::is_setup_likelihood_estimator(const std::vector<List> &all_points,

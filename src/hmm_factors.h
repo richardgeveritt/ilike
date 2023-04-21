@@ -6,7 +6,7 @@ using namespace Rcpp;
 
 #include <vector>
 #include "factors.h"
-#include "data.h"
+#include "parameters.h"
 
 class ProposalKernel;
 class HMMFactorVariables;
@@ -32,11 +32,18 @@ public:
   void set_data(const Index* index);
   
   FactorVariables* simulate_factor_variables(const Parameters &simulated_parameters);
+  /*
   FactorVariables* simulate_factor_variables(const Parameters &simulated_parameters,
                                              const Parameters &conditioned_on_parameters);
+  */
   FactorVariables* subsample_simulate_factor_variables(const Parameters &simulated_parameters);
+  /*
   FactorVariables* subsample_simulate_factor_variables(const Parameters &simulated_parameters,
                                                        const Parameters &conditioned_on_parameters);
+  */
+  
+  void setup();
+  void setup(const Parameters &conditioned_on_parameters);
   
 protected:
   

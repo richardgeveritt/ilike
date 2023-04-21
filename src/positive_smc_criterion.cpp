@@ -10,7 +10,7 @@ PositiveSMCCriterion::~PositiveSMCCriterion()
   
 }
 
-//Copy constructor for the PositiveSMCCriterion class.
+// Copy constructor for the PositiveSMCCriterion class.
 PositiveSMCCriterion::PositiveSMCCriterion(const PositiveSMCCriterion &another)
   :SMCCriterion(another)
 {
@@ -27,7 +27,7 @@ void PositiveSMCCriterion::operator=(const PositiveSMCCriterion &another)
   this->make_copy(another);
 }
 
-SMCCriterion* PositiveSMCCriterion::duplicate(void)const
+SMCCriterion* PositiveSMCCriterion::duplicate() const
 {
   return( new PositiveSMCCriterion(*this));
 }
@@ -45,8 +45,14 @@ void PositiveSMCCriterion::find_desired_criterion(SMCOutput* current_state)
 {
 }
 
+/*
 void PositiveSMCCriterion::find_desired_criterion(SMCOutput* current_state,
                                                   const Parameters &conditioned_on_parameters)
+{
+}
+*/
+
+void PositiveSMCCriterion::subsample_find_desired_criterion(SMCOutput* current_state)
 {
 }
 
@@ -60,8 +66,15 @@ void PositiveSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_
   
 }
 
+/*
 void PositiveSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_state,
                                                   const Parameters &conditioned_on_parameters)
 {
   
+}
+*/
+
+bool PositiveSMCCriterion::always_positive() const
+{
+  return true;
 }

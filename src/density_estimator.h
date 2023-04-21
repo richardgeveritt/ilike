@@ -8,6 +8,7 @@ using namespace Rcpp;
 #include "parameters.h"
 
 //class SMCOutput;
+class DensityEstimatorOutput;
 
 class DensityEstimator
 {
@@ -15,22 +16,21 @@ class DensityEstimator
 public:
 
   DensityEstimator();
+  DensityEstimator(const std::vector<std::string> &variables_in);
   virtual ~DensityEstimator();
 
   DensityEstimator(const DensityEstimator &another);
 
   void operator=(const DensityEstimator &another);
   virtual DensityEstimator* duplicate() const=0;
-
-  virtual void fit(const std::vector<Parameters> &points,
-                   arma::colvec normalised_log_weights)=0;
-  void fit(const std::vector<Parameters> &points);
   
-  virtual double evaluate(const Parameters &point) const=0;
+  virtual DensityEstimatorOutput* initialise()=0;
+  
+  std::vector<std::string> get_variables() const;
 
 protected:
   
-  size_t n;
+  std::vector<std::string> variables;
 
   void make_copy(const DensityEstimator &another);
 

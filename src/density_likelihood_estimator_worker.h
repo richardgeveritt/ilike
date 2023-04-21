@@ -6,9 +6,10 @@ using namespace Rcpp;
 
 #include "distributions.h"
 #include "parameters.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 
 class DensityLikelihoodEstimator;
+class DensityLikelihoodEstimatorOutput;
 
 class DensityLikelihoodEstimatorWorker
 {
@@ -30,17 +31,23 @@ public:
   size_t get_seed() const;
   void set_seed(size_t seed_in);
 
-  void simulate();
-  void simulate(const Parameters &conditioned_on_parameters);
+  void simulate(DensityLikelihoodEstimatorOutput* output);
+  void simulate(DensityLikelihoodEstimatorOutput* output,
+                const Parameters &conditioned_on_parameters);
   
-  void subsample_simulate(const Parameters &conditioned_on_parameters);
+  void subsample_simulate(DensityLikelihoodEstimatorOutput* output);
+  void subsample_simulate(DensityLikelihoodEstimatorOutput* output,
+                          const Parameters &conditioned_on_parameters);
 
 protected:
 
-  virtual void specific_simulate()=0;
-  virtual void specific_simulate(const Parameters &conditioned_on_parameters)=0;
+  virtual void specific_simulate(DensityLikelihoodEstimatorOutput* output)=0;
+  virtual void specific_simulate(DensityLikelihoodEstimatorOutput* output,
+                                 const Parameters &conditioned_on_parameters)=0;
   
-  virtual void subsample_specific_simulate(const Parameters &conditioned_on_parameters)=0;
+  virtual void subsample_specific_simulate(DensityLikelihoodEstimatorOutput* output)=0;
+  virtual void subsample_specific_simulate(DensityLikelihoodEstimatorOutput* output,
+                                           const Parameters &conditioned_on_parameters)=0;
 
   void make_copy(const DensityLikelihoodEstimatorWorker &another);
 

@@ -11,6 +11,7 @@ HMMFactorVariables::HMMFactorVariables()
   this->likelihood_estimator_outputs.resize(0);
   this->initial_prior = NULL;
   this->dynamic_smcfixed_part = 0.0;
+  this->hmm_factors = NULL;
 }
 
 HMMFactorVariables::HMMFactorVariables(HMMFactors* hmm_factors_in,
@@ -131,6 +132,7 @@ void HMMFactorVariables::evaluate_smcfixed_part_of_likelihoods(const Index* inde
   //}
 }
 
+/*
 void HMMFactorVariables::evaluate_smcfixed_part_of_likelihoods(const Index* index,
                                                                const Parameters &conditioned_on_parameters)
 {
@@ -159,7 +161,35 @@ void HMMFactorVariables::evaluate_smcfixed_part_of_likelihoods(const Index* inde
     (*i)->evaluate_smcfixed_part(all_parameters);
   }
 }
+*/
 
+void HMMFactorVariables::subsample_evaluate_smcfixed_part_of_likelihoods(const Index* index)
+{
+  
+  if (index->size()>1)
+    Rcpp::stop("HMMFactorVariables::subsample_evaluate_smcfixed_part_of_likelihoods - cannot break down likelihood estimation into two stages when using more than one measurement.");
+  
+  if (*index->begin()==0)
+  {
+    if (this->initial_prior!=NULL)
+      this->initial_prior->evaluate_smcfixed_part(this->particle->parameters);
+  }
+  else
+  {
+    if (this->hmm_factors->smcfixed_flag && (this->hmm_factors->transition_kernel!=NULL))
+      this->dynamic_smcfixed_part = this->hmm_factors->transition_kernel->subsample_evaluate_kernel(*this->particle,
+                                                                                                    *this->particle->previous_self);
+  }
+  
+  for (auto i=this->likelihood_estimator_outputs.begin();
+       i!=this->likelihood_estimator_outputs.end();
+       ++i)
+  {
+    (*i)->subsample_evaluate_smcfixed_part(this->particle->parameters);
+  }
+}
+
+/*
 void HMMFactorVariables::subsample_evaluate_smcfixed_part_of_likelihoods(const Index* index,
                                                                          const Parameters &conditioned_on_parameters)
 {
@@ -188,6 +218,7 @@ void HMMFactorVariables::subsample_evaluate_smcfixed_part_of_likelihoods(const I
     (*i)->subsample_evaluate_smcfixed_part(all_parameters);
   }
 }
+*/
 
 double HMMFactorVariables::evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index)
 {
@@ -227,6 +258,7 @@ double HMMFactorVariables::evaluate_smcadaptive_part_given_smcfixed_likelihoods(
   return result;
 }
 
+/*
 double HMMFactorVariables::evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index,
                                                                                 const Parameters &conditioned_on_parameters)
 {
@@ -268,7 +300,9 @@ double HMMFactorVariables::evaluate_smcadaptive_part_given_smcfixed_likelihoods(
   
   return result;
 }
+*/
 
+/*
 double HMMFactorVariables::subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index,
                                                                                           const Parameters &conditioned_on_parameters)
 {
@@ -310,6 +344,46 @@ double HMMFactorVariables::subsample_evaluate_smcadaptive_part_given_smcfixed_li
   
   return result;
 }
+*/
+
+double HMMFactorVariables::subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index)
+{
+  
+  if (index->size()>1)
+    Rcpp::stop("HMMFactorVariables::subsample_evaluate_smcfixed_part_of_likelihoods - cannot break down likelihood estimation into two stages when using more than one measurement.");
+  
+  double result = 0.0;
+  
+  if (*index->begin()==0)
+  {
+    if (this->initial_prior!=NULL)
+    {
+      this->initial_prior->subsample_evaluate_smcadaptive_part_given_smcfixed(this->particle->parameters);
+      result = result + this->initial_prior->subsample_log_likelihood;
+    }
+  }
+  else
+  {
+    if (this->hmm_factors->smcfixed_flag)
+      result = result + this->dynamic_smcfixed_part;
+    else
+    {
+      if (this->hmm_factors->transition_kernel!=NULL)
+        result = result + this->hmm_factors->transition_kernel->subsample_evaluate_kernel(*this->particle,
+                                                                                          *this->particle->previous_self);
+    }
+  }
+  
+  for (auto i=this->likelihood_estimator_outputs.begin();
+       i!=this->likelihood_estimator_outputs.end();
+       ++i)
+  {
+    (*i)->subsample_evaluate_smcadaptive_part_given_smcfixed(this->particle->parameters);
+    result = result + (*i)->subsample_log_likelihood;
+  }
+  
+  return result;
+}
 
 double HMMFactorVariables::evaluate_likelihoods(const Index* index)
 {
@@ -341,6 +415,7 @@ double HMMFactorVariables::evaluate_likelihoods(const Index* index)
   return result;
 }
 
+/*
 double HMMFactorVariables::evaluate_likelihoods(const Index* index,
                                                 const Parameters &conditioned_on_parameters)
 {
@@ -373,6 +448,7 @@ double HMMFactorVariables::evaluate_likelihoods(const Index* index,
   
   return result;
 }
+*/
 
 double HMMFactorVariables::subsample_evaluate_likelihoods(const Index* index)
 {
@@ -404,6 +480,7 @@ double HMMFactorVariables::subsample_evaluate_likelihoods(const Index* index)
   return result;
 }
 
+/*
 double HMMFactorVariables::subsample_evaluate_likelihoods(const Index* index,
                                                           const Parameters &conditioned_on_parameters)
 {
@@ -436,6 +513,7 @@ double HMMFactorVariables::subsample_evaluate_likelihoods(const Index* index,
   
   return result;
 }
+*/
 
 /*
 arma::mat HMMFactorVariables::direct_get_gradient_of_log(const std::string &variable)
@@ -600,38 +678,15 @@ arma::mat HMMFactorVariables::direct_get_gradient_of_log(const Index* index,
   */
 }
 
+/*
 arma::mat HMMFactorVariables::direct_get_gradient_of_log(const Index* index,
                                                          const std::string &variable,
                                                          const Parameters &conditioned_on_parameters)
 {
   Rcpp::stop("HMMFactorVariables::direct_get_gradient_of_log - not written yet.");
   
-  /*
-  Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
-  arma::mat current_parameter = this->particle->parameters[variable];
-  arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
-  for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=this->likelihood_estimator_outputs.begin();
-       i!=this->likelihood_estimator_outputs.end();
-       ++i)
-  {
-    if (*i!=NULL)
-    {
-      result = result + (*i)->get_gradient_of_log(variable,
-                                                  all_parameters);
-    }
-  }
-  
-  
-  if (this->hmm_factors->transition_kernel!=NULL)
-    result = result + this->hmm_factors->transition_kernel->gradient_of_log(variable,
-                                                                            *this->particle,
-                                                                            *this->particle->previous_self,
-                                                                            conditioned_on_parameters);
-  
-  //this->target_gradients_of_log[variable] = result;
-  return result;
-  */
 }
+*/
 
 arma::mat HMMFactorVariables::direct_subsample_get_gradient_of_log(const Index* index,
                                                                    const std::string &variable)
@@ -662,39 +717,38 @@ arma::mat HMMFactorVariables::direct_subsample_get_gradient_of_log(const Index* 
   */
 }
 
+/*
 arma::mat HMMFactorVariables::direct_subsample_get_gradient_of_log(const Index* index,
                                                                    const std::string &variable,
                                                                    const Parameters &conditioned_on_parameters)
 {
   Rcpp::stop("HMMFactorVariables::subsample_evaluate_likelihoods - not written yet.");
-  
-  /*
-  Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
-  arma::mat current_parameter = this->particle->parameters[variable];
-  arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
-  for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=this->likelihood_estimator_outputs.begin();
-       i!=this->likelihood_estimator_outputs.end();
-       ++i)
-  {
-    if (*i!=NULL)
-    {
-      result = result + (*i)->subsample_get_gradient_of_log(variable,
-                                                            all_parameters);
-    }
-  }
-  
-  if (this->hmm_factors->transition_kernel!=NULL)
-    result = result + this->hmm_factors->transition_kernel->subsample_gradient_of_log(variable,
-                                                                                      *this->particle,
-                                                                                      *this->particle->previous_self,
-                                                                                      conditioned_on_parameters);
-  
-  //this->subsample_target_gradients_of_log[variable] = result;
-  return result;
-  */
 }
+*/
 
 Factors* HMMFactorVariables::get_factors()
 {
   return this->hmm_factors;
+}
+
+void HMMFactorVariables::write_to_file(const std::string &directory_name,
+                                       const std::string &index) const
+{
+  for (size_t i=0;
+       i<this->likelihood_estimator_outputs.size();
+       ++i)
+  {
+    std::string factor_directory_name = directory_name + "/factor" + toString(i);
+    this->likelihood_estimator_outputs[i]->write_to_file(factor_directory_name,index);
+  }
+}
+
+void HMMFactorVariables::close_ofstreams()
+{
+  for (size_t i=0;
+       i<this->likelihood_estimator_outputs.size();
+       ++i)
+  {
+    this->likelihood_estimator_outputs[i]->close_ofstreams();
+  }
 }

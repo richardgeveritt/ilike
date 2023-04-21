@@ -1,11 +1,12 @@
 #include "likelihood_estimator_output.h"
 #include "likelihood_estimator.h"
-#include "data.h"
+#include "parameters.h"
 
 LikelihoodEstimatorOutput::LikelihoodEstimatorOutput()
 {
   this->log_likelihood = 0.0;
   this->subsample_log_likelihood = 0.0;
+  this->write_to_file_flag = true;
 }
 
 LikelihoodEstimatorOutput::~LikelihoodEstimatorOutput()
@@ -34,6 +35,7 @@ void LikelihoodEstimatorOutput::operator=(const LikelihoodEstimatorOutput &anoth
 void LikelihoodEstimatorOutput::make_copy(const LikelihoodEstimatorOutput &another)
 {
   this->log_likelihood = another.log_likelihood;
+  this->write_to_file_flag = another.write_to_file_flag;
   this->subsample_log_likelihood = another.subsample_log_likelihood;
 }
 
@@ -59,6 +61,12 @@ void LikelihoodEstimatorOutput::change_data()
 void LikelihoodEstimatorOutput::change_data(Data* new_data)
 {
   this->get_likelihood_estimator()->change_data(new_data);
+}
+
+void LikelihoodEstimatorOutput::write(const std::string &directory_name)
+{
+  if (this->write_to_file_flag==true)
+    this->write_to_file(directory_name);
 }
 
 std::ostream& operator<<(std::ostream& os, const LikelihoodEstimatorOutput &output)

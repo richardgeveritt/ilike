@@ -33,46 +33,76 @@ public:
   FactorVariables* duplicate() const;
   
   void evaluate_smcfixed_part_of_likelihoods(const Index* index);
+  /*
   void evaluate_smcfixed_part_of_likelihoods(const Index* index,
                                              const Parameters &conditioned_on_parameters);
+  */
   double evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index);
+  /*
   double evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index,
                                                               const Parameters &conditioned_on_parameters);
+  */
+  
   double evaluate_likelihoods(const Index* index);
+  /*
   double evaluate_likelihoods(const Index* index,
                               const Parameters &conditioned_on_parameters);
+  */
+  
+  void subsample_evaluate_smcfixed_part_of_likelihoods(const Index* index);
+  double subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index);
+  
+  /*
   void subsample_evaluate_smcfixed_part_of_likelihoods(const Index* index,
                                                        const Parameters &conditioned_on_parameters);
   double subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index,
                                                                         const Parameters &conditioned_on_parameters);
+  */
+  
   double subsample_evaluate_likelihoods(const Index* index);
+  /*
   double subsample_evaluate_likelihoods(const Index* index,
                                         const Parameters &conditioned_on_parameters);
+  */
   
   arma::mat direct_get_gradient_of_log(const std::string &variable);
+  /*
   arma::mat direct_get_gradient_of_log(const std::string &variable,
                                        const Parameters &conditioned_on_parameters);
+  */
   
   arma::mat direct_subsample_get_gradient_of_log(const std::string &variable);
+  /*
   arma::mat direct_subsample_get_gradient_of_log(const std::string &variable,
                                                  const Parameters &conditioned_on_parameters);
+  */
   
   arma::mat direct_get_gradient_of_log(const Index* index,
                                        const std::string &variable);
+  /*
   arma::mat direct_get_gradient_of_log(const Index* index,
                                        const std::string &variable,
                                        const Parameters &conditioned_on_parameters);
+  */
   
   arma::mat direct_subsample_get_gradient_of_log(const Index* index,
                                                  const std::string &variable);
+  /*
   arma::mat direct_subsample_get_gradient_of_log(const Index* index,
                                                  const std::string &variable,
                                                  const Parameters &conditioned_on_parameters);
+  */
   
   Factors* get_factors();
   
+  void write_to_file(const std::string &directory_name,
+                     const std::string &index) const;
+  
+  void close_ofstreams();
+  
 protected:
 
+  // not stored here
   VectorFactors* vector_factors;
   
   void make_copy(const VectorFactorVariables &another);

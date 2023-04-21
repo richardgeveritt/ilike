@@ -48,7 +48,6 @@ void IterationsMCMCTermination::make_copy(const IterationsMCMCTermination &anoth
 
 bool IterationsMCMCTermination::terminate()
 {
-  *this->counter = *this->counter + 1;
   if (*this->counter==this->number_of_iterations)
   {
     *this->counter = 0;

@@ -139,7 +139,7 @@ void KalmanFilterOutput::set_current_posterior_statistics(const arma::colvec &la
 
 void KalmanFilterOutput::add_predicted_statistics()
 {
-  size_t num_to_pop_back = std::max<int>(0,this->predicted_means.size()-lag-1);
+  size_t num_to_pop_back = std::max<int>(0,this->predicted_means.size()-this->lag+1);
   for (size_t i=0; i<num_to_pop_back; ++i)
   {
     this->predicted_means.pop_back();
@@ -154,7 +154,7 @@ void KalmanFilterOutput::add_predicted_statistics()
 
 void KalmanFilterOutput::add_posterior_statistics()
 {
-  size_t num_to_pop_back = std::max<int>(0,this->posterior_means.size()-lag-1);
+  size_t num_to_pop_back = std::max<int>(0,this->posterior_means.size()-this->lag+1);
   for (size_t i=0; i<num_to_pop_back; ++i)
   {
     this->posterior_means.pop_back();
@@ -218,4 +218,15 @@ arma::mat KalmanFilterOutput::subsample_get_gradient_of_log(const std::string &v
 void KalmanFilterOutput::print(std::ostream &os) const
 {
 
+}
+
+void KalmanFilterOutput::write_to_file(const std::string &directory_name,
+                                       const std::string &index)
+{
+  
+}
+
+void KalmanFilterOutput::close_ofstreams()
+{
+  
 }

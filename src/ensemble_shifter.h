@@ -23,12 +23,13 @@ public:
   void operator=(const EnsembleShifter &another);
   virtual EnsembleShifter* duplicate() const=0;
   
-  virtual void setup(Ensemble* ensemble)=0;
+  virtual void setup(Ensemble* ensemble,
+                     double inverse_incremental_temperature)=0;
   
   virtual void shift(const EnsembleFactorVariables* ensemble_factor_variables,
                      arma::colvec &position,
-                     const std::vector<arma::mat> &Cxys,
-                     const std::vector<arma::mat> &Cyys,
+                     const std::vector<arma::colvec*> &measurements,
+                     const std::vector<arma::mat> &kalman_gains,
                      double inverse_incremental_temperature) const=0;
 
 protected:

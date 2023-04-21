@@ -1,7 +1,7 @@
 #include "data_subsampler.h"
 #include "data_subsetter.h"
 #include "distributions.h"
-#include "data.h"
+#include "parameters.h"
 #include "iid_data_subsetter.h"
 
 DataSubsampler::DataSubsampler()

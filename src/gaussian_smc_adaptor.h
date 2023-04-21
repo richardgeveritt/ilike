@@ -39,12 +39,12 @@ protected:
   
   std::vector<std::string> variable_names;
   
+  // not stored here
   std::vector<GaussianProposalInfo*> gaussian_info_pointers;
   
+  // stored here
   std::vector<Scale> scales;
-  
   std::vector<VectorParameterEstimator*> mean_estimators;
-  
   std::vector<MatrixParameterEstimator*> covariance_estimators;
 
 };

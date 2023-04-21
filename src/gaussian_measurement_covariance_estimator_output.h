@@ -15,8 +15,6 @@ public:
 
   GaussianMeasurementCovarianceEstimatorOutput();
   virtual ~GaussianMeasurementCovarianceEstimatorOutput();
-  
-  GaussianMeasurementCovarianceEstimatorOutput(GaussianMeasurementCovarianceEstimator* gaussian_estimator);
 
   GaussianMeasurementCovarianceEstimatorOutput(const GaussianMeasurementCovarianceEstimatorOutput &another);
 
@@ -29,34 +27,43 @@ public:
   
   arma::colvec get_deterministic_shift() const;
   
-  arma::mat get_adjustment(const arma::mat &Zf,
-                           const arma::mat &Ginv,
-                           const arma::mat &Ftranspose,
-                           const arma::mat &V,
-                           double inverse_incremental_temperature);
-  
-  arma::mat get_kalman_gain(const arma::mat &Cxy,
-                            const arma::mat &Cyy,
-                            double inverse_incremental_temperature);
+  arma::mat get_unconditional_measurement_covariance(const arma::mat &Cyy,
+                                                     double inverse_incremental_temperature);
   
   double evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature);
+  
+  double subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature);
+  
+  /*
   double evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
                                             const Parameters &conditioned_on_parameters);
   double subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
                                                       const Parameters &conditioned_on_parameters);
+  */
   
   double evaluate_likelihood();
+  /*
   double evaluate_likelihood(const Parameters &conditioned_on_parameters);
+  */
   double subsample_evaluate_likelihood();
+  /*
   double subsample_evaluate_likelihood(const Parameters &conditioned_on_parameters);
+  */
   
-  virtual arma::mat get_measurement_covariance()=0;
+  //virtual arma::mat get_measurement_covariance()=0;
+  
+  virtual GaussianMeasurementCovarianceEstimator* get_gaussian_estimator()=0;
+  
+  void close_ofstreams();
 
 protected:
   
   arma::colvec measurement_state;
   arma::colvec random_shift;
   //arma::mat measurement_noise;
+  
+  void write_to_file(const std::string &directory_name,
+                     const std::string &index);
 
   void make_copy(const GaussianMeasurementCovarianceEstimatorOutput &another);
   

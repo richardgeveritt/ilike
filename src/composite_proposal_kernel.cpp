@@ -68,6 +68,8 @@ void CompositeProposalKernel::make_copy(const CompositeProposalKernel &another)
   {
     if (*i!=NULL)
       this->all_kernels.push_back((*i)->proposal_kernel_duplicate());
+    else
+      this->all_kernels.push_back(NULL);
   }
 }
 
@@ -85,6 +87,7 @@ double CompositeProposalKernel::specific_evaluate_kernel(Particle &proposed_part
   return output;
 }
 
+/*
 double CompositeProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
                                                          Particle &old_particle,
                                                          const Parameters &conditioned_on_parameters) const
@@ -100,6 +103,7 @@ double CompositeProposalKernel::specific_evaluate_kernel(Particle &proposed_part
   }
   return output;
 }
+*/
 
 double CompositeProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                                                    Particle &old_particle) const
@@ -115,6 +119,7 @@ double CompositeProposalKernel::specific_subsample_evaluate_kernel(Particle &pro
   return output;
 }
 
+/*
 double CompositeProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                                                    Particle &old_particle,
                                                                    const Parameters &conditioned_on_parameters) const
@@ -130,6 +135,7 @@ double CompositeProposalKernel::specific_subsample_evaluate_kernel(Particle &pro
   }
   return output;
 }
+*/
 
 Parameters CompositeProposalKernel::simulate(RandomNumberGenerator &rng,
                                              Particle &particle) const
@@ -144,6 +150,7 @@ Parameters CompositeProposalKernel::simulate(RandomNumberGenerator &rng,
   return *output.move_parameters;
 }
 
+/*
 Parameters CompositeProposalKernel::simulate(RandomNumberGenerator &rng,
                                              Particle &particle,
                                              const Parameters &conditioned_on_parameters) const
@@ -157,6 +164,7 @@ Parameters CompositeProposalKernel::simulate(RandomNumberGenerator &rng,
   }
   return *output.move_parameters;
 }
+*/
 
 Parameters CompositeProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                        Particle &particle) const
@@ -171,6 +179,7 @@ Parameters CompositeProposalKernel::subsample_simulate(RandomNumberGenerator &rn
   return *output.move_parameters;
 }
 
+/*
 Parameters CompositeProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                        Particle &particle,
                                                        const Parameters &conditioned_on_parameters) const
@@ -184,6 +193,7 @@ Parameters CompositeProposalKernel::subsample_simulate(RandomNumberGenerator &rn
   }
   return *output.move_parameters;
 }
+*/
 
 Parameters CompositeProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                        const std::string &variable,
@@ -201,6 +211,7 @@ Parameters CompositeProposalKernel::subsample_simulate(RandomNumberGenerator &rn
   return *output.move_parameters;
 }
 
+/*
 Parameters CompositeProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                        const std::string &variable,
                                                        Particle &particle,
@@ -218,6 +229,7 @@ Parameters CompositeProposalKernel::subsample_simulate(RandomNumberGenerator &rn
   }
   return *output.move_parameters;
 }
+*/
 
 arma::mat CompositeProposalKernel::specific_gradient_of_log(const std::string &variable,
                                            Particle &proposed_particle,
@@ -226,6 +238,14 @@ arma::mat CompositeProposalKernel::specific_gradient_of_log(const std::string &v
   Rcpp::stop("CompositeProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
+arma::mat CompositeProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
+                                                                      Particle &proposed_particle,
+                                                                      Particle &old_particle)
+{
+  Rcpp::stop("CompositeProposalKernel::specific_subsample_gradient_of_log - not written yet.");
+}
+
+/*
 arma::mat CompositeProposalKernel::specific_gradient_of_log(const std::string &variable,
                                            Particle &proposed_particle,
                                            Particle &old_particle,
@@ -233,10 +253,13 @@ arma::mat CompositeProposalKernel::specific_gradient_of_log(const std::string &v
 {
   Rcpp::stop("CompositeProposalKernel::specific_gradient_of_log - not written yet.");
 }
+*/
 
 //virtual arma::mat specific_subsample_gradient_of_log(const std::string &variable,
 //                                                     Particle &proposed_particle,
 //                                                     Particle &old_particle)=0;
+
+/*
 arma::mat CompositeProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
                                                      Particle &proposed_particle,
                                                      Particle &old_particle,
@@ -244,3 +267,4 @@ arma::mat CompositeProposalKernel::specific_subsample_gradient_of_log(const std:
 {
   Rcpp::stop("CompositeProposalKernel::specific_gradient_of_log - not written yet.");
 }
+*/

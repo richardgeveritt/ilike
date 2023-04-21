@@ -12,6 +12,13 @@ class GaussianMeasurementCovarianceEstimator : public MeasurementCovarianceEstim
 public:
 
   GaussianMeasurementCovarianceEstimator();
+  
+  GaussianMeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
+                                         size_t* seed_in,
+                                         Data* data_in,
+                                         std::shared_ptr<Transform> inverse_transform_in,
+                                         std::shared_ptr<Transform> summary_statistics_in);
+  
   virtual ~GaussianMeasurementCovarianceEstimator();
 
   GaussianMeasurementCovarianceEstimator(const GaussianMeasurementCovarianceEstimator &another);
@@ -25,7 +32,21 @@ public:
                      const arma::mat &Cxy,
                      const arma::mat &Cyy);
   
-  //virtual arma::mat get_measurement_covariance() const=0;
+  arma::mat get_adjustment(const arma::mat &Zf,
+                           const arma::mat &Ginv,
+                           const arma::mat &Ftranspose,
+                           const arma::mat &V,
+                           double inverse_incremental_temperature);
+  
+  arma::mat get_unconditional_measurement_covariance(const arma::mat &Cyy,
+                                                     double inverse_incremental_temperature);
+  
+  virtual arma::mat get_measurement_covariance()=0;
+  
+  void change_data();
+  void change_data(Data* new_data);
+  
+  void precompute_gaussian_covariance(double inverse_incremental_temperature);
 
 protected:
 

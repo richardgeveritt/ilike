@@ -9,7 +9,7 @@ using namespace Rcpp;
 #include "proposal_kernel.h"
 #include "particle.h"
 #include "distributions.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 
 class BarkerDynamicsProposalKernel;
 
@@ -30,6 +30,35 @@ public:
   // Stochastic has some weights.
   // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.
   // Proposal needs to call simulate in all llhdoutputs
+  
+  Parameters simulate(RandomNumberGenerator &rng,
+                      Particle &particle) const;
+  
+  /*
+  Parameters simulate(RandomNumberGenerator &rng,
+                      Particle &particle,
+                      const Parameters &conditioned_on_parameters) const;
+  */
+  
+  Parameters subsample_simulate(RandomNumberGenerator &rng,
+                                Particle &particle) const;
+  
+  /*
+  Parameters subsample_simulate(RandomNumberGenerator &rng,
+                                Particle &particle,
+                                const Parameters &conditioned_on_parameters) const;
+  */
+  
+  Parameters subsample_simulate(RandomNumberGenerator &rng,
+                                const std::string &variable,
+                                Particle &particle) const;
+  
+  /*
+  Parameters subsample_simulate(RandomNumberGenerator &rng,
+                                const std::string &variable,
+                                Particle &particle,
+                                const Parameters &conditioned_on_parameters) const;
+  */
   
   virtual Parameters independent_simulate(RandomNumberGenerator &rng) const=0;
   virtual Parameters subsample_independent_simulate(RandomNumberGenerator &rng) const=0;
@@ -76,62 +105,51 @@ protected:
   
   double specific_evaluate_kernel(Particle &proposed_particle,
                                   Particle &old_particle) const;
+  
+  /*
   double specific_evaluate_kernel(Particle &proposed_particle,
                                   Particle &old_particle,
                                   const Parameters &conditioned_on_parameters) const;
+  */
+  
   double specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                             Particle &old_particle) const;
+  
+  /*
   double specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                             Particle &old_particle,
                                             const Parameters &conditioned_on_parameters) const;
+  */
   
   arma::mat specific_gradient_of_log(const std::string &variable,
                                      Particle &proposed_particle,
                                      Particle &old_particle);
+  
+  /*
   arma::mat specific_gradient_of_log(const std::string &variable,
                                      Particle &proposed_particle,
                                      Particle &old_particle,
                                      const Parameters &conditioned_on_parameters);
+  */
+  
   arma::mat specific_subsample_gradient_of_log(const std::string &variable,
                                                Particle &proposed_particle,
                                                Particle &old_particle);
+  
+  /*
   arma::mat specific_subsample_gradient_of_log(const std::string &variable,
                                                Particle &proposed_particle,
                                                Particle &old_particle,
                                                const Parameters &conditioned_on_parameters);
+  */
   
   friend BarkerDynamicsProposalKernel;
-  
-  Parameters simulate(RandomNumberGenerator &rng,
-                      Particle &particle) const;
-  
-  Parameters simulate(RandomNumberGenerator &rng,
-                      Particle &particle,
-                      const Parameters &conditioned_on_parameters) const;
-  
-  Parameters subsample_simulate(RandomNumberGenerator &rng,
-                                Particle &particle) const;
-  
-  Parameters subsample_simulate(RandomNumberGenerator &rng,
-                      Particle &particle,
-                      const Parameters &conditioned_on_parameters) const;
-  
-  Parameters subsample_simulate(RandomNumberGenerator &rng,
-                                const std::string &variable,
-                                Particle &particle) const;
-  
-  Parameters subsample_simulate(RandomNumberGenerator &rng,
-                                const std::string &variable,
-                                Particle &particle,
-                                const Parameters &conditioned_on_parameters) const;
-  
-  
 
   void make_copy(const IndependentProposalKernel &another);
   
-  EvaluateLogMCMCProposalPtr proposal_evaluate;
+  //EvaluateLogMCMCProposalPtr proposal_evaluate;
   
-  SimulateMCMCProposalPtr proposal_simulate;
+  //SimulateMCMCProposalPtr proposal_simulate;
   
 };
 

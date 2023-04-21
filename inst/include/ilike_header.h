@@ -8,7 +8,7 @@ using namespace Rcpp;
 
 #include "parameters.h"
 #include "distributions.h"
-#include "data.h"
+//#include "data.h"
 
 // typedefs for function pointers
 
@@ -40,9 +40,16 @@ typedef double (*EvaluateLogIndependentProposalPtr)(const Parameters &proposed_p
 typedef Parameters (*SimulateIndependentProposalPtr)(RandomNumberGenerator &rng,
                                                      const Parameters &proposal_parameters);
 
+typedef Data (*SimulateModelPtr)(RandomNumberGenerator &rng,
+                                 const Parameters &parameters);
+
 typedef double (*GainPtr)(size_t n);
 
 typedef Parameters (*TransformPtr)(const Parameters &inputs);
+
+typedef Data (*TransformToDataPtr)(const Parameters &inputs);
+
+typedef Data (*SummaryStatisticsPtr)(const Data &inputs);
 
 typedef arma::mat (*JacobianPtr)(const Parameters &inputs);
 
@@ -60,7 +67,6 @@ typedef arma::colvec (*SimulateTransitionKernelFromTimeParametersPtr)(const arma
 
 typedef arma::mat (*GetMeasurementMatrixPtr)(const Parameters &conditioned_on_parameters);
 
-
 typedef arma::colvec (*MatrixSimulateMeasurementKernelPtr)(const arma::colvec &current_state);
 
 typedef arma::colvec (*GetMatrixSimulateMeasurementKernelPtr)(const arma::colvec &current_state,
@@ -69,15 +75,16 @@ typedef arma::colvec (*GetMatrixSimulateMeasurementKernelPtr)(const arma::colvec
 typedef Parameters (*SimulateMeasurementKernelPtr)(const Parameters &current_state);
 
 typedef Parameters (*GetSimulateMeasurementKernelPtr)(const Parameters &current_state,
-                                                        const Parameters &conditioned_on_parameters);
+                                                      const Parameters &conditioned_on_parameters);
 
-
+typedef double (*PowerFunctionPtr)(const Parameters &current_state,
+                                const std::string &power_variable);
 
 
 
 typedef double (*EstimateLogLikelihoodPtr)(const List &inputs, const List &observed_data, const List &auxiliary_variables);
 
-typedef List (*SimulateModelPtr)(const List &inputs, const List &observed_data);
+//typedef List (*SimulateModelPtr)(const List &inputs, const List &observed_data);
 
 typedef List (*SimulateAuxiliaryVariablesPtr)(const List &inputs, const List &observed_data);
 
@@ -87,11 +94,11 @@ typedef double (*EvaluateLogABCKernelPtr)(const arma::colvec &simulated_stats,
                 const arma::colvec &observed_stats,
                 const double &abc_tolerance);
 
-typedef arma::colvec (*SummaryStatisticsPtr)(const List &observed_data);
+//typedef arma::colvec (*SummaryStatisticsPtr)(const List &observed_data);
 
 typedef List (*GetDataFromSimulationPtr)(const List &simulation);
 
-typedef Data (*DataPtr)(void);
+typedef Data (*DataPtr)();
 
 
 EvaluateLogDistributionPtr load_evaluate_log_distribution(const SEXP &evaluate_log_distribution_SEXP);

@@ -10,7 +10,7 @@ using namespace Rcpp;
 #include "particle.h"
 //#include "ensemble_member.h"
 #include "distributions.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 
 class MCMCAdaptor;
 class SMCAdaptor;
@@ -39,21 +39,30 @@ public:
 
   Particle move(RandomNumberGenerator &rng,
                 Particle &particle) const;
+  /*
   Particle move(RandomNumberGenerator &rng,
                 Particle &particle,
                 const Parameters &conditioned_on_parameters) const;
-  //Particle subsample_move(RandomNumberGenerator &rng,
-  //                        Particle &particle) const;
+  */
+  
+  Particle subsample_move(RandomNumberGenerator &rng,
+                          Particle &particle) const;
+  
+  /*
   Particle subsample_move(RandomNumberGenerator &rng,
                           Particle &particle,
                           const Parameters &conditioned_on_parameters) const;
+  */
   Particle subsample_move(RandomNumberGenerator &rng,
                           const std::string &variable,
                           Particle &particle) const;
+  
+  /*
   Particle subsample_move(RandomNumberGenerator &rng,
                           const std::string &variable,
                           Particle &particle,
                           const Parameters &conditioned_on_parameters) const;
+  */
   
   /*
   Particle move(RandomNumberGenerator &rng,
@@ -90,29 +99,71 @@ public:
   
   double evaluate_kernel(Particle &proposed_particle,
                          Particle &old_particle) const;
+  
+  /*
   double evaluate_kernel(Particle &proposed_particle,
                          Particle &old_particle,
                          const Parameters &conditioned_on_parameters) const;
+  */
   double subsample_evaluate_kernel(Particle &proposed_particle,
                                    Particle &old_particle) const;
+  
+  /*
   double subsample_evaluate_kernel(Particle &proposed_particle,
                                    Particle &old_particle,
                                    const Parameters &conditioned_on_parameters) const;
+  */
   
   arma::mat gradient_of_log(const std::string &variable,
-                                    Particle &proposed_particle,
-                                    Particle &old_particle);
+                            Particle &proposed_particle,
+                            Particle &old_particle);
+  
+  /*
   arma::mat gradient_of_log(const std::string &variable,
                                     Particle &proposed_particle,
                                     Particle &old_particle,
                                     const Parameters &conditioned_on_parameters);
+  */
+  
   arma::mat subsample_gradient_of_log(const std::string &variable,
-                                              Particle &proposed_particle,
-                                              Particle &old_particle);
+                                      Particle &proposed_particle,
+                                      Particle &old_particle);
+  
+  /*
   arma::mat subsample_gradient_of_log(const std::string &variable,
                                               Particle &proposed_particle,
                                               Particle &old_particle,
                                               const Parameters &conditioned_on_parameters);
+  */
+  
+  virtual Parameters simulate(RandomNumberGenerator &rng,
+                              Particle &particle) const=0;
+  
+  /*
+  virtual Parameters simulate(RandomNumberGenerator &rng,
+                              Particle &particle,
+                              const Parameters &conditioned_on_parameters) const=0;
+  */
+  
+  virtual Parameters subsample_simulate(RandomNumberGenerator &rng,
+                                        Particle &particle) const=0;
+  
+  /*
+  virtual Parameters subsample_simulate(RandomNumberGenerator &rng,
+                                        Particle &particle,
+                                        const Parameters &conditioned_on_parameters) const=0;
+  */
+  
+  virtual Parameters subsample_simulate(RandomNumberGenerator &rng,
+                                        const std::string &variable,
+                                        Particle &particle) const=0;
+  
+  /*
+  virtual Parameters subsample_simulate(RandomNumberGenerator &rng,
+                                        const std::string &variable,
+                                        Particle &particle,
+                                        const Parameters &conditioned_on_parameters) const=0;
+  */
   
   Transform* get_transform() const;
   
@@ -126,54 +177,46 @@ protected:
   friend CompositeProposalKernel;
   friend ReinforceGradientEstimator;
   friend DirectGradientEstimatorOutput;
-  virtual Parameters simulate(RandomNumberGenerator &rng,
-                              Particle &particle) const=0;
-  
-  virtual Parameters simulate(RandomNumberGenerator &rng,
-                              Particle &particle,
-                              const Parameters &conditioned_on_parameters) const=0;
-  
-  virtual Parameters subsample_simulate(RandomNumberGenerator &rng,
-                                        Particle &particle) const=0;
-  
-  virtual Parameters subsample_simulate(RandomNumberGenerator &rng,
-                                        Particle &particle,
-                                        const Parameters &conditioned_on_parameters) const=0;
-  
-  virtual Parameters subsample_simulate(RandomNumberGenerator &rng,
-                                        const std::string &variable,
-                                        Particle &particle) const=0;
-  
-  virtual Parameters subsample_simulate(RandomNumberGenerator &rng,
-                                        const std::string &variable,
-                                        Particle &particle,
-                                        const Parameters &conditioned_on_parameters) const=0;
   
   virtual double specific_evaluate_kernel(Particle &proposed_particle,
                                           Particle &old_particle) const=0;
+  
+  /*
   virtual double specific_evaluate_kernel(Particle &proposed_particle,
                                           Particle &old_particle,
                                           const Parameters &conditioned_on_parameters) const=0;
+  */
+  
   virtual double specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                                     Particle &old_particle) const=0;
+  
+  /*
   virtual double specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                                     Particle &old_particle,
                                                     const Parameters &conditioned_on_parameters) const=0;
-  
+  */
+   
   virtual arma::mat specific_gradient_of_log(const std::string &variable,
                                              Particle &proposed_particle,
                                              Particle &old_particle)=0;
+  
+  /*
   virtual arma::mat specific_gradient_of_log(const std::string &variable,
                                              Particle &proposed_particle,
                                              Particle &old_particle,
                                              const Parameters &conditioned_on_parameters)=0;
-  //virtual arma::mat specific_subsample_gradient_of_log(const std::string &variable,
-  //                                                     Particle &proposed_particle,
-  //                                                     Particle &old_particle)=0;
+  */
+  
+  virtual arma::mat specific_subsample_gradient_of_log(const std::string &variable,
+                                                       Particle &proposed_particle,
+                                                       Particle &old_particle)=0;
+  
+  /*
   virtual arma::mat specific_subsample_gradient_of_log(const std::string &variable,
                                                        Particle &proposed_particle,
                                                        Particle &old_particle,
                                                        const Parameters &conditioned_on_parameters)=0;
+  */
 
   void make_copy(const ProposalKernel &another);
   

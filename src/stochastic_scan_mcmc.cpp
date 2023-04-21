@@ -77,6 +77,7 @@ Particle StochasticScanMCMC::move(RandomNumberGenerator &rng,
                                                            particle);
 }
 
+/*
 Particle StochasticScanMCMC::move(RandomNumberGenerator &rng,
                                   Particle &particle,
                                   const Parameters &conditioned_on_parameters) const
@@ -85,7 +86,16 @@ Particle StochasticScanMCMC::move(RandomNumberGenerator &rng,
                                                            particle,
                                                            conditioned_on_parameters);
 }
+*/
 
+Particle StochasticScanMCMC::subsample_move(RandomNumberGenerator &rng,
+                                            Particle &particle) const
+{
+  return this->moves[rdis(rng, this->probabilities)]->subsample_move(rng,
+                                                                     particle);
+}
+
+/*
 Particle StochasticScanMCMC::subsample_move(RandomNumberGenerator &rng,
                                             Particle &particle,
                                             const Parameters &conditioned_on_parameters) const
@@ -94,6 +104,7 @@ Particle StochasticScanMCMC::subsample_move(RandomNumberGenerator &rng,
                                                                      particle,
                                                                      conditioned_on_parameters);
 }
+*/
 
 void StochasticScanMCMC::smc_adapt(SMCOutput* current_state)
 {
@@ -161,5 +172,15 @@ void StochasticScanMCMC::specific_mcmc_adapt(Particle &current_particle,
   {
     (*i)->specific_mcmc_adapt(current_particle,
                               iteration_counter);
+  }
+}
+
+void StochasticScanMCMC::set_index(Index* index_in)
+{
+  for (auto i=this->moves.begin();
+       i!=this->moves.end();
+       ++i)
+  {
+    (*i)->set_index(index_in);
   }
 }

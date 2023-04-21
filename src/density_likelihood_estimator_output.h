@@ -6,11 +6,14 @@
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 
+#include <string>
+
 #include "likelihood_estimator_output.h"
 #include "particles.h"
 
 class DensityLikelihoodEstimator;
 class DensityEstimator;
+class DensityEstimatorOutput;
 
 class DensityLikelihoodEstimatorOutput : public LikelihoodEstimatorOutput
 {
@@ -18,7 +21,11 @@ class DensityLikelihoodEstimatorOutput : public LikelihoodEstimatorOutput
 public:
 
   DensityLikelihoodEstimatorOutput();
-  DensityLikelihoodEstimatorOutput(DensityLikelihoodEstimator* estimator_in);
+  DensityLikelihoodEstimatorOutput(DensityLikelihoodEstimator* estimator_in,
+                                   DensityEstimator* density_estimator_in,
+                                   DensityEstimator* subsample_density_estimator_in);
+  //DensityLikelihoodEstimatorOutput(DensityLikelihoodEstimator* estimator_in,
+  //                                 const Parameters &conditioned_on_parameters);
   virtual ~DensityLikelihoodEstimatorOutput();
 
   DensityLikelihoodEstimatorOutput(const DensityLikelihoodEstimatorOutput &another);
@@ -42,7 +49,12 @@ public:
                                 const Parameters &x);
   arma::mat subsample_get_gradient_of_log(const std::string &variable,
                                 const Parameters &x);
+  
+  void fit(const std::vector<Parameters> &points);
+  void subsample_fit(const std::vector<Parameters> &points);
 
+  void close_ofstreams();
+  
   void print(std::ostream &os) const;
 
 protected:
@@ -51,6 +63,9 @@ protected:
   DensityLikelihoodEstimator* estimator;
   
   // Stored here.
+  DensityEstimatorOutput* density_estimator_output;
+  DensityEstimatorOutput* subsample_density_estimator_output;
+  // Stored here.
   //DensityEstimator* density_estimator;
   
   //Particles particles;
@@ -58,6 +73,11 @@ protected:
   
   double log_likelihood_smcfixed_part;
   double subsample_log_likelihood_smcfixed_part;
+  
+  void write_to_file(const std::string &directory_name,
+                     const std::string &index = "");
+  
+  //std::string results_name;
 
   void make_copy(const DensityLikelihoodEstimatorOutput &another);
 

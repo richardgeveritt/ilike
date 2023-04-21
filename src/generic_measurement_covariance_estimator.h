@@ -5,7 +5,7 @@
 using namespace Rcpp;
 
 #include "measurement_covariance_estimator.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 #include "gaussian_independent_proposal_kernel.h"
 
 class MeasurementCovarianceEstimatorOutput;
@@ -17,12 +17,23 @@ class GenericMeasurementCovarianceEstimator : public MeasurementCovarianceEstima
 public:
 
   GenericMeasurementCovarianceEstimator();
+  
+  GenericMeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
+                                        size_t* seed_in,
+                                        Data* data_in,
+                                        std::shared_ptr<Transform> transform_in,
+                                        std::shared_ptr<Transform> summary_statistics_in,
+                                        SimulateModelPtr simulator_in);
+  
   virtual ~GenericMeasurementCovarianceEstimator();
 
   GenericMeasurementCovarianceEstimator(const GenericMeasurementCovarianceEstimator &another);
 
   void operator=(const GenericMeasurementCovarianceEstimator &another);
   MeasurementCovarianceEstimator* duplicate() const;
+  
+  void setup();
+  void setup(const Parameters &parameters);
   
   //void set_parameters(const Parameters &conditioned_on_parameters_in);
   
@@ -34,11 +45,25 @@ public:
                      const arma::mat &Cxy,
                      const arma::mat &Cyy);
   
+  arma::mat get_adjustment(const arma::mat &Zf,
+                           const arma::mat &Ginv,
+                           const arma::mat &Ftranspose,
+                           const arma::mat &V,
+                           double inverse_incremental_temperature);
+  
   arma::mat get_Cygivenx() const;
   
-  arma::colvec simulate(const Parameters &current_state);
+  arma::mat get_unconditional_measurement_covariance(const arma::mat &Cyy,
+                                                     double inverse_incremental_temperature);
+  
+  Parameters simulate(const Parameters &current_state);
   
   arma::colvec gaussian_simulate();
+  
+  void change_data();
+  void change_data(Data* new_data);
+  
+  void precompute_gaussian_covariance(double inverse_incremental_temperature);
 
 protected:
   
@@ -46,6 +71,9 @@ protected:
   
   MeasurementCovarianceEstimatorOutput* initialise_measurement_covariance_estimator();
   MeasurementCovarianceEstimatorOutput* initialise_measurement_covariance_estimator(const Parameters &conditioned_on_parameters);
+  
+  void setup_measurement_variables();
+  void setup_measurement_variables(const Parameters &conditioned_on_parameters);
 
   void make_copy(const GenericMeasurementCovarianceEstimator &another);
   
@@ -58,7 +86,7 @@ protected:
   //SimulateMeasurementKernelPtr measurement_kernel;
   //arma::mat measurement_noise;
   
-  SimulateIndependentProposalPtr simulator;
+  SimulateModelPtr simulator;
   
   GaussianIndependentProposalKernel gaussian_simulator;
   

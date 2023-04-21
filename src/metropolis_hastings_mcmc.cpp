@@ -2,6 +2,7 @@
 #include "distributions.h"
 #include "utils.h"
 #include "metropolis_hastings_mcmc.h"
+#include "gaussian_random_walk_proposal_kernel.h"
 
 MetropolisHastingsMCMC::MetropolisHastingsMCMC()
   :MCMC()
@@ -19,12 +20,27 @@ MetropolisHastingsMCMC::MetropolisHastingsMCMC(size_t number_of_iterations_in,
 }
 
 MetropolisHastingsMCMC::MetropolisHastingsMCMC(size_t number_of_iterations_in,
-                                               const std::vector<Parameters> &initial_points_in,
-                                               const Parameters &proposal_variances_in)
+                                               const std::string &variable_name_in,
+                                               const arma::mat &proposal_covariance_in)
+:MCMC(number_of_iterations_in)
+{
+  this->index = NULL;
+  std::vector<std::string> variable_names_in;
+  variable_names_in.push_back(variable_name_in);
+  std::vector<arma::mat> proposal_covariances_in;
+  proposal_covariances_in.push_back(proposal_covariance_in);
+  this->proposal = new GaussianRandomWalkProposalKernel(variable_names_in,
+                                                        proposal_covariances_in);
+}
+
+MetropolisHastingsMCMC::MetropolisHastingsMCMC(size_t number_of_iterations_in,
+                                               const std::vector<std::string> &variable_names_in,
+                                               const std::vector<arma::mat> &proposal_covariances_in)
   :MCMC(number_of_iterations_in)
 {
   this->index = NULL;
-  this->proposal = NULL;
+  this->proposal = new GaussianRandomWalkProposalKernel(variable_names_in,
+                                                        proposal_covariances_in);
   // default to Gaussian random walk
   //this->proposal = ProposalKernel(EvaluateLogMCMCProposalPtr proposal_evaluate_in,
   //                                SimulateMCMCProposalPtr proposal_simulate_in,
@@ -92,7 +108,7 @@ Particle MetropolisHastingsMCMC::move(RandomNumberGenerator &rng,
 {
   Particle proposed_particle = this->proposal->move(rng,
                                                     particle);
-  
+
   double log_u = log(runif(rng));
   
   if (log_u < proposed_particle.evaluate_likelihoods(this->index) -
@@ -109,6 +125,7 @@ Particle MetropolisHastingsMCMC::move(RandomNumberGenerator &rng,
   
 }
 
+/*
 Particle MetropolisHastingsMCMC::move(RandomNumberGenerator &rng,
                                       Particle &particle,
                                       const Parameters &conditioned_on_parameters) const
@@ -133,7 +150,33 @@ Particle MetropolisHastingsMCMC::move(RandomNumberGenerator &rng,
   }
   
 }
+*/
 
+Particle MetropolisHastingsMCMC::subsample_move(RandomNumberGenerator &rng,
+                                                Particle &particle) const
+{
+  Particle proposed_particle = this->proposal->subsample_move(rng,
+                                                              particle);
+  
+  double log_u = log(runif(rng));
+  
+  if (log_u < proposed_particle.subsample_evaluate_likelihoods(this->index) -
+      particle.subsample_target_evaluated +
+      this->proposal->subsample_evaluate_kernel(particle, proposed_particle) -
+      this->proposal->subsample_evaluate_kernel(proposed_particle, particle))
+  {
+    proposed_particle.set_acceptance(this->proposal,true);
+    return proposed_particle;
+  }
+  else
+  {
+    proposed_particle.set_acceptance(this->proposal,false);
+    return particle;
+  }
+  
+}
+
+/*
 Particle MetropolisHastingsMCMC::subsample_move(RandomNumberGenerator &rng,
                                                 Particle &particle,
                                                 const Parameters &conditioned_on_parameters) const
@@ -160,6 +203,7 @@ Particle MetropolisHastingsMCMC::subsample_move(RandomNumberGenerator &rng,
   }
   
 }
+*/
 
 /*
 EnsembleMember MetropolisHastingsMCMC::move(RandomNumberGenerator &rng,
@@ -255,4 +299,12 @@ void MetropolisHastingsMCMC::specific_mcmc_adapt(Particle &current_particle,
 {
   this->proposal->mcmc_adapt(current_particle,
                              iteration_counter);
+}
+
+void MetropolisHastingsMCMC::set_index(Index* index_in)
+{
+  if (this->index!=NULL)
+    delete this->index;
+  
+  this->index = index_in;
 }

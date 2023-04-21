@@ -114,6 +114,7 @@ void EnsembleKalmanWorker::move(Ensemble* next_particles,
   this->set_seed(this->get_seed() + this->get_number_of_ensemble_members());
 }
 
+/*
 void EnsembleKalmanWorker::move(Ensemble* next_particles,
                                 Ensemble* current_particles,
                                 const Parameters &conditioned_on_parameters)
@@ -123,7 +124,17 @@ void EnsembleKalmanWorker::move(Ensemble* next_particles,
                       conditioned_on_parameters);
   this->set_seed(this->get_seed() + this->get_number_of_ensemble_members());
 }
+*/
 
+void EnsembleKalmanWorker::subsample_move(Ensemble* next_particles,
+                                          Ensemble* current_particles)
+{
+  this->subsample_specific_move(next_particles,
+                                current_particles);
+  this->set_seed(this->get_seed() + this->get_number_of_ensemble_members());
+}
+
+/*
 void EnsembleKalmanWorker::subsample_move(Ensemble* next_particles,
                                           Ensemble* current_particles,
                                           const Parameters &conditioned_on_parameters)
@@ -133,6 +144,7 @@ void EnsembleKalmanWorker::subsample_move(Ensemble* next_particles,
                                 conditioned_on_parameters);
   this->set_seed(this->get_seed() + this->get_number_of_ensemble_members());
 }
+*/
 
 /*
 void EnsembleKalmanWorker::subsample_simulate(Particles* next_particles,

@@ -111,10 +111,10 @@ double LangevinProposalKernel::specific_evaluate_kernel(Particle &proposed_parti
        i!=this->proposal_info.end();
        ++i)
   {
-    arma::colvec mean = old_particle.move_parameters->get_vector(i->first);
+    arma::colvec mean = old_particle.move_parameters->get_colvec(i->first);
     double scale = i->second.get_double_scale();
     double dim = double(mean.n_rows);
-    output = output + dmvnorm_using_precomp(proposed_particle.move_parameters->get_vector(i->first),
+    output = output + dmvnorm_using_precomp(proposed_particle.move_parameters->get_colvec(i->first),
                               mean + scale*i->second.get_covariance()*arma::vectorise(estimator->get_gradient_of_log(i->first,this->index,old_particle))/2.0,
                                             (1.0/sqrt(i->second.get_double_scale()))*i->second.get_inv(),
                                             dim*log(scale)+i->second.get_logdet());
@@ -122,6 +122,7 @@ double LangevinProposalKernel::specific_evaluate_kernel(Particle &proposed_parti
   return output;
 }
 
+/*
 double LangevinProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
                                                         Particle &old_particle,
                                                         const Parameters &conditioned_on_parameters) const
@@ -134,16 +135,17 @@ double LangevinProposalKernel::specific_evaluate_kernel(Particle &proposed_parti
        i!=this->proposal_info.end();
        ++i)
   {
-    arma::colvec mean = old_particle.move_parameters->get_vector(i->first);
+    arma::colvec mean = old_particle.move_parameters->get_colvec(i->first);
     double scale = i->second.get_double_scale();
     double dim = double(mean.n_rows);
-    output = output + dmvnorm_using_precomp(proposed_particle.move_parameters->get_vector(i->first),
+    output = output + dmvnorm_using_precomp(proposed_particle.move_parameters->get_colvec(i->first),
                                             mean + scale*i->second.get_covariance()*arma::vectorise(estimator->get_gradient_of_log(i->first,this->index,old_particle,conditioned_on_parameters))/2.0,
                                             (1.0/sqrt(i->second.get_double_scale()))*i->second.get_inv(),
                                             dim*log(scale)+i->second.get_logdet());
   }
   return output;
 }
+*/
 
 double LangevinProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                                                   Particle &old_particle) const
@@ -167,10 +169,10 @@ double LangevinProposalKernel::specific_subsample_evaluate_kernel(Particle &prop
        i!=this->proposal_info.end();
        ++i)
   {
-    arma::colvec mean = old_particle.move_parameters->get_vector(i->first);
+    arma::colvec mean = old_particle.move_parameters->get_colvec(i->first);
     double scale = i->second.get_double_scale();
     double dim = double(mean.n_rows);
-    output = output + dmvnorm_using_precomp(proposed_particle.move_parameters->get_vector(i->first),
+    output = output + dmvnorm_using_precomp(proposed_particle.move_parameters->get_colvec(i->first),
                                             mean + scale*i->second.get_covariance()*arma::vectorise(estimator->subsample_get_gradient_of_log(i->first,this->index,old_particle))/2.0,
                                             (1.0/sqrt(i->second.get_double_scale()))*i->second.get_inv(),
                                             dim*log(scale)+i->second.get_logdet());
@@ -178,39 +180,30 @@ double LangevinProposalKernel::specific_subsample_evaluate_kernel(Particle &prop
   return output;
 }
 
+/*
 double LangevinProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                                                   Particle &old_particle,
                                                                   const Parameters &conditioned_on_parameters) const
 {
   GradientEstimatorOutput* estimator = old_particle.initialise_gradient_estimator_output(this,
                                                                                          this->gradient_estimator);
-  /*
-  double output = 0.0;
-  for (size_t i=0; i<this->covariances.size(); ++i)
-  {
-    output = output + dmvnorm(proposed_particle.parameters.get_vector(this->variable_names[i]),
-                              old_particle.parameters.get_vector(this->variable_names[i]) + this->covariances[i]*arma::vectorise(this->gradient_estimator->subsample_get_gradient_of_log(this->variable_names[i],old_particle,conditioned_on_parameters))/2.0,
-                              this->invs[i],
-                              this->logdets[i]);
-  }
-  return output;
-   */
   
   double output = 0.0;
   for (auto i=this->proposal_info.begin();
        i!=this->proposal_info.end();
        ++i)
   {
-    arma::colvec mean = old_particle.move_parameters->get_vector(i->first);
+    arma::colvec mean = old_particle.move_parameters->get_colvec(i->first);
     double scale = i->second.get_double_scale();
     double dim = double(mean.n_rows);
-    output = output + dmvnorm_using_precomp(proposed_particle.move_parameters->get_vector(i->first),
+    output = output + dmvnorm_using_precomp(proposed_particle.move_parameters->get_colvec(i->first),
                                             mean + scale*i->second.get_covariance()*arma::vectorise(estimator->subsample_get_gradient_of_log(i->first,this->index,old_particle,conditioned_on_parameters))/2.0,
                                             (1.0/sqrt(i->second.get_double_scale()))*i->second.get_inv(),
                                             dim*log(scale)+i->second.get_logdet());
   }
   return output;
 }
+*/
 
 Parameters LangevinProposalKernel::simulate(RandomNumberGenerator &rng,
                                             Particle &particle) const
@@ -237,7 +230,7 @@ Parameters LangevinProposalKernel::simulate(RandomNumberGenerator &rng,
        i!=this->proposal_info.end();
        ++i)
   {
-    arma::colvec mean = particle.move_parameters->get_vector(i->first);
+    arma::colvec mean = particle.move_parameters->get_colvec(i->first);
     double scale = i->second.get_double_scale();
     //double dim = double(mean.n_rows);
     output[i->first] = rmvnorm(rng,
@@ -248,21 +241,11 @@ Parameters LangevinProposalKernel::simulate(RandomNumberGenerator &rng,
   return output;
 }
 
+/*
 Parameters LangevinProposalKernel::simulate(RandomNumberGenerator &rng,
                                             Particle &particle,
                                             const Parameters &conditioned_on_parameters) const
 {
-  /*
-  Parameters output = particle.parameters;
-  for (size_t i=0; i<this->covariances.size(); ++i)
-  {
-    output[this->variable_names[i]] = rmvnorm(rng,
-                                              particle.parameters.get_vector(this->variable_names[i]) + this->covariances[i]*arma::vectorise(this->gradient_estimator->get_gradient_of_log(this->variable_names[i],particle,conditioned_on_parameters))/2.0,
-                                              this->chols[i],
-                                              true);
-  }
-  return output;
-  */
   
   GradientEstimatorOutput* estimator = particle.initialise_gradient_estimator_output(this,
                                                                                      this->gradient_estimator);
@@ -274,7 +257,7 @@ Parameters LangevinProposalKernel::simulate(RandomNumberGenerator &rng,
        i!=this->proposal_info.end();
        ++i)
   {
-    arma::colvec mean = particle.move_parameters->get_vector(i->first);
+    arma::colvec mean = particle.move_parameters->get_colvec(i->first);
     double scale = i->second.get_double_scale();
     //double dim = double(mean.n_rows);
     output[i->first] = rmvnorm(rng,
@@ -284,6 +267,7 @@ Parameters LangevinProposalKernel::simulate(RandomNumberGenerator &rng,
   }
   return output;
 }
+*/
 
 Parameters LangevinProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                       Particle &particle) const
@@ -310,7 +294,7 @@ Parameters LangevinProposalKernel::subsample_simulate(RandomNumberGenerator &rng
        i!=this->proposal_info.end();
        ++i)
   {
-    arma::colvec mean = particle.move_parameters->get_vector(i->first);
+    arma::colvec mean = particle.move_parameters->get_colvec(i->first);
     double scale = i->second.get_double_scale();
     //double dim = double(mean.n_rows);
     output[i->first] = rmvnorm(rng,
@@ -321,21 +305,11 @@ Parameters LangevinProposalKernel::subsample_simulate(RandomNumberGenerator &rng
   return output;
 }
 
+/*
 Parameters LangevinProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                            Particle &particle,
-                                            const Parameters &conditioned_on_parameters) const
+                                                      Particle &particle,
+                                                      const Parameters &conditioned_on_parameters) const
 {
-  /*
-  Parameters output = particle.parameters;
-  for (size_t i=0; i<this->covariances.size(); ++i)
-  {
-    output[this->variable_names[i]] = rmvnorm(rng,
-                                              particle.parameters.get_vector(this->variable_names[i]) + this->covariances[i]*arma::vectorise(this->gradient_estimator->subsample_get_gradient_of_log(this->variable_names[i],particle,conditioned_on_parameters))/2.0,
-                                              this->chols[i],
-                                              true);
-  }
-  return output;
-  */
   
   GradientEstimatorOutput* estimator = particle.initialise_gradient_estimator_output(this,
                                                                                          this->gradient_estimator);
@@ -347,7 +321,7 @@ Parameters LangevinProposalKernel::subsample_simulate(RandomNumberGenerator &rng
        i!=this->proposal_info.end();
        ++i)
   {
-    arma::colvec mean = particle.move_parameters->get_vector(i->first);
+    arma::colvec mean = particle.move_parameters->get_colvec(i->first);
     double scale = i->second.get_double_scale();
     //double dim = double(mean.n_rows);
     output[i->first] = rmvnorm(rng,
@@ -357,6 +331,7 @@ Parameters LangevinProposalKernel::subsample_simulate(RandomNumberGenerator &rng
   }
   return output;
 }
+*/
 
 Parameters LangevinProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                       const std::string &variable,
@@ -383,7 +358,7 @@ Parameters LangevinProposalKernel::subsample_simulate(RandomNumberGenerator &rng
   Parameters output;
   if (this->unused_variables_kept)
     output = *particle.move_parameters;
-  arma::colvec mean = particle.move_parameters->get_vector(found->first);
+  arma::colvec mean = particle.move_parameters->get_colvec(found->first);
   double scale = found->second.get_double_scale();
   //double dim = double(mean.n_rows);
   output[found->first] = rmvnorm(rng,
@@ -393,23 +368,12 @@ Parameters LangevinProposalKernel::subsample_simulate(RandomNumberGenerator &rng
   return output;
 }
 
+/*
 Parameters LangevinProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                       const std::string &variable,
                                                       Particle &particle,
                                                       const Parameters &conditioned_on_parameters) const
 {
-  /*
-  Parameters output = particle.parameters;
-  size_t i = [std::distance(this->variable_names.begin(),
-                            std::find(this->variable_names.begin(),
-                                      this->variable_names.end(),
-                                      variable))];
-  output[this->variable_names[i]] = rmvnorm(rng,
-                                            particle.parameters.get_vector(this->variable_names[i]) + this->covariances[i]*arma::vectorise(this->gradient_estimator->subsample_get_gradient_of_log(this->variable_names[i],particle,conditioned_on_parameters))/2.0,
-                                            this->chols[i],
-                                            true);
-  return output;
-  */
   
   GradientEstimatorOutput* estimator = particle.initialise_gradient_estimator_output(this,
                                                                                          this->gradient_estimator);
@@ -419,7 +383,7 @@ Parameters LangevinProposalKernel::subsample_simulate(RandomNumberGenerator &rng
   Parameters output;
   if (this->unused_variables_kept)
     output = *particle.move_parameters;
-  arma::colvec mean = particle.move_parameters->get_vector(found->first);
+  arma::colvec mean = particle.move_parameters->get_colvec(found->first);
   double scale = found->second.get_double_scale();
   //double dim = double(mean.n_rows);
   output[found->first] = rmvnorm(rng,
@@ -428,6 +392,7 @@ Parameters LangevinProposalKernel::subsample_simulate(RandomNumberGenerator &rng
                              true);
   return output;
 }
+*/
 
 arma::mat LangevinProposalKernel::specific_gradient_of_log(const std::string &variable,
                                                          Particle &proposed_particle,
@@ -436,6 +401,7 @@ arma::mat LangevinProposalKernel::specific_gradient_of_log(const std::string &va
   Rcpp::stop("LangevinProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
+/*
 arma::mat LangevinProposalKernel::specific_gradient_of_log(const std::string &variable,
                                                          Particle &proposed_particle,
                                                          Particle &old_particle,
@@ -443,7 +409,16 @@ arma::mat LangevinProposalKernel::specific_gradient_of_log(const std::string &va
 {
   Rcpp::stop("LangevinProposalKernel::specific_gradient_of_log - not written yet.");
 }
+*/
 
+arma::mat LangevinProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
+                                                                     Particle &proposed_particle,
+                                                                     Particle &old_particle)
+{
+  Rcpp::stop("LangevinProposalKernel::specific_gradient_of_log - not written yet.");
+}
+
+/*
 arma::mat LangevinProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
                                                                    Particle &proposed_particle,
                                                                    Particle &old_particle,
@@ -451,3 +426,4 @@ arma::mat LangevinProposalKernel::specific_subsample_gradient_of_log(const std::
 {
   Rcpp::stop("LangevinProposalKernel::specific_gradient_of_log - not written yet.");
 }
+*/

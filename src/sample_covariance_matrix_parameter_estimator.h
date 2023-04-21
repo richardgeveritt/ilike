@@ -21,16 +21,8 @@ public:
   void operator=(const SampleCovarianceMatrixParameterEstimator &another);
   MatrixParameterEstimator* duplicate() const;
 
-  void fit(const std::vector<Parameters> &points,
-           arma::colvec normalised_log_weights);
-  
-  void fit(const std::string &variable,
-           const std::vector<Parameters> &points,
-           arma::colvec normalised_log_weights);
-  
-  void fit(const std::string &variable,
-           const std::vector<MoveOutput*> &points,
-           arma::colvec normalised_log_weights);
+  void fit(const arma::mat &matrix_points,
+           const arma::colvec &normalised_weights);
   
 protected:
 

@@ -9,6 +9,7 @@ using namespace Rcpp;
 
 class VectorParameterEstimator;
 class MatrixParameterEstimator;
+class DensityEstimatorOutput;
 
 class GaussianDensityEstimator : public DensityEstimator
 {
@@ -17,7 +18,10 @@ public:
 
   GaussianDensityEstimator();
   
-  GaussianDensityEstimator(bool unbiased_in);
+  GaussianDensityEstimator(const std::vector<std::string> &variables_in);
+  
+  GaussianDensityEstimator(const std::vector<std::string> &variables_in,
+                           bool unbiased_in);
 
   virtual ~GaussianDensityEstimator();
 
@@ -25,17 +29,23 @@ public:
 
   void operator=(const GaussianDensityEstimator &another);
   DensityEstimator* duplicate() const;
+  
+  DensityEstimatorOutput* initialise();
+  
+  bool get_unbiased() const;
 
+  /*
   void fit(const std::vector<Parameters> &points,
            arma::colvec normalised_log_weights);
   
-  double evaluate(const Parameters &point) const;
+  double evaluate(const Data &point) const;
+  */
   
 protected:
   
   // Stored here.
-  VectorParameterEstimator* mean_estimator;
-  MatrixParameterEstimator* covariance_estimator;
+  //VectorParameterEstimator* mean_estimator;
+  //MatrixParameterEstimator* covariance_estimator;
   
   bool unbiased;
 

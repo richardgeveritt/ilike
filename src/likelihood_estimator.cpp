@@ -11,13 +11,15 @@ LikelihoodEstimator::LikelihoodEstimator()
 
 LikelihoodEstimator::LikelihoodEstimator(RandomNumberGenerator* rng_in,
                                          size_t* seed_in,
-                                         Data* data_in)
+                                         Data* data_in,
+                                         bool smcfixed_flag_in)
 {
   this->data = data_in;
   this->current_data = this->data;
   //this->model_and_algorithm = ModelAndAlgorithm() ;
   this->rng = rng_in;
   this->seed = seed_in;
+  this->smcfixed_flag = smcfixed_flag_in;
   this->subsampler = NULL;
   this->factors = NULL;
 }
@@ -52,6 +54,7 @@ void LikelihoodEstimator::make_copy(const LikelihoodEstimator &another)
   this->rng = another.rng;
   this->seed = another.seed;
   this->subsampler = another.subsampler;
+  this->smcfixed_flag = another.smcfixed_flag;
   if (another.factors!=NULL)
     this->factors = another.factors->duplicate();
   else
@@ -93,4 +96,9 @@ void LikelihoodEstimator::change_data(Data* new_data)
 Data* LikelihoodEstimator::get_data() const
 {
   return this->data;
+}
+
+bool LikelihoodEstimator::get_smcfixed_flag() const
+{
+  return this->smcfixed_flag;
 }

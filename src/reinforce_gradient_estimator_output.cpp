@@ -92,6 +92,7 @@ arma::mat ReinforceGradientEstimatorOutput::get_gradient_of_log(const std::strin
   }
 }
 
+/*
 arma::mat ReinforceGradientEstimatorOutput::get_gradient_of_log(const std::string &variable,
                                                                 const Index* index,
                                                                 Particle &particle,
@@ -112,6 +113,7 @@ arma::mat ReinforceGradientEstimatorOutput::get_gradient_of_log(const std::strin
     return info.gradient;
   }
 }
+*/
 
 arma::mat ReinforceGradientEstimatorOutput::subsample_get_gradient_of_log(const std::string &variable,
                                                                           const Index* index,
@@ -133,6 +135,7 @@ arma::mat ReinforceGradientEstimatorOutput::subsample_get_gradient_of_log(const 
   }
 }
 
+/*
 arma::mat ReinforceGradientEstimatorOutput::subsample_get_gradient_of_log(const std::string &variable,
                                                                           const Index* index,
                                                                           Particle &particle,
@@ -153,3 +156,4 @@ arma::mat ReinforceGradientEstimatorOutput::subsample_get_gradient_of_log(const 
     return info.gradient;
   }
 }
+*/

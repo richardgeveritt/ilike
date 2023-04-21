@@ -6,6 +6,8 @@
 #include <vector>
 #include "parameters.h"
 
+class DensityLikelihoodEstimatorOutput;
+
 class SequentialDensityLikelihoodEstimatorWorker : public DensityLikelihoodEstimatorWorker
 {
 public:
@@ -23,10 +25,13 @@ public:
 
 protected:
 
-  void specific_simulate();
-  void specific_simulate(const Parameters &conditioned_on_parameters);
+  void specific_simulate(DensityLikelihoodEstimatorOutput* output);
+  void specific_simulate(DensityLikelihoodEstimatorOutput* output,
+                         const Parameters &conditioned_on_parameters);
   
-  void subsample_specific_simulate(const Parameters &conditioned_on_parameters);
+  void subsample_specific_simulate(DensityLikelihoodEstimatorOutput* output);
+  void subsample_specific_simulate(DensityLikelihoodEstimatorOutput* output,
+                                   const Parameters &conditioned_on_parameters);
 
   void make_copy(const SequentialDensityLikelihoodEstimatorWorker &another);
 

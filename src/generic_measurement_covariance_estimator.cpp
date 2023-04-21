@@ -6,6 +6,21 @@ GenericMeasurementCovarianceEstimator::GenericMeasurementCovarianceEstimator()
 {
 }
 
+GenericMeasurementCovarianceEstimator::GenericMeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
+                                                                             size_t* seed_in,
+                                                                             Data* data_in,
+                                                                             std::shared_ptr<Transform> transform_in,
+                                                                             std::shared_ptr<Transform> summary_statistics_in,
+                                                                             SimulateModelPtr simulator_in)
+: MeasurementCovarianceEstimator(rng_in,
+                                 seed_in,
+                                 data_in,
+                                 transform_in,
+                                 summary_statistics_in)
+{
+  this->simulator = simulator_in;
+}
+
 GenericMeasurementCovarianceEstimator::~GenericMeasurementCovarianceEstimator()
 {
 }
@@ -43,7 +58,6 @@ MeasurementCovarianceEstimator* GenericMeasurementCovarianceEstimator::duplicate
   return( new GenericMeasurementCovarianceEstimator(*this));
 }
 
-
 MeasurementCovarianceEstimatorOutput* GenericMeasurementCovarianceEstimator::initialise_measurement_covariance_estimator()
 {
   MeasurementCovarianceEstimatorOutput* output = new GenericMeasurementCovarianceEstimatorOutput(this);
@@ -54,6 +68,54 @@ MeasurementCovarianceEstimatorOutput* GenericMeasurementCovarianceEstimator::ini
 {
   MeasurementCovarianceEstimatorOutput* output = new GenericMeasurementCovarianceEstimatorOutput(this);
   return output;
+}
+
+void GenericMeasurementCovarianceEstimator::setup()
+{
+  this->setup_measurement_variables();
+}
+
+void GenericMeasurementCovarianceEstimator::setup(const Parameters &parameters)
+{
+  this->setup_measurement_variables(parameters);
+}
+
+void GenericMeasurementCovarianceEstimator::setup_measurement_variables()
+{
+  Data dummy_data = this->simulator(*this->rng,Parameters());
+  this->measurement_variables = dummy_data.get_vector_variables();
+  std::vector<arma::colvec> means;
+  means.reserve(this->measurement_variables.size());
+  std::vector<arma::mat> covs;
+  covs.reserve(this->measurement_variables.size());
+  for (size_t i=0; i<this->measurement_variables.size(); ++i)
+  {
+    arma::colvec current_vector = arma::vectorise(dummy_data[this->measurement_variables[i]]);
+    means.push_back(arma::zeros<arma::colvec>(current_vector.n_rows));
+    covs.push_back(arma::zeros(current_vector.n_rows,current_vector.n_rows));
+  }
+  this->gaussian_simulator = GaussianIndependentProposalKernel(this->measurement_variables,
+                                                               means,
+                                                               covs);
+}
+
+void GenericMeasurementCovarianceEstimator::setup_measurement_variables(const Parameters &conditioned_on_parameters)
+{
+  Data dummy_data = this->simulator(*this->rng,conditioned_on_parameters);
+  this->measurement_variables = dummy_data.get_vector_variables();
+  std::vector<arma::colvec> means;
+  means.reserve(this->measurement_variables.size());
+  std::vector<arma::mat> covs;
+  covs.reserve(this->measurement_variables.size());
+  for (size_t i=0; i<this->measurement_variables.size(); ++i)
+  {
+    arma::colvec current_vector = arma::vectorise(dummy_data[this->measurement_variables[i]]);
+    means.push_back(arma::zeros<arma::colvec>(current_vector.n_rows));
+    covs.push_back(arma::eye(current_vector.n_rows,current_vector.n_rows));
+  }
+  this->gaussian_simulator = GaussianIndependentProposalKernel(this->measurement_variables,
+                                                               means,
+                                                               covs);
 }
 
 /*
@@ -68,6 +130,28 @@ arma::mat GenericMeasurementCovarianceEstimator::get_measurement_covariance() co
 arma::mat GenericMeasurementCovarianceEstimator::get_Cygivenx() const
 {
   return this->Cygivenx;
+}
+
+arma::mat GenericMeasurementCovarianceEstimator::get_adjustment(const arma::mat &Zf,
+                                                                const arma::mat &Ginv,
+                                                                const arma::mat &Ftranspose,
+                                                                const arma::mat &V,
+                                                                double inverse_incremental_temperature)
+{
+  // follows https://arxiv.org/abs/2006.02941
+  arma::mat for_eig = V*((inverse_incremental_temperature-1.0)*this->get_Cygivenx())*V.t();
+  
+  arma::mat C;
+  arma::vec diagGamma;
+  arma::mat Ctrans;
+  arma::svd(C,diagGamma,Ctrans,for_eig);
+  
+  arma::mat Gamma(diagGamma.n_elem,diagGamma.n_elem);
+  Gamma.diag() = diagGamma;
+  arma::mat I;
+  I.eye(diagGamma.n_elem,diagGamma.n_elem);
+  
+  return Zf*C*arma::sqrtmat_sympd(arma::inv_sympd(I+Gamma))*Ginv*Ftranspose;
 }
 
 /*
@@ -93,13 +177,56 @@ void GenericMeasurementCovarianceEstimator::find_Cygivenx(const arma::mat &inv_C
   this->Cygivenx = Cyy - Cxy.t()*inv_Cxx*Cxy;
 }
 
-arma::colvec GenericMeasurementCovarianceEstimator::simulate(const Parameters &current_state)
+arma::mat GenericMeasurementCovarianceEstimator::get_unconditional_measurement_covariance(const arma::mat &Cyy,
+                                                                                                double inverse_incremental_temperature)
+{
+  return Cyy + (inverse_incremental_temperature-1.0)*this->Cygivenx;
+}
+
+Parameters GenericMeasurementCovarianceEstimator::simulate(const Parameters &current_state)
 {
   return this->simulator(*this->rng,
-                         current_state).get_vector(this->measurement_variables);
+                         current_state);
 }
 
 arma::colvec GenericMeasurementCovarianceEstimator::gaussian_simulate()
 {
-  return this->gaussian_simulator.independent_simulate(*this->rng).get_vector(this->measurement_variables);
+  return this->gaussian_simulator.independent_simulate(*this->rng).get_colvec(this->measurement_variables);
+}
+
+void GenericMeasurementCovarianceEstimator::change_data()
+{
+  this->current_data = this->data;
+  if (this->measurement_variables.size()>0)
+  {
+    this->measurement = (*this->current_data)[this->measurement_variables[0]].as_col();
+    
+    for (size_t i=1; i<this->measurement_variables.size(); ++i)
+    {
+      this->measurement = join_cols(this->measurement,(*this->current_data)[this->measurement_variables[i]].as_col());
+    }
+  }
+}
+
+void GenericMeasurementCovarianceEstimator::change_data(Data* new_data)
+{
+  this->current_data = new_data;
+  if (this->measurement_variables.size()>0)
+  {
+    this->measurement = (*this->current_data)[this->measurement_variables[0]].as_col();
+    
+    if (this->measurement_variables.size()>0)
+    {
+      for (size_t i=1; i<this->measurement_variables.size(); ++i)
+      {
+        this->measurement = join_cols(this->measurement,(*this->current_data)[this->measurement_variables[i]].as_col());
+      }
+    }
+  }
+}
+
+void GenericMeasurementCovarianceEstimator::precompute_gaussian_covariance(double inverse_incremental_temperature)
+{
+  this->inv_sigma_precomp = arma::inv_sympd(inverse_incremental_temperature*this->Cygivenx);
+  this->log_det_precomp = arma::log_det_sympd(inverse_incremental_temperature*this->Cygivenx);
 }

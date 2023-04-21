@@ -1,4 +1,5 @@
 #include "enk_gaussian_measurement_covariance_estimator_output.h"
+#include "enk_gaussian_measurement_covariance_estimator.h"
 
 EnKGaussianMeasurementCovarianceEstimatorOutput::EnKGaussianMeasurementCovarianceEstimatorOutput()
   :GaussianMeasurementCovarianceEstimatorOutput()
@@ -56,12 +57,22 @@ arma::rowvec EnKGaussianMeasurementCovarianceEstimatorOutput::get_measurement_ra
 }
 */
 
-void EnKGaussianMeasurementCovarianceEstimatorOutput::simulate(const Parameters &parameters)
+void EnKGaussianMeasurementCovarianceEstimatorOutput::specific_simulate(const Parameters &parameters)
 {
   
 }
 
-arma::mat EnKGaussianMeasurementCovarianceEstimatorOutput::get_measurement_covariance()
+void EnKGaussianMeasurementCovarianceEstimatorOutput::subsample_specific_simulate(const Parameters &parameters)
 {
-  return arma::mat();
+  
+}
+
+MeasurementCovarianceEstimator* EnKGaussianMeasurementCovarianceEstimatorOutput::get_estimator()
+{
+  return this->enk_estimator;
+}
+
+GaussianMeasurementCovarianceEstimator* EnKGaussianMeasurementCovarianceEstimatorOutput::get_gaussian_estimator()
+{
+  return this->enk_estimator;
 }

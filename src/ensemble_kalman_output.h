@@ -10,11 +10,13 @@ using namespace Rcpp;
 
 #include "likelihood_estimator_output.h"
 #include "ensemble.h"
+#include "ilike_header.h"
 
 class EnsembleKalman;
 class EnsembleKalmanFilter;
 class EnsembleSequencer;
-class IterativeEnsembleKalmanInversion;
+class EnsembleKalmanInversion;
+class EnsembleKalmanMFDS;
 
 class EnsembleKalmanOutput : public LikelihoodEstimatorOutput
 {
@@ -26,14 +28,17 @@ public:
   
   EnsembleKalmanOutput();
   EnsembleKalmanOutput(EnsembleKalman* estimator_in,
-                       size_t lag_in);
+                       size_t lag_in,
+                       std::shared_ptr<Transform> transform_in,
+                       const std::string &results_name_in);
   virtual ~EnsembleKalmanOutput();
 
   EnsembleKalmanOutput(const EnsembleKalmanOutput &another);
   void operator=(const EnsembleKalmanOutput &another);
   LikelihoodEstimatorOutput* duplicate() const;
 
-  Ensemble* add_ensemble();
+  //Ensemble* add_ensemble();
+  Ensemble* add_ensemble(EnsembleFactors* ensemble_factors);
   //void add_proposed_ensemble(const Ensemble &latest_proposals);
   //void initialise_unnormalised_log_incremental_weights(const arma::colvec &latest_unnormalised_log_incremental_weights);
   void initialise_next_step();
@@ -41,17 +46,34 @@ public:
   Ensemble back() const;
   Ensemble& back();
   
+  double calculate_latest_log_normalising_constant_ratio();
+  
   void simulate();
   
   void simulate(const Parameters &parameters);
   
   //double evaluate(const Parameters &parameters);
+  
+  /*
+  void evaluate_smcfixed_part();
+  void evaluate_smcadaptive_part_given_smcfixed();
+  
+  void subsample_evaluate_smcfixed_part();
+  void subsample_evaluate_smcadaptive_part_given_smcfixed();
+  */
+  
+  
   void evaluate_smcfixed_part(const Parameters &conditioned_on_parameters);
   void evaluate_smcadaptive_part_given_smcfixed(const Parameters &conditioned_on_parameters);
   
+  
+  void subsample_simulate();
   void subsample_simulate(const Parameters &parameters);
+  
+  
   void subsample_evaluate_smcfixed_part(const Parameters &parameters);
   void subsample_evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters);
+  
   
   LikelihoodEstimator* get_likelihood_estimator() const;
   
@@ -61,6 +83,8 @@ public:
                                           const Parameters &x);
   
   size_t number_of_ensemble_kalman_iterations() const;
+  
+  void increment_enk_iteration();
   
   /*
   void set_current_predicted_statistics(const arma::colvec &latest_mean,
@@ -83,18 +107,34 @@ public:
 
   void print(std::ostream &os) const;
   */
+  
+  void close_ofstreams();
 
 protected:
   
   friend EnsembleKalmanFilter;
-  friend IterativeEnsembleKalmanInversion;
+  friend EnsembleKalmanInversion;
   friend EnsembleSequencer;
+  friend EnsembleKalmanMFDS;
 
   // Stored in Factors.
   EnsembleKalman* estimator;
   
+  size_t enk_iteration;
+  
+  int iteration_written_to_file;
+  
+  std::string results_name;
+  
   double log_likelihood_smcfixed_part;
   double subsample_log_likelihood_smcfixed_part;
+  
+  std::shared_ptr<Transform> transform;
+  
+  void write_to_file(const std::string &directory_name,
+                     const std::string &index = "");
+  
+  void close_ofstreams(size_t deque_index);
 
   void make_copy(const EnsembleKalmanOutput &another);
   

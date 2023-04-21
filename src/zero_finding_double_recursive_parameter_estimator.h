@@ -6,7 +6,7 @@ using namespace Rcpp;
 
 //#include <vector>
 #include "double_recursive_parameter_estimator.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 
 class ZeroFindingDoubleRecursiveParameterEstimator : public DoubleRecursiveParameterEstimator
 {

@@ -44,7 +44,7 @@ Mileometer::Mileometer(const Mileometer &another)
 }
 
 // Returns a pointer to a base class of type Mileometer.
-Mileometer* Mileometer::duplicate(void) const
+Mileometer* Mileometer::duplicate() const
 {
 	return new Mileometer(*this);
 }
@@ -58,15 +58,48 @@ void Mileometer::make_copy(const Mileometer &another)
 }
 
 // The = operator.
-void Mileometer::operator=(const Mileometer &another)
+Mileometer& Mileometer::operator=(const Mileometer &another)
 {
 	if(this==&another)//a==a
-		return;
+		return *this;
   
 	this->current_index.clear();
 	this->limits.clear();
 	
   this->make_copy(another);
+  
+  return *this;
+}
+
+// The move constructor.
+Mileometer::Mileometer(Mileometer &&another)
+{
+  this->make_copy(std::move(another));
+}
+
+// Copy all the members of the class.
+void Mileometer::make_copy(Mileometer &&another)
+{
+  // Copy all members, duplicating the memory where appropriate.
+  this->current_index = std::move(another.current_index);
+  this->limits = std::move(another.limits);
+  
+  another.current_index = std::vector<size_t>();
+  another.limits = std::vector<size_t>();
+}
+
+// The = operator.
+Mileometer& Mileometer::operator=(Mileometer &&another)
+{
+  if(this==&another)//a==a
+    return *this;
+  
+  this->current_index.clear();
+  this->limits.clear();
+  
+  this->make_copy(std::move(another));
+  
+  return *this;
 }
 
 // Get the current index.
@@ -81,7 +114,7 @@ bool Mileometer::at_start() const
        i!=this->current_index.end();
        ++i)
   {
-    if (*i==0)
+    if (*i!=0)
     {
       return false;
     }
@@ -102,8 +135,36 @@ std::vector<double> Mileometer::get_current_values(const std::vector< std::vecto
   return current_value;
 }
 
+size_t Mileometer::operator[](const size_t &i) const
+{
+  return this->current_index[i];
+}
+
+size_t Mileometer::size() const
+{
+  return this->current_index.size();
+}
+
+size_t Mileometer::back() const
+{
+  return this->current_index.back();
+}
+
+size_t Mileometer::get_previous_index() const
+{
+  return this->current_index.back();
+}
+
+size_t Mileometer::get_next_index() const
+{
+  if (this->current_index.back()>=this->limits.back()-1) // at end
+    return 0;
+  else
+    return this->current_index.back()+1;
+}
+
 // Increment current and return it.
-void Mileometer::increment(void)
+void Mileometer::increment()
 {
 	// Call increment on the end counter.
 	this->increment(this->current_index.size()-1);
@@ -134,4 +195,15 @@ void Mileometer::increment(size_t dimension)
 		if (dimension!=0)
 			this->increment(dimension-1);
 	}
+}
+
+void Mileometer::reset_final_dimension(size_t new_number_of_states)
+{
+  this->limits.back() = new_number_of_states;
+  this->current_index.back() = 0;
+}
+
+void Mileometer::reset()
+{
+  
 }

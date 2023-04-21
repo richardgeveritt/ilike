@@ -54,13 +54,14 @@ void CustomProposalKernel::make_copy(const CustomProposalKernel &another)
 }
 
 double CustomProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
-                                             Particle &old_particle) const
+                                                      Particle &old_particle) const
 {
   return this->proposal_evaluate(*proposed_particle.move_parameters,
                                  *old_particle.move_parameters,
                                  this->proposal_parameters);
 }
 
+/*
 double CustomProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
                                                       Particle &old_particle,
                                                       const Parameters &conditioned_on_parameters) const
@@ -69,6 +70,7 @@ double CustomProposalKernel::specific_evaluate_kernel(Particle &proposed_particl
                                  old_particle.move_parameters->merge(conditioned_on_parameters),
                                  this->proposal_parameters);
 }
+*/
 
 double CustomProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                                                 Particle &old_particle) const
@@ -77,6 +79,7 @@ double CustomProposalKernel::specific_subsample_evaluate_kernel(Particle &propos
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
 
+/*
 double CustomProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                                                 Particle &old_particle,
                                                                 const Parameters &conditioned_on_parameters) const
@@ -84,7 +87,7 @@ double CustomProposalKernel::specific_subsample_evaluate_kernel(Particle &propos
   // no difference since size of data set does not impact on proposal
   return this->specific_evaluate_kernel(proposed_particle, old_particle, conditioned_on_parameters);
 }
-
+*/
 
 Parameters CustomProposalKernel::simulate(RandomNumberGenerator &rng,
                                           Particle &particle) const
@@ -94,6 +97,7 @@ Parameters CustomProposalKernel::simulate(RandomNumberGenerator &rng,
                                  this->proposal_parameters);
 }
 
+/*
 Parameters CustomProposalKernel::simulate(RandomNumberGenerator &rng,
                                           Particle &particle,
                                           const Parameters &conditioned_on_parameters) const
@@ -102,6 +106,7 @@ Parameters CustomProposalKernel::simulate(RandomNumberGenerator &rng,
                                  particle.move_parameters->merge(conditioned_on_parameters),
                                  this->proposal_parameters);
 }
+*/
 
 Parameters CustomProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                     Particle &particle) const
@@ -110,6 +115,7 @@ Parameters CustomProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
   return this->simulate(rng, particle);
 }
 
+/*
 Parameters CustomProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                     Particle &particle,
                                                     const Parameters &conditioned_on_parameters) const
@@ -117,6 +123,7 @@ Parameters CustomProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
   // no difference since size of data set does not impact on proposal
   return this->simulate(rng, particle, conditioned_on_parameters);
 }
+*/
 
 Parameters CustomProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                     const std::string &variable,
@@ -126,6 +133,7 @@ Parameters CustomProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
   Rcpp::stop("CustomProposalKernel::subsample_simulate - not implemented.");
 }
 
+/*
 Parameters CustomProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                     const std::string &variable,
                                                     Particle &particle,
@@ -134,14 +142,16 @@ Parameters CustomProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
   // no difference since size of data set does not impact on proposal
   Rcpp::stop("CustomProposalKernel::subsample_simulate - not implemented.");
 }
+*/
 
 arma::mat CustomProposalKernel::specific_gradient_of_log(const std::string &variable,
-                                                           Particle &proposed_particle,
-                                                           Particle &old_particle)
+                                                         Particle &proposed_particle,
+                                                         Particle &old_particle)
 {
   Rcpp::stop("CustomProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
+/*
 arma::mat CustomProposalKernel::specific_gradient_of_log(const std::string &variable,
                                                            Particle &proposed_particle,
                                                            Particle &old_particle,
@@ -149,11 +159,11 @@ arma::mat CustomProposalKernel::specific_gradient_of_log(const std::string &vari
 {
   Rcpp::stop("CustomProposalKernel::specific_gradient_of_log - not written yet.");
 }
+*/
 
 arma::mat CustomProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
-                                                                     Particle &proposed_particle,
-                                                                     Particle &old_particle,
-                                                                     const Parameters &conditioned_on_parameters)
+                                                                   Particle &proposed_particle,
+                                                                   Particle &old_particle)
 {
   Rcpp::stop("CustomProposalKernel::specific_gradient_of_log - not written yet.");
 }

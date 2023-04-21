@@ -1,5 +1,6 @@
 #include "direct_gaussian_measurement_covariance_estimator_output.h"
 #include "direct_gaussian_measurement_covariance_estimator.h"
+#include "transform.h"
 
 DirectGaussianMeasurementCovarianceEstimatorOutput::DirectGaussianMeasurementCovarianceEstimatorOutput()
   :GaussianMeasurementCovarianceEstimatorOutput()
@@ -7,7 +8,7 @@ DirectGaussianMeasurementCovarianceEstimatorOutput::DirectGaussianMeasurementCov
 }
 
 DirectGaussianMeasurementCovarianceEstimatorOutput::DirectGaussianMeasurementCovarianceEstimatorOutput(DirectGaussianMeasurementCovarianceEstimator* direct_estimator_in)
-:GaussianMeasurementCovarianceEstimatorOutput(direct_estimator_in)
+:GaussianMeasurementCovarianceEstimatorOutput()
 {
   this->direct_estimator = direct_estimator_in;
 }
@@ -44,17 +45,57 @@ GaussianMeasurementCovarianceEstimatorOutput* DirectGaussianMeasurementCovarianc
 void DirectGaussianMeasurementCovarianceEstimatorOutput::make_copy(const DirectGaussianMeasurementCovarianceEstimatorOutput &another)
 {
   //this->conditioned_on_parameters = another.conditioned_on_parameters;
-  this->kernel = another.kernel;
+  //this->kernel = another.kernel;
   this->direct_estimator = another.direct_estimator;
 }
 
-void DirectGaussianMeasurementCovarianceEstimatorOutput::simulate(const Parameters &parameters)
+void DirectGaussianMeasurementCovarianceEstimatorOutput::specific_simulate(const Parameters &parameters)
 {
   // do transform on params (could actually leave until later since deterministic, but choose to do now and store result
-  this->measurement_state = this->direct_estimator->transform_function(parameters).get_vector(this->direct_estimator->measurement_variables);
+  std::shared_ptr<Transform> summary_statistics = this->direct_estimator->summary_statistics;
+  if (summary_statistics==NULL)
+  {
+    if (this->direct_estimator->transform_function!=NULL)
+    {
+      this->measurement_state = this->direct_estimator->transform_function->transform(parameters).get_colvec(this->direct_estimator->measurement_variables);
+    }
+    else
+    {
+      this->measurement_state = parameters.get_colvec(this->direct_estimator->measurement_variables);
+    }
+  }
+  else
+  {
+    if (this->direct_estimator->transform_function!=NULL)
+    {
+      this->measurement_state = summary_statistics->transform(this->direct_estimator->transform_function->transform(parameters)).get_colvec(this->direct_estimator->measurement_variables);
+    }
+    else
+    {
+      this->measurement_state = summary_statistics->transform(parameters).get_colvec(this->direct_estimator->measurement_variables);
+    }
+    
+  }
   
-  this->set_parameters(parameters);
-  this->random_shift = this->kernel.independent_simulate(*this->direct_estimator->rng).get_vector(this->direct_estimator->measurement_variables);
+  this->direct_estimator->set_parameters(parameters);
+  this->random_shift = this->direct_estimator->kernel.independent_simulate(*this->direct_estimator->rng).get_colvec(this->direct_estimator->measurement_variables);
+}
+
+void DirectGaussianMeasurementCovarianceEstimatorOutput::subsample_specific_simulate(const Parameters &parameters)
+{
+  // do transform on params (could actually leave until later since deterministic, but choose to do now and store result
+  std::shared_ptr<Transform> summary_statistics = this->direct_estimator->summary_statistics;
+  if (summary_statistics==NULL)
+  {
+    this->measurement_state = this->direct_estimator->transform_function->transform(parameters).get_colvec(this->direct_estimator->measurement_variables);
+  }
+  else
+  {
+    this->measurement_state = summary_statistics->transform(this->direct_estimator->transform_function->transform(parameters)).get_colvec(this->direct_estimator->measurement_variables);
+  }
+  
+  this->direct_estimator->set_parameters(parameters);
+  this->random_shift = this->direct_estimator->kernel.independent_simulate(*this->direct_estimator->rng).get_colvec(this->direct_estimator->measurement_variables);
 }
 
 /*
@@ -64,22 +105,12 @@ arma::rowvec DirectGaussianMeasurementCovarianceEstimatorOutput::get_measurement
 }
 */
 
-arma::mat DirectGaussianMeasurementCovarianceEstimatorOutput::get_measurement_covariance()
+MeasurementCovarianceEstimator* DirectGaussianMeasurementCovarianceEstimatorOutput::get_estimator()
 {
-  return this->kernel.get_covariance(this->direct_estimator->measurement_variables);
+  return this->direct_estimator;
 }
 
-void DirectGaussianMeasurementCovarianceEstimatorOutput::set_parameters(const Parameters &conditioned_on_parameters_in)
+GaussianMeasurementCovarianceEstimator* DirectGaussianMeasurementCovarianceEstimatorOutput::get_gaussian_estimator()
 {
-  if (this->set_using_parameters)
-  {
-    //this->conditioned_on_parameters = conditioned_on_parameters_in;
-    for (size_t i=0;
-         i<this->direct_estimator->measurement_variables.size();
-         ++i)
-    {
-      this->kernel.set_covariance(this->direct_estimator->measurement_variables[i],
-                                  this->direct_estimator->measurement_noise_functions[i](conditioned_on_parameters_in));
-    }
-  }
+  return this->direct_estimator;
 }

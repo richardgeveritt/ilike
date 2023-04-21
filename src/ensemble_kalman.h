@@ -6,11 +6,13 @@ using namespace Rcpp;
 
 #include <vector>
 #include <string>
+#include <memory>
 
 #include "likelihood_estimator.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 #include "parameters.h"
-//#include "ensemble_member.h"
+#include "ensemble_sequencer.h"
+#include "packing_instructions.h"
 
 class EnsembleKalmanOutput;
 class EnsembleKalmanWorker;
@@ -21,17 +23,9 @@ class EnsembleFactors;
 class EnsembleShifter;
 class MoveOutput;
 class EnsembleSequencer;
+class Tranform;
 
 #include "ensemble.h"
-
-class PackingInstructions
-{
-public:
-  std::vector<std::string> states_names;
-  //std::vector<std::string> measurements_names;
-  std::vector<std::pair<size_t,size_t>> states_start_and_end;
-  //std::vector<std::pair<size_t,size_t>> measurements_start_and_end;
-};
 
 class EnsembleKalman : public LikelihoodEstimator
 {
@@ -43,8 +37,13 @@ public:
   EnsembleKalman(RandomNumberGenerator* rng_in,
                  size_t* seed_in,
                  Data* data_in,
+                 size_t number_of_ensemble_members_in,
+                 size_t lag_in,
+                 EnsembleShifter* shifter_in,
+                 std::shared_ptr<Transform> transform_in,
                  bool smcfixed_flag_in,
-                 bool sequencer_limit_is_fixed_in);
+                 bool sequencer_limit_is_fixed_in,
+                 const std::string &results_name_in);
 
   virtual ~EnsembleKalman();
 
@@ -57,24 +56,36 @@ public:
   //                                const List &auxiliary_variables) const;
   
   LikelihoodEstimatorOutput* initialise();
-  virtual EnsembleKalmanOutput* ensemble_kalman_initialise()=0;
   
   EnsembleKalmanOutput* run();
   EnsembleKalmanOutput* run(const Parameters &conditioned_on_parameters);
 
   LikelihoodEstimatorOutput* initialise(const Parameters &parameters);
-  virtual EnsembleKalmanOutput* ensemble_kalman_initialise(const Parameters &parameters)=0;
   
-  Particle simulate_ensemble_member(RandomNumberGenerator &rng) const;
-  Particle simulate_ensemble_member(RandomNumberGenerator &rng,
-                                    const Parameters &conditioned_on_parameters) const;
+  void setup();
+  void setup(const Parameters &parameters);
+  void setup_variables();
+  void setup_variables(const Parameters &parameters);
+  
+  void set_packing_instructions();
+  
+  void simulate_ensemble_member(RandomNumberGenerator &rng,
+                                Particle* new_particle) const;
+  void simulate_ensemble_member(RandomNumberGenerator &rng,
+                                Particle* new_particle,
+                                const Parameters &conditioned_on_parameters) const;
   
   virtual MoveOutput* move(RandomNumberGenerator &rng,
                            Particle &particle)=0;
   
+  virtual MoveOutput* subsample_move(RandomNumberGenerator &rng,
+                                     Particle &particle)=0;
+  
+  /*
   virtual MoveOutput* move(RandomNumberGenerator &rng,
                            Particle &particle,
                            const Parameters &conditioned_on_parameters)=0;
+  */
   
   //virtual void weight_for_adapting_sequence(Ensemble &current_particles,
   //                                          double incremental_temperature)=0;
@@ -88,19 +99,32 @@ protected:
   friend EnsembleKalmanWorker;
   friend SequentialEnsembleKalmanWorker;
   friend EnsembleSequencer;
+  
+  EnsembleSequencer sequencer;
+  
   // Stored here.
   EnsembleKalmanWorker* the_worker;
   
+  EnsembleKalmanOutput* ensemble_kalman_initialise();
+  virtual EnsembleKalmanOutput* specific_ensemble_kalman_initialise()=0;
+  
+  /*
   virtual void ensemble_kalman_evaluate(EnsembleKalmanOutput* simulation)=0;
+  virtual void ensemble_kalman_subsample_evaluate(EnsembleKalmanOutput* simulation)=0;
+  */
+  
   virtual void ensemble_kalman_evaluate(EnsembleKalmanOutput* simulation,
                                         const Parameters &conditioned_on_parameters)=0;
-  
   virtual void ensemble_kalman_subsample_evaluate(EnsembleKalmanOutput* simulation,
                                                   const Parameters &conditioned_on_parameters)=0;
   
+  /*
   virtual void ensemble_kalman_evaluate_smcfixed_part(EnsembleKalmanOutput* simulation)=0;
   virtual void ensemble_kalman_evaluate_smcadaptive_part_given_smcfixed(EnsembleKalmanOutput* simulation)=0;
+  */
   
+  EnsembleKalmanOutput* ensemble_kalman_initialise(const Parameters &parameters);
+  virtual EnsembleKalmanOutput* specific_ensemble_kalman_initialise(const Parameters &parameters)=0;
   virtual void ensemble_kalman_simulate(EnsembleKalmanOutput* simulation)=0;
   virtual void ensemble_kalman_simulate(EnsembleKalmanOutput* simulation,
                                 const Parameters &conditioned_on_parameters)=0;
@@ -120,6 +144,8 @@ protected:
   virtual void ensemble_kalman_subsample_evaluate_smcadaptive_part_given_smcfixed(EnsembleKalmanOutput* simulation,
                                                                                   const Parameters &conditioned_on_parameters)=0;
   
+  //void setup_variables_using_candidate_parameters(const Parameters &candidate_parameters);
+  
   void simulate_proposal(EnsembleKalmanOutput* simulation,
                          const Index* index);
   void simulate_proposal(EnsembleKalmanOutput* simulation,
@@ -131,14 +157,15 @@ protected:
   
   void find_measurement_covariances(EnsembleKalmanOutput* simulation);
   
-  // A flag to determine if the terms are deemed to be "smcfixed" (will not be reevaluated when finding the next target in adaptive SMC).
-  bool smcfixed_flag;
+  // not stored here
+  //Parameters* sequencer_parameters;
+  
   bool sequencer_limit_is_fixed;
   
   size_t lag;
   size_t number_of_ensemble_members;
   
-  bool likelihood_is_evaluated;
+  //bool likelihood_is_evaluated;
   
   // stored here
   //std::vector<MeasurementCovarianceEstimator*> measurement_covariance_estimators;
@@ -160,9 +187,32 @@ protected:
   //std::vector<EvaluateLogDistributionPtr> numerator_distributions;
   //std::vector<EvaluateLogLikelihoodPtr> denominator_llhds;
   //std::vector<EvaluateLogDistributionPtr> denominator_distributions;
+  
+  std::vector<std::string> vector_variables;
+  std::vector<std::string> any_variables;
+  
+  std::vector<size_t> vector_variable_sizes;
+  
+  std::string results_name;
+  
+  bool proposed_particles_inputted;
+  std::vector<Parameters> initial_ensemble; // not needed, unless initial values provided
+  
+  std::shared_ptr<Transform> transform;
+  //TransformPtr inverse_transform;
+  
+  bool initialised;
 
   // Stored here.
   //EnsembleKalmanOutput* output;
+  
+  std::ofstream log_likelihood_file_stream;
+  std::ofstream vector_variables_file_stream;
+  std::ofstream vector_variable_sizes_file_stream;
+  std::ofstream incremental_log_likelihood_file_stream;
+  std::ofstream schedule_parameters_file_stream;
+  std::ofstream vector_points_file_stream;
+  std::ofstream any_points_file_stream;
 
   void make_copy(const EnsembleKalman &another);
 

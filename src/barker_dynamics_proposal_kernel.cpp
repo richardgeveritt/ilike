@@ -135,6 +135,7 @@ double BarkerDynamicsProposalKernel::specific_evaluate_kernel(Particle &proposed
   return output;
 }
 
+/*
 double BarkerDynamicsProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
                                                               Particle &old_particle,
                                                               const Parameters &conditioned_on_parameters) const
@@ -161,6 +162,7 @@ double BarkerDynamicsProposalKernel::specific_evaluate_kernel(Particle &proposed
   }
   return output;
 }
+*/
 
 double BarkerDynamicsProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                                                         Particle &old_particle) const
@@ -188,6 +190,7 @@ double BarkerDynamicsProposalKernel::specific_subsample_evaluate_kernel(Particle
   return output;
 }
 
+/*
 double BarkerDynamicsProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                                                         Particle &old_particle,
                                                                         const Parameters &conditioned_on_parameters) const
@@ -214,6 +217,7 @@ double BarkerDynamicsProposalKernel::specific_subsample_evaluate_kernel(Particle
   }
   return output;
 }
+*/
 
 Parameters BarkerDynamicsProposalKernel::simulate(RandomNumberGenerator &rng,
                                                   Particle &particle) const
@@ -246,6 +250,7 @@ Parameters BarkerDynamicsProposalKernel::simulate(RandomNumberGenerator &rng,
   return proposed;
 }
 
+/*
 Parameters BarkerDynamicsProposalKernel::simulate(RandomNumberGenerator &rng,
                                                   Particle &particle,
                                                   const Parameters &conditioned_on_parameters) const
@@ -279,6 +284,7 @@ Parameters BarkerDynamicsProposalKernel::simulate(RandomNumberGenerator &rng,
   }
   return proposed;
 }
+*/
 
 Parameters BarkerDynamicsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                             Particle &particle) const
@@ -311,40 +317,15 @@ Parameters BarkerDynamicsProposalKernel::subsample_simulate(RandomNumberGenerato
   return proposed;
   */
 }
-                                   
+     
+/*
 Parameters BarkerDynamicsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                             Particle &particle,
                                                             const Parameters &conditioned_on_parameters) const
 {
   Rcpp::stop("BarkerDynamicsProposalKernel::subsample_simulate - not written yet.");
-  /*
-  Parameters proposed = this->proposal_simulate->subsample_simulate(rng,
-                                                particle,
-                                                conditioned_on_parameters);
-  
-  for (auto i=this->proposal_info.begin();
-       i!=this->proposal_info.end();
-       ++i)
-  {
-    arma::colvec current_chol_gradient_prod = i->second.chol * arma::vectorise(this->gradient_estimator->subsample_get_gradient_of_log(i->first,particle,conditioned_on_parameters));
-    
-    arma::mat initial_proposed = proposed[i->first];
-    arma::rowvec current_proposed = arma::vectorise(initial_proposed);
-    
-    arma::rowvec log_unifs = log(runif(rng,current_proposed.size()));
-    for (size_t j=0; j<current_proposed.size(); ++j)
-    {
-      double log_prob = -log1p(exp(-current_proposed[j]*current_chol_gradient_prod[j]));
-      if (log_unifs[j]>log_prob)
-      {
-        current_proposed[j] = -current_proposed[j];
-      }
-    }
-    proposed[i->first] = particle.parameters[i->first] + arma::reshape(current_proposed * i->second.chol,initial_proposed.n_rows,initial_proposed.n_cols);
-  }
-  return proposed;
-  */
 }
+*/
 
 Parameters BarkerDynamicsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                             const std::string &variable,
@@ -377,46 +358,31 @@ Parameters BarkerDynamicsProposalKernel::subsample_simulate(RandomNumberGenerato
   */
 }
 
+/*
 Parameters BarkerDynamicsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                             const std::string &variable,
                                                        Particle &particle,
                                                        const Parameters &conditioned_on_parameters) const
 {
   Rcpp::stop("BarkerDynamicsProposalKernel::subsample_simulate - not written yet.");
-  /*
-  Parameters proposed = this->proposal_simulate->subsample_simulate(rng,
-                                                          variable,
-                                                          particle,
-                                                          conditioned_on_parameters);
-  
-  auto found = this->proposal_info.find(variable);
-  
-  arma::colvec current_chol_gradient_prod = found->second.chol * arma::vectorise(this->subsample_gradient_estimator->get_gradient_of_log(found->first,particle,conditioned_on_parameters));
-  
-  arma::mat initial_proposed = proposed[found->first];
-  arma::rowvec current_proposed = arma::vectorise(initial_proposed);
-  
-  arma::rowvec log_unifs = log(runif(rng,current_proposed.size()));
-  for (size_t j=0; j<current_proposed.size(); ++j)
-  {
-    double log_prob = -log1p(exp(-current_proposed[j]*current_chol_gradient_prod[j]));
-    if (log_unifs[j]>log_prob)
-    {
-      current_proposed[j] = -current_proposed[j];
-    }
-  }
-  proposed[found->first] = particle.parameters[found->first] + arma::reshape(current_proposed * found->second.chol,initial_proposed.n_rows,initial_proposed.n_cols);
-  return proposed;
-  */
 }
+*/
 
 arma::mat BarkerDynamicsProposalKernel::specific_gradient_of_log(const std::string &variable,
-                                   Particle &proposed_particle,
-                                   Particle &old_particle)
+                                                                 Particle &proposed_particle,
+                                                                 Particle &old_particle)
 {
   Rcpp::stop("BarkerDynamicsProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
+arma::mat BarkerDynamicsProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
+                                                                 Particle &proposed_particle,
+                                                                 Particle &old_particle)
+{
+  Rcpp::stop("BarkerDynamicsProposalKernel::specific_subsample_gradient_of_log - not written yet.");
+}
+
+/*
 arma::mat BarkerDynamicsProposalKernel::specific_gradient_of_log(const std::string &variable,
                                    Particle &proposed_particle,
                                    Particle &old_particle,
@@ -424,10 +390,13 @@ arma::mat BarkerDynamicsProposalKernel::specific_gradient_of_log(const std::stri
 {
   Rcpp::stop("BarkerDynamicsProposalKernel::specific_gradient_of_log - not written yet.");
 }
+*/
 
 //virtual arma::mat specific_subsample_gradient_of_log(const std::string &variable,
 //                                                     Particle &proposed_particle,
 //                                                     Particle &old_particle)=0;
+
+/*
 arma::mat BarkerDynamicsProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
                                              Particle &proposed_particle,
                                              Particle &old_particle,
@@ -435,3 +404,4 @@ arma::mat BarkerDynamicsProposalKernel::specific_subsample_gradient_of_log(const
 {
   Rcpp::stop("BarkerDynamicsProposalKernel::specific_gradient_of_log - not written yet.");
 }
+*/

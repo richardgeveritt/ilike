@@ -9,7 +9,7 @@ using namespace Rcpp;
 #include "proposal_kernel.h"
 #include "particle.h"
 #include "distributions.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 
 class SymmetricProposalKernel : public ProposalKernel
 {

@@ -17,8 +17,11 @@ public:
   
   // Gaussian random walk.
   MetropolisHastingsMCMC(size_t number_of_iterations_in,
-                         const std::vector<Parameters> &initial_points_in,
-                         const Parameters &proposal_variances);
+                         const std::string &variable_name_in,
+                         const arma::mat &proposal_covariance_in);
+  MetropolisHastingsMCMC(size_t number_of_iterations_in,
+                         const std::vector<std::string> &variable_names_in,
+                         const std::vector<arma::mat> &proposal_covariances_in);
   
   MetropolisHastingsMCMC(size_t number_of_iterations_in,
                          ProposalKernel* proposal_in);
@@ -34,13 +37,20 @@ public:
   Particle move(RandomNumberGenerator &rng,
                 Particle &particle) const;
   
+  /*
   Particle move(RandomNumberGenerator &rng,
                 Particle &particle,
                 const Parameters &conditioned_on_parameters) const;
+  */
   
+  Particle subsample_move(RandomNumberGenerator &rng,
+                          Particle &particle) const;
+  
+  /*
   Particle subsample_move(RandomNumberGenerator &rng,
                           Particle &particle,
                           const Parameters &conditioned_on_parameters) const;
+  */
   
   /*
   EnsembleMember move(RandomNumberGenerator &rng,
@@ -60,6 +70,8 @@ public:
   
   void smc_adapt(SMCOutput* current_state);
   void ensemble_adapt(EnsembleKalmanOutput* current_state);
+  
+  void set_index(Index* index_in);
   
 protected:
   

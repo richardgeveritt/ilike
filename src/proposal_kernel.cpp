@@ -10,6 +10,8 @@
 #include "direct_gradient_estimator_output.h"
 #include "factor_variables.h"
 #include "factors.h"
+#include "ensemble_factor_variables.h"
+#include "ensemble_factors.h"
 
 ProposalKernel::ProposalKernel()
   :Kernel()
@@ -85,19 +87,21 @@ void ProposalKernel::make_copy(const ProposalKernel &another)
 Particle ProposalKernel::move(RandomNumberGenerator &rng,
                               Particle &particle) const
 {
-
   Particle proposed_particle;
+  
+  //particle.parameters = particle.parameters.deep_copy_nonfixed();
+  proposed_particle.parameters = particle.parameters;//.deep_copy_nonfixed();
   if (this->transform==NULL)
   {
     particle.set_move_transformed_parameters();
-    proposed_particle.parameters = this->simulate(rng,particle);
+    proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->simulate(rng,particle));
   }
   else
   {
     // transform particles
     particle.set_move_transformed_parameters(this->transform);
     proposed_particle.move_transformed_parameters = this->simulate(rng,particle);
-    proposed_particle.parameters = this->transform->inverse_transform(proposed_particle.move_transformed_parameters);
+    proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->transform->inverse_transform(proposed_particle.move_transformed_parameters));
     
     // thing to think about...
     // reason we pass particle is because it has extra info such as gradient
@@ -111,13 +115,28 @@ Particle ProposalKernel::move(RandomNumberGenerator &rng,
   }
   
   // Outputs are created here, with memory managed by Particle hereafter.
-  proposed_particle.simulate_factor_variables(&particle);
+  if (particle.factor_variables!=NULL)
+  {
+    Factors* old_factors = particle.factor_variables->get_factors();
+    if (old_factors!=NULL)
+      proposed_particle.simulate_factor_variables(old_factors);
+  }
+  
+  if (particle.ensemble_factor_variables!=NULL)
+  {
+    EnsembleFactors* old_ensemble_factors = particle.ensemble_factor_variables->get_ensemble_factors();
+    if (old_ensemble_factors!=NULL)
+      proposed_particle.simulate_ensemble_factor_variables(old_ensemble_factors);
+  }
   
   proposed_particle.accepted_outputs = particle.accepted_outputs;
+  
+  proposed_particle.previous_self = &particle;
   
   return proposed_particle; // what we need is for previous target eval to be set to eval for this target (when evaluated there)!!!!! we don't want it to know its grad, until evaluated there
 }
 
+/*
 Particle ProposalKernel::move(RandomNumberGenerator &rng,
                               Particle &particle,
                               const Parameters &conditioned_on_parameters) const
@@ -145,43 +164,84 @@ Particle ProposalKernel::move(RandomNumberGenerator &rng,
   Parameters all_proposed_parameters = proposed_particle.parameters.merge(conditioned_on_parameters);
   
   // Outputs are created here, with memory managed by Particle hereafter.
-  proposed_particle.factor_variables = particle.factor_variables->get_factors()->simulate_factor_variables(all_proposed_parameters);
+  if (particle.factor_variables!=NULL)
+  {
+    Factors* old_factors = particle.factor_variables->get_factors();
+    if (old_factors!=NULL)
+      proposed_particle.simulate_factor_variables(old_factors,
+                                                  conditioned_on_parameters);
+  }
+  
+  if (particle.ensemble_factor_variables!=NULL)
+  {
+    EnsembleFactors* old_ensemble_factors = particle.ensemble_factor_variables->get_ensemble_factors();
+    if (old_ensemble_factors!=NULL)
+      proposed_particle.simulate_ensemble_factor_variables(old_ensemble_factors,
+                                                           conditioned_on_parameters);
+  }
   
   proposed_particle.accepted_outputs = particle.accepted_outputs;
+  
+  proposed_particle.previous_self = &particle;
+  
   // Outputs are created here, with memory managed by Particle hereafter.
   return proposed_particle;
 }
+*/
 
-/*
 Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
                                         Particle &particle) const
 {
-  //Parameters all_parameters = particle.parameters.merge(conditioned_on_parameters);
-  
   Particle proposed_particle;
+  
+  //particle.parameters = particle.parameters.deep_copy_nonfixed();
+  proposed_particle.parameters = particle.parameters;//.deep_copy_nonfixed();
   if (this->transform==NULL)
   {
     particle.set_move_transformed_parameters();
-    proposed_particle.parameters = this->subsample_simulate(rng,particle);
+    proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->subsample_simulate(rng,particle));
   }
   else
   {
     // transform particles
     particle.set_move_transformed_parameters(this->transform);
     proposed_particle.move_transformed_parameters = this->subsample_simulate(rng,particle);
-    proposed_particle.parameters = this->transform->inverse_transform(proposed_particle.move_transformed_parameters);
+    proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->transform->inverse_transform(proposed_particle.move_transformed_parameters));
+    
+    // thing to think about...
+    // reason we pass particle is because it has extra info such as gradient
+    // we sometimes set this in the proposal (such as finding grad)
+    // if we pass temp particle, this info won't be stored...
+    // what info do we want stored? gradient of transformed? not sure...
+    // might need to store transformed version in Particle? Try to avoid
+    
+    // put in simulate!
+    // deriv in some algs comes from deriv of prior times llhd in transformed space - need diff bit
   }
   
   // Outputs are created here, with memory managed by Particle hereafter.
-  proposed_particle.factor_variables = particle.factor_variables->get_factors()->subsample_simulate_factor_variables(rng,
-                                                                                                                     proposed_particle.parameters);
+  if (particle.factor_variables!=NULL)
+  {
+    Factors* old_factors = particle.factor_variables->get_factors();
+    if (old_factors!=NULL)
+      proposed_particle.subsample_simulate_factor_variables(old_factors);
+  }
+  
+  if (particle.ensemble_factor_variables!=NULL)
+  {
+    EnsembleFactors* old_ensemble_factors = particle.ensemble_factor_variables->get_ensemble_factors();
+    if (old_ensemble_factors!=NULL)
+      proposed_particle.subsample_simulate_ensemble_factor_variables(old_ensemble_factors);
+  }
   
   proposed_particle.accepted_outputs = particle.accepted_outputs;
-  // Outputs are created here, with memory managed by Particle hereafter.
-  return proposed_particle;
+  
+  proposed_particle.previous_self = &particle;
+  
+  return proposed_particle; // what we need is for previous target eval to be set to eval for this target (when evaluated there)!!!!! we don't want it to know its grad, until evaluated there
 }
-*/
 
+/*
 Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
                                         Particle &particle,
                                         const Parameters &conditioned_on_parameters) const
@@ -207,36 +267,67 @@ Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
   
   proposed_particle.accepted_outputs = particle.accepted_outputs;
   // Outputs are created here, with memory managed by Particle hereafter.
+  
+  proposed_particle.previous_self = &particle;
+  
   return proposed_particle;
 }
+*/
 
 Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
                                         const std::string &variable,
                                         Particle &particle) const
 {
-  //Parameters all_parameters = particle.parameters.merge(conditioned_on_parameters);
   Particle proposed_particle;
+  
+  //particle.parameters = particle.parameters.deep_copy_nonfixed();
+  proposed_particle.parameters = particle.parameters;//.deep_copy_nonfixed();
   if (this->transform==NULL)
   {
     particle.set_move_transformed_parameters();
-    proposed_particle.parameters = this->subsample_simulate(rng,variable,particle);
+    proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->subsample_simulate(rng,variable,particle));
   }
   else
   {
     // transform particles
     particle.set_move_transformed_parameters(this->transform);
     proposed_particle.move_transformed_parameters = this->subsample_simulate(rng,variable,particle);
-    proposed_particle.parameters = this->transform->inverse_transform(proposed_particle.move_transformed_parameters);
+    proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->transform->inverse_transform(proposed_particle.move_transformed_parameters));
+    
+    // thing to think about...
+    // reason we pass particle is because it has extra info such as gradient
+    // we sometimes set this in the proposal (such as finding grad)
+    // if we pass temp particle, this info won't be stored...
+    // what info do we want stored? gradient of transformed? not sure...
+    // might need to store transformed version in Particle? Try to avoid
+    
+    // put in simulate!
+    // deriv in some algs comes from deriv of prior times llhd in transformed space - need diff bit
   }
   
   // Outputs are created here, with memory managed by Particle hereafter.
-  proposed_particle.factor_variables = particle.factor_variables->get_factors()->subsample_simulate_factor_variables(proposed_particle.parameters);
+  if (particle.factor_variables!=NULL)
+  {
+    Factors* old_factors = particle.factor_variables->get_factors();
+    if (old_factors!=NULL)
+      proposed_particle.subsample_simulate_factor_variables(old_factors);
+  }
+  
+  if (particle.ensemble_factor_variables!=NULL)
+  {
+    EnsembleFactors* old_ensemble_factors = particle.ensemble_factor_variables->get_ensemble_factors();
+    if (old_ensemble_factors!=NULL)
+      proposed_particle.subsample_simulate_ensemble_factor_variables(old_ensemble_factors);
+  }
   
   proposed_particle.accepted_outputs = particle.accepted_outputs;
-  // Outputs are created here, with memory managed by Particle hereafter.
+  
+  proposed_particle.previous_self = &particle;
+  
   return proposed_particle;
 }
 
+/*
 Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
                                         const std::string &variable,
                                         Particle &particle,
@@ -270,10 +361,13 @@ Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
                                                                                                                      conditioned_on_parameters);
   
   proposed_particle.accepted_outputs = particle.accepted_outputs;
+  
+  proposed_particle.previous_self = &particle;
+  
   // Outputs are created here, with memory managed by Particle hereafter.
   return proposed_particle;
 }
-
+*/
 
 /*
 Particle ProposalKernel::move(RandomNumberGenerator &rng,
@@ -503,19 +597,22 @@ Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
 
 void ProposalKernel::ensemble_adapt(EnsembleKalmanOutput* current_state)
 {
-  this->smc_adaptor->ensemble_adapt(current_state);
+  if (this->smc_adaptor!=NULL)
+    this->smc_adaptor->ensemble_adapt(current_state);
 }
 
 void ProposalKernel::smc_adapt(SMCOutput* current_state)
 {
-  this->smc_adaptor->smc_adapt(current_state);
+  if (this->smc_adaptor!=NULL)
+    this->smc_adaptor->smc_adapt(current_state);
 }
 
 void ProposalKernel::mcmc_adapt(Particle &current_particle,
                                 size_t iteration_counter)
 {
-  this->mcmc_adaptor->mcmc_adapt(current_particle,
-                                 iteration_counter);
+  if (this->mcmc_adaptor!=NULL)
+    this->mcmc_adaptor->mcmc_adapt(current_particle,
+                                   iteration_counter);
 }
 
 void ProposalKernel::use_transform(Particle &particle)
@@ -549,6 +646,7 @@ double ProposalKernel::evaluate_kernel(Particle &proposed_particle,
   }
 }
 
+/*
 double ProposalKernel::evaluate_kernel(Particle &proposed_particle,
                                        Particle &old_particle,
                                        const Parameters &conditioned_on_parameters) const
@@ -572,6 +670,7 @@ double ProposalKernel::evaluate_kernel(Particle &proposed_particle,
                                           conditioned_on_parameters) + this->transform->log_abs_jacobian_determinant(proposed_particle.parameters);
   }
 }
+*/
 
 double ProposalKernel::subsample_evaluate_kernel(Particle &proposed_particle,
                                                  Particle &old_particle) const
@@ -594,6 +693,7 @@ double ProposalKernel::subsample_evaluate_kernel(Particle &proposed_particle,
   }
 }
 
+/*
 double ProposalKernel::subsample_evaluate_kernel(Particle &proposed_particle,
                                                  Particle &old_particle,
                                                  const Parameters &conditioned_on_parameters) const
@@ -617,6 +717,7 @@ double ProposalKernel::subsample_evaluate_kernel(Particle &proposed_particle,
                                                     conditioned_on_parameters) + this->transform->log_abs_jacobian_determinant(proposed_particle.parameters);
   }
 }
+*/
 
 Transform* ProposalKernel::get_transform() const
 {
@@ -655,6 +756,7 @@ arma::mat ProposalKernel::gradient_of_log(const std::string &variable,
   return result;
 }
 
+/*
 arma::mat ProposalKernel::gradient_of_log(const std::string &variable,
                                           Particle &proposed_particle,
                                           Particle &old_particle,
@@ -669,13 +771,13 @@ arma::mat ProposalKernel::gradient_of_log(const std::string &variable,
 
   return result;
 }
+*/
 
-/*
 arma::mat ProposalKernel::subsample_gradient_of_log(const std::string &variable,
                                                     Particle &proposed_particle,
                                                     Particle &old_particle)
 {
-  arma::mat result = this->subsample_specific_gradient_of_log(variable,
+  arma::mat result = this->specific_subsample_gradient_of_log(variable,
                                                               proposed_particle,
                                                               old_particle);
   if (this->transform!=NULL)
@@ -683,8 +785,8 @@ arma::mat ProposalKernel::subsample_gradient_of_log(const std::string &variable,
   
   return result;
 }
-*/
 
+/*
 arma::mat ProposalKernel::subsample_gradient_of_log(const std::string &variable,
                                                     Particle &proposed_particle,
                                                     Particle &old_particle,
@@ -699,3 +801,4 @@ arma::mat ProposalKernel::subsample_gradient_of_log(const std::string &variable,
   
   return result;
 }
+*/

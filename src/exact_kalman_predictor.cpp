@@ -66,7 +66,7 @@ void ExactKalmanPredictor::operator=(const ExactKalmanPredictor &another)
   this->make_copy(another);
 }
 
-KalmanPredictor* ExactKalmanPredictor::duplicate(void) const
+KalmanPredictor* ExactKalmanPredictor::duplicate() const
 {
   return( new ExactKalmanPredictor(*this));
 }

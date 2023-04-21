@@ -6,7 +6,7 @@ using namespace Rcpp;
 
 #include <vector>
 #include "kalman_updater.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 
 class ExactKalmanUpdater : public KalmanUpdater
 {

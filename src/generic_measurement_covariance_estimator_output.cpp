@@ -1,5 +1,6 @@
 #include "generic_measurement_covariance_estimator_output.h"
 #include "generic_measurement_covariance_estimator.h"
+#include "transform.h"
 
 GenericMeasurementCovarianceEstimatorOutput::GenericMeasurementCovarianceEstimatorOutput()
   :MeasurementCovarianceEstimatorOutput()
@@ -44,9 +45,32 @@ MeasurementCovarianceEstimatorOutput* GenericMeasurementCovarianceEstimatorOutpu
   return( new GenericMeasurementCovarianceEstimatorOutput(*this));
 }
 
-void GenericMeasurementCovarianceEstimatorOutput::simulate(const Parameters &current_state)
+void GenericMeasurementCovarianceEstimatorOutput::specific_simulate(const Parameters &current_state)
 {
-  this->measurement_state = this->generic_estimator->simulate(current_state);
+  std::shared_ptr<Transform> summary_statistics = this->generic_estimator->summary_statistics;
+  if (summary_statistics==NULL)
+  {
+    this->measurement_state = this->generic_estimator->simulate(current_state).get_colvec(this->generic_estimator->measurement_variables);
+  }
+  else
+  {
+    this->measurement_state = summary_statistics->transform(this->generic_estimator->simulate(current_state)).get_colvec(this->generic_estimator->measurement_variables);
+  }
+  
+  this->random_shift = this->generic_estimator->gaussian_simulate();
+}
+
+void GenericMeasurementCovarianceEstimatorOutput::subsample_specific_simulate(const Parameters &current_state)
+{
+  std::shared_ptr<Transform> summary_statistics = this->generic_estimator->summary_statistics;
+  if (summary_statistics==NULL)
+  {
+    this->measurement_state = this->generic_estimator->simulate(current_state).get_colvec(this->generic_estimator->measurement_variables);
+  }
+  else
+  {
+    this->measurement_state = summary_statistics->transform(this->generic_estimator->simulate(current_state)).get_colvec(this->generic_estimator->measurement_variables);
+  }
   this->random_shift = this->generic_estimator->gaussian_simulate();
 }
 
@@ -57,7 +81,10 @@ arma::rowvec GenericMeasurementCovarianceEstimatorOutput::get_measurement_state_
 
 arma::colvec GenericMeasurementCovarianceEstimatorOutput::get_shift(double inverse_incremental_temperature) const
 {
-  return this->measurement_state + arma::chol((inverse_incremental_temperature-1.0)*this->generic_estimator->Cygivenx)*this->random_shift;
+  if ((inverse_incremental_temperature-1.0)==0.0)
+    return this->measurement_state;
+  else
+    return this->measurement_state + arma::chol((inverse_incremental_temperature-1.0)*this->generic_estimator->Cygivenx)*this->random_shift;
 }
 
 arma::colvec GenericMeasurementCovarianceEstimatorOutput::get_deterministic_shift() const
@@ -65,84 +92,88 @@ arma::colvec GenericMeasurementCovarianceEstimatorOutput::get_deterministic_shif
   return this->measurement_state;
 }
 
-arma::mat GenericMeasurementCovarianceEstimatorOutput::get_kalman_gain(const arma::mat &Cxy,
-                                                                       const arma::mat &Cyy,
-                                                                       double inverse_incremental_temperature)
-{
-  return Cxy*(Cyy + (inverse_incremental_temperature-1.0)*this->generic_estimator->get_Cygivenx()).i();
-}
-
-arma::mat GenericMeasurementCovarianceEstimatorOutput::get_adjustment(const arma::mat &Zf,
-                                                                      const arma::mat &Ginv,
-                                                                      const arma::mat &Ftranspose,
-                                                                      const arma::mat &V,
-                                                                      double inverse_incremental_temperature)
-{
-  // follows https://arxiv.org/abs/2006.02941
-  arma::mat for_eig = V*((inverse_incremental_temperature-1.0)*this->generic_estimator->get_Cygivenx())*V.t();
-  
-  arma::mat C;
-  arma::vec diagGamma;
-  arma::mat Ctrans;
-  arma::svd_econ(C,diagGamma,Ctrans,for_eig);
-  
-  arma::mat Gamma;
-  Gamma.diag() = diagGamma;
-  arma::mat I;
-  I.eye( arma::size(Gamma) );
-  
-  return Zf*C*arma::sqrtmat_sympd(arma::inv_sympd(I+Gamma))*Ginv*Ftranspose;
-}
-
 double GenericMeasurementCovarianceEstimatorOutput::evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature)
 {
-  return dmvnorm(*this->estimator->get_measurement_pointer(),
-                 this->measurement_state,
-                 inverse_incremental_temperature*this->generic_estimator->Cygivenx);
+  return dmvnorm_using_precomp(*this->generic_estimator->get_measurement_pointer(),
+                               this->measurement_state,
+                               this->generic_estimator->inv_sigma_precomp,
+                               this->generic_estimator->log_det_precomp);
 }
 
+/*
 double GenericMeasurementCovarianceEstimatorOutput::evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
                                                                                        const Parameters &conditioned_on_parameters)
 {
   // parameters of covariance should already be set at this point, so second argument does nothing
-  return dmvnorm(*this->estimator->get_measurement_pointer(),
+  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
+                 this->measurement_state,
+                 inverse_incremental_temperature*this->generic_estimator->Cygivenx);
+}
+*/
+
+double GenericMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature)
+{
+  // parameters of covariance should already be set at this point, so second argument does nothing
+  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
                  this->measurement_state,
                  inverse_incremental_temperature*this->generic_estimator->Cygivenx);
 }
 
+/*
 double GenericMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
                                                     const Parameters &conditioned_on_parameters)
 {
   // parameters of covariance should already be set at this point, so second argument does nothing
-  return dmvnorm(*this->estimator->get_measurement_pointer(),
+  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
                  this->measurement_state,
                  inverse_incremental_temperature*this->generic_estimator->Cygivenx);
 }
+*/
 
 double GenericMeasurementCovarianceEstimatorOutput::evaluate_likelihood()
 {
-  return dmvnorm(*this->estimator->get_measurement_pointer(),
+  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
                  this->measurement_state,
                  this->generic_estimator->Cygivenx);
 }
 
+/*
 double GenericMeasurementCovarianceEstimatorOutput::evaluate_likelihood(const Parameters &conditioned_on_parameters)
 {
-  return dmvnorm(*this->estimator->get_measurement_pointer(),
+  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
                  this->measurement_state,
                  this->generic_estimator->Cygivenx);
 }
+*/
 
 double GenericMeasurementCovarianceEstimatorOutput::subsample_evaluate_likelihood()
 {
-  return dmvnorm(*this->estimator->get_measurement_pointer(),
+  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
                  this->measurement_state,
                  this->generic_estimator->Cygivenx);
 }
 
+/*
 double GenericMeasurementCovarianceEstimatorOutput::subsample_evaluate_likelihood(const Parameters &conditioned_on_parameters)
 {
-  return dmvnorm(*this->estimator->get_measurement_pointer(),
+  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
                  this->measurement_state,
                  this->generic_estimator->Cygivenx);
+}
+*/
+
+MeasurementCovarianceEstimator* GenericMeasurementCovarianceEstimatorOutput::get_estimator()
+{
+  return this->generic_estimator;
+}
+
+void GenericMeasurementCovarianceEstimatorOutput::write_to_file(const std::string &directory_name,
+                                                                const std::string &index)
+{
+  
+}
+
+void GenericMeasurementCovarianceEstimatorOutput::close_ofstreams()
+{
+  
 }

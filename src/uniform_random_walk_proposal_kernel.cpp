@@ -94,12 +94,14 @@ double UniformRandomWalkProposalKernel::specific_evaluate_kernel(Particle &propo
   return output;
 }
 
+/*
 double UniformRandomWalkProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
                                                                  Particle &old_particle,
                                                                  const Parameters &conditioned_on_parameters) const
 {
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
+*/
 
 double UniformRandomWalkProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                                                            Particle &old_particle) const
@@ -108,6 +110,7 @@ double UniformRandomWalkProposalKernel::specific_subsample_evaluate_kernel(Parti
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
 
+/*
 double UniformRandomWalkProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                                          Particle &old_particle,
                                                          const Parameters &conditioned_on_parameters) const
@@ -115,9 +118,10 @@ double UniformRandomWalkProposalKernel::specific_subsample_evaluate_kernel(Parti
   // no difference since size of data set does not impact on proposal
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
+*/
 
 Parameters UniformRandomWalkProposalKernel::simulate(RandomNumberGenerator &rng,
-                                                      Particle &particle) const
+                                                     Particle &particle) const
 {
   Parameters output;
   if (this->unused_variables_kept)
@@ -191,6 +195,7 @@ arma::mat UniformRandomWalkProposalKernel::specific_gradient_of_log(const std::s
   Rcpp::stop("UniformRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
+/*
 arma::mat UniformRandomWalkProposalKernel::specific_gradient_of_log(const std::string &variable,
                                                                     Particle &proposed_particle,
                                                                     Particle &old_particle,
@@ -198,7 +203,16 @@ arma::mat UniformRandomWalkProposalKernel::specific_gradient_of_log(const std::s
 {
   Rcpp::stop("UniformRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
 }
+*/
 
+arma::mat UniformRandomWalkProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
+                                                                              Particle &proposed_particle,
+                                                                              Particle &old_particle)
+{
+  Rcpp::stop("UniformRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
+}
+
+/*
 arma::mat UniformRandomWalkProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
                                                                               Particle &proposed_particle,
                                                                               Particle &old_particle,
@@ -206,3 +220,4 @@ arma::mat UniformRandomWalkProposalKernel::specific_subsample_gradient_of_log(co
 {
   Rcpp::stop("UniformRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
 }
+*/

@@ -24,4 +24,6 @@ void MoveOutput::operator=(const MoveOutput &another)
 
 void MoveOutput::make_copy(const MoveOutput &another)
 {
+  //this->vector_variables = another.vector_variables;
+  //this->any_variables = another.any_variables;
 }

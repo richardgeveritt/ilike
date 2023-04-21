@@ -20,12 +20,13 @@ public:
   void operator=(const AdjustmentEnsembleShifter &another);
   EnsembleShifter* duplicate() const;
   
-  void setup(Ensemble* ensemble);
+  void setup(Ensemble* ensemble,
+             double inverse_incremental_temperature);
   
   void shift(const EnsembleFactorVariables* ensemble_factor_variables,
              arma::colvec &position,
-             const std::vector<arma::mat> &Cxys,
-             const std::vector<arma::mat> &Cyys,
+             const std::vector<arma::colvec*> &measurements,
+             const std::vector<arma::mat> &kalman_gains,
              double inverse_incremental_temperature) const;
 
 protected:
@@ -35,6 +36,7 @@ protected:
   arma::mat Ftranspose;
   arma::colvec mean_position;
   std::vector<arma::mat> Vs;
+  std::vector<arma::mat> As;
 
   void make_copy(const AdjustmentEnsembleShifter &another);
 

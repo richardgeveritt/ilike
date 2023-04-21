@@ -28,7 +28,8 @@ public:
                  SimulateDistributionPtr simulate_proposal_in,
                  EvaluateLogDistributionPtr evaluate_log_proposal_in,
                  bool parallel_in,
-                 size_t grain_size_in);
+                 size_t grain_size_in,
+                 const std::string &results_name_in);
   ParticleFilter(const ParticleFilter &another);
   virtual ~ParticleFilter(void);
 
@@ -39,27 +40,47 @@ public:
   MoveOutput* move(RandomNumberGenerator &rng,
                    Particle &particle);
   
-  void weight_for_adapting_sequence(Particles &current_particles);
+  //void weight_for_adapting_sequence(Particles &current_particles);
   
+  /*
   MoveOutput* move(RandomNumberGenerator &rng,
                    Particle &particle,
                    const Parameters &conditioned_on_parameters);
+  */
   
-  void weight_for_adapting_sequence(Particles &current_particles,
+  void weight_for_adapting_sequence(const Index* index,
+                                    Particles &current_particles);
+  
+  /*
+  void weight_for_adapting_sequence(const Index* index,
+                                    Particles &current_particles,
                                     const Parameters &conditioned_on_parameters);
+  */
   
+  MoveOutput* subsample_move(RandomNumberGenerator &rng,
+                             Particle &particle);
+  
+  /*
   MoveOutput* subsample_move(RandomNumberGenerator &rng,
                              Particle &particle,
                              const Parameters &conditioned_on_parameters);
+  */
   
-  void subsample_weight_for_adapting_sequence(Particles &current_particles,
+  void subsample_weight_for_adapting_sequence(const Index* index,
+                                              Particles &current_particles);
+  
+  /*
+  void subsample_weight_for_adapting_sequence(const Index* index,
+                                              Particles &current_particles,
                                               const Parameters &conditioned_on_parameters);
+  */
 
 protected:
   
   SMCOutput* specific_run();
+  //SMCOutput* specific_run(const std::string &directory_name);
   
-  SMCOutput* initialise_smc();
+  SMCOutput* specific_initialise_smc();
   void simulate_smc(SMCOutput* simulation);
   void evaluate_smc(SMCOutput* simulation);
   
@@ -67,10 +88,11 @@ protected:
   void evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* simulation);
   //void mcmc_move(SMCOutput* current_state);
   
-  
   SMCOutput* specific_run(const Parameters &parameters);
+  //SMCOutput* specific_run(const std::string &directory_name,
+  //                        const Parameters &parameters);
   
-  SMCOutput* initialise_smc(const Parameters &parameters);
+  SMCOutput* specific_initialise_smc(const Parameters &parameters);
   void simulate_smc(SMCOutput* simulation,
                     const Parameters &conditioned_on_parameters);
   void evaluate_smc(SMCOutput* simulation,
@@ -79,6 +101,11 @@ protected:
                     const Parameters &conditioned_on_parameters);
   void evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* simulation,
                                                     const Parameters &conditioned_on_parameters);
+  
+  void subsample_evaluate_smc(SMCOutput* simulation);
+  void subsample_simulate_smc(SMCOutput* simulation);
+  void subsample_evaluate_smcfixed_part_smc(SMCOutput* simulation);
+  void subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* simulation);
   
   void subsample_evaluate_smc(SMCOutput* simulation,
                               const Parameters &conditioned_on_parameters);

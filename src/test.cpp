@@ -3,13 +3,14 @@ using namespace Rcpp;
 
 #include <RcppParallel.h>
 
+/*
 #include "parameters.h"
 #include "function_pointers.h"
 #include "distributions.h"
 #include "importance_sampler.h"
 #include "likelihood_estimator_output.h"
 #include "smc_output.h"
-
+*/
 
 
 // class Tester {
@@ -46,6 +47,8 @@ using namespace Rcpp;
 // };
 //
 //
+
+/*
 class MyWorker : public RcppParallel::Worker {
 
 public:
@@ -104,6 +107,7 @@ MyWorker::MyWorker(uint64_t seed_in,
   this->evaluate_log_prior = evaluate_log_prior_in;
   this->simulate_prior = simulate_prior_in;
 }
+*/
 
 // [[Rcpp::export]]
 double a_test(const List &model)
@@ -111,6 +115,7 @@ double a_test(const List &model)
   //SEXP evaluate_log_prior_SEXP = model["evaluate_log_prior"];
   //EvaluateLogDistributionPtr evaluate_log_prior = load_evaluate_log_distribution(evaluate_log_prior_SEXP);
 
+  /*
   SEXP simulate_prior_SEXP = model["simulate_prior"];
   SimulateIndependentProposalPtr simulate_prior_func = load_simulate_independent_proposal(simulate_prior_SEXP);
 
@@ -155,6 +160,7 @@ double a_test(const List &model)
 
   Rcout << output->log_likelihood << std::endl;
   delete output;
+  */
 
   //Parameters input;
   //dqrng::random_64bit_wrapper<dqrng::xoshiro256plus> rng = dqrng::random_64bit_wrapper<dqrng::xoshiro256plus>();

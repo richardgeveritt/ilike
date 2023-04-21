@@ -6,6 +6,54 @@ DirectGaussianMeasurementCovarianceEstimator::DirectGaussianMeasurementCovarianc
 {
 }
 
+DirectGaussianMeasurementCovarianceEstimator::DirectGaussianMeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
+                                                                                           size_t* seed_in,
+                                                                                           Data* data_in,
+                                                                                           std::shared_ptr<Transform> transform_in,
+                                                                                           std::shared_ptr<Transform> summary_statistics_in,
+                                                                                           std::shared_ptr<Transform> transform_function_in,
+                                                                                           const std::vector<std::string> &measurement_variables_in,
+                                                                                           const std::vector<arma::mat> &measurement_noises_in)
+: GaussianMeasurementCovarianceEstimator(rng_in,
+                                         seed_in,
+                                         data_in,
+                                         transform_in,
+                                         summary_statistics_in)
+{
+  this->set_using_parameters = false;
+  this->measurement_variables = measurement_variables_in;
+  for (size_t i=0;
+       i<this->measurement_variables.size();
+       ++i)
+  {
+    this->kernel.set_mean(this->measurement_variables[i],
+                          arma::colvec(measurement_noises_in[i].n_rows));
+    this->kernel.set_covariance(this->measurement_variables[i],
+                                measurement_noises_in[i]);
+  }
+  this->transform_function = transform_function_in;
+}
+
+DirectGaussianMeasurementCovarianceEstimator::DirectGaussianMeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
+                                                                                           size_t* seed_in,
+                                                                                           Data* data_in,
+                                                                                           std::shared_ptr<Transform> transform_in,
+                                                                                           std::shared_ptr<Transform> summary_statistics_in,
+                                                                                           std::shared_ptr<Transform> transform_function_in,
+                                                                                           const std::vector<std::string> &measurement_variables_in,
+                                                                                           const std::vector<GetMeasurementMatrixPtr> &measurement_noise_functions_in)
+: GaussianMeasurementCovarianceEstimator(rng_in,
+                                         seed_in,
+                                         data_in,
+                                         transform_in,
+                                         summary_statistics_in)
+{
+  this->set_using_parameters = true;
+  this->measurement_variables = measurement_variables_in;
+  this->transform_function = transform_function_in;
+  this->measurement_noise_functions = measurement_noise_functions_in;
+}
+
 DirectGaussianMeasurementCovarianceEstimator::~DirectGaussianMeasurementCovarianceEstimator()
 {
 }
@@ -38,7 +86,7 @@ GaussianMeasurementCovarianceEstimator* DirectGaussianMeasurementCovarianceEstim
 void DirectGaussianMeasurementCovarianceEstimator::make_copy(const DirectGaussianMeasurementCovarianceEstimator &another)
 {
   //this->measurement_kernel = another.measurement_kernel;
-  //this->kernel = another.kernel;
+  this->kernel = another.kernel;
   //this->measurement_noise = another.measurement_noise;
   //this->measurement_kernel_function = another.measurement_kernel_function;
   this->measurement_noise_functions = another.measurement_noise_functions;
@@ -58,9 +106,51 @@ MeasurementCovarianceEstimatorOutput* DirectGaussianMeasurementCovarianceEstimat
   return output;
 }
 
+void DirectGaussianMeasurementCovarianceEstimator::setup()
+{
+  this->setup_measurement_variables();
+}
+
+void DirectGaussianMeasurementCovarianceEstimator::setup(const Parameters &parameters)
+{
+  this->setup_measurement_variables(parameters);
+}
+
+void DirectGaussianMeasurementCovarianceEstimator::setup_measurement_variables()
+{
+  //Data dummy_data = this->transform_function(Parameters());
+  //this->measurement_variables = dummy_data.get_vector_variables();
+}
+
+void DirectGaussianMeasurementCovarianceEstimator::setup_measurement_variables(const Parameters &conditioned_on_parameters)
+{
+  //Data dummy_data = this->transform_function(conditioned_on_parameters);
+  //this->measurement_variables = dummy_data.get_vector_variables();
+}
+
+arma::mat DirectGaussianMeasurementCovarianceEstimator::get_measurement_covariance()
+{
+  return this->kernel.get_covariance(this->measurement_variables);
+}
+
 /*
  arma::mat DirectGaussianMeasurementCovarianceEstimator::get_measurement_covariance() const
  {
  return this->kernel.get_covariance(this->measurement_variables);
  }
  */
+
+void DirectGaussianMeasurementCovarianceEstimator::set_parameters(const Parameters &conditioned_on_parameters_in)
+{
+  if (this->set_using_parameters)
+  {
+    //this->conditioned_on_parameters = conditioned_on_parameters_in;
+    for (size_t i=0;
+         i<this->measurement_variables.size();
+         ++i)
+    {
+      this->kernel.set_covariance(this->measurement_variables[i],
+                                  this->measurement_noise_functions[i](conditioned_on_parameters_in));
+    }
+  }
+}

@@ -28,10 +28,15 @@ public:
   
   void simulate(const Parameters &parameters);
   //double evaluate(const Parameters &parameters);
+  
   void evaluate_smcfixed_part(const Parameters &parameters);
   void evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters);
+  //void evaluate_smcfixed_part(const Parameters &parameters);
+  //void evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters);
   
+  void subsample_simulate();
   void subsample_simulate(const Parameters &parameters);
+  
   void subsample_evaluate_smcfixed_part(const Parameters &parameters);
   void subsample_evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters);
   
@@ -42,6 +47,8 @@ public:
   arma::mat subsample_get_gradient_of_log(const std::string &variable,
                                 const Parameters &x);
 
+  void close_ofstreams();
+  
   void print(std::ostream &os) const;
 
 protected:
@@ -51,6 +58,9 @@ protected:
   
   double log_likelihood_smcfixed_part;
   double subsample_log_likelihood_smcfixed_part;
+  
+  void write_to_file(const std::string &directory_name,
+                     const std::string &index = "");
 
   void make_copy(const ExactLikelihoodEstimatorOutput &another);
 

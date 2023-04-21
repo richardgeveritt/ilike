@@ -110,7 +110,7 @@ Parameters CustomIndependentProposalKernel::independent_simulate(RandomNumberGen
                                                                  const Parameters &conditioned_on_parameters) const
 {
   return this->proposal_simulate(rng,
-                                 this->proposal_parameters);
+                                 this->proposal_parameters.merge(conditioned_on_parameters));
 }
 
 Parameters CustomIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng) const
@@ -125,7 +125,7 @@ Parameters CustomIndependentProposalKernel::subsample_independent_simulate(Rando
 {
   // no difference since size of data set does not impact on proposal
   return this->proposal_simulate(rng,
-                                 this->proposal_parameters);
+                                 this->proposal_parameters.merge(conditioned_on_parameters));
 }
 
 Parameters CustomIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
@@ -144,7 +144,7 @@ Parameters CustomIndependentProposalKernel::subsample_independent_simulate(Rando
   // no difference since size of data set does not impact on proposal
   Rcpp::stop("CustomIndependentProposalKernel::subsample_independent_simulate - not written yet.");
   return this->proposal_simulate(rng,
-                                 this->proposal_parameters);
+                                 this->proposal_parameters.merge(conditioned_on_parameters));
 }
 
 arma::mat CustomIndependentProposalKernel::independent_gradient_of_log(const std::string &variable,

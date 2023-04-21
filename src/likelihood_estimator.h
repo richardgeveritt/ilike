@@ -9,7 +9,7 @@ using namespace Rcpp;
 //#include "model_and_algorithm.h"
 #include "distributions.h"
 #include "data_subsampler.h"
-#include "data.h"
+#include "parameters.h"
 
 class LikelihoodEstimatorOutput;
 class SMCWorker;
@@ -23,7 +23,8 @@ public:
   LikelihoodEstimator();
   LikelihoodEstimator(RandomNumberGenerator* rng_in,
                       size_t* seed_in,
-                      Data* data_in);
+                      Data* data_in,
+                      bool smcfixed_flag_in);
   virtual ~LikelihoodEstimator();
 
   LikelihoodEstimator(const LikelihoodEstimator &another);
@@ -35,6 +36,9 @@ public:
   virtual LikelihoodEstimatorOutput* initialise()=0;
   virtual LikelihoodEstimatorOutput* initialise(const Parameters &parameters)=0;
   
+  virtual void setup()=0;
+  virtual void setup(const Parameters &parameters)=0;
+  
   // To be called if we just want the likelihood, without splitting the estimation into multiple steps.
   //double estimate();
   double estimate(const Parameters &parameters);
@@ -43,6 +47,8 @@ public:
   void change_data(Data* new_data);
   
   Data* get_data() const;
+  
+  bool get_smcfixed_flag() const;
 
 protected:
 
@@ -67,6 +73,9 @@ protected:
   
   // stored here
   Factors* factors;
+  
+  // A flag to determine if the terms are deemed to be "smcfixed" (will not be reevaluated when finding the next target in adaptive SMC).
+  bool smcfixed_flag;
 
   void make_copy(const LikelihoodEstimator &another);
 

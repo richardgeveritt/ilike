@@ -39,6 +39,13 @@ GaussianRandomWalkProposalKernel::GaussianRandomWalkProposalKernel(const std::ve
   }
 }
 
+GaussianRandomWalkProposalKernel::GaussianRandomWalkProposalKernel(const std::string &variable_name_in,
+                                                                   const arma::mat &covariance_in)
+{
+  this->unused_variables_kept = true;
+  this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in);
+}
+
 GaussianRandomWalkProposalKernel::GaussianRandomWalkProposalKernel(const GaussianRandomWalkProposalKernel &another)
   :SymmetricProposalKernel(another)
 {
@@ -83,10 +90,10 @@ double GaussianRandomWalkProposalKernel::specific_evaluate_kernel(Particle &prop
        i!=this->proposal_info.end();
        ++i)
   {
-    arma::colvec mean = old_particle.move_parameters->get_vector(i->first);
+    arma::colvec mean = old_particle.move_parameters->get_colvec(i->first);
     double scale = i->second.get_double_scale();
     double dim = double(mean.n_rows);
-    output = output + dmvnorm_using_precomp(proposed_particle.move_parameters->get_vector(i->first),
+    output = output + dmvnorm_using_precomp(proposed_particle.move_parameters->get_colvec(i->first),
                                             mean,
                                             (1.0/sqrt(scale))*i->second.get_inv(),
                                             dim*log(scale)+i->second.get_logdet());
@@ -94,12 +101,14 @@ double GaussianRandomWalkProposalKernel::specific_evaluate_kernel(Particle &prop
   return output;
 }
 
+/*
 double GaussianRandomWalkProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
                                                                   Particle &old_particle,
                                                                   const Parameters &conditioned_on_parameters) const
 {
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
+*/
 
 double GaussianRandomWalkProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                                                             Particle &old_particle) const
@@ -108,6 +117,7 @@ double GaussianRandomWalkProposalKernel::specific_subsample_evaluate_kernel(Part
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
 
+/*
 double GaussianRandomWalkProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                                                             Particle &old_particle,
                                                                             const Parameters &conditioned_on_parameters) const
@@ -115,6 +125,7 @@ double GaussianRandomWalkProposalKernel::specific_subsample_evaluate_kernel(Part
   // no difference since size of data set does not impact on proposal
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
+*/
 
 void GaussianRandomWalkProposalKernel::set_covariance(const std::string &variable,
                                                       const arma::mat &covariance_in)
@@ -136,8 +147,8 @@ Parameters GaussianRandomWalkProposalKernel::simulate(RandomNumberGenerator &rng
                                                       Particle &particle) const
 {
   Parameters output;
-  if (this->unused_variables_kept)
-    output = *particle.move_parameters;
+  //if (this->unused_variables_kept)
+  //  output = *particle.move_parameters;
   for (auto i=this->proposal_info.begin();
        i!=this->proposal_info.end();
        ++i)
@@ -146,19 +157,21 @@ Parameters GaussianRandomWalkProposalKernel::simulate(RandomNumberGenerator &rng
     double scale = i->second.get_double_scale();
     //double dim = double(mean.n_rows);
     output[i->first] = rmvnorm(rng,
-                               particle.move_parameters->get_vector(i->first),
+                               particle.move_parameters->get_colvec(i->first),
                                sqrt(scale)*i->second.get_chol(),
                                true);
   }
   return output;
 }
 
+/*
 Parameters GaussianRandomWalkProposalKernel::simulate(RandomNumberGenerator &rng,
                                                       Particle &particle,
                                                       const Parameters &conditioned_on_parameters) const
 {
   return this->simulate(rng, particle);
 }
+*/
 
 Parameters GaussianRandomWalkProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                                 Particle &particle) const
@@ -167,6 +180,7 @@ Parameters GaussianRandomWalkProposalKernel::subsample_simulate(RandomNumberGene
   return this->simulate(rng, particle);
 }
 
+/*
 Parameters GaussianRandomWalkProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                       Particle &particle,
                                                       const Parameters &conditioned_on_parameters) const
@@ -174,6 +188,7 @@ Parameters GaussianRandomWalkProposalKernel::subsample_simulate(RandomNumberGene
   // no difference since size of data set does not impact on proposal
   return this->simulate(rng, particle);
 }
+*/
 
 Parameters GaussianRandomWalkProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                                 const std::string &variable,
@@ -186,12 +201,13 @@ Parameters GaussianRandomWalkProposalKernel::subsample_simulate(RandomNumberGene
   if (this->unused_variables_kept)
     output = *particle.move_parameters;
   output[variable] = rmvnorm(rng,
-                             particle.move_parameters->get_vector(variable),
+                             particle.move_parameters->get_colvec(variable),
                              sqrt(found->second.get_double_scale())*found->second.get_chol(),
                              true);
   return output;
 }
 
+/*
 Parameters GaussianRandomWalkProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                                 const std::string &variable,
                                                                 Particle &particle,
@@ -200,14 +216,16 @@ Parameters GaussianRandomWalkProposalKernel::subsample_simulate(RandomNumberGene
   // no difference since size of data set does not impact on proposal
   return this->subsample_simulate(rng, variable, particle);
 }
+*/
 
 arma::mat GaussianRandomWalkProposalKernel::specific_gradient_of_log(const std::string &variable,
-                                                                    Particle &proposed_particle,
-                                                                    Particle &old_particle)
+                                                                     Particle &proposed_particle,
+                                                                     Particle &old_particle)
 {
   Rcpp::stop("GaussianRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
+/*
 arma::mat GaussianRandomWalkProposalKernel::specific_gradient_of_log(const std::string &variable,
                                                                     Particle &proposed_particle,
                                                                     Particle &old_particle,
@@ -215,7 +233,16 @@ arma::mat GaussianRandomWalkProposalKernel::specific_gradient_of_log(const std::
 {
   Rcpp::stop("GaussianRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
 }
+*/
 
+arma::mat GaussianRandomWalkProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
+                                                                               Particle &proposed_particle,
+                                                                               Particle &old_particle)
+{
+  Rcpp::stop("GaussianRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
+}
+
+/*
 arma::mat GaussianRandomWalkProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
                                                                               Particle &proposed_particle,
                                                                               Particle &old_particle,
@@ -223,3 +250,4 @@ arma::mat GaussianRandomWalkProposalKernel::specific_subsample_gradient_of_log(c
 {
   Rcpp::stop("GaussianRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
 }
+*/

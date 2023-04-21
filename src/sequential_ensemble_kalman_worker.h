@@ -20,23 +20,30 @@ public:
   void operator=(const SequentialEnsembleKalmanWorker &another);
   EnsembleKalmanWorker* duplicate() const;
   
-  void shift(Ensemble* ensemble,
-             double inverse_temperature);
+  void shift(Ensemble* ensemble);
   
   void pack(Ensemble* ensemble);
   void unpack(Ensemble* ensemble);
+  void unpack_with_predicted(Ensemble* ensemble);
   
   void weight(Ensemble* ensemble,
               const Index* index,
               double incremental_temperature);
+  /*
   void weight(Ensemble* ensemble,
               const Index* index,
               double incremental_temperature,
               const Parameters &conditioned_on_parameters);
+  */
+  void subsample_weight(Ensemble* ensemble,
+                        const Index* index,
+                        double incremental_temperature);
+  /*
   void subsample_weight(Ensemble* ensemble,
                         const Index* index,
                         double incremental_temperature,
                         const Parameters &conditioned_on_parameters);
+  */
   
   arma::colvec get_unnormalised_log_incremental_weights() const;
   
@@ -120,13 +127,20 @@ protected:
   void specific_move(Ensemble* next_particles,
                      Ensemble* current_particles);
   
+  /*
   void specific_move(Ensemble* next_particles,
                      Ensemble* current_particles,
                      const Parameters &conditioned_on_parameters);
+  */
   
+  void subsample_specific_move(Ensemble* next_particles,
+                               Ensemble* current_particles);
+  
+  /*
   void subsample_specific_move(Ensemble* next_particles,
                                Ensemble* current_particles,
                                const Parameters &conditioned_on_parameters);
+  */
   
   //void pack(Ensemble &next_ensemble_kalman);
   //void unpack(Ensemble &next_ensemble_kalman);

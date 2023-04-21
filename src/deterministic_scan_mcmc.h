@@ -24,15 +24,24 @@ public:
 
   Particle move(RandomNumberGenerator &rng,
                 Particle &particle) const;
+  
+  Particle subsample_move(RandomNumberGenerator &rng,
+                          Particle &particle) const;
+  
+  /*
   Particle move(RandomNumberGenerator &rng,
                 Particle &particle,
                 const Parameters &conditioned_on_parameters) const;
+  
   Particle subsample_move(RandomNumberGenerator &rng,
                 Particle &particle,
                 const Parameters &conditioned_on_parameters) const;
+  */
   
   void smc_adapt(SMCOutput* current_state);
   void ensemble_adapt(EnsembleKalmanOutput* current_state);
+  
+  void set_index(Index* index_in);
   
 protected:
   

@@ -10,6 +10,7 @@
 #include "ensemble_factors.h"
 #include "vector_single_index.h"
 #include "single_point_move_output.h"
+#include "independent_proposal_kernel.h"
 //#include "ensemble_kalman_updater.h"
 //#include "ensemble_kalman_predictor.h"
 
@@ -22,10 +23,25 @@ EnsembleKalmanFilter::EnsembleKalmanFilter()
 EnsembleKalmanFilter::EnsembleKalmanFilter(RandomNumberGenerator* rng_in,
                                            size_t* seed_in,
                                            Data* data_in,
+                                           size_t number_of_ensemble_members_in,
+                                           size_t lag_in,
+                                           EnsembleShifter* shifter_in,
+                                           std::shared_ptr<Transform> transform_in,
                                            EvaluateLogLikelihoodPtr llhd_in,
                                            double current_time_in,
-                                           bool sequencer_limit_is_fixed_in)
-:EnsembleKalman(rng_in, seed_in, data_in, false, true)
+                                           bool smcfixed_flag_in,
+                                           bool sequencer_limit_is_fixed_in,
+                                           const std::string &results_name_in)
+:EnsembleKalman(rng_in,
+                seed_in,
+                data_in,
+                number_of_ensemble_members_in,
+                lag_in,
+                shifter_in,
+                transform_in,
+                false,
+                sequencer_limit_is_fixed_in,
+                results_name_in)
 {
   this->current_time = current_time_in;
   this->current_index = this->first_index;
@@ -102,7 +118,9 @@ EnsembleKalmanOutput* EnsembleKalmanFilter::specific_run()
 EnsembleKalmanOutput* EnsembleKalmanFilter::ensemble_kalman_initialise()
 {
   EnsembleKalmanOutput* output = new EnsembleKalmanOutput(this,
-                                                          this->lag);
+                                                          this->lag,
+                                                          this->transform,
+                                                          this->results_name);
   this->first_index = 0;
   this->current_index = this->first_index;
   this->factors->set_data(this->current_index);
@@ -122,9 +140,11 @@ void EnsembleKalmanFilter::ensemble_kalman_simulate(EnsembleKalmanOutput* curren
   {
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Ensemble* current_ensemble = &current_state->back();
-    Ensemble* next_ensemble = current_state->add_ensemble();
+    Ensemble* next_ensemble = current_state->add_ensemble(this->ensemble_factors);
     this->the_worker->move(next_ensemble,
                            current_ensemble);
+    
+    current_state->increment_enk_iteration();
     
     // involves complete evaluation of weights using current adaptive param
   }
@@ -167,9 +187,9 @@ MoveOutput* EnsembleKalmanFilter::move(RandomNumberGenerator &rng,
     }
   }
   
-  moved_ensemble_member.simulate_ensemble_factor_variables(&ensemble_member);
+  //moved_ensemble_member.simulate_ensemble_factor_variables(&ensemble_member);
     
-  MoveOutput* moved_output = new SinglePointMoveOutput(moved_ensemble_member);
+  MoveOutput* moved_output = new SinglePointMoveOutput(std::move(moved_ensemble_member));
   
   return moved_output;
 }
@@ -188,33 +208,11 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcadaptive_part_given_smcfi
   {
     this->the_worker->pack(&current_state->back());
     this->find_measurement_covariances(current_state);
-    this->the_worker->shift(&current_state->back(),1.0);
+    
+    // will need to change sequencer to have temperature within t - at the moment temperature will not be set correctly
+    
+    this->the_worker->shift(&current_state->back());
     this->the_worker->unpack(&current_state->back());
-    
-    /*
-    if (current_state->all_particles.size()==1)
-    {
-      
-      this->the_worker->weight(current_state->back());
-    }
-    else
-    {
-      if (this->dynamic_proposal_is_evaluated)
-      {
-        this->the_worker->pf_weight(current_state->back(),
-                                    *(current_state->all_particles.end()-2),
-                                    this->proposal_kernel);
-      }
-      else
-      {
-        this->the_worker->pf_weight(current_state->back(),
-                                    *(current_state->all_particles.end()-2),
-                                    NULL);
-      }
-    }
-    
-    current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-    */
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
@@ -222,7 +220,7 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcadaptive_part_given_smcfi
     // check termination, using sequencer
     if (this->check_termination())
     {
-      terminate = TRUE;
+      //terminate = TRUE;
       break;
     }
     
@@ -238,13 +236,16 @@ EnsembleKalmanOutput* EnsembleKalmanFilter::specific_run(const Parameters &condi
 {
   EnsembleKalmanOutput* current_state = this->ensemble_kalman_initialise(conditioned_on_parameters);
   this->ensemble_kalman_evaluate(current_state, conditioned_on_parameters);
+  //this->ensemble_kalman_evaluate(current_state);
   return current_state;
 }
 
 EnsembleKalmanOutput* EnsembleKalmanFilter::ensemble_kalman_initialise(const Parameters &parameters)
 {
   EnsembleKalmanOutput* output = new EnsembleKalmanOutput(this,
-                                                          this->lag);
+                                                          this->lag,
+                                                          this->transform,
+                                                          this->results_name);
   this->first_index = 0;
   this->current_index = this->first_index;
   this->factors->set_data(this->current_index);
@@ -266,16 +267,24 @@ void EnsembleKalmanFilter::ensemble_kalman_simulate(EnsembleKalmanOutput* curren
   {
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Ensemble* current_ensemble = &current_state->back();
-    Ensemble* next_ensemble = current_state->add_ensemble();
+    Ensemble* next_ensemble = current_state->add_ensemble(this->ensemble_factors);
+    
+    /*
     this->the_worker->move(next_ensemble,
                            current_ensemble,
                            conditioned_on_parameters);
+    */
     
+    this->the_worker->move(next_ensemble,
+                           current_ensemble);
+    
+    current_state->increment_enk_iteration();
     // involves complete evaluation of weights using current adaptive param
   }
   
 }
 
+/*
 MoveOutput* EnsembleKalmanFilter::move(RandomNumberGenerator &rng,
                                           Particle &ensemble_member,
                                           const Parameters &conditioned_on_parameters)
@@ -298,13 +307,41 @@ MoveOutput* EnsembleKalmanFilter::move(RandomNumberGenerator &rng,
     }
   }
   
-  moved_ensemble_member.simulate_ensemble_factor_variables(&ensemble_member);
+  //moved_ensemble_member.simulate_ensemble_factor_variables(&ensemble_member);
   
-  MoveOutput* moved_output = new SinglePointMoveOutput(moved_ensemble_member);
+  MoveOutput* moved_output = new SinglePointMoveOutput(std::move(moved_ensemble_member));
+  
+  return moved_output;
+}
+*/
+
+MoveOutput* EnsembleKalmanFilter::subsample_move(RandomNumberGenerator &rng,
+                                                 Particle &ensemble_member)
+{
+  Particle moved_ensemble_member;
+  for (size_t i=0; i<this->predictions_per_update; ++i)
+  {
+    VectorSingleIndex index(this->current_index);
+    if (i==0)
+    {
+      moved_ensemble_member = this->proposal_kernel->subsample_move(rng,
+                                                                    ensemble_member);
+    }
+    else
+    {
+      moved_ensemble_member = this->proposal_kernel->subsample_move(rng,
+                                                                    moved_ensemble_member);
+    }
+  }
+  
+  //moved_ensemble_member.simulate_ensemble_factor_variables(&ensemble_member);
+  
+  MoveOutput* moved_output = new SinglePointMoveOutput(std::move(moved_ensemble_member));
   
   return moved_output;
 }
 
+/*
 MoveOutput* EnsembleKalmanFilter::subsample_move(RandomNumberGenerator &rng,
                                                  Particle &ensemble_member,
                                                  const Parameters &conditioned_on_parameters)
@@ -327,12 +364,13 @@ MoveOutput* EnsembleKalmanFilter::subsample_move(RandomNumberGenerator &rng,
     }
   }
   
-  moved_ensemble_member.simulate_ensemble_factor_variables(&ensemble_member);
+  //moved_ensemble_member.simulate_ensemble_factor_variables(&ensemble_member);
   
-  MoveOutput* moved_output = new SinglePointMoveOutput(moved_ensemble_member);
+  MoveOutput* moved_output = new SinglePointMoveOutput(std::move(moved_ensemble_member));
   
   return moved_output;
 }
+*/
 
 void EnsembleKalmanFilter::ensemble_kalman_evaluate(EnsembleKalmanOutput* current_state,
                                                     const Parameters &conditioned_on_parameters)
@@ -370,33 +408,8 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcadaptive_part_given_smcfi
   {
     this->the_worker->pack(&current_state->back());
     this->find_measurement_covariances(current_state);
-    this->the_worker->shift(&current_state->back(),1.0);
+    this->the_worker->shift(&current_state->back());
     this->the_worker->unpack(&current_state->back());
-    
-    /*
-     if (current_state->all_particles.size()==1)
-     {
-     
-     this->the_worker->weight(current_state->back());
-     }
-     else
-     {
-     if (this->dynamic_proposal_is_evaluated)
-     {
-     this->the_worker->pf_weight(current_state->back(),
-     *(current_state->all_particles.end()-2),
-     this->proposal_kernel);
-     }
-     else
-     {
-     this->the_worker->pf_weight(current_state->back(),
-     *(current_state->all_particles.end()-2),
-     NULL);
-     }
-     }
-     
-     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-     */
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
@@ -404,7 +417,7 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcadaptive_part_given_smcfi
     // check termination, using sequencer
     if (this->check_termination())
     {
-      terminate = TRUE;
+      //terminate = TRUE;
       break;
     }
     
@@ -414,6 +427,28 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcadaptive_part_given_smcfi
     this->ensemble_kalman_simulate(current_state,
                                    conditioned_on_parameters);
     
+  }
+}
+
+void EnsembleKalmanFilter::subsample_ensemble_kalman_simulate(EnsembleKalmanOutput* current_state)
+{
+  if (current_state->all_ensembles.size()==0)
+  {
+    VectorSingleIndex index(this->current_index);
+    // Simulate from the proposal.
+    this->simulate_proposal(current_state,
+                            &index);
+  }
+  else
+  {
+    // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
+    Ensemble* current_ensemble = &current_state->back();
+    Ensemble* next_ensemble = current_state->add_ensemble(this->ensemble_factors);
+    this->the_worker->subsample_move(next_ensemble,
+                                     current_ensemble);
+    
+    current_state->increment_enk_iteration();
+    // involves complete evaluation of weights using current adaptive param
   }
 }
 
@@ -432,16 +467,20 @@ void EnsembleKalmanFilter::subsample_ensemble_kalman_simulate(EnsembleKalmanOutp
   {
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Ensemble* current_ensemble = &current_state->back();
-    Ensemble* next_ensemble = current_state->add_ensemble();
+    Ensemble* next_ensemble = current_state->add_ensemble(this->ensemble_factors);
+    //this->the_worker->subsample_move(next_ensemble,
+    //                                 current_ensemble,
+    //                                 conditioned_on_parameters);
     this->the_worker->subsample_move(next_ensemble,
-                                     current_ensemble,
-                                     conditioned_on_parameters);
+                                     current_ensemble);
     
+    current_state->increment_enk_iteration();
     // involves complete evaluation of weights using current adaptive param
   }
   
 }
 
+/*
 void EnsembleKalmanFilter::subsample_ensemble_kalman_evaluate(EnsembleKalmanOutput* current_state,
                                                               const Parameters &conditioned_on_parameters)
 {
@@ -478,33 +517,8 @@ void EnsembleKalmanFilter::subsample_ensemble_kalman_evaluate_smcadaptive_part_g
   {
     this->the_worker->pack(&current_state->back());
     this->find_measurement_covariances(current_state);
-    this->the_worker->shift(&current_state->back(),1.0);
+    this->the_worker->shift(&current_state->back());
     this->the_worker->unpack(&current_state->back());
-    
-    /*
-     if (current_state->all_particles.size()==1)
-     {
-     
-     this->the_worker->weight(current_state->back());
-     }
-     else
-     {
-     if (this->dynamic_proposal_is_evaluated)
-     {
-     this->the_worker->pf_weight(current_state->back(),
-     *(current_state->all_particles.end()-2),
-     this->proposal_kernel);
-     }
-     else
-     {
-     this->the_worker->pf_weight(current_state->back(),
-     *(current_state->all_particles.end()-2),
-     NULL);
-     }
-     }
-     
-     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-     */
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
@@ -512,7 +526,7 @@ void EnsembleKalmanFilter::subsample_ensemble_kalman_evaluate_smcadaptive_part_g
     // check termination, using sequencer
     if (this->check_termination())
     {
-      terminate = TRUE;
+      //terminate = TRUE;
       break;
     }
     
@@ -524,6 +538,7 @@ void EnsembleKalmanFilter::subsample_ensemble_kalman_evaluate_smcadaptive_part_g
     
   }
 }
+*/
 
 //void EnsembleKalmanFilter::evaluate(EnsembleKalmanOutput* current_state,
 //                            const Parameters &conditioned_on_parameters)
@@ -660,6 +675,12 @@ bool EnsembleKalmanFilter::check_termination() const
   return(this->current_index==this->last_index);
 }
 
+/*
+void EnsembleKalmanFilter::setup_variables()
+{
+  this->setup_variables_using_candidate_parameters(this->proposal->independent_simulate(*this->rng));
+}
+*/
 
 //double EnsembleKalmanFilter::evaluate(const Parameters &parameters)
 //{

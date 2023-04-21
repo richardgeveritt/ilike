@@ -68,6 +68,8 @@ void ZigZagMCMC::make_copy(const ZigZagMCMC &another)
   this->proposal = another.proposal;
   if (another.proposal!=NULL)
     this->proposal = another.proposal->proposal_kernel_duplicate();
+  else
+    this->proposal = NULL;
 }
 
 Particle ZigZagMCMC::move(RandomNumberGenerator &rng,
@@ -76,19 +78,29 @@ Particle ZigZagMCMC::move(RandomNumberGenerator &rng,
   Rcpp::stop("ZigZagMCMC::move - not yet implemented.");
 }
 
+/*
 Particle ZigZagMCMC::move(RandomNumberGenerator &rng,
                           Particle &particle,
                           const Parameters &conditioned_on_parameters) const
 {
   Rcpp::stop("ZigZagMCMC::move - not yet implemented.");
 }
+*/
 
+Particle ZigZagMCMC::subsample_move(RandomNumberGenerator &rng,
+                                    Particle &particle) const
+{
+  Rcpp::stop("ZigZagMCMC::move - not yet implemented.");
+}
+
+/*
 Particle ZigZagMCMC::subsample_move(RandomNumberGenerator &rng,
                                     Particle &particle,
                                     const Parameters &conditioned_on_parameters) const
 {
   Rcpp::stop("ZigZagMCMC::move - not yet implemented.");
 }
+*/
 
 /*
 EnsembleMember ZigZagMCMC::move(RandomNumberGenerator &rng,
@@ -122,6 +134,7 @@ MoveOutput* ZigZagMCMC::run(RandomNumberGenerator &rng,
   return new PDMPMCMCOutput();
 }
 
+/*
 MoveOutput* ZigZagMCMC::run(RandomNumberGenerator &rng,
                             Particle &particle,
                             const Parameters &conditioned_on_parameters) const
@@ -129,7 +142,16 @@ MoveOutput* ZigZagMCMC::run(RandomNumberGenerator &rng,
   // run PDMP
   return new PDMPMCMCOutput();
 }
+*/
 
+MoveOutput* ZigZagMCMC::subsample_run(RandomNumberGenerator &rng,
+                                      Particle &particle) const
+{
+  // run PDMP
+  return new PDMPMCMCOutput();
+}
+
+/*
 MoveOutput* ZigZagMCMC::subsample_run(RandomNumberGenerator &rng,
                                       Particle &particle,
                                       const Parameters &conditioned_on_parameters) const
@@ -137,6 +159,7 @@ MoveOutput* ZigZagMCMC::subsample_run(RandomNumberGenerator &rng,
   // run PDMP
   return new PDMPMCMCOutput();
 }
+*/
 
 void ZigZagMCMC::smc_adapt(SMCOutput* current_state)
 {
@@ -153,4 +176,9 @@ void ZigZagMCMC::specific_mcmc_adapt(Particle &current_particle,
 {
   proposal->mcmc_adapt(current_particle,
                        iteration_counter);
+}
+
+void ZigZagMCMC::set_index(Index* index_in)
+{
+  
 }

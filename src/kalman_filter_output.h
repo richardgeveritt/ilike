@@ -61,6 +61,8 @@ public:
   arma::mat subsample_get_gradient_of_log(const std::string &variable,
                                 const Parameters &x);
 
+  void close_ofstreams();
+  
   void print(std::ostream &os) const;
 
 protected:
@@ -70,6 +72,9 @@ protected:
   
   double log_likelihood_smcfixed_part;
   double subsample_log_likelihood_smcfixed_part;
+  
+  void write_to_file(const std::string &directory_name,
+                     const std::string &index="");
 
   void make_copy(const KalmanFilterOutput &another);
   

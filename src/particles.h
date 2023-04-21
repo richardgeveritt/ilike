@@ -14,26 +14,61 @@ using namespace Rcpp;
 class SMC;
 class SequentialSMCWorker;
 class MoveOutput;
+class Factors;
 
 class Particles
 {
 public:
 
-  Particles(void);
+  Particles();
   Particles(size_t number_of_particles_in);
   Particles(const std::vector< MoveOutput* > &particles_in);
-  Particles(const std::vector<Parameters> &initial_values_in,
-            const arma::colvec &log_probabilities_of_initial_values_in);
+  Particles(std::vector<Parameters> &initial_values_in,
+            const arma::colvec &log_probabilities_of_initial_values_in,
+            Factors* factors_in);
+  Particles(std::vector<Parameters> &initial_values_in,
+            const arma::colvec &log_probabilities_of_initial_values_in,
+            Factors* factors_in,
+            const Parameters &conditioned_on_parameters);
+  Particles(std::vector<Parameters> &initial_values_in,
+            const arma::colvec &log_probabilities_of_initial_values_in,
+            Factors* factors_in,
+            const Parameters &conditioned_on_parameters,
+            const Parameters &sequencer_parameters);
+  
+  void setup(std::vector<Parameters> &initial_values_in,
+             const arma::colvec &log_probabilities_of_initial_values_in,
+             Factors* factors_in);
+  
+  void setup(std::vector<Parameters> &initial_values_in,
+             const arma::colvec &log_probabilities_of_initial_values_in,
+             Factors* factors_in,
+             const Parameters &conditioned_on_parameters);
+  
+  void setup(std::vector<Parameters> &initial_values_in,
+             const arma::colvec &log_probabilities_of_initial_values_in,
+             Factors* factors_in,
+             const Parameters &conditioned_on_parameters,
+             const Parameters &sequencer_parameters);
 
-  virtual ~Particles(void);
+  virtual ~Particles();
 
   Particles(const Particles &another);
-  void operator=(const Particles &another);
+  Particles& operator=(const Particles &another);
+  
+  Particles(Particles &&another);
+  Particles& operator=(Particles &&another);
   
   void reserve(size_t number_of_particles_in);
-  //void push_back(const Parameters &parameters_in);
-  void push_back(const Particle &particle_in);
+  //void push_back(const Parameters &parameters_in,
+  //               Factors* factors_in);
+  //void push_back(const Particle &particle_in);
   void push_back(MoveOutput* move_output_in);
+  void push_back(Parameters &&parameters_in,
+                 Factors* factors_in);
+  void push_back(Particle &&particle_in);
+  
+  Particle* add_particle();
   
   void simulate_resampling_variables(RandomNumberGenerator &rng);
 
@@ -42,13 +77,14 @@ public:
   
   void initialise_weights();
   void update_weights(const arma::colvec &latest_unnormalised_log_incremental_weights);
+  double calculate_log_normalising_constant();
   void normalise_weights();
   void resample();
   
   void set_previous_target_evaluated_to_target_evaluated();
   void subsample_set_previous_target_evaluated_to_target_evaluated();
   
-  arma::mat get_most_recent_matrix_particles() const;
+  arma::mat get_most_recent_matrix_particles(const std::vector<std::string> &vector_variables) const;
   
   //virtual List& operator[](int index)=0;
   //virtual List operator[](int index) const=0;
@@ -83,13 +119,23 @@ public:
   // Also store anything that needs to be stored in a different structure across all particles.
   arma::colvec resampling_variables;
   std::vector<size_t> ancestor_variables;
+  
+  bool resampled_flag;
+  
+  Parameters schedule_parameters;
+  
+  double ess;
+  
+  void close_ofstreams();
 
 protected:
   
   //friend SequentialSMCWorker;
 
   void make_copy(const Particles &another);
-
+  
+  void make_copy(Particles &&another);
+  
   // Stored here. // moved to model_and_algorithm
   //std::vector<LikelihoodEstimator*> likelihood_estimators;
 

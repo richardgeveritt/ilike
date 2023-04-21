@@ -31,13 +31,20 @@ public:
   virtual Particle move(RandomNumberGenerator &rng,
                         Particle &particle) const=0;
 
+  /*
   virtual Particle move(RandomNumberGenerator &rng,
                         Particle &particle,
                         const Parameters &conditioned_on_parameters) const=0;
+  */
   
+  virtual Particle subsample_move(RandomNumberGenerator &rng,
+                                  Particle &particle) const=0;
+  
+  /*
   virtual Particle subsample_move(RandomNumberGenerator &rng,
                                   Particle &particle,
                                   const Parameters &conditioned_on_parameters) const=0;
+  */
   
   /*
   virtual EnsembleMember move(RandomNumberGenerator &rng,

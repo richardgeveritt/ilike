@@ -4,10 +4,13 @@
 #include "density_estimator.h"
 #include "parameter_particle_simulator.h"
 #include "sequential_density_likelihood_estimator_worker.h"
+#include "independent_proposal_kernel.h"
+//#include "transform.h"
 
 DensityLikelihoodEstimator::DensityLikelihoodEstimator()
   :LikelihoodEstimator()
 {
+  //this->transform = NULL;
 }
 
 DensityLikelihoodEstimator::DensityLikelihoodEstimator(RandomNumberGenerator* rng_in,
@@ -16,15 +19,21 @@ DensityLikelihoodEstimator::DensityLikelihoodEstimator(RandomNumberGenerator* rn
                                                        size_t number_of_points_in,
                                                        bool smcfixed_flag_in,
                                                        DensityEstimator* density_estimator_in,
-                                                       SimulateIndependentProposalPtr simulate_distribution_in,
-                                                       bool parallel_in)
-:LikelihoodEstimator(rng_in, seed_in, data_in)
+                                                       IndependentProposalKernel* proposal_in,
+                                                       bool make_subsample_version_in,
+                                                       bool parallel_in,
+                                                       size_t grain_size_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
 {
   this->density_estimator = density_estimator_in;
-  this->subsample_density_estimator = density_estimator_in->duplicate();
-  this->simulate_distribution = simulate_distribution_in;
-  this->smcfixed_flag = smcfixed_flag_in;
+  if (make_subsample_version_in==true)
+    this->subsample_density_estimator = density_estimator_in->duplicate();
+  else
+    this->subsample_density_estimator = NULL;
+  this->proposal = proposal_in;
+  this->subsample_proposal = NULL;
   this->number_of_points = number_of_points_in;
+  //this->transform = NULL;
 
   if (parallel_in==TRUE)
   {
@@ -46,6 +55,15 @@ DensityLikelihoodEstimator::~DensityLikelihoodEstimator()
   
   if (this->the_worker!=NULL)
     delete this->the_worker;
+  
+  if (this->proposal!=NULL)
+    delete this->proposal;
+  
+  if (this->subsample_proposal!=NULL)
+    delete this->subsample_proposal;
+  
+  //if (this->transform!=NULL)
+  //  delete this->transform;
 }
 
 //Copy constructor for the DensityLikelihoodEstimator class.
@@ -70,11 +88,20 @@ void DensityLikelihoodEstimator::operator=(const DensityLikelihoodEstimator &ano
   if (this->the_worker!=NULL)
     delete this->the_worker;
   
+  if (this->proposal!=NULL)
+    delete this->proposal;
+  
+  if (this->subsample_proposal!=NULL)
+    delete this->subsample_proposal;
+  
+  //if (this->transform!=NULL)
+  //  delete this->transform;
+  
   LikelihoodEstimator::operator=(another);
   this->make_copy(another);
 }
 
-LikelihoodEstimator* DensityLikelihoodEstimator::duplicate(void)const
+LikelihoodEstimator* DensityLikelihoodEstimator::duplicate() const
 {
   return( new DensityLikelihoodEstimator(*this));
 }
@@ -83,20 +110,43 @@ void DensityLikelihoodEstimator::make_copy(const DensityLikelihoodEstimator &ano
 {
   if (another.density_estimator!=NULL)
     this->density_estimator = another.density_estimator->duplicate();
+  else
+    this->density_estimator = NULL;
   
   if (another.subsample_density_estimator!=NULL)
     this->subsample_density_estimator = another.subsample_density_estimator->duplicate();
+  else
+    this->subsample_density_estimator = NULL;
   
   if (another.the_worker!=NULL)
     this->the_worker = another.the_worker->duplicate();
+  else
+    this->the_worker = NULL;
   
-  this->smcfixed_flag = another.smcfixed_flag;
+  if (another.proposal!=NULL)
+    this->proposal = another.proposal->independent_proposal_kernel_duplicate();
+  else
+    this->proposal = NULL;
   
-  this->simulate_distribution = another.simulate_distribution;
+  if (another.subsample_proposal!=NULL)
+    this->subsample_proposal = another.subsample_proposal->independent_proposal_kernel_duplicate();
+  else
+    this->subsample_proposal = NULL;
   
-  this->subsample_simulate_distribution = another.subsample_simulate_distribution;
+  /*
+  if (another.transform!=NULL)
+    this->transform = another.transform->duplicate();
+  else
+    this->transform = NULL;
+  */
+  
+  //this->simulate_distribution = another.simulate_distribution;
+  
+  //this->subsample_simulate_distribution = another.subsample_simulate_distribution;
   
   this->number_of_points = another.number_of_points;
+  
+  this->variables = another.variables;
 }
 
 // double DensityLikelihoodEstimator::estimate_log_likelihood(const List &inputs,
@@ -107,12 +157,41 @@ void DensityLikelihoodEstimator::make_copy(const DensityLikelihoodEstimator &ano
 
 LikelihoodEstimatorOutput* DensityLikelihoodEstimator::initialise()
 {
-  return new DensityLikelihoodEstimatorOutput(this);
+  return new DensityLikelihoodEstimatorOutput(this,
+                                              this->density_estimator,
+                                              this->subsample_density_estimator);
 }
 
 LikelihoodEstimatorOutput* DensityLikelihoodEstimator::initialise(const Parameters &parameters)
 {
-  return new DensityLikelihoodEstimatorOutput(this);
+  return new DensityLikelihoodEstimatorOutput(this,
+                                              this->density_estimator,
+                                              this->subsample_density_estimator);
+}
+
+void DensityLikelihoodEstimator::setup()
+{
+  this->variables = this->proposal->independent_simulate(*this->rng).get_vector_variables();
+  /*
+  if (this->transform==NULL)
+    this->variables = this->proposal->independent_simulate(*this->rng).get_vector_variables();
+  else
+    this->variables = this->transform->transform(this->proposal->independent_simulate(*this->rng)).get_vector_variables();
+  */
+}
+
+void DensityLikelihoodEstimator::setup(const Parameters &parameters)
+{
+  /*
+  if (this->transform==NULL)
+    this->variables = this->proposal->independent_simulate(*this->rng,
+                                                           parameters).get_vector_variables();
+  else
+    this->variables = this->transform->transform(this->proposal->independent_simulate(*this->rng,
+                                                                                      parameters)).get_vector_variables();
+  */
+  this->variables = this->proposal->independent_simulate(*this->rng,
+                                                         parameters).get_vector_variables();
 }
 
 //double DensityLikelihoodEstimator::evaluate(const Parameters &parameters)

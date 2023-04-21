@@ -34,13 +34,20 @@ public:
   MoveOutput* run(RandomNumberGenerator &rng,
                   Particle &particle);
   
+  /*
   MoveOutput* run(RandomNumberGenerator &rng,
                   Particle &particle,
                   const Parameters &conditioned_on_parameters);
+  */
   
+  MoveOutput* subsample_run(RandomNumberGenerator &rng,
+                            Particle &particle);
+  
+  /*
   MoveOutput* subsample_run(RandomNumberGenerator &rng,
                             Particle &particle,
                             const Parameters &conditioned_on_parameters);
+  */
   
   // could change to also have MoveOutput*
   // change when needed
@@ -65,6 +72,8 @@ public:
   
   void mcmc_adapt(Particle &current_particle,
                   size_t iteration_counter);
+  
+  virtual void set_index(Index* index_in)=0;
 
 protected:
   
@@ -78,6 +87,9 @@ protected:
   
   // Stored here.
   MCMCTermination* termination;
+  
+  // stored here
+  //Index* index;
 
   void make_copy(const MCMC &another);
 

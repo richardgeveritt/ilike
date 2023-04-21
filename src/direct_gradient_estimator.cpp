@@ -29,7 +29,7 @@ void DirectGradientEstimator::operator=(const DirectGradientEstimator &another)
   this->make_copy(another);
 }
 
-GradientEstimator* DirectGradientEstimator::duplicate(void)const
+GradientEstimator* DirectGradientEstimator::duplicate() const
 {
   return( new DirectGradientEstimator(*this));
 }
@@ -58,6 +58,7 @@ arma::mat DirectGradientEstimator::get_gradient_of_log(const std::string &variab
                                              index);
 }
 
+/*
 arma::mat DirectGradientEstimator::get_gradient_of_log(const std::string &variable,
                                                        const Index* index,
                                                        Particle &particle,
@@ -67,6 +68,7 @@ arma::mat DirectGradientEstimator::get_gradient_of_log(const std::string &variab
                                              index,
                                              conditioned_on_parameters);
 }
+*/
 
 arma::mat DirectGradientEstimator::subsample_get_gradient_of_log(const std::string &variable,
                                                                  const Index* index,
@@ -76,6 +78,7 @@ arma::mat DirectGradientEstimator::subsample_get_gradient_of_log(const std::stri
                                                        index);
 }
 
+/*
 arma::mat DirectGradientEstimator::subsample_get_gradient_of_log(const std::string &variable,
                                                                  const Index* index,
                                                                  Particle &particle,
@@ -85,3 +88,4 @@ arma::mat DirectGradientEstimator::subsample_get_gradient_of_log(const std::stri
                                                        index,
                                                        conditioned_on_parameters);
 }
+*/

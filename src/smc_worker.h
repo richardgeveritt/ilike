@@ -6,7 +6,7 @@ using namespace Rcpp;
 
 #include "particles.h"
 #include "distributions.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 #include "proposal_kernel.h"
 #include "sequencer.h"
 
@@ -62,6 +62,8 @@ public:
   
   void simulate(Particles* next_particles,
                 const Parameters &conditioned_on_parameters);
+  
+  /*
   virtual void weight(const Index* index,
                       Particles &current_particles,
                       const Parameters &conditioned_on_parameters)=0;
@@ -95,9 +97,37 @@ public:
   void move(Particles* next_particles,
             const Particles* current_particles,
             const Parameters &conditioned_on_parameters);
+  */
+  
+  void subsample_simulate(Particles* next_particles);
+  virtual void subsample_pf_initial_weight(Particles &current_particles)=0;
+  virtual void subsample_weight(const Index* index,
+                                Particles &current_particles)=0;
+  virtual void subsample_smcfixed_weight(const Index* index,
+                                         Particles &current_particles)=0;
+  virtual void subsample_smcadaptive_given_smcfixed_weight(const Index* index,
+                                                           Particles &current_particles)=0;
+  virtual void subsample_smcadaptive_given_smcfixed_evaluate_target(const Index* index,
+                                                                    Particles &current_particles)=0;
+  virtual void subsample_marginal_weight(const Index* index,
+                                         Particles &current_particles,
+                                         Particles &previous_particles,
+                                         ProposalKernel* proposal_kernel)=0;
+  virtual void subsample_generic_weight(const Index* index,
+                                        Particles &current_particles,
+                                        Particles &previous_particles,
+                                        ProposalKernel* proposal_kernel,
+                                        ProposalKernel* L_kernel)=0;
+  virtual void subsample_pf_weight(const Index* index,
+                                   Particles &current_particles,
+                                   Particles &previous_particles,
+                                   ProposalKernel* proposal_kernel)=0;
+  void subsample_move(Particles* next_particles,
+                      const Particles* current_particles);
   
   void subsample_simulate(Particles* next_particles,
-                const Parameters &conditioned_on_parameters);
+                          const Parameters &conditioned_on_parameters);
+  /*
   virtual void subsample_pf_initial_weight(Particles &current_particles,
                                            const Parameters &conditioned_on_parameters)=0;
   virtual void subsample_weight(const Index* index,
@@ -131,6 +161,7 @@ public:
   void subsample_move(Particles* next_particles,
                       const Particles* current_particles,
                       const Parameters &conditioned_on_parameters);
+  */
   //void simulate_and_weight(const Parameters &conditioned_on_parameters);
 
   //virtual Particles& simulated_particles()=0;
@@ -151,16 +182,25 @@ protected:
   //virtual void specific_weight(const Parameters &conditioned_on_parameters)=0;
   //virtual void specific_simulate_and_weight(const Parameters &conditioned_on_parameters)=0;
   
+  /*
   virtual void specific_move(Particles* next_particles,
                              const Particles* current_particles,
                              const Parameters &conditioned_on_parameters)=0;
+  */
+  
+  virtual void subsample_specific_simulate(Particles* next_particles)=0;
+  
+  virtual void subsample_specific_move(Particles* next_particles,
+                                       const Particles* current_particles)=0;
   
   virtual void subsample_specific_simulate(Particles* next_particles,
-                                 const Parameters &conditioned_on_parameters)=0;
+                                           const Parameters &conditioned_on_parameters)=0;
   
+  /*
   virtual void subsample_specific_move(Particles* next_particles,
                                        const Particles* current_particles,
                                        const Parameters &conditioned_on_parameters)=0;
+  */
 
   void make_copy(const SMCWorker &another);
 

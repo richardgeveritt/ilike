@@ -3,14 +3,21 @@
 #include "measurement_covariance_estimator_output.h"
 #include "vector_factor_variables.h"
 #include "vector_ensemble_factor_variables.h"
-#include "data.h"
+#include "parameters.h"
 #include "index.h"
+#include "ensemble.h"
 
 VectorEnsembleFactors::VectorEnsembleFactors()
   :EnsembleFactors()
 {
   this->measurement_covariance_estimators.resize(0);
   this->measurement_covariance_estimator_temp_data.resize(0);
+}
+
+VectorEnsembleFactors::VectorEnsembleFactors(const std::vector<MeasurementCovarianceEstimator*> &measurement_covariance_estimators_in)
+:EnsembleFactors()
+{
+  this->measurement_covariance_estimators = measurement_covariance_estimators_in;
 }
 
 VectorEnsembleFactors::~VectorEnsembleFactors()
@@ -126,9 +133,21 @@ void VectorEnsembleFactors::set_data(const Index* index)
   }
 }
 
-arma::colvec VectorEnsembleFactors::get_measurements()
+std::vector<arma::colvec*> VectorEnsembleFactors::get_measurements()
 {
-  return measurement_covariance_estimator_temp_data[0]->get_vector(this->measurement_names);
+  std::vector<arma::colvec*> measurements;
+  measurements.reserve(this->measurement_covariance_estimators.size());
+  
+  for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+       i != this->measurement_covariance_estimators.end();
+       ++i)
+  {
+    measurements.push_back((*i)->get_measurement_pointer());
+  }
+  
+  return measurements;
+  //return measurement_covariance_estimator_temp_data[0]->get_colvec(this->measurement_names);
+  //return this->measurement_covariance_estimator_temp_data[0]->get_colvec(this->measurement_names);
 }
 
 EnsembleFactorVariables* VectorEnsembleFactors::simulate_ensemble_factor_variables(const Parameters &simulated_parameters)
@@ -148,6 +167,7 @@ EnsembleFactorVariables* VectorEnsembleFactors::simulate_ensemble_factor_variabl
                                            outputs);
 }
 
+/*
 EnsembleFactorVariables* VectorEnsembleFactors::simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
                                                                                    const Parameters &conditioned_on_parameters)
 {
@@ -174,6 +194,53 @@ EnsembleFactorVariables* VectorEnsembleFactors::simulate_ensemble_factor_variabl
   return new VectorEnsembleFactorVariables(this,
                                            outputs);
 }
+*/
+
+EnsembleFactorVariables* VectorEnsembleFactors::subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters)
+{
+  std::vector<MeasurementCovarianceEstimatorOutput*> outputs;
+  outputs.reserve(this->measurement_covariance_estimators.size());
+  
+  for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+       i != this->measurement_covariance_estimators.end();
+       ++i)
+  {
+    outputs.push_back((*i)->initialise(simulated_parameters));
+    outputs.back()->subsample_simulate(simulated_parameters);
+  }
+  
+  return new VectorEnsembleFactorVariables(this,
+                                           outputs);
+}
+
+/*
+EnsembleFactorVariables* VectorEnsembleFactors::subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
+                                                                      const Parameters &conditioned_on_parameters)
+{
+  std::vector<MeasurementCovarianceEstimatorOutput*> outputs;
+  outputs.reserve(this->measurement_covariance_estimators.size());
+  
+  Parameters all_parameters = simulated_parameters.merge(conditioned_on_parameters);
+  
+  for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+       i != this->measurement_covariance_estimators.end();
+       ++i)
+  {
+    outputs.push_back((*i)->initialise(all_parameters));
+    
+    // call set params first
+    // should be a proposalkernel? check for consistency
+    
+    //(*i)->set_parameters(conditioned_on_parameters);
+    
+    outputs.back()->subsample_simulate(all_parameters);
+    // need to separate current state from params in this case
+  }
+  
+  return new VectorEnsembleFactorVariables(this,
+                                           outputs);
+}
+*/
 
 /*
 std::vector<arma::mat> VectorEnsembleFactors::get_measurement_covariances()
@@ -230,6 +297,78 @@ void VectorEnsembleFactors::find_Cygivenx(const arma::mat &inv_Cxx,
     this->measurement_covariance_estimators[i]->find_Cygivenx(inv_Cxx,
                                                               Cxys[i],
                                                               Cyys[i]);
+  }
+}
+
+std::vector<arma::mat> VectorEnsembleFactors::get_adjustments(const arma::mat &Zf,
+                                                              const arma::mat &Ginv,
+                                                              const arma::mat &Ftranspose,
+                                                              const std::vector<arma::mat> &Vs,
+                                                              double inverse_incremental_temperature) const
+{
+  std::vector<arma::mat> adjustments;
+  adjustments.reserve(this->measurement_covariance_estimators.size());
+  for (size_t i=0;
+       i<this->measurement_covariance_estimators.size();
+       ++i)
+  {
+    adjustments.push_back(this->measurement_covariance_estimators[i]->get_adjustment(Zf,
+                                                                                     Ginv,
+                                                                                     Ftranspose,
+                                                                                     Vs[i],
+                                                                                     inverse_incremental_temperature));
+  }
+  return adjustments;
+}
+
+double VectorEnsembleFactors::get_incremental_likelihood(Ensemble* ensemble)
+{
+  double inverse_incremental_temperature = 1.0/(this->temperature - this->previous_temperature);
+  
+  double llhd = 0.0;
+  ensemble->kalman_gains.clear();
+  ensemble->kalman_gains.reserve(this->measurement_covariance_estimators.size());
+  
+  for (size_t i=0;
+       i<this->measurement_covariance_estimators.size();
+       ++i)
+  {
+    arma::mat unconditional_measurement_covariance = this->measurement_covariance_estimators[i]->get_unconditional_measurement_covariance(ensemble->Cyys[i],
+                                                                                                                                          inverse_incremental_temperature);
+    ensemble->kalman_gains.push_back(ensemble->Cxys[i]*unconditional_measurement_covariance.i());
+    llhd = llhd + dmvnorm(*this->measurement_covariance_estimators[i]->get_measurement_pointer(),ensemble->myys[i],unconditional_measurement_covariance);
+  }
+  
+  return llhd;
+}
+
+void VectorEnsembleFactors::setup()
+{
+  for (auto i=this->measurement_covariance_estimators.begin();
+       i!=this->measurement_covariance_estimators.end();
+       ++i)
+  {
+    (*i)->setup();
+  }
+}
+
+void VectorEnsembleFactors::setup(const Parameters &conditioned_on_parameters)
+{
+  for (auto i=this->measurement_covariance_estimators.begin();
+       i!=this->measurement_covariance_estimators.end();
+       ++i)
+  {
+    (*i)->setup(conditioned_on_parameters);
+  }
+}
+
+void VectorEnsembleFactors::precompute_gaussian_covariance(double inverse_incremental_temperature)
+{
+  for (auto i=this->measurement_covariance_estimators.begin();
+       i!=this->measurement_covariance_estimators.end();
+       ++i)
+  {
+    (*i)->precompute_gaussian_covariance(inverse_incremental_temperature);
   }
 }
 

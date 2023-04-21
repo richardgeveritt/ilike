@@ -52,10 +52,10 @@ void SampleAverageVectorRecursiveParameterEstimator::update(const std::string &v
 {
   if (iteration_counter==0)
   {
-    this->estimated = latest_particle.move_parameters->get_vector(variable_name);
+    this->estimated = latest_particle.move_parameters->get_colvec(variable_name);
   }
   else
   {
-    this->estimated = this->estimated + this->gain(iteration_counter+1)*(latest_particle.move_parameters->get_vector(variable_name) - this->estimated);
+    this->estimated = this->estimated + this->gain(iteration_counter+1)*(latest_particle.move_parameters->get_colvec(variable_name) - this->estimated);
   }
 }

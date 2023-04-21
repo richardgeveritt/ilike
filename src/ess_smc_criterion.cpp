@@ -47,20 +47,31 @@ void ESSSMCCriterion::make_copy(const ESSSMCCriterion &another)
 
 double ESSSMCCriterion::operator()(const Particles &particles) const
 {
-  if ( sum(particles.unnormalised_log_weights==R_NegInf)==particles.unnormalised_log_weights.size() )
+  if ( sum(particles.unnormalised_log_weights==-arma::datum::inf)==particles.unnormalised_log_weights.size() )
   {
     return(-this->desired_criterion);
   }
-  else if ( sum(particles.unnormalised_log_weights==R_PosInf)==particles.unnormalised_log_weights.size() )
+  else if ( sum(particles.unnormalised_log_weights==arma::datum::inf)==particles.unnormalised_log_weights.size() )
   {
     return(double(particles.incremental_log_weights.size())-this->desired_criterion);
   }
   else
   {
-    return(exp(2.0*log_sum_exp(particles.unnormalised_log_weights) - log_sum_exp(2.0*particles.unnormalised_log_weights)) - this->desired_criterion);
+    return(particles.ess - this->desired_criterion);
   }
 }
 
+void ESSSMCCriterion::subsample_find_desired_criterion(SMCOutput* current_state)
+{
+  // use ratio method from https://arxiv.org/pdf/1907.01505.pdf
+  
+  // different at first step
+  
+  // use previous_particles.previous_llhd
+  // use current_particles.current_llhd
+}
+
+/*
 void ESSSMCCriterion::find_desired_criterion(SMCOutput* current_state,
                                              const Parameters &conditioned_on_parameters)
 {
@@ -71,6 +82,18 @@ void ESSSMCCriterion::find_desired_criterion(SMCOutput* current_state,
   // use previous_particles.previous_llhd
   // use current_particles.current_llhd
 }
+
+void ESSSMCCriterion::subsample_find_desired_criterion(SMCOutput* current_state,
+                                                       const Parameters &conditioned_on_parameters)
+{
+  // use ratio method from https://arxiv.org/pdf/1907.01505.pdf
+  
+  // different at first step
+  
+  // use previous_particles.previous_llhd
+  // use current_particles.current_llhd
+}
+*/
 
 void ESSSMCCriterion::find_desired_criterion(SMCOutput* current_state)
 {
@@ -84,9 +107,22 @@ void ESSSMCCriterion::find_desired_criterion(SMCOutput* current_state)
 
 double ESSSMCCriterion::operator()(const Ensemble &particles) const
 {
-  Rcpp::stop("ESSSMCCriterion::operator() - not written yet.");
+  if ( sum(particles.unnormalised_log_weights==-arma::datum::inf)==particles.unnormalised_log_weights.size() )
+  {
+    return(-this->desired_criterion);
+  }
+  else if ( sum(particles.unnormalised_log_weights==arma::datum::inf)==particles.unnormalised_log_weights.size() )
+  {
+    return(double(particles.unnormalised_log_weights.size())-this->desired_criterion);
+  }
+  else
+  {
+    double ess = exp(2.0*log_sum_exp(particles.unnormalised_log_weights) - log_sum_exp(2.0*particles.unnormalised_log_weights));
+    return(ess - this->desired_criterion);
+  }
 }
 
+/*
 void ESSSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_state,
                                              const Parameters &conditioned_on_parameters)
 {
@@ -97,6 +133,7 @@ void ESSSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_state
   // use previous_particles.previous_llhd
   // use current_particles.current_llhd
 }
+*/
 
 void ESSSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_state)
 {
@@ -106,4 +143,9 @@ void ESSSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_state
   
   // use previous_particles.previous_llhd
   // use current_particles.current_llhd
+}
+
+bool ESSSMCCriterion::always_positive() const
+{
+  return false;
 }

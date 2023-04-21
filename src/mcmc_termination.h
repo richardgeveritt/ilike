@@ -6,6 +6,7 @@ using namespace Rcpp;
 
 #include <vector>
 #include "particles.h"
+#include "standard_mcmc_output.h"
 
 class MCMCTermination
 {

@@ -8,7 +8,7 @@ using namespace Rcpp;
 #include <string>
 
 #include "likelihood_estimator.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 #include "parameters.h"
 
 class KalmanFilterOutput;
@@ -71,9 +71,6 @@ protected:
   bool check_termination() const;
 
   friend KalmanFilterOutput;
-  
-  // A flag to determine if the terms are deemed to be "smcfixed" (will not be reevaluated when finding the next target in adaptive SMC).
-  bool smcfixed_flag;
   
   arma::colvec prior_mean;
   arma::mat prior_covariance;

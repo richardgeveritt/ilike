@@ -5,10 +5,12 @@ SEMCMCTermination::SEMCMCTermination()
 {
 }
 
-SEMCMCTermination::SEMCMCTermination(double threshold_in)
+SEMCMCTermination::SEMCMCTermination(double threshold_in,
+                                     size_t max_number_of_iterations_in)
   :MCMCTermination()
 {
   this->threshold = threshold_in;
+  this->max_number_of_iterations = max_number_of_iterations_in;
 }
 
 SEMCMCTermination::~SEMCMCTermination()
@@ -41,6 +43,7 @@ MCMCTermination* SEMCMCTermination::duplicate(void)const
 void SEMCMCTermination::make_copy(const SEMCMCTermination &another)
 {
   this->threshold = another.threshold;
+  this->max_number_of_iterations = another.max_number_of_iterations;
 }
 
 bool SEMCMCTermination::terminate()

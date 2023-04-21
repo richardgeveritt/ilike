@@ -57,21 +57,31 @@ void DensityLikelihoodEstimatorWorker::make_copy(const DensityLikelihoodEstimato
   //}
 }
 
-void DensityLikelihoodEstimatorWorker::simulate()
+void DensityLikelihoodEstimatorWorker::simulate(DensityLikelihoodEstimatorOutput* output)
 {
-  this->specific_simulate();
+  this->specific_simulate(output);
   this->set_seed(this->get_seed() + this->get_number_of_points());
 }
 
-void DensityLikelihoodEstimatorWorker::simulate(const Parameters &conditioned_on_parameters)
+void DensityLikelihoodEstimatorWorker::simulate(DensityLikelihoodEstimatorOutput* output,
+                                                const Parameters &conditioned_on_parameters)
 {
-  this->specific_simulate(conditioned_on_parameters);
+  this->specific_simulate(output,
+                          conditioned_on_parameters);
   this->set_seed(this->get_seed() + this->get_number_of_points());
 }
 
-void DensityLikelihoodEstimatorWorker::subsample_simulate(const Parameters &conditioned_on_parameters)
+void DensityLikelihoodEstimatorWorker::subsample_simulate(DensityLikelihoodEstimatorOutput* output)
 {
-  this->subsample_specific_simulate(conditioned_on_parameters);
+  this->subsample_specific_simulate(output);
+  this->set_seed(this->get_seed() + this->get_number_of_points());
+}
+
+void DensityLikelihoodEstimatorWorker::subsample_simulate(DensityLikelihoodEstimatorOutput* output,
+                                                          const Parameters &conditioned_on_parameters)
+{
+  this->subsample_specific_simulate(output,
+                                    conditioned_on_parameters);
   this->set_seed(this->get_seed() + this->get_number_of_points());
 }
 

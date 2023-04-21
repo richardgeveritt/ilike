@@ -9,6 +9,7 @@ using namespace Rcpp;
 
 class MeasurementCovarianceEstimatorOutput;
 class EnsembleFactorVariables;
+class VectorEnsembleFactors;
 
 class VectorEnsembleFactorVariables : public EnsembleFactorVariables
 {
@@ -17,7 +18,7 @@ public:
 
   VectorEnsembleFactorVariables();
   
-  VectorEnsembleFactorVariables(EnsembleFactors* ensemble_factors_in,
+  VectorEnsembleFactorVariables(VectorEnsembleFactors* ensemble_factors_in,
                                 const std::vector<MeasurementCovarianceEstimatorOutput*> &measurement_covariance_estimator_outputs_in);
 
   virtual ~VectorEnsembleFactorVariables();
@@ -32,31 +33,45 @@ public:
   std::vector<arma::rowvec> get_measurement_states_for_covariance() const;
   std::vector<arma::colvec> get_shifts(double inverse_incremental_temperature) const;
   std::vector<arma::colvec> get_deterministic_shifts() const;
-  std::vector<arma::mat> get_kalman_gains(const std::vector<arma::mat> &Cxys,
-                                          const std::vector<arma::mat> &Cyys,
-                                          double inverse_incremental_temperature) const;
+  //std::vector<arma::mat> get_unconditional_measurement_covariances(const std::vector<arma::mat> &Cyys,
+  //                                                                 double inverse_incremental_temperature) const;
   std::vector<arma::colvec*> get_measurements() const;
-  
-  std::vector<arma::mat> get_adjustments(const arma::mat &Zf,
-                                         const arma::mat &Ginv,
-                                         const arma::mat &Ftranspose,
-                                         const std::vector<arma::mat> &Vs,
-                                         double inverse_incremental_temperature) const;
   
   double evaluate_ensemble_likelihood_ratios(const Index* index,
                                              double inverse_incremental_temperature);
+  
+  /*
   double evaluate_ensemble_likelihood_ratios(const Index* index,
                                              double inverse_incremental_temperature,
                                              const Parameters &conditioned_on_parameters);
+  */
+  
+  double subsample_evaluate_ensemble_likelihood_ratios(const Index* index,
+                                                       double inverse_incremental_temperature);
+  
+  /*
   double subsample_evaluate_ensemble_likelihood_ratios(const Index* index,
                                                        double inverse_incremental_temperature,
                                                        const Parameters &conditioned_on_parameters);
+  */
   
   double evaluate_likelihoods(const Index* index);
+  /*
   double evaluate_likelihoods(const Index* index,
                               const Parameters &conditioned_on_parameters);
+  */
+  double subsample_evaluate_likelihoods(const Index* index);
+  /*
   double subsample_evaluate_likelihoods(const Index* index,
                                         const Parameters &conditioned_on_parameters);
+  */
+  
+  EnsembleFactors* get_ensemble_factors();
+  
+  void write_to_file(const std::string &directory_name,
+                     const std::string &index) const;
+  
+  void close_ofstreams();
   
   /*
   void evaluate_smcfixed_part_of_measurement_covariances(const Index* index);
@@ -98,6 +113,9 @@ public:
   */
   
 protected:
+  
+  // Stored in likelihood_estimator.
+  VectorEnsembleFactors* vector_ensemble_factors;
 
   void make_copy(const VectorEnsembleFactorVariables &another);
   

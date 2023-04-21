@@ -6,7 +6,7 @@ using namespace Rcpp;
 
 //#include <vector>
 #include "vector_recursive_parameter_estimator.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 #include "particle.h"
 
 class SampleAverageVectorRecursiveParameterEstimator : public VectorRecursiveParameterEstimator

@@ -141,12 +141,14 @@ FactorVariables* VectorFactors::simulate_factor_variables(const Parameters &simu
   {
     outputs.push_back((*i)->initialise(simulated_parameters));
     outputs.back()->simulate(simulated_parameters);
+    outputs.back()->write_to_file_flag = false;
   }
   
   return new VectorFactorVariables(this,
                                    outputs);
 }
 
+/*
 FactorVariables* VectorFactors::simulate_factor_variables(const Parameters &simulated_parameters,
                                                           const Parameters &conditioned_on_parameters)
 {
@@ -161,11 +163,13 @@ FactorVariables* VectorFactors::simulate_factor_variables(const Parameters &simu
   {
     outputs.push_back((*i)->initialise(all_parameters));
     outputs.back()->simulate(all_parameters);
+    outputs.back()->write_to_file_flag = false;
   }
   
   return new VectorFactorVariables(this,
                                    outputs);
 }
+*/
 
 FactorVariables* VectorFactors::subsample_simulate_factor_variables(const Parameters &simulated_parameters)
 {
@@ -178,12 +182,14 @@ FactorVariables* VectorFactors::subsample_simulate_factor_variables(const Parame
   {
     outputs.push_back((*i)->initialise(simulated_parameters));
     outputs.back()->subsample_simulate(simulated_parameters);
+    outputs.back()->write_to_file_flag = false;
   }
   
   return new VectorFactorVariables(this,
                                    outputs);
 }
 
+/*
 FactorVariables* VectorFactors::subsample_simulate_factor_variables(const Parameters &simulated_parameters,
                                                                     const Parameters &conditioned_on_parameters)
 {
@@ -198,8 +204,30 @@ FactorVariables* VectorFactors::subsample_simulate_factor_variables(const Parame
   {
     outputs.push_back((*i)->initialise(all_parameters));
     outputs.back()->subsample_simulate(all_parameters);
+    outputs.back()->write_to_file_flag = false;
   }
   
   return new VectorFactorVariables(this,
                                    outputs);
+}
+*/
+
+void VectorFactors::setup()
+{
+  for (auto i=this->likelihood_estimators.begin();
+       i!=this->likelihood_estimators.end();
+       ++i)
+  {
+    (*i)->setup();
+  }
+}
+
+void VectorFactors::setup(const Parameters &conditioned_on_parameters)
+{
+  for (auto i=this->likelihood_estimators.begin();
+       i!=this->likelihood_estimators.end();
+       ++i)
+  {
+    (*i)->setup(conditioned_on_parameters);
+  }
 }

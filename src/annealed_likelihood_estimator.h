@@ -7,7 +7,7 @@ using namespace Rcpp;
 #include <vector>
 
 #include "likelihood_estimator.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 #include "parameters.h"
 
 class AnnealedLikelihoodEstimatorOutput;
@@ -85,7 +85,8 @@ public:
                               size_t* seed_in,
                               Data* data_in,
                               LikelihoodEstimator* estimator_in,
-                              EvaluateLogDistributionPtr function_power_in,
+                              PowerFunctionPtr function_power_in,
+                              const std::string &power_variable_in,
                               bool smcfixed_flag_in);
 
   AnnealedLikelihoodEstimator(RandomNumberGenerator* rng_in,
@@ -107,23 +108,26 @@ public:
 
   LikelihoodEstimatorOutput* initialise();
   LikelihoodEstimatorOutput* initialise(const Parameters &parameters);
+  
+  void setup();
+  void setup(const Parameters &parameters);
 
   // void is_setup_likelihood_estimator(const std::vector<List> &all_points,
   //                                    const std::vector<List> &all_auxiliary_variables);
 
-private:
-  
-  // A flag to determine if the estimator (that we will raise to a power) is deemed to be "smcfixed" (will not be reevaluated when finding the next target in adaptive SMC).
-  bool smcfixed_flag;
+protected:
 
   friend AnnealedLikelihoodEstimatorOutput;
 
-  EvaluateLogDistributionPtr function_power;
+  PowerFunctionPtr function_power;
+  std::string power_variable;
   double constant_power;
   bool use_constant;
   
   // Stored here.
   LikelihoodEstimator* estimator;
+  
+  std::ofstream log_likelihood_file_stream;
 
   // Stored here.
   //AnnealedLikelihoodEstimatorOutput* output;

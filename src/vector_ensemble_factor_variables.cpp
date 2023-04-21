@@ -1,4 +1,5 @@
 #include "vector_ensemble_factor_variables.h"
+#include "vector_ensemble_factors.h"
 #include "measurement_covariance_estimator_output.h"
 #include "ensemble_factors.h"
 #include "index.h"
@@ -7,13 +8,15 @@ VectorEnsembleFactorVariables::VectorEnsembleFactorVariables()
   :EnsembleFactorVariables()
 {
   this->measurement_covariance_estimator_outputs.resize(0);
+  this->vector_ensemble_factors = NULL;
 }
 
-VectorEnsembleFactorVariables::VectorEnsembleFactorVariables(EnsembleFactors* ensemble_factors_in,
+VectorEnsembleFactorVariables::VectorEnsembleFactorVariables(VectorEnsembleFactors* vector_ensemble_factors_in,
                                                              const std::vector<MeasurementCovarianceEstimatorOutput*> &measurement_covariance_estimators_in)
-:EnsembleFactorVariables(ensemble_factors_in)
+:EnsembleFactorVariables()
 {
   this->measurement_covariance_estimator_outputs = measurement_covariance_estimators_in;
+  this->vector_ensemble_factors = vector_ensemble_factors_in;
 }
 
 VectorEnsembleFactorVariables::~VectorEnsembleFactorVariables()
@@ -71,6 +74,7 @@ void VectorEnsembleFactorVariables::make_copy(const VectorEnsembleFactorVariable
     else
       this->measurement_covariance_estimator_outputs.push_back(NULL);
   }
+  this->vector_ensemble_factors = another.vector_ensemble_factors;
 }
 
 std::vector<arma::rowvec> VectorEnsembleFactorVariables::get_measurement_states_for_covariance() const
@@ -112,23 +116,24 @@ std::vector<arma::colvec> VectorEnsembleFactorVariables::get_deterministic_shift
   return shifts;
 }
 
-std::vector<arma::mat> VectorEnsembleFactorVariables::get_kalman_gains(const std::vector<arma::mat> &Cxys,
-                                                                       const std::vector<arma::mat> &Cyys,
-                                                                       double inverse_incremental_temperature) const
+/*
+std::vector<arma::mat> VectorEnsembleFactorVariables::get_unconditional_measurement_covariances(const std::vector<arma::mat> &Cyys,
+                                                                                                double inverse_incremental_temperature) const
 {
-  std::vector<arma::mat> kalman_gains;
-  kalman_gains.reserve(this->measurement_covariance_estimator_outputs.size());
+  std::vector<arma::mat> unconditional_measurement_covariances;
+  unconditional_measurement_covariances.reserve(this->measurement_covariance_estimator_outputs.size());
   for (size_t i=0;
        i<this->measurement_covariance_estimator_outputs.size();
        ++i)
   {
-    this->measurement_covariance_estimator_outputs[i]->get_kalman_gain(Cxys[i],
-                                                                       Cyys[i],
-                                                                       inverse_incremental_temperature);
+    unconditional_measurement_covariances.push_back(this->measurement_covariance_estimator_outputs[i]->get_unconditional_measurement_covariance(Cyys[i],
+                                                                                                                       inverse_incremental_temperature));
   }
-  return kalman_gains;
+  return unconditional_measurement_covariances;
 }
+*/
 
+/*
 std::vector<arma::colvec*> VectorEnsembleFactorVariables::get_measurements() const
 {
   std::vector<arma::colvec*> measurements;
@@ -141,27 +146,7 @@ std::vector<arma::colvec*> VectorEnsembleFactorVariables::get_measurements() con
   }
   return measurements;
 }
-
-std::vector<arma::mat> VectorEnsembleFactorVariables::get_adjustments(const arma::mat &Zf,
-                                                                      const arma::mat &Ginv,
-                                                                      const arma::mat &Ftranspose,
-                                                                      const std::vector<arma::mat> &Vs,
-                                                                      double inverse_incremental_temperature) const
-{
-  std::vector<arma::mat> adjustments;
-  adjustments.reserve(this->measurement_covariance_estimator_outputs.size());
-  for (size_t i=0;
-       i<this->measurement_covariance_estimator_outputs.size();
-       ++i)
-  {
-    this->measurement_covariance_estimator_outputs[i]->get_adjustment(Zf,
-                                                                      Ginv,
-                                                                      Ftranspose,
-                                                                      Vs[i],
-                                                                      inverse_incremental_temperature);
-  }
-  return adjustments;
-}
+*/
 
 double VectorEnsembleFactorVariables::evaluate_ensemble_likelihood_ratios(const Index* index,
                                                                           double inverse_incremental_temperature)
@@ -176,6 +161,7 @@ double VectorEnsembleFactorVariables::evaluate_ensemble_likelihood_ratios(const 
   return result;
 }
 
+/*
 double VectorEnsembleFactorVariables::evaluate_ensemble_likelihood_ratios(const Index* index,
                                                                           double inverse_incremental_temperature,
                                                                           const Parameters &conditioned_on_parameters)
@@ -190,7 +176,22 @@ double VectorEnsembleFactorVariables::evaluate_ensemble_likelihood_ratios(const 
   }
   return result;
 }
+*/
 
+double VectorEnsembleFactorVariables::subsample_evaluate_ensemble_likelihood_ratios(const Index* index,
+                                                                                    double inverse_incremental_temperature)
+{
+  double result = 0.0;
+  for (auto i=index->begin();
+       i!=index->end();
+       ++i)
+  {
+    result = result + this->measurement_covariance_estimator_outputs[*i]->subsample_evaluate_ensemble_likelihood_ratio(inverse_incremental_temperature);
+  }
+  return result;
+}
+
+/*
 double VectorEnsembleFactorVariables::subsample_evaluate_ensemble_likelihood_ratios(const Index* index,
                                                                                     double inverse_incremental_temperature,
                                                                                     const Parameters &conditioned_on_parameters)
@@ -205,6 +206,7 @@ double VectorEnsembleFactorVariables::subsample_evaluate_ensemble_likelihood_rat
   }
   return result;
 }
+*/
 
 double VectorEnsembleFactorVariables::evaluate_likelihoods(const Index* index)
 {
@@ -218,6 +220,7 @@ double VectorEnsembleFactorVariables::evaluate_likelihoods(const Index* index)
   return result;
 }
 
+/*
 double VectorEnsembleFactorVariables::evaluate_likelihoods(const Index* index,
                                                            const Parameters &conditioned_on_parameters)
 {
@@ -230,7 +233,21 @@ double VectorEnsembleFactorVariables::evaluate_likelihoods(const Index* index,
   }
   return result;
 }
+*/
 
+double VectorEnsembleFactorVariables::subsample_evaluate_likelihoods(const Index* index)
+{
+  double result = 0.0;
+  for (auto i=index->begin();
+       i!=index->end();
+       ++i)
+  {
+    result = result + this->measurement_covariance_estimator_outputs[*i]->subsample_evaluate_likelihood();
+  }
+  return result;
+}
+
+/*
 double VectorEnsembleFactorVariables::subsample_evaluate_likelihoods(const Index* index,
                                                                      const Parameters &conditioned_on_parameters)
 {
@@ -242,6 +259,34 @@ double VectorEnsembleFactorVariables::subsample_evaluate_likelihoods(const Index
     result = result + this->measurement_covariance_estimator_outputs[*i]->subsample_evaluate_likelihood(conditioned_on_parameters);
   }
   return result;
+}
+*/
+
+EnsembleFactors* VectorEnsembleFactorVariables::get_ensemble_factors()
+{
+  return this->vector_ensemble_factors;
+}
+
+void VectorEnsembleFactorVariables::write_to_file(const std::string &directory_name,
+                                                  const std::string &index) const
+{
+  for (size_t i=0;
+       i<this->measurement_covariance_estimator_outputs.size();
+       ++i)
+  {
+    std::string factor_directory_name = directory_name + "/ensemble_factor" + toString(i);
+    this->measurement_covariance_estimator_outputs[i]->write_to_file(factor_directory_name,index);
+  }
+}
+
+void VectorEnsembleFactorVariables::close_ofstreams()
+{
+  for (size_t i=0;
+       i<this->measurement_covariance_estimator_outputs.size();
+       ++i)
+  {
+    this->measurement_covariance_estimator_outputs[i]->close_ofstreams();
+  }
 }
 
 /*

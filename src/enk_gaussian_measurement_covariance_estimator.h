@@ -21,11 +21,19 @@ public:
   void operator=(const EnKGaussianMeasurementCovarianceEstimator &another);
   MeasurementCovarianceEstimator* duplicate() const;
   GaussianMeasurementCovarianceEstimator* gaussian_duplicate() const;
+  
+  arma::mat get_measurement_covariance();
+  
+  void setup();
+  void setup(const Parameters &parameters);
 
 protected:
   
   MeasurementCovarianceEstimatorOutput* initialise_measurement_covariance_estimator();
   MeasurementCovarianceEstimatorOutput* initialise_measurement_covariance_estimator(const Parameters &conditioned_on_parameters);
+  
+  void setup_measurement_variables();
+  void setup_measurement_variables(const Parameters &conditioned_on_parameters);
 
   void make_copy(const EnKGaussianMeasurementCovarianceEstimator &another);
 

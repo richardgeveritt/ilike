@@ -8,10 +8,11 @@
 #include "move_output.h"
 #include "single_point_move_output.h"
 #include "independent_proposal_kernel.h"
-#include "custom_independent_proposal_kernel.h"
+//#include "custom_independent_proposal_kernel.h"
 #include "custom_distribution_proposal_kernel.h"
 #include "vector_factors.h"
 #include "vector_single_index.h"
+#include "positive_smc_criterion.h"
 
 ImportanceSampler::ImportanceSampler()
   :SMC()
@@ -24,13 +25,15 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                      Data* data_in,
                                      size_t number_of_particles_in,
                                      EvaluateLogLikelihoodPtr evaluate_log_likelihood_in,
-                                     SimulateIndependentProposalPtr simulate_prior_in,
+                                     SimulateDistributionPtr simulate_prior_in,
                                      bool smcfixed_flag_in,
                                      bool parallel_in,
-                                     size_t grain_size_in)
-  :SMC(rng_in, seed_in, data_in, number_of_particles_in, 1, 0, double(number_of_particles_in), false, smcfixed_flag_in, true)
+                                     size_t grain_size_in,
+                                     const std::string &results_name_in)
+  :SMC(rng_in, seed_in, data_in, number_of_particles_in, 1, 0, double(number_of_particles_in), false, smcfixed_flag_in, true, results_name_in)
 {
-  this->index = NULL;
+  IndependentProposalKernel* proposal = new CustomDistributionProposalKernel(simulate_prior_in);
+  //Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
   
   std::vector<size_t> indices;
   std::vector<LikelihoodEstimator*> likelihood_estimators;
@@ -45,8 +48,6 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
   
   this->factors = new VectorFactors(likelihood_estimators);
   
-  IndependentProposalKernel* proposal = new CustomDistributionProposalKernel(simulate_prior_in);
-  
   // Need to construct LikelihoodEstimator to read in to this constructor.
   this->particle_simulator = new ParameterParticleSimulator(proposal,
                                                             likelihood_estimators);
@@ -56,12 +57,22 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
       //this->the_worker = new RcppParallelSMCWorker(this,
                                                 //this->model_and_algorithm.particle_simulator,
                                                 //grain_size_in);
+    Rcpp::stop("ImportanceSampler - parallel worker not allowed yet.");
   }
   else
   {
     this->the_worker = new SequentialSMCWorker(this);
   }
 
+  std::vector<double> schedule_in;
+  schedule_in.push_back(0.0);
+  schedule_in.push_back(1.0);
+  SMCCriterion* smc_criterion = new PositiveSMCCriterion();
+  this->sequencer = Sequencer(this->the_worker,
+                              schedule_in,
+                              "",
+                              25,
+                              smc_criterion);
 }
 
 ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
@@ -70,14 +81,17 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                      size_t number_of_particles_in,
                                      EvaluateLogLikelihoodPtr evaluate_log_likelihood_in,
                                      EvaluateLogDistributionPtr evaluate_log_prior_in,
-                                     SimulateIndependentProposalPtr simulate_proposal_in,
+                                     SimulateDistributionPtr simulate_proposal_in,
                                      EvaluateLogDistributionPtr evaluate_log_proposal_in,
                                      bool smcfixed_flag_in,
                                      bool parallel_in,
-                                     size_t grain_size_in)
-  :SMC(rng_in, seed_in, data_in, number_of_particles_in, 1, 0, double(number_of_particles_in), true, smcfixed_flag_in, true)
+                                     size_t grain_size_in,
+                                     const std::string &results_name_in)
+  :SMC(rng_in, seed_in, data_in, number_of_particles_in, 1, 0, double(number_of_particles_in), true, smcfixed_flag_in, true, results_name_in)
 {
-  this->index = NULL;
+  IndependentProposalKernel* proposal = new CustomDistributionProposalKernel(simulate_proposal_in,
+                                                                             evaluate_log_proposal_in);
+  //Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
   
   std::vector<LikelihoodEstimator*> likelihood_estimators;
   std::vector<size_t> indices;
@@ -91,12 +105,20 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
   indices.push_back(0);
   this->index = new VectorSingleIndex(indices);
   
-  IndependentProposalKernel* proposal = new CustomDistributionProposalKernel(simulate_proposal_in,
-                                                                             evaluate_log_proposal_in);
+  this->factors = new VectorFactors(likelihood_estimators);
   
   // Need to construct LikelihoodEstimator to read in to this constructor.
   this->particle_simulator = new ParameterParticleSimulator(proposal,
                                                             likelihood_estimators);
+  
+  /*
+  for (auto i=likelihood_estimators.begin();
+       i!=likelihood_estimators.end();
+       ++i)
+  {
+    (*i)->setup(candidate_parameters);
+  }
+  */
   
   //this->model_and_algorithm.particle_simulator = new ParameterParticleSimulator(simulate_proposal_in,
   //                                                                              this->model_and_algorithm.likelihood_estimators,
@@ -113,6 +135,15 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
     this->the_worker = new SequentialSMCWorker(this);
   }
 
+  std::vector<double> schedule_in;
+  schedule_in.push_back(0.0);
+  schedule_in.push_back(1.0);
+                        SMCCriterion* smc_criterion = new PositiveSMCCriterion();
+                        this->sequencer = Sequencer(this->the_worker,
+                                                    schedule_in,
+                                                    "",
+                                                    25,
+                                                    smc_criterion);
 }
 
 ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
@@ -124,11 +155,11 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                      IndependentProposalKernel* proposal_in,
                                      bool smcfixed_flag_in,
                                      bool parallel_in,
-                                     size_t grain_size_in)
-:SMC(rng_in, seed_in, data_in, number_of_particles_in, 1, 0, double(number_of_particles_in), true, smcfixed_flag_in, true)
+                                     size_t grain_size_in,
+                                     const std::string &results_name_in)
+:SMC(rng_in, seed_in, data_in, number_of_particles_in, 1, 0, double(number_of_particles_in), true, smcfixed_flag_in, true, results_name_in)
 {
-  this->index = NULL;
-  
+  //Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
   std::vector<size_t> indices;
   std::vector<LikelihoodEstimator*> likelihood_estimators;
   likelihood_estimators.reserve(1);
@@ -141,6 +172,8 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
   
   indices.push_back(0);
   this->index = new VectorSingleIndex(indices);
+  
+  this->factors = new VectorFactors(likelihood_estimators);
   
   // Need to construct LikelihoodEstimator to read in to this constructor.
   this->particle_simulator = new ParameterParticleSimulator(proposal_in,
@@ -160,6 +193,141 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
   {
     this->the_worker = new SequentialSMCWorker(this);
   }
+  
+  std::vector<double> schedule_in;
+  schedule_in.push_back(0.0);
+  schedule_in.push_back(1.0);
+                        SMCCriterion* smc_criterion = new PositiveSMCCriterion();
+                        this->sequencer = Sequencer(this->the_worker,
+                                                    schedule_in,
+                                                    "",
+                                                    25,
+                                                    smc_criterion);
+}
+
+ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
+                                     size_t* seed_in,
+                                     Data* data_in,
+                                     size_t number_of_particles_in,
+                                     const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
+                                     IndependentProposalKernel* proposal_in,
+                                     bool proposal_is_evaluated_in,
+                                     bool smcfixed_flag_in,
+                                     bool sequencer_limit_is_fixed_in,
+                                     bool parallel_in,
+                                     size_t grain_size_in,
+                                     const std::string &results_name_in)
+:SMC(rng_in, seed_in, data_in, number_of_particles_in, 1, 0, double(number_of_particles_in), proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, results_name_in)
+{
+  //Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
+  std::vector<size_t> indices;
+  indices.reserve(likelihood_estimators_in.size());
+  for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
+    indices.push_back(i);
+  this->index = new VectorSingleIndex(indices);
+  
+  this->factors = new VectorFactors(likelihood_estimators_in);
+  
+  /*
+  for (auto i=likelihood_estimators_in.begin();
+       i!=likelihood_estimators_in.end();
+       ++i)
+  {
+    (*i)->setup(candidate_parameters);
+  }
+  */
+  
+  // Need to construct LikelihoodEstimator to read in to this constructor.
+  this->particle_simulator = new ParameterParticleSimulator(proposal_in,
+                                                            likelihood_estimators_in);
+  
+  //this->model_and_algorithm.particle_simulator = new ParameterParticleSimulator(simulate_proposal_in,
+  //                                                                              this->model_and_algorithm.likelihood_estimators,
+  //                                                                              "u");
+  
+  if (parallel_in==TRUE)
+  {
+    //this->the_worker = new RcppParallelSMCWorker(this,
+    //this->model_and_algorithm.particle_simulator,
+    //grain_size_in);
+  }
+  else
+  {
+    this->the_worker = new SequentialSMCWorker(this);
+  }
+  
+  std::vector<double> schedule_in;
+  schedule_in.push_back(1.0);
+  SMCCriterion* smc_criterion = new PositiveSMCCriterion();
+  this->sequencer = Sequencer(this->the_worker,
+                              schedule_in,
+                              "",
+                              25,
+                              smc_criterion);
+}
+
+ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
+                                     size_t* seed_in,
+                                     Data* data_in,
+                                     size_t number_of_particles_in,
+                                     const std::string &target_variable_in,
+                                     double target_value_in,
+                                     const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
+                                     IndependentProposalKernel* proposal_in,
+                                     bool proposal_is_evaluated_in,
+                                     bool smcfixed_flag_in,
+                                     bool sequencer_limit_is_fixed_in,
+                                     bool parallel_in,
+                                     size_t grain_size_in,
+                                     const std::string &results_name_in)
+:SMC(rng_in, seed_in, data_in, number_of_particles_in, 1, 0, double(number_of_particles_in), proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, results_name_in)
+{
+  //Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
+  std::vector<size_t> indices;
+  indices.reserve(likelihood_estimators_in.size());
+  for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
+    indices.push_back(i);
+  this->index = new VectorSingleIndex(indices);
+  
+  this->factors = new VectorFactors(likelihood_estimators_in);
+  
+  /*
+   for (auto i=likelihood_estimators_in.begin();
+   i!=likelihood_estimators_in.end();
+   ++i)
+   {
+   (*i)->setup(candidate_parameters);
+   }
+   */
+  
+  // Need to construct LikelihoodEstimator to read in to this constructor.
+  this->particle_simulator = new ParameterParticleSimulator(proposal_in,
+                                                            likelihood_estimators_in);
+  
+  //this->model_and_algorithm.particle_simulator = new ParameterParticleSimulator(simulate_proposal_in,
+  //                                                                              this->model_and_algorithm.likelihood_estimators,
+  //                                                                              "u");
+  
+  if (parallel_in==TRUE)
+  {
+    //this->the_worker = new RcppParallelSMCWorker(this,
+    //this->model_and_algorithm.particle_simulator,
+    //grain_size_in);
+  }
+  else
+  {
+    this->the_worker = new SequentialSMCWorker(this);
+  }
+  
+  std::vector<double> schedule_in;
+  schedule_in.push_back(target_value_in);
+  SMCCriterion* smc_criterion = new PositiveSMCCriterion();
+  this->sequencer = Sequencer(this->the_worker,
+                              schedule_in,
+                              target_variable_in,
+                              25,
+                              smc_criterion);
+  //this->sequencer_parameters = &this->sequencer.schedule_parameters;
 }
 
 //Copy constructor for the ImportanceSampler class.
@@ -215,20 +383,31 @@ void ImportanceSampler::make_copy(const ImportanceSampler &another)
 // {
 // }
 
-
 SMCOutput* ImportanceSampler::specific_run()
 {
   SMCOutput* simulation = this->initialise_smc();
   this->simulate_smc(simulation);
-  //std::cout<<simulation->back().back()->back().parameters<<std::endl;
   this->evaluate_smc(simulation);
-  simulation->normalise_weights();
+  simulation->normalise_and_resample_weights();
+  //simulation->write_to_file(directory_name);
   return simulation;
 }
 
-SMCOutput* ImportanceSampler::initialise_smc()
+/*
+SMCOutput* ImportanceSampler::specific_run(const std::string &directory_name)
 {
-  SMCOutput* output = new SMCOutput(this, this->lag, this->lag_proposed);
+  SMCOutput* simulation = this->initialise_smc();
+  this->simulate_smc(simulation);
+  this->evaluate_smc(simulation);
+  simulation->normalise_and_resample_weights();
+  simulation->write(directory_name);
+  return simulation;
+}
+*/
+
+SMCOutput* ImportanceSampler::specific_initialise_smc()
+{
+  SMCOutput* output = new SMCOutput(this, this->lag, this->lag_proposed, this->results_name);
   return output;
 }
 
@@ -239,7 +418,7 @@ void ImportanceSampler::simulate_smc(SMCOutput* current_state)
 
 void ImportanceSampler::evaluate_smc(SMCOutput* current_state)
 {
-  //std::cout<<current_state->back().back()->back().parameters<<std::endl;
+  /*
   //this->weight(current_state, conditioned_on_parameters);
   this->the_worker->weight(this->index,
                            current_state->back());
@@ -248,53 +427,105 @@ void ImportanceSampler::evaluate_smc(SMCOutput* current_state)
   
   //this->log_likelihood = current_state->log_likelihood_pre_last_step + current_state->latest_log_normalising_constant_ratio();
   
-  current_state->log_likelihood = current_state->latest_log_normalising_constant_ratio();
+  current_state->log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
+  
+  if (this->sequencer_parameters!=NULL)
+    current_state->back().schedule_parameters = *this->sequencer_parameters;
+  */
+  
+  this->evaluate_smcfixed_part_smc(current_state);
+  this->evaluate_smcadaptive_part_given_smcfixed_smc(current_state);
 }
 
 void ImportanceSampler::evaluate_smcfixed_part_smc(SMCOutput* current_state)
 {
   //this->smcfixed_weight(current_state, conditioned_on_parameters);
+  
   this->the_worker->smcfixed_weight(this->index,
                                     current_state->back());
+  
+  /*
+  if (this->sequencer_parameters!=NULL)
+  {
+    this->the_worker->smcfixed_weight(this->index,
+                                      current_state->back(),
+                                      *this->sequencer_parameters);
+  }
+  else
+  {
+    this->the_worker->smcfixed_weight(this->index,
+                                      current_state->back());
+  }
+  */
   //current_state->initialise_next_step();
 }
 
 void ImportanceSampler::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current_state)
 {
   //this->smcadaptive_given_smcfixed_weight(current_state, conditioned_on_parameters);
-  this->the_worker->smcadaptive_given_smcfixed_weight(this->index,
-                                                      current_state->back());
-  current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
+  //this->the_worker->smcadaptive_given_smcfixed_weight(this->index,
+  //                                                    current_state->back());
+  //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
   
+  this->sequencer.find_next_target_bisection(current_state,this->index);
   //this->log_likelihood = current_state->log_likelihood_pre_last_step + current_state->latest_log_normalising_constant_ratio();
   
-  current_state->log_likelihood = current_state->latest_log_normalising_constant_ratio();
+  current_state->log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
+  
+  //if (this->sequencer_parameters!=NULL)
+  //  current_state->back().schedule_parameters = *this->sequencer_parameters;
+  current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
 }
 
 MoveOutput* ImportanceSampler::move(RandomNumberGenerator &rng,
                                     Particle &particle)
 {
-  return new SinglePointMoveOutput(particle);
+  return new SinglePointMoveOutput(std::move(particle));
 }
 
-void ImportanceSampler::weight_for_adapting_sequence(Particles &current_particles)
+void ImportanceSampler::weight_for_adapting_sequence(const Index* index,
+                                                     Particles &current_particles)
 {
-  this->the_worker->smcadaptive_given_smcfixed_weight(this->index,
+  this->the_worker->smcadaptive_given_smcfixed_weight(index,
                                                       current_particles);
 }
+
+/*
+void ImportanceSampler::weight_for_adapting_sequence(const Index* index,
+                                                     Particles &current_particles,
+                                                     const Parameters &conditioned_on_parameters)
+{
+  this->the_worker->smcadaptive_given_smcfixed_weight(index,
+                                                      current_particles,
+                                                      conditioned_on_parameters);
+}
+*/
 
 SMCOutput* ImportanceSampler::specific_run(const Parameters &conditioned_on_parameters)
 {
   SMCOutput* simulation = this->initialise_smc(conditioned_on_parameters);
   this->simulate_smc(simulation, conditioned_on_parameters);
   this->evaluate_smc(simulation, conditioned_on_parameters);
-  simulation->normalise_weights();
+  simulation->normalise_and_resample_weights();
   return simulation;
 }
 
-SMCOutput* ImportanceSampler::initialise_smc(const Parameters &conditioned_on_parameters)
+/*
+SMCOutput* ImportanceSampler::specific_run(const std::string &directory_name,
+                                           const Parameters &conditioned_on_parameters)
 {
-  SMCOutput* output = new SMCOutput(this, this->lag, this->lag_proposed);
+  SMCOutput* simulation = this->initialise_smc(conditioned_on_parameters);
+  this->simulate_smc(simulation, conditioned_on_parameters);
+  this->evaluate_smc(simulation, conditioned_on_parameters);
+  simulation->normalise_and_resample_weights();
+  simulation->write(directory_name);
+  return simulation;
+}
+*/
+
+SMCOutput* ImportanceSampler::specific_initialise_smc(const Parameters &conditioned_on_parameters)
+{
+  SMCOutput* output = new SMCOutput(this, this->lag, this->lag_proposed, this->results_name);
   return output;
 }
 
@@ -307,6 +538,7 @@ void ImportanceSampler::simulate_smc(SMCOutput* current_state,
 void ImportanceSampler::evaluate_smc(SMCOutput* current_state,
                                      const Parameters &conditioned_on_parameters)
 {
+  /*
   //this->weight(current_state, conditioned_on_parameters);
   this->the_worker->weight(this->index,
                            current_state->back(),
@@ -316,107 +548,271 @@ void ImportanceSampler::evaluate_smc(SMCOutput* current_state,
   
   //this->log_likelihood = current_state->log_likelihood_pre_last_step + current_state->latest_log_normalising_constant_ratio();
   
-  current_state->log_likelihood = current_state->latest_log_normalising_constant_ratio();
+  current_state->log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
+  
+  if (this->sequencer_parameters!=NULL)
+    current_state->back().schedule_parameters = *this->sequencer_parameters;
+  */
+  
+  this->evaluate_smcfixed_part_smc(current_state,conditioned_on_parameters);
+  this->evaluate_smcadaptive_part_given_smcfixed_smc(current_state,conditioned_on_parameters);
 }
 
 void ImportanceSampler::evaluate_smcfixed_part_smc(SMCOutput* current_state,
-                                                const Parameters &conditioned_on_parameters)
+                                                   const Parameters &conditioned_on_parameters)
 {
   //this->smcfixed_weight(current_state, conditioned_on_parameters);
+  /*
+  if (this->sequencer_parameters!=NULL)
+  {
+    Parameters all_parameters = conditioned_on_parameters.merge(*this->sequencer_parameters);
+    this->the_worker->smcfixed_weight(this->index,
+                                      current_state->back(),
+                                      all_parameters);
+  }
+  else
+  {
+    this->the_worker->smcfixed_weight(this->index,
+                                      current_state->back(),
+                                      conditioned_on_parameters);
+  }
+  */
+  
   this->the_worker->smcfixed_weight(this->index,
-                                    current_state->back(),
-                                    conditioned_on_parameters);
-  //current_state->initialise_next_step();
+                                    current_state->back());
 }
 
 void ImportanceSampler::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current_state,
-                                                           const Parameters &conditioned_on_parameters)
+                                                                     const Parameters &conditioned_on_parameters)
 {
+  // set sequencer to have values from conditioned_on_parameters
+  if (!this->sequencer_limit_is_fixed)
+    this->sequencer.set_next_with_parameter(conditioned_on_parameters);
+  else
+    this->sequencer.reset();
+  
   //this->smcadaptive_given_smcfixed_weight(current_state, conditioned_on_parameters);
-  this->the_worker->smcadaptive_given_smcfixed_weight(this->index,
-                                                      current_state->back(),
-                                                      conditioned_on_parameters);
+  //this->sequencer.find_next_target_bisection(current_state,this->index,conditioned_on_parameters);
+  this->sequencer.find_next_target_bisection(current_state,this->index);
+  //this->the_worker->smcadaptive_given_smcfixed_weight(this->index,
+  //                                                    current_state->back(),
+  //                                                    conditioned_on_parameters);
+  //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
+  
+  //this->log_likelihood = current_state->log_likelihood_pre_last_step + current_state->latest_log_normalising_constant_ratio();
+  
+  current_state->log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
+  
+  //if (this->sequencer_parameters!=NULL)
+  //  current_state->back().schedule_parameters = *this->sequencer_parameters;
+  current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+}
+
+void ImportanceSampler::subsample_simulate_smc(SMCOutput* current_state)
+{
+  this->simulate_proposal(current_state);
+}
+
+void ImportanceSampler::subsample_simulate_smc(SMCOutput* current_state,
+                                               const Parameters &conditioned_on_parameters)
+{
+  this->simulate_proposal(current_state, conditioned_on_parameters);
+}
+
+void ImportanceSampler::subsample_evaluate_smc(SMCOutput* current_state)
+{
+  //this->weight(current_state, conditioned_on_parameters);
+  //this->the_worker->subsample_weight(this->index,
+  //                                   current_state->back(),
+  //                                   conditioned_on_parameters);
+  
+  this->the_worker->subsample_weight(this->index,
+                                     current_state->back());
+  //current_state->initialise_next_step();
   current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
   
   //this->log_likelihood = current_state->log_likelihood_pre_last_step + current_state->latest_log_normalising_constant_ratio();
   
-  current_state->log_likelihood = current_state->latest_log_normalising_constant_ratio();
-}
-
-void ImportanceSampler::subsample_simulate_smc(SMCOutput* current_state,
-                                     const Parameters &conditioned_on_parameters)
-{
-  this->simulate_proposal(current_state, conditioned_on_parameters);
+  current_state->log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
+  
+  //if (this->sequencer_parameters!=NULL)
+  //  current_state->back().schedule_parameters = *this->sequencer_parameters;
 }
 
 void ImportanceSampler::subsample_evaluate_smc(SMCOutput* current_state,
                                                const Parameters &conditioned_on_parameters)
 {
   //this->weight(current_state, conditioned_on_parameters);
+  //this->the_worker->subsample_weight(this->index,
+  //                                   current_state->back(),
+  //                                   conditioned_on_parameters);
+  
   this->the_worker->subsample_weight(this->index,
-                                     current_state->back(),
-                                     conditioned_on_parameters);
+                                     current_state->back());
   //current_state->initialise_next_step();
   current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
   
   //this->log_likelihood = current_state->log_likelihood_pre_last_step + current_state->latest_log_normalising_constant_ratio();
   
-  current_state->log_likelihood = current_state->latest_log_normalising_constant_ratio();
+  current_state->log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
+  
+  //if (this->sequencer_parameters!=NULL)
+  //  current_state->back().schedule_parameters = *this->sequencer_parameters;
 }
 
-void ImportanceSampler::subsample_evaluate_smcfixed_part_smc(SMCOutput* current_state,
-                                                   const Parameters &conditioned_on_parameters)
+void ImportanceSampler::subsample_evaluate_smcfixed_part_smc(SMCOutput* current_state)
 {
   //this->smcfixed_weight(current_state, conditioned_on_parameters);
+  /*
+   if (this->sequencer_parameters!=NULL)
+   {
+   Parameters all_parameters = conditioned_on_parameters.merge(*this->sequencer_parameters);
+   this->the_worker->subsample_smcfixed_weight(this->index,
+   current_state->back(),
+   all_parameters);
+   }
+   else
+   {
+   this->the_worker->subsample_smcfixed_weight(this->index,
+   current_state->back(),
+   conditioned_on_parameters);
+   }
+   */
+  
   this->the_worker->subsample_smcfixed_weight(this->index,
-                                              current_state->back(),
-                                              conditioned_on_parameters);
+                                              current_state->back());
   //current_state->initialise_next_step();
 }
 
-void ImportanceSampler::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current_state,
-                                                                     const Parameters &conditioned_on_parameters)
+void ImportanceSampler::subsample_evaluate_smcfixed_part_smc(SMCOutput* current_state,
+                                                             const Parameters &conditioned_on_parameters)
 {
+  //this->smcfixed_weight(current_state, conditioned_on_parameters);
+  /*
+  if (this->sequencer_parameters!=NULL)
+  {
+    Parameters all_parameters = conditioned_on_parameters.merge(*this->sequencer_parameters);
+    this->the_worker->subsample_smcfixed_weight(this->index,
+                                                current_state->back(),
+                                                all_parameters);
+  }
+  else
+  {
+    this->the_worker->subsample_smcfixed_weight(this->index,
+                                                current_state->back(),
+                                                conditioned_on_parameters);
+  }
+  */
+  
+  this->the_worker->subsample_smcfixed_weight(this->index,
+                                              current_state->back());
+  //current_state->initialise_next_step();
+}
+
+void ImportanceSampler::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current_state)
+{
+  // set sequencer to have values from conditioned_on_parameters
+  
+  //this->sequencer.subsample_find_next_target_bisection(current_state,this->index,conditioned_on_parameters);
+  this->sequencer.subsample_find_next_target_bisection(current_state,this->index);
+  
   //this->smcadaptive_given_smcfixed_weight(current_state, conditioned_on_parameters);
+  
+  /*
+   this->the_worker->subsample_smcadaptive_given_smcfixed_weight(this->index,
+   current_state->back(),
+   conditioned_on_parameters);
+   current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
+   */
+  
+  //this->log_likelihood = current_state->log_likelihood_pre_last_step + current_state->latest_log_normalising_constant_ratio();
+  
+  current_state->log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
+  
+  //if (this->sequencer_parameters!=NULL)
+  //  current_state->back().schedule_parameters = *this->sequencer_parameters;
+  current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+}
+
+void ImportanceSampler::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current_state,
+                                                                               const Parameters &conditioned_on_parameters)
+{
+  // set sequencer to have values from conditioned_on_parameters
+  if (!this->sequencer_limit_is_fixed)
+    this->sequencer.set_next_with_parameter(conditioned_on_parameters);
+  else
+    this->sequencer.reset();
+  
+  //this->sequencer.subsample_find_next_target_bisection(current_state,this->index,conditioned_on_parameters);
+  this->sequencer.subsample_find_next_target_bisection(current_state,this->index);
+  
+  //this->smcadaptive_given_smcfixed_weight(current_state, conditioned_on_parameters);
+  
+  /*
   this->the_worker->subsample_smcadaptive_given_smcfixed_weight(this->index,
                                                                 current_state->back(),
                                                                 conditioned_on_parameters);
   current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
+  */
   
   //this->log_likelihood = current_state->log_likelihood_pre_last_step + current_state->latest_log_normalising_constant_ratio();
   
-  current_state->log_likelihood = current_state->latest_log_normalising_constant_ratio();
+  current_state->log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
+  
+  //if (this->sequencer_parameters!=NULL)
+  //  current_state->back().schedule_parameters = *this->sequencer_parameters;
+  current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
 }
 
+/*
 MoveOutput* ImportanceSampler::move(RandomNumberGenerator &rng,
                                     Particle &particle,
                                     const Parameters &conditioned_on_parameters)
 {
-  return new SinglePointMoveOutput(particle);
+  return new SinglePointMoveOutput(std::move(particle));
 }
+*/
 
-void ImportanceSampler::weight_for_adapting_sequence(Particles &current_particles,
-                                                     const Parameters &conditioned_on_parameters)
+//void ImportanceSampler::weight_for_adapting_sequence(Particles &current_particles,
+//                                                     const Parameters &conditioned_on_parameters)
+//{
+//  this->the_worker->smcadaptive_given_smcfixed_weight(this->index,
+//                                                      current_particles,
+//                                                      conditioned_on_parameters);
+//}
+
+MoveOutput* ImportanceSampler::subsample_move(RandomNumberGenerator &rng,
+                                              Particle &particle)
 {
-  this->the_worker->smcadaptive_given_smcfixed_weight(this->index,
-                                                      current_particles,
-                                                      conditioned_on_parameters);
+  return new SinglePointMoveOutput(std::move(particle));
 }
 
+/*
 MoveOutput* ImportanceSampler::subsample_move(RandomNumberGenerator &rng,
                                               Particle &particle,
                                               const Parameters &conditioned_on_parameters)
 {
-  return new SinglePointMoveOutput(particle);
+  return new SinglePointMoveOutput(std::move(particle));
+}
+*/
+
+void ImportanceSampler::subsample_weight_for_adapting_sequence(const Index* index,
+                                                               Particles &current_particles)
+{
+  this->the_worker->subsample_smcadaptive_given_smcfixed_weight(index,
+                                                                current_particles);
 }
 
-void ImportanceSampler::subsample_weight_for_adapting_sequence(Particles &current_particles,
+/*
+void ImportanceSampler::subsample_weight_for_adapting_sequence(const Index* index,
+                                                               Particles &current_particles,
                                                                const Parameters &conditioned_on_parameters)
 {
-  this->the_worker->subsample_smcadaptive_given_smcfixed_weight(this->index,
+  this->the_worker->subsample_smcadaptive_given_smcfixed_weight(index,
                                                                 current_particles,
                                                                 conditioned_on_parameters);
 }
+*/
 
 /*
 void ImportanceSampler::weight(SMCOutput* current_state,

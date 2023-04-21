@@ -33,18 +33,33 @@ public:
 	// Everything you need to copy the class.
 	Mileometer(const Mileometer &another);
 	Mileometer* duplicate() const;
-	void make_copy(const Mileometer &another);
-	void operator=(const Mileometer &another);
+  Mileometer& operator=(const Mileometer &another);
+  
+  Mileometer(Mileometer &&another);
+  Mileometer& operator=(Mileometer &&another);
 
 	// Get the current index.
 	std::vector<size_t> get_current_index() const;
   
   std::vector<double> get_current_values(const std::vector< std::vector<double> > &values) const;
   
+  size_t operator[](const size_t &i) const;
+  
+  size_t size() const;
+  
+  size_t back() const;
+  
+  size_t get_previous_index() const;
+  size_t get_next_index() const;
+  
   bool at_start() const;
 
 	// Increment current.
 	void increment();
+  
+  void reset_final_dimension(size_t new_number_of_states);
+  
+  void reset();
 
 protected: // Things that can be accessed in this class and subclasses.
 
@@ -57,6 +72,9 @@ protected: // Things that can be accessed in this class and subclasses.
 
 	// Increment current dimension.
 	void increment(size_t dimension);
+  
+  void make_copy(const Mileometer &another);
+  void make_copy(Mileometer &&another);
 
 private: // Things that can be accessed only by this class.
 

@@ -7,13 +7,14 @@ using namespace Rcpp;
 #include <vector>
 #include "move_output.h"
 #include "parameters.h"
+#include "ilike_header.h"
 
 class StandardMCMCOutput : public MoveOutput
 {
 
 public:
 
-  StandardMCMCOutput(const Parameters &parameter_in);
+  //StandardMCMCOutput(const Parameters &parameter_in);
   StandardMCMCOutput();
 
   virtual ~StandardMCMCOutput();
@@ -29,6 +30,19 @@ public:
   Particle back() const;
   
   std::vector<Parameters> get_vector_of_parameters() const;
+  
+  void write_vector_points(const std::vector<std::string> &variables,
+                           std::ofstream &file_stream,
+                           std::shared_ptr<Transform> transform) const;
+  void write_any_points(const std::vector<std::string> &variables,
+                        std::ofstream &file_stream) const;
+  
+  void write_factors(const std::string &directory_name,
+                     const std::string &index) const;
+  void write_ensemble_factors(const std::string &directory_name,
+                              const std::string &index) const;
+  
+  void close_ofstreams();
   
 protected:
 

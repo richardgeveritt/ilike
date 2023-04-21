@@ -1,5 +1,7 @@
 #include "ensemble_kalman_output.h"
 #include "ensemble_kalman.h"
+#include "move_output.h"
+#include "filesystem.h"
 
 EnsembleKalmanOutput::EnsembleKalmanOutput()
   :LikelihoodEstimatorOutput()
@@ -7,16 +9,25 @@ EnsembleKalmanOutput::EnsembleKalmanOutput()
   this->log_likelihood_smcfixed_part = 0.0;
   this->subsample_log_likelihood_smcfixed_part = 0.0;
   this->estimator = NULL;
+  this->iteration_written_to_file = -1;
+  this->transform = NULL;
+  this->enk_iteration = 0;
 }
 
 EnsembleKalmanOutput::EnsembleKalmanOutput(EnsembleKalman* estimator_in,
-                                           size_t lag_in)
+                                           size_t lag_in,
+                                           std::shared_ptr<Transform> transform_in,
+                                           const std::string &results_name_in)
   :LikelihoodEstimatorOutput()
 {
   this->estimator = estimator_in;
   this->log_likelihood_smcfixed_part = 0.0;
   this->subsample_log_likelihood_smcfixed_part = 0.0;
   this->lag = lag_in;
+  this->iteration_written_to_file = -1;
+  this->results_name = results_name_in;
+  this->transform = transform_in;
+  this->enk_iteration = 0;
 }
 
 EnsembleKalmanOutput::~EnsembleKalmanOutput()
@@ -53,16 +64,31 @@ void EnsembleKalmanOutput::make_copy(const EnsembleKalmanOutput &another)
   this->subsample_log_likelihood_smcfixed_part = another.subsample_log_likelihood_smcfixed_part;
   this->all_ensembles = another.all_ensembles;
   this->lag = another.lag;
+  this->results_name = another.results_name;
 }
 
+/*
 Ensemble* EnsembleKalmanOutput::add_ensemble()
 {
-  size_t num_to_pop_back = std::max<int>(0,this->all_ensembles.size()-lag-1);
-  for (size_t i=0; i<num_to_pop_back; ++i)
+  size_t num_to_pop_front = std::max<int>(0,this->all_ensembles.size()-this->lag+1);
+  for (size_t i=0; i<num_to_pop_front; ++i)
   {
-    this->all_ensembles.pop_back();
+    this->all_ensembles.pop_front();
   }
   this->all_ensembles.push_back(Ensemble());
+  this->all_ensembles.back().reserve(this->estimator->number_of_ensemble_members);
+  return &this->all_ensembles.back();
+}
+*/
+
+Ensemble* EnsembleKalmanOutput::add_ensemble(EnsembleFactors* ensemble_factors)
+{
+  size_t num_to_pop_front = std::max<int>(0,this->all_ensembles.size()-this->lag+1);
+  for (size_t i=0; i<num_to_pop_front; ++i)
+  {
+    this->all_ensembles.pop_front();
+  }
+  this->all_ensembles.push_back(Ensemble(ensemble_factors));
   this->all_ensembles.back().reserve(this->estimator->number_of_ensemble_members);
   return &this->all_ensembles.back();
 }
@@ -77,6 +103,11 @@ Ensemble& EnsembleKalmanOutput::back()
   return this->all_ensembles.back();
 }
 
+double EnsembleKalmanOutput::calculate_latest_log_normalising_constant_ratio()
+{
+  return this->all_ensembles.back().calculate_log_normalising_constant();
+}
+
 void EnsembleKalmanOutput::simulate()
 {
   this->estimator->ensemble_kalman_simulate(this);
@@ -86,6 +117,32 @@ void EnsembleKalmanOutput::simulate(const Parameters &parameters)
 {
   this->estimator->ensemble_kalman_simulate(this, parameters);
 }
+
+/*
+void EnsembleKalmanOutput::evaluate_smcfixed_part()
+{
+  if (this->estimator->smcfixed_flag)
+  {
+    this->estimator->ensemble_kalman_evaluate(this);
+    //this->log_likelihood_smcfixed_part = std::accumulate(this->log_normalising_constant_ratios.begin(),
+    //this->log_normalising_constant_ratios.end(),
+    //1.0);
+  }
+  else
+  {
+    this->estimator->ensemble_kalman_evaluate_smcfixed_part(this);
+  }
+}
+
+void EnsembleKalmanOutput::evaluate_smcadaptive_part_given_smcfixed()
+{
+  if (!this->estimator->smcfixed_flag)
+  {
+    this->estimator->ensemble_kalman_evaluate_smcadaptive_part_given_smcfixed(this);
+  }
+  
+}
+*/
 
 void EnsembleKalmanOutput::evaluate_smcfixed_part(const Parameters &conditioned_on_parameters)
 {
@@ -111,10 +168,41 @@ void EnsembleKalmanOutput::evaluate_smcadaptive_part_given_smcfixed(const Parame
   
 }
 
+void EnsembleKalmanOutput::subsample_simulate()
+{
+  this->estimator->ensemble_kalman_simulate(this);
+}
+
 void EnsembleKalmanOutput::subsample_simulate(const Parameters &parameters)
 {
   this->estimator->ensemble_kalman_simulate(this, parameters);
 }
+
+/*
+void EnsembleKalmanOutput::subsample_evaluate_smcfixed_part()
+{
+  if (this->estimator->smcfixed_flag)
+  {
+    this->estimator->ensemble_kalman_subsample_evaluate(this);
+    //this->log_likelihood_smcfixed_part = std::accumulate(this->log_normalising_constant_ratios.begin(),
+    //this->log_normalising_constant_ratios.end(),
+    //1.0);
+  }
+  else
+  {
+    this->estimator->ensemble_kalman_subsample_evaluate_smcfixed_part(this);
+  }
+}
+
+void EnsembleKalmanOutput::subsample_evaluate_smcadaptive_part_given_smcfixed()
+{
+  if (!this->estimator->smcfixed_flag)
+  {
+    this->estimator->ensemble_kalman_subsample_evaluate_smcadaptive_part_given_smcfixed(this);
+  }
+  
+}
+*/
 
 void EnsembleKalmanOutput::subsample_evaluate_smcfixed_part(const Parameters &conditioned_on_parameters)
 {
@@ -148,13 +236,13 @@ LikelihoodEstimator* EnsembleKalmanOutput::get_likelihood_estimator() const
 arma::mat EnsembleKalmanOutput::get_gradient_of_log(const std::string &variable,
                                                     const Parameters &x)
 {
-  throw std::runtime_error("EnsembleKalmanOutput::get_gradient_of_log - not yet implemented.");
+  Rcpp::stop("EnsembleKalmanOutput::get_gradient_of_log - not yet implemented.");
 }
 
 arma::mat EnsembleKalmanOutput::subsample_get_gradient_of_log(const std::string &variable,
                                                               const Parameters &x)
 {
-  throw std::runtime_error("EnsembleKalmanOutput::subsample_get_gradient_of_log - not yet implemented.");
+  Rcpp::stop("EnsembleKalmanOutput::subsample_get_gradient_of_log - not yet implemented.");
 }
 
 size_t EnsembleKalmanOutput::number_of_ensemble_kalman_iterations() const
@@ -162,6 +250,224 @@ size_t EnsembleKalmanOutput::number_of_ensemble_kalman_iterations() const
   return this->all_ensembles.size();
 }
 
+void EnsembleKalmanOutput::increment_enk_iteration()
+{
+  this->enk_iteration = this->enk_iteration + 1;
+}
+
+void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
+                                         const std::string &index)
+{
+  std::string directory_name = dir_name + "_enk";
+  
+  if (index!="")
+    directory_name = directory_name + "_" + index;
+  
+  if (!directory_exists(directory_name))
+  {
+    make_directory(directory_name);
+  }
+  
+  // for each iteration left to write
+  for (size_t iteration = this->iteration_written_to_file+1;
+       iteration<this->enk_iteration+1;
+       ++iteration)
+  {
+    size_t distance_from_end = this->enk_iteration-iteration;
+    if (this->all_ensembles.size() > distance_from_end)
+    {
+      size_t deque_index = this->all_ensembles.size()-1-distance_from_end;
+      
+      if (!this->estimator->log_likelihood_file_stream.is_open())
+      {
+        this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt");
+      }
+      if (this->estimator->log_likelihood_file_stream.is_open())
+      {
+        //log_likelihood_file_stream << this->all_ensembles[deque_index].log_normalising_constant << std::endl;
+        this->estimator->log_likelihood_file_stream << this->log_likelihood << std::endl;
+        //log_likelihood_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + "cannot be opened.");
+      }
+      
+      if (!this->estimator->vector_variables_file_stream.is_open())
+      {
+        this->estimator->vector_variables_file_stream.open(directory_name + "/vector_variables.txt",std::ios::out | std::ios::app);
+      }
+      if (this->estimator->vector_variables_file_stream.is_open())
+      {
+        for (size_t i=0; i<this->estimator->vector_variables.size(); ++i)
+        {
+          this->estimator->vector_variables_file_stream << this->estimator->vector_variables[i] << ";";
+        }
+        this->estimator->vector_variables_file_stream << std::endl;
+        //vector_variables_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + directory_name + "/vector_variables.txt" + "cannot be opened.");
+      }
+      
+      if (!this->estimator->vector_variable_sizes_file_stream.is_open())
+      {
+        this->estimator->vector_variable_sizes_file_stream.open(directory_name + "/vector_variable_sizes.txt",std::ios::out | std::ios::app);
+      }
+      if (this->estimator->vector_variable_sizes_file_stream.is_open())
+      {
+        for (size_t i=0; i<this->estimator->vector_variable_sizes.size(); ++i)
+        {
+          this->estimator->vector_variable_sizes_file_stream << this->estimator->vector_variable_sizes[i] << ";";
+        }
+        this->estimator->vector_variable_sizes_file_stream << std::endl;
+        //vector_variable_sizes_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + directory_name + "/vector_variable_sizes.txt" + "cannot be opened.");
+      }
+      
+      std::string smc_iteration_directory = directory_name + "/iteration" + std::to_string(iteration);
+      
+      if (!directory_exists(smc_iteration_directory))
+      {
+        make_directory(smc_iteration_directory);
+      }
+      
+      if (!this->estimator->incremental_log_likelihood_file_stream.is_open())
+      {
+        this->estimator->incremental_log_likelihood_file_stream.open(smc_iteration_directory + "/incremental_log_likelihood.txt");
+      }
+      if (this->estimator->incremental_log_likelihood_file_stream.is_open())
+      {
+        this->estimator->incremental_log_likelihood_file_stream << this->all_ensembles[deque_index].log_normalising_constant_ratio << std::endl;
+        //incremental_log_likelihood_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + smc_iteration_directory + "/incremental_log_likelihood.txt" + "cannot be opened.");
+      }
+      
+      if (!this->estimator->schedule_parameters_file_stream.is_open())
+      {
+        this->estimator->schedule_parameters_file_stream.open(smc_iteration_directory + "/schedule_parameters.txt");
+      }
+      if (this->estimator->schedule_parameters_file_stream.is_open())
+      {
+        this->estimator->schedule_parameters_file_stream << this->all_ensembles[deque_index].schedule_parameters << std::endl;
+        //schedule_parameters_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + smc_iteration_directory + "/schedule_parameters.txt" + "cannot be opened.");
+      }
+      
+      if(!this->estimator->vector_points_file_stream.is_open())
+      {
+        this->estimator->vector_points_file_stream.open(smc_iteration_directory + "/vector_points.txt");
+      }
+      if(this->estimator->vector_points_file_stream.is_open())
+      {
+        for (auto i = this->all_ensembles[deque_index].members.begin();
+             i!=this->all_ensembles[deque_index].members.end();
+             ++i)
+        {
+          (*i)->write_vector_points(this->estimator->vector_variables,
+                                    this->estimator->vector_points_file_stream,
+                                    this->transform);
+        }
+        //vector_points_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + smc_iteration_directory + "/vector_points.txt" + "cannot be opened.");
+      }
+      
+      if(!this->estimator->any_points_file_stream.is_open())
+      {
+        this->estimator->any_points_file_stream.open(smc_iteration_directory + "/any_points.txt");
+      }
+      if(this->estimator->any_points_file_stream.is_open())
+      {
+        for (auto i = this->all_ensembles[deque_index].members.begin();
+             i!=this->all_ensembles[deque_index].members.end();
+             ++i)
+        {
+          (*i)->write_any_points(this->estimator->any_variables,
+                                 this->estimator->any_points_file_stream);
+        }
+        //any_points_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + smc_iteration_directory + "/any_points.txt" + "cannot be opened.");
+      }
+      
+      // for any other info in Particles, write to a different file
+      
+      //for (auto i = this->all_ensembles[deque_index].members.begin();
+      //     i!=this->all_ensembles[deque_index].members.end();
+      //     ++i)
+      //{
+      //  (*i)->write_factors(smc_iteration_directory);
+      //}
+      for (size_t i = 0;
+           i<this->all_ensembles[deque_index].members.size();
+           ++i)
+      {
+        this->all_ensembles[deque_index].members[i]->write_factors(smc_iteration_directory,
+                                                                   std::to_string(i));
+      }
+      
+      //for (auto i = this->all_ensembles[deque_index].members.begin();
+      //     i!=this->all_ensembles[deque_index].members.end();
+      //     ++i)
+      //{
+      //  (*i)->write_ensemble_factors(smc_iteration_directory);
+      //}
+      for (size_t i = 0;
+           i<this->all_ensembles[deque_index].members.size();
+           ++i)
+      {
+        this->all_ensembles[deque_index].members[i]->write_ensemble_factors(smc_iteration_directory,
+                                                                            std::to_string(i));
+      }
+      
+      this->close_ofstreams(deque_index);
+      
+    }
+    
+  }
+  
+  this->iteration_written_to_file = this->enk_iteration;
+}
+
+void EnsembleKalmanOutput::close_ofstreams()
+{
+  this->estimator->incremental_log_likelihood_file_stream.close();
+  this->estimator->schedule_parameters_file_stream.close();
+  this->estimator->vector_points_file_stream.close();
+  this->estimator->any_points_file_stream.close(); // should be one for each member of Parameters
+  
+  for (auto i = this->all_ensembles.begin();
+       i!=this->all_ensembles.end();
+       ++i)
+  {
+    i->close_ofstreams();
+  }
+}
+
+void EnsembleKalmanOutput::close_ofstreams(size_t deque_index)
+{
+  this->estimator->incremental_log_likelihood_file_stream.close();
+  this->estimator->schedule_parameters_file_stream.close();
+  this->estimator->vector_points_file_stream.close();
+  this->estimator->any_points_file_stream.close(); // should be one for each member of Parameters
+  
+  this->all_ensembles[deque_index].close_ofstreams();
+}
 
 /*
 void EnsembleKalmanOutput::set_current_predicted_statistics(const arma::colvec &latest_mean,
@@ -186,15 +492,15 @@ void EnsembleKalmanOutput::add_predicted_statistics()
 {
   // unsure
   // copied from KF
-  size_t num_to_pop_back = std::max<int>(0,this->predicted_means.size()-lag-1);
-  for (size_t i=0; i<num_to_pop_back; ++i)
+  size_t num_to_pop_front = std::max<int>(0,this->predicted_means.size()-this->lag+1);
+  for (size_t i=0; i<num_to_pop_front; ++i)
   {
-    this->predicted_means.pop_back();
+    this->predicted_means.pop_front();
   }
   this->predicted_means.push_back(this->current_predicted_mean);
-  for (size_t i=0; i<num_to_pop_back; ++i)
+  for (size_t i=0; i<num_to_pop_front; ++i)
   {
-    this->predicted_covariances.pop_back();
+    this->predicted_covariances.pop_front();
   }
   this->predicted_covariances.push_back(this->current_predicted_covariance);
 }
@@ -203,15 +509,15 @@ void EnsembleKalmanOutput::add_posterior_statistics()
 {
   // unsure
   // copied from KF
-  size_t num_to_pop_back = std::max<int>(0,this->posterior_means.size()-lag-1);
-  for (size_t i=0; i<num_to_pop_back; ++i)
+  size_t num_to_pop_front = std::max<int>(0,this->posterior_means.size()-this->lag+1);
+  for (size_t i=0; i<num_to_pop_front; ++i)
   {
-    this->posterior_means.pop_back();
+    this->posterior_means.pop_front();
   }
   this->posterior_means.push_back(this->current_posterior_mean);
-  for (size_t i=0; i<num_to_pop_back; ++i)
+  for (size_t i=0; i<num_to_pop_front; ++i)
   {
-    this->posterior_covariances.pop_back();
+    this->posterior_covariances.pop_front();
   }
   this->posterior_covariances.push_back(this->current_posterior_covariance);
 }

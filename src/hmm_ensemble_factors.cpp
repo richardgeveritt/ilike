@@ -3,6 +3,7 @@
 #include "measurement_covariance_estimator_output.h"
 #include "hmm_ensemble_factor_variables.h"
 #include "proposal_kernel.h"
+#include "ensemble.h"
 
 HMMEnsembleFactors::HMMEnsembleFactors()
   :EnsembleFactors()
@@ -153,6 +154,7 @@ EnsembleFactorVariables* HMMEnsembleFactors::simulate_ensemble_factor_variables(
                                         outputs);
 }
 
+/*
 EnsembleFactorVariables* HMMEnsembleFactors::simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
                                                                                 const Parameters &conditioned_on_parameters)
 {
@@ -172,10 +174,61 @@ EnsembleFactorVariables* HMMEnsembleFactors::simulate_ensemble_factor_variables(
   return new HMMEnsembleFactorVariables(this,
                                         outputs);
 }
+*/
 
-arma::colvec HMMEnsembleFactors::get_measurements()
+EnsembleFactorVariables* HMMEnsembleFactors::subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters)
 {
-  return measurement_covariance_estimator_temp_data[0]->get_vector(this->measurement_names);
+  std::vector<MeasurementCovarianceEstimatorOutput*> outputs;
+  outputs.reserve(this->measurement_covariance_estimators.size());
+  
+  for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+       i != this->measurement_covariance_estimators.end();
+       ++i)
+  {
+    outputs.push_back((*i)->initialise(simulated_parameters));
+    outputs.back()->subsample_simulate(simulated_parameters);
+  }
+  
+  return new HMMEnsembleFactorVariables(this,
+                                        outputs);
+}
+
+/*
+EnsembleFactorVariables* HMMEnsembleFactors::subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
+                                                                                const Parameters &conditioned_on_parameters)
+{
+  std::vector<MeasurementCovarianceEstimatorOutput*> outputs;
+  outputs.reserve(this->measurement_covariance_estimators.size());
+  
+  Parameters all_parameters = simulated_parameters.merge(conditioned_on_parameters);
+  
+  for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+       i != this->measurement_covariance_estimators.end();
+       ++i)
+  {
+    outputs.push_back((*i)->initialise(all_parameters));
+    outputs.back()->subsample_simulate(all_parameters);
+  }
+  
+  return new HMMEnsembleFactorVariables(this,
+                                        outputs);
+}
+*/
+
+std::vector<arma::colvec*> HMMEnsembleFactors::get_measurements()
+{
+  std::vector<arma::colvec*> measurements;
+  measurements.reserve(this->measurement_covariance_estimators.size());
+  
+  for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+       i != this->measurement_covariance_estimators.end();
+       ++i)
+  {
+    measurements.push_back((*i)->get_measurement_pointer());
+  }
+  
+  return measurements;
+  //return measurement_covariance_estimator_temp_data[0]->get_colvec(this->measurement_names);
 }
 
 /*
@@ -235,20 +288,74 @@ void HMMEnsembleFactors::find_Cygivenx(const arma::mat &inv_Cxx,
   }
 }
 
-/*
-std::vector<arma::mat> VectorEnsembleFactors::get_kalman_gains(const std::vector<arma::mat> &Cxys,
-                                                               const std::vector<arma::mat> &Cyys,
-                                                               double inverse_incremental_temperature)
+std::vector<arma::mat> HMMEnsembleFactors::get_adjustments(const arma::mat &Zf,
+                                                           const arma::mat &Ginv,
+                                                           const arma::mat &Ftranspose,
+                                                           const std::vector<arma::mat> &Vs,
+                                                           double inverse_incremental_temperature) const
 {
-  std::vector<arma::mat> kalman_gains;
-  kalman_gains.reserve(this->measurement_covariance_estimators.size);
+  std::vector<arma::mat> adjustments;
+  adjustments.reserve(this->measurement_covariance_estimators.size());
   for (size_t i=0;
        i<this->measurement_covariance_estimators.size();
        ++i)
   {
-    this->measurement_covariance_estimators[i]->get_kalman_gain(Cxys[i],
-                                                                Cyys[i],
-                                                                inverse_incremental_temperature);
+    adjustments.push_back(this->measurement_covariance_estimators[i]->get_adjustment(Zf,
+                                                                                     Ginv,
+                                                                                     Ftranspose,
+                                                                                     Vs[i],
+                                                                                     inverse_incremental_temperature));
+  }
+  return adjustments;
+}
+
+double HMMEnsembleFactors::get_incremental_likelihood(Ensemble* ensemble)
+{
+  double inverse_incremental_temperature = 1.0/(this->temperature - this->previous_temperature);
+  
+  double llhd = 0.0;
+  ensemble->kalman_gains.clear();
+  ensemble->kalman_gains.reserve(this->measurement_covariance_estimators.size());
+  
+  for (size_t i=0;
+       i<this->measurement_covariance_estimators.size();
+       ++i)
+  {
+    arma::mat unconditional_measurement_covariance = this->measurement_covariance_estimators[i]->get_unconditional_measurement_covariance(ensemble->Cyys[i],
+                                                                                                                                          inverse_incremental_temperature);
+    ensemble->kalman_gains.push_back(ensemble->Cxys[i]*unconditional_measurement_covariance.i());
+    llhd = llhd + dmvnorm(*this->measurement_covariance_estimators[i]->get_measurement_pointer(),ensemble->myys[i],unconditional_measurement_covariance);
+  }
+  
+  return llhd;
+}
+
+void HMMEnsembleFactors::setup()
+{
+  for (auto i=this->measurement_covariance_estimators.begin();
+       i!=this->measurement_covariance_estimators.end();
+       ++i)
+  {
+    (*i)->setup();
   }
 }
-*/
+
+void HMMEnsembleFactors::setup(const Parameters &conditioned_on_parameters)
+{
+  for (auto i=this->measurement_covariance_estimators.begin();
+       i!=this->measurement_covariance_estimators.end();
+       ++i)
+  {
+    (*i)->setup(conditioned_on_parameters);
+  }
+}
+
+void HMMEnsembleFactors::precompute_gaussian_covariance(double inverse_incremental_temperature)
+{
+  for (auto i=this->measurement_covariance_estimators.begin();
+       i!=this->measurement_covariance_estimators.end();
+       ++i)
+  {
+    (*i)->precompute_gaussian_covariance(inverse_incremental_temperature);
+  }
+}

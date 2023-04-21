@@ -9,7 +9,10 @@ using namespace Rcpp;
 #include "parameters.h"
 
 class LikelihoodEstimator;
-class Data;
+class HMMFactorVariables;
+class VectorFactorVariables;
+class AnnealedLikelihoodEstimatorOutput;
+//class Data;
 
 class LikelihoodEstimatorOutput
 {
@@ -65,6 +68,8 @@ public:
                                         const Parameters &x)=0;
   virtual arma::mat subsample_get_gradient_of_log(const std::string &variable,
                                                   const Parameters &x)=0;
+  
+  void write(const std::string &directory_name);
 
   friend std::ostream& operator<<(std::ostream& os, const LikelihoodEstimatorOutput &p);
 
@@ -73,6 +78,10 @@ public:
   double log_likelihood;
   
   double subsample_log_likelihood;
+  
+  bool write_to_file_flag;
+  
+  virtual void close_ofstreams()=0;
 
   // virtual double estimate_log_likelihood(const List &inputs,
   //                                        const List &auxiliary_variables) const=0;
@@ -83,6 +92,13 @@ public:
   //                                            const std::vector<List> &all_auxiliary_variables)=0;
 
 protected:
+  
+  friend HMMFactorVariables;
+  friend VectorFactorVariables;
+  friend AnnealedLikelihoodEstimatorOutput;
+  
+  virtual void write_to_file(const std::string &directory_name,
+                             const std::string &index = "")=0;
 
   void make_copy(const LikelihoodEstimatorOutput &another);
 

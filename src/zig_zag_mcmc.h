@@ -36,13 +36,20 @@ public:
   Particle move(RandomNumberGenerator &rng,
                 Particle &particle) const;
   
+  /*
   Particle move(RandomNumberGenerator &rng,
                 Particle &particle,
                 const Parameters &conditioned_on_parameters) const;
+  */
   
+  Particle subsample_move(RandomNumberGenerator &rng,
+                          Particle &particle) const;
+  
+  /*
   Particle subsample_move(RandomNumberGenerator &rng,
                           Particle &particle,
                           const Parameters &conditioned_on_parameters) const;
+  */
   
   /*
   EnsembleMember move(RandomNumberGenerator &rng,
@@ -62,20 +69,28 @@ public:
   
   // Overrides that just run the PDMP, rather than calling run in the MCMC base class.
   MoveOutput* run(RandomNumberGenerator &rng,
-                  
-                  Particle &particle) const;
+                  Particle &particle) const; // override?
   
+  /*
   MoveOutput* run(RandomNumberGenerator &rng,
                   Particle &particle,
-                  const Parameters &conditioned_on_parameters) const;
+                  const Parameters &conditioned_on_parameters) const; // override?
+  */
   
+  MoveOutput* subsample_run(RandomNumberGenerator &rng,
+                            Particle &particle) const;
+  
+  /*
   MoveOutput* subsample_run(RandomNumberGenerator &rng,
                             Particle &particle,
                             const Parameters &conditioned_on_parameters) const;
+  */
   
   void smc_adapt(SMCOutput* current_state);
   
   void ensemble_adapt(EnsembleKalmanOutput* current_state);
+  
+  void set_index(Index* index_in);
   
 protected:
   

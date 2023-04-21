@@ -1,5 +1,6 @@
 #include "stochastic_ensemble_shifter.h"
 #include "ensemble_factor_variables.h"
+#include "distributions.h"
 
 StochasticEnsembleShifter::StochasticEnsembleShifter()
   :EnsembleShifter()
@@ -37,27 +38,24 @@ void StochasticEnsembleShifter::make_copy(const StochasticEnsembleShifter &anoth
 {
 }
 
-void StochasticEnsembleShifter::setup(Ensemble* ensemble)
+void StochasticEnsembleShifter::setup(Ensemble* ensemble,
+                                      double inverse_incremental_temperature)
 {
   
 }
 
 void StochasticEnsembleShifter::shift(const EnsembleFactorVariables* ensemble_factor_variables,
                                       arma::colvec &position,
-                                      const std::vector<arma::mat> &Cxys,
-                                      const std::vector<arma::mat> &Cyys,
+                                      const std::vector<arma::colvec*> &measurements,
+                                      const std::vector<arma::mat> &kalman_gains,
                                       double inverse_incremental_temperature) const
 {
   std::vector<arma::colvec> shift_terms = ensemble_factor_variables->get_shifts(inverse_incremental_temperature);
   
-  std::vector<arma::mat> kalman_gains = ensemble_factor_variables->get_kalman_gains(Cxys,
-                                                                                    Cyys,
-                                                                                    inverse_incremental_temperature);
-  
-  std::vector<arma::colvec*> measurements = ensemble_factor_variables->get_measurements();
+  //std::vector<arma::colvec*> measurements = ensemble_factor_variables->get_measurements();
   
   for (size_t j=0;
-       j<Cxys.size();
+       j<kalman_gains.size();
        ++j)
   {
     position = position + kalman_gains[j]*(*measurements[j] - shift_terms[j]);

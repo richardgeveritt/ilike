@@ -12,7 +12,8 @@ using namespace Rcpp;
 class MeasurementCovarianceEstimator;
 class MeasurementCovarianceEstimatorOutput;
 class EnsembleFactorVariables;
-class Data;
+class Ensemble;
+//class Data;
 
 class VectorEnsembleFactors : public EnsembleFactors
 {
@@ -20,6 +21,7 @@ class VectorEnsembleFactors : public EnsembleFactors
 public:
 
   VectorEnsembleFactors();
+  VectorEnsembleFactors(const std::vector<MeasurementCovarianceEstimator*> &measurement_covariance_estimators_in);
 
   virtual ~VectorEnsembleFactors();
 
@@ -31,11 +33,18 @@ public:
   void set_data(const Index* index);
   
   // should be updated to return std::vector<arma::colvec>, one for each factor
-  arma::colvec get_measurements();
+  std::vector<arma::colvec*> get_measurements();
   
   EnsembleFactorVariables* simulate_ensemble_factor_variables(const Parameters &simulated_parameters);
+  /*
   EnsembleFactorVariables* simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
                                                               const Parameters &conditioned_on_parameters);
+  */
+  EnsembleFactorVariables* subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters);
+  /*
+  EnsembleFactorVariables* subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
+                                                                        const Parameters &conditioned_on_parameters);
+  */
   
   //std::vector<arma::mat> get_measurement_covariances();
   //std::vector<arma::mat> get_measurement_covariances(const Parameters &conditioned_on_parameters);
@@ -45,6 +54,23 @@ public:
   void find_Cygivenx(const arma::mat &inv_Cxx,
                      const std::vector<arma::mat> &Cxys,
                      const std::vector<arma::mat> &Cyys);
+  
+  std::vector<arma::mat> get_adjustments(const arma::mat &Zf,
+                                         const arma::mat &Ginv,
+                                         const arma::mat &Ftranspose,
+                                         const std::vector<arma::mat> &Vs,
+                                         double inverse_incremental_temperature) const;
+  
+  //std::vector<arma::colvec> pack_measurements() const;
+  
+  double get_incremental_likelihood(Ensemble* ensemble);
+  
+  EnsembleFactors* get_ensemble_factors();
+  
+  void setup();
+  void setup(const Parameters &conditioned_on_parameters);
+  
+  void precompute_gaussian_covariance(double inverse_incremental_temperature);
   
   //void find_measurement_covariances(EnsembleKalmanOutput* simulation);
   

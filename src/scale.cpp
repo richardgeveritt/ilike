@@ -28,12 +28,13 @@ Scale::Scale(const Scale &another)
   this->make_copy(another);
 }
   
-void Scale::operator=(const Scale &another)
+Scale& Scale::operator=(const Scale &another)
 {
   if(this == &another)
-    return;
+    return *this;
 
   this->make_copy(another);
+  return *this;
 }
 
 void Scale::make_copy(const Scale &another)
@@ -41,6 +42,31 @@ void Scale::make_copy(const Scale &another)
   this->constant = another.constant;
   this->divide_by_dimension = another.divide_by_dimension;
   this->dimension = another.dimension;
+}
+
+Scale::Scale(Scale &&another)
+{
+  this->make_copy(std::move(another));
+}
+
+Scale& Scale::operator=(Scale &&another)
+{
+  if(this == &another)
+    return *this;
+  
+  this->make_copy(std::move(another));
+  return *this;
+}
+
+void Scale::make_copy(Scale &&another)
+{
+  this->constant = std::move(another.constant);
+  this->divide_by_dimension = std::move(another.divide_by_dimension);
+  this->dimension = std::move(another.dimension);
+  
+  another.constant = 0.0;
+  another.divide_by_dimension = false;
+  another.dimension = 0.0;
 }
 
 double Scale::operator()() const

@@ -109,6 +109,7 @@ Particle MetropolisMCMC::move(RandomNumberGenerator &rng,
   
 }
 
+/*
 Particle MetropolisMCMC::move(RandomNumberGenerator &rng,
                               Particle &particle,
                               const Parameters &conditioned_on_parameters) const
@@ -133,7 +134,29 @@ Particle MetropolisMCMC::move(RandomNumberGenerator &rng,
   }
   
 }
+*/
 
+Particle MetropolisMCMC::subsample_move(RandomNumberGenerator &rng,
+                                        Particle &particle) const
+{
+  Particle proposed_particle = this->proposal->subsample_move(rng,
+                                                              particle);
+  
+  double log_u = log(runif(rng));
+  
+  if (log_u < proposed_particle.subsample_evaluate_likelihoods(this->index) -
+      particle.subsample_target_evaluated)
+  {
+    return proposed_particle;
+  }
+  else
+  {
+    return particle;
+  }
+  
+}
+
+/*
 Particle MetropolisMCMC::subsample_move(RandomNumberGenerator &rng,
                                         Particle &particle,
                                         const Parameters &conditioned_on_parameters) const
@@ -156,6 +179,7 @@ Particle MetropolisMCMC::subsample_move(RandomNumberGenerator &rng,
   }
   
 }
+*/
 
 void MetropolisMCMC::smc_adapt(SMCOutput* current_state)
 {
@@ -172,4 +196,12 @@ void MetropolisMCMC::specific_mcmc_adapt(Particle &current_particle,
 {
   proposal->mcmc_adapt(current_particle,
                        iteration_counter);
+}
+
+void MetropolisMCMC::set_index(Index* index_in)
+{
+  if (this->index!=NULL)
+    delete this->index;
+  
+  this->index = index_in;
 }

@@ -1,5 +1,6 @@
 #include "enk_gaussian_measurement_covariance_estimator.h"
 #include "enk_gaussian_measurement_covariance_estimator_output.h"
+#include "parameters.h"
 
 EnKGaussianMeasurementCovarianceEstimator::EnKGaussianMeasurementCovarianceEstimator()
   :GaussianMeasurementCovarianceEstimator()
@@ -48,4 +49,31 @@ MeasurementCovarianceEstimatorOutput* EnKGaussianMeasurementCovarianceEstimator:
 {
   MeasurementCovarianceEstimatorOutput* output = new EnKGaussianMeasurementCovarianceEstimatorOutput(this);
   return output;
+}
+
+void EnKGaussianMeasurementCovarianceEstimator::setup()
+{
+  this->setup_measurement_variables();
+}
+
+void EnKGaussianMeasurementCovarianceEstimator::setup(const Parameters &parameters)
+{
+  this->setup_measurement_variables(parameters);
+}
+
+void EnKGaussianMeasurementCovarianceEstimator::setup_measurement_variables()
+{
+  Data dummy_data;
+  this->measurement_variables = dummy_data.get_vector_variables();
+}
+
+void EnKGaussianMeasurementCovarianceEstimator::setup_measurement_variables(const Parameters &conditioned_on_parameters)
+{
+  Data dummy_data;
+  this->measurement_variables = dummy_data.get_vector_variables();
+}
+
+arma::mat EnKGaussianMeasurementCovarianceEstimator::get_measurement_covariance()
+{
+  return arma::mat();
 }

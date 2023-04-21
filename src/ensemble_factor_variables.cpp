@@ -4,12 +4,15 @@
 EnsembleFactorVariables::EnsembleFactorVariables()
 {
   this->particle = NULL;
+  //this->ensemble_factors = NULL;
 }
 
+/*
 EnsembleFactorVariables::EnsembleFactorVariables(EnsembleFactors* ensemble_factors_in)
 {
   this->ensemble_factors = ensemble_factors_in;
 }
+*/
 
 EnsembleFactorVariables::~EnsembleFactorVariables()
 {
@@ -32,13 +35,15 @@ void EnsembleFactorVariables::operator=(const EnsembleFactorVariables &another)
 void EnsembleFactorVariables::make_copy(const EnsembleFactorVariables &another)
 {
   this->particle = another.particle;
-  this->ensemble_factors = another.ensemble_factors;
+  //this->ensemble_factors = another.ensemble_factors;
 }
 
+/*
 EnsembleFactors* EnsembleFactorVariables::get_ensemble_factors()
 {
   return this->ensemble_factors;
 }
+*/
 
 void EnsembleFactorVariables::set_particle(Particle* particle_in)
 {

@@ -1,6 +1,6 @@
 #include "iid_data_subsetter.h"
 #include "distributions.h"
-#include "data.h"
+#include "parameters.h"
 #include "data_subsampler.h"
 
 IIDDataSubsetter::IIDDataSubsetter()
@@ -46,14 +46,14 @@ void IIDDataSubsetter::subset(size_t num_pieces)
        i!=this->data->vector_end();
        ++i)
   {
-    arma::colvec probabilities(i->second.n_rows);
+    arma::colvec probabilities(i->second.first->n_rows);
     probabilities.fill(1.0);
     arma::uvec indices = multiple_rdis(*this->subsampler->rng,
                                        num_pieces,
                                        probabilities);
     (*this->subsampler->small_data)[i->first] = (*this->data)[i->first].rows(indices);
     
-    double current_ratio = double(i->second.n_rows)/double(num_pieces);
+    double current_ratio = double(i->second.first->n_rows)/double(num_pieces);
     if (this->subsampler->ratio!=0.0)
     {
       if (this->subsampler->ratio!=current_ratio)

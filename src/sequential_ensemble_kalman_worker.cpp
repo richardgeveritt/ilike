@@ -9,6 +9,8 @@
 #include "ensemble_factor_variables.h"
 #include "ensemble_factors.h"
 #include "ensemble_shifter.h"
+#include "factor_variables.h"
+#include "single_point_move_output.h"
 
 //Default constructor.
 SequentialEnsembleKalmanWorker::SequentialEnsembleKalmanWorker(void)
@@ -20,7 +22,7 @@ SequentialEnsembleKalmanWorker::SequentialEnsembleKalmanWorker(EnsembleKalman* t
   :EnsembleKalmanWorker(the_enk_in)
 {
   //this->particles = NULL;
-  //this->log_unnormalised_incremental_weights = std::vector<double>(this->get_number_of_particles());
+  this->log_unnormalised_incremental_weights = std::vector<double>(this->get_number_of_ensemble_members());
 }
 
 //Copy constructor for the SequentialEnsembleKalmanWorker class.
@@ -31,7 +33,7 @@ SequentialEnsembleKalmanWorker::SequentialEnsembleKalmanWorker(const SequentialE
 }
 
 //Destructor for the SequentialEnsembleKalmanWorker class.
-SequentialEnsembleKalmanWorker::~SequentialEnsembleKalmanWorker(void)
+SequentialEnsembleKalmanWorker::~SequentialEnsembleKalmanWorker()
 {
 }
 
@@ -47,7 +49,7 @@ void SequentialEnsembleKalmanWorker::operator=(const SequentialEnsembleKalmanWor
   this->make_copy(another);
 }
 
-EnsembleKalmanWorker* SequentialEnsembleKalmanWorker::duplicate(void)const
+EnsembleKalmanWorker* SequentialEnsembleKalmanWorker::duplicate() const
 {
   return( new SequentialEnsembleKalmanWorker(*this));
 }
@@ -70,10 +72,14 @@ void SequentialEnsembleKalmanWorker::make_copy(const SequentialEnsembleKalmanWor
   this->log_unnormalised_incremental_weights = another.log_unnormalised_incremental_weights;
 }
 
-void SequentialEnsembleKalmanWorker::shift(Ensemble* ensemble,
-                                           double inverse_incremental_temperature)
+void SequentialEnsembleKalmanWorker::shift(Ensemble* ensemble)
 {
-  this->the_enk->ensemble_shifter->setup(ensemble);
+  double inverse_incremental_temperature = ensemble->get_inverse_incremental_temperature();
+  
+  this->the_enk->ensemble_shifter->setup(ensemble,
+                                         inverse_incremental_temperature);
+  
+  std::vector<arma::colvec*> measurements = this->the_enk->ensemble_factors->get_measurements();
   
   // parallel part (may not be better in parallel)
   for (size_t i=0;
@@ -82,8 +88,8 @@ void SequentialEnsembleKalmanWorker::shift(Ensemble* ensemble,
   {
     this->the_enk->ensemble_shifter->shift(ensemble->members[i]->back().ensemble_factor_variables,
                                            ensemble->partially_packed_members_col[i],
-                                           ensemble->Cxys,
-                                           ensemble->Cyys,
+                                           measurements,
+                                           ensemble->kalman_gains,
                                            inverse_incremental_temperature);
   }
 }
@@ -106,7 +112,7 @@ void SequentialEnsembleKalmanWorker::pack(Ensemble* ensemble)
        i!=ensemble->members.end();
        ++i)
   {
-    arma::colvec packed_parameters = (*i)->back().get_vector(ensemble->packing_instructions->states_names);
+    arma::colvec packed_parameters = (*i)->back().get_colvec(this->the_enk->packing_instructions.states_names);
     ensemble->partially_packed_members_col.push_back(packed_parameters);
     ensemble->partially_packed_members_row.push_back(arma::conv_to<arma::rowvec>::from(packed_parameters));
     ensemble->partially_packed_measurement_states.push_back((*i)->back().ensemble_factor_variables->get_measurement_states_for_covariance());
@@ -132,12 +138,12 @@ void SequentialEnsembleKalmanWorker::pack(Ensemble* ensemble)
     }
     else
     {
-      ensemble->packed_members = join_rows(ensemble->packed_members,ensemble->partially_packed_members_row[i]);
+      ensemble->packed_members = join_cols(ensemble->packed_members,ensemble->partially_packed_members_row[i]);
       for (size_t j=0;
            j<ensemble->partially_packed_measurement_states[i].size();
            ++j)
       {
-        ensemble->packed_measurement_states.push_back(join_rows(ensemble->packed_measurement_states[j],ensemble->partially_packed_measurement_states[i][j]));
+        ensemble->packed_measurement_states[j] = join_cols(ensemble->packed_measurement_states[j],ensemble->partially_packed_measurement_states[i][j]);
       }
     }
   }
@@ -155,52 +161,102 @@ void SequentialEnsembleKalmanWorker::unpack(Ensemble* ensemble)
        ++i)
   {
     for (size_t j=0;
-         j<ensemble->packing_instructions->states_names.size();
+         j<this->the_enk->packing_instructions.states_names.size();
          ++j)
     {
-      ensemble->members[i]->back().parameters[ensemble->packing_instructions->states_names[j]] = ensemble->partially_packed_members_col[i](arma::span(ensemble->packing_instructions->states_start_and_end[j].first,
-                                                                                                                    ensemble->packing_instructions->states_start_and_end[j].second));
+      ensemble->members[i]->back().parameters[this->the_enk->packing_instructions.states_names[j]] = ensemble->partially_packed_members_col[i](arma::span(this->the_enk->packing_instructions.states_start_and_end[j].first,
+                                                                                                                                                      this->the_enk->packing_instructions.states_start_and_end[j].second));
     }
+  }
+  
+}
+
+void SequentialEnsembleKalmanWorker::unpack_with_predicted(Ensemble* ensemble)
+{
+  // only need to unpack state variables
+  
+  ensemble->predicted_members.clear();
+  ensemble->predicted_members.reserve(ensemble->members.size());
+  
+  // can be done in parallel
+  for (size_t i=0;
+       i<ensemble->members.size();
+       ++i)
+  {
+    Parameters new_parameters;
+    
+    for (size_t j=0;
+         j<this->the_enk->packing_instructions.states_names.size();
+         ++j)
+    {
+      /*
+      ensemble->members[i]->back().parameters[this->the_enk->packing_instructions.states_names[j]] = ensemble->partially_packed_members_col[i](arma::span(this->the_enk->packing_instructions.states_start_and_end[j].first,
+                                                                                                                                                          this->the_enk->packing_instructions.states_start_and_end[j].second));
+      */
+      
+      //ensemble->predicted_members[i]->back().
+      
+      new_parameters[this->the_enk->packing_instructions.states_names[j]] = ensemble->partially_packed_predicted_members_col[i](arma::span(this->the_enk->packing_instructions.states_start_and_end[j].first,
+                                                                                                                                                                              this->the_enk->packing_instructions.states_start_and_end[j].second));
+    }
+    
+    ensemble->predicted_members.push_back(new SinglePointMoveOutput(new_parameters,ensemble->members[i]->back().ensemble_factor_variables->get_ensemble_factors()));
   }
   
 }
 
 void SequentialEnsembleKalmanWorker::weight(Ensemble* ensemble,
                                             const Index* index,
-                                            double incremental_temperature)
+                                            double inverse_incremental_temperature)
 {
+  ensemble->precompute_gaussian_covariance(inverse_incremental_temperature);
   for (size_t i = 0; i < ensemble->size(); ++i)
   {
     this->log_unnormalised_incremental_weights[i] = (*ensemble)[i]->back().evaluate_ensemble_likelihood_ratios(index,
-                                                                                                       incremental_temperature);
+                                                                                                               inverse_incremental_temperature);
   }
 }
 
+/*
 void SequentialEnsembleKalmanWorker::weight(Ensemble* ensemble,
                                             const Index* index,
-                                            double incremental_temperature,
+                                            double inverse_incremental_temperature,
                                             const Parameters &conditioned_on_parameters)
 {
   for (size_t i = 0; i < ensemble->size(); ++i)
   {
     this->log_unnormalised_incremental_weights[i] = (*ensemble)[i]->back().evaluate_ensemble_likelihood_ratios(index,
-                                                                                                       incremental_temperature,
+                                                                                                               inverse_incremental_temperature,
                                                                                                     conditioned_on_parameters);
   }
 }
+*/
 
 void SequentialEnsembleKalmanWorker::subsample_weight(Ensemble* ensemble,
                                                       const Index* index,
-                                                      double incremental_temperature,
+                                                      double inverse_incremental_temperature)
+{
+  for (size_t i = 0; i < ensemble->size(); ++i)
+  {
+    this->log_unnormalised_incremental_weights[i] = (*ensemble)[i]->back().subsample_evaluate_ensemble_likelihood_ratios(index,
+                                                                                                                         inverse_incremental_temperature);
+  }
+}
+
+/*
+void SequentialEnsembleKalmanWorker::subsample_weight(Ensemble* ensemble,
+                                                      const Index* index,
+                                                      double inverse_incremental_temperature,
                                                       const Parameters &conditioned_on_parameters)
 {
   for (size_t i = 0; i < ensemble->size(); ++i)
   {
-    this->log_unnormalised_incremental_weights[i] = incremental_temperature*(*ensemble)[i]->back().subsample_evaluate_ensemble_likelihood_ratios(index,
-                                                                                                                                                 incremental_temperature,
+    this->log_unnormalised_incremental_weights[i] = (*ensemble)[i]->back().subsample_evaluate_ensemble_likelihood_ratios(index,
+                                                                                                                                                 inverse_incremental_temperature,
                                                                                                                           conditioned_on_parameters);
   }
 }
+*/
 
 arma::colvec SequentialEnsembleKalmanWorker::get_unnormalised_log_incremental_weights() const
 {
@@ -222,12 +278,15 @@ void SequentialEnsembleKalmanWorker::specific_simulate(Ensemble* next_ensemble,
   
   for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
   {
-    next_ensemble->push_back(this->the_enk->simulate_ensemble_member(local_rng));
+    Particle* new_particle = next_ensemble->add_ensemble_member();
+    this->the_enk->simulate_ensemble_member(local_rng,
+                                            new_particle);
+    //next_ensemble->push_back();
     
-    if (this->the_enk->likelihood_is_evaluated==true)
-    {
-      next_ensemble->back()->back().evaluate_all_likelihoods(index);
-    }
+    //if (this->the_enk->likelihood_is_evaluated==true)
+    //{
+    //  next_ensemble->back()->back().evaluate_all_likelihoods(index);
+    //}
   }
 }
 
@@ -240,14 +299,19 @@ void SequentialEnsembleKalmanWorker::specific_simulate(Ensemble* next_ensemble,
   
   for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
   {
-    next_ensemble->push_back(this->the_enk->simulate_ensemble_member(local_rng,
-                                                                    conditioned_on_parameters));
+    Particle* new_particle = next_ensemble->add_ensemble_member();
+    this->the_enk->simulate_ensemble_member(local_rng,
+                                            new_particle,
+                                            conditioned_on_parameters);
     
-    if (this->the_enk->likelihood_is_evaluated==true)
-    {
-      next_ensemble->back()->back().evaluate_all_likelihoods(index,
-                                                     conditioned_on_parameters);
-    }
+    //next_ensemble->push_back(this->the_enk->simulate_ensemble_member(local_rng,
+    //                                                                 conditioned_on_parameters));
+    
+    //if (this->the_enk->likelihood_is_evaluated==true)
+    //{
+    //  next_ensemble->back()->back().evaluate_all_likelihoods(index,
+    //                                                         conditioned_on_parameters);
+    //}
   }
   
   //this->output = EnsembleKalman(this->particles);
@@ -514,6 +578,7 @@ void SequentialEnsembleKalmanWorker::specific_move(Ensemble* next_particles,
   }
 }
 
+/*
 void SequentialEnsembleKalmanWorker::specific_move(Ensemble* next_particles,
                                                    Ensemble* current_particles,
                                                    const Parameters &conditioned_on_parameters)
@@ -529,7 +594,23 @@ void SequentialEnsembleKalmanWorker::specific_move(Ensemble* next_particles,
     
   }
 }
+*/
 
+void SequentialEnsembleKalmanWorker::subsample_specific_move(Ensemble* next_particles,
+                                                             Ensemble* current_particles)
+{
+  RandomNumberGenerator local_rng(*this->get_rng());
+  local_rng.seed(this->get_seed(),this->get_number_of_ensemble_members());
+  
+  for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
+  {
+    next_particles->push_back(this->the_enk->move(local_rng,
+                                                  (*current_particles)[i]->back()));
+    
+  }
+}
+
+/*
 void SequentialEnsembleKalmanWorker::subsample_specific_move(Ensemble* next_particles,
                                                              Ensemble* current_particles,
                                                              const Parameters &conditioned_on_parameters)
@@ -545,6 +626,7 @@ void SequentialEnsembleKalmanWorker::subsample_specific_move(Ensemble* next_part
     
   }
 }
+*/
 
 /*
 void SequentialEnsembleKalmanWorker::smcfixed_weight(EnsembleKalman &current_particles,

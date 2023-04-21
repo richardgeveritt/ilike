@@ -22,16 +22,20 @@ public:
   void operator=(const MatrixParameterEstimator &another);
   virtual MatrixParameterEstimator* duplicate() const=0;
 
-  virtual void fit(const std::vector<Parameters> &points,
-                   arma::colvec normalised_log_weights)=0;
+  virtual void fit(const arma::mat &matrix_points,
+                   const arma::colvec &normalised_log_weights)=0;
   
-  virtual void fit(const std::string &variable,
-                   const std::vector<Parameters> &points,
-                   arma::colvec normalised_log_weights)=0;
+  void fit(const std::vector<std::string> &variables,
+           const std::vector<Parameters> &points,
+           const arma::colvec &normalised_log_weights);
   
-  virtual void fit(const std::string &variable,
-                   const std::vector<MoveOutput*> &points,
-                   arma::colvec normalised_log_weights)=0;
+  void fit(const std::string &variable,
+           const std::vector<Parameters> &points,
+           const arma::colvec &normalised_log_weights);
+  
+  void fit(const std::string &variable,
+           const std::vector<MoveOutput*> &points,
+           const arma::colvec &normalised_log_weights);
   
   arma::mat estimated;
   

@@ -14,7 +14,8 @@ public:
 
   SEMCMCTermination();
   
-  SEMCMCTermination(double threshold_in);
+  SEMCMCTermination(double threshold_in,
+                    size_t max_number_of_iterations_in);
 
   virtual ~SEMCMCTermination();
 
@@ -28,6 +29,8 @@ public:
 protected:
   
   double threshold;
+  
+  size_t max_number_of_iterations;
   
   void make_copy(const SEMCMCTermination &another);
 

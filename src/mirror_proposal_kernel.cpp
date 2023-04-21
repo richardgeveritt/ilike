@@ -110,8 +110,8 @@ double MirrorProposalKernel::specific_evaluate_kernel(Particle &proposed_particl
     arma::colvec mean = i->second.get_mean();
     double scale = i->second.get_double_scale();
     double dim = double(mean.n_rows);
-    output = output + dmvnorm_using_precomp(proposed_particle.move_parameters->get_vector(i->first),
-                                            2.0*mean-old_particle.move_parameters->get_vector(i->first),
+    output = output + dmvnorm_using_precomp(proposed_particle.move_parameters->get_colvec(i->first),
+                                            2.0*mean-old_particle.move_parameters->get_colvec(i->first),
                                             (1.0/sqrt(scale))*i->second.get_inv(),
                                             dim*log(scale)+i->second.get_logdet());
   }
@@ -122,12 +122,14 @@ double MirrorProposalKernel::specific_evaluate_kernel(Particle &proposed_particl
   
 }
 
+/*
 double MirrorProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
                                                       Particle &old_particle,
                                                       const Parameters &conditioned_on_parameters) const
 {
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
+*/
 
 double MirrorProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                                                 Particle &old_particle) const
@@ -136,6 +138,7 @@ double MirrorProposalKernel::specific_subsample_evaluate_kernel(Particle &propos
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
 
+/*
 double MirrorProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                                                 Particle &old_particle,
                                                                 const Parameters &conditioned_on_parameters) const
@@ -143,6 +146,7 @@ double MirrorProposalKernel::specific_subsample_evaluate_kernel(Particle &propos
   // no difference since size of data set does not impact on proposal
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
+*/
 
 arma::mat MirrorProposalKernel::get_inverse_covariance(const std::string &variable)
 {
@@ -158,19 +162,21 @@ Parameters MirrorProposalKernel::simulate(RandomNumberGenerator &rng,
        ++i)
   {
     output[i->first] = rmvnorm(rng,
-                               2.0*i->second.get_mean()-particle.move_parameters->get_vector(i->first),
+                               2.0*i->second.get_mean()-particle.move_parameters->get_colvec(i->first),
                                sqrt(i->second.get_double_scale())*i->second.get_chol(),
                                true);
   }
   return output;
 }
 
+/*
 Parameters MirrorProposalKernel::simulate(RandomNumberGenerator &rng,
                                           Particle &particle,
                                           const Parameters &conditioned_on_parameters) const
 {
   return this->simulate(rng,particle);
 }
+*/
 
 Parameters MirrorProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                     Particle &particle) const
@@ -179,6 +185,7 @@ Parameters MirrorProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
   return this->simulate(rng,particle);
 }
 
+/*
 Parameters MirrorProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                     Particle &particle,
                                                     const Parameters &conditioned_on_parameters) const
@@ -186,6 +193,7 @@ Parameters MirrorProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
   // no difference since size of data set does not impact on proposal
   return this->simulate(rng,particle);
 }
+*/
 
 Parameters MirrorProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                     const std::string &variable,
@@ -196,12 +204,13 @@ Parameters MirrorProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
   
   Parameters output = *particle.move_parameters;
   output[variable] = rmvnorm(rng,
-                             2.0*found->second.get_mean()-particle.move_parameters->get_vector(variable),
+                             2.0*found->second.get_mean()-particle.move_parameters->get_colvec(variable),
                              sqrt(found->second.get_double_scale())*found->second.get_chol(),
                              true);
   return output;
 }
 
+/*
 Parameters MirrorProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                     const std::string &variable,
                                                     Particle &particle,
@@ -212,6 +221,7 @@ Parameters MirrorProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                   variable,
                                   particle);
 }
+*/
 
 arma::mat MirrorProposalKernel::specific_gradient_of_log(const std::string &variable,
                                                                      Particle &proposed_particle,
@@ -220,6 +230,7 @@ arma::mat MirrorProposalKernel::specific_gradient_of_log(const std::string &vari
   Rcpp::stop("MirrorProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
+/*
 arma::mat MirrorProposalKernel::specific_gradient_of_log(const std::string &variable,
                                                                      Particle &proposed_particle,
                                                                      Particle &old_particle,
@@ -227,11 +238,21 @@ arma::mat MirrorProposalKernel::specific_gradient_of_log(const std::string &vari
 {
   Rcpp::stop("MirrorProposalKernel::specific_gradient_of_log - not written yet.");
 }
+*/
 
 arma::mat MirrorProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
                                                                                Particle &proposed_particle,
-                                                                               Particle &old_particle,
-                                                                               const Parameters &conditioned_on_parameters)
+                                                                               Particle &old_particle)
 {
   Rcpp::stop("MirrorProposalKernel::specific_gradient_of_log - not written yet.");
 }
+
+/*
+arma::mat MirrorProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
+                                                                   Particle &proposed_particle,
+                                                                   Particle &old_particle,
+                                                                   const Parameters &conditioned_on_parameters)
+{
+  Rcpp::stop("MirrorProposalKernel::specific_gradient_of_log - not written yet.");
+}
+*/

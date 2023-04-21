@@ -20,6 +20,8 @@ class Transform;
 class ProposalKernel;
 class GradientEstimatorOutput;
 class GradientEstimator;
+class Factors;
+class EnsembleFactors;
 class FactorVariables;
 class EnsembleFactorVariables;
 
@@ -29,18 +31,69 @@ class Particle
 public:
 
   Particle();
-  Particle(const Parameters &parameters_in);
+  //Particle(const Parameters &&parameters_in);
+  
   Particle(const Parameters &parameters_in,
+           EnsembleFactors* ensemble_factors_in);
+  Particle(Parameters &&parameters_in,
+           Factors* factors_in);
+  Particle(Parameters &&parameters_in,
+           Factors* factors_in,
+           const Parameters &conditioned_on_parameters);
+  Particle(Parameters &&parameters_in,
+           Factors* factors_in,
+           const Parameters &conditioned_on_parameters,
+           const Parameters &sequencer_parameters);
+  Particle(Parameters &&parameters_in,
            FactorVariables* factor_variables_in);
-  Particle(const Parameters &parameters_in,
+  Particle(Parameters &&parameters_in,
            FactorVariables* factor_variables_in,
            double previous_target_evaluated_in);
-  Particle(const Parameters &parameters_in,
+  Particle(Parameters &&parameters_in,
+           EnsembleFactors* ensemble_factors_in);
+  Particle(Parameters &&parameters_in,
+           EnsembleFactors* ensemble_factors_in,
+           const Parameters &conditioned_on_parameters);
+  Particle(Parameters &&parameters_in,
+           EnsembleFactors* ensemble_factors_in,
+           const Parameters &conditioned_on_parameters,
+           const Parameters &sequencer_parameters);
+  Particle(Parameters &&parameters_in,
            EnsembleFactorVariables* ensemble_factor_variables_in);
   virtual ~Particle();
+  
+  void setup(Factors* factors_in);
+  void setup(Factors* factors_in,
+             const Parameters &conditioned_on_parameters);
+  void setup(Factors* factors_in,
+             const Parameters &conditioned_on_parameters,
+             const Parameters &sequencer_parameters);
+  void setup(const Parameters &parameters_in,
+             Factors* factors_in);
+  void setup(const Parameters &parameters_in,
+             Factors* factors_in,
+             const Parameters &conditioned_on_parameters);
+  void setup(const Parameters &parameters_in,
+             Factors* factors_in,
+             const Parameters &conditioned_on_parameters,
+             const Parameters &sequencer_parameters);
+  void setup(const Parameters &parameters_in,
+             EnsembleFactors* factors_in);
+  void setup(const Parameters &parameters_in,
+             EnsembleFactors* factors_in,
+             const Parameters &conditioned_on_parameters);
+  void setup(const Parameters &parameters_in,
+             EnsembleFactors* factors_in,
+             const Parameters &conditioned_on_parameters,
+             const Parameters &sequencer_parameters);
+  
+  Particle copy_without_factor_variables() const;
 
   Particle(const Particle &another);
-  void operator=(const Particle &another);
+  Particle& operator=(const Particle &another);
+  
+  Particle(Particle &&another);
+  Particle& operator=(Particle &&another);
 
   friend std::ostream& operator<<(std::ostream& os, const Particle &p);
   
@@ -58,39 +111,81 @@ public:
   */
   
   void evaluate_smcfixed_part_of_likelihoods(const Index* index);
+  /*
   void evaluate_smcfixed_part_of_likelihoods(const Index* index,
                                              const Parameters &conditioned_on_parameters);
+  */
   double evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index);
+  
+  /*
   double evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index,
                                                               const Parameters &conditioned_on_parameters);
+  */
+  
   double evaluate_likelihoods(const Index* index);
+  
+  /*
   double evaluate_likelihoods(const Index* index,
                               const Parameters &conditioned_on_parameters);
+  */
+  
+  void subsample_evaluate_smcfixed_part_of_likelihoods(const Index* index);
+  double subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index);
+  
+  /*
   void subsample_evaluate_smcfixed_part_of_likelihoods(const Index* index,
                                                        const Parameters &conditioned_on_parameters);
   double subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index,
                                                                         const Parameters &conditioned_on_parameters);
+  */
+  
   double subsample_evaluate_likelihoods(const Index* index);
+  
+  /*
   double subsample_evaluate_likelihoods(const Index* index,
                                         const Parameters &conditioned_on_parameters);
+  */
   
   double evaluate_ensemble_likelihood_ratios(const Index* index,
                                              double incremental_temperature);
+  /*
   double evaluate_ensemble_likelihood_ratios(const Index* index,
                                              double incremental_temperature,
                                              const Parameters &conditioned_on_parameters);
+  */
+  
+  double subsample_evaluate_ensemble_likelihood_ratios(const Index* index,
+                                                       double incremental_temperature);
+  
+  /*
   double subsample_evaluate_ensemble_likelihood_ratios(const Index* index,
                                                        double incremental_temperature,
                                                        const Parameters &conditioned_on_parameters);
+  */
   
   double evaluate_all_likelihoods(const Index* index);
+  
+  /*
   double evaluate_all_likelihoods(const Index* index,
                                   const Parameters &conditioned_on_parameters);
+  */
+  
+  double subsample_evaluate_all_likelihoods(const Index* index);
+  
+  /*
   double subsample_evaluate_all_likelihoods(const Index* index,
                                             const Parameters &conditioned_on_parameters);
+  */
   
-  arma::colvec get_vector() const;
-  arma::colvec get_vector(const std::vector<std::string> &state_names) const;
+  //arma::colvec get_vector() const;
+  
+  arma::colvec get_colvec(const std::string &state_name) const;
+  
+  arma::rowvec get_rowvec(const std::string &state_name) const;
+  
+  arma::colvec get_colvec(const std::vector<std::string> &state_names) const;
+  
+  arma::rowvec get_rowvec(const std::vector<std::string> &state_names) const;
   
   void set_move_transformed_parameters();
   void set_move_transformed_parameters(Transform* transform_in);
@@ -139,25 +234,45 @@ public:
   
   arma::mat direct_get_gradient_of_log(const std::string &variable,
                                        const Index* index);
+  
+  /*
   arma::mat direct_get_gradient_of_log(const std::string &variable,
                                        const Index* index,
                                        const Parameters &conditioned_on_parameters);
+  */
   
   arma::mat direct_subsample_get_gradient_of_log(const std::string &variable,
                                                  const Index* index);
+  
+  /*
   arma::mat direct_subsample_get_gradient_of_log(const std::string &variable,
                                                  const Index* index,
                                                  const Parameters &conditioned_on_parameters);
+  */
   
-  void simulate_factor_variables(Particle* previous_particle);
+  void simulate_factor_variables(Factors* factors);
   
-  void simulate_ensemble_factor_variables(Particle* previous_particle);
+  void simulate_ensemble_factor_variables(EnsembleFactors* ensemble_factors);
   
-  void simulate_factor_variables(Particle* previous_particle,
+  /*
+  void simulate_factor_variables(Factors* factors,
                                  const Parameters &conditioned_on_parameters);
   
-  void simulate_ensemble_factor_variables(Particle* previous_particle,
+  void simulate_ensemble_factor_variables(EnsembleFactors* ensemble_factors,
                                           const Parameters &conditioned_on_parameters);
+  */
+  
+  void subsample_simulate_factor_variables(Factors* factors);
+  
+  void subsample_simulate_ensemble_factor_variables(EnsembleFactors* ensemble_factors);
+  
+  /*
+  void subsample_simulate_factor_variables(Factors* factors,
+                                           const Parameters &conditioned_on_parameters);
+  
+  void subsample_simulate_ensemble_factor_variables(EnsembleFactors* ensemble_factors,
+                                                    const Parameters &conditioned_on_parameters);
+  */
   
   // not stored here
   Particle* previous_self;
@@ -168,6 +283,8 @@ protected:
   Transform* move_transform;
 
   void make_copy(const Particle &another);
+  
+  void make_copy(Particle &&another);
 
 };
 

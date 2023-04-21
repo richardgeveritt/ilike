@@ -27,11 +27,22 @@ public:
   virtual void set_data(const Index* index)=0;
   
   virtual FactorVariables* simulate_factor_variables(const Parameters &simulated_parameters)=0;
+  
+  /*
   virtual FactorVariables* simulate_factor_variables(const Parameters &simulated_parameters,
                                                      const Parameters &conditioned_on_parameters)=0;
+   
+  */
+  
   virtual FactorVariables* subsample_simulate_factor_variables(const Parameters &simulated_parameters)=0;
+  
+  /*
   virtual FactorVariables* subsample_simulate_factor_variables(const Parameters &simulated_parameters,
                                                                const Parameters &conditioned_on_parameters)=0;
+  */
+  
+  virtual void setup()=0;
+  virtual void setup(const Parameters &conditioned_on_parameters)=0;
 
 protected:
 

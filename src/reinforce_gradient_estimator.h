@@ -32,19 +32,23 @@ public:
                                 const Index* index,
                                 Particle &particle);
   
+  /*
   arma::mat get_gradient_of_log(const std::string &variable,
                                 const Index* index,
                                 Particle &particle,
                                 const Parameters &conditioned_on_parameters);
+  */
   
   arma::mat subsample_get_gradient_of_log(const std::string &variable,
                                           const Index* index,
                                           Particle &particle);
   
+  /*
   arma::mat subsample_get_gradient_of_log(const std::string &variable,
                                           const Index* index,
                                           Particle &particle,
                                           const Parameters &conditioned_on_parameters);
+  */
   
 protected:
 

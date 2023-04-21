@@ -1,4 +1,5 @@
 #include "adjustment_ensemble_shifter.h"
+#include "ensemble_factors.h"
 #include "ensemble_factor_variables.h"
 #include "ensemble.h"
 
@@ -41,19 +42,22 @@ void AdjustmentEnsembleShifter::make_copy(const AdjustmentEnsembleShifter &anoth
   this->Ftranspose = another.Ftranspose;
   this->mean_position = another.mean_position;
   this->Vs = another.Vs;
+  this->As = another.As;
 }
 
-void AdjustmentEnsembleShifter::setup(Ensemble* ensemble)
+void AdjustmentEnsembleShifter::setup(Ensemble* ensemble,
+                                      double inverse_incremental_temperature)
 {
   this->mean_position = arma::mean(ensemble->packed_members,0);
   this->Zf = (1.0/(ensemble->size()-1.0))*(ensemble->packed_members.each_row() - this->mean_position).t();
   
   arma::mat U;
-  arma::vec G;
-  arma::svd_econ(this->Ftranspose,G,U,this->Zf);
+  arma::vec Gdiag;
+  arma::svd(this->Ftranspose,Gdiag,U,this->Zf);
   this->Ftranspose = this->Ftranspose.t();
-  this->Ginv.diag() = G;
-  this->Ginv = arma::pinv(this->Ginv);
+  arma::mat G(this->Zf.n_rows,this->Zf.n_cols);
+  G.diag() = Gdiag;
+  this->Ginv = arma::pinv(G);
   
   this->Vs.clear();
   this->Vs.reserve(ensemble->Cxys.size());
@@ -61,41 +65,36 @@ void AdjustmentEnsembleShifter::setup(Ensemble* ensemble)
        i<ensemble->Cxys.size();
        ++i)
   {
-    arma::rowvec mean_meas_state = arma::mean(ensemble->packed_measurement_states[i],0);
-    this->Vs.push_back(ensemble->packed_measurement_states[i].each_row()-mean_meas_state);
+    this->Vs.push_back(ensemble->packed_measurement_states[i].each_row()-arma::conv_to<arma::rowvec>::from(ensemble->myys[i]));
   }
+  
+  As = ensemble->ensemble_factors->get_adjustments(this->Zf,
+                                                   this->Ginv,
+                                                   this->Ftranspose,
+                                                   this->Vs,
+                                                   inverse_incremental_temperature);
 }
 
 void AdjustmentEnsembleShifter::shift(const EnsembleFactorVariables* ensemble_factor_variables,
                                       arma::colvec &position,
-                                      const std::vector<arma::mat> &Cxys,
-                                      const std::vector<arma::mat> &Cyys,
+                                      const std::vector<arma::colvec*> &measurements,
+                                      const std::vector<arma::mat> &kalman_gains,
                                       double inverse_incremental_temperature) const
 {
   std::vector<arma::colvec> shift_terms = ensemble_factor_variables->get_deterministic_shifts();
-  
-  std::vector<arma::mat> kalman_gains = ensemble_factor_variables->get_kalman_gains(Cxys,
-                                                                                    Cyys,
-                                                                                    inverse_incremental_temperature);
-  
-  std::vector<arma::colvec*> measurements = ensemble_factor_variables->get_measurements();
-  
-  std::vector<arma::mat> As = ensemble_factor_variables->get_adjustments(this->Zf,
-                                                                         this->Ginv,
-                                                                         this->Ftranspose,
-                                                                         this->Vs,
-                                                                         inverse_incremental_temperature);
   
   //std::vector<arma::colvec> first_part_of_shift;
   //first_part_of_shift.reserve(Cxys.size());
   
   arma::colvec second_part_shiftee = position - this->mean_position;
-  position = this->mean_position;
+  //position = this->mean_position;
   
+  // shift taken from https://arxiv.org/abs/2204.04386
   for (size_t j=0;
-       j<Cxys.size();
+       j<kalman_gains.size();
        ++j)
   {
-    position = position + kalman_gains[j]*(*measurements[j] - shift_terms[j]) + As[j]*second_part_shiftee;
+    //position = position + kalman_gains[j]*(*measurements[j] - shift_terms[j]) + this->As[j]*second_part_shiftee;
+    position = this->mean_position + kalman_gains[j]*(*measurements[j] - shift_terms[j]) + this->As[j]*second_part_shiftee;
   }
 }

@@ -9,7 +9,7 @@ using namespace Rcpp;
 #include "independent_proposal_kernel.h"
 #include "particle.h"
 #include "distributions.h"
-#include "function_pointers.h"
+#include "ilike_header.h"
 #include "gaussian_proposal_info.h"
 
 class GaussianIndependentProposalKernel : public IndependentProposalKernel
@@ -41,6 +41,9 @@ public:
   Kernel* duplicate() const;
   ProposalKernel* proposal_kernel_duplicate() const;
   IndependentProposalKernel* independent_proposal_kernel_duplicate() const;
+  
+  void set_mean(const std::string &variable,
+                const arma::colvec &mean_in);
   
   void set_covariance(const std::string &variable,
                       const arma::mat &covariance_in);

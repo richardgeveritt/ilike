@@ -170,13 +170,14 @@ FactorVariables* HMMFactors::simulate_factor_variables(const Parameters &simulat
   {
     outputs.push_back((*i)->initialise(simulated_parameters));
     outputs.back()->simulate(simulated_parameters);
+    outputs.back()->write_to_file_flag = false;
   }
   
   return new HMMFactorVariables(this,
                                 outputs);
 }
 
-
+/*
 FactorVariables* HMMFactors::simulate_factor_variables(const Parameters &simulated_parameters,
                                                        const Parameters &conditioned_on_parameters)
 {
@@ -191,11 +192,13 @@ FactorVariables* HMMFactors::simulate_factor_variables(const Parameters &simulat
   {
     outputs.push_back((*i)->initialise(all_parameters));
     outputs.back()->simulate(all_parameters);
+    outputs.back()->write_to_file_flag = false;
   }
   
   return new HMMFactorVariables(this,
                                 outputs);
 }
+*/
 
 FactorVariables* HMMFactors::subsample_simulate_factor_variables(const Parameters &simulated_parameters)
 {
@@ -208,12 +211,14 @@ FactorVariables* HMMFactors::subsample_simulate_factor_variables(const Parameter
   {
     outputs.push_back((*i)->initialise(simulated_parameters));
     outputs.back()->subsample_simulate(simulated_parameters);
+    outputs.back()->write_to_file_flag = false;
   }
   
   return new HMMFactorVariables(this,
                                 outputs);
 }
 
+/*
 FactorVariables* HMMFactors::subsample_simulate_factor_variables(const Parameters &simulated_parameters,
                                                                  const Parameters &conditioned_on_parameters)
 {
@@ -228,8 +233,30 @@ FactorVariables* HMMFactors::subsample_simulate_factor_variables(const Parameter
   {
     outputs.push_back((*i)->initialise(all_parameters));
     outputs.back()->subsample_simulate(all_parameters);
+    outputs.back()->write_to_file_flag = false;
   }
   
   return new HMMFactorVariables(this,
                                 outputs);
+}
+*/
+
+void HMMFactors::setup()
+{
+  for (auto i=this->likelihood_estimators.begin();
+       i!=this->likelihood_estimators.end();
+       ++i)
+  {
+    (*i)->setup();
+  }
+}
+
+void HMMFactors::setup(const Parameters &conditioned_on_parameters)
+{
+  for (auto i=this->likelihood_estimators.begin();
+       i!=this->likelihood_estimators.end();
+       ++i)
+  {
+    (*i)->setup(conditioned_on_parameters);
+  }
 }
