@@ -14,6 +14,10 @@
 #include <stdlib.h>
 #include <string>
 
+#if defined(_WIN32)
+#include <direct.h>
+#endif
+
 inline bool directory_exists(const std::string &directory_name)
 {
   struct stat info;
