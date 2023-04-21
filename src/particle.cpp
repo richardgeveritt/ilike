@@ -150,9 +150,9 @@ move_transformed_parameters()
 
 Particle::Particle(Parameters &&parameters_in,
                    FactorVariables* factor_variables_in)
-: factor_variables(factor_variables_in),
-parameters(std::move(parameters_in)),
-move_transformed_parameters()
+: parameters(std::move(parameters_in)),
+move_transformed_parameters(),
+factor_variables(factor_variables_in)
 {
   this->move_transform = NULL;
   this->move_parameters = &this->parameters;
@@ -175,9 +175,9 @@ move_transformed_parameters()
 Particle::Particle(Parameters &&parameters_in,
                    FactorVariables* factor_variables_in,
                    double previous_target_evaluated_in)
-: factor_variables(factor_variables_in),
-parameters(std::move(parameters_in)),
-move_transformed_parameters()
+: parameters(std::move(parameters_in)),
+move_transformed_parameters(),
+factor_variables(factor_variables_in)
 {
   this->move_transform = NULL;
   this->move_parameters = &this->parameters;
