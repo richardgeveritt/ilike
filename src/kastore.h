@@ -184,7 +184,6 @@ means compiling without NDEBUG. This macro still asserts when NDEBUG is defined.
         if (!(condition)) {                                                             \
             fprintf(stderr, "Bug detected in %s at line %d. %s\n", __FILE__, __LINE__,  \
                 KAS_BUG_ASSERT_MESSAGE);                                                \
-            Rcpp::stop("Bug in TSK.");                                                  \
         }                                                                               \
     } while (0)
 
