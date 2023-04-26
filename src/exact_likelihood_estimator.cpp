@@ -47,11 +47,43 @@ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in
 ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
                                                    size_t* seed_in,
                                                    Data* data_in,
+                                                   const std::vector<DistributionFactor*> &numerator_distribution_factors_in,
+                                                   bool smcfixed_flag_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
+{
+  this->numerator_distribution_factors = numerator_distribution_factors_in;
+}
+
+ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
+                                                   size_t* seed_in,
+                                                   Data* data_in,
                                                    LikelihoodFactor* llhd_in,
                                                    bool smcfixed_flag_in)
 :LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
 {
   this->numerator_likelihood_factors.push_back(llhd_in);
+}
+
+ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
+                                                   size_t* seed_in,
+                                                   Data* data_in,
+                                                   const std::vector<LikelihoodFactor*> &numerator_likelihood_factors_in,
+                                                   bool smcfixed_flag_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
+{
+  this->numerator_likelihood_factors = numerator_likelihood_factors_in;
+}
+
+ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
+                                                   size_t* seed_in,
+                                                   Data* data_in,
+                                                   const std::vector<DistributionFactor*> &numerator_distribution_factors_in,
+                                                   const std::vector<LikelihoodFactor*> &numerator_likelihood_factors_in,
+                                                   bool smcfixed_flag_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
+{
+  this->numerator_distribution_factors = numerator_distribution_factors_in;
+  this->numerator_likelihood_factors = numerator_likelihood_factors_in;
 }
 
 ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,

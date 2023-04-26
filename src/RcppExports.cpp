@@ -12,6 +12,22 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// do_importance_sampler
+void do_importance_sampler(const List& model, const List& parameters, size_t number_of_importance_points, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
+RcppExport SEXP _ilike_do_importance_sampler(SEXP modelSEXP, SEXP parametersSEXP, SEXP number_of_importance_pointsSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
+    Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
+    Rcpp::traits::input_parameter< size_t >::type number_of_importance_points(number_of_importance_pointsSEXP);
+    Rcpp::traits::input_parameter< bool >::type parallel_in(parallel_inSEXP);
+    Rcpp::traits::input_parameter< size_t >::type grain_size_in(grain_size_inSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type results_name_in(results_name_inSEXP);
+    Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
+    do_importance_sampler(model, parameters, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed);
+    return R_NilValue;
+END_RCPP
+}
 // a_test
 double a_test(const List& model);
 RcppExport SEXP _ilike_a_test(SEXP modelSEXP) {
@@ -25,6 +41,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_ilike_do_importance_sampler", (DL_FUNC) &_ilike_do_importance_sampler, 7},
     {"_ilike_a_test", (DL_FUNC) &_ilike_a_test, 1},
     {NULL, NULL, 0}
 };

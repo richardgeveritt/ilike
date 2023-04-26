@@ -43,7 +43,26 @@ public:
   ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
                            size_t* seed_in,
                            Data* data_in,
+                           const std::vector<DistributionFactor*> &numerator_distribution_factors_in,
+                           bool smcfixed_flag_in);
+  
+  ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
+                           size_t* seed_in,
+                           Data* data_in,
                            LikelihoodFactor* llhd_in,
+                           bool smcfixed_flag_in);
+  
+  ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
+                           size_t* seed_in,
+                           Data* data_in,
+                           const std::vector<LikelihoodFactor*> &numerator_likelihood_factors_in,
+                           bool smcfixed_flag_in);
+  
+  ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
+                           size_t* seed_in,
+                           Data* data_in,
+                           const std::vector<DistributionFactor*> &numerator_distribution_factors_in,
+                           const std::vector<LikelihoodFactor*> &numerator_likelihood_factors_in,
                            bool smcfixed_flag_in);
   
   ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
@@ -57,6 +76,12 @@ public:
                            Data* data_in,
                            EvaluateLogDistributionPtr prior_in,
                            EvaluateLogLikelihoodPtr llhd_in,
+                           bool smcfixed_flag_in);
+  
+  ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
+                           size_t* seed_in,
+                           Data* data_in,
+                           std::vector<DistributionFactor*> numerator_distribution_factors,
                            bool smcfixed_flag_in);
   
   /*

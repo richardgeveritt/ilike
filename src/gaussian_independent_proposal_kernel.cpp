@@ -52,6 +52,14 @@ GaussianIndependentProposalKernel::GaussianIndependentProposalKernel(const std::
   }
 }
 
+GaussianIndependentProposalKernel::GaussianIndependentProposalKernel(const std::string &variable_name_in,
+                                                                     const double &mean_in,
+                                                                     const double &sd_in)
+:IndependentProposalKernel()
+{
+  this->proposal_info[variable_name_in] = GaussianProposalInfo(mean_in,sd_in);
+}
+
 GaussianIndependentProposalKernel::GaussianIndependentProposalKernel(const std::vector<std::string> &variable_names_in,
                                                                      const std::vector<arma::colvec> &means_in,
                                                                      const std::vector<arma::mat> &covariances_in)

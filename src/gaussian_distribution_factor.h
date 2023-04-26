@@ -16,6 +16,10 @@ public:
 
   GaussianDistributionFactor();
 
+  GaussianDistributionFactor(const std::string &variable_in,
+                             double mean_in,
+                             double sd_in);
+  
   GaussianDistributionFactor(const std::vector<std::string> &variable_names_in,
                              const std::vector<arma::colvec> &means_in,
                              const std::vector<arma::mat> &covariances_in);

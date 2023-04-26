@@ -31,6 +31,10 @@ public:
   GaussianIndependentProposalKernel(const std::vector<std::string> &variable_names_in,
                                     const std::vector<arma::mat> &covariances_in);
   
+  GaussianIndependentProposalKernel(const std::string &variable_name_in,
+                                    const double &mean_in,
+                                    const double &sd_in);
+  
   GaussianIndependentProposalKernel(const std::vector<std::string> &variable_names_in,
                                     const std::vector<arma::colvec> &means_in,
                                     const std::vector<arma::mat> &covariances_in);

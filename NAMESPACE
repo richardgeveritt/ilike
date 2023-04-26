@@ -2,6 +2,7 @@
 
 export(importance_sample)
 export(importance_sample_cpp)
+export(parse_like_model)
 export(tester)
 importFrom(Rcpp,sourceCpp)
 importFrom(RcppParallel,RcppParallelLibs)

@@ -14,6 +14,9 @@ public:
   GaussianProposalInfo();
 
   virtual ~GaussianProposalInfo();
+  
+  GaussianProposalInfo(const double &mean_in,
+                       const double &sd_in);
 
   GaussianProposalInfo(const arma::colvec &mean_in);
   GaussianProposalInfo(const arma::mat &covariance_in);
