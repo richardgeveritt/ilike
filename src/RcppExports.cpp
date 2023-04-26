@@ -28,21 +28,9 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
-// a_test
-double a_test(const List& model);
-RcppExport SEXP _ilike_a_test(SEXP modelSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
-    rcpp_result_gen = Rcpp::wrap(a_test(model));
-    return rcpp_result_gen;
-END_RCPP
-}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_ilike_do_importance_sampler", (DL_FUNC) &_ilike_do_importance_sampler, 7},
-    {"_ilike_a_test", (DL_FUNC) &_ilike_a_test, 1},
     {NULL, NULL, 0}
 };
 

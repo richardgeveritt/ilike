@@ -163,6 +163,22 @@ parse_like_model <- function(filename)
     }
   }
 
+  if ("simulate_prior" %in% names(blocks))
+  {
+    for (i in 1:length(blocks$simulate_prior))
+    {
+      RcppXPtrUtils::checkXPtr(blocks$simulate_prior[[i]], "Parameters", c("RandomNumberGenerator&"))
+    }
+  }
+
+  if ("evaluate_log_likelihood" %in% names(blocks))
+  {
+    for (i in 1:length(blocks$evaluate_log__likelihood))
+    {
+      RcppXPtrUtils::checkXPtr(blocks$evaluate_log__likelihood[[i]], "double", c("const Parameters&","const Data&"))
+    }
+  }
+
   return(blocks)
 }
 

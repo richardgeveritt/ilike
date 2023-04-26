@@ -400,6 +400,14 @@ IndependentProposalKernel* get_prior_as_simulate_only_proposal(const List &model
   return proposal;
 }
 
+void do_importance_sampler(const List &model,
+                           const List &parameters,
+                           size_t number_of_importance_points,
+                           bool parallel_in,
+                           size_t grain_size_in,
+                           const std::string &results_name_in,
+                           size_t seed=rdtsc());
+
 // [[Rcpp::export]]
 void do_importance_sampler(const List &model,
                            const List &parameters,
@@ -407,7 +415,7 @@ void do_importance_sampler(const List &model,
                            bool parallel_in,
                            size_t grain_size_in,
                            const std::string &results_name_in,
-                           size_t seed=rdtsc())
+                           size_t seed)
 {
   RandomNumberGenerator rng;
   

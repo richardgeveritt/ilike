@@ -5,7 +5,3 @@ do_importance_sampler <- function(model, parameters, number_of_importance_points
     invisible(.Call(`_ilike_do_importance_sampler`, model, parameters, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed))
 }
 
-a_test <- function(model) {
-    .Call(`_ilike_a_test`, model)
-}
-

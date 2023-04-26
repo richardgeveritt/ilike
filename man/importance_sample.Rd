@@ -4,17 +4,33 @@
 \alias{importance_sample}
 \title{Importance sampler.}
 \usage{
-importance_sample(model, algorithm, messages = FALSE)
+importance_sample(
+  model_filename,
+  results_directory,
+  number_of_importance_points,
+  parameter_list = list(),
+  seed = NULL,
+  parallel_flag = FALSE,
+  grain_size = 1
+)
 }
 \arguments{
-\item{model}{A model.}
+\item{model_filename}{A file containing the model.}
 
-\item{algorithm}{algorithm details.}
+\item{number_of_importance_points}{The number of importance points.}
 
-\item{messages}{Set to TRUE to have messages printed to console.}
+\item{parameter_list}{A list containing parameters for the model.}
+
+\item{seed}{The seed for the random number generator.}
+
+\item{parallel_flag}{Set to true to perform the importance sampling in parallel, false for serial.}
+
+\item{grain_size}{Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).}
+
+\item{output_directory}{The name of the directory to which results will be written..}
 }
 \value{
-Importance points.
+Nothing: output can be found in the output_directory.
 }
 \description{
 Importance sampler.
