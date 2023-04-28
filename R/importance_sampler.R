@@ -1,7 +1,7 @@
 #' Importance sampler.
 #'
-#' @param model_filename A file containing the model.
-#' @param output_directory The name of the directory to which results will be written..
+#' @param model A file containing the model.
+#' @param results_directory The name of the directory to which results will be written..
 #' @param number_of_importance_points The number of importance points.
 #' @param parameter_list (optional) A list containing parameters for the model.
 #' @param seed (optional) The seed for the random number generator.

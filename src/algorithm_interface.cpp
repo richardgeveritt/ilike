@@ -137,6 +137,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_eatimators(RandomNumberGenerato
   
   if (include_priors)
   {
+    Rcout << "1";
     if ( model.containsElementNamed("prior") )
     {
       List priors = model["prior"];
@@ -200,6 +201,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_eatimators(RandomNumberGenerato
       }
     }
     
+    Rcout << "2";
     if ( model.containsElementNamed("prior_log_evaluate") )
     {
       List priors = model["prior_log_evaluate"];
@@ -212,6 +214,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_eatimators(RandomNumberGenerato
     }
   }
   
+  Rcout << "3";
   if ( model.containsElementNamed("likelihood_log_evaluate") )
   {
     List exact_likelihoods = model["likelihood_log_evaluate"];
@@ -231,7 +234,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_eatimators(RandomNumberGenerato
                                                                prior_factors,
                                                                exact_likelihood_factors,
                                                                true));
-  
+  Rcout << "4";
   return likelihood_estimators;
 }
 
@@ -443,15 +446,12 @@ void do_importance_sampler(const List &model,
   bool smcfixed_flag = TRUE;
   size_t grain_size = 1;
   
-  Rcout << the_data;
-  
   //std::string results_name = "/Users/richard/Dropbox/code/ilike/experiments/test";
   
   // May need to alter for cases where the likelihood needs to be tuned automatically (e.g. in ABC).
   
   // Check if the prior is the proposal: affects what llhd_estimators we include.
   
-  /*
   std::vector<LikelihoodEstimator*> likelihood_estimators;
   IndependentProposalKernel* proposal_in;
   bool proposal_is_evaluated_in;
@@ -486,7 +486,7 @@ void do_importance_sampler(const List &model,
     
     proposal_is_evaluated_in = false;
   }
-  
+  /*
   ImportanceSampler alg(&rng,
                         &seed,
                         &the_data,
