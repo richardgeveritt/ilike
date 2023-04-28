@@ -12,8 +12,18 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// ilike_rdtsc
+size_t ilike_rdtsc();
+RcppExport SEXP _ilike_ilike_rdtsc() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(ilike_rdtsc());
+    return rcpp_result_gen;
+END_RCPP
+}
 // do_importance_sampler
-void do_importance_sampler(const List& model, const List& parameters, size_t number_of_importance_points, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
+void do_importance_sampler(const List& model, const List& parameters, size_t number_of_importance_points, bool parallel_in, size_t grain_size_in, const String& results_name_in, size_t seed);
 RcppExport SEXP _ilike_do_importance_sampler(SEXP modelSEXP, SEXP parametersSEXP, SEXP number_of_importance_pointsSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -22,7 +32,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< size_t >::type number_of_importance_points(number_of_importance_pointsSEXP);
     Rcpp::traits::input_parameter< bool >::type parallel_in(parallel_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type grain_size_in(grain_size_inSEXP);
-    Rcpp::traits::input_parameter< const std::string& >::type results_name_in(results_name_inSEXP);
+    Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
     do_importance_sampler(model, parameters, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed);
     return R_NilValue;
@@ -30,6 +40,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_ilike_ilike_rdtsc", (DL_FUNC) &_ilike_ilike_rdtsc, 0},
     {"_ilike_do_importance_sampler", (DL_FUNC) &_ilike_do_importance_sampler, 7},
     {NULL, NULL, 0}
 };

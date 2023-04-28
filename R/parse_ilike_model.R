@@ -3,7 +3,7 @@
 #' @param filename The name (and path) of the .cpp file containing the model.
 #' @return A list containing the model details.
 #' @export
-parse_like_model <- function(filename)
+parse_ilike_model <- function(filename)
 {
   filename = "/Users/richard/Dropbox/projects/ilikemodels/gaussian_unknown_precision/gaussian_unknown_precision_model.cpp"
 
@@ -16,6 +16,7 @@ parse_like_model <- function(filename)
   is_custom = FALSE
   line_counter = 0
   add_to_block_code = TRUE
+  function_names = c()
 
   while ( TRUE ) {
     line = readLines(the_file, n = 1)
@@ -49,7 +50,16 @@ parse_like_model <- function(filename)
             {
               if (is_custom==TRUE)
               {
-                blocks[[block_name]][[block_number]] = cppXPtr(block_code,plugins=c("cpp11"),depends = c("ilike","RcppArmadillo","BH","dqrng","sitmo"))
+                blocks[[block_name]][[block_number]] = RcppXPtrUtils::cppXPtr(block_code,plugins=c("cpp11"),depends = c("ilike","RcppArmadillo","BH","dqrng","sitmo"))
+                # if (!(result[[2]] %in% function_names))
+                # {
+                #   blocks[[block_name]][[block_number]] = result[[1]]
+                #   function_names = c(function_names,result[[2]])
+                # }
+                # else
+                # {
+                #   stop("Model file must not contain two functions with the same name.")
+                # }
               }
               else
               {
@@ -143,6 +153,25 @@ parse_like_model <- function(filename)
       if (is_custom==TRUE)
       {
         blocks[[block_name]][[block_number]] = RcppXPtrUtils::cppXPtr(block_code,plugins=c("cpp11"),depends = c("ilike","RcppArmadillo","BH","dqrng","sitmo"))
+        # if (!(result[[2]] %in% function_names))
+        # {
+        #   blocks[[block_name]][[block_number]] = result[[1]]
+        #   function_names = c(function_names,result[[2]])
+        # }
+        # else
+        # {
+        #   stop("Model file must not contain two functions with the same name.")
+        # }
+        # result = ilike_cppXPtr(block_code,plugins=c("cpp11"),depends = c("ilike","RcppArmadillo","BH","dqrng","sitmo"))
+        # if (!(result[[2]] %in% function_names))
+        # {
+        #   blocks[[block_name]][[block_number]] = result[[1]]
+        #   function_names = c(function_names,result[[2]])
+        # }
+        # else
+        # {
+        #   stop("Model file must not contain two functions with the same name.")
+        # }
       }
       else
       {
@@ -159,7 +188,7 @@ parse_like_model <- function(filename)
   {
     for (i in 1:length(blocks$evaluate_log_prior))
     {
-      RcppXPtrUtils::checkXPtr(blocks$evaluate_log_prior[[i]], "double", c("const Parameters&"))
+      #RcppXPtrUtils::checkXPtr(blocks$evaluate_log_prior[[i]], "double", c("const Parameters&"))
     }
   }
 
@@ -167,15 +196,15 @@ parse_like_model <- function(filename)
   {
     for (i in 1:length(blocks$simulate_prior))
     {
-      RcppXPtrUtils::checkXPtr(blocks$simulate_prior[[i]], "Parameters", c("RandomNumberGenerator&"))
+      #RcppXPtrUtils::checkXPtr(blocks$simulate_prior[[i]], "Parameters", c("RandomNumberGenerator&"))
     }
   }
 
   if ("evaluate_log_likelihood" %in% names(blocks))
   {
-    for (i in 1:length(blocks$evaluate_log__likelihood))
+    for (i in 1:length(blocks$evaluate_log_likelihood))
     {
-      RcppXPtrUtils::checkXPtr(blocks$evaluate_log__likelihood[[i]], "double", c("const Parameters&","const Data&"))
+      #RcppXPtrUtils::checkXPtr(blocks$evaluate_log_likelihood[[i]], "double", c("const Parameters&","const Data&"))
     }
   }
 

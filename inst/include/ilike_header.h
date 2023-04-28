@@ -125,7 +125,7 @@ GetDataFromSimulationPtr load_get_data_from_simulation(const SEXP &get_data_from
 
 Data load_data(const SEXP &data_SEXP);
 
-Data load_data_function(const SEXP &data_SEXP);
+DataPtr load_data_function(const SEXP &data_SEXP);
 
 // List simulate_distribution_cpp(const SEXP &simulate_distribution_SEXP);
 //
@@ -235,9 +235,16 @@ inline GetDataFromSimulationPtr load_get_data_from_simulation(const SEXP &get_da
 inline Data load_data(const SEXP &data_SEXP)
 {
   XPtr<DataPtr> data_XPtr(data_SEXP);
+  //return Parameters();
   return (*data_XPtr)();
 }
 
+inline DataPtr load_data_function(const SEXP &data_SEXP)
+{
+  XPtr<DataPtr> data_XPtr(data_SEXP);
+  //return Parameters();
+  return *data_XPtr;
+}
 
 // // [[Rcpp::export]]
 // List simulate_distribution_cpp(const SEXP &simulate_distribution_SEXP)

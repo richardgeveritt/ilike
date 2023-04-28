@@ -40,11 +40,36 @@ bool isDoubleInList(const Rcpp::List &list, int index_from_one)
   }
 }
 
+/*
+Data example_data()
+{
+  RandomNumberGenerator rng;
+  rng.seed(1);
+  size_t n = 100;
+  //arma::colvec sampled = rnorm(rng,n);
+  arma::colvec sampled(n);
+  for (size_t i = 0; i<n; ++i)
+    sampled[i] = rnorm(rng,0.0,1.0);
+  Data data;
+  data["y"] = sampled;
+  return data;
+}
+
+XPtr<DataPtr> example_store_data();
+
+// [[Rcpp::export]]
+XPtr<DataPtr> example_store_data()
+{
+  return(XPtr<DataPtr>(new DataPtr(&example_data)));
+}
+*/
+
 Data get_data(const List &model)
 {
   if (model.containsElementNamed("data"))
   {
-    SEXP data_SEXP = model["data"];
+    List data_list = model["data"];
+    SEXP data_SEXP = data_list[0];
     return load_data(data_SEXP);
   }
   else
@@ -317,62 +342,59 @@ IndependentProposalKernel* get_prior_as_simulate_only_proposal(const List &model
       stop("Need only a single element in the 'prior' section in the model file. No proposal specified, so using prior as proposal, but need exactly one to be specified or there is ambiguity over which to use.");
     }
     
-    for (size_t i=0; i<priors.size(); ++i)
+    if (Rf_isNewList(priors[0]))
     {
-      if (Rf_isNewList(priors[i]))
+      List current_prior = priors[0];
+      if ( current_prior.containsElementNamed("type") && current_prior.containsElementNamed("variables") )
       {
-        List current_prior = priors[i];
-        if ( current_prior.containsElementNamed("type") && current_prior.containsElementNamed("variables") )
+        std::string type = current_prior["type"];
+        if (type=="norm")
         {
-          std::string type = current_prior["type"];
-          if (type=="norm")
-          {
-            std::string augmented_variable_names = current_prior["variables"];
-            
-            // split string in ;
-            std::vector<std::string> variable_names = split(augmented_variable_names,';');
-            
-            // throw error if more than one variable
-            if (variable_names.size()!=1)
-              Rcpp::stop("Only one variable allowed for univariate Gaussian distribution.");
-            
-            if (!current_prior.containsElementNamed("parameters"))
-              stop("Parameters missing for univariate Gaussian prior.");
-            
-            List parameters = current_prior["parameters"];
-            
-            if (parameters.size()!=2)
-              Rcpp::stop("Mean and standard deviation parameters required for univariate Gaussian prior.");
-            
-            double mean = extract_double_parameter(parameters,
-                                                   model_parameters,
-                                                   0);
-            
-            double sd = extract_double_parameter(parameters,
+          std::string augmented_variable_names = current_prior["variables"];
+          
+          // split string in ;
+          std::vector<std::string> variable_names = split(augmented_variable_names,';');
+          
+          // throw error if more than one variable
+          if (variable_names.size()!=1)
+            Rcpp::stop("Only one variable allowed for univariate Gaussian distribution.");
+          
+          if (!current_prior.containsElementNamed("parameters"))
+            stop("Parameters missing for univariate Gaussian prior.");
+          
+          List parameters = current_prior["parameters"];
+          
+          if (parameters.size()!=2)
+            Rcpp::stop("Mean and standard deviation parameters required for univariate Gaussian prior.");
+          
+          double mean = extract_double_parameter(parameters,
                                                  model_parameters,
-                                                 1);
-            
-            proposal = new GaussianIndependentProposalKernel(variable_names[0],
-                                                             mean,
-                                                             sd);
-            
-          }
-          else
-          {
-            Rcout << "Prior type " << type;
-            stop("Prior type unknown");
-          }
+                                                 0);
+          
+          double sd = extract_double_parameter(parameters,
+                                               model_parameters,
+                                               1);
+          
+          proposal = new GaussianIndependentProposalKernel(variable_names[0],
+                                                           mean,
+                                                           sd);
+          
         }
         else
         {
-          stop("Missing information for prior in model file.");
+          Rcout << "Prior type " << type;
+          stop("Prior type unknown");
         }
-        
       }
       else
       {
-        stop("Error in prior section of model file.");
+        stop("Missing information for prior in model file.");
       }
+      
+    }
+    else
+    {
+      stop("Error in prior section of model file.");
     }
   }
   
@@ -385,11 +407,8 @@ IndependentProposalKernel* get_prior_as_simulate_only_proposal(const List &model
       stop("Need only a single element in the 'prior_simulate' section in the model file. No proposal specified, so using prior as proposal, but need exactly one to be specified or there is ambiguity over which to use.");
     }
     
-    for (size_t i=0; i<priors.size(); ++i)
-    {
-      SEXP prior_simulate_SEXP = priors[i];
-      proposal = new CustomDistributionProposalKernel(load_simulate_distribution(prior_simulate_SEXP));
-    }
+    SEXP prior_simulate_SEXP = priors[0];
+    proposal = new CustomDistributionProposalKernel(load_simulate_distribution(prior_simulate_SEXP));
   }
   
   if (proposal==NULL)
@@ -400,13 +419,11 @@ IndependentProposalKernel* get_prior_as_simulate_only_proposal(const List &model
   return proposal;
 }
 
-void do_importance_sampler(const List &model,
-                           const List &parameters,
-                           size_t number_of_importance_points,
-                           bool parallel_in,
-                           size_t grain_size_in,
-                           const std::string &results_name_in,
-                           size_t seed=rdtsc());
+// [[Rcpp::export]]
+size_t ilike_rdtsc()
+{
+  return rdtsc();
+}
 
 // [[Rcpp::export]]
 void do_importance_sampler(const List &model,
@@ -414,9 +431,10 @@ void do_importance_sampler(const List &model,
                            size_t number_of_importance_points,
                            bool parallel_in,
                            size_t grain_size_in,
-                           const std::string &results_name_in,
+                           const String &results_name_in,
                            size_t seed)
 {
+  
   RandomNumberGenerator rng;
   
   Data the_data = get_data(model);
@@ -425,12 +443,15 @@ void do_importance_sampler(const List &model,
   bool smcfixed_flag = TRUE;
   size_t grain_size = 1;
   
+  Rcout << the_data;
+  
   //std::string results_name = "/Users/richard/Dropbox/code/ilike/experiments/test";
   
   // May need to alter for cases where the likelihood needs to be tuned automatically (e.g. in ABC).
   
   // Check if the prior is the proposal: affects what llhd_estimators we include.
   
+  /*
   std::vector<LikelihoodEstimator*> likelihood_estimators;
   IndependentProposalKernel* proposal_in;
   bool proposal_is_evaluated_in;
@@ -477,10 +498,11 @@ void do_importance_sampler(const List &model,
                         true,
                         parallel_in,
                         grain_size_in,
-                        results_name_in);
+                        results_name_in.get_cstring());
   
   SMCOutput* output = alg.run();
   if (results_name_in!="")
     output->write(results_name_in);
   delete output;
+  */
 }
