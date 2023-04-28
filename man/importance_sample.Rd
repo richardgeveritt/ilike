@@ -15,6 +15,10 @@ importance_sample(
 )
 }
 \arguments{
+\item{model}{A file containing the model.}
+
+\item{results_directory}{The name of the directory to which results will be written..}
+
 \item{number_of_importance_points}{The number of importance points.}
 
 \item{parameter_list}{(optional) A list containing parameters for the model.}
@@ -24,10 +28,6 @@ importance_sample(
 \item{parallel_flag}{(optional) Set to true to perform the importance sampling in parallel, false for serial.}
 
 \item{grain_size}{(optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).}
-
-\item{model_filename}{A file containing the model.}
-
-\item{output_directory}{The name of the directory to which results will be written..}
 }
 \value{
 Nothing: output can be found in the output_directory.

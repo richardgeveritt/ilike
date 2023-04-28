@@ -23,7 +23,6 @@ importance_sample = function(model,
   if (is.null(seed))
   {
     seed = ilike_rdtsc()
-    print(seed)
   }
 
   do_importance_sampler(model,

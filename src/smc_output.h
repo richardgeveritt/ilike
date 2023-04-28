@@ -82,6 +82,8 @@ public:
   size_t number_of_smc_iterations() const;
   
   void increment_smc_iteration();
+  
+  void set_time(double time_in);
 
   void print(std::ostream &os) const;
   
@@ -118,6 +120,8 @@ protected:
   int iteration_written_to_file;
   
   std::string results_name;
+  
+  double time;
   
   void close_ofstreams(size_t deque_index);
 

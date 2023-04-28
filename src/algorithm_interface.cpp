@@ -4,6 +4,7 @@ using namespace Rcpp;
 #include <string>
 #include <sstream>
 #include <vector>
+#include <chrono>
 
 #include "distributions.h"
 #include "parameters.h"
@@ -137,7 +138,6 @@ std::vector<LikelihoodEstimator*> get_likelihood_eatimators(RandomNumberGenerato
   
   if (include_priors)
   {
-    Rcout << "1";
     if ( model.containsElementNamed("prior") )
     {
       List priors = model["prior"];
@@ -201,10 +201,9 @@ std::vector<LikelihoodEstimator*> get_likelihood_eatimators(RandomNumberGenerato
       }
     }
     
-    Rcout << "2";
-    if ( model.containsElementNamed("prior_log_evaluate") )
+    if ( model.containsElementNamed("log_evaluate_log_prior") )
     {
-      List priors = model["prior_log_evaluate"];
+      List priors = model["evaluate_log_prior"];
       
       for (size_t i=0; i<priors.size(); ++i)
       {
@@ -214,10 +213,9 @@ std::vector<LikelihoodEstimator*> get_likelihood_eatimators(RandomNumberGenerato
     }
   }
   
-  Rcout << "3";
-  if ( model.containsElementNamed("likelihood_log_evaluate") )
+  if ( model.containsElementNamed("evaluate_log_likelihood") )
   {
-    List exact_likelihoods = model["likelihood_log_evaluate"];
+    List exact_likelihoods = model["evaluate_log_likelihood"];
     
     for (size_t i=0; i<exact_likelihoods.size(); ++i)
     {
@@ -227,14 +225,14 @@ std::vector<LikelihoodEstimator*> get_likelihood_eatimators(RandomNumberGenerato
     }
     
   }
-  
+
   likelihood_estimators.push_back(new ExactLikelihoodEstimator(rng_in,
                                                                seed_in,
                                                                data_in,
                                                                prior_factors,
                                                                exact_likelihood_factors,
                                                                true));
-  Rcout << "4";
+
   return likelihood_estimators;
 }
 
@@ -243,14 +241,14 @@ IndependentProposalKernel* get_proposal(const List &model,
 {
   IndependentProposalKernel* proposal = NULL;
   
-  if ( model.containsElementNamed("proposal") && model.containsElementNamed("proposal_log_evaluate") )
+  if ( model.containsElementNamed("proposal") && model.containsElementNamed("evaluate_log_proposal") )
   {
-    stop("Model file contains a 'proposal' section and a 'proposal_log_evaluate' section. Include only one of these.");
+    stop("Model file contains a 'proposal' section and a 'evaluate_log_proposal' section. Include only one of these.");
   }
   
   if ( model.containsElementNamed("proposal") && model.containsElementNamed("proposal_simulate") )
   {
-    stop("Model file contains a 'proposal' section and a 'proposal_simulate' section. Include only one of these.");
+    stop("Model file contains a 'proposal' section and a 'simulate_proposal' section. Include only one of these.");
   }
   
   if ( model.containsElementNamed("proposal") )
@@ -311,12 +309,12 @@ IndependentProposalKernel* get_proposal(const List &model,
       stop("Error in proposal section of model file.");
     }
   }
-  else if ( model.containsElementNamed("proposal_log_evaluate") && model.containsElementNamed("proposal_simulate") )
+  else if ( model.containsElementNamed("evaluate_log_proposal") && model.containsElementNamed("simulate_proposal") )
   {
-    SEXP proposal_log_evaluate_SEXP = model["proposal_log_evaluate"];
-    SEXP proposal_simulate_SEXP = model["proposal_simulate"];
-    proposal = new CustomDistributionProposalKernel(load_simulate_distribution(proposal_simulate_SEXP),
-                                                    load_evaluate_log_distribution(proposal_log_evaluate_SEXP));
+    SEXP evaluate_log_proposal_SEXP = model["evaluate_log_proposal"];
+    SEXP simulate_proposal_SEXP = model["simulate_proposal"];
+    proposal = new CustomDistributionProposalKernel(load_simulate_distribution(simulate_proposal_SEXP),
+                                                    load_evaluate_log_distribution(evaluate_log_proposal_SEXP));
   }
   else
   {
@@ -331,9 +329,9 @@ IndependentProposalKernel* get_prior_as_simulate_only_proposal(const List &model
 {
   IndependentProposalKernel* proposal = NULL;
   
-  if ( model.containsElementNamed("prior") && model.containsElementNamed("prior_simulate") )
+  if ( model.containsElementNamed("prior") && model.containsElementNamed("simulate_prior") )
   {
-    stop("Model file contains a 'prior' section and a 'prior_simulate' section. No proposal specified, so using prior as proposal, but since both sections are specified there is ambiguity over which to use.");
+    stop("Model file contains a 'prior' section and a 'simulate_prior' section. No proposal specified, so using prior as proposal, but since both sections are specified there is ambiguity over which to use.");
   }
   
   if ( model.containsElementNamed("prior") )
@@ -401,17 +399,17 @@ IndependentProposalKernel* get_prior_as_simulate_only_proposal(const List &model
     }
   }
   
-  if ( model.containsElementNamed("prior_simulate") )
+  if ( model.containsElementNamed("simulate_prior") )
   {
-    List priors = model["prior_simulate"];
+    List priors = model["simulate_prior"];
     
     if (priors.size()!=1)
     {
-      stop("Need only a single element in the 'prior_simulate' section in the model file. No proposal specified, so using prior as proposal, but need exactly one to be specified or there is ambiguity over which to use.");
+      stop("Need only a single element in the 'simulate_prior' section in the model file. No proposal specified, so using prior as proposal, but need exactly one to be specified or there is ambiguity over which to use.");
     }
     
-    SEXP prior_simulate_SEXP = priors[0];
-    proposal = new CustomDistributionProposalKernel(load_simulate_distribution(prior_simulate_SEXP));
+    SEXP simulate_prior_SEXP = priors[0];
+    proposal = new CustomDistributionProposalKernel(load_simulate_distribution(simulate_prior_SEXP));
   }
   
   if (proposal==NULL)
@@ -486,7 +484,7 @@ void do_importance_sampler(const List &model,
     
     proposal_is_evaluated_in = false;
   }
-  /*
+  
   ImportanceSampler alg(&rng,
                         &seed,
                         &the_data,
@@ -498,11 +496,17 @@ void do_importance_sampler(const List &model,
                         true,
                         parallel_in,
                         grain_size_in,
-                        results_name_in.get_cstring());
+                        "");
   
+  clock_t start, end;
+  int max = 0;
+  start = clock();
   SMCOutput* output = alg.run();
-  if (results_name_in!="")
-    output->write(results_name_in);
+  end = clock();
+  double time = double(end - start)/CLOCKS_PER_SEC;
+  output->set_time(time);
+  if (strcmp(results_name_in.get_cstring(),"") != 0)
+    output->write(results_name_in.get_cstring());
   delete output;
-  */
+  
 }

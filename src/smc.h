@@ -229,6 +229,7 @@ protected:
   bool initialised;
   
   std::ofstream log_likelihood_file_stream;
+  std::ofstream time_file_stream;
   std::ofstream vector_variables_file_stream;
   std::ofstream vector_variable_sizes_file_stream;
   std::ofstream incremental_log_likelihood_file_stream;

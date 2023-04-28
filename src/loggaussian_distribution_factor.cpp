@@ -82,6 +82,6 @@ double LogGaussianDistributionFactor::distribution_evaluate(const Parameters &in
 arma::mat LogGaussianDistributionFactor::distribution_evaluate_gradient(const std::string &variable,
                                                                         const Parameters &input) const
 {
-  auto found = this->proposal_info.find(variable);
+  //auto found = this->proposal_info.find(variable);
   Rcpp::stop("LogGaussianDistributionFactor::distribution_evaluate_gradient - not written yet.");
 }

@@ -15,6 +15,7 @@ SMCOutput::SMCOutput()
   this->estimator = NULL;
   this->smc_iteration = 0;
   this->iteration_written_to_file = -1;
+  this->time = 0.0;
 }
 
 SMCOutput::~SMCOutput()
@@ -35,6 +36,7 @@ SMCOutput::SMCOutput(SMC* estimator_in,
   this->results_name = results_name_in;
   this->smc_iteration = 0;
   this->iteration_written_to_file = -1;
+  this->time = 0.0;
 }
 
 //Copy constructor for the SMCOutput class.
@@ -61,7 +63,7 @@ void SMCOutput::operator=(const SMCOutput &another)
   this->make_copy(another);
 }
 
-LikelihoodEstimatorOutput* SMCOutput::duplicate(void)const
+LikelihoodEstimatorOutput* SMCOutput::duplicate() const
 {
   return( new SMCOutput(*this));
 }
@@ -83,6 +85,7 @@ void SMCOutput::make_copy(const SMCOutput &another)
   this->results_name = another.results_name;
   this->smc_iteration = another.smc_iteration;
   this->iteration_written_to_file = another.iteration_written_to_file;
+  this->time = another.time;
 }
 
 void SMCOutput::simulate()
@@ -344,6 +347,11 @@ arma::mat SMCOutput::subsample_get_gradient_of_log(const std::string &variable,
   Rcpp::stop("SMCOutput::get_gradient_of_log - not yet implemented.");
 }
 
+void SMCOutput::set_time(double time_in)
+{
+  this->time = time_in;
+}
+
 void SMCOutput::write_to_file(const std::string &dir_name,
                               const std::string &index)
 {
@@ -379,6 +387,20 @@ void SMCOutput::write_to_file(const std::string &dir_name,
       else
       {
         Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + " cannot be opened.");
+      }
+      
+      if (!this->estimator->time_file_stream.is_open())
+      {
+        this->estimator->time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
+      }
+      if (this->estimator->time_file_stream.is_open())
+      {
+        this->estimator->time_file_stream << this->time << std::endl;
+        //log_likelihood_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
       }
       
       if (!this->estimator->vector_variables_file_stream.is_open())
@@ -591,6 +613,11 @@ void SMCOutput::write_to_file(const std::string &dir_name,
 
 void SMCOutput::close_ofstreams()
 {
+  this->estimator->log_likelihood_file_stream.close();
+  this->estimator->time_file_stream.close();
+  this->estimator->vector_variables_file_stream.close();
+  this->estimator->vector_variable_sizes_file_stream.close();
+  
   this->estimator->incremental_log_likelihood_file_stream.close();
   this->estimator->resampled_file_stream.close();
   this->estimator->ess_file_stream.close();
@@ -610,6 +637,11 @@ void SMCOutput::close_ofstreams()
 
 void SMCOutput::close_ofstreams(size_t deque_index)
 {
+  this->estimator->log_likelihood_file_stream.close();
+  this->estimator->time_file_stream.close();
+  this->estimator->vector_variables_file_stream.close();
+  this->estimator->vector_variable_sizes_file_stream.close();
+  
   this->estimator->incremental_log_likelihood_file_stream.close();
   this->estimator->resampled_file_stream.close();
   this->estimator->ess_file_stream.close();

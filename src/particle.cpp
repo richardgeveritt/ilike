@@ -1090,17 +1090,18 @@ double Particle::evaluate_all_likelihoods(const Index* index,
 
 double Particle::subsample_evaluate_all_likelihoods(const Index* index)
 {
-  this->subsample_target_evaluated = 0.0;
-  this->subsample_ensemble_target_evaluated = 0.0;
+  this->target_evaluated = 0.0;
+  this->ensemble_target_evaluated = 0.0;
   if (this->factor_variables!=NULL)
   {
-    this->subsample_target_evaluated = this->subsample_target_evaluated + this->factor_variables->subsample_evaluate_likelihoods(index);
+    this->target_evaluated = this->target_evaluated + this->factor_variables->subsample_evaluate_likelihoods(index);
   }
   if (this->ensemble_factor_variables!=NULL)
   {
-    this->subsample_ensemble_target_evaluated = this->subsample_ensemble_target_evaluated + this->ensemble_factor_variables->subsample_evaluate_likelihoods(index);
+    this->ensemble_target_evaluated = this->ensemble_target_evaluated + this->ensemble_factor_variables->subsample_evaluate_likelihoods(index);
+    this->ensemble_target_evaluated = this->ensemble_factor_variables->get_ensemble_factors()->get_temperature()*this->ensemble_target_evaluated;
   }
-  return this->subsample_target_evaluated + this->ensemble_factor_variables->get_ensemble_factors()->get_temperature()*this->subsample_ensemble_target_evaluated;
+  return this->target_evaluated + this->ensemble_target_evaluated;
 }
 
 /*
