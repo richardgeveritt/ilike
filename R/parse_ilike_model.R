@@ -1,11 +1,282 @@
+split_string <- function(input_string)
+{
+  # Use regular expression to split at commas not within parentheses
+  split_result <- unlist(strsplit(input_string, ",(?![^(]*\\))", perl = TRUE))
+
+  # Trim leading and trailing whitespace from each split substring
+  split_result <- trimws(split_result)
+
+  return(split_result)
+}
+
+ilike_parse <- function(input,
+                        parameter_list = list())
+{
+  required_args <- formula.tools::get.vars(parse(text=input))
+
+  parameter_arguments = c()
+
+  for (i in 1:length(required_args))
+  {
+    h = required_args[i]
+
+    if ( (nchar(h)>1) && (substr(h,1,1)=="p") && (!grepl("\\D",substr(h,2,nchar(h)))) )
+    {
+      parameter_number = as.numeric(substr(h,2,nchar(h)))
+      if (parameter_number<=length(parameter_list))
+      {
+        parameter_arguments = c(parameter_arguments,h)
+        do.call("<-",list(h, parameter_list[[parameter_number]]))
+      }
+      else
+      {
+        stop(paste("In call ",arg_string,", parameter ",as.numeric(substr(h,2,nchar(h)))," not found in parameter_list (parameter_list has length ",length(parameter_list),".",sep=""))
+      }
+    }
+  }
+
+  # If p1, etc are in the list, remove from arg list, set p1=, etc. Then should be used by function.
+  required_args = setdiff(required_args,parameter_arguments)
+
+  eval(parse(text = paste('result_function <- function(', paste(required_args,collapse=","), ') { return(' , input , ')}', sep='')))
+  return(list(result_function,required_args))
+}
+
+extract_block <- function(blocks,block_name,block_number,block_code,is_custom,parameter_list)
+{
+  #browser()
+
+  # ignore block if block number is not positive
+  if (block_number>0)
+  {
+    if (is_custom==TRUE)
+    {
+      blocks[[block_name]][[block_number]] = RcppXPtrUtils::cppXPtr(block_code,plugins=c("cpp11"),depends = c("ilike","RcppArmadillo","BH","dqrng","sitmo"))
+    }
+    else
+    {
+      # Check if block_function is of the form: function(some,stuff)
+
+      block_function <- gsub("\\s+", "", block_function)
+
+      # Split input into function name and arguments
+      parts <- strsplit(block_function, "\\(")[[1]]
+      if (length(parts)>1)
+      {
+        function_name <- parts[1]
+        if ( (substr(input,nchar(function_name)+1,nchar(function_name)+1)!="(") || (substr(input,nchar(input),nchar(input))!=")"))
+        {
+          stop(paste("Block ",block_name,", number ",block_number,": input does not specify a function.",sep=""))
+        }
+        arg_string <- substr(input,nchar(function_name)+2,nchar(input)-1)
+
+        ilike_split_name = strsplit(function_name,"::")[[1]]
+
+        if ( (length(ilike_split_name)>1) && (ilike_split_name[1]=="ilike") )
+        {
+          is_like_function = TRUE
+          ilike_type = paste(ilike_split_name[2:length(ilike_split_name)],collapse = "::")
+        }
+        else
+        {
+          is_like_function = FALSE
+        }
+      }
+      else
+      {
+        stop(paste("Block ",block_name,", number ",block_number,": function needs to have a name.",sep=""))
+      }
+
+      if (length(split_at_equals)>2)
+      {
+        stop(paste("Block ",block_name,", number ",block_number,": can have a maximum of one equals sign in it.",sep=""))
+      }
+
+      if (is_like_function==TRUE)
+      {
+        if (block_name=="prior")
+        {
+          split_arg_string = strsplit(arg_string,",")
+
+          variables = split_arg_string[1]
+
+          parameters = list()
+          if (length(split_arg_string)>1)
+          for (k in 2:(length(split_arg_string)))
+          {
+            parameters[[k-1]] = split_arg_string[k]
+          }
+
+          blocks[[block_name]][[block_number]][["type"]] = ilike_type
+          blocks[[block_name]][[block_number]][["variables"]] = variables
+          blocks[[block_name]][[block_number]][["parameters"]] = parameters
+        }
+        else
+        {
+          stop(paste("Block ",block_name,", number ",block_number,": ",block_name," is invalid block type.",sep=""))
+        }
+      }
+      else
+      {
+
+        # need to check if output is assigned from function (for simulate)
+        split_at_equals = strsplit(block_function,"=")[[1]]
+        if (length(split_at_equals)==2)
+        {
+          output_variable = split_at_equals[1]
+          function_to_use = split_at_equals[2]
+          function_name = strsplit(function_name,"=")[[1]][2]
+        }
+        else
+        {
+          output_variable = ""
+          function_to_use = block_function
+        }
+
+        function_info = ilike_parse(function_to_use,
+                                    parameter_list)
+
+        R_function_arguments = function_info[[2]]
+
+        which_parameters = matrix(0,length(R_function_arguments))
+        which_data = matrix(0,length(R_function_arguments))
+        cpp_function_arguments_string = ""
+
+        for (i in 1:length(R_function_arguments))
+        {
+          split_at_dot = strsplit(R_function_arguments[i],".")[[1]]
+          if (length(split_at_dot)==0)
+          {
+            stop(paste("Block ",block_name,", number ",block_number,": argument is of size zero.",sep=""))
+          }
+          else if (length(split_at_dot)==1)
+          {
+            cpp_function_arguments_string = paste(cpp_function_arguments_string,split_at_dot[1],sep=",")
+          }
+          else if (length(split_at_dot)>=2)
+          {
+            cpp_function_arguments_string = paste(cpp_function_arguments_string,',',split_at_dot[1],'["',paste(split_at_dot[2:length(split_at_dot)],collapse=""),'"]',sep="")
+
+            if (split_at_dot[1]=="parameters")
+            {
+              which_parameters[i] = 1
+            }
+
+            if (split_at_dot[1]=="data")
+            {
+              which_data[i] = 1
+            }
+          }
+        }
+
+        # give C++ wrapper for this
+        # write to cpp file
+        # source
+        # delete file
+
+        cpp_function_name = paste(block_name,block_number,sep="")
+
+        temp_filename = paste(cpp_function_name,".cpp",sep="")
+        xptr_name = paste(cpp_function_name,"getXPtr",sep="_")
+
+        if (block_name=="evaluate_log_prior")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", number ",block_number,": using variables from data not possible in a prior.",sep=""))
+          }
+
+          return_type = "double"
+          arguments[1] = "const Parameters &parameters"
+          args_for_typedef = "const Parameters&"
+          function_body = paste('Function f("',function_name,'"); ','return NumericVector(',function_name,'(',cpp_function_arguments_string,'))[0];',sep="")
+        }
+
+        if (block_name=="simulate_prior")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", number ",block_number,": using variables from data not possible in a prior.",sep=""))
+          }
+
+          return_type = "Parameters"
+          arguments[1] = "RandomNumberGenerator &rng"
+          args_for_typedef = "RandomNumberGenerator&"
+          function_body = paste('Function f("',function_name,'"); Parameters output; output["',output_variable,'"] = NumericVector(',function_name,'(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+
+        code = paste(return_type,' ',function_name,'(',sep="")
+        for (i in 1:length(arguments))
+        {
+          code = paste(code,arguments[1])
+          if (i!=length(arguments))
+          {
+            code = paste(code,',',sep="")
+          }
+        }
+        code = paste(code,') {',function_body,' }',sep="")
+
+        fileConn<-file(temp_filename)
+        writeLines(c(
+          '#include <RcppArmadillo.h>',
+          '// [[Rcpp::depends(RcppArmadillo)]]',
+          '// [[Rcpp::depends(ilike)]]',
+          '// [[Rcpp::depends(BH)]]',
+          '// [[Rcpp::depends(dqrng)]]',
+          '// [[Rcpp::depends(sitmo)]]',
+          'using namespace Rcpp;',
+          '#include <ilike.h>',
+          paste("SEXP ",xptr_name,"();",sep=""),
+          code,
+          "// [[Rcpp::export]]",
+          paste("SEXP ",xptr_name,"() {",sep=""),
+          paste("  typedef", return_type, "(*funcPtr)(", args_for_typedef, ");"),
+          paste("  return XPtr<funcPtr>(new funcPtr(&", cpp_function_name, "));"),
+          "}"), fileConn)
+        close(fileConn)
+
+        Rcpp::sourceCpp(temp_filename)
+        #file.remove(temp_filename)
+
+        blocks[[block_name]][[block_number]] = get(xptr_name)()
+      }
+
+    }
+  }
+
+  return(blocks)
+}
+
 #' Parse .cpp file to give ilike model.
 #'
 #' @param filename The name (and path) of the .cpp file containing the model.
+#' @param parameter_list (optional) A list containing parameters for the model.
 #' @return A list containing the model details.
 #' @export
-parse_ilike_model <- function(filename)
+parse_ilike_model <- function(filename,
+                              parameter_list = list())
 {
   filename = "/Users/richard/Dropbox/projects/ilikemodels/gaussian_unknown_precision/gaussian_unknown_precision_model.cpp"
+  basename = tools::file_path_sans_ext(filename)
+
+  # Check if there is a file with a .py extension.
+  if (file.exists(paste(basename,".py",sep="")))
+  {
+    reticulate::source_python(paste(basename,".py",sep=""))
+  }
+
+  # Check if there is a file with a .jl extension.
+  if (file.exists(paste(basename,".jl",sep="")))
+  {
+    JuliaCall::julia_setup()
+    JuliaCall::julia_source(paste(basename,".jl",sep=""))
+  }
+
+  # Check if there is a file with a .R extension.
+  if (file.exists(paste(basename,".R",sep="")))
+  {
+    source(paste(basename,".R",sep=""))
+  }
 
   the_file = file(filename,open="r")
 
@@ -45,29 +316,7 @@ parse_ilike_model <- function(filename)
           }
           else # end current block
           {
-            # ignore block if block number is not positive
-            if (block_number>0)
-            {
-              if (is_custom==TRUE)
-              {
-                blocks[[block_name]][[block_number]] = RcppXPtrUtils::cppXPtr(block_code,plugins=c("cpp11"),depends = c("ilike","RcppArmadillo","BH","dqrng","sitmo"))
-                # if (!(result[[2]] %in% function_names))
-                # {
-                #   blocks[[block_name]][[block_number]] = result[[1]]
-                #   function_names = c(function_names,result[[2]])
-                # }
-                # else
-                # {
-                #   stop("Model file must not contain two functions with the same name.")
-                # }
-              }
-              else
-              {
-                blocks[[block_name]][[block_number]][["type"]] = block_type
-                blocks[[block_name]][[block_number]][["variables"]] = variables
-                blocks[[block_name]][[block_number]][["parameters"]] = parameters
-              }
-            }
+            blocks = extract_block(blocks,block_name,block_number,block_code,is_custom,parameter_list)
             block_code = ""
           }
 
@@ -78,7 +327,19 @@ parse_ilike_model <- function(filename)
 
           unparsed_block_name = substr(line, 5, nchar(line)-4)
 
-          split_block_name = strsplit(unparsed_block_name,split=",")[[1]]
+          # expect input for each block in one of the following forms:
+          # (a) /***evaluate_log_prior***/, followed by a C++ function
+          # (b) /***evaluate_log_prior,n***/, in the case of a model with multiple factors, where this is the nth factor
+          # (c) /***prior,ilike::lnorm(tau,1,1)***/, to use a lognormal distribution with parameters 1 and 1
+          # (d) /***prior,n,ilike::lnorm(tau,1,1)***/, to use a lognormal distribution with parameters 1 and 1, in the case of a model with multiple factors, where this is the nth factor
+          # (e) /***evaluate_log_prior,dlnorm(tau,1,1,TRUE)***/, so that we extract the named argument from the parameters read into the function, and input the other arguments, in this order, in to dlnorm (dlnorm in this case is a base R function, but it could be a user defined one in an R, python or julia file)
+          # (f) /***evaluate_log_prior,n,dlnorm(tau,1,1,TRUE)***/, is the same case as (e), except that we have a model with multiple factors and this is the nth factor
+          # (g) /***evaluate_log_likelihood,n,dnorm(data.y,0,recip(sqrt(tau)),TRUE)***/
+          # (h) /***simulate_prior,tau=rlnorm(1,1,1)***/, when we simulate a variable
+          # (i) /***simulate_prior,1,theta=rlnorm(1,theta,1)***/, for simulations that involve multiple steps
+          # (j) /***simulate_prior,2,tau=rlnorm(1,theta,1)***/, the counterpart to (i)
+
+          split_block_name = split_string(unparsed_block_name)
 
           if (length(split_block_name)==1)
           {
@@ -88,18 +349,19 @@ parse_ilike_model <- function(filename)
           }
           else if (length(split_block_name)==2)
           {
+            # block number is always second argument, if present
             block_number = strtoi(split_block_name[2])
-            if (is.na(block_number))
+            if (is.na(block_number)) # not a number, so second argument must be a function
             {
-              stop(paste("Invalid file: line ",line_number,", expected number as second argument.",sep=""))
+              block_function = split_block_name[2]
             }
-            else
+            else # is a number. There are no other arguments, so we have a custom C++ function.
             {
               is_custom = TRUE
             }
             block_name = split_block_name[1]
           }
-          else if (length(split_block_name)>=3)
+          else if (length(split_block_name)==3)
           {
             is_custom = FALSE
             block_name = split_block_name[1]
@@ -107,32 +369,17 @@ parse_ilike_model <- function(filename)
             block_number = strtoi(split_block_name[2])
             if (is.na(block_number))
             {
-              block_number = 1
-              block_type_index = 2
-              #stop(paste("Invalid file: line ",line_number,", expected number as second argument.",sep=""))
+              # only way of having 3 arguments is that the second is a number
+              stop(paste("Invalid file: line ",line_number,", expected number as second argument.",sep=""))
             }
             else
             {
-              block_type_index = 3
-              if (length(split_block_name)==3)
-              {
-                stop(paste("Invalid file: line ",line_number,", require variables and parameters to be specified.",sep=""))
-              }
+              block_function = split_block_name[3]
             }
-
-            block_type = split_block_name[block_type_index]
-
-            variables = split_block_name[block_type_index+1]
-
-            parameters = list()
-            if (block_type_index+1<length(split_block_name))
-            {
-              for (i in 2:(length(split_block_name)-block_type_index))
-              {
-                index = block_type_index + i
-                parameters[[i-1]] = split_block_name[index]
-              }
-            }
+          }
+          else
+          {
+            stop(paste("Invalid file: line ",line_number,", invalid function definition (can only have up three parts, separated by commas).",sep=""))
           }
         }
       }
@@ -150,35 +397,7 @@ parse_ilike_model <- function(filename)
     # ignore block if block number is not positive
     if (block_number>0)
     {
-      if (is_custom==TRUE)
-      {
-        blocks[[block_name]][[block_number]] = RcppXPtrUtils::cppXPtr(block_code,plugins=c("cpp11"),depends = c("ilike","RcppArmadillo","BH","dqrng","sitmo"))
-        # if (!(result[[2]] %in% function_names))
-        # {
-        #   blocks[[block_name]][[block_number]] = result[[1]]
-        #   function_names = c(function_names,result[[2]])
-        # }
-        # else
-        # {
-        #   stop("Model file must not contain two functions with the same name.")
-        # }
-        # result = ilike_cppXPtr(block_code,plugins=c("cpp11"),depends = c("ilike","RcppArmadillo","BH","dqrng","sitmo"))
-        # if (!(result[[2]] %in% function_names))
-        # {
-        #   blocks[[block_name]][[block_number]] = result[[1]]
-        #   function_names = c(function_names,result[[2]])
-        # }
-        # else
-        # {
-        #   stop("Model file must not contain two functions with the same name.")
-        # }
-      }
-      else
-      {
-        blocks[[block_name]][[block_number]][["type"]] = block_type
-        blocks[[block_name]][[block_number]][["variables"]] = variables
-        blocks[[block_name]][[block_number]][["parameters"]] = parameters
-      }
+      blocks = extract_block(blocks,block_name,block_number,block_code,is_custom,parameter_list)
     }
   }
 
@@ -188,7 +407,7 @@ parse_ilike_model <- function(filename)
   {
     for (i in 1:length(blocks$evaluate_log_prior))
     {
-      #RcppXPtrUtils::checkXPtr(blocks$evaluate_log_prior[[i]], "double", c("const Parameters&"))
+      RcppXPtrUtils::checkXPtr(blocks$evaluate_log_prior[[i]], "double", c("const Parameters&"))
     }
   }
 
@@ -196,7 +415,7 @@ parse_ilike_model <- function(filename)
   {
     for (i in 1:length(blocks$simulate_prior))
     {
-      #RcppXPtrUtils::checkXPtr(blocks$simulate_prior[[i]], "Parameters", c("RandomNumberGenerator&"))
+      #cppXPtrUtils::checkXPtr(blocks$simulate_prior[[i]], "Parameters", c("RandomNumberGenerator&"))
     }
   }
 
@@ -204,7 +423,7 @@ parse_ilike_model <- function(filename)
   {
     for (i in 1:length(blocks$evaluate_log_likelihood))
     {
-      #RcppXPtrUtils::checkXPtr(blocks$evaluate_log_likelihood[[i]], "double", c("const Parameters&","const Data&"))
+      RcppXPtrUtils::checkXPtr(blocks$evaluate_log_likelihood[[i]], "double", c("const Parameters&","const Data&"))
     }
   }
 
@@ -214,5 +433,17 @@ parse_ilike_model <- function(filename)
 # expect input for each block in one of the following forms:
 # (a) /***evaluate_log_prior***/, followed by a C++ function
 # (b) /***evaluate_log_prior,n***/, in the case of a model with multiple factors, where this is the nth factor
-# (c) /***evaluate_log_prior,norm,0,1***/, to use a normal distribution with parameters 0 and 1
-# (d) /***evaluate_log_prior,n,norm,0,1***/, to use a normal distribution with parameters 0 and 1, in the case of a model with multiple factors, where this is the nth factor
+# (c) /***prior,norm,tau,0,1***/, to use a normal distribution with parameters 0 and 1
+# (d) /***prior,n,norm,tau,0,1***/, to use a normal distribution with parameters 0 and 1, in the case of a model with multiple factors, where this is the nth factor
+
+# expect input for each block in one of the following forms:
+# (a) /***evaluate_log_prior***/, followed by a C++ function
+# (b) /***evaluate_log_prior,n***/, in the case of a model with multiple factors, where this is the nth factor
+# (c) /***prior,ilike::lnorm(tau,1,1)***/, to use a lognormal distribution with parameters 1 and 1
+# (d) /***prior,n,ilike::lnorm(tau,1,1)***/, to use a lognormal distribution with parameters 1 and 1, in the case of a model with multiple factors, where this is the nth factor
+# (e) /***evaluate_log_prior,dlnorm(tau,1,1,TRUE)***/, so that we extract the named argument from the parameters read into the function, and input the other arguments, in this order, in to dlnorm (dlnorm in this case is a base R function, but it could be a user defined one in an R, python or julia file)
+# (f) /***evaluate_log_prior,n,dlnorm(tau,1,1,TRUE)***/, is the same case as (e), except that we have a model with multiple factors and this is the nth factor
+# (g) /***evaluate_log_likelihood,n,dnorm(data$y,0,recip(sqrt(tau)),TRUE)***/
+# (h) /***simulate_prior,tau=rlnorm(1,1,1)***/, when we simulate a variable
+# (i) /***simulate_prior,1,theta=rlnorm(1,theta,1)***/, for simulations that involve multiple steps
+# (j) /***simulate_prior,2,tau=rlnorm(1,theta,1)***/, the counterpart to (i)

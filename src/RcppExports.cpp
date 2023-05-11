@@ -38,10 +38,27 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// do_smc_mcmc
+void do_smc_mcmc(const List& model, const List& parameters, size_t number_of_importance_points, bool parallel_in, size_t grain_size_in, const String& results_name_in, size_t seed);
+RcppExport SEXP _ilike_do_smc_mcmc(SEXP modelSEXP, SEXP parametersSEXP, SEXP number_of_importance_pointsSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
+    Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
+    Rcpp::traits::input_parameter< size_t >::type number_of_importance_points(number_of_importance_pointsSEXP);
+    Rcpp::traits::input_parameter< bool >::type parallel_in(parallel_inSEXP);
+    Rcpp::traits::input_parameter< size_t >::type grain_size_in(grain_size_inSEXP);
+    Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
+    Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
+    do_smc_mcmc(model, parameters, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed);
+    return R_NilValue;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_ilike_ilike_rdtsc", (DL_FUNC) &_ilike_ilike_rdtsc, 0},
     {"_ilike_do_importance_sampler", (DL_FUNC) &_ilike_do_importance_sampler, 7},
+    {"_ilike_do_smc_mcmc", (DL_FUNC) &_ilike_do_smc_mcmc, 7},
     {NULL, NULL, 0}
 };
 

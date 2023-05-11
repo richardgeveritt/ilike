@@ -4,10 +4,12 @@
 \alias{parse_ilike_model}
 \title{Parse .cpp file to give ilike model.}
 \usage{
-parse_ilike_model(filename)
+parse_ilike_model(filename, parameter_list = list())
 }
 \arguments{
 \item{filename}{The name (and path) of the .cpp file containing the model.}
+
+\item{parameter_list}{(optional) A list containing parameters for the model.}
 }
 \value{
 A list containing the model details.

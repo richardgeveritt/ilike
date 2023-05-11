@@ -460,15 +460,15 @@ inline double dmvnorm_estimated_params(const arma::colvec &x,
 
 }
 
-inline double rgamma(RandomNumberGenerator &rng, double shape, double scale)
+inline double rgamma(RandomNumberGenerator &rng, double shape, double rate)
 {
-  boost::random::gamma_distribution<double> my_gamma(shape, scale);
+  boost::random::gamma_distribution<double> my_gamma(shape, 1.0/rate);
   return my_gamma(rng);
 }
 
-inline arma::colvec rgamma(RandomNumberGenerator &rng, size_t n, double shape, double scale)
+inline arma::colvec rgamma(RandomNumberGenerator &rng, size_t n, double shape, double rate)
 {
-  boost::random::gamma_distribution<double> my_gamma(shape, scale);
+  boost::random::gamma_distribution<double> my_gamma(shape, 1.0/rate);
   arma::colvec output(n);
   for (size_t i=0; i<n; ++i)
   {
@@ -477,13 +477,13 @@ inline arma::colvec rgamma(RandomNumberGenerator &rng, size_t n, double shape, d
   return output;
 }
 
-inline double dgamma(double x, double shape, double scale)
+inline double dgamma(double x, double shape, double rate)
 {
-  if ( (shape<=0) || (scale<=0) )
+  if ( (shape<=0) || (rate<=0) )
     return double(NAN);
   if (x<0)
     return -arma::datum::inf;
-  return -boost::math::lgamma<double>(shape) - shape*log(scale) + (shape-1.0)*log(x) - x/scale;
+  return -boost::math::lgamma<double>(shape) + shape*log(rate) + (rate-1.0)*log(x) - rate*x;
 }
 
 inline double rlnorm(RandomNumberGenerator &rng, double meanlog, double sdlog)

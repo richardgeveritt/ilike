@@ -7,6 +7,14 @@ LogGaussianDistributionFactor::LogGaussianDistributionFactor()
 }
 
 LogGaussianDistributionFactor::LogGaussianDistributionFactor(const std::string &variable_name_in,
+                                                             const double &mean_in,
+                                                             const double &covariance_in)
+:DistributionFactor()
+{
+  this->proposal_info[variable_name_in] = GaussianProposalInfo(mean_in,covariance_in);
+}
+
+LogGaussianDistributionFactor::LogGaussianDistributionFactor(const std::string &variable_name_in,
                                                              const arma::colvec &mean_in,
                                                              const arma::mat &covariance_in)
 :DistributionFactor()

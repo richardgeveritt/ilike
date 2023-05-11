@@ -17,6 +17,10 @@ public:
   LogGaussianDistributionFactor();
   
   LogGaussianDistributionFactor(const std::string &variable_name_in,
+                                const double &mean_in,
+                                const double &covariance_in);
+  
+  LogGaussianDistributionFactor(const std::string &variable_name_in,
                                 const arma::colvec &mean_in,
                                 const arma::mat &covariance_in);
   

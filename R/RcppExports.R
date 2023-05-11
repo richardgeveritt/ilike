@@ -9,3 +9,7 @@ do_importance_sampler <- function(model, parameters, number_of_importance_points
     invisible(.Call(`_ilike_do_importance_sampler`, model, parameters, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed))
 }
 
+do_smc_mcmc <- function(model, parameters, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed) {
+    invisible(.Call(`_ilike_do_smc_mcmc`, model, parameters, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed))
+}
+

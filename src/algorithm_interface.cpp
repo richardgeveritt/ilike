@@ -10,10 +10,14 @@ using namespace Rcpp;
 #include "parameters.h"
 #include "exact_likelihood_estimator.h"
 #include "importance_sampler.h"
-#include "gaussian_distribution_factor.h"
 #include "custom_distribution_factor.h"
+#include "gaussian_distribution_factor.h"
+#include "loggaussian_distribution_factor.h"
+#include "gamma_distribution_factor.h"
 #include "custom_likelihood_factor.h"
 #include "gaussian_independent_proposal_kernel.h"
+#include "loggaussian_independent_proposal_kernel.h"
+#include "gamma_independent_proposal_kernel.h"
 #include "custom_distribution_proposal_kernel.h"
 #include "smc_output.h"
 
@@ -122,6 +126,38 @@ double extract_double_parameter(const List &parameters_from_file,
   return result;
 }
 
+List get_single_variable_two_parameter_info(const List &model_parameters,
+                                            const List &current_distribution,
+                                            const std::string &distribution_name)
+{
+  std::string augmented_variable_names = current_distribution["variables"];
+  
+  // split string in ;
+  std::vector<std::string> variable_names = split(augmented_variable_names,';');
+  
+  // throw error if more than one variable
+  if (variable_names.size()!=1)
+    Rcpp::stop("Only one variable allowed for " + distribution_name + ".");
+  
+  if (!current_distribution.containsElementNamed("parameters"))
+    Rcpp::stop("Missing parameters for " + distribution_name + " (two parameters required).");
+  
+  List parameters = current_distribution["parameters"];
+  
+  if (parameters.size()!=2)
+    Rcpp::stop("Two parameters required for " + distribution_name + ".");
+  
+  double first_param = extract_double_parameter(parameters,
+                                                model_parameters,
+                                                0);
+  
+  double second_param = extract_double_parameter(parameters,
+                                                 model_parameters,
+                                                 1);
+  
+  return List::create(variable_names[0],first_param,second_param);
+}
+
 std::vector<LikelihoodEstimator*> get_likelihood_eatimators(RandomNumberGenerator* rng_in,
                                                             size_t* seed_in,
                                                             Data* data_in,
@@ -150,36 +186,50 @@ std::vector<LikelihoodEstimator*> get_likelihood_eatimators(RandomNumberGenerato
           if ( current_prior.containsElementNamed("type") && current_prior.containsElementNamed("variables") )
           {
             std::string type = current_prior["type"];
+            
             if (type=="norm")
             {
-              std::string augmented_variable_names = current_prior["variables"];
+              List info = get_single_variable_two_parameter_info(model_parameters,
+                                                                 current_prior,
+                                                                 type);
               
-              // split string in ;
-              std::vector<std::string> variable_names = split(augmented_variable_names,';');
+              std::string variable = info[0];
+              double mean = info[1];
+              double sd = info[2];
               
-              // throw error if more than one variable
-              if (variable_names.size()!=1)
-                Rcpp::stop("Only one variable allowed for univariate Gaussian distribution.");
-              
-              if (!current_prior.containsElementNamed("parameters"))
-                stop("Parameters missing for univariate Gaussian prior.");
-              
-              List parameters = current_prior["parameters"];
-              
-              if (parameters.size()!=2)
-                Rcpp::stop("Mean and standard deviation parameters required for univariate Gaussian prior.");
-              
-              double mean = extract_double_parameter(parameters,
-                                                     model_parameters,
-                                                     0);
-              
-              double sd = extract_double_parameter(parameters,
-                                                   model_parameters,
-                                                   1);
-              
-              prior_factors.push_back(new GaussianDistributionFactor(variable_names[0],
+              prior_factors.push_back(new GaussianDistributionFactor(variable,
                                                                      mean,
                                                                      sd));
+              
+            }
+            else if (type=="lnorm")
+            {
+              List info = get_single_variable_two_parameter_info(model_parameters,
+                                                                 current_prior,
+                                                                 type);
+              
+              std::string variable = info[0];
+              double mean = info[1];
+              double sd = info[2];
+              
+              prior_factors.push_back(new LogGaussianDistributionFactor(variable,
+                                                                        mean,
+                                                                        sd));
+              
+            }
+            else if (type=="gamma")
+            {
+              List info = get_single_variable_two_parameter_info(model_parameters,
+                                                                 current_prior,
+                                                                 type);
+              
+              std::string variable = info[0];
+              double shape = info[1];
+              double rate = info[2];
+              
+              prior_factors.push_back(new GammaDistributionFactor(variable,
+                                                                  shape,
+                                                                  rate));
               
             }
             else
@@ -262,34 +312,47 @@ IndependentProposalKernel* get_proposal(const List &model,
         std::string type = proposal_info["type"];
         if (type=="norm")
         {
-          std::string augmented_variable_names = proposal_info["variables"];
+          List info = get_single_variable_two_parameter_info(model_parameters,
+                                                             proposal_info,
+                                                             type);
           
-          // split string in ;
-          std::vector<std::string> variable_names = split(augmented_variable_names,';');
+          std::string variable = info[0];
+          double mean = info[1];
+          double sd = info[2];
           
-          // throw error if more than one variable
-          if (variable_names.size()!=1)
-            Rcpp::stop("Only one variable allowed for univariate Gaussian distribution.");
-          
-          if (!proposal_info.containsElementNamed("parameters"))
-            stop("Parameters missing for univariate Gaussian proposal.");
-          
-          List parameters = proposal_info["parameters"];
-          
-          if (parameters.size()!=2)
-            Rcpp::stop("Mean and standard deviation parameters required for univariate Gaussian proposal.");
-          
-          double mean = extract_double_parameter(parameters,
-                                                 model_parameters,
-                                                 0);
-          
-          double sd = extract_double_parameter(parameters,
-                                               model_parameters,
-                                               1);
-          
-          proposal = new GaussianIndependentProposalKernel(variable_names[0],
+          proposal = new GaussianIndependentProposalKernel(variable,
                                                            mean,
                                                            sd);
+          
+        }
+        else if (type=="lnorm")
+        {
+          List info = get_single_variable_two_parameter_info(model_parameters,
+                                                             proposal_info,
+                                                             type);
+          
+          std::string variable = info[0];
+          double mean = info[1];
+          double sd = info[2];
+          
+          proposal = new LogGaussianIndependentProposalKernel(variable,
+                                                              mean,
+                                                              sd);
+          
+        }
+        else if (type=="gamma")
+        {
+          List info = get_single_variable_two_parameter_info(model_parameters,
+                                                             proposal_info,
+                                                             type);
+          
+          std::string variable = info[0];
+          double shape = info[1];
+          double rate = info[2];
+          
+          proposal = new GammaIndependentProposalKernel(variable,
+                                                        shape,
+                                                        rate);
           
         }
         else
@@ -351,34 +414,46 @@ IndependentProposalKernel* get_prior_as_simulate_only_proposal(const List &model
         std::string type = current_prior["type"];
         if (type=="norm")
         {
-          std::string augmented_variable_names = current_prior["variables"];
+          List info = get_single_variable_two_parameter_info(model_parameters,
+                                                             current_prior,
+                                                             type);
           
-          // split string in ;
-          std::vector<std::string> variable_names = split(augmented_variable_names,';');
+          std::string variable = info[0];
+          double mean = info[1];
+          double sd = info[2];
           
-          // throw error if more than one variable
-          if (variable_names.size()!=1)
-            Rcpp::stop("Only one variable allowed for univariate Gaussian distribution.");
-          
-          if (!current_prior.containsElementNamed("parameters"))
-            stop("Parameters missing for univariate Gaussian prior.");
-          
-          List parameters = current_prior["parameters"];
-          
-          if (parameters.size()!=2)
-            Rcpp::stop("Mean and standard deviation parameters required for univariate Gaussian prior.");
-          
-          double mean = extract_double_parameter(parameters,
-                                                 model_parameters,
-                                                 0);
-          
-          double sd = extract_double_parameter(parameters,
-                                               model_parameters,
-                                               1);
-          
-          proposal = new GaussianIndependentProposalKernel(variable_names[0],
+          proposal = new GaussianIndependentProposalKernel(variable,
                                                            mean,
                                                            sd);
+          
+        }
+        else if (type=="lnorm")
+        {
+          List info = get_single_variable_two_parameter_info(model_parameters,
+                                                             current_prior,
+                                                             type);
+            
+          std::string variable = info[0];
+          double mean = info[1];
+          double sd = info[2];
+          
+          proposal = new LogGaussianIndependentProposalKernel(variable,
+                                                              mean,
+                                                              sd);
+          
+        }
+        else if (type=="gamma")
+        {
+          List info = get_single_variable_two_parameter_info(model_parameters,
+                                                             current_prior,
+                                                             type);
+          
+          std::string variable = info[0];
+          double shape = info[1];
+          double rate = info[2];
+          proposal = new LogGaussianIndependentProposalKernel(variable,
+                                                              shape,
+                                                              rate);
           
         }
         else
@@ -440,9 +515,85 @@ void do_importance_sampler(const List &model,
   
   Data the_data = get_data(model);
   
-  bool parallel = FALSE;
-  bool smcfixed_flag = TRUE;
-  size_t grain_size = 1;
+  //std::string results_name = "/Users/richard/Dropbox/code/ilike/experiments/test";
+  
+  // May need to alter for cases where the likelihood needs to be tuned automatically (e.g. in ABC).
+  
+  // Check if the prior is the proposal: affects what llhd_estimators we include.
+  
+  std::vector<LikelihoodEstimator*> likelihood_estimators;
+  IndependentProposalKernel* proposal_in;
+  bool proposal_is_evaluated_in;
+  
+  if ( model.containsElementNamed("proposal") || model.containsElementNamed("simulate_proposal") )
+  {
+    likelihood_estimators = get_likelihood_eatimators(&rng,
+                                                      &seed,
+                                                      &the_data,
+                                                      model,
+                                                      parameters,
+                                                      true);
+    
+    proposal_in = get_proposal(model,
+                               parameters);
+    
+    proposal_is_evaluated_in = true;
+  }
+  else
+  {
+    Rcout << "No importance sampling proposal specified; using prior." << std::endl;
+    
+    likelihood_estimators = get_likelihood_eatimators(&rng,
+                                                      &seed,
+                                                      &the_data,
+                                                      model,
+                                                      parameters,
+                                                      false);
+    
+    proposal_in = get_prior_as_simulate_only_proposal(model,
+                                                      parameters);
+    
+    proposal_is_evaluated_in = false;
+  }
+  
+  ImportanceSampler alg(&rng,
+                        &seed,
+                        &the_data,
+                        number_of_importance_points,
+                        likelihood_estimators,
+                        proposal_in,
+                        proposal_is_evaluated_in,
+                        true,
+                        true,
+                        parallel_in,
+                        grain_size_in,
+                        "");
+  
+  clock_t start, end;
+  start = clock();
+  SMCOutput* output = alg.run();
+  end = clock();
+  double time = double(end - start)/CLOCKS_PER_SEC;
+  output->set_time(time);
+  if (strcmp(results_name_in.get_cstring(),"") != 0)
+    output->write(results_name_in.get_cstring());
+  delete output;
+  
+}
+
+// [[Rcpp::export]]
+void do_smc_mcmc(const List &model,
+                 const List &parameters,
+                 size_t number_of_importance_points,
+                 bool parallel_in,
+                 size_t grain_size_in,
+                 const String &results_name_in,
+                 size_t seed)
+{
+  
+  RandomNumberGenerator rng;
+  
+  Data the_data = get_data(model);
   
   //std::string results_name = "/Users/richard/Dropbox/code/ilike/experiments/test";
   
@@ -499,7 +650,6 @@ void do_importance_sampler(const List &model,
                         "");
   
   clock_t start, end;
-  int max = 0;
   start = clock();
   SMCOutput* output = alg.run();
   end = clock();
@@ -509,4 +659,7 @@ void do_importance_sampler(const List &model,
     output->write(results_name_in.get_cstring());
   delete output;
   
+  Rcout << "Sampling finished." << std::endl;
+  if (strcmp(results_name_in.get_cstring(),"") != 0)
+    Rcout << "Results written to " << results_name_in.get_cstring() << "_smc" << std::endl;
 }
