@@ -1,12 +1,29 @@
-split_string <- function(input_string)
-{
-  # Use regular expression to split at commas not within parentheses
-  split_result <- unlist(strsplit(input_string, ",(?![^(]*\\))", perl = TRUE))
+split_string <- function(input_string) {
+  result <- vector()
+  current_word <- ""
+  parentheses_level <- 0
+
+  for (char in strsplit(input_string, "")[[1]]) {
+    if (char == "," && parentheses_level == 0) {
+      result <- c(result, current_word)
+      current_word <- ""
+    } else {
+      current_word <- paste0(current_word, char)
+
+      if (char == "(") {
+        parentheses_level <- parentheses_level + 1
+      } else if (char == ")") {
+        parentheses_level <- parentheses_level - 1
+      }
+    }
+  }
+
+  result <- c(result, current_word)
 
   # Trim leading and trailing whitespace from each split substring
-  split_result <- trimws(split_result)
+  result <- trimws(result)
 
-  return(split_result)
+  return(result)
 }
 
 ilike_parse <- function(input,
@@ -14,35 +31,47 @@ ilike_parse <- function(input,
 {
   required_args <- formula.tools::get.vars(parse(text=input))
 
-  parameter_arguments = c()
-
-  for (i in 1:length(required_args))
+  an.error.occured <- FALSE
+  tryCatch( { required_args <- formula.tools::get.vars(parse(text=input)) }
+            , error = function(e) {an.error.occured <<- TRUE})
+  if (an.error.occured)
   {
-    h = required_args[i]
-
-    if ( (nchar(h)>1) && (substr(h,1,1)=="p") && (!grepl("\\D",substr(h,2,nchar(h)))) )
-    {
-      parameter_number = as.numeric(substr(h,2,nchar(h)))
-      if (parameter_number<=length(parameter_list))
-      {
-        parameter_arguments = c(parameter_arguments,h)
-        do.call("<-",list(h, parameter_list[[parameter_number]]))
-      }
-      else
-      {
-        stop(paste("In call ",arg_string,", parameter ",as.numeric(substr(h,2,nchar(h)))," not found in parameter_list (parameter_list has length ",length(parameter_list),".",sep=""))
-      }
-    }
+    stop(paste('Error in formula.tools::get.vars function. Maybe you used an equals sign within the function specification (e.g. using log=TRUE). This is not yet supported.',sep=""))
   }
 
-  # If p1, etc are in the list, remove from arg list, set p1=, etc. Then should be used by function.
-  required_args = setdiff(required_args,parameter_arguments)
+  parameter_arguments = c()
 
-  eval(parse(text = paste('result_function <- function(', paste(required_args,collapse=","), ') { return(' , input , ')}', sep='')))
-  return(list(result_function,required_args))
+  if (length(required_args)>0)
+  {
+    for (i in 1:length(required_args))
+    {
+      h = required_args[i]
+
+      if ( (nchar(h)>1) && (substr(h,1,1)=="p") && (!grepl("\\D",substr(h,2,nchar(h)))) )
+      {
+        parameter_number = as.numeric(substr(h,2,nchar(h)))
+        if (parameter_number<=length(parameter_list))
+        {
+          parameter_arguments = c(parameter_arguments,h)
+          do.call("<-",list(h, parameter_list[[parameter_number]]))
+        }
+        else
+        {
+          stop(paste("In call ",arg_string,", parameter ",as.numeric(substr(h,2,nchar(h)))," not found in parameter_list (parameter_list has length ",length(parameter_list),".",sep=""))
+        }
+      }
+    }
+
+    # If p1, etc are in the list, remove from arg list, set p1=, etc. Then should be used by function.
+    required_args = setdiff(required_args,parameter_arguments)
+  }
+
+  #eval(parse(text = paste('result_function <- function(', paste(required_args,collapse=","), ') { return(' , input , ')}', sep='')))
+  result_function_text = paste(' <- function(', paste(required_args,collapse=","), ') { return(' , input , ')}', sep='')
+  return(list(result_function_text,required_args))
 }
 
-extract_block <- function(blocks,block_name,block_number,block_code,is_custom,parameter_list)
+extract_block <- function(blocks,block_name,block_number,block_code,block_function,is_custom,parameter_list)
 {
   #browser()
 
@@ -64,11 +93,11 @@ extract_block <- function(blocks,block_name,block_number,block_code,is_custom,pa
       if (length(parts)>1)
       {
         function_name <- parts[1]
-        if ( (substr(input,nchar(function_name)+1,nchar(function_name)+1)!="(") || (substr(input,nchar(input),nchar(input))!=")"))
+        if ( (substr(block_function,nchar(function_name)+1,nchar(function_name)+1)!="(") || (substr(block_function,nchar(block_function),nchar(block_function))!=")"))
         {
           stop(paste("Block ",block_name,", number ",block_number,": input does not specify a function.",sep=""))
         }
-        arg_string <- substr(input,nchar(function_name)+2,nchar(input)-1)
+        arg_string <- substr(block_function,nchar(function_name)+2,nchar(block_function)-1)
 
         ilike_split_name = strsplit(function_name,"::")[[1]]
 
@@ -85,11 +114,6 @@ extract_block <- function(blocks,block_name,block_number,block_code,is_custom,pa
       else
       {
         stop(paste("Block ",block_name,", number ",block_number,": function needs to have a name.",sep=""))
-      }
-
-      if (length(split_at_equals)>2)
-      {
-        stop(paste("Block ",block_name,", number ",block_number,": can have a maximum of one equals sign in it.",sep=""))
       }
 
       if (is_like_function==TRUE)
@@ -133,40 +157,52 @@ extract_block <- function(blocks,block_name,block_number,block_code,is_custom,pa
           function_to_use = block_function
         }
 
+        if (length(split_at_equals)>2)
+        {
+          stop(paste("Block ",block_name,", number ",block_number,": can have a maximum of one equals sign in it.",sep=""))
+        }
+
         function_info = ilike_parse(function_to_use,
                                     parameter_list)
 
         R_function_arguments = function_info[[2]]
 
-        which_parameters = matrix(0,length(R_function_arguments))
-        which_data = matrix(0,length(R_function_arguments))
         cpp_function_arguments_string = ""
-
-        for (i in 1:length(R_function_arguments))
+        which_parameters = c()
+        which_data = c()
+        if (length(R_function_arguments)>0)
         {
-          split_at_dot = strsplit(R_function_arguments[i],".")[[1]]
-          if (length(split_at_dot)==0)
-          {
-            stop(paste("Block ",block_name,", number ",block_number,": argument is of size zero.",sep=""))
-          }
-          else if (length(split_at_dot)==1)
-          {
-            cpp_function_arguments_string = paste(cpp_function_arguments_string,split_at_dot[1],sep=",")
-          }
-          else if (length(split_at_dot)>=2)
-          {
-            cpp_function_arguments_string = paste(cpp_function_arguments_string,',',split_at_dot[1],'["',paste(split_at_dot[2:length(split_at_dot)],collapse=""),'"]',sep="")
+          which_parameters = matrix(0,length(R_function_arguments))
+          which_data = matrix(0,length(R_function_arguments))
 
-            if (split_at_dot[1]=="parameters")
+          for (i in 1:length(R_function_arguments))
+          {
+            split_at_dot = strsplit(R_function_arguments[i],"\\.")[[1]]
+            if (length(split_at_dot)==0)
             {
-              which_parameters[i] = 1
+              stop(paste("Block ",block_name,", number ",block_number,": argument is of size zero.",sep=""))
             }
-
-            if (split_at_dot[1]=="data")
+            else if (length(split_at_dot)==1)
             {
-              which_data[i] = 1
+              cpp_function_arguments_string = paste(cpp_function_arguments_string,split_at_dot[1],sep=",")
+            }
+            else if (length(split_at_dot)>=2)
+            {
+              cpp_function_arguments_string = paste(cpp_function_arguments_string,',',split_at_dot[1],'["',paste(split_at_dot[2:length(split_at_dot)],collapse=""),'"]',sep="")
+
+              if (split_at_dot[1]=="parameters")
+              {
+                which_parameters[i] = 1
+              }
+
+              if (split_at_dot[1]=="data")
+              {
+                which_data[i] = 1
+              }
             }
           }
+
+          cpp_function_arguments_string = substr(cpp_function_arguments_string,2,nchar(cpp_function_arguments_string))
         }
 
         # give C++ wrapper for this
@@ -175,11 +211,29 @@ extract_block <- function(blocks,block_name,block_number,block_code,is_custom,pa
         # delete file
 
         cpp_function_name = paste(block_name,block_number,sep="")
+        R_function_name = paste(cpp_function_name,'_R',sep="")
 
         temp_filename = paste(cpp_function_name,".cpp",sep="")
         xptr_name = paste(cpp_function_name,"getXPtr",sep="_")
 
-        if (block_name=="evaluate_log_prior")
+        if (block_name=="data")
+        {
+          if (sum(which_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", number ",block_number,": using variables from parameters not possible in a data function.",sep=""))
+          }
+
+          return_type = "Data"
+          arguments = c()
+          #args_for_typedef = ""
+          if (output_variable=="")
+          {
+            stop(paste("Block ",block_name,", number ",block_number,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Data output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+        else if (block_name=="evaluate_log_prior")
         {
           if (sum(which_data)>0)
           {
@@ -187,31 +241,55 @@ extract_block <- function(blocks,block_name,block_number,block_code,is_custom,pa
           }
 
           return_type = "double"
+          arguments = c()
           arguments[1] = "const Parameters &parameters"
-          args_for_typedef = "const Parameters&"
-          function_body = paste('Function f("',function_name,'"); ','return NumericVector(',function_name,'(',cpp_function_arguments_string,'))[0];',sep="")
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
         }
-
-        if (block_name=="simulate_prior")
+        else if (block_name=="evaluate_log_likelihood")
+        {
+          return_type = "double"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          arguments[2] = "const Data &data"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
+        }
+        else if (block_name=="simulate_prior")
         {
           if (sum(which_data)>0)
           {
             stop(paste("Block ",block_name,", number ",block_number,": using variables from data not possible in a prior.",sep=""))
           }
 
+          if (output_variable=="")
+          {
+            stop(paste("Block ",block_name,", number ",block_number,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
           return_type = "Parameters"
+          arguments = c()
           arguments[1] = "RandomNumberGenerator &rng"
-          args_for_typedef = "RandomNumberGenerator&"
-          function_body = paste('Function f("',function_name,'"); Parameters output; output["',output_variable,'"] = NumericVector(',function_name,'(',cpp_function_arguments_string,')); return output;',sep="")
+          #args_for_typedef = "RandomNumberGenerator&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+        else
+        {
+          stop(paste("Block ",block_name,", number ",block_number,": block is of unknown type.",sep=""))
         }
 
-        code = paste(return_type,' ',function_name,'(',sep="")
-        for (i in 1:length(arguments))
+        args_for_typedef = paste(arguments,collapse=",")
+
+        code = paste(return_type,' ',cpp_function_name,'(',sep="")
+        if (length(arguments)>0)
         {
-          code = paste(code,arguments[1])
-          if (i!=length(arguments))
+          for (i in 1:length(arguments))
           {
-            code = paste(code,',',sep="")
+            code = paste(code,arguments[i],sep="")
+            if (i!=length(arguments))
+            {
+              code = paste(code,',',sep="")
+            }
           }
         }
         code = paste(code,') {',function_body,' }',sep="")
@@ -224,6 +302,9 @@ extract_block <- function(blocks,block_name,block_number,block_code,is_custom,pa
           '// [[Rcpp::depends(BH)]]',
           '// [[Rcpp::depends(dqrng)]]',
           '// [[Rcpp::depends(sitmo)]]',
+          '/*** R',
+          paste(R_function_name,function_info[[1]],sep=""),
+          '*/',
           'using namespace Rcpp;',
           '#include <ilike.h>',
           paste("SEXP ",xptr_name,"();",sep=""),
@@ -236,7 +317,7 @@ extract_block <- function(blocks,block_name,block_number,block_code,is_custom,pa
         close(fileConn)
 
         Rcpp::sourceCpp(temp_filename)
-        #file.remove(temp_filename)
+        file.remove(temp_filename)
 
         blocks[[block_name]][[block_number]] = get(xptr_name)()
       }
@@ -256,7 +337,6 @@ extract_block <- function(blocks,block_name,block_number,block_code,is_custom,pa
 parse_ilike_model <- function(filename,
                               parameter_list = list())
 {
-  filename = "/Users/richard/Dropbox/projects/ilikemodels/gaussian_unknown_precision/gaussian_unknown_precision_model.cpp"
   basename = tools::file_path_sans_ext(filename)
 
   # Check if there is a file with a .py extension.
@@ -316,7 +396,7 @@ parse_ilike_model <- function(filename,
           }
           else # end current block
           {
-            blocks = extract_block(blocks,block_name,block_number,block_code,is_custom,parameter_list)
+            blocks = extract_block(blocks,block_name,block_number,block_code,block_function,is_custom,parameter_list)
             block_code = ""
           }
 
@@ -354,6 +434,7 @@ parse_ilike_model <- function(filename,
             if (is.na(block_number)) # not a number, so second argument must be a function
             {
               block_function = split_block_name[2]
+              block_number = 1
             }
             else # is a number. There are no other arguments, so we have a custom C++ function.
             {
@@ -370,7 +451,7 @@ parse_ilike_model <- function(filename,
             if (is.na(block_number))
             {
               # only way of having 3 arguments is that the second is a number
-              stop(paste("Invalid file: line ",line_number,", expected number as second argument.",sep=""))
+              stop(paste("Invalid file: line ",line_counter,", expected number as second argument.",sep=""))
             }
             else
             {
@@ -379,7 +460,7 @@ parse_ilike_model <- function(filename,
           }
           else
           {
-            stop(paste("Invalid file: line ",line_number,", invalid function definition (can only have up three parts, separated by commas).",sep=""))
+            stop(paste("Invalid file: line ",line_counter,", invalid function definition (can only have up three parts, separated by commas).",sep=""))
           }
         }
       }
@@ -397,35 +478,43 @@ parse_ilike_model <- function(filename,
     # ignore block if block number is not positive
     if (block_number>0)
     {
-      blocks = extract_block(blocks,block_name,block_number,block_code,is_custom,parameter_list)
+      blocks = extract_block(blocks,block_name,block_number,block_code,block_function,is_custom,parameter_list)
     }
   }
 
   close(the_file)
 
-  if ("evaluate_log_prior" %in% names(blocks))
-  {
-    for (i in 1:length(blocks$evaluate_log_prior))
-    {
-      RcppXPtrUtils::checkXPtr(blocks$evaluate_log_prior[[i]], "double", c("const Parameters&"))
-    }
-  }
-
-  if ("simulate_prior" %in% names(blocks))
-  {
-    for (i in 1:length(blocks$simulate_prior))
-    {
-      #cppXPtrUtils::checkXPtr(blocks$simulate_prior[[i]], "Parameters", c("RandomNumberGenerator&"))
-    }
-  }
-
-  if ("evaluate_log_likelihood" %in% names(blocks))
-  {
-    for (i in 1:length(blocks$evaluate_log_likelihood))
-    {
-      RcppXPtrUtils::checkXPtr(blocks$evaluate_log_likelihood[[i]], "double", c("const Parameters&","const Data&"))
-    }
-  }
+  # if ("data" %in% names(blocks))
+  # {
+  #   for (i in 1:length(blocks$data))
+  #   {
+  #     RcppXPtrUtils::checkXPtr(blocks$data[[i]], "Data")
+  #   }
+  # }
+  #
+  # if ("evaluate_log_prior" %in% names(blocks))
+  # {
+  #   for (i in 1:length(blocks$evaluate_log_prior))
+  #   {
+  #     RcppXPtrUtils::checkXPtr(blocks$evaluate_log_prior[[i]], "double", c("const Parameters&"))
+  #   }
+  # }
+  #
+  # if ("simulate_prior" %in% names(blocks))
+  # {
+  #   for (i in 1:length(blocks$simulate_prior))
+  #   {
+  #     RcppXPtrUtils::checkXPtr(blocks$simulate_prior[[i]], "Parameters", c("RandomNumberGenerator&"))
+  #   }
+  # }
+  #
+  # if ("evaluate_log_likelihood" %in% names(blocks))
+  # {
+  #   for (i in 1:length(blocks$evaluate_log_likelihood))
+  #   {
+  #     RcppXPtrUtils::checkXPtr(blocks$evaluate_log_likelihood[[i]], "double", c("const Parameters&","const Data&"))
+  #   }
+  # }
 
   return(blocks)
 }
