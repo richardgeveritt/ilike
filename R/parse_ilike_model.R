@@ -26,6 +26,66 @@ split_string <- function(input_string) {
   return(result)
 }
 
+my_julia_source = function(filename)
+{
+  # Read the content of the Julia file
+  file_content <- readLines(filename)
+
+  # Define a regular expression pattern to identify function definitions
+  function_pattern <- "^function\\s+(\\w+)"
+
+  # Initialize variables
+  current_function <- NULL
+  current_lines <- NULL
+
+  output = list()
+  list_names = c()
+
+  # Loop through each line in the file
+  for (line in file_content) {
+    # Check if the line matches the function pattern
+    if (grepl(function_pattern, line)) {
+      # If a function is already being processed, write it to a file
+      if (!is.null(current_function)) {
+
+        function_name <- strsplit(current_function, "\\(")[[1]][1]
+        assign(function_name,JuliaConnectoR::juliaEval(paste(current_lines,collapse="\n")))
+        #assign(function_name,JuliaCall::julia_eval(paste(current_lines,collapse="\n")))
+        output = append(output,eval(parse(text=function_name)))
+        list_names = c(list_names,function_name)
+        #writeLines(current_lines, paste0(current_function, ".jl"))
+      }
+      else {
+        JuliaConnectoR::juliaEval(paste(current_lines,collapse="\n"))
+        #JuliaCall::julia_eval(paste(current_lines,collapse="\n"))
+      }
+
+      # Extract the function name from the line
+      current_function <- sub(function_pattern, "\\1", line)
+      # Reset the lines buffer
+      current_lines <- NULL
+    }
+
+    # Add the current line to the lines buffer
+    current_lines <- c(current_lines, line)
+  }
+
+  # Write the last function to a file
+  if (!is.null(current_function)) {
+
+    function_name <- strsplit(current_function, "\\(")[[1]][1]
+    assign(function_name,JuliaConnectoR::juliaEval(paste(current_lines,collapse="\n")))
+    #assign(function_name,JuliaCall::julia_eval(paste(current_lines,collapse="\n")))
+    output = append(output,eval(parse(text=function_name)))
+    list_names = c(list_names,function_name)
+
+    #writeLines(current_lines, paste0(current_function, ".jl"))
+  }
+
+  names(output) = list_names
+  return(output)
+}
+
 ilike_parse <- function(input,
                         parameter_list = list())
 {
@@ -332,24 +392,38 @@ extract_block <- function(blocks,block_name,block_number,block_code,block_functi
 #'
 #' @param filename The name (and path) of the .cpp file containing the model.
 #' @param parameter_list (optional) A list containing parameters for the model.
+#' @param julia_bin_dir (optional) The directory containing the Julia bin file - only needed if Julia functions are used.
 #' @return A list containing the model details.
 #' @export
 parse_ilike_model <- function(filename,
-                              parameter_list = list())
+                              parameter_list = list(),
+                              julia_bin_dir="")
 {
   basename = tools::file_path_sans_ext(filename)
 
   # Check if there is a file with a .py extension.
   if (file.exists(paste(basename,".py",sep="")))
   {
-    reticulate::source_python(paste(basename,".py",sep=""))
+    reticulate::source_python(paste(basename,".py",sep=""),envir=globalenv())
   }
 
   # Check if there is a file with a .jl extension.
   if (file.exists(paste(basename,".jl",sep="")))
   {
-    JuliaCall::julia_setup()
-    JuliaCall::julia_source(paste(basename,".jl",sep=""))
+    if (julia_bin_dir!="")
+    {
+      #JuliaCall::julia_setup(julia_bin_dir)
+      Sys.setenv(JULIA_BINDIR = julia_bin_dir)
+      output = my_julia_source(paste(basename,".jl",sep=""))
+      list2env(output, .GlobalEnv)
+    }
+    else
+    {
+      stop("Julia binary directory needs to be specified to use Julia functions.")
+    }
+    #JuliaCall::julia_source(paste(basename,".jl",sep=""))
+
+    # Split julia file into lots of little files, and call mystring <- read_file("my_rnorm(n).jl"); my_rnorm <- JuliaCall::julia_eval(mystring) on each one
   }
 
   # Check if there is a file with a .R extension.
