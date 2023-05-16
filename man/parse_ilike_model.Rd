@@ -4,12 +4,21 @@
 \alias{parse_ilike_model}
 \title{Parse .cpp file to give ilike model.}
 \usage{
-parse_ilike_model(filename, parameter_list = list())
+parse_ilike_model(
+  filename,
+  parameter_list = list(),
+  julia_bin_dir = "",
+  julia_required_libraries = c()
+)
 }
 \arguments{
 \item{filename}{The name (and path) of the .cpp file containing the model.}
 
 \item{parameter_list}{(optional) A list containing parameters for the model.}
+
+\item{julia_bin_dir}{(optional) The directory containing the Julia bin file - only needed if Julia functions are used.}
+
+\item{julia_required_libraries}{(optional) Vector of strings, each of which is a Julia packge that will be installed and loaded.}
 }
 \value{
 A list containing the model details.
