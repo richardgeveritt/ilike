@@ -26,7 +26,8 @@ split_string <- function(input_string) {
   return(result)
 }
 
-my_julia_source = function(filename)
+my_julia_source = function(filename,
+                           julia_required_libraries=c())
 {
   # Read the content of the Julia file
   file_content <- readLines(filename)
@@ -49,15 +50,23 @@ my_julia_source = function(filename)
       if (!is.null(current_function)) {
 
         function_name <- strsplit(current_function, "\\(")[[1]][1]
-        assign(function_name,JuliaConnectoR::juliaEval(paste(current_lines,collapse="\n")))
-        #assign(function_name,JuliaCall::julia_eval(paste(current_lines,collapse="\n")))
+        #assign(function_name,JuliaConnectoR::juliaEval(paste(current_lines,collapse="\n")))
+        assign(function_name,JuliaCall::julia_eval(paste(current_lines,collapse="\n")))
         output = append(output,eval(parse(text=function_name)))
         list_names = c(list_names,function_name)
         #writeLines(current_lines, paste0(current_function, ".jl"))
       }
       else {
-        JuliaConnectoR::juliaEval(paste(current_lines,collapse="\n"))
+        #JuliaConnectoR::juliaEval(paste(current_lines,collapse="\n"))
         #JuliaCall::julia_eval(paste(current_lines,collapse="\n"))
+        if (length(julia_required_libraries)>0)
+        {
+          for (i in 1:length(julia_required_libraries))
+          {
+            JuliaCall::julia_install_package(julia_required_libraries[i])
+            JuliaCall::julia_library(julia_required_libraries[i])
+          }
+        }
       }
 
       # Extract the function name from the line
@@ -74,8 +83,8 @@ my_julia_source = function(filename)
   if (!is.null(current_function)) {
 
     function_name <- strsplit(current_function, "\\(")[[1]][1]
-    assign(function_name,JuliaConnectoR::juliaEval(paste(current_lines,collapse="\n")))
-    #assign(function_name,JuliaCall::julia_eval(paste(current_lines,collapse="\n")))
+    #assign(function_name,JuliaConnectoR::juliaEval(paste(current_lines,collapse="\n")))
+    assign(function_name,JuliaCall::julia_eval(paste(current_lines,collapse="\n")))
     output = append(output,eval(parse(text=function_name)))
     list_names = c(list_names,function_name)
 
@@ -393,11 +402,13 @@ extract_block <- function(blocks,block_name,block_number,block_code,block_functi
 #' @param filename The name (and path) of the .cpp file containing the model.
 #' @param parameter_list (optional) A list containing parameters for the model.
 #' @param julia_bin_dir (optional) The directory containing the Julia bin file - only needed if Julia functions are used.
+#' @param julia_required_libraries (optional) Vector of strings, each of which is a Julia packge that will be installed and loaded.
 #' @return A list containing the model details.
 #' @export
 parse_ilike_model <- function(filename,
                               parameter_list = list(),
-                              julia_bin_dir="")
+                              julia_bin_dir="",
+                              julia_required_libraries=c())
 {
   basename = tools::file_path_sans_ext(filename)
 
@@ -412,9 +423,9 @@ parse_ilike_model <- function(filename,
   {
     if (julia_bin_dir!="")
     {
-      #JuliaCall::julia_setup(julia_bin_dir)
-      Sys.setenv(JULIA_BINDIR = julia_bin_dir)
-      output = my_julia_source(paste(basename,".jl",sep=""))
+      JuliaCall::julia_setup(julia_bin_dir)
+      #Sys.setenv(JULIA_BINDIR = julia_bin_dir)
+      output = my_julia_source(paste(basename,".jl",sep=""),julia_required_libraries)
       list2env(output, .GlobalEnv)
     }
     else
