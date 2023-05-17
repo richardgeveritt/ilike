@@ -189,7 +189,7 @@ extract_block <- function(blocks,block_name,block_number,block_code,block_functi
       {
         if (block_name=="prior")
         {
-          split_arg_string = strsplit(arg_string,",")
+          split_arg_string = strsplit(arg_string,",")[[1]]
 
           variables = split_arg_string[1]
 
