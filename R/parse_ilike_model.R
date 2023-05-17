@@ -482,6 +482,7 @@ parse_ilike_model <- function(filename,
           else # end current block
           {
             blocks = extract_block(blocks,block_name,block_number,block_code,block_function,is_custom,parameter_list)
+            is_custom = FALSE
             block_code = ""
           }
 
