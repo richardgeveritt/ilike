@@ -15,7 +15,7 @@ importance_sample = function(model,
                              parameter_list = list(),
                              seed = NULL,
                              parallel_flag = FALSE,
-                             grain_size = 1)
+                             grain_size = 100000)
 {
   if ((is.character(model)) && (length(model) == 1))
     model = parse_ilike_model(filename,parameter_list)

@@ -513,9 +513,9 @@ void SequentialSMCWorker::weight(const Index* index,
 
 void SequentialSMCWorker::pf_initial_weight(Particles &current_particles)
 {
+  VectorSingleIndex index(0);
   for (size_t i = 0; i < this->get_number_of_particles(); ++i)
   {
-    VectorSingleIndex index(0);
     this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods(&index) - current_particles[i]->back().previous_target_evaluated;
   }
 }

@@ -129,6 +129,12 @@ public:
 protected:
   
   friend SequentialSMCWorker;
+  friend class SimulateWorker;
+  friend class ConditionalSimulateWorker;
+  friend class SubsampleSimulateWorker;
+  friend class SubsampleConditionalSimulateWorker;
+  friend class MoveWorker;
+  friend class SubsampleMoveWorker;
   
   bool proposal_is_evaluated;
   

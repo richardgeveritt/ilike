@@ -569,12 +569,15 @@ void do_importance_sampler(const List &model,
                         grain_size_in,
                         "");
   
-  clock_t start, end;
-  start = clock();
+  std::chrono::high_resolution_clock::time_point start_time, end_time;
+  start_time = std::chrono::high_resolution_clock::now();
+  
   SMCOutput* output = alg.run();
-  end = clock();
-  double time = double(end - start)/CLOCKS_PER_SEC;
-  output->set_time(time);
+  
+  end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed_time = end_time - start_time;
+  output->set_time(elapsed_time.count());
+  
   if (strcmp(results_name_in.get_cstring(),"") != 0)
     output->write(results_name_in.get_cstring());
   delete output;
@@ -649,12 +652,15 @@ void do_smc_mcmc(const List &model,
                         grain_size_in,
                         "");
   
-  clock_t start, end;
-  start = clock();
+  std::chrono::high_resolution_clock::time_point start_time, end_time;
+  start_time = std::chrono::high_resolution_clock::now();
+  
   SMCOutput* output = alg.run();
-  end = clock();
-  double time = double(end - start)/CLOCKS_PER_SEC;
-  output->set_time(time);
+  
+  end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed_time = end_time - start_time;
+  output->set_time(elapsed_time.count());
+  
   if (strcmp(results_name_in.get_cstring(),"") != 0)
     output->write(results_name_in.get_cstring());
   delete output;

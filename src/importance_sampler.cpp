@@ -13,6 +13,7 @@
 #include "vector_factors.h"
 #include "vector_single_index.h"
 #include "positive_smc_criterion.h"
+#include "rcppparallel_smc_worker.h"
 
 ImportanceSampler::ImportanceSampler()
   :SMC()
@@ -54,10 +55,8 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
 
   if (parallel_in==TRUE)
   {
-      //this->the_worker = new RcppParallelSMCWorker(this,
-                                                //this->model_and_algorithm.particle_simulator,
-                                                //grain_size_in);
-    Rcpp::stop("ImportanceSampler - parallel worker not allowed yet.");
+    this->the_worker = new RcppParallelSMCWorker(this,
+                                                 grain_size_in);
   }
   else
   {
@@ -129,6 +128,8 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
       //this->the_worker = new RcppParallelSMCWorker(this,
                                                 //this->model_and_algorithm.particle_simulator,
                                                 //grain_size_in);
+    this->the_worker = new RcppParallelSMCWorker(this,
+                                                 grain_size_in);
   }
   else
   {
@@ -188,6 +189,8 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
     //this->the_worker = new RcppParallelSMCWorker(this,
     //this->model_and_algorithm.particle_simulator,
     //grain_size_in);
+    this->the_worker = new RcppParallelSMCWorker(this,
+                                                 grain_size_in);
   }
   else
   {
@@ -250,6 +253,8 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
     //this->the_worker = new RcppParallelSMCWorker(this,
     //this->model_and_algorithm.particle_simulator,
     //grain_size_in);
+    this->the_worker = new RcppParallelSMCWorker(this,
+                                                 grain_size_in);
   }
   else
   {
@@ -313,6 +318,8 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
     //this->the_worker = new RcppParallelSMCWorker(this,
     //this->model_and_algorithm.particle_simulator,
     //grain_size_in);
+    this->the_worker = new RcppParallelSMCWorker(this,
+                                                 grain_size_in);
   }
   else
   {
@@ -389,7 +396,6 @@ SMCOutput* ImportanceSampler::specific_run()
   this->simulate_smc(simulation);
   this->evaluate_smc(simulation);
   simulation->normalise_and_resample_weights();
-  //simulation->write_to_file(directory_name);
   return simulation;
 }
 
