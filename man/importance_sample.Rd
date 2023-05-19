@@ -11,7 +11,7 @@ importance_sample(
   parameter_list = list(),
   seed = NULL,
   parallel_flag = FALSE,
-  grain_size = 1
+  grain_size = 1e+05
 )
 }
 \arguments{
