@@ -36,6 +36,8 @@ protected:
   
   EvaluateLogDistributionPtr distribution;
   EvaluateGradientLogDistributionPtr distribution_gradient;
+  
+  
 
 };
 

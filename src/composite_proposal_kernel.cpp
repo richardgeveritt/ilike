@@ -232,8 +232,8 @@ Parameters CompositeProposalKernel::subsample_simulate(RandomNumberGenerator &rn
 */
 
 arma::mat CompositeProposalKernel::specific_gradient_of_log(const std::string &variable,
-                                           Particle &proposed_particle,
-                                           Particle &old_particle)
+                                                            Particle &proposed_particle,
+                                                            Particle &old_particle)
 {
   Rcpp::stop("CompositeProposalKernel::specific_gradient_of_log - not written yet.");
 }

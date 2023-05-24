@@ -20,6 +20,7 @@ using namespace Rcpp;
 #include "gamma_independent_proposal_kernel.h"
 #include "custom_distribution_proposal_kernel.h"
 #include "smc_output.h"
+#include "composite_independent_proposal_kernel.h"
 
 std::vector<std::string> split(const std::string &str, const char delimiter)
 {
@@ -74,7 +75,8 @@ Data get_data(const List &model)
   if (model.containsElementNamed("data"))
   {
     List data_list = model["data"];
-    SEXP data_SEXP = data_list[0];
+    List data_list0 = data_list[0];
+    SEXP data_SEXP = data_list0["data"];
     return load_data(data_SEXP);
   }
   else
@@ -165,6 +167,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_eatimators(RandomNumberGenerato
                                                             const List &model_parameters,
                                                             bool include_priors)
 {
+  
   std::vector<LikelihoodEstimator*> likelihood_estimators;
   std::vector<DistributionFactor*> numerator_distribution_factors;
   std::vector<LikelihoodFactor*> numerator_likelihood_factors;
@@ -172,333 +175,424 @@ std::vector<LikelihoodEstimator*> get_likelihood_eatimators(RandomNumberGenerato
   std::vector<DistributionFactor*> prior_factors;
   std::vector<LikelihoodFactor*> exact_likelihood_factors;
   
-  if (include_priors)
+  //Rcout << 0 << std::endl;
+  
+  if ( model.containsElementNamed("factor") )
   {
-    if ( model.containsElementNamed("prior") )
+    
+    List factors = model["factor"];
+    
+    //Rcout << factors.size() << std::endl;
+    
+    for (size_t i=0; i<factors.size(); ++i)
     {
-      List priors = model["prior"];
+
+      //Rcout << i+1 << std::endl;
       
-      for (size_t i=0; i<priors.size(); ++i)
+      
+      if (Rf_isNewList(factors[i]))
       {
-        if (Rf_isNewList(priors[i]))
+        
+        List current_factor = factors[i];
+        if ( current_factor.containsElementNamed("prior") )
         {
-          List current_prior = priors[i];
-          if ( current_prior.containsElementNamed("type") && current_prior.containsElementNamed("variables") )
+          if (include_priors)
           {
-            std::string type = current_prior["type"];
             
-            if (type=="norm")
+            if (Rf_isNewList(current_factor["prior"]))
             {
-              List info = get_single_variable_two_parameter_info(model_parameters,
-                                                                 current_prior,
-                                                                 type);
               
-              std::string variable = info[0];
-              double mean = info[1];
-              double sd = info[2];
-              
-              prior_factors.push_back(new GaussianDistributionFactor(variable,
-                                                                     mean,
-                                                                     sd));
-              
-            }
-            else if (type=="lnorm")
-            {
-              List info = get_single_variable_two_parameter_info(model_parameters,
-                                                                 current_prior,
-                                                                 type);
-              
-              std::string variable = info[0];
-              double mean = info[1];
-              double sd = info[2];
-              
-              prior_factors.push_back(new LogGaussianDistributionFactor(variable,
-                                                                        mean,
-                                                                        sd));
-              
-            }
-            else if (type=="gamma")
-            {
-              List info = get_single_variable_two_parameter_info(model_parameters,
-                                                                 current_prior,
-                                                                 type);
-              
-              std::string variable = info[0];
-              double shape = info[1];
-              double rate = info[2];
-              
-              prior_factors.push_back(new GammaDistributionFactor(variable,
-                                                                  shape,
-                                                                  rate));
+              List current_prior = current_factor["prior"];
+              if ( current_prior.containsElementNamed("type") && current_prior.containsElementNamed("variables") )
+              {
+                std::string type = current_prior["type"];
+                
+                
+                if (type=="norm")
+                {
+                  List info = get_single_variable_two_parameter_info(model_parameters,
+                                                                     current_prior,
+                                                                     type);
+                  
+                  std::string variable = info[0];
+                  double mean = info[1];
+                  double sd = info[2];
+                  
+                  prior_factors.push_back(new GaussianDistributionFactor(variable,
+                                                                         mean,
+                                                                         sd));
+                  
+                }
+                else if (type=="lnorm")
+                {
+                  List info = get_single_variable_two_parameter_info(model_parameters,
+                                                                     current_prior,
+                                                                     type);
+                  
+                  std::string variable = info[0];
+                  double mean = info[1];
+                  double sd = info[2];
+                  
+                  prior_factors.push_back(new LogGaussianDistributionFactor(variable,
+                                                                            mean,
+                                                                            sd));
+                  
+                }
+                else if (type=="gamma")
+                {
+                  List info = get_single_variable_two_parameter_info(model_parameters,
+                                                                     current_prior,
+                                                                     type);
+                  
+                  std::string variable = info[0];
+                  double shape = info[1];
+                  double rate = info[2];
+                  
+                  prior_factors.push_back(new GammaDistributionFactor(variable,
+                                                                      shape,
+                                                                      rate));
+                  
+                }
+                else
+                {
+                  Rcout << "Prior type " << type;
+                  stop("Prior type unknown");
+                }
+                
+              }
+              else
+              {
+                stop("Missing information for prior in model file.");
+              }
               
             }
             else
             {
-              Rcout << "Prior type " << type;
-              stop("Prior type unknown");
+              stop("Error in factors section of model file.");
             }
+            
           }
-          else
+        }
+        
+        if (current_factor.containsElementNamed("evaluate_log_prior"))
+        {
+          if (include_priors)
           {
-            stop("Missing information for prior in model file.");
+            
+            SEXP evaluate_log_prior_SEXP = current_factor["evaluate_log_prior"];
+            prior_factors.push_back(new CustomDistributionFactor(load_evaluate_log_distribution(evaluate_log_prior_SEXP)));
+            
           }
+        }
+        
+        if ( current_factor.containsElementNamed("evaluate_log_likelihood") )
+        {
+          
+          SEXP evaluate_log_likelihood_SEXP = current_factor["evaluate_log_likelihood"];
+          exact_likelihood_factors.push_back(new CustomLikelihoodFactor(load_evaluate_log_likelihood(evaluate_log_likelihood_SEXP),
+                                                                        data_in));
+          
           
         }
-        else
-        {
-          stop("Error in prior section of model file.");
-        }
+        
+        
       }
-    }
-    
-    if ( model.containsElementNamed("log_evaluate_log_prior") )
-    {
-      List priors = model["evaluate_log_prior"];
-      
-      for (size_t i=0; i<priors.size(); ++i)
+      else
       {
-        SEXP prior_log_evaluate_SEXP = priors[i];
-        prior_factors.push_back(new CustomDistributionFactor(load_evaluate_log_distribution(prior_log_evaluate_SEXP)));
+        stop("Error in factors section of model file.");
       }
-    }
-  }
-  
-  if ( model.containsElementNamed("evaluate_log_likelihood") )
-  {
-    List exact_likelihoods = model["evaluate_log_likelihood"];
-    
-    for (size_t i=0; i<exact_likelihoods.size(); ++i)
-    {
-      SEXP likelihood_log_evaluate_SEXP = exact_likelihoods[i];
-      exact_likelihood_factors.push_back(new CustomLikelihoodFactor(load_evaluate_log_likelihood(likelihood_log_evaluate_SEXP),
-                                                                    data_in));
+      
     }
     
   }
 
+  
   likelihood_estimators.push_back(new ExactLikelihoodEstimator(rng_in,
                                                                seed_in,
                                                                data_in,
                                                                prior_factors,
                                                                exact_likelihood_factors,
                                                                true));
-
+  
   return likelihood_estimators;
+  
+  //return std::vector<LikelihoodEstimator*>();
 }
 
 IndependentProposalKernel* get_proposal(const List &model,
                                         const List &model_parameters)
 {
   IndependentProposalKernel* proposal = NULL;
+  std::vector<IndependentProposalKernel*> proposals;
   
-  if ( model.containsElementNamed("proposal") && model.containsElementNamed("evaluate_log_proposal") )
+  if ( model.containsElementNamed("importance_proposal") )
   {
-    stop("Model file contains a 'proposal' section and a 'evaluate_log_proposal' section. Include only one of these.");
-  }
-  
-  if ( model.containsElementNamed("proposal") && model.containsElementNamed("proposal_simulate") )
-  {
-    stop("Model file contains a 'proposal' section and a 'simulate_proposal' section. Include only one of these.");
-  }
-  
-  if ( model.containsElementNamed("proposal") )
-  {
-    List proposal_info = model["proposal"];
+    List importance_proposals = model["importance_proposal"];
     
-    if (Rf_isNewList(proposal_info))
+    for (size_t i=0; i<importance_proposals.size(); ++i)
     {
-      if ( proposal_info.containsElementNamed("type") && proposal_info.containsElementNamed("variables") )
+      if (Rf_isNewList(importance_proposals[i]))
       {
-        std::string type = proposal_info["type"];
-        if (type=="norm")
+        List current_proposal = importance_proposals[i];
+        if ( current_proposal.containsElementNamed("importance_proposal") )
         {
-          List info = get_single_variable_two_parameter_info(model_parameters,
-                                                             proposal_info,
-                                                             type);
+          List proposal_info = current_proposal["importance_proposal"];
           
-          std::string variable = info[0];
-          double mean = info[1];
-          double sd = info[2];
-          
-          proposal = new GaussianIndependentProposalKernel(variable,
-                                                           mean,
-                                                           sd);
-          
+          if (Rf_isNewList(proposal_info))
+          {
+            if ( proposal_info.containsElementNamed("type") && proposal_info.containsElementNamed("variables") )
+            {
+              std::string type = proposal_info["type"];
+              if (type=="norm")
+              {
+                List info = get_single_variable_two_parameter_info(model_parameters,
+                                                                   proposal_info,
+                                                                   type);
+                
+                std::string variable = info[0];
+                double mean = info[1];
+                double sd = info[2];
+                
+                proposal = new GaussianIndependentProposalKernel(variable,
+                                                                 mean,
+                                                                 sd);
+                
+              }
+              else if (type=="lnorm")
+              {
+                List info = get_single_variable_two_parameter_info(model_parameters,
+                                                                   proposal_info,
+                                                                   type);
+                
+                std::string variable = info[0];
+                double mean = info[1];
+                double sd = info[2];
+                
+                proposal = new LogGaussianIndependentProposalKernel(variable,
+                                                                    mean,
+                                                                    sd);
+                
+              }
+              else if (type=="gamma")
+              {
+                List info = get_single_variable_two_parameter_info(model_parameters,
+                                                                   proposal_info,
+                                                                   type);
+                
+                std::string variable = info[0];
+                double shape = info[1];
+                double rate = info[2];
+                
+                proposal = new GammaIndependentProposalKernel(variable,
+                                                              shape,
+                                                              rate);
+                
+              }
+              else
+              {
+                Rcout << "Proposal type " << type;
+                stop("Proposal type unknown");
+              }
+            }
+            else
+            {
+              stop("Missing information for proposal in model file.");
+            }
+            
+          }
+          else
+          {
+            stop("Error in proposal section of model file.");
+          }
         }
-        else if (type=="lnorm")
+        
+        if ( model.containsElementNamed("evaluate_log_importance_proposal") && model.containsElementNamed("simulate_importance_proposal") )
         {
-          List info = get_single_variable_two_parameter_info(model_parameters,
-                                                             proposal_info,
-                                                             type);
-          
-          std::string variable = info[0];
-          double mean = info[1];
-          double sd = info[2];
-          
-          proposal = new LogGaussianIndependentProposalKernel(variable,
-                                                              mean,
-                                                              sd);
-          
+          SEXP evaluate_log_importance_proposal_SEXP = current_proposal["evaluate_log_importance_proposal"];
+          SEXP simulate_importance_proposal_SEXP = current_proposal["simulate_importance_proposal"];
+          proposal = new CustomDistributionProposalKernel(load_simulate_distribution(simulate_importance_proposal_SEXP),
+                                                          load_evaluate_log_distribution(evaluate_log_importance_proposal_SEXP));
         }
-        else if (type=="gamma")
-        {
-          List info = get_single_variable_two_parameter_info(model_parameters,
-                                                             proposal_info,
-                                                             type);
-          
-          std::string variable = info[0];
-          double shape = info[1];
-          double rate = info[2];
-          
-          proposal = new GammaIndependentProposalKernel(variable,
-                                                        shape,
-                                                        rate);
-          
-        }
-        else
-        {
-          Rcout << "Proposal type " << type;
-          stop("Proposal type unknown");
-        }
+        
       }
       else
       {
-        stop("Missing information for proposal in model file.");
+        stop("Error in importance proposals section of model file.");
       }
       
-    }
-    else
-    {
-      stop("Error in proposal section of model file.");
+      if (proposal!=NULL)
+      {
+        proposals.push_back(proposal);
+      }
     }
   }
-  else if ( model.containsElementNamed("evaluate_log_proposal") && model.containsElementNamed("simulate_proposal") )
-  {
-    SEXP evaluate_log_proposal_SEXP = model["evaluate_log_proposal"];
-    SEXP simulate_proposal_SEXP = model["simulate_proposal"];
-    proposal = new CustomDistributionProposalKernel(load_simulate_distribution(simulate_proposal_SEXP),
-                                                    load_evaluate_log_distribution(evaluate_log_proposal_SEXP));
-  }
-  else
+  
+  if (proposal==NULL)
   {
     stop("No proposal specified.");
   }
-  
-  return proposal;
+  else
+  {
+    if (proposals.size()==1)
+    {
+      return proposal;
+    }
+    else
+    {
+      return new CompositeIndependentProposalKernel(proposals);
+    }
+  }
 }
 
 IndependentProposalKernel* get_prior_as_simulate_only_proposal(const List &model,
                                                                const List &model_parameters)
 {
   IndependentProposalKernel* proposal = NULL;
+  std::vector<IndependentProposalKernel*> proposals;
   
-  if ( model.containsElementNamed("prior") && model.containsElementNamed("simulate_prior") )
+  if ( model.containsElementNamed("factor") )
   {
-    stop("Model file contains a 'prior' section and a 'simulate_prior' section. No proposal specified, so using prior as proposal, but since both sections are specified there is ambiguity over which to use.");
-  }
-  
-  if ( model.containsElementNamed("prior") )
-  {
-    List priors = model["prior"];
+    List factors = model["factor"];
     
-    if (priors.size()!=1)
+    for (size_t i=0; i<factors.size(); ++i)
     {
-      stop("Need only a single element in the 'prior' section in the model file. No proposal specified, so using prior as proposal, but need exactly one to be specified or there is ambiguity over which to use.");
-    }
-    
-    if (Rf_isNewList(priors[0]))
-    {
-      List current_prior = priors[0];
-      if ( current_prior.containsElementNamed("type") && current_prior.containsElementNamed("variables") )
+      if (Rf_isNewList(factors[i]))
       {
-        std::string type = current_prior["type"];
-        if (type=="norm")
+        List current_factor = factors[i];
+        if ( current_factor.containsElementNamed("prior") )
         {
-          List info = get_single_variable_two_parameter_info(model_parameters,
-                                                             current_prior,
-                                                             type);
-          
-          std::string variable = info[0];
-          double mean = info[1];
-          double sd = info[2];
-          
-          proposal = new GaussianIndependentProposalKernel(variable,
-                                                           mean,
-                                                           sd);
-          
-        }
-        else if (type=="lnorm")
-        {
-          List info = get_single_variable_two_parameter_info(model_parameters,
-                                                             current_prior,
-                                                             type);
-            
-          std::string variable = info[0];
-          double mean = info[1];
-          double sd = info[2];
-          
-          proposal = new LogGaussianIndependentProposalKernel(variable,
-                                                              mean,
-                                                              sd);
-          
-        }
-        else if (type=="gamma")
-        {
-          List info = get_single_variable_two_parameter_info(model_parameters,
-                                                             current_prior,
-                                                             type);
-          
-          std::string variable = info[0];
-          double shape = info[1];
-          double rate = info[2];
-          proposal = new LogGaussianIndependentProposalKernel(variable,
+          if (Rf_isNewList(current_factor["prior"]))
+          {
+            List current_prior = current_factor["prior"];
+            if ( current_prior.containsElementNamed("type") && current_prior.containsElementNamed("variables") )
+            {
+              std::string type = current_prior["type"];
+              
+              if (type=="norm")
+              {
+                List info = get_single_variable_two_parameter_info(model_parameters,
+                                                                   current_prior,
+                                                                   type);
+                
+                std::string variable = info[0];
+                double mean = info[1];
+                double sd = info[2];
+                
+                proposal = new GaussianIndependentProposalKernel(variable,
+                                                                 mean,
+                                                                 sd);
+                
+                if (proposal!=NULL)
+                {
+                  proposals.push_back(proposal);
+                }
+                
+              }
+              else if (type=="lnorm")
+              {
+                Rcout << "made it!";
+                List info = get_single_variable_two_parameter_info(model_parameters,
+                                                                   current_prior,
+                                                                   type);
+                
+                std::string variable = info[0];
+                double mean = info[1];
+                double sd = info[2];
+                
+                proposal = new LogGaussianIndependentProposalKernel(variable,
+                                                                    mean,
+                                                                    sd);
+                
+                if (proposal!=NULL)
+                {
+                  proposals.push_back(proposal);
+                }
+                
+              }
+              else if (type=="gamma")
+              {
+                List info = get_single_variable_two_parameter_info(model_parameters,
+                                                                   current_prior,
+                                                                   type);
+                
+                std::string variable = info[0];
+                double shape = info[1];
+                double rate = info[2];
+                
+                proposal = new GammaIndependentProposalKernel(variable,
                                                               shape,
                                                               rate);
-          
+                
+                if (proposal!=NULL)
+                {
+                  proposals.push_back(proposal);
+                }
+                
+              }
+              else
+              {
+                Rcout << "Prior type " << type;
+                stop("Prior type unknown");
+              }
+            }
+            else
+            {
+              stop("Missing information for prior in model file.");
+            }
+          }
+          else
+          {
+            stop("Error in factors section of model file.");
+          }
         }
-        else
+        
+        if (current_factor.containsElementNamed("simulate_prior"))
         {
-          Rcout << "Prior type " << type;
-          stop("Prior type unknown");
+          Rcout << "made it to simulate!";
+          SEXP simulate_prior_SEXP = current_factor["simulate_prior"];
+          proposal = new CustomDistributionProposalKernel(load_simulate_distribution(simulate_prior_SEXP));
+          
+          if (proposal!=NULL)
+          {
+            proposals.push_back(proposal);
+          }
         }
+        
       }
       else
       {
-        stop("Missing information for prior in model file.");
+        stop("Error in factors section of model file.");
       }
       
     }
-    else
-    {
-      stop("Error in prior section of model file.");
-    }
-  }
-  
-  if ( model.containsElementNamed("simulate_prior") )
-  {
-    List priors = model["simulate_prior"];
-    
-    if (priors.size()!=1)
-    {
-      stop("Need only a single element in the 'simulate_prior' section in the model file. No proposal specified, so using prior as proposal, but need exactly one to be specified or there is ambiguity over which to use.");
-    }
-    
-    SEXP simulate_prior_SEXP = priors[0];
-    proposal = new CustomDistributionProposalKernel(load_simulate_distribution(simulate_prior_SEXP));
   }
   
   if (proposal==NULL)
   {
     stop("No suitable prior to use as proposal.");
   }
-  
-  return proposal;
+  else
+  {
+    if (proposals.size()==1)
+    {
+      return proposal;
+    }
+    else
+    {
+      return new CompositeIndependentProposalKernel(proposals);
+    }
+  }
 }
 
 // [[Rcpp::export]]
 size_t ilike_rdtsc()
 {
   return rdtsc();
+}
+
+std::vector<LikelihoodEstimator*> test_fn(RandomNumberGenerator* rng_in)
+{
+  return std::vector<LikelihoodEstimator*>();
 }
 
 // [[Rcpp::export]]
@@ -512,9 +606,9 @@ void do_importance_sampler(const List &model,
 {
   
   RandomNumberGenerator rng;
-  
   Data the_data = get_data(model);
   
+  Rcout << the_data;
   //std::string results_name = "/Users/richard/Dropbox/code/ilike/experiments/test";
   
   // May need to alter for cases where the likelihood needs to be tuned automatically (e.g. in ABC).
@@ -525,8 +619,9 @@ void do_importance_sampler(const List &model,
   IndependentProposalKernel* proposal_in;
   bool proposal_is_evaluated_in;
   
-  if ( model.containsElementNamed("proposal") || model.containsElementNamed("simulate_proposal") )
+  if ( model.containsElementNamed("importance_proposal") )
   {
+    
     likelihood_estimators = get_likelihood_eatimators(&rng,
                                                       &seed,
                                                       &the_data,
@@ -538,10 +633,13 @@ void do_importance_sampler(const List &model,
                                parameters);
     
     proposal_is_evaluated_in = true;
+    
   }
   else
   {
     Rcout << "No importance sampling proposal specified; using prior." << std::endl;
+    
+    //likelihood_estimators = test_fn(&rng,&seed);
     
     likelihood_estimators = get_likelihood_eatimators(&rng,
                                                       &seed,
@@ -555,6 +653,7 @@ void do_importance_sampler(const List &model,
     
     proposal_is_evaluated_in = false;
   }
+  
   
   ImportanceSampler alg(&rng,
                         &seed,
@@ -604,11 +703,12 @@ void do_smc_mcmc(const List &model,
   
   // Check if the prior is the proposal: affects what llhd_estimators we include.
   
+  
   std::vector<LikelihoodEstimator*> likelihood_estimators;
   IndependentProposalKernel* proposal_in;
   bool proposal_is_evaluated_in;
   
-  if ( model.containsElementNamed("proposal") || model.containsElementNamed("simulate_proposal") )
+  if ( model.containsElementNamed("importance_proposals") )
   {
     likelihood_estimators = get_likelihood_eatimators(&rng,
                                                       &seed,
@@ -632,13 +732,15 @@ void do_smc_mcmc(const List &model,
                                                       model,
                                                       parameters,
                                                       false);
-    
+    /*
     proposal_in = get_prior_as_simulate_only_proposal(model,
                                                       parameters);
     
     proposal_is_evaluated_in = false;
+    */
   }
   
+  /*
   ImportanceSampler alg(&rng,
                         &seed,
                         &the_data,
@@ -668,4 +770,5 @@ void do_smc_mcmc(const List &model,
   Rcout << "Sampling finished." << std::endl;
   if (strcmp(results_name_in.get_cstring(),"") != 0)
     Rcout << "Results written to " << results_name_in.get_cstring() << "_smc" << std::endl;
+  */
 }

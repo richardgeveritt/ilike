@@ -140,16 +140,176 @@ ilike_parse <- function(input,
   return(list(result_function_text,required_args))
 }
 
-extract_block <- function(blocks,block_name,block_number,block_code,block_function,is_custom,parameter_list)
+determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,importance_proposal_nunber,data_number)
 {
-  #browser()
+  if (length(split_block_name)==1)
+  {
+    is_custom = TRUE
+    block_name = split_block_name
+    block_function = ""
+  }
+  else if (length(split_block_name)==2)
+  {
+    is_custom = FALSE
+    block_name = split_block_name[1]
+    block_function = split_block_name[2]
+  }
+  else
+  {
+    stop(paste("Invalid file: line ",line_counter,", invalid function definition (can only have up two parts, separated by commas).",sep=""))
+  }
 
+  prior_function_types = c("prior","evaluate_log_prior","simulate_prior")
+  likelihood_function_types = c("evaluate_log_likelihood","simulate_model")
+  factor_function_types = c(prior_function_types,likelihood_function_types)
+  data_function_types = c("data")
+  importance_proposal_types = c("simulate_importance_proposal","evaluate_importance_log_proposal")
+
+  # distinguish between factor, data, etc
+  if (block_name %in% factor_function_types)
+  {
+    block_type = "factor"
+
+    # Is this a continuation of the current factor, or a new one?
+
+    # Get the current factor info.
+    if ("factor" %in% names(blocks))
+    {
+      current_factor_info = blocks[["factor"]][[factor_number]]
+
+      # Possible factors are:
+      # (a) "prior" (prior variant)
+      # (b) one or both of "evaluate_log_prior","simulate_prior" (prior variant)
+      # (c) "evaluate_log_likelihood", alone (likelihood variant)
+      # (d) "simulate_model" and (ABC, SL, etc) (likelihood variant)
+
+      if (block_name %in% prior_function_types)
+      {
+        new_is_llhd = FALSE
+      }
+      else
+      {
+        new_is_llhd = TRUE
+      }
+
+      if ("prior" %in% names(current_factor_info))
+      {
+        # factor is complete
+        print(paste('Factor ends on line ',line_counter-1,'. Contains prior.',sep = ""))
+        factor_number = factor_number + 1
+      }
+      else if ( ("evaluate_log_prior" %in% names(current_factor_info)) || ("simulate_prior" %in% names(current_factor_info)) )
+      {
+        # factor is complete
+        if ( ("evaluate_log_prior" %in% names(current_factor_info)) && (block_name=="evaluate_log_prior") )
+        {
+          if ("simulate_prior" %in% names(current_factor_info))
+          {
+            print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_prior and simulate_prior.',sep = ""))
+          }
+          else
+          {
+            print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_prior.',sep = ""))
+          }
+          factor_number = factor_number + 1
+        }
+        else if ( ("simulate_prior" %in% names(current_factor_info)) && (block_name=="simulate_prior") )
+        {
+          if ("evaluate_log_prior" %in% names(current_factor_info))
+          {
+            print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_prior and simulate_prior.',sep = ""))
+          }
+          else
+          {
+            print(paste('Factor ends on line ',line_counter-1,'. Contains simulate_prior.',sep = ""))
+          }
+          factor_number = factor_number + 1
+        }
+        else if (new_is_llhd)
+        {
+          if ( ("evaluate_log_prior" %in% names(current_factor_info)) && ("simulate_prior" %in% names(current_factor_info)) )
+          {
+            print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_prior and simulate_prior.',sep = ""))
+          }
+          else if ("evaluate_log_prior" %in% names(current_factor_info))
+          {
+            print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_prior.',sep = ""))
+          }
+          else if ("simulate_prior" %in% names(current_factor_info))
+          {
+            print(paste('Factor ends on line ',line_counter-1,'. Contains simulate_prior.',sep = ""))
+          }
+          factor_number = factor_number + 1
+        }
+      }
+      else if ("evaluate_log_likelihood" %in% names(current_factor_info))
+      {
+        # factor is complete
+        print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_likelihood.',sep = ""))
+        factor_number = factor_number + 1
+      }
+    }
+    else
+    {
+      factor_number = factor_number + 1
+    }
+
+    number_to_pass_to_extract_block = factor_number
+  }
+  else if (block_name %in% data_function_types)
+  {
+    block_type = "data"
+    if (data_number!=0)
+    {
+      stop(paste("Invalid file: line ",line_counter,', data already specified.',sep=""))
+    }
+    data_number = data_number + 1
+
+    number_to_pass_to_extract_block = data_number
+  }
+  else if (block_name %in% importance_proposal_types)
+  {
+    stop("Importance proposal not interfaced yet.")
+
+    number_to_pass_to_extract_block = importance_proposal_nunber
+  }
+  else
+  {
+    stop(paste("Invalid file: line ",line_counter,', function type "',block_name,'" unknown.',sep=""))
+  }
+
+  return(list(block_type,
+              number_to_pass_to_extract_block,
+              block_name,
+              is_custom,
+              block_function,
+              factor_number,
+              importance_proposal_nunber,
+              data_number))
+}
+
+extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,parameter_list)
+{
   # ignore block if block number is not positive
-  if (block_number>0)
+  if (factor_number>0)
   {
     if (is_custom==TRUE)
     {
-      blocks[[block_name]][[block_number]] = RcppXPtrUtils::cppXPtr(block_code,plugins=c("cpp11"),depends = c("ilike","RcppArmadillo","BH","dqrng","sitmo"))
+      my_list = list(RcppXPtrUtils::cppXPtr(block_code,plugins=c("cpp11"),depends = c("ilike","RcppArmadillo","BH","dqrng","sitmo")))
+      names(my_list) = c(block_name)
+
+      if (length((blocks[[block_type]]))==0)
+      {
+        blocks[[block_type]][[factor_number]] = my_list
+      }
+      else if (factor_number!=length((blocks[[block_type]])))
+      {
+        blocks[[block_type]][[factor_number]] = my_list
+      }
+      else
+      {
+        blocks[[block_type]][[factor_number]] = append(blocks[[block_type]][[factor_number]],my_list)
+      }
     }
     else
     {
@@ -164,7 +324,7 @@ extract_block <- function(blocks,block_name,block_number,block_code,block_functi
         function_name <- parts[1]
         if ( (substr(block_function,nchar(function_name)+1,nchar(function_name)+1)!="(") || (substr(block_function,nchar(block_function),nchar(block_function))!=")"))
         {
-          stop(paste("Block ",block_name,", number ",block_number,": input does not specify a function.",sep=""))
+          stop(paste("Block ",block_name,", line number ",line_counter,": input does not specify a function.",sep=""))
         }
         arg_string <- substr(block_function,nchar(function_name)+2,nchar(block_function)-1)
 
@@ -182,7 +342,7 @@ extract_block <- function(blocks,block_name,block_number,block_code,block_functi
       }
       else
       {
-        stop(paste("Block ",block_name,", number ",block_number,": function needs to have a name.",sep=""))
+        stop(paste("Block ",block_name,", line number ",line_counter,": function needs to have a name.",sep=""))
       }
 
       if (is_like_function==TRUE)
@@ -200,13 +360,37 @@ extract_block <- function(blocks,block_name,block_number,block_code,block_functi
             parameters[[k-1]] = split_arg_string[k]
           }
 
-          blocks[[block_name]][[block_number]][["type"]] = ilike_type
-          blocks[[block_name]][[block_number]][["variables"]] = variables
-          blocks[[block_name]][[block_number]][["parameters"]] = parameters
+          # temp_list = blocks[[block_type]]
+          # temp_list[[factor_number]][[block_name]][["type"]] = ilike_type
+          # temp_list[[factor_number]][[block_name]][["variables"]] = variables
+          # temp_list[[factor_number]][[block_name]][["parameters"]] = parameters
+          # blocks[[block_type]] = temp_list
+
+          my_list = list(list(type=ilike_type,
+                              variables=variables,
+                              parameters=parameters))
+          names(my_list) = c(block_name)
+
+          if (length((blocks[[block_type]]))==0)
+          {
+            blocks[[block_type]][[factor_number]] = my_list
+          }
+          else if (factor_number!=length((blocks[[block_type]])))
+          {
+            blocks[[block_type]][[factor_number]] = my_list
+          }
+          else
+          {
+            blocks[[block_type]][[factor_number]] = append(blocks[[block_type]][[factor_number]],my_list)
+          }
+
+          #blocks[[block_type]][[factor_number]][[block_name]][["type"]] = ilike_type
+          #blocks[[block_type]][[factor_number]][[block_name]][["variables"]] = variables
+          #blocks[[block_type]][[factor_number]][[block_name]][["parameters"]] = parameters
         }
         else
         {
-          stop(paste("Block ",block_name,", number ",block_number,": ",block_name," is invalid block type.",sep=""))
+          stop(paste("Block ",block_name,", line number ",line_counter,": ",block_name," is invalid block type.",sep=""))
         }
       }
       else
@@ -228,7 +412,7 @@ extract_block <- function(blocks,block_name,block_number,block_code,block_functi
 
         if (length(split_at_equals)>2)
         {
-          stop(paste("Block ",block_name,", number ",block_number,": can have a maximum of one equals sign in it.",sep=""))
+          stop(paste("Block ",block_name,", line number ",line_counter,": can have a maximum of one equals sign in it.",sep=""))
         }
 
         function_info = ilike_parse(function_to_use,
@@ -249,7 +433,7 @@ extract_block <- function(blocks,block_name,block_number,block_code,block_functi
             split_at_dot = strsplit(R_function_arguments[i],"\\.")[[1]]
             if (length(split_at_dot)==0)
             {
-              stop(paste("Block ",block_name,", number ",block_number,": argument is of size zero.",sep=""))
+              stop(paste("Block ",block_name,", line number ",line_counter,": argument is of size zero.",sep=""))
             }
             else if (length(split_at_dot)==1)
             {
@@ -279,7 +463,7 @@ extract_block <- function(blocks,block_name,block_number,block_code,block_functi
         # source
         # delete file
 
-        cpp_function_name = paste(block_name,block_number,sep="")
+        cpp_function_name = paste(block_name,factor_number,sep="")
         R_function_name = paste(cpp_function_name,'_R',sep="")
 
         temp_filename = paste(cpp_function_name,".cpp",sep="")
@@ -289,7 +473,7 @@ extract_block <- function(blocks,block_name,block_number,block_code,block_functi
         {
           if (sum(which_parameters)>0)
           {
-            stop(paste("Block ",block_name,", number ",block_number,": using variables from parameters not possible in a data function.",sep=""))
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in a data function.",sep=""))
           }
 
           return_type = "Data"
@@ -297,7 +481,7 @@ extract_block <- function(blocks,block_name,block_number,block_code,block_functi
           #args_for_typedef = ""
           if (output_variable=="")
           {
-            stop(paste("Block ",block_name,", number ",block_number,": no output variables specified, need output_variable=some_function(...).",sep=""))
+            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
           }
 
           function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Data output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
@@ -306,7 +490,7 @@ extract_block <- function(blocks,block_name,block_number,block_code,block_functi
         {
           if (sum(which_data)>0)
           {
-            stop(paste("Block ",block_name,", number ",block_number,": using variables from data not possible in a prior.",sep=""))
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a prior.",sep=""))
           }
 
           return_type = "double"
@@ -328,12 +512,12 @@ extract_block <- function(blocks,block_name,block_number,block_code,block_functi
         {
           if (sum(which_data)>0)
           {
-            stop(paste("Block ",block_name,", number ",block_number,": using variables from data not possible in a prior.",sep=""))
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a prior.",sep=""))
           }
 
           if (output_variable=="")
           {
-            stop(paste("Block ",block_name,", number ",block_number,": no output variables specified, need output_variable=some_function(...).",sep=""))
+            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
           }
 
           return_type = "Parameters"
@@ -344,7 +528,7 @@ extract_block <- function(blocks,block_name,block_number,block_code,block_functi
         }
         else
         {
-          stop(paste("Block ",block_name,", number ",block_number,": block is of unknown type.",sep=""))
+          stop(paste("Block ",block_name,", line number ",line_counter,": block is of unknown type.",sep=""))
         }
 
         args_for_typedef = paste(arguments,collapse=",")
@@ -388,7 +572,21 @@ extract_block <- function(blocks,block_name,block_number,block_code,block_functi
         Rcpp::sourceCpp(temp_filename)
         file.remove(temp_filename)
 
-        blocks[[block_name]][[block_number]] = get(xptr_name)()
+        my_list = list()
+        names(my_list) = c(block_name)
+        if (length((blocks[[block_type]]))==0)
+        {
+          blocks[[block_type]][[factor_number]] = my_list
+        }
+        else if (factor_number!=length((blocks[[block_type]])))
+        {
+          blocks[[block_type]][[factor_number]] = my_list
+        }
+        else
+        {
+          blocks[[block_type]][[factor_number]] = append(blocks[[block_type]] [[factor_number]],my_list)
+        }
+        blocks[[block_type]][[factor_number]][[block_name]] = get(xptr_name)
       }
 
     }
@@ -453,6 +651,13 @@ parse_ilike_model <- function(filename,
   line_counter = 0
   add_to_block_code = TRUE
   function_names = c()
+  in_factor = FALSE
+
+  factor_number = 0
+  importance_proposal_nunber = 0
+  data_number = 0
+  block_type = "none"
+  block_name = "none"
 
   while ( TRUE ) {
     line = readLines(the_file, n = 1)
@@ -481,73 +686,41 @@ parse_ilike_model <- function(filename,
           }
           else # end current block
           {
-            blocks = extract_block(blocks,block_name,block_number,block_code,block_function,is_custom,parameter_list)
+            blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list)
             is_custom = FALSE
             block_code = ""
           }
 
-          if (nchar(line)==8)
-          {
-            stop("New section of file needs a name: use /***name***/.")
-          }
-
           unparsed_block_name = substr(line, 5, nchar(line)-4)
+
+          if (nchar(unparsed_block_name)==8)
+          {
+            stop(paste("Invalid file: line ",line_counter,", new section of file needs a name: use /***name***/.",sep=""))
+          }
+          split_block_name = split_string(unparsed_block_name)
+          new_block_info = determine_block_type(split_block_name,blocks,line_counter,block_type,block_name,factor_number,importance_proposal_nunber,data_number)
 
           # expect input for each block in one of the following forms:
           # (a) /***evaluate_log_prior***/, followed by a C++ function
-          # (b) /***evaluate_log_prior,n***/, in the case of a model with multiple factors, where this is the nth factor
+          # (b) /***evaluate_log_prior***/, in the case of a model with multiple factors, where this is the nth factor
           # (c) /***prior,ilike::lnorm(tau,1,1)***/, to use a lognormal distribution with parameters 1 and 1
-          # (d) /***prior,n,ilike::lnorm(tau,1,1)***/, to use a lognormal distribution with parameters 1 and 1, in the case of a model with multiple factors, where this is the nth factor
+          # (d) /***prior,ilike::lnorm(tau,1,1)***/, to use a lognormal distribution with parameters 1 and 1, in the case of a model with multiple factors, where this is the nth factor
           # (e) /***evaluate_log_prior,dlnorm(tau,1,1,TRUE)***/, so that we extract the named argument from the parameters read into the function, and input the other arguments, in this order, in to dlnorm (dlnorm in this case is a base R function, but it could be a user defined one in an R, python or julia file)
-          # (f) /***evaluate_log_prior,n,dlnorm(tau,1,1,TRUE)***/, is the same case as (e), except that we have a model with multiple factors and this is the nth factor
+          # (f) /***evaluate_log_prior,dlnorm(tau,1,1,TRUE)***/, is the same case as (e), except that we have a model with multiple factors and this is the nth factor
           # (g) /***evaluate_log_likelihood,n,dnorm(data.y,0,recip(sqrt(tau)),TRUE)***/
           # (h) /***simulate_prior,tau=rlnorm(1,1,1)***/, when we simulate a variable
-          # (i) /***simulate_prior,1,theta=rlnorm(1,theta,1)***/, for simulations that involve multiple steps
-          # (j) /***simulate_prior,2,tau=rlnorm(1,theta,1)***/, the counterpart to (i)
+          # (i) /***simulate_prior,theta=rlnorm(1,1,1)***/, for simulations that involve multiple steps
+          # (j) /***simulate_prior,tau=rlnorm(1,theta,1)***/, the counterpart to (i)
 
-          split_block_name = split_string(unparsed_block_name)
+          block_type = new_block_info[[1]]
+          number_to_pass_to_extract_block = new_block_info[[2]]
+          block_name = new_block_info[[3]]
+          is_custom = new_block_info[[4]]
+          block_function = new_block_info[[5]]
+          factor_number = new_block_info[[6]]
+          importance_proposal_nunber = new_block_info[[7]]
+          data_number = new_block_info[[8]]
 
-          if (length(split_block_name)==1)
-          {
-            block_name = split_block_name
-            block_number = 1
-            is_custom = TRUE
-          }
-          else if (length(split_block_name)==2)
-          {
-            # block number is always second argument, if present
-            block_number = strtoi(split_block_name[2])
-            if (is.na(block_number)) # not a number, so second argument must be a function
-            {
-              block_function = split_block_name[2]
-              block_number = 1
-            }
-            else # is a number. There are no other arguments, so we have a custom C++ function.
-            {
-              is_custom = TRUE
-            }
-            block_name = split_block_name[1]
-          }
-          else if (length(split_block_name)==3)
-          {
-            is_custom = FALSE
-            block_name = split_block_name[1]
-
-            block_number = strtoi(split_block_name[2])
-            if (is.na(block_number))
-            {
-              # only way of having 3 arguments is that the second is a number
-              stop(paste("Invalid file: line ",line_counter,", expected number as second argument.",sep=""))
-            }
-            else
-            {
-              block_function = split_block_name[3]
-            }
-          }
-          else
-          {
-            stop(paste("Invalid file: line ",line_counter,", invalid function definition (can only have up three parts, separated by commas).",sep=""))
-          }
         }
       }
     }
@@ -562,9 +735,9 @@ parse_ilike_model <- function(filename,
   if (in_block==TRUE)
   {
     # ignore block if block number is not positive
-    if (block_number>0)
+    if (number_to_pass_to_extract_block>0)
     {
-      blocks = extract_block(blocks,block_name,block_number,block_code,block_function,is_custom,parameter_list)
+      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list)
     }
   }
 

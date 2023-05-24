@@ -424,6 +424,7 @@ void ImportanceSampler::simulate_smc(SMCOutput* current_state)
 
 void ImportanceSampler::evaluate_smc(SMCOutput* current_state)
 {
+  //
   /*
   //this->weight(current_state, conditioned_on_parameters);
   this->the_worker->weight(this->index,
