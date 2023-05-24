@@ -317,7 +317,7 @@ print_importance_proposal_info = function(importance_proposal_index,blocks,line_
   print(paste('Importance_proposal ends on line ',line_counter,'. Contains ',importance_proposal_info_string,'.',sep = ""))
 }
 
-determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,importance_proposal_nunber,data_number)
+determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,importance_proposal_number,data_number)
 {
   if (length(split_block_name)==1)
   {
@@ -357,11 +357,9 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
   }
   else if (block_name %in% importance_proposal_types)
   {
-    stop("Importance proposal not interfaced yet.")
-
     block_type = "importance_proposal"
-    importance_proposal_nunber = importance_proposal_processing(importance_proposal_nunber)
-    number_to_pass_to_extract_block = importance_proposal_nunber
+    importance_proposal_number = importance_proposal_processing(importance_proposal_number,blocks,block_name,line_counter)
+    number_to_pass_to_extract_block = importance_proposal_number
   }
   else
   {
@@ -374,7 +372,7 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
               is_custom,
               block_function,
               factor_number,
-              importance_proposal_nunber,
+              importance_proposal_number,
               data_number))
 }
 
@@ -830,7 +828,7 @@ parse_ilike_model <- function(filename,
   in_factor = FALSE
 
   factor_number = 0
-  importance_proposal_nunber = 0
+  importance_proposal_number = 0
   data_number = 0
   block_type = "none"
   block_name = "none"
@@ -874,7 +872,7 @@ parse_ilike_model <- function(filename,
             stop(paste("Invalid file: line ",line_counter,", new section of file needs a name: use /***name***/.",sep=""))
           }
           split_block_name = split_string(unparsed_block_name)
-          new_block_info = determine_block_type(split_block_name,blocks,line_counter,block_type,block_name,factor_number,importance_proposal_nunber,data_number)
+          new_block_info = determine_block_type(split_block_name,blocks,line_counter,block_type,block_name,factor_number,importance_proposal_number,data_number)
 
           # expect input for each block in one of the following forms:
           # (a) /***evaluate_log_prior***/, followed by a C++ function
@@ -894,7 +892,7 @@ parse_ilike_model <- function(filename,
           is_custom = new_block_info[[4]]
           block_function = new_block_info[[5]]
           factor_number = new_block_info[[6]]
-          importance_proposal_nunber = new_block_info[[7]]
+          importance_proposal_number = new_block_info[[7]]
           data_number = new_block_info[[8]]
 
         }
@@ -918,7 +916,7 @@ parse_ilike_model <- function(filename,
       {
         print_factor_info(length(blocks[["factor"]]),blocks,line_counter)
       }
-      if (factor_number==length(blocks[["importance_proposal"]]))
+      if (importance_proposal_number==length(blocks[["importance_proposal"]]))
       {
         print_importance_proposal_info(length(blocks[["importance_proposal"]]),blocks,line_counter)
       }
@@ -968,20 +966,22 @@ parse_ilike_model <- function(filename,
     {
       proposal_type = c(TRUE,TRUE)#,TRUE,TRUE)
 
-      tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[["evaluate_log_importance_proposal"]],  "double", c("const Parameters&")) }
+      tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["evaluate_log_importance_proposal"]],  "double", c("const Parameters&")) }
                 , error = function(e) {proposal_type[1] <<- FALSE})
 
       # tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[["evaluate_log_importance_proposal"]],  "double", c("const Parameters&","const Parameters&")) }
       #           , error = function(e) {proposal_type[2] <<- FALSE})
 
-      tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[["evaluate_log_importance_proposal"]],  "double", c("const Parameters&","const Data&")) }
+      tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["evaluate_log_importance_proposal"]],  "double", c("const Parameters&","const Data&")) }
                 , error = function(e) {proposal_type[2] <<- FALSE})
 
       # tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[["evaluate_log_importance_proposal"]],  "double", c("const Parameters&","const Parameters&","const Data&")) }
       #           , error = function(e) {proposal_type[4] <<- FALSE})
 
       if (length(which(proposal_type==TRUE))==0)
+      {
         stop("No valid importance proposal specified.")
+      }
 
       blocks[["importance_proposal"]][[i]][["type"]] = which(proposal_type)[1]
     }
@@ -990,22 +990,24 @@ parse_ilike_model <- function(filename,
     {
       proposal_type = c(TRUE,TRUE)#TRUE,TRUE)
 
-      tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[["simulate_importance_proposal"]], "Parameters", c("RandomNumberGenerator&")) }
+      tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["simulate_importance_proposal"]], "Parameters", c("RandomNumberGenerator&")) }
                 , error = function(e) {proposal_type[1] <<- FALSE})
 
       # tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[["simulate_importance_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
       #           , error = function(e) {proposal_type[2] <<- FALSE})
 
-      tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[["simulate_importance_proposal"]], "Parameters", c("RandomNumberGenerator&","const Data&")) }
+      tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["simulate_importance_proposal"]], "Parameters", c("RandomNumberGenerator&","const Data&")) }
                 , error = function(e) {proposal_type[2] <<- FALSE})
 
       # tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[["simulate_importance_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
       #           , error = function(e) {proposal_type[4] <<- FALSE})
 
       if (length(which(proposal_type==TRUE))==0)
+      {
         stop("No valid importance proposal specified.")
+      }
 
-      if ("type" %in% names(current_importance_proposal))
+      if ("type" %in% names(blocks[["importance_proposal"]][[i]]))
       {
         if (blocks[["importance_proposal"]][[i]][["type"]]!=which(proposal_type)[1])
         {
