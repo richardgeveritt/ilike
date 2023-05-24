@@ -19,6 +19,9 @@ using namespace Rcpp;
 #include "loggaussian_independent_proposal_kernel.h"
 #include "gamma_independent_proposal_kernel.h"
 #include "custom_distribution_proposal_kernel.h"
+#include "custom_independent_proposal_kernel.h"
+#include "custom_guided_distribution_proposal_kernel.h"
+#include "custom_guided_independent_proposal_kernel.h"
 #include "smc_output.h"
 #include "composite_independent_proposal_kernel.h"
 
@@ -266,8 +269,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_eatimators(RandomNumberGenerato
             
           }
         }
-        
-        if (current_factor.containsElementNamed("evaluate_log_prior"))
+        else if (current_factor.containsElementNamed("evaluate_log_prior"))
         {
           if (include_priors)
           {
@@ -277,17 +279,18 @@ std::vector<LikelihoodEstimator*> get_likelihood_eatimators(RandomNumberGenerato
             
           }
         }
-        
-        if ( current_factor.containsElementNamed("evaluate_log_likelihood") )
+        else if ( current_factor.containsElementNamed("evaluate_log_likelihood") )
         {
           
           SEXP evaluate_log_likelihood_SEXP = current_factor["evaluate_log_likelihood"];
           exact_likelihood_factors.push_back(new CustomLikelihoodFactor(load_evaluate_log_likelihood(evaluate_log_likelihood_SEXP),
                                                                         data_in));
           
-          
         }
-        
+        else
+        {
+          stop("Invalid factor.");
+        }
         
       }
       else
@@ -313,7 +316,8 @@ std::vector<LikelihoodEstimator*> get_likelihood_eatimators(RandomNumberGenerato
 }
 
 IndependentProposalKernel* get_proposal(const List &model,
-                                        const List &model_parameters)
+                                        const List &model_parameters,
+                                        const Data* data)
 {
   IndependentProposalKernel* proposal = NULL;
   std::vector<IndependentProposalKernel*> proposals;
@@ -398,13 +402,29 @@ IndependentProposalKernel* get_proposal(const List &model,
             stop("Error in proposal section of model file.");
           }
         }
-        
-        if ( model.containsElementNamed("evaluate_log_importance_proposal") && model.containsElementNamed("simulate_importance_proposal") )
+        else if ( current_proposal.containsElementNamed("evaluate_log_importance_proposal") && current_proposal.containsElementNamed("simulate_importance_proposal") && current_proposal.containsElementNamed("type") )
         {
           SEXP evaluate_log_importance_proposal_SEXP = current_proposal["evaluate_log_importance_proposal"];
           SEXP simulate_importance_proposal_SEXP = current_proposal["simulate_importance_proposal"];
-          proposal = new CustomDistributionProposalKernel(load_simulate_distribution(simulate_importance_proposal_SEXP),
-                                                          load_evaluate_log_distribution(evaluate_log_importance_proposal_SEXP));
+          size_t type = current_proposal["type"];
+          if (type==1)
+          {
+            proposal = new CustomDistributionProposalKernel(load_simulate_distribution(simulate_importance_proposal_SEXP),
+                                                            load_evaluate_log_distribution(evaluate_log_importance_proposal_SEXP));
+          }
+          else if (type==2)
+          {
+            proposal = new CustomGuidedDistributionProposalKernel(load_simulate_guided_distribution(simulate_importance_proposal_SEXP),
+                                                            load_evaluate_log_guided_distribution(evaluate_log_importance_proposal_SEXP),data);
+          }
+          else
+          {
+            stop("Functions read in for proposal are invalid.");
+          }
+        }
+        else
+        {
+          stop("Invalid importance proposal. Maybe you specified a method to simulate from the proposal, but no method to evaluate it?");
         }
         
       }
@@ -537,8 +557,7 @@ IndependentProposalKernel* get_prior_as_simulate_only_proposal(const List &model
             stop("Error in factors section of model file.");
           }
         }
-        
-        if (current_factor.containsElementNamed("simulate_prior"))
+        else if (current_factor.containsElementNamed("simulate_prior"))
         {
           SEXP simulate_prior_SEXP = current_factor["simulate_prior"];
           proposal = new CustomDistributionProposalKernel(load_simulate_distribution(simulate_prior_SEXP));
@@ -581,11 +600,6 @@ size_t ilike_rdtsc()
   return rdtsc();
 }
 
-std::vector<LikelihoodEstimator*> test_fn(RandomNumberGenerator* rng_in)
-{
-  return std::vector<LikelihoodEstimator*>();
-}
-
 // [[Rcpp::export]]
 void do_importance_sampler(const List &model,
                            const List &parameters,
@@ -620,7 +634,8 @@ void do_importance_sampler(const List &model,
                                                       true);
     
     proposal_in = get_proposal(model,
-                               parameters);
+                               parameters,
+                               &the_data);
     
     proposal_is_evaluated_in = true;
     
@@ -628,8 +643,6 @@ void do_importance_sampler(const List &model,
   else
   {
     Rcout << "No importance sampling proposal specified; using prior." << std::endl;
-    
-    //likelihood_estimators = test_fn(&rng,&seed);
     
     likelihood_estimators = get_likelihood_eatimators(&rng,
                                                       &seed,
@@ -708,7 +721,8 @@ void do_smc_mcmc(const List &model,
                                                       true);
     
     proposal_in = get_proposal(model,
-                               parameters);
+                               parameters,
+                               &the_data);
     
     proposal_is_evaluated_in = true;
   }

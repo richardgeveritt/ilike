@@ -1,5 +1,5 @@
-#ifndef CUSTOMINDEPENDENTPROPOSALKERNEL_H
-#define CUSTOMINDEPENDENTPROPOSALKERNEL_H
+#ifndef CUSTOMGUIDEDDISTRIBUTIONPROPOSALKERNEL_H
+#define CUSTOMGUIDEDDISTRIBUTIONPROPOSALKERNEL_H
 
 #include <RcppArmadillo.h>
 using namespace Rcpp;
@@ -11,26 +11,26 @@ using namespace Rcpp;
 #include "distributions.h"
 #include "ilike_header.h"
 
-class CustomIndependentProposalKernel : public IndependentProposalKernel
+class CustomGuidedDistributionProposalKernel : public IndependentProposalKernel
 {
 
 public:
 
-  CustomIndependentProposalKernel();
-  virtual ~CustomIndependentProposalKernel();
+  CustomGuidedDistributionProposalKernel();
+  virtual ~CustomGuidedDistributionProposalKernel();
   
-  CustomIndependentProposalKernel(SimulateIndependentProposalPtr proposal_simulate_in);
+  CustomGuidedDistributionProposalKernel(SimulateGuidedDistributionPtr proposal_simulate_in);
   
-  //CustomIndependentProposalKernel(SimulateIndependentProposalPtr proposal_simulate_in,
-  //                                EvaluateLogIndependentProposalPtr proposal_evaluate_in);
+  //CustomGuidedDistributionProposalKernel(SimulateGuidedDistributionPtr proposal_simulate_in,
+  //                                      EvaluateLogGuidedDistributionPtr proposal_evaluate_in);
   
-  CustomIndependentProposalKernel(SimulateIndependentProposalPtr proposal_simulate_in,
-                                  EvaluateLogIndependentProposalPtr proposal_evaluate_in,
-                                  const Parameters &proposal_parameters_in);
+  CustomGuidedDistributionProposalKernel(SimulateGuidedDistributionPtr proposal_simulate_in,
+                                        EvaluateLogGuidedDistributionPtr proposal_evaluate_in,
+                                        const Data* data_in);
 
-  CustomIndependentProposalKernel(const CustomIndependentProposalKernel &another);
+  CustomGuidedDistributionProposalKernel(const CustomGuidedDistributionProposalKernel &another);
 
-  void operator=(const CustomIndependentProposalKernel &another);
+  void operator=(const CustomGuidedDistributionProposalKernel &another);
   Kernel* duplicate() const;
   ProposalKernel* proposal_kernel_duplicate() const;
   IndependentProposalKernel* independent_proposal_kernel_duplicate() const;
@@ -76,13 +76,13 @@ public:
 
 protected:
 
-  void make_copy(const CustomIndependentProposalKernel &another);
+  void make_copy(const CustomGuidedDistributionProposalKernel &another);
   
-  EvaluateLogIndependentProposalPtr proposal_evaluate;
+  EvaluateLogGuidedDistributionPtr proposal_evaluate;
   
-  SimulateIndependentProposalPtr proposal_simulate;
+  SimulateGuidedDistributionPtr proposal_simulate;
   
-  Parameters proposal_parameters;
+  const Data* data;
   
 };
 

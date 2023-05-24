@@ -26,7 +26,7 @@ typedef arma::mat (*EvaluateGradientLogLikelihoodPtr)(const std::string &variabl
                                                       const Parameters &inputs,
                                                       const Data &observed_data);
 
-typedef double (*EvaluateLogMCMCProposalPtr)(const Parameters &proposed_parameters,
+typedef double (*EvaluateLogMCMCProposalPtr)(const Parameters &parameters,
                                              const Parameters &old_parameters,
                                              const Parameters &proposal_parameters);
 
@@ -34,11 +34,31 @@ typedef Parameters (*SimulateMCMCProposalPtr)(RandomNumberGenerator &rng,
                                               const Parameters &parameters,
                                               const Parameters &proposal_parameters);
 
-typedef double (*EvaluateLogIndependentProposalPtr)(const Parameters &proposed_parameters,
+typedef double (*EvaluateLogIndependentProposalPtr)(const Parameters &parameters,
                                                     const Parameters &proposal_parameters);
 
 typedef Parameters (*SimulateIndependentProposalPtr)(RandomNumberGenerator &rng,
                                                      const Parameters &proposal_parameters);
+
+typedef double (*EvaluateLogGuidedDistributionPtr)(const Parameters &parameters,
+                                                   const Data &data);
+
+typedef Parameters (*SimulateGuidedDistributionPtr)(RandomNumberGenerator &rng,
+                                                    const Data &data);
+
+typedef double (*EvaluateLogIndependentProposalPtr)(const Parameters &parameters,
+                                                          const Parameters &proposal_parameters);
+
+typedef Parameters (*SimulateIndependentProposalPtr)(RandomNumberGenerator &rng,
+                                                           const Parameters &proposal_parameters);
+
+typedef double (*EvaluateLogGuidedIndependentProposalPtr)(const Parameters &parameters,
+                                                          const Parameters &proposal_parameters,
+                                                          const Data &data);
+
+typedef Parameters (*SimulateGuidedIndependentProposalPtr)(RandomNumberGenerator &rng,
+                                                           const Parameters &proposal_parameters,
+                                                           const Data &data);
 
 typedef Data (*SimulateModelPtr)(RandomNumberGenerator &rng,
                                  const Parameters &parameters);
@@ -105,9 +125,19 @@ EvaluateLogDistributionPtr load_evaluate_log_distribution(const SEXP &evaluate_l
 
 SimulateDistributionPtr load_simulate_distribution(const SEXP &simulate_distribution_SEXP);
 
-EvaluateLogLikelihoodPtr load_evaluate_log_likelihood(const SEXP &evaluate_log_likelihood_SEXP);
+EvaluateLogGuidedDistributionPtr load_evaluate_log_guided_distribution(const SEXP &evaluate_log_guided_distribution_SEXP);
 
-EstimateLogLikelihoodPtr load_estimate_log_likelihood(const SEXP &estimate_log_likelihood_SEXP);
+SimulateGuidedDistributionPtr load_simulate_guided_distribution(const SEXP &simulate_guided_distribution_SEXP);
+
+EvaluateLogIndependentProposalPtr load_evaluate_log_independent_proposal(const SEXP &evaluate_log_independent_proposal_SEXP);
+
+SimulateIndependentProposalPtr load_simulate_independent_proposal(const SEXP &simulate_independent_proposal_SEXP);
+
+EvaluateLogGuidedIndependentProposalPtr load_evaluate_log_guided_independent_proposal(const SEXP &evaluate_log_guided_independent_proposal_SEXP);
+
+SimulateGuidedIndependentProposalPtr load_simulate_guided_independent_proposal(const SEXP &simulate_guided_independent_proposal_SEXP);
+
+EvaluateLogLikelihoodPtr load_evaluate_log_likelihood(const SEXP &evaluate_log_likelihood_SEXP);
 
 SimulateModelPtr load_simulate_model(const SEXP &simulate_model_SEXP);
 
@@ -170,6 +200,42 @@ inline SimulateDistributionPtr load_simulate_distribution(const SEXP &simulate_d
 {
   XPtr<SimulateDistributionPtr> simulate_distribution_XPtr(simulate_distribution_SEXP);
   return *simulate_distribution_XPtr;
+}
+
+inline EvaluateLogGuidedDistributionPtr load_evaluate_log_guided_distribution(const SEXP &evaluate_log_guided_distribution_SEXP)
+{
+  XPtr<EvaluateLogGuidedDistributionPtr> evaluate_log_guided_distribution_XPtr(evaluate_log_guided_distribution_SEXP);
+  return *evaluate_log_guided_distribution_XPtr;
+}
+
+inline SimulateGuidedDistributionPtr load_simulate_guided_distribution(const SEXP &simulate_guided_distribution_SEXP)
+{
+  XPtr<SimulateGuidedDistributionPtr> simulate_guided_distribution_XPtr(simulate_guided_distribution_SEXP);
+  return *simulate_guided_distribution_XPtr;
+}
+
+inline EvaluateLogIndependentProposalPtr load_evaluate_log_independent_proposal(const SEXP &evaluate_log_independent_proposal_SEXP)
+{
+  XPtr<EvaluateLogIndependentProposalPtr> evaluate_log_independent_proposal_XPtr(evaluate_log_independent_proposal_SEXP);
+  return *evaluate_log_independent_proposal_XPtr;
+}
+
+inline SimulateGuidedIndependentProposalPtr load_guided_simulate_independent_proposal(const SEXP &simulate_guided_independent_proposal_SEXP)
+{
+  XPtr<SimulateGuidedIndependentProposalPtr> simulate_guided_distribution_XPtr(simulate_guided_independent_proposal_SEXP);
+  return *simulate_guided_distribution_XPtr;
+}
+
+inline EvaluateLogGuidedIndependentProposalPtr load_evaluate_log_guided_independent_proposal(const SEXP &evaluate_log_guided_independent_proposal_SEXP)
+{
+  XPtr<EvaluateLogGuidedIndependentProposalPtr> evaluate_log_guided_independent_proposal_XPtr(evaluate_log_guided_independent_proposal_SEXP);
+  return *evaluate_log_guided_independent_proposal_XPtr;
+}
+
+inline SimulateGuidedIndependentProposalPtr load_simulate_guided_independent_proposal(const SEXP &simulate_guided_independent_proposal_SEXP)
+{
+  XPtr<SimulateGuidedIndependentProposalPtr> simulate_guided_independent_proposal_XPtr(simulate_guided_independent_proposal_SEXP);
+  return *simulate_guided_independent_proposal_XPtr;
 }
 
 inline SimulateIndependentProposalPtr load_simulate_independent_proposal(const SEXP &simulate_independent_proposal_SEXP)

@@ -22,6 +22,7 @@ CustomIndependentProposalKernel::CustomIndependentProposalKernel(SimulateIndepen
   this->proposal_parameters = Parameters();
 }
 
+/*
 CustomIndependentProposalKernel::CustomIndependentProposalKernel(SimulateIndependentProposalPtr proposal_simulate_in,
                                                                  EvaluateLogIndependentProposalPtr proposal_evaluate_in)
 :IndependentProposalKernel()
@@ -30,6 +31,7 @@ CustomIndependentProposalKernel::CustomIndependentProposalKernel(SimulateIndepen
   this->proposal_simulate = proposal_simulate_in;
   this->proposal_parameters = Parameters();
 }
+*/
 
 CustomIndependentProposalKernel::CustomIndependentProposalKernel(SimulateIndependentProposalPtr proposal_simulate_in,
                                                                  EvaluateLogIndependentProposalPtr proposal_evaluate_in,
