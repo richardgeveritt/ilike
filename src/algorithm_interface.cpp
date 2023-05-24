@@ -174,22 +174,15 @@ std::vector<LikelihoodEstimator*> get_likelihood_eatimators(RandomNumberGenerato
   
   std::vector<DistributionFactor*> prior_factors;
   std::vector<LikelihoodFactor*> exact_likelihood_factors;
-  
-  //Rcout << 0 << std::endl;
-  
+
   if ( model.containsElementNamed("factor") )
   {
     
     List factors = model["factor"];
-    
-    //Rcout << factors.size() << std::endl;
-    
+
     for (size_t i=0; i<factors.size(); ++i)
     {
 
-      //Rcout << i+1 << std::endl;
-      
-      
       if (Rf_isNewList(factors[i]))
       {
         
@@ -490,7 +483,6 @@ IndependentProposalKernel* get_prior_as_simulate_only_proposal(const List &model
               }
               else if (type=="lnorm")
               {
-                Rcout << "made it!";
                 List info = get_single_variable_two_parameter_info(model_parameters,
                                                                    current_prior,
                                                                    type);
@@ -548,7 +540,6 @@ IndependentProposalKernel* get_prior_as_simulate_only_proposal(const List &model
         
         if (current_factor.containsElementNamed("simulate_prior"))
         {
-          Rcout << "made it to simulate!";
           SEXP simulate_prior_SEXP = current_factor["simulate_prior"];
           proposal = new CustomDistributionProposalKernel(load_simulate_distribution(simulate_prior_SEXP));
           
@@ -608,7 +599,6 @@ void do_importance_sampler(const List &model,
   RandomNumberGenerator rng;
   Data the_data = get_data(model);
   
-  Rcout << the_data;
   //std::string results_name = "/Users/richard/Dropbox/code/ilike/experiments/test";
   
   // May need to alter for cases where the likelihood needs to be tuned automatically (e.g. in ABC).

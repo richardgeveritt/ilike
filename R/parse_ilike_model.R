@@ -140,6 +140,129 @@ ilike_parse <- function(input,
   return(list(result_function_text,required_args))
 }
 
+factor_processing = function(factor_number,blocks,block_name,prior_function_types,line_counter)
+{
+  # Is this a continuation of the current factor, or a new one?
+
+  # Get the current factor info.
+  if ("factor" %in% names(blocks))
+  {
+    current_factor_info = blocks[["factor"]][[factor_number]]
+
+    # Possible factors are:
+    # (a) "prior" (prior variant)
+    # (b) one or both of "evaluate_log_prior","simulate_prior" (prior variant)
+    # (c) "evaluate_log_likelihood", alone (likelihood variant)
+    # (d) "simulate_model" and (ABC, SL, etc) (likelihood variant)
+
+    if (block_name %in% prior_function_types)
+    {
+      new_is_llhd = FALSE
+    }
+    else
+    {
+      new_is_llhd = TRUE
+    }
+
+    if ("prior" %in% names(current_factor_info))
+    {
+      # factor is complete
+      print(paste('Factor ends on line ',line_counter-1,'. Contains prior.',sep = ""))
+      factor_number = factor_number + 1
+    }
+    else if ( ("evaluate_log_prior" %in% names(current_factor_info)) || ("simulate_prior" %in% names(current_factor_info)) )
+    {
+      # factor is complete
+      if ( ("evaluate_log_prior" %in% names(current_factor_info)) && (block_name=="evaluate_log_prior") )
+      {
+        # if ("simulate_prior" %in% names(current_factor_info))
+        # {
+        #   print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_prior and simulate_prior.',sep = ""))
+        # }
+        # else
+        # {
+        #   print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_prior.',sep = ""))
+        # }
+        print_factor_info(factor_number,blocks,line_counter-1)
+        factor_number = factor_number + 1
+      }
+      else if ( ("simulate_prior" %in% names(current_factor_info)) && (block_name=="simulate_prior") )
+      {
+        # if ("evaluate_log_prior" %in% names(current_factor_info))
+        # {
+        #   print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_prior and simulate_prior.',sep = ""))
+        # }
+        # else
+        # {
+        #   print(paste('Factor ends on line ',line_counter-1,'. Contains simulate_prior.',sep = ""))
+        # }
+        print_factor_info(factor_number,blocks,line_counter-1)
+        factor_number = factor_number + 1
+      }
+      else if (new_is_llhd)
+      {
+        # if ( ("evaluate_log_prior" %in% names(current_factor_info)) && ("simulate_prior" %in% names(current_factor_info)) )
+        # {
+        #   print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_prior and simulate_prior.',sep = ""))
+        # }
+        # else if ("evaluate_log_prior" %in% names(current_factor_info))
+        # {
+        #   print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_prior.',sep = ""))
+        # }
+        # else if ("simulate_prior" %in% names(current_factor_info))
+        # {
+        #   print(paste('Factor ends on line ',line_counter-1,'. Contains simulate_prior.',sep = ""))
+        # }
+        print_factor_info(factor_number,blocks,line_counter-1)
+        factor_number = factor_number + 1
+      }
+    }
+    else if ("evaluate_log_likelihood" %in% names(current_factor_info))
+    {
+      # factor is complete
+      #print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_likelihood.',sep = ""))
+      print_factor_info(factor_number,blocks,line_counter-1)
+      factor_number = factor_number + 1
+    }
+  }
+  else
+  {
+    factor_number = factor_number + 1
+  }
+
+  return(factor_number)
+}
+
+data_processing = function(data_number)
+{
+  if (data_number!=0)
+  {
+    stop(paste("Invalid file: line ",line_counter,', data already specified.',sep=""))
+  }
+  data_number = data_number + 1
+  return(data_number)
+}
+
+importance_proposal_processing = function(importance_proposal_number)
+{
+  return(importance_proposal_number)
+}
+
+print_factor_info = function(factor_index,blocks,line_counter)
+{
+  factor_info_string = ""
+  last_factor_names = names(blocks[["factor"]][[factor_index]])
+  for (j in 1:length(last_factor_names))
+  {
+    factor_info_string = paste(factor_info_string,last_factor_names[j],sep=", ")
+  }
+  if (nchar(factor_info_string)>2)
+  {
+    factor_info_string = substr(factor_info_string,3,nchar(factor_info_string))
+  }
+  print(paste('Factor ends on line ',line_counter,'. Contains ',factor_info_string,'.',sep = ""))
+}
+
 determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,importance_proposal_nunber,data_number)
 {
   if (length(split_block_name)==1)
@@ -169,108 +292,21 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
   if (block_name %in% factor_function_types)
   {
     block_type = "factor"
-
-    # Is this a continuation of the current factor, or a new one?
-
-    # Get the current factor info.
-    if ("factor" %in% names(blocks))
-    {
-      current_factor_info = blocks[["factor"]][[factor_number]]
-
-      # Possible factors are:
-      # (a) "prior" (prior variant)
-      # (b) one or both of "evaluate_log_prior","simulate_prior" (prior variant)
-      # (c) "evaluate_log_likelihood", alone (likelihood variant)
-      # (d) "simulate_model" and (ABC, SL, etc) (likelihood variant)
-
-      if (block_name %in% prior_function_types)
-      {
-        new_is_llhd = FALSE
-      }
-      else
-      {
-        new_is_llhd = TRUE
-      }
-
-      if ("prior" %in% names(current_factor_info))
-      {
-        # factor is complete
-        print(paste('Factor ends on line ',line_counter-1,'. Contains prior.',sep = ""))
-        factor_number = factor_number + 1
-      }
-      else if ( ("evaluate_log_prior" %in% names(current_factor_info)) || ("simulate_prior" %in% names(current_factor_info)) )
-      {
-        # factor is complete
-        if ( ("evaluate_log_prior" %in% names(current_factor_info)) && (block_name=="evaluate_log_prior") )
-        {
-          if ("simulate_prior" %in% names(current_factor_info))
-          {
-            print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_prior and simulate_prior.',sep = ""))
-          }
-          else
-          {
-            print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_prior.',sep = ""))
-          }
-          factor_number = factor_number + 1
-        }
-        else if ( ("simulate_prior" %in% names(current_factor_info)) && (block_name=="simulate_prior") )
-        {
-          if ("evaluate_log_prior" %in% names(current_factor_info))
-          {
-            print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_prior and simulate_prior.',sep = ""))
-          }
-          else
-          {
-            print(paste('Factor ends on line ',line_counter-1,'. Contains simulate_prior.',sep = ""))
-          }
-          factor_number = factor_number + 1
-        }
-        else if (new_is_llhd)
-        {
-          if ( ("evaluate_log_prior" %in% names(current_factor_info)) && ("simulate_prior" %in% names(current_factor_info)) )
-          {
-            print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_prior and simulate_prior.',sep = ""))
-          }
-          else if ("evaluate_log_prior" %in% names(current_factor_info))
-          {
-            print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_prior.',sep = ""))
-          }
-          else if ("simulate_prior" %in% names(current_factor_info))
-          {
-            print(paste('Factor ends on line ',line_counter-1,'. Contains simulate_prior.',sep = ""))
-          }
-          factor_number = factor_number + 1
-        }
-      }
-      else if ("evaluate_log_likelihood" %in% names(current_factor_info))
-      {
-        # factor is complete
-        print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_likelihood.',sep = ""))
-        factor_number = factor_number + 1
-      }
-    }
-    else
-    {
-      factor_number = factor_number + 1
-    }
-
+    factor_number = factor_processing(factor_number,blocks,block_name,prior_function_types,line_counter)
     number_to_pass_to_extract_block = factor_number
   }
   else if (block_name %in% data_function_types)
   {
     block_type = "data"
-    if (data_number!=0)
-    {
-      stop(paste("Invalid file: line ",line_counter,', data already specified.',sep=""))
-    }
-    data_number = data_number + 1
-
+    data_number = data_processing(data_number)
     number_to_pass_to_extract_block = data_number
   }
   else if (block_name %in% importance_proposal_types)
   {
     stop("Importance proposal not interfaced yet.")
 
+    block_type = "importance_proposal"
+    importance_proposal_nunber = importance_proposal_processing(importance_proposal_nunber)
     number_to_pass_to_extract_block = importance_proposal_nunber
   }
   else
@@ -738,6 +774,10 @@ parse_ilike_model <- function(filename,
     if (number_to_pass_to_extract_block>0)
     {
       blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list)
+      if (factor_number==length(blocks[["factor"]]))
+      {
+        print_factor_info(length(blocks[["factor"]]),blocks,line_counter)
+      }
     }
   }
 
