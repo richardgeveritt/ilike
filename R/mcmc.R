@@ -13,7 +13,8 @@
 #' @export
 mcmc = function(model,
                 results_directory,
-                number_of_importance_points,
+                number_of_mcmc_iterations,
+                initial_values = list(),
                 model_parameter_list = list(),
                 algorithm_parameter_list = list(),
                 seed = NULL,
