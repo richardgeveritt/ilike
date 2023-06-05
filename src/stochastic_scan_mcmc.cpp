@@ -6,6 +6,13 @@ StochasticScanMCMC::StochasticScanMCMC()
 {
 }
 
+StochasticScanMCMC::StochasticScanMCMC(const std::vector<MCMC*> &moves_in,
+                                       const arma::colvec &unnormalised_probabilities_in)
+{
+  this->moves = moves_in;
+  this->probabilities = unnormalised_probabilities_in/sum(unnormalised_probabilities_in);
+}
+
 StochasticScanMCMC::~StochasticScanMCMC()
 {
   for (std::vector<MCMC*>::iterator i=this->moves.begin();
@@ -182,5 +189,15 @@ void StochasticScanMCMC::set_index(Index* index_in)
        ++i)
   {
     (*i)->set_index(index_in);
+  }
+}
+
+void StochasticScanMCMC::set_proposal_parameters(Parameters* proposal_parameters_in)
+{
+  for (auto i=this->moves.begin();
+       i!=this->moves.end();
+       ++i)
+  {
+    (*i)->set_proposal_parameters(proposal_parameters_in);
   }
 }

@@ -56,6 +56,8 @@ public:
   arma::mat subsample_independent_gradient_of_log(const std::string &variable,
                                                   const Parameters &proposed_particle);
   
+  void set_proposal_parameters(Parameters* proposal_parameters_in);
+  
 // Mh has its own parameters.
   // Stochastic has some weights.
   // MH has sim prop and eval prop, t**ake in params. Use current value in acceptance, Set current value if accepted.

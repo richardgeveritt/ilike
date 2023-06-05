@@ -19,6 +19,7 @@ public:
   ImportanceSampler(RandomNumberGenerator* rng_in,
                     size_t* seed_in,
                     Data* data_in,
+                    const Parameters &algorithm_parameters_in,
                     size_t number_of_particles_in,
                     EvaluateLogLikelihoodPtr evaluate_log_likelihood_in,
                     SimulateDistributionPtr simulate_prior_in,
@@ -30,6 +31,7 @@ public:
   ImportanceSampler(RandomNumberGenerator* rng_in,
                     size_t* seed_in,
                     Data* data_in,
+                    const Parameters &algorithm_parameters_in,
                     size_t number_of_particles_in,
                     EvaluateLogLikelihoodPtr evaluate_log_likelihood_in,
                     EvaluateLogDistributionPtr evaluate_log_prior_in,
@@ -43,6 +45,7 @@ public:
   ImportanceSampler(RandomNumberGenerator* rng_in,
                     size_t* seed_in,
                     Data* data_in,
+                    const Parameters &algorithm_parameters_in,
                     size_t number_of_particles_in,
                     EvaluateLogLikelihoodPtr evaluate_log_likelihood_in,
                     EvaluateLogDistributionPtr evaluate_log_prior_in,
@@ -55,6 +58,7 @@ public:
   ImportanceSampler(RandomNumberGenerator* rng_in,
                     size_t* seed_in,
                     Data* data_in,
+                    const Parameters &algorithm_parameters_in,
                     size_t number_of_particles_in,
                     const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
                     IndependentProposalKernel* proposal_in,
@@ -68,6 +72,7 @@ public:
   ImportanceSampler(RandomNumberGenerator* rng_in,
                     size_t* seed_in,
                     Data* data_in,
+                    const Parameters &algorithm_parameters_in,
                     size_t number_of_particles_in,
                     const std::string &target_variable_in,
                     double target_value_in,
@@ -81,7 +86,7 @@ public:
                     const std::string &results_name_in);
 
   ImportanceSampler(const ImportanceSampler &another);
-  virtual ~ImportanceSampler(void);
+  virtual ~ImportanceSampler();
 
   void operator=(const ImportanceSampler &another);
   SMC* smc_duplicate() const;

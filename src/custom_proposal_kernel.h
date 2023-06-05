@@ -19,15 +19,16 @@ public:
   CustomProposalKernel();
   virtual ~CustomProposalKernel();
   
-  CustomProposalKernel(EvaluateLogMCMCProposalPtr proposal_evaluate_in,
-                       SimulateMCMCProposalPtr proposal_simulate_in,
-                       const Parameters &proposal_parameters_in);
+  CustomProposalKernel(SimulateMCMCProposalPtr proposal_simulate_in,
+                       EvaluateLogMCMCProposalPtr proposal_evaluate_in);
 
   CustomProposalKernel(const CustomProposalKernel &another);
 
   void operator=(const CustomProposalKernel &another);
   Kernel* duplicate() const;
   ProposalKernel* proposal_kernel_duplicate() const;
+  
+  void set_proposal_parameters(Parameters* proposal_parameters_in);
   
 // Mh has its own parameters.
   // Stochastic has some weights.
@@ -39,49 +40,20 @@ protected:
   double specific_evaluate_kernel(Particle &proposed_particle,
                                   Particle &old_particle) const;
   
-  /*
-  double specific_evaluate_kernel(Particle &proposed_particle,
-                                  Particle &old_particle,
-                                  const Parameters &conditioned_on_parameters) const;
-  */
   
   double specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                             Particle &old_particle) const;
   
-  /*
-  double specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                            Particle &old_particle,
-                                            const Parameters &conditioned_on_parameters) const;
-  */
-  
   Parameters simulate(RandomNumberGenerator &rng,
                       Particle &particle) const;
   
-  /*
-  Parameters simulate(RandomNumberGenerator &rng,
-                      Particle &particle,
-                      const Parameters &conditioned_on_parameters) const;
-  */
-  
   Parameters subsample_simulate(RandomNumberGenerator &rng,
                                 Particle &particle) const;
-  
-  /*
-  Parameters subsample_simulate(RandomNumberGenerator &rng,
-                                Particle &particle,
-                                const Parameters &conditioned_on_parameters) const;
-  */
   
   Parameters subsample_simulate(RandomNumberGenerator &rng,
                                 const std::string &variable,
                                 Particle &particle) const;
   
-  /*
-  Parameters subsample_simulate(RandomNumberGenerator &rng,
-                                const std::string &variable,
-                                Particle &particle,
-                                const Parameters &conditioned_on_parameters) const;
-  */
   
   arma::mat specific_gradient_of_log(const std::string &variable,
                                      Particle &proposed_particle,
@@ -91,23 +63,10 @@ protected:
                                                Particle &proposed_particle,
                                                Particle &old_particle);
   
-  /*
-  arma::mat specific_gradient_of_log(const std::string &variable,
-                                     Particle &proposed_particle,
-                                     Particle &old_particle,
-                                     const Parameters &conditioned_on_parameters);
-  */
   
   //virtual arma::mat specific_subsample_gradient_of_log(const std::string &variable,
   //                                                     Particle &proposed_particle,
   //                                                     Particle &old_particle)=0;
-  
-  /*
-  arma::mat specific_subsample_gradient_of_log(const std::string &variable,
-                                               Particle &proposed_particle,
-                                               Particle &old_particle,
-                                               const Parameters &conditioned_on_parameters);
-  */
 
   void make_copy(const CustomProposalKernel &another);
   
@@ -115,7 +74,8 @@ protected:
   
   SimulateMCMCProposalPtr proposal_simulate;
   
-  Parameters proposal_parameters;
+  Parameters* proposal_parameters;
+  
   
 };
 

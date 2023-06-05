@@ -7,7 +7,7 @@ CustomGuidedIndependentProposalKernel::CustomGuidedIndependentProposalKernel()
 {
   this->proposal_evaluate = NULL;
   this->proposal_simulate = NULL;
-  this->proposal_parameters = Parameters();
+  this->proposal_parameters = NULL;
   this->data = NULL;
 }
 
@@ -20,29 +20,30 @@ CustomGuidedIndependentProposalKernel::CustomGuidedIndependentProposalKernel(Sim
 {
   this->proposal_evaluate = NULL;
   this->proposal_simulate = proposal_simulate_in;
-  this->proposal_parameters = Parameters();
+  this->proposal_parameters = NULL;
   this->data = NULL;
 }
 
+/*
 CustomGuidedIndependentProposalKernel::CustomGuidedIndependentProposalKernel(SimulateGuidedIndependentProposalPtr proposal_simulate_in,
                                                                  EvaluateLogGuidedIndependentProposalPtr proposal_evaluate_in)
 :IndependentProposalKernel()
 {
   this->proposal_evaluate = proposal_evaluate_in;
   this->proposal_simulate = proposal_simulate_in;
-  this->proposal_parameters = Parameters();
+  this->proposal_parameters = NULL;
   this->data = NULL;
 }
+*/
 
 CustomGuidedIndependentProposalKernel::CustomGuidedIndependentProposalKernel(SimulateGuidedIndependentProposalPtr proposal_simulate_in,
                                                                  EvaluateLogGuidedIndependentProposalPtr proposal_evaluate_in,
-                                                                 const Parameters &proposal_parameters_in,
                                                                              const Data* data_in)
   :IndependentProposalKernel()
 {
   this->proposal_evaluate = proposal_evaluate_in;
   this->proposal_simulate = proposal_simulate_in;
-  this->proposal_parameters = proposal_parameters_in;
+  this->proposal_parameters = NULL;
   this->data = data_in;
 }
 
@@ -84,11 +85,23 @@ void CustomGuidedIndependentProposalKernel::make_copy(const CustomGuidedIndepend
   this->data = another.data;
 }
 
+void CustomGuidedIndependentProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
+{
+  this->proposal_parameters = proposal_parameters_in;
+}
+
 double CustomGuidedIndependentProposalKernel::evaluate_independent_kernel(const Parameters &proposed_particle) const
 {
-  return this->proposal_evaluate(proposed_particle,
-                                 this->proposal_parameters,
-                                 *this->data);
+  if (this->proposal_parameters!=NULL)
+  {
+    return this->proposal_evaluate(proposed_particle,
+                                   *this->proposal_parameters,
+                                   *this->data);
+  }
+  else
+  {
+    stop("CustomGuidedIndependentProposalKernel::evaluate_independent_kernel - proposal parameters not set.");
+  }
 }
 
 /*
@@ -108,17 +121,31 @@ double CustomGuidedIndependentProposalKernel::subsample_evaluate_independent_ker
 
 Parameters CustomGuidedIndependentProposalKernel::independent_simulate(RandomNumberGenerator &rng) const
 {
-  return this->proposal_simulate(rng,
-                                 this->proposal_parameters,
-                                 *this->data);
+  if (this->proposal_parameters!=NULL)
+  {
+    return this->proposal_simulate(rng,
+                                   *this->proposal_parameters,
+                                   *this->data);
+  }
+  else
+  {
+    stop("CustomGuidedIndependentProposalKernel::evaluate_independent_kernel - proposal parameters not set.");
+  }
 }
 
 Parameters CustomGuidedIndependentProposalKernel::independent_simulate(RandomNumberGenerator &rng,
                                                                  const Parameters &conditioned_on_parameters) const
 {
-  return this->proposal_simulate(rng,
-                                 this->proposal_parameters.merge(conditioned_on_parameters),
-                                 *this->data);
+  if (this->proposal_parameters!=NULL)
+  {
+    return this->proposal_simulate(rng,
+                                   this->proposal_parameters->merge(conditioned_on_parameters),
+                                   *this->data);
+  }
+  else
+  {
+    stop("CustomGuidedIndependentProposalKernel::evaluate_independent_kernel - proposal parameters not set.");
+  }
 }
 
 Parameters CustomGuidedIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng) const

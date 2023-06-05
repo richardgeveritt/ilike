@@ -13,6 +13,8 @@ class DeterministicScanMCMC : public MCMC
 public:
 
   DeterministicScanMCMC();
+  
+  DeterministicScanMCMC(const std::vector<MCMC*> &moves_in);
 
   virtual ~DeterministicScanMCMC();
 
@@ -42,6 +44,8 @@ public:
   void ensemble_adapt(EnsembleKalmanOutput* current_state);
   
   void set_index(Index* index_in);
+  
+  void set_proposal_parameters(Parameters* proposal_parameters_in);
   
 protected:
   

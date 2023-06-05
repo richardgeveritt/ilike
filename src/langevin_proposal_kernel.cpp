@@ -24,6 +24,7 @@ LangevinProposalKernel::~LangevinProposalKernel()
 }
 
 LangevinProposalKernel::LangevinProposalKernel(const std::vector<std::string> &variable_names_in)
+:ProposalKernel()
 {
   this->unused_variables_kept = true;
   
@@ -38,8 +39,21 @@ LangevinProposalKernel::LangevinProposalKernel(const std::vector<std::string> &v
   }
 }
 
+LangevinProposalKernel::LangevinProposalKernel(const std::string &variable_name_in,
+                                               const arma::mat &covariance_in)
+:ProposalKernel()
+{
+  this->unused_variables_kept = true;
+  
+  this->gradient_estimator = NULL;
+  this->index = NULL;
+  
+  this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in);
+}
+
 LangevinProposalKernel::LangevinProposalKernel(const std::vector<std::string> &variable_names_in,
-                                                           const std::vector<arma::mat> &covariances_in)
+                                               const std::vector<arma::mat> &covariances_in)
+:ProposalKernel()
 {
   this->unused_variables_kept = true;
   
@@ -427,3 +441,8 @@ arma::mat LangevinProposalKernel::specific_subsample_gradient_of_log(const std::
   Rcpp::stop("LangevinProposalKernel::specific_gradient_of_log - not written yet.");
 }
 */
+
+void LangevinProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
+{
+  
+}

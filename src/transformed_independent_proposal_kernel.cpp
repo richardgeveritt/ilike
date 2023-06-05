@@ -196,3 +196,8 @@ arma::mat TransformedIndependentProposalKernel::subsample_independent_gradient_o
 {
   Rcpp::stop("TransformedIndependentProposalKernel::independent_gradient_of_log - not written yet.");
 }
+
+void TransformedIndependentProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
+{
+  this->proposal->set_proposal_parameters(proposal_parameters_in);
+}

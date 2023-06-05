@@ -17,6 +17,8 @@ public:
   
   GaussianProposalInfo(const double &mean_in,
                        const double &sd_in);
+  
+  GaussianProposalInfo(const double &sd_in);
 
   GaussianProposalInfo(const arma::colvec &mean_in);
   GaussianProposalInfo(const arma::mat &covariance_in);

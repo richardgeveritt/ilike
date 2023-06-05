@@ -167,6 +167,8 @@ public:
   
   Transform* get_transform() const;
   
+  virtual void set_proposal_parameters(Parameters* proposal_parameters_in)=0;
+  
 // Mh has its own parameters.
   // Stochastic has some weights.
   // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.

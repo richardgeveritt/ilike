@@ -182,3 +182,8 @@ void ZigZagMCMC::set_index(Index* index_in)
 {
   
 }
+
+void ZigZagMCMC::set_proposal_parameters(Parameters* proposal_parameters_in)
+{
+  this->proposal->set_proposal_parameters(proposal_parameters_in);
+}

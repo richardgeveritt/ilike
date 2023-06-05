@@ -23,7 +23,7 @@ DensityLikelihoodEstimator::DensityLikelihoodEstimator(RandomNumberGenerator* rn
                                                        bool make_subsample_version_in,
                                                        bool parallel_in,
                                                        size_t grain_size_in)
-:LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
 {
   this->density_estimator = density_estimator_in;
   if (make_subsample_version_in==true)

@@ -11,7 +11,7 @@ ABCLikelihoodEstimator::ABCLikelihoodEstimator(RandomNumberGenerator* rng_in,
                                                Data* data_in,
                                                ABCKernelFactor* abc_kernel_in,
                                                bool smcfixed_flag_in)
-:LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
 {
   this->abc_kernel = abc_kernel_in;
 }

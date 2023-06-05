@@ -31,6 +31,9 @@ public:
   // make cov_names from var_names
   GaussianRandomWalkProposalKernel(const std::string &variable_name_in,
                                    const arma::mat &covariance_in);
+  
+  GaussianRandomWalkProposalKernel(const std::string &variable_name_in,
+                                   const double &sd_in);
 
   GaussianRandomWalkProposalKernel(const GaussianRandomWalkProposalKernel &another);
 
@@ -44,6 +47,8 @@ public:
   
   arma::mat get_inverse_covariance(const std::string &variable);
   arma::mat get_covariance(const std::string &variable);
+  
+  void set_proposal_parameters(Parameters* proposal_parameters_in);
   
 // Mh has its own parameters.
   // Stochastic has some weights.

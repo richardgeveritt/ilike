@@ -14,6 +14,7 @@ HMCProposalKernel::~HMCProposalKernel()
 }
 
 HMCProposalKernel::HMCProposalKernel(const std::vector<std::string> &variable_names_in)
+:ProposalKernel()
 {
   std::vector<arma::mat> covariances_in;
   std::vector<std::string> covariance_names_in;
@@ -28,6 +29,7 @@ HMCProposalKernel::HMCProposalKernel(const std::vector<std::string> &variable_na
 
 HMCProposalKernel::HMCProposalKernel(const std::vector<std::string> &variable_names_in,
                                      const std::vector<arma::mat> &covariances_in)
+:ProposalKernel()
 {
   std::vector<std::string> covariance_names_in;
   covariance_names_in.reserve(variable_names_in.size());
@@ -38,7 +40,8 @@ HMCProposalKernel::HMCProposalKernel(const std::vector<std::string> &variable_na
 }
 
 HMCProposalKernel::HMCProposalKernel(const std::vector<std::string> &variable_names_in,
-                                                                   const std::vector<std::string> &covariance_names_in)
+                                     const std::vector<std::string> &covariance_names_in)
+:ProposalKernel()
 {
   std::vector<arma::mat> covariances_in;
   covariances_in.reserve(covariance_names_in.size());
@@ -48,9 +51,24 @@ HMCProposalKernel::HMCProposalKernel(const std::vector<std::string> &variable_na
   }
 }
 
+HMCProposalKernel::HMCProposalKernel(const std::string &variable_name_in,
+                                     const arma::mat &covariance_in)
+:ProposalKernel()
+{
+  /*
+  this->unused_variables_kept = true;
+  
+  this->gradient_estimator = NULL;
+  this->index = NULL;
+  
+  this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in);
+  */
+}
+
 HMCProposalKernel::HMCProposalKernel(const std::vector<std::string> &variable_names_in,
                                                                    const std::vector<std::string> &covariance_names_in,
                                                                    const std::vector<arma::mat> &covariances_in)
+:ProposalKernel()
 {
 }
 
@@ -239,3 +257,8 @@ arma::mat HMCProposalKernel::specific_subsample_gradient_of_log(const std::strin
   Rcpp::stop("HMCProposalKernel::specific_gradient_of_log - not written yet.");
 }
 */
+
+void HMCProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
+{
+  
+}

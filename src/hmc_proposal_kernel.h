@@ -24,21 +24,26 @@ public:
   
   // make cov_names from var_names
   HMCProposalKernel(const std::vector<std::string> &variable_names_in,
-                                   const std::vector<arma::mat> &covariances_in);
+                    const std::vector<arma::mat> &covariances_in);
   
   // find covariance adaptively
   HMCProposalKernel(const std::vector<std::string> &variable_names_in,
-                                   const std::vector<std::string> &covariance_names_in);
+                    const std::vector<std::string> &covariance_names_in);
+  
+  HMCProposalKernel(const std::string &variable_name_in,
+                    const arma::mat &covariance_in);
   
   HMCProposalKernel(const std::vector<std::string> &variable_names_in,
-                                   const std::vector<std::string> &covariance_names_in,
-                                   const std::vector<arma::mat> &covariances_in);
+                    const std::vector<std::string> &covariance_names_in,
+                    const std::vector<arma::mat> &covariances_in);
 
   HMCProposalKernel(const HMCProposalKernel &another);
 
   void operator=(const HMCProposalKernel &another);
   Kernel* duplicate() const;
   ProposalKernel* proposal_kernel_duplicate() const;
+  
+  void set_proposal_parameters(Parameters* proposal_parameters_in);
   
 // Mh has its own parameters.
   // Stochastic has some weights.

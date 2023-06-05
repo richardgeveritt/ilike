@@ -5,11 +5,19 @@ ilike_rdtsc <- function() {
     .Call(`_ilike_ilike_rdtsc`)
 }
 
-do_importance_sampler <- function(model, parameters, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed) {
-    invisible(.Call(`_ilike_do_importance_sampler`, model, parameters, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed))
+do_importance_sampler <- function(model, parameters, algorithm_parameter_list, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed) {
+    invisible(.Call(`_ilike_do_importance_sampler`, model, parameters, algorithm_parameter_list, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed))
+}
+
+do_mcmc <- function(model, parameters, algorithm_parameter_list, initial_values, number_of_mcmc_iterations, parallel_in, grain_size_in, results_name_in, seed) {
+    invisible(.Call(`_ilike_do_mcmc`, model, parameters, algorithm_parameter_list, initial_values, number_of_mcmc_iterations, parallel_in, grain_size_in, results_name_in, seed))
 }
 
 do_smc_mcmc <- function(model, parameters, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed) {
     invisible(.Call(`_ilike_do_smc_mcmc`, model, parameters, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed))
 }
 
+# Register entry points for exported C++ functions
+methods::setLoadAction(function(ns) {
+    .Call('_ilike_RcppExport_registerCCallable', PACKAGE = 'ilike')
+})

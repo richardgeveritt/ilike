@@ -38,7 +38,7 @@ EnsembleKalman::EnsembleKalman(RandomNumberGenerator* rng_in,
                                bool smcfixed_flag_in,
                                bool sequencer_limit_is_fixed_in,
                                const std::string &results_name_in)
-:LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
 {
   this->number_of_ensemble_members = number_of_ensemble_members_in;
   this->lag = lag_in;

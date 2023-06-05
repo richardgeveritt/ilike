@@ -5,6 +5,17 @@ DeterministicScanMCMC::DeterministicScanMCMC()
 {
 }
 
+DeterministicScanMCMC::DeterministicScanMCMC(const std::vector<MCMC*> &moves_in)
+{
+  this->moves = moves_in;
+  this->order.clear();
+  this->order.reserve(this->moves.size());
+  for (size_t i=0; i<this->moves.size(); ++i)
+  {
+    this->order.push_back(i);
+  }
+}
+
 DeterministicScanMCMC::~DeterministicScanMCMC()
 {
   for (std::vector<MCMC*>::iterator i=this->moves.begin();
@@ -173,5 +184,15 @@ void DeterministicScanMCMC::set_index(Index* index_in)
        ++i)
   {
     (*i)->set_index(index_in);
+  }
+}
+
+void DeterministicScanMCMC::set_proposal_parameters(Parameters* proposal_parameters_in)
+{
+  for (auto i=this->moves.begin();
+       i!=this->moves.end();
+       ++i)
+  {
+    (*i)->set_proposal_parameters(proposal_parameters_in);
   }
 }

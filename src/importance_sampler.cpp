@@ -13,7 +13,7 @@
 #include "vector_factors.h"
 #include "vector_single_index.h"
 #include "positive_smc_criterion.h"
-#include "rcppparallel_smc_worker.h"
+//#include "rcppparallel_smc_worker.h"
 
 ImportanceSampler::ImportanceSampler()
   :SMC()
@@ -24,6 +24,7 @@ ImportanceSampler::ImportanceSampler()
 ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                      size_t* seed_in,
                                      Data* data_in,
+                                     const Parameters &algorithm_parameters_in,
                                      size_t number_of_particles_in,
                                      EvaluateLogLikelihoodPtr evaluate_log_likelihood_in,
                                      SimulateDistributionPtr simulate_prior_in,
@@ -31,9 +32,10 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                      bool parallel_in,
                                      size_t grain_size_in,
                                      const std::string &results_name_in)
-  :SMC(rng_in, seed_in, data_in, number_of_particles_in, 1, 0, double(number_of_particles_in), false, smcfixed_flag_in, true, results_name_in)
+  :SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, 1, 0, double(number_of_particles_in), false, smcfixed_flag_in, true, results_name_in)
 {
   IndependentProposalKernel* proposal = new CustomDistributionProposalKernel(simulate_prior_in);
+  proposal->set_proposal_parameters(&this->algorithm_parameters);
   //Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
   
   std::vector<size_t> indices;
@@ -55,8 +57,7 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
 
   if (parallel_in==TRUE)
   {
-    this->the_worker = new RcppParallelSMCWorker(this,
-                                                 grain_size_in);
+    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
   }
   else
   {
@@ -77,6 +78,7 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
 ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                      size_t* seed_in,
                                      Data* data_in,
+                                     const Parameters &algorithm_parameters_in,
                                      size_t number_of_particles_in,
                                      EvaluateLogLikelihoodPtr evaluate_log_likelihood_in,
                                      EvaluateLogDistributionPtr evaluate_log_prior_in,
@@ -86,10 +88,11 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                      bool parallel_in,
                                      size_t grain_size_in,
                                      const std::string &results_name_in)
-  :SMC(rng_in, seed_in, data_in, number_of_particles_in, 1, 0, double(number_of_particles_in), true, smcfixed_flag_in, true, results_name_in)
+  :SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, 1, 0, double(number_of_particles_in), true, smcfixed_flag_in, true, results_name_in)
 {
   IndependentProposalKernel* proposal = new CustomDistributionProposalKernel(simulate_proposal_in,
                                                                              evaluate_log_proposal_in);
+  proposal->set_proposal_parameters(&this->algorithm_parameters);
   //Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
   
   std::vector<LikelihoodEstimator*> likelihood_estimators;
@@ -125,11 +128,7 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
 
   if (parallel_in==TRUE)
   {
-      //this->the_worker = new RcppParallelSMCWorker(this,
-                                                //this->model_and_algorithm.particle_simulator,
-                                                //grain_size_in);
-    this->the_worker = new RcppParallelSMCWorker(this,
-                                                 grain_size_in);
+    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
   }
   else
   {
@@ -150,6 +149,7 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
 ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                      size_t* seed_in,
                                      Data* data_in,
+                                     const Parameters &algorithm_parameters_in,
                                      size_t number_of_particles_in,
                                      EvaluateLogLikelihoodPtr evaluate_log_likelihood_in,
                                      EvaluateLogDistributionPtr evaluate_log_prior_in,
@@ -158,8 +158,9 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                      bool parallel_in,
                                      size_t grain_size_in,
                                      const std::string &results_name_in)
-:SMC(rng_in, seed_in, data_in, number_of_particles_in, 1, 0, double(number_of_particles_in), true, smcfixed_flag_in, true, results_name_in)
+:SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, 1, 0, double(number_of_particles_in), true, smcfixed_flag_in, true, results_name_in)
 {
+  proposal_in->set_proposal_parameters(&this->algorithm_parameters);
   //Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
   std::vector<size_t> indices;
   std::vector<LikelihoodEstimator*> likelihood_estimators;
@@ -186,11 +187,7 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
   
   if (parallel_in==TRUE)
   {
-    //this->the_worker = new RcppParallelSMCWorker(this,
-    //this->model_and_algorithm.particle_simulator,
-    //grain_size_in);
-    this->the_worker = new RcppParallelSMCWorker(this,
-                                                 grain_size_in);
+    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
   }
   else
   {
@@ -211,6 +208,7 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
 ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                      size_t* seed_in,
                                      Data* data_in,
+                                     const Parameters &algorithm_parameters_in,
                                      size_t number_of_particles_in,
                                      const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
                                      IndependentProposalKernel* proposal_in,
@@ -220,8 +218,10 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                      bool parallel_in,
                                      size_t grain_size_in,
                                      const std::string &results_name_in)
-:SMC(rng_in, seed_in, data_in, number_of_particles_in, 1, 0, double(number_of_particles_in), proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, results_name_in)
+:SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, 1, 0, double(number_of_particles_in), proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, results_name_in)
 {
+  proposal_in->set_proposal_parameters(&this->algorithm_parameters);
+  
   //Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
   std::vector<size_t> indices;
   indices.reserve(likelihood_estimators_in.size());
@@ -250,11 +250,7 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
   
   if (parallel_in==TRUE)
   {
-    //this->the_worker = new RcppParallelSMCWorker(this,
-    //this->model_and_algorithm.particle_simulator,
-    //grain_size_in);
-    this->the_worker = new RcppParallelSMCWorker(this,
-                                                 grain_size_in);
+    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
   }
   else
   {
@@ -274,6 +270,7 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
 ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                      size_t* seed_in,
                                      Data* data_in,
+                                     const Parameters &algorithm_parameters_in,
                                      size_t number_of_particles_in,
                                      const std::string &target_variable_in,
                                      double target_value_in,
@@ -285,8 +282,10 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                      bool parallel_in,
                                      size_t grain_size_in,
                                      const std::string &results_name_in)
-:SMC(rng_in, seed_in, data_in, number_of_particles_in, 1, 0, double(number_of_particles_in), proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, results_name_in)
+:SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, 1, 0, double(number_of_particles_in), proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, results_name_in)
 {
+  proposal_in->set_proposal_parameters(&this->algorithm_parameters);
+  
   //Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
   std::vector<size_t> indices;
   indices.reserve(likelihood_estimators_in.size());
@@ -315,11 +314,7 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
   
   if (parallel_in==TRUE)
   {
-    //this->the_worker = new RcppParallelSMCWorker(this,
-    //this->model_and_algorithm.particle_simulator,
-    //grain_size_in);
-    this->the_worker = new RcppParallelSMCWorker(this,
-                                                 grain_size_in);
+    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
   }
   else
   {

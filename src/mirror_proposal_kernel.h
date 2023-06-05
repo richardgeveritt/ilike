@@ -31,6 +31,10 @@ public:
   MirrorProposalKernel(const std::vector<std::string> &variable_names_in,
                        const std::vector<arma::mat> &covariances_in);
   
+  MirrorProposalKernel(const std::string &variable_name_in,
+                       const arma::colvec &mean_in,
+                       const arma::mat &covariance_in);
+  
   MirrorProposalKernel(const std::vector<std::string> &variable_names_in,
                        const std::vector<arma::colvec> &means_in,
                        const std::vector<arma::mat> &covariances_in);
@@ -43,6 +47,8 @@ public:
   SymmetricProposalKernel* symmetric_proposal_kernel_duplicate() const;
   
   arma::mat get_inverse_covariance(const std::string &variable);
+  
+  void set_proposal_parameters(Parameters* proposal_parameters_in);
   
 // Mh has its own parameters.
   // Stochastic has some weights.

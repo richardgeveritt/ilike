@@ -60,6 +60,13 @@ GaussianIndependentProposalKernel::GaussianIndependentProposalKernel(const std::
   this->proposal_info[variable_name_in] = GaussianProposalInfo(mean_in,sd_in);
 }
 
+GaussianIndependentProposalKernel::GaussianIndependentProposalKernel(const std::string &variable_name_in,
+                                                                     const arma::colvec &mean_in,
+                                                                     const arma::mat &covariance_in)
+{
+  this->proposal_info[variable_name_in] = GaussianProposalInfo(mean_in,covariance_in);
+}
+
 GaussianIndependentProposalKernel::GaussianIndependentProposalKernel(const std::vector<std::string> &variable_names_in,
                                                                      const std::vector<arma::colvec> &means_in,
                                                                      const std::vector<arma::mat> &covariances_in)
@@ -260,4 +267,9 @@ arma::mat GaussianIndependentProposalKernel::subsample_independent_gradient_of_l
                                                                                    const Parameters &proposed_particle)
 {
   Rcpp::stop("GaussianIndependentProposalKernel::independent_gradient_of_log - not written yet.");
+}
+
+void GaussianIndependentProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
+{
+  
 }

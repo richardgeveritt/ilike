@@ -56,6 +56,8 @@ public:
   
   void set_index(Index* index_in);
   
+  void set_proposal_parameters(Parameters* proposal_parameters_in);
+  
 protected:
   
   void specific_mcmc_adapt(Particle &current_particle,

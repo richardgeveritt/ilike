@@ -287,6 +287,123 @@ importance_proposal_processing = function(importance_proposal_number,blocks,bloc
   return(importance_proposal_number)
 }
 
+mh_proposal_processing = function(mh_proposal_number,blocks,block_name,line_counter)
+{
+  # Is this a continuation of the current mh_proposal, or a new one?
+
+  # Get the current mh_proposal info.
+  if ("mh_proposal" %in% names(blocks))
+  {
+    current_mh_proposal_info = blocks[["mh_proposal"]][[mh_proposal_number]]
+
+    if ("mh_proposal" %in% names(current_mh_proposal_info))
+    {
+      # mh_proposal is complete
+      print_mh_proposal_info(mh_proposal_number,blocks,line_counter-1)
+      mh_proposal_number = mh_proposal_number + 1
+    }
+    else if ( ("evaluate_log_mh_proposal" %in% names(current_mh_proposal_info)) || ("simulate_mh_proposal" %in% names(current_mh_proposal_info)) )
+    {
+      # mh_proposal is complete
+      if ( ("evaluate_log_mh_proposal" %in% names(current_mh_proposal_info)) && ("simulate_mh_proposal" %in% names(current_mh_proposal_info)) )
+      {
+        print_mh_proposal_info(mh_proposal_number,blocks,line_counter-1)
+        mh_proposal_number = mh_proposal_number + 1
+      }
+
+      if (block_name=="mh_proposal")
+      {
+        stop(paste("Invalid file: line ",line_counter,', mh_proposal specified, but previous importance proposal block is incomplete (did you specify both evaluate_log_mh_proposal and simulate_mh_proposal?',sep=""))
+      }
+
+    }
+  }
+  else
+  {
+    mh_proposal_number = mh_proposal_number + 1
+  }
+
+  return(mh_proposal_number)
+}
+
+independent_mh_proposal_processing = function(independent_mh_proposal_number,blocks,block_name,line_counter)
+{
+  # Is this a continuation of the current independent_mh_proposal, or a new one?
+
+  # Get the current independent_mh_proposal info.
+  if ("independent_mh_proposal" %in% names(blocks))
+  {
+    current_independent_mh_proposal_info = blocks[["independent_mh_proposal"]][[independent_mh_proposal_number]]
+
+    if ("independent_mh_proposal" %in% names(current_independent_mh_proposal_info))
+    {
+      # independent_mh_proposal is complete
+      print_independent_mh_proposal_info(independent_mh_proposal_number,blocks,line_counter-1)
+      independent_mh_proposal_number = independent_mh_proposal_number + 1
+    }
+    else if ( ("evaluate_log_independent_mh_proposal" %in% names(current_independent_mh_proposal_info)) || ("simulate_independent_mh_proposal" %in% names(current_independent_mh_proposal_info)) )
+    {
+      # independent_mh_proposal is complete
+      if ( ("evaluate_log_independent_mh_proposal" %in% names(current_independent_mh_proposal_info)) && ("simulate_independent_mh_proposal" %in% names(current_independent_mh_proposal_info)) )
+      {
+        print_independent_mh_proposal_info(independent_mh_proposal_number,blocks,line_counter-1)
+        independent_mh_proposal_number = independent_mh_proposal_number + 1
+      }
+
+      if (block_name=="independent_mh_proposal")
+      {
+        stop(paste("Invalid file: line ",line_counter,', independent_mh_proposal specified, but previous importance proposal block is incomplete (did you specify both evaluate_log_independent_mh_proposal and simulate_independent_mh_proposal?',sep=""))
+      }
+
+    }
+  }
+  else
+  {
+    independent_mh_proposal_number = independent_mh_proposal_number + 1
+  }
+
+  return(independent_mh_proposal_number)
+}
+
+m_proposal_processing = function(m_proposal_number,blocks,block_name,line_counter)
+{
+  # Is this a continuation of the current m_proposal, or a new one?
+
+  # Get the current m_proposal info.
+  if ("m_proposal" %in% names(blocks))
+  {
+    current_m_proposal_info = blocks[["m_proposal"]][[m_proposal_number]]
+
+    if ("m_proposal" %in% names(current_m_proposal_info))
+    {
+      # m_proposal is complete
+      print_m_proposal_info(m_proposal_number,blocks,line_counter-1)
+      m_proposal_number = m_proposal_number + 1
+    }
+    else if ("simulate_m_proposal" %in% names(current_m_proposal_info))
+    {
+      print_m_proposal_info(m_proposal_number,blocks,line_counter-1)
+      m_proposal_number = m_proposal_number + 1
+    }
+  }
+  else
+  {
+    m_proposal_number = m_proposal_number + 1
+  }
+
+  return(m_proposal_number)
+}
+
+mcmc_weights_processing = function(mcmc_weights_number)
+{
+  if (mcmc_weights_number!=0)
+  {
+    stop(paste("Invalid file: line ",line_counter,', mcmc_weights already specified.',sep=""))
+  }
+  mcmc_weights_number = mcmc_weights_number + 1
+  return(mcmc_weights_number)
+}
+
 print_factor_info = function(factor_index,blocks,line_counter)
 {
   factor_info_string = ""
@@ -317,7 +434,52 @@ print_importance_proposal_info = function(importance_proposal_index,blocks,line_
   print(paste('Importance_proposal ends on line ',line_counter,'. Contains ',importance_proposal_info_string,'.',sep = ""))
 }
 
-determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,importance_proposal_number,data_number)
+print_mh_proposal_info = function(mh_proposal_index,blocks,line_counter)
+{
+  mh_proposal_info_string = ""
+  last_mh_proposal_names = names(blocks[["mh_proposal"]][[mh_proposal_index]])
+  for (j in 1:length(last_mh_proposal_names))
+  {
+    mh_proposal_info_string = paste(mh_proposal_info_string,last_mh_proposal_names[j],sep=", ")
+  }
+  if (nchar(mh_proposal_info_string)>2)
+  {
+    mh_proposal_info_string = substr(mh_proposal_info_string,3,nchar(mh_proposal_info_string))
+  }
+  print(paste('mh_proposal ends on line ',line_counter,'. Contains ',mh_proposal_info_string,'.',sep = ""))
+}
+
+print_independent_mh_proposal_info = function(independent_mh_proposal_index,blocks,line_counter)
+{
+  independent_mh_proposal_info_string = ""
+  last_independent_mh_proposal_names = names(blocks[["independent_mh_proposal"]][[independent_mh_proposal_index]])
+  for (j in 1:length(last_independent_mh_proposal_names))
+  {
+    independent_mh_proposal_info_string = paste(independent_mh_proposal_info_string,last_independent_mh_proposal_names[j],sep=", ")
+  }
+  if (nchar(independent_mh_proposal_info_string)>2)
+  {
+    independent_mh_proposal_info_string = substr(independent_mh_proposal_info_string,3,nchar(independent_mh_proposal_info_string))
+  }
+  print(paste('independent_mh_proposal ends on line ',line_counter,'. Contains ',independent_mh_proposal_info_string,'.',sep = ""))
+}
+
+print_m_proposal_info = function(m_proposal_index,blocks,line_counter)
+{
+  m_proposal_info_string = ""
+  last_m_proposal_names = names(blocks[["m_proposal"]][[m_proposal_index]])
+  for (j in 1:length(last_m_proposal_names))
+  {
+    m_proposal_info_string = paste(m_proposal_info_string,last_m_proposal_names[j],sep=", ")
+  }
+  if (nchar(m_proposal_info_string)>2)
+  {
+    m_proposal_info_string = substr(m_proposal_info_string,3,nchar(m_proposal_info_string))
+  }
+  print(paste('m_proposal ends on line ',line_counter,'. Contains ',m_proposal_info_string,'.',sep = ""))
+}
+
+determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,importance_proposal_number,mh_proposal_number,independent_mh_proposal_number,m_proposal_number,data_number,mcmc_weights_number)
 {
   if (length(split_block_name)==1)
   {
@@ -341,6 +503,10 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
   factor_function_types = c(prior_function_types,likelihood_function_types)
   data_function_types = c("data")
   importance_proposal_types = c("simulate_importance_proposal","evaluate_log_importance_proposal")
+  mh_proposal_types = c("simulate_mh_proposal","evaluate_log_mh_proposal","mh_proposal")
+  independent_mh_proposal_types = c("simulate_independent_mh_proposal","evaluate_log_independent_mh_proposal","independent_mh_proposal")
+  m_proposal_types = c("simulate_m_proposal","m_proposal")
+  mcmc_weights_function_types = c("mcmc_weights")
 
   # distinguish between factor, data, etc
   if (block_name %in% factor_function_types)
@@ -361,6 +527,30 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
     importance_proposal_number = importance_proposal_processing(importance_proposal_number,blocks,block_name,line_counter)
     number_to_pass_to_extract_block = importance_proposal_number
   }
+  else if (block_name %in% mh_proposal_types)
+  {
+    block_type = "mh_proposal"
+    mh_proposal_number = mh_proposal_processing(mh_proposal_number,blocks,block_name,line_counter)
+    number_to_pass_to_extract_block = mh_proposal_number
+  }
+  else if (block_name %in% independent_mh_proposal_types)
+  {
+    block_type = "independent_mh_proposal"
+    independent_mh_proposal_number = independent_mh_proposal_processing(independent_mh_proposal_number,blocks,block_name,line_counter)
+    number_to_pass_to_extract_block = independent_mh_proposal_number
+  }
+  else if (block_name %in% m_proposal_types)
+  {
+    block_type = "m_proposal"
+    m_proposal_number = m_proposal_processing(m_proposal_number,blocks,block_name,line_counter)
+    number_to_pass_to_extract_block = m_proposal_number
+  }
+  else if (block_name %in% mcmc_weights_function_types)
+  {
+    block_type = "mcmc_weights"
+    mcmc_weights_number = mcmc_weights_processing(mcmc_weights_number)
+    number_to_pass_to_extract_block = mcmc_weights_number
+  }
   else
   {
     stop(paste("Invalid file: line ",line_counter,', function type "',block_name,'" unknown.',sep=""))
@@ -373,11 +563,38 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
               block_function,
               factor_number,
               importance_proposal_number,
-              data_number))
+              mh_proposal_number,
+              independent_mh_proposal_number,
+              m_proposal_number,
+              data_number,
+              mcmc_weights_number))
 }
 
 extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,parameter_list)
 {
+  # Get information about the order in which MCMC moves are included.
+  if ( (block_type=="mh_proposal") || (block_type=="independent_mh_proposal") || (block_type=="m_proposal") )
+  {
+    # Are we adding to an existing block? If we are not, then we need to add in the information about the order of the new MCMC move.
+    if (factor_number>length(blocks[[block_type]]))
+    {
+      if (block_type=="mh_proposal")
+      {
+        blocks[["order_of_mcmc"]] = c(blocks[["order_of_mcmc"]],1)
+      }
+
+      if (block_type=="independent_mh_proposal")
+      {
+        blocks[["order_of_mcmc"]] = c(blocks[["order_of_mcmc"]],2)
+      }
+
+      if (block_type=="m_proposal")
+      {
+        blocks[["order_of_mcmc"]] = c(blocks[["order_of_mcmc"]],3)
+      }
+    }
+  }
+
   # ignore block if block number is not positive
   if (factor_number>0)
   {
@@ -398,6 +615,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
       {
         blocks[[block_type]][[factor_number]] = append(blocks[[block_type]][[factor_number]],my_list)
       }
+
     }
     else
     {
@@ -476,6 +694,88 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           #blocks[[block_type]][[factor_number]][[block_name]][["variables"]] = variables
           #blocks[[block_type]][[factor_number]][[block_name]][["parameters"]] = parameters
         }
+        else if (block_name=="importance_proposal")
+        {
+          split_arg_string = strsplit(arg_string,",")[[1]]
+
+          variables = split_arg_string[1]
+
+          parameters = list()
+          if (length(split_arg_string)>1)
+            for (k in 2:(length(split_arg_string)))
+            {
+              parameters[[k-1]] = split_arg_string[k]
+            }
+
+          # temp_list = blocks[[block_type]]
+          # temp_list[[factor_number]][[block_name]][["type"]] = ilike_type
+          # temp_list[[factor_number]][[block_name]][["variables"]] = variables
+          # temp_list[[factor_number]][[block_name]][["parameters"]] = parameters
+          # blocks[[block_type]] = temp_list
+
+          my_list = list(list(type=ilike_type,
+                              variables=variables,
+                              parameters=parameters))
+          names(my_list) = c(block_name)
+
+          if (length((blocks[[block_type]]))==0)
+          {
+            blocks[[block_type]][[factor_number]] = my_list
+          }
+          else if (factor_number!=length((blocks[[block_type]])))
+          {
+            blocks[[block_type]][[factor_number]] = my_list
+          }
+          else
+          {
+            blocks[[block_type]][[factor_number]] = append(blocks[[block_type]][[factor_number]],my_list)
+          }
+
+          #blocks[[block_type]][[factor_number]][[block_name]][["type"]] = ilike_type
+          #blocks[[block_type]][[factor_number]][[block_name]][["variables"]] = variables
+          #blocks[[block_type]][[factor_number]][[block_name]][["parameters"]] = parameters
+        }
+        else if (block_name=="independent_mh_proposal")
+        {
+          split_arg_string = strsplit(arg_string,",")[[1]]
+
+          variables = split_arg_string[1]
+
+          parameters = list()
+          if (length(split_arg_string)>1)
+            for (k in 2:(length(split_arg_string)))
+            {
+              parameters[[k-1]] = split_arg_string[k]
+            }
+
+          # temp_list = blocks[[block_type]]
+          # temp_list[[factor_number]][[block_name]][["type"]] = ilike_type
+          # temp_list[[factor_number]][[block_name]][["variables"]] = variables
+          # temp_list[[factor_number]][[block_name]][["parameters"]] = parameters
+          # blocks[[block_type]] = temp_list
+
+          my_list = list(list(type=ilike_type,
+                              variables=variables,
+                              parameters=parameters))
+          names(my_list) = c(block_name)
+
+          if (length((blocks[[block_type]]))==0)
+          {
+            blocks[[block_type]][[factor_number]] = my_list
+          }
+          else if (factor_number!=length((blocks[[block_type]])))
+          {
+            blocks[[block_type]][[factor_number]] = my_list
+          }
+          else
+          {
+            blocks[[block_type]][[factor_number]] = append(blocks[[block_type]][[factor_number]],my_list)
+          }
+
+          #blocks[[block_type]][[factor_number]][[block_name]][["type"]] = ilike_type
+          #blocks[[block_type]][[factor_number]][[block_name]][["variables"]] = variables
+          #blocks[[block_type]][[factor_number]][[block_name]][["parameters"]] = parameters
+        }
         else
         {
           stop(paste("Block ",block_name,", line number ",line_counter,": ",block_name," is invalid block type.",sep=""))
@@ -509,11 +809,13 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
         R_function_arguments = function_info[[2]]
 
         cpp_function_arguments_string = ""
+        which_proposed_parameters = c()
         which_parameters = c()
         which_proposal_parameters = c()
         which_data = c()
         if (length(R_function_arguments)>0)
         {
+          which_proposed_parameters = matrix(0,length(R_function_arguments))
           which_parameters = matrix(0,length(R_function_arguments))
           which_proposal_parameters = matrix(0,length(R_function_arguments))
           which_data = matrix(0,length(R_function_arguments))
@@ -532,6 +834,11 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             else if (length(split_at_dot)>=2)
             {
               cpp_function_arguments_string = paste(cpp_function_arguments_string,',',split_at_dot[1],'["',paste(split_at_dot[2:length(split_at_dot)],collapse=""),'"]',sep="")
+
+              if (split_at_dot[1]=="proposed_parameters")
+              {
+                which_proposed_parameters[i] = 1
+              }
 
               if (split_at_dot[1]=="parameters")
               {
@@ -563,6 +870,8 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
         temp_filename = paste(cpp_function_name,".cpp",sep="")
         xptr_name = paste(cpp_function_name,"getXPtr",sep="_")
+
+        proposal_type = 0
 
         if (block_name=="data")
         {
@@ -627,33 +936,41 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           {
             return_type = "double"
             arguments = c()
-            arguments[1] = "const Parameters &parameters"
+            arguments[1] = "const Parameters &proposed_parameters"
             arguments[2] = "const Parameters &proposal_parameters"
             arguments[3] = "const Data &data"
             #args_for_typedef = "const Parameters&"
+
+            proposal_type = 4
           }
           else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
           {
             return_type = "double"
             arguments = c()
-            arguments[1] = "const Parameters &parameters"
+            arguments[1] = "const Parameters &proposed_parameters"
             arguments[2] = "const Data &data"
             #args_for_typedef = "const Parameters&"
+
+            proposal_type = 3
           }
           else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
           {
             return_type = "double"
             arguments = c()
-            arguments[1] = "const Parameters &parameters"
+            arguments[1] = "const Parameters &proposed_parameters"
             arguments[2] = "const Parameters &proposal_parameters"
             #args_for_typedef = "const Parameters&"
+
+            proposal_type = 2
           }
           else
           {
             return_type = "double"
             arguments = c()
-            arguments[1] = "const Parameters &parameters"
+            arguments[1] = "const Parameters &proposed_parameters"
             #args_for_typedef = "const Parameters&"
+
+            proposal_type = 1
           }
 
           function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
@@ -675,6 +992,8 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             arguments[2] = "const Parameters &proposal_parameters"
             arguments[3] = "const Data &data"
             #args_for_typedef = "const Parameters&"
+
+            proposal_type = 4
           }
           else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
           {
@@ -682,6 +1001,8 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             arguments[1] = "RandomNumberGenerator &rng"
             arguments[2] = "const Data &data"
             #args_for_typedef = "const Parameters&"
+
+            proposal_type = 3
           }
           else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
           {
@@ -689,16 +1010,306 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             arguments[1] = "RandomNumberGenerator &rng"
             arguments[2] = "const Parameters &proposal_parameters"
             #args_for_typedef = "const Parameters&"
+
+            proposal_type = 2
           }
           else
           {
             arguments = c()
             arguments[1] = "RandomNumberGenerator &rng"
             #args_for_typedef = "const Parameters&"
+
+            proposal_type = 1
           }
 
           #args_for_typedef = "RandomNumberGenerator&"
           function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+        else if (block_name=="evaluate_log_mh_proposal")
+        {
+          if ( (sum(which_data)>0) && (sum(which_proposal_parameters)>0) )
+          {
+            return_type = "double"
+            arguments = c()
+            arguments[1] = "const Parameters &proposed_parameters"
+            arguments[2] = "const Parameters &parameters"
+            arguments[3] = "const Parameters &proposal_parameters"
+            arguments[4] = "const Data &data"
+            #args_for_typedef = "const Parameters&"
+
+            proposal_type = 4
+          }
+          else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
+          {
+            return_type = "double"
+            arguments = c()
+            arguments[1] = "const Parameters &proposed_parameters"
+            arguments[2] = "const Parameters &parameters"
+            arguments[3] = "const Data &data"
+            #args_for_typedef = "const Parameters&"
+
+            proposal_type = 3
+          }
+          else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
+          {
+            return_type = "double"
+            arguments = c()
+            arguments[1] = "const Parameters &proposed_parameters"
+            arguments[2] = "const Parameters &parameters"
+            arguments[3] = "const Parameters &proposal_parameters"
+            #args_for_typedef = "const Parameters&"
+
+            proposal_type = 2
+          }
+          else
+          {
+            return_type = "double"
+            arguments = c()
+            arguments[1] = "const Parameters &proposed_parameters"
+            arguments[2] = "const Parameters &parameters"
+            #args_for_typedef = "const Parameters&"
+
+            proposal_type = 1
+          }
+
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
+        }
+        else if (block_name=="simulate_mh_proposal")
+        {
+          if (output_variable=="")
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          return_type = "Parameters"
+          arguments = c()
+
+          if (sum(which_parameters)>0)
+          {
+            if ( (sum(which_data)>0) && (sum(which_proposal_parameters)>0) )
+            {
+              arguments = c()
+              arguments[1] = "RandomNumberGenerator &rng"
+              arguments[2] = "const Parameters &parameters"
+              arguments[3] = "const Parameters &proposal_parameters"
+              arguments[4] = "const Data &data"
+              #args_for_typedef = "const Parameters&"
+
+              proposal_type = 4
+            }
+            else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
+            {
+              arguments = c()
+              arguments[1] = "RandomNumberGenerator &rng"
+              arguments[2] = "const Parameters &parameters"
+              arguments[3] = "const Data &data"
+              #args_for_typedef = "const Parameters&"
+
+              proposal_type = 3
+            }
+            else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
+            {
+              arguments = c()
+              arguments[1] = "RandomNumberGenerator &rng"
+              arguments[2] = "const Parameters &parameters"
+              arguments[3] = "const Parameters &proposal_parameters"
+              #args_for_typedef = "const Parameters&"
+
+              proposal_type = 2
+            }
+            else
+            {
+              arguments = c()
+              arguments[1] = "RandomNumberGenerator &rng"
+              arguments[2] = "const Parameters &parameters"
+              #args_for_typedef = "const Parameters&"
+
+              proposal_type = 1
+            }
+          }
+          else
+          {
+            top(paste("Block ",block_name,", line number ",line_counter,": no parameters used, should this have been specified as simulate_independent_mh_proposal?",sep=""))
+          }
+
+          #args_for_typedef = "RandomNumberGenerator&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+        else if (block_name=="evaluate_log_independent_mh_proposal")
+        {
+          if ( (sum(which_data)>0) && (sum(which_proposal_parameters)>0) )
+          {
+            return_type = "double"
+            arguments = c()
+            arguments[1] = "const Parameters &proposed_parameters"
+            arguments[2] = "const Parameters &proposal_parameters"
+            arguments[3] = "const Data &data"
+            #args_for_typedef = "const Parameters&"
+
+            proposal_type = 4
+          }
+          else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
+          {
+            return_type = "double"
+            arguments = c()
+            arguments[1] = "const Parameters &proposed_parameters"
+            arguments[2] = "const Data &data"
+            #args_for_typedef = "const Parameters&"
+
+            proposal_type = 3
+          }
+          else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
+          {
+            return_type = "double"
+            arguments = c()
+            arguments[1] = "const Parameters &proposed_parameters"
+            arguments[2] = "const Parameters &proposal_parameters"
+            #args_for_typedef = "const Parameters&"
+
+            proposal_type = 2
+          }
+          else
+          {
+            return_type = "double"
+            arguments = c()
+            arguments[1] = "const Parameters &proposed_parameters"
+            #args_for_typedef = "const Parameters&"
+
+            proposal_type = 1
+          }
+
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
+        }
+        else if (block_name=="simulate_independent_mh_proposal")
+        {
+          if (output_variable=="")
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          return_type = "Parameters"
+          arguments = c()
+
+          if (sum(which_parameters)==0)
+          {
+            if ( (sum(which_data)>0) && (sum(which_proposal_parameters)>0) )
+            {
+              arguments = c()
+              arguments[1] = "RandomNumberGenerator &rng"
+              arguments[2] = "const Parameters &proposal_parameters"
+              arguments[3] = "const Data &data"
+              #args_for_typedef = "const Parameters&"
+
+              proposal_type = 4
+            }
+            else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
+            {
+              arguments = c()
+              arguments[1] = "RandomNumberGenerator &rng"
+              arguments[2] = "const Data &data"
+              #args_for_typedef = "const Parameters&"
+
+              proposal_type = 3
+            }
+            else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
+            {
+              arguments = c()
+              arguments[1] = "RandomNumberGenerator &rng"
+              arguments[2] = "const Parameters &proposal_parameters"
+              #args_for_typedef = "const Parameters&"
+
+              proposal_type = 2
+            }
+            else
+            {
+              arguments = c()
+              arguments[1] = "RandomNumberGenerator &rng"
+              #args_for_typedef = "const Parameters&"
+
+              proposal_type = 1
+            }
+          }
+          else
+          {
+            top(paste("Block ",block_name,", line number ",line_counter,": parameters used, should this have been specified as simulate_mh_proposal?",sep=""))
+          }
+
+          #args_for_typedef = "RandomNumberGenerator&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+        else if (block_name=="simulate_m_proposal")
+        {
+          if (output_variable=="")
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          return_type = "Parameters"
+          arguments = c()
+
+          if (sum(which_parameters)>0)
+          {
+            if ( (sum(which_data)>0) && (sum(which_proposal_parameters)>0) )
+            {
+              arguments = c()
+              arguments[1] = "RandomNumberGenerator &rng"
+              arguments[2] = "const Parameters &parameters"
+              arguments[3] = "const Parameters &proposal_parameters"
+              arguments[4] = "const Data &data"
+              #args_for_typedef = "const Parameters&"
+
+              proposal_type = 4
+            }
+            else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
+            {
+              arguments = c()
+              arguments[1] = "RandomNumberGenerator &rng"
+              arguments[2] = "const Parameters &parameters"
+              arguments[3] = "const Data &data"
+              #args_for_typedef = "const Parameters&"
+
+              proposal_type = 3
+            }
+            else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
+            {
+              arguments = c()
+              arguments[1] = "RandomNumberGenerator &rng"
+              arguments[2] = "const Parameters &parameters"
+              arguments[3] = "const Parameters &proposal_parameters"
+              #args_for_typedef = "const Parameters&"
+
+              proposal_type = 2
+            }
+            else
+            {
+              arguments = c()
+              arguments[1] = "RandomNumberGenerator &rng"
+              arguments[2] = "const Parameters &parameters"
+              #args_for_typedef = "const Parameters&"
+
+              proposal_type = 1
+            }
+          }
+          else
+          {
+            top(paste("Block ",block_name,", line number ",line_counter,": no parameters used, invalid proposal type?",sep=""))
+          }
+
+          #args_for_typedef = "RandomNumberGenerator&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+
+        }
+        else if (block_name=="mcmc_weights")
+        {
+          if (sum(which_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in a mcmc_weights function.",sep=""))
+          }
+
+          return_type = "NumericVector"
+          arguments = c()
+
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericVector output = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
         }
         else
         {
@@ -722,6 +1333,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
         code = paste(code,') {',function_body,' }',sep="")
 
         fileConn<-file(temp_filename)
+
         writeLines(c(
           '#include <RcppArmadillo.h>',
           '// [[Rcpp::depends(RcppArmadillo)]]',
@@ -741,13 +1353,32 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           paste("  typedef", return_type, "(*funcPtr)(", args_for_typedef, ");"),
           paste("  return XPtr<funcPtr>(new funcPtr(&", cpp_function_name, "));"),
           "}"), fileConn)
+
+        # writeLines(c(
+        #   '/*** R',
+        #   paste(R_function_name,function_info[[1]],sep=""),
+        #   '*/'), fileConn)
+
         close(fileConn)
 
+        #browser()
         Rcpp::sourceCpp(temp_filename)
         file.remove(temp_filename)
 
-        my_list = list()
+        my_list = list(get(xptr_name)())
+        #my_list = list(RcppXPtrUtils::cppXPtr(code,plugins=c("cpp11"),depends = c("ilike","RcppArmadillo","BH","dqrng","sitmo")))
+
         names(my_list) = c(block_name)
+
+        if (proposal_type!=0)
+          my_list[["type"]] = proposal_type
+
+        if ("type" %in% names(blocks[[block_type]][[factor_number]]))
+        {
+          if (blocks[[block_type]][[factor_number]][[type]]!=proposal_type)
+            stop(paste("Block ",block_name,", line number ",line_counter,": different parts of the proposal are of different types (maybe one relies on additional parameters and/or data, and the other does not?)",sep=""))
+        }
+
         if (length((blocks[[block_type]]))==0)
         {
           blocks[[block_type]][[factor_number]] = my_list
@@ -760,7 +1391,6 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
         {
           blocks[[block_type]][[factor_number]] = append(blocks[[block_type]] [[factor_number]],my_list)
         }
-        blocks[[block_type]][[factor_number]][[block_name]] = get(xptr_name)
       }
 
     }
@@ -768,6 +1398,308 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
   return(blocks)
 }
+
+
+check_types = function(blocks)
+{
+  if ("data" %in% names(blocks))
+  {
+    for (i in 1:length(blocks[["data"]]))
+    {
+      if (inherits(blocks[["data"]][[i]][["data"]],"XPtr"))
+        RcppXPtrUtils::checkXPtr(blocks[["data"]][[i]][["data"]], "Data")
+    }
+  }
+
+  for (i in 1:length(blocks[["factor"]]))
+  {
+    current_factor = blocks[["factor"]][[i]]
+
+    if ("evaluate_log_prior" %in% names(current_factor))
+    {
+      if (inherits(current_factor[["evaluate_log_prior"]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_factor[["evaluate_log_prior"]], "double", c("const Parameters&"))
+      }
+    }
+
+    if ("simulate_prior" %in% names(current_factor))
+    {
+      if (inherits(current_factor[["simulate_prior"]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_factor[["simulate_prior"]], "Parameters", c("RandomNumberGenerator&"))
+      }
+    }
+
+    if ("evaluate_log_likelihood" %in% names(current_factor))
+    {
+      if (inherits(current_factor[["evaluate_log_likelihood"]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_factor[["evaluate_log_likelihood"]],  "double", c("const Parameters&","const Data&"))
+      }
+    }
+
+  }
+
+  for (i in 1:length(blocks[["importance_proposal"]]))
+  {
+    current_importance_proposal = blocks[["importance_proposal"]][[i]]
+
+    if ("evaluate_log_importance_proposal" %in% names(current_importance_proposal))
+    {
+      if (inherits(current_importance_proposal[["evaluate_log_importance_proposal"]],"XPtr"))
+      {
+        proposal_type = c(TRUE,TRUE,TRUE,TRUE)
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["evaluate_log_importance_proposal"]],  "double", c("const Parameters&")) }
+                  , error = function(e) {proposal_type[1] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["evaluate_log_importance_proposal"]],  "double", c("const Parameters&","const Parameters&")) }
+                  , error = function(e) {proposal_type[2] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["evaluate_log_importance_proposal"]],  "double", c("const Parameters&","const Data&")) }
+                  , error = function(e) {proposal_type[3] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["evaluate_log_importance_proposal"]],  "double", c("const Parameters&","const Parameters&","const Data&")) }
+                  , error = function(e) {proposal_type[4] <<- FALSE})
+
+        if (length(which(proposal_type==TRUE))==0)
+        {
+          stop("No valid importance proposal specified.")
+        }
+
+        blocks[["importance_proposal"]][[i]][["type"]] = which(proposal_type)[1]
+      }
+    }
+
+    if ("simulate_importance_proposal" %in% names(current_importance_proposal))
+    {
+      if (inherits(current_importance_proposal[["simulate_importance_proposal"]],"XPtr"))
+      {
+        proposal_type = c(TRUE,TRUE,TRUE,TRUE)
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["simulate_importance_proposal"]], "Parameters", c("RandomNumberGenerator&")) }
+                  , error = function(e) {proposal_type[1] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["simulate_importance_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
+                  , error = function(e) {proposal_type[2] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["simulate_importance_proposal"]], "Parameters", c("RandomNumberGenerator&","const Data&")) }
+                  , error = function(e) {proposal_type[3] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["simulate_importance_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
+                  , error = function(e) {proposal_type[4] <<- FALSE})
+
+        if (length(which(proposal_type==TRUE))==0)
+        {
+          stop("No valid importance proposal specified.")
+        }
+
+        if ("type" %in% names(blocks[["importance_proposal"]][[i]]))
+        {
+          if (blocks[["importance_proposal"]][[i]][["type"]]!=which(proposal_type)[1])
+          {
+            stop("evaluate_log_importance_proposal and simulate_importance_proposal are incompatible.")
+          }
+        }
+        else
+        {
+          stop("Need to specify both evaluate_log_importance_proposal and simulate_importance_proposal.")
+        }
+      }
+    }
+  }
+
+  for (i in 1:length(blocks[["mh_proposal"]]))
+  {
+    current_mh_proposal = blocks[["mh_proposal"]][[i]]
+
+    if ("evaluate_log_mh_proposal" %in% names(current_mh_proposal))
+    {
+      if (inherits(current_mh_proposal[["evaluate_log_mh_proposal"]],"XPtr"))
+      {
+        proposal_type = c(TRUE,TRUE,TRUE,TRUE)
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_mh_proposal[["evaluate_log_mh_proposal"]],  "double", c("const Parameters&","const Parameters&")) }
+                  , error = function(e) {proposal_type[1] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_mh_proposal[["evaluate_log_mh_proposal"]],  "double", c("const Parameters&","const Parameters&","const Parameters&")) }
+                  , error = function(e) {proposal_type[2] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_mh_proposal[["evaluate_log_mh_proposal"]],  "double", c("const Parameters&","const Parameters&","const Data&")) }
+                  , error = function(e) {proposal_type[3] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_mh_proposal[["evaluate_log_mh_proposal"]],  "double", c("const Parameters&","const Parameters&","const Parameters&","const Data&")) }
+                  , error = function(e) {proposal_type[4] <<- FALSE})
+
+        if (length(which(proposal_type==TRUE))==0)
+        {
+          stop("No valid importance proposal specified.")
+        }
+
+        blocks[["mh_proposal"]][[i]][["type"]] = which(proposal_type)[1]
+      }
+    }
+
+    if ("simulate_mh_proposal" %in% names(current_mh_proposal))
+    {
+      if (inherits(current_mh_proposal[["simulate_mh_proposal"]],"XPtr"))
+      {
+        proposal_type = c(TRUE,TRUE,TRUE,TRUE)
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_mh_proposal[["simulate_mh_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
+                  , error = function(e) {proposal_type[1] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_mh_proposal[["simulate_mh_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&")) }
+                  , error = function(e) {proposal_type[2] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_mh_proposal[["simulate_mh_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
+                  , error = function(e) {proposal_type[3] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_mh_proposal[["simulate_mh_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&","const Data&")) }
+                  , error = function(e) {proposal_type[4] <<- FALSE})
+
+        if (length(which(proposal_type==TRUE))==0)
+        {
+          stop("No valid mh proposal specified.")
+        }
+
+        if ("type" %in% names(blocks[["mh_proposal"]][[i]]))
+        {
+          if (blocks[["mh_proposal"]][[i]][["type"]]!=which(proposal_type)[1])
+          {
+            stop("evaluate_log_mh_proposal and simulate_mh_proposal are incompatible.")
+          }
+        }
+        else
+        {
+          stop("Need to specify both evaluate_log_mh_proposal and simulate_mh_proposal.")
+        }
+      }
+    }
+
+  }
+
+  for (i in 1:length(blocks[["independent_mh_proposal"]]))
+  {
+    current_independent_mh_proposal = blocks[["independent_mh_proposal"]][[i]]
+
+    if ("evaluate_log_independent_mh_proposal" %in% names(current_independent_mh_proposal))
+    {
+      if (inherits(current_independent_mh_proposal[["evaluate_log_independent_mh_proposal"]],"XPtr"))
+      {
+        proposal_type = c(TRUE,TRUE,TRUE,TRUE)
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_independent_mh_proposal[["evaluate_log_independent_mh_proposal"]],  "double", c("const Parameters&")) }
+                  , error = function(e) {proposal_type[1] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_independent_mh_proposal[["evaluate_log_independent_mh_proposal"]],  "double", c("const Parameters&","const Parameters&")) }
+                  , error = function(e) {proposal_type[2] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_independent_mh_proposal[["evaluate_log_independent_mh_proposal"]],  "double", c("const Parameters&","const Data&")) }
+                  , error = function(e) {proposal_type[3] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_independent_mh_proposal[["evaluate_log_independent_mh_proposal"]],  "double", c("const Parameters&","const Parameters&","const Data&")) }
+                  , error = function(e) {proposal_type[4] <<- FALSE})
+
+        if (length(which(proposal_type==TRUE))==0)
+        {
+          stop("No valid importance proposal specified.")
+        }
+
+        blocks[["independent_mh_proposal"]][[i]][["type"]] = which(proposal_type)[1]
+      }
+    }
+
+    if ("simulate_independent_mh_proposal" %in% names(current_independent_mh_proposal))
+    {
+      if (inherits(current_independent_mh_proposal[["simulate_independent_mh_proposal"]],"XPtr"))
+      {
+        proposal_type = c(TRUE,TRUE,TRUE,TRUE)
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_independent_mh_proposal[["simulate_independent_mh_proposal"]], "Parameters", c("RandomNumberGenerator&")) }
+                  , error = function(e) {proposal_type[1] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_independent_mh_proposal[["simulate_independent_mh_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
+                  , error = function(e) {proposal_type[2] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_independent_mh_proposal[["simulate_independent_mh_proposal"]], "Parameters", c("RandomNumberGenerator&","const Data&")) }
+                  , error = function(e) {proposal_type[3] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_independent_mh_proposal[["simulate_independent_mh_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
+                  , error = function(e) {proposal_type[4] <<- FALSE})
+
+        if (length(which(proposal_type==TRUE))==0)
+        {
+          stop("No valid independent mh proposal specified.")
+        }
+
+        if ("type" %in% names(blocks[["independent_mh_proposal"]][[i]]))
+        {
+          if (blocks[["independent_mh_proposal"]][[i]][["type"]]!=which(proposal_type)[1])
+          {
+            stop("evaluate_log_independent_mh_proposal and simulate_independent_mh_proposal are incompatible.")
+          }
+        }
+        else
+        {
+          stop("Need to specify both evaluate_log_independent_mh_proposal and simulate_independent_mh_proposal.")
+        }
+      }
+    }
+
+  }
+
+  for (i in 1:length(blocks[["m_proposal"]]))
+  {
+    current_m_proposal = blocks[["m_proposal"]][[i]]
+
+    if ("simulate_m_proposal" %in% names(current_m_proposal))
+    {
+      if (inherits(current_m_proposal[["simulate_m_proposal"]],"XPtr"))
+      {
+        proposal_type = c(TRUE,TRUE,TRUE,TRUE)
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_m_proposal[["simulate_m_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
+                  , error = function(e) {proposal_type[1] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_m_proposal[["simulate_m_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&")) }
+                  , error = function(e) {proposal_type[2] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_m_proposal[["simulate_m_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
+                  , error = function(e) {proposal_type[3] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_m_proposal[["simulate_m_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&","const Data&")) }
+                  , error = function(e) {proposal_type[4] <<- FALSE})
+
+        if (length(which(proposal_type==TRUE))==0)
+        {
+          stop("No valid m proposal specified.")
+        }
+
+        blocks[["m_proposal"]][[i]][["type"]] = which(proposal_type)[1]
+      }
+    }
+
+  }
+
+  if ("mcmc_weights" %in% names(blocks))
+  {
+    for (i in 1:length(blocks[["mcmc_weights"]]))
+    {
+      if ("mcmc_weights" %in% names(blocks[["mcmc_weights"]][[i]]))
+      {
+        if (inherits(blocks[["mcmc_weights"]][[i]][["mcmc_weights"]],"XPtr"))
+        {
+          RcppXPtrUtils::checkXPtr(blocks[["mcmc_weights"]][[i]][["mcmc_weights"]], "NumericVector")
+        }
+      }
+    }
+  }
+
+  return(blocks)
+}
+
 
 #' Parse .cpp file to give ilike model.
 #'
@@ -818,7 +1750,7 @@ parse_ilike_model <- function(filename,
   the_file = file(filename,open="r")
 
   in_block = FALSE
-  blocks = list()
+  blocks = list(order_of_mcmc=c())
   block_code = ""
   starting_block_flag = FALSE
   is_custom = FALSE
@@ -829,7 +1761,11 @@ parse_ilike_model <- function(filename,
 
   factor_number = 0
   importance_proposal_number = 0
+  mh_proposal_number = 0
+  independent_mh_proposal_number = 0
+  m_proposal_number = 0
   data_number = 0
+  mcmc_weights_number = 0
   block_type = "none"
   block_name = "none"
 
@@ -872,7 +1808,7 @@ parse_ilike_model <- function(filename,
             stop(paste("Invalid file: line ",line_counter,", new section of file needs a name: use /***name***/.",sep=""))
           }
           split_block_name = split_string(unparsed_block_name)
-          new_block_info = determine_block_type(split_block_name,blocks,line_counter,block_type,block_name,factor_number,importance_proposal_number,data_number)
+          new_block_info = determine_block_type(split_block_name,blocks,line_counter,block_type,block_name,factor_number,importance_proposal_number,mh_proposal_number,independent_mh_proposal_number,m_proposal_number,data_number,mcmc_weights_number)
 
           # expect input for each block in one of the following forms:
           # (a) /***evaluate_log_prior***/, followed by a C++ function
@@ -893,7 +1829,11 @@ parse_ilike_model <- function(filename,
           block_function = new_block_info[[5]]
           factor_number = new_block_info[[6]]
           importance_proposal_number = new_block_info[[7]]
-          data_number = new_block_info[[8]]
+          mh_proposal_number = new_block_info[[8]]
+          independent_mh_proposal_number = new_block_info[[9]]
+          m_proposal_number = new_block_info[[10]]
+          data_number = new_block_info[[11]]
+          mcmc_weights_number = new_block_info[[12]]
 
         }
       }
@@ -912,114 +1852,34 @@ parse_ilike_model <- function(filename,
     if (number_to_pass_to_extract_block>0)
     {
       blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list)
-      if (factor_number==length(blocks[["factor"]]))
+      if ( (factor_number!=0) && (factor_number==length(blocks[["factor"]])) )
       {
         print_factor_info(length(blocks[["factor"]]),blocks,line_counter)
       }
-      if (importance_proposal_number==length(blocks[["importance_proposal"]]))
+      if ( (importance_proposal_number!=0) && importance_proposal_number==length(blocks[["importance_proposal"]]))
       {
         print_importance_proposal_info(length(blocks[["importance_proposal"]]),blocks,line_counter)
+      }
+      if ( (mh_proposal_number!=0) && mh_proposal_number==length(blocks[["mh_proposal"]]))
+      {
+        print_mh_proposal_info(length(blocks[["mh_proposal"]]),blocks,line_counter)
+      }
+      if ( (independent_mh_proposal_number!=0) && independent_mh_proposal_number==length(blocks[["independent_mh_proposal"]]))
+      {
+        print_independent_mh_proposal_info(length(blocks[["independent_mh_proposal"]]),blocks,line_counter)
+      }
+      if ( (m_proposal_number!=0) && m_proposal_number==length(blocks[["m_proposal"]]))
+      {
+        print_m_proposal_info(length(blocks[["m_proposal"]]),blocks,line_counter)
       }
     }
   }
 
   close(the_file)
 
-  if ("data" %in% names(blocks))
-  {
-    for (i in 1:length(blocks[["data"]]))
-    {
-      RcppXPtrUtils::checkXPtr(blocks[["data"]][[i]][["data"]], "Data")
-    }
-  }
+  #browser()
 
-  for (i in 1:length(blocks[["factor"]]))
-  {
-    current_factor = blocks[["factor"]][[i]]
-    if ("evaluate_log_prior" %in% names(current_factor))
-    {
-      RcppXPtrUtils::checkXPtr(current_factor[["evaluate_log_prior"]], "double", c("const Parameters&"))
-    }
-
-    if ("simulate_prior" %in% names(current_factor))
-    {
-      RcppXPtrUtils::checkXPtr(current_factor[["simulate_prior"]], "Parameters", c("RandomNumberGenerator&"))
-    }
-
-    if ("evaluate_log_prior" %in% names(current_factor))
-    {
-      RcppXPtrUtils::checkXPtr(current_factor[["evaluate_log_prior"]], "double", c("const Parameters&"))
-    }
-
-    if ("evaluate_log_likelihood" %in% names(current_factor))
-    {
-      RcppXPtrUtils::checkXPtr(current_factor[["evaluate_log_likelihood"]],  "double", c("const Parameters&","const Data&"))
-    }
-
-  }
-
-  for (i in 1:length(blocks[["importance_proposal"]]))
-  {
-    current_importance_proposal = blocks[["importance_proposal"]][[i]]
-
-    if ("evaluate_log_importance_proposal" %in% names(current_importance_proposal))
-    {
-      proposal_type = c(TRUE,TRUE)#,TRUE,TRUE)
-
-      tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["evaluate_log_importance_proposal"]],  "double", c("const Parameters&")) }
-                , error = function(e) {proposal_type[1] <<- FALSE})
-
-      # tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[["evaluate_log_importance_proposal"]],  "double", c("const Parameters&","const Parameters&")) }
-      #           , error = function(e) {proposal_type[2] <<- FALSE})
-
-      tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["evaluate_log_importance_proposal"]],  "double", c("const Parameters&","const Data&")) }
-                , error = function(e) {proposal_type[2] <<- FALSE})
-
-      # tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[["evaluate_log_importance_proposal"]],  "double", c("const Parameters&","const Parameters&","const Data&")) }
-      #           , error = function(e) {proposal_type[4] <<- FALSE})
-
-      if (length(which(proposal_type==TRUE))==0)
-      {
-        stop("No valid importance proposal specified.")
-      }
-
-      blocks[["importance_proposal"]][[i]][["type"]] = which(proposal_type)[1]
-    }
-
-    if ("simulate_importance_proposal" %in% names(current_importance_proposal))
-    {
-      proposal_type = c(TRUE,TRUE)#TRUE,TRUE)
-
-      tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["simulate_importance_proposal"]], "Parameters", c("RandomNumberGenerator&")) }
-                , error = function(e) {proposal_type[1] <<- FALSE})
-
-      # tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[["simulate_importance_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
-      #           , error = function(e) {proposal_type[2] <<- FALSE})
-
-      tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["simulate_importance_proposal"]], "Parameters", c("RandomNumberGenerator&","const Data&")) }
-                , error = function(e) {proposal_type[2] <<- FALSE})
-
-      # tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[["simulate_importance_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
-      #           , error = function(e) {proposal_type[4] <<- FALSE})
-
-      if (length(which(proposal_type==TRUE))==0)
-      {
-        stop("No valid importance proposal specified.")
-      }
-
-      if ("type" %in% names(blocks[["importance_proposal"]][[i]]))
-      {
-        if (blocks[["importance_proposal"]][[i]][["type"]]!=which(proposal_type)[1])
-        {
-          stop("evaluate_log_importance_proposal and simulate_importance_proposal are incompatible.")
-        }
-      }
-      else
-      {
-        stop("Need to specify both evaluate_log_importance_proposal and simulate_importance_proposal.")
-      }
-    }
-  }
+  blocks = check_types(blocks)
 
   return(blocks)
 }

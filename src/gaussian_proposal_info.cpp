@@ -14,6 +14,13 @@ GaussianProposalInfo::GaussianProposalInfo(const double &mean_in,
   this->set_covariance(cov);
 }
 
+GaussianProposalInfo::GaussianProposalInfo(const double &sd_in)
+: scale(1.0)
+{
+  arma::mat cov(1, 1, arma::fill::value(pow(sd_in,2.0)));
+  this->set_covariance(cov);
+}
+
 GaussianProposalInfo::GaussianProposalInfo(const arma::mat &covariance_in)
 : scale(1.0)
 {

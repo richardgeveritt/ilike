@@ -263,3 +263,8 @@ arma::mat TransformedProposalKernel::specific_subsample_gradient_of_log(const st
   Rcpp::stop("TransformedProposalKernel::specific_gradient_of_log - not written yet.");
 }
 */
+
+void TransformedProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
+{
+  this->proposal->set_proposal_parameters(proposal_parameters_in);
+}

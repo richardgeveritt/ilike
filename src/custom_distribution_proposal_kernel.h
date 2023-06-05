@@ -88,6 +88,9 @@ public:
   //                                      const Parameters &conditioned_on_parameters);
   arma::mat subsample_independent_gradient_of_log(const std::string &variable,
                                                   const Parameters &proposed_particle);
+  
+  void set_proposal_parameters(Parameters* proposal_parameters_in);
+  
   //arma::mat subsample_independent_gradient_of_log(const std::string &variable,
   //                                                Variables* proposed_particle,
   //                                                const Parameters &conditioned_on_parameters);

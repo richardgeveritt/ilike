@@ -21,12 +21,12 @@ public:
   
   CustomIndependentProposalKernel(SimulateIndependentProposalPtr proposal_simulate_in);
   
-  //CustomIndependentProposalKernel(SimulateIndependentProposalPtr proposal_simulate_in,
-  //                                EvaluateLogIndependentProposalPtr proposal_evaluate_in);
-  
   CustomIndependentProposalKernel(SimulateIndependentProposalPtr proposal_simulate_in,
-                                  EvaluateLogIndependentProposalPtr proposal_evaluate_in,
-                                  const Parameters &proposal_parameters_in);
+                                  EvaluateLogIndependentProposalPtr proposal_evaluate_in);
+  
+  //CustomIndependentProposalKernel(SimulateIndependentProposalPtr proposal_simulate_in,
+  //                                EvaluateLogIndependentProposalPtr proposal_evaluate_in,
+  //                                Parameters* proposal_parameters_in);
 
   CustomIndependentProposalKernel(const CustomIndependentProposalKernel &another);
 
@@ -69,6 +69,7 @@ public:
   //                                                Variables* proposed_particle,
   //                                                const Parameters &conditioned_on_parameters);
   
+  void set_proposal_parameters(Parameters* proposal_parameters_in);
 // Mh has its own parameters.
   // Stochastic has some weights.
   // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.
@@ -82,7 +83,7 @@ protected:
   
   SimulateIndependentProposalPtr proposal_simulate;
   
-  Parameters proposal_parameters;
+  Parameters* proposal_parameters;
   
 };
 

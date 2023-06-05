@@ -38,8 +38,13 @@ ParticleFilter::ParticleFilter(RandomNumberGenerator* rng_in,
                                bool parallel_in,
                                size_t grain_size_in,
                                const std::string &results_name_in)
-  :SMC(rng_in, seed_in, data_in, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, true, false, true, results_name_in)
+  :SMC(rng_in, seed_in, data_in, Parameters(), number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, true, false, true, results_name_in)
 {
+  
+  proposal_kernel_in->set_proposal_parameters(&this->algorithm_parameters);
+  
+  // also need to set up first proposal
+  
   /*
   std::vector<LikelihoodEstimator*> likelihood_estimators;
   

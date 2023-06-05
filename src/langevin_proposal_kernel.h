@@ -29,12 +29,17 @@ public:
   // make cov_names from var_names
   LangevinProposalKernel(const std::vector<std::string> &variable_names_in,
                          const std::vector<arma::mat> &covariances_in);
+  
+  LangevinProposalKernel(const std::string &variable_name_in,
+                         const arma::mat &covariance_in);
 
   LangevinProposalKernel(const LangevinProposalKernel &another);
 
   void operator=(const LangevinProposalKernel &another);
   Kernel* duplicate() const;
   ProposalKernel* proposal_kernel_duplicate() const;
+  
+  void set_proposal_parameters(Parameters* proposal_parameters_in);
   
 // Mh has its own parameters.
   // Stochastic has some weights.

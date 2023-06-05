@@ -35,6 +35,10 @@ public:
                                        const double &mean_in,
                                        const double &sd_in);
   
+  LogGaussianIndependentProposalKernel(const std::string &variable_name_in,
+                                       const arma::colvec &mean_in,
+                                       const arma::mat &sd_in);
+  
   LogGaussianIndependentProposalKernel(const std::vector<std::string> &variable_names_in,
                                        const std::vector<arma::colvec> &means_in,
                                        const std::vector<arma::mat> &covariances_in);
@@ -82,6 +86,8 @@ public:
                                         const Parameters &proposed_particle);
   arma::mat subsample_independent_gradient_of_log(const std::string &variable,
                                                   const Parameters &proposed_particle);
+  
+  void set_proposal_parameters(Parameters* proposal_parameters_in);
   
 // Mh has its own parameters.
   // Stochastic has some weights.

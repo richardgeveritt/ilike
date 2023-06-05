@@ -27,6 +27,33 @@ UniformRandomWalkProposalKernel::UniformRandomWalkProposalKernel(const std::vect
   }
 }
 
+UniformRandomWalkProposalKernel::UniformRandomWalkProposalKernel(const std::string &variable_name_in,
+                                                                 const double &halfwidth_in)
+:SymmetricProposalKernel()
+{
+  this->unused_variables_kept = true;
+  
+  this->proposal_info[variable_name_in] = halfwidth_in;
+}
+
+UniformRandomWalkProposalKernel::UniformRandomWalkProposalKernel(const std::string &variable_name_in,
+                                                                 const arma::colvec &halfwidth_in)
+:SymmetricProposalKernel()
+{
+  this->unused_variables_kept = true;
+  
+  this->proposal_info[variable_name_in] = halfwidth_in;
+}
+
+UniformRandomWalkProposalKernel::UniformRandomWalkProposalKernel(const std::string &variable_name_in,
+                                                                 const arma::mat &halfwidth_in)
+:SymmetricProposalKernel()
+{
+  this->unused_variables_kept = true;
+  
+  this->proposal_info[variable_name_in] = halfwidth_in;
+}
+
 UniformRandomWalkProposalKernel::UniformRandomWalkProposalKernel(const std::vector<std::string> &variable_names_in,
                                                                  const std::vector<arma::mat> &halfwidths_in)
   :SymmetricProposalKernel()
@@ -221,3 +248,8 @@ arma::mat UniformRandomWalkProposalKernel::specific_subsample_gradient_of_log(co
   Rcpp::stop("UniformRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
 }
 */
+
+void UniformRandomWalkProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
+{
+  
+}

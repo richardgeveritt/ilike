@@ -11,14 +11,12 @@ CustomProposalKernel::~CustomProposalKernel()
 {
 }
 
-CustomProposalKernel::CustomProposalKernel(EvaluateLogMCMCProposalPtr proposal_evaluate_in,
-                                           SimulateMCMCProposalPtr proposal_simulate_in,
-                                           const Parameters &proposal_parameters_in)
+CustomProposalKernel::CustomProposalKernel(SimulateMCMCProposalPtr proposal_simulate_in,
+                                           EvaluateLogMCMCProposalPtr proposal_evaluate_in)
   :ProposalKernel()
 {
   this->proposal_evaluate = proposal_evaluate_in;
   this->proposal_simulate = proposal_simulate_in;
-  this->proposal_parameters = proposal_parameters_in;
 }
 
 CustomProposalKernel::CustomProposalKernel(const CustomProposalKernel &another)
@@ -58,19 +56,8 @@ double CustomProposalKernel::specific_evaluate_kernel(Particle &proposed_particl
 {
   return this->proposal_evaluate(*proposed_particle.move_parameters,
                                  *old_particle.move_parameters,
-                                 this->proposal_parameters);
+                                 *this->proposal_parameters);
 }
-
-/*
-double CustomProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
-                                                      Particle &old_particle,
-                                                      const Parameters &conditioned_on_parameters) const
-{
-  return this->proposal_evaluate(proposed_particle.move_parameters->merge(conditioned_on_parameters),
-                                 old_particle.move_parameters->merge(conditioned_on_parameters),
-                                 this->proposal_parameters);
-}
-*/
 
 double CustomProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
                                                                 Particle &old_particle) const
@@ -79,34 +66,14 @@ double CustomProposalKernel::specific_subsample_evaluate_kernel(Particle &propos
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
 
-/*
-double CustomProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                                                Particle &old_particle,
-                                                                const Parameters &conditioned_on_parameters) const
-{
-  // no difference since size of data set does not impact on proposal
-  return this->specific_evaluate_kernel(proposed_particle, old_particle, conditioned_on_parameters);
-}
-*/
-
 Parameters CustomProposalKernel::simulate(RandomNumberGenerator &rng,
                                           Particle &particle) const
 {
   return this->proposal_simulate(rng,
                                  *particle.move_parameters,
-                                 this->proposal_parameters);
+                                 *this->proposal_parameters);
 }
 
-/*
-Parameters CustomProposalKernel::simulate(RandomNumberGenerator &rng,
-                                          Particle &particle,
-                                          const Parameters &conditioned_on_parameters) const
-{
-  return this->proposal_simulate(rng,
-                                 particle.move_parameters->merge(conditioned_on_parameters),
-                                 this->proposal_parameters);
-}
-*/
 
 Parameters CustomProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                     Particle &particle) const
@@ -115,15 +82,6 @@ Parameters CustomProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
   return this->simulate(rng, particle);
 }
 
-/*
-Parameters CustomProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                    Particle &particle,
-                                                    const Parameters &conditioned_on_parameters) const
-{
-  // no difference since size of data set does not impact on proposal
-  return this->simulate(rng, particle, conditioned_on_parameters);
-}
-*/
 
 Parameters CustomProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                     const std::string &variable,
@@ -133,17 +91,6 @@ Parameters CustomProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
   Rcpp::stop("CustomProposalKernel::subsample_simulate - not implemented.");
 }
 
-/*
-Parameters CustomProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                    const std::string &variable,
-                                                    Particle &particle,
-                                                    const Parameters &conditioned_on_parameters) const
-{
-  // no difference since size of data set does not impact on proposal
-  Rcpp::stop("CustomProposalKernel::subsample_simulate - not implemented.");
-}
-*/
-
 arma::mat CustomProposalKernel::specific_gradient_of_log(const std::string &variable,
                                                          Particle &proposed_particle,
                                                          Particle &old_particle)
@@ -151,19 +98,14 @@ arma::mat CustomProposalKernel::specific_gradient_of_log(const std::string &vari
   Rcpp::stop("CustomProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
-/*
-arma::mat CustomProposalKernel::specific_gradient_of_log(const std::string &variable,
-                                                           Particle &proposed_particle,
-                                                           Particle &old_particle,
-                                                           const Parameters &conditioned_on_parameters)
-{
-  Rcpp::stop("CustomProposalKernel::specific_gradient_of_log - not written yet.");
-}
-*/
-
 arma::mat CustomProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
                                                                    Particle &proposed_particle,
                                                                    Particle &old_particle)
 {
   Rcpp::stop("CustomProposalKernel::specific_gradient_of_log - not written yet.");
+}
+
+void CustomProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
+{
+  this->proposal_parameters = proposal_parameters_in;
 }

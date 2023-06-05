@@ -12,6 +12,7 @@ LikelihoodEstimator::LikelihoodEstimator()
 LikelihoodEstimator::LikelihoodEstimator(RandomNumberGenerator* rng_in,
                                          size_t* seed_in,
                                          Data* data_in,
+                                         const Parameters &algorithm_parameters_in,
                                          bool smcfixed_flag_in)
 {
   this->data = data_in;
@@ -22,6 +23,7 @@ LikelihoodEstimator::LikelihoodEstimator(RandomNumberGenerator* rng_in,
   this->smcfixed_flag = smcfixed_flag_in;
   this->subsampler = NULL;
   this->factors = NULL;
+  this->algorithm_parameters = algorithm_parameters_in;
 }
 
 LikelihoodEstimator::~LikelihoodEstimator()
@@ -59,6 +61,7 @@ void LikelihoodEstimator::make_copy(const LikelihoodEstimator &another)
     this->factors = another.factors->duplicate();
   else
     this->factors = NULL;
+  this->algorithm_parameters = another.algorithm_parameters;
 }
 
 /*

@@ -13,6 +13,9 @@ class StochasticScanMCMC : public MCMC
 public:
 
   StochasticScanMCMC();
+  
+  StochasticScanMCMC(const std::vector<MCMC*> &moves,
+                     const arma::colvec &unnormalised_probabilities_in);
 
   virtual ~StochasticScanMCMC();
 
@@ -61,6 +64,8 @@ public:
   void ensemble_adapt(EnsembleKalmanOutput* current_state);
   
   void set_index(Index* index_in);
+  
+  void set_proposal_parameters(Parameters* proposal_parameters_in);
   
 protected:
   

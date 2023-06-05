@@ -308,3 +308,8 @@ void MetropolisHastingsMCMC::set_index(Index* index_in)
   
   this->index = index_in;
 }
+
+void MetropolisHastingsMCMC::set_proposal_parameters(Parameters* proposal_parameters_in)
+{
+  this->proposal->set_proposal_parameters(proposal_parameters_in);
+}

@@ -26,6 +26,15 @@ public:
   // make cov_names from var_names
   UniformRandomWalkProposalKernel(const std::vector<std::string> &variable_names_in,
                                   const std::vector<arma::mat> &halfwidths_in);
+  
+  UniformRandomWalkProposalKernel(const std::string &variable_name_in,
+                                  const double &halfwidth_in);
+
+  UniformRandomWalkProposalKernel(const std::string &variable_name_in,
+                                  const arma::colvec &halfwidth_in);
+  
+  UniformRandomWalkProposalKernel(const std::string &variable_name_in,
+                                  const arma::mat &halfwidth_in);
 
   UniformRandomWalkProposalKernel(const UniformRandomWalkProposalKernel &another);
 
@@ -33,6 +42,8 @@ public:
   Kernel* duplicate() const;
   ProposalKernel* proposal_kernel_duplicate() const;
   SymmetricProposalKernel* symmetric_proposal_kernel_duplicate() const;
+  
+  void set_proposal_parameters(Parameters* proposal_parameters_in);
   
 // Mh has its own parameters.
   // Stochastic has some weights.

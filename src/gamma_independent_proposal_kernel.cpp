@@ -138,3 +138,8 @@ arma::mat GammaIndependentProposalKernel::subsample_independent_gradient_of_log(
 {
   Rcpp::stop("GammaIndependentProposalKernel::independent_gradient_of_log - not written yet.");
 }
+
+void GammaIndependentProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
+{
+  
+}

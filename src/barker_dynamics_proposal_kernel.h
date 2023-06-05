@@ -28,12 +28,17 @@ public:
   
   BarkerDynamicsProposalKernel(const std::vector<std::string> &variable_names_in,
                                const std::vector<arma::mat> &covariances_in);
+  
+  BarkerDynamicsProposalKernel(const std::string &variable_name_in,
+                               const arma::mat &covariance_in);
 
   BarkerDynamicsProposalKernel(const BarkerDynamicsProposalKernel &another);
 
   void operator=(const BarkerDynamicsProposalKernel &another);
   Kernel* duplicate() const;
   ProposalKernel* proposal_kernel_duplicate() const;
+  
+  void set_proposal_parameters(Parameters* proposal_parameters_in);
   
 // Mh has its own parameters.
   // Stochastic has some weights.

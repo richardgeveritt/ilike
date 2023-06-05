@@ -189,3 +189,13 @@ arma::mat CompositeIndependentProposalKernel::subsample_independent_gradient_of_
 {
   Rcpp::stop("CompositeIndependentProposalKernel::independent_gradient_of_log - not written yet.");
 }
+
+void CompositeIndependentProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
+{
+  for (auto i=this->all_kernels.begin();
+       i!=this->all_kernels.end();
+       ++i)
+  {
+    (*i)->set_proposal_parameters(proposal_parameters_in);
+  }
+}

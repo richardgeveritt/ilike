@@ -29,6 +29,7 @@ BarkerDynamicsProposalKernel::~BarkerDynamicsProposalKernel()
 }
 
 BarkerDynamicsProposalKernel::BarkerDynamicsProposalKernel(const std::vector<std::string> &variable_names_in)
+:ProposalKernel()
 {
   this->gradient_estimator = NULL;
   this->proposal_simulate = NULL;
@@ -42,11 +43,24 @@ BarkerDynamicsProposalKernel::BarkerDynamicsProposalKernel(const std::vector<std
   }
 }
 
-BarkerDynamicsProposalKernel::BarkerDynamicsProposalKernel(const std::vector<std::string> &variable_names_in,
-                                                           const std::vector<arma::mat> &covariances_in)
+BarkerDynamicsProposalKernel::BarkerDynamicsProposalKernel(const std::string &variable_name_in,
+                                                           const arma::mat &covariance_in)
+:ProposalKernel()
 {
   this->gradient_estimator = NULL;
   this->index = NULL;
+  this->proposal_simulate = NULL;
+  
+  this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in);
+}
+
+BarkerDynamicsProposalKernel::BarkerDynamicsProposalKernel(const std::vector<std::string> &variable_names_in,
+                                                           const std::vector<arma::mat> &covariances_in)
+:ProposalKernel()
+{
+  this->gradient_estimator = NULL;
+  this->index = NULL;
+  this->proposal_simulate = NULL;
   
   for (size_t i=0;
        i<variable_names_in.size();
@@ -405,3 +419,8 @@ arma::mat BarkerDynamicsProposalKernel::specific_subsample_gradient_of_log(const
   Rcpp::stop("BarkerDynamicsProposalKernel::specific_gradient_of_log - not written yet.");
 }
 */
+
+void BarkerDynamicsProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
+{
+  
+}

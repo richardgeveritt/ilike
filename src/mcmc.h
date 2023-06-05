@@ -74,6 +74,8 @@ public:
                   size_t iteration_counter);
   
   virtual void set_index(Index* index_in)=0;
+  
+  virtual void set_proposal_parameters(Parameters* proposal_parameters_in)=0;
 
 protected:
   

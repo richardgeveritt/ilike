@@ -7,7 +7,7 @@ CustomIndependentProposalKernel::CustomIndependentProposalKernel()
 {
   this->proposal_evaluate = NULL;
   this->proposal_simulate = NULL;
-  this->proposal_parameters = Parameters();
+  this->proposal_parameters = NULL;
 }
 
 CustomIndependentProposalKernel::~CustomIndependentProposalKernel()
@@ -19,29 +19,29 @@ CustomIndependentProposalKernel::CustomIndependentProposalKernel(SimulateIndepen
 {
   this->proposal_evaluate = NULL;
   this->proposal_simulate = proposal_simulate_in;
-  this->proposal_parameters = Parameters();
+  this->proposal_parameters = NULL;
 }
 
-/*
 CustomIndependentProposalKernel::CustomIndependentProposalKernel(SimulateIndependentProposalPtr proposal_simulate_in,
                                                                  EvaluateLogIndependentProposalPtr proposal_evaluate_in)
 :IndependentProposalKernel()
 {
   this->proposal_evaluate = proposal_evaluate_in;
   this->proposal_simulate = proposal_simulate_in;
-  this->proposal_parameters = Parameters();
+  this->proposal_parameters = NULL;
 }
-*/
 
+/*
 CustomIndependentProposalKernel::CustomIndependentProposalKernel(SimulateIndependentProposalPtr proposal_simulate_in,
                                                                  EvaluateLogIndependentProposalPtr proposal_evaluate_in,
-                                                                 const Parameters &proposal_parameters_in)
+                                                                 Parameters* proposal_parameters_in)
   :IndependentProposalKernel()
 {
   this->proposal_evaluate = proposal_evaluate_in;
   this->proposal_simulate = proposal_simulate_in;
   this->proposal_parameters = proposal_parameters_in;
 }
+*/
 
 CustomIndependentProposalKernel::CustomIndependentProposalKernel(const CustomIndependentProposalKernel &another)
   :IndependentProposalKernel(another)
@@ -80,10 +80,22 @@ void CustomIndependentProposalKernel::make_copy(const CustomIndependentProposalK
   this->proposal_parameters = another.proposal_parameters;
 }
 
+void CustomIndependentProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
+{
+  this->proposal_parameters = proposal_parameters_in;
+}
+
 double CustomIndependentProposalKernel::evaluate_independent_kernel(const Parameters &proposed_particle) const
 {
-  return this->proposal_evaluate(proposed_particle,
-                                 this->proposal_parameters);
+  if (this->proposal_parameters!=NULL)
+  {
+    return this->proposal_evaluate(proposed_particle,
+                                   *this->proposal_parameters);
+  }
+  else
+  {
+    stop("CustomIndependentProposalKernel::evaluate_independent_kernel - proposal parameters not set.");
+  }
 }
 
 /*
@@ -98,36 +110,71 @@ double CustomIndependentProposalKernel::evaluate_independent_kernel(const Parame
 double CustomIndependentProposalKernel::subsample_evaluate_independent_kernel(const Parameters &proposed_particle) const
 {
   // no difference since size of data set does not impact on proposal
-  return this->proposal_evaluate(proposed_particle,
-                                 this->proposal_parameters);
+  if (this->proposal_parameters!=NULL)
+  {
+    return this->proposal_evaluate(proposed_particle,
+                                   *this->proposal_parameters);
+  }
+  else
+  {
+    stop("CustomIndependentProposalKernel::evaluate_independent_kernel - proposal parameters not set.");
+  }
 }
 
 Parameters CustomIndependentProposalKernel::independent_simulate(RandomNumberGenerator &rng) const
 {
-  return this->proposal_simulate(rng,
-                                 this->proposal_parameters);
+  if (this->proposal_parameters!=NULL)
+  {
+    return this->proposal_simulate(rng,
+                                   *this->proposal_parameters);
+  }
+  else
+  {
+    stop("CustomIndependentProposalKernel::evaluate_independent_kernel - proposal parameters not set.");
+  }
 }
 
 Parameters CustomIndependentProposalKernel::independent_simulate(RandomNumberGenerator &rng,
                                                                  const Parameters &conditioned_on_parameters) const
 {
-  return this->proposal_simulate(rng,
-                                 this->proposal_parameters.merge(conditioned_on_parameters));
+  if (this->proposal_parameters!=NULL)
+  {
+    return this->proposal_simulate(rng,
+                                   this->proposal_parameters->merge(conditioned_on_parameters));
+  }
+  else
+  {
+    stop("CustomIndependentProposalKernel::evaluate_independent_kernel - proposal parameters not set.");
+  }
 }
 
 Parameters CustomIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng) const
 {
   // no difference since size of data set does not impact on proposal
-  return this->proposal_simulate(rng,
-                                 this->proposal_parameters);
+  if (this->proposal_parameters!=NULL)
+  {
+    return this->proposal_simulate(rng,
+                                   *this->proposal_parameters);
+  }
+  else
+  {
+    stop("CustomIndependentProposalKernel::evaluate_independent_kernel - proposal parameters not set.");
+  }
 }
 
 Parameters CustomIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
                                                                            const Parameters &conditioned_on_parameters) const
 {
   // no difference since size of data set does not impact on proposal
-  return this->proposal_simulate(rng,
-                                 this->proposal_parameters.merge(conditioned_on_parameters));
+  if (this->proposal_parameters!=NULL)
+  {
+    return this->proposal_simulate(rng,
+                                   this->proposal_parameters->merge(conditioned_on_parameters));
+  }
+  else
+  {
+    stop("CustomIndependentProposalKernel::evaluate_independent_kernel - proposal parameters not set.");
+  }
 }
 
 Parameters CustomIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
@@ -136,7 +183,7 @@ Parameters CustomIndependentProposalKernel::subsample_independent_simulate(Rando
   // no difference since size of data set does not impact on proposal
   Rcpp::stop("CustomIndependentProposalKernel::subsample_independent_simulate - not written yet.");
   return this->proposal_simulate(rng,
-                                 this->proposal_parameters);
+                                 *this->proposal_parameters);
 }
 
 Parameters CustomIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
@@ -146,7 +193,7 @@ Parameters CustomIndependentProposalKernel::subsample_independent_simulate(Rando
   // no difference since size of data set does not impact on proposal
   Rcpp::stop("CustomIndependentProposalKernel::subsample_independent_simulate - not written yet.");
   return this->proposal_simulate(rng,
-                                 this->proposal_parameters.merge(conditioned_on_parameters));
+                                 this->proposal_parameters->merge(conditioned_on_parameters));
 }
 
 arma::mat CustomIndependentProposalKernel::independent_gradient_of_log(const std::string &variable,

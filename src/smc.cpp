@@ -34,6 +34,7 @@ SMC::SMC()
 SMC::SMC(RandomNumberGenerator* rng_in,
          size_t* seed_in,
          Data* data_in,
+         const Parameters &algorithm_parameters_in,
          size_t number_of_particles_in,
          size_t lag_in,
          size_t lag_proposed_in,
@@ -43,7 +44,7 @@ SMC::SMC(RandomNumberGenerator* rng_in,
          bool smcfixed_flag_in,
          bool sequencer_limit_is_fixed_in,
          const std::string &results_name_in)
-  :LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
+  :LikelihoodEstimator(rng_in, seed_in, data_in, algorithm_parameters_in, smcfixed_flag_in)
 {
   //this->output = new SMCOutput(lag_in,
   //                             lag_proposed_in);

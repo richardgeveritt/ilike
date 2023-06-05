@@ -20,6 +20,10 @@ public:
                              double mean_in,
                              double sd_in);
   
+  GaussianDistributionFactor(const std::string &variable_in,
+                             const arma::colvec &mean_in,
+                             const arma::mat &covariance_in);
+  
   GaussianDistributionFactor(const std::vector<std::string> &variable_names_in,
                              const std::vector<arma::colvec> &means_in,
                              const std::vector<arma::mat> &covariances_in);

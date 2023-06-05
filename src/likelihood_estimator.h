@@ -24,6 +24,7 @@ public:
   LikelihoodEstimator(RandomNumberGenerator* rng_in,
                       size_t* seed_in,
                       Data* data_in,
+                      const Parameters &algorithm_parameters_in,
                       bool smcfixed_flag_in);
   virtual ~LikelihoodEstimator();
 
@@ -49,6 +50,8 @@ public:
   Data* get_data() const;
   
   bool get_smcfixed_flag() const;
+  
+  Parameters algorithm_parameters;
 
 protected:
 

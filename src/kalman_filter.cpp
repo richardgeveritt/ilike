@@ -15,7 +15,7 @@ KalmanFilter::KalmanFilter(RandomNumberGenerator* rng_in,
                            EvaluateLogLikelihoodPtr llhd_in,
                            double current_time_in,
                            bool smcfixed_flag_in)
-:LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
 {
   this->current_time = current_time_in;
   this->lag = lag_in;

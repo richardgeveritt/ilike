@@ -270,6 +270,11 @@ arma::mat CustomDistributionProposalKernel::subsample_independent_gradient_of_lo
   Rcpp::stop("CustomDistributionProposalKernel::independent_gradient_of_log - not written yet.");
 }
 
+void CustomDistributionProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
+{
+  
+}
+
 /*
 arma::mat CustomDistributionProposalKernel::subsample_independent_gradient_of_log(const std::string &variable,
                                                 Variables* proposed_particle,

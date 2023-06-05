@@ -26,6 +26,7 @@ SMCMCMCMove::SMCMCMCMove()
 SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          size_t* seed_in,
                          Data* data_in,
+                         const Parameters &algorithm_parameters,
                          size_t lag_in,
                          size_t lag_proposed_in,
                          MCMC* mcmc_in,
@@ -39,6 +40,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
 :SMC(rng_in,
      seed_in,
      data_in,
+     Parameters(),
      initial_points_in.size(),
      std::max<size_t>(2,lag_in),
      lag_proposed_in,
@@ -48,6 +50,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
      true,
      results_name_in)
 {
+  mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
+  
   std::vector<LikelihoodEstimator*> likelihood_estimators;
   std::vector<size_t> indices;
   likelihood_estimators.reserve(1);
@@ -104,6 +108,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
 SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          size_t* seed_in,
                          Data* data_in,
+                         const Parameters &algorithm_parameters,
                          size_t lag_in,
                          size_t lag_proposed_in,
                          MCMC* mcmc_in,
@@ -116,6 +121,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
 :SMC(rng_in,
      seed_in,
      data_in,
+     Parameters(),
      initial_points_in.size(),
      std::max<size_t>(2,lag_in),
      lag_proposed_in,
@@ -125,6 +131,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
      true,
      results_name_in)
 {
+  mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
+  
   std::vector<size_t> indices;
   indices.reserve(likelihood_estimators_in.size());
   for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
@@ -189,10 +197,13 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
-:SMC(rng_in, seed_in, data_in, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, -1.0, true, true, true, results_name_in)
+:SMC(rng_in, seed_in, data_in, Parameters(), number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, -1.0, true, true, true, results_name_in)
 {
+  mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
+  
   IndependentProposalKernel* proposal = new CustomDistributionProposalKernel(simulate_proposal_in,
                                                                              evaluate_log_proposal_in);
+  proposal->set_proposal_parameters(&this->algorithm_parameters);
   //Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
   
   std::vector<LikelihoodEstimator*> likelihood_estimators;
@@ -319,13 +330,16 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
-  :SMC(rng_in, seed_in, data_in, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, true, true, true, results_name_in)
+  :SMC(rng_in, seed_in, data_in, Parameters(), number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, true, true, true, results_name_in)
 {
+  mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
+  
   std::string variable_in = "power";
   
   // Need to construct LikelihoodEstimator to read in to this constructor.
   IndependentProposalKernel* proposal = new CustomDistributionProposalKernel(simulate_proposal_in,
                                                                              evaluate_log_proposal_in);
+  proposal->set_proposal_parameters(&this->algorithm_parameters);
   //Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
   
   std::vector<LikelihoodEstimator*> likelihood_estimators;
@@ -433,12 +447,14 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
-:SMC(rng_in, seed_in, data_in, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, true, true, true, results_name_in)
+:SMC(rng_in, seed_in, data_in, Parameters(), number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, true, true, true, results_name_in)
 {
+  mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
   std::string variable_in = "power";
   // Need to construct LikelihoodEstimator to read in to this constructor.
   IndependentProposalKernel* proposal = new CustomDistributionProposalKernel(simulate_proposal_in,
                                                                              evaluate_log_proposal_in);
+  proposal->set_proposal_parameters(&this->algorithm_parameters);
   //Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
   
   std::vector<LikelihoodEstimator*> likelihood_estimators;
@@ -554,9 +570,12 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
-:SMC(rng_in, seed_in, data_in, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, results_name_in)
+:SMC(rng_in, seed_in, data_in, Parameters(), number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, results_name_in)
 {
   //Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
+  
+  mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
+  proposal_in->set_proposal_parameters(&this->algorithm_parameters);
   
   std::vector<size_t> indices;
   indices.reserve(likelihood_estimators_in.size());

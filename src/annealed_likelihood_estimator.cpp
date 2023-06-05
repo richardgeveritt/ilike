@@ -13,7 +13,7 @@ AnnealedLikelihoodEstimator::AnnealedLikelihoodEstimator(RandomNumberGenerator* 
                                                          PowerFunctionPtr function_power_in,
                                                          const std::string &power_variable_in,
                                                          bool smcfixed_flag_in)
-:LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
 {
   this->estimator = estimator_in;
   this->function_power = function_power_in;
@@ -30,7 +30,7 @@ AnnealedLikelihoodEstimator::AnnealedLikelihoodEstimator(RandomNumberGenerator* 
                                                          LikelihoodEstimator* estimator_in,
                                                          double constant_power_in,
                                                          bool smcfixed_flag_in)
-:LikelihoodEstimator(rng_in, seed_in, data_in, smcfixed_flag_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
 {
   this->estimator = estimator_in;
   this->function_power = PowerFunctionPtr();

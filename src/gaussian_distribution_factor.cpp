@@ -14,6 +14,14 @@ GaussianDistributionFactor::GaussianDistributionFactor(const std::string &variab
     this->proposal_info[variable_in] = GaussianProposalInfo(mean_in,sd_in);
 }
 
+GaussianDistributionFactor::GaussianDistributionFactor(const std::string &variable_in,
+                                                       const arma::colvec &mean_in,
+                                                       const arma::mat &covariance_in)
+:DistributionFactor()
+{
+  this->proposal_info[variable_in] = GaussianProposalInfo(mean_in,covariance_in);
+}
+
 GaussianDistributionFactor::GaussianDistributionFactor(const std::vector<std::string> &variable_names_in,
                                                        const std::vector<arma::colvec> &means_in,
                                                        const std::vector<arma::mat> &covariances_in)

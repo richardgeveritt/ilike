@@ -28,6 +28,7 @@ public:
   SMC(RandomNumberGenerator* rng_in,
       size_t* seed_in,
       Data* data_in,
+      const Parameters &algorithm_parameters_in,
       size_t number_of_particles_in,
       size_t lag_in,
       size_t lag_proposed_in,

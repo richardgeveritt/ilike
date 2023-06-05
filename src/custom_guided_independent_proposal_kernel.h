@@ -21,12 +21,11 @@ public:
   
   CustomGuidedIndependentProposalKernel(SimulateGuidedIndependentProposalPtr proposal_simulate_in);
   
-  CustomGuidedIndependentProposalKernel(SimulateGuidedIndependentProposalPtr proposal_simulate_in,
-                                        EvaluateLogGuidedIndependentProposalPtr proposal_evaluate_in);
+  //CustomGuidedIndependentProposalKernel(SimulateGuidedIndependentProposalPtr proposal_simulate_in,
+  //                                      EvaluateLogGuidedIndependentProposalPtr proposal_evaluate_in);
   
   CustomGuidedIndependentProposalKernel(SimulateGuidedIndependentProposalPtr proposal_simulate_in,
                                         EvaluateLogGuidedIndependentProposalPtr proposal_evaluate_in,
-                                        const Parameters &proposal_parameters_in,
                                         const Data* data_in);
 
   CustomGuidedIndependentProposalKernel(const CustomGuidedIndependentProposalKernel &another);
@@ -70,6 +69,8 @@ public:
   //                                                Variables* proposed_particle,
   //                                                const Parameters &conditioned_on_parameters);
   
+  void set_proposal_parameters(Parameters* proposal_parameters_in);
+  
 // Mh has its own parameters.
   // Stochastic has some weights.
   // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.
@@ -83,7 +84,8 @@ protected:
   
   SimulateGuidedIndependentProposalPtr proposal_simulate;
   
-  Parameters proposal_parameters;
+  // not stored here - points to algoritbm_parameters
+  Parameters* proposal_parameters;
   
   const Data* data;
   

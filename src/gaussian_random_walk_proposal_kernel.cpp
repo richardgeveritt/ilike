@@ -40,7 +40,16 @@ GaussianRandomWalkProposalKernel::GaussianRandomWalkProposalKernel(const std::ve
 }
 
 GaussianRandomWalkProposalKernel::GaussianRandomWalkProposalKernel(const std::string &variable_name_in,
+                                                                   const double &sd_in)
+:SymmetricProposalKernel()
+{
+  this->unused_variables_kept = true;
+  this->proposal_info[variable_name_in] = GaussianProposalInfo(sd_in);
+}
+
+GaussianRandomWalkProposalKernel::GaussianRandomWalkProposalKernel(const std::string &variable_name_in,
                                                                    const arma::mat &covariance_in)
+:SymmetricProposalKernel()
 {
   this->unused_variables_kept = true;
   this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in);
@@ -251,3 +260,8 @@ arma::mat GaussianRandomWalkProposalKernel::specific_subsample_gradient_of_log(c
   Rcpp::stop("GaussianRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
 }
 */
+
+void GaussianRandomWalkProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
+{
+  
+}

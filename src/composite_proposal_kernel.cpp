@@ -245,6 +245,16 @@ arma::mat CompositeProposalKernel::specific_subsample_gradient_of_log(const std:
   Rcpp::stop("CompositeProposalKernel::specific_subsample_gradient_of_log - not written yet.");
 }
 
+void CompositeProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
+{
+  for (auto i=this->all_kernels.begin();
+       i!=this->all_kernels.end();
+       ++i)
+  {
+    (*i)->set_proposal_parameters(proposal_parameters_in);
+  }
+}
+
 /*
 arma::mat CompositeProposalKernel::specific_gradient_of_log(const std::string &variable,
                                            Particle &proposed_particle,
