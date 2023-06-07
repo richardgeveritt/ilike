@@ -132,8 +132,6 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
      true,
      results_name_in)
 {
-  Rcout << "here2" << std::endl;
-  
   mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
   proposal_in->set_proposal_parameters(&this->algorithm_parameters);
   
@@ -148,7 +146,6 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   this->particle_simulator = new ParameterParticleSimulator(proposal_in,
                                                             likelihood_estimators_in);
   
-  Rcout << "here3" << std::endl;
   this->proposed_particles_inputted = false;
 
   //this->model_and_algorithm.particle_simulator = new ParameterParticleSimulator(simulate_proposal_in,
@@ -175,8 +172,6 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                               variable_in,
                               25,
                               smc_criterion);
-  
-  Rcout << "here4" << std::endl;
   
   this->mcmc = mcmc_in;
   this->mcmc->set_index(new VectorSingleIndex(indices));

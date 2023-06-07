@@ -20,7 +20,6 @@
 SMC::SMC()
   :LikelihoodEstimator()
 {
-  Rcout << "eh?" << std::endl;
   this->particle_simulator = NULL;
   //this->smc_termination = NULL;
   //this->sequencer_parameters = NULL;
@@ -49,8 +48,6 @@ SMC::SMC(RandomNumberGenerator* rng_in,
          const std::string &results_name_in)
   :LikelihoodEstimator(rng_in, seed_in, data_in, algorithm_parameters_in, smcfixed_flag_in)
 {
-  Rcout << "here0.5" << std::endl;
-  
   //this->output = new SMCOutput(lag_in,
   //                             lag_proposed_in);
   this->number_of_particles = number_of_particles_in;
@@ -243,7 +240,6 @@ SMCOutput* SMC::run()
     this->initialised = true;
   }
   return this->specific_run();
-  //return new SMCOutput;
 }
 
 /*

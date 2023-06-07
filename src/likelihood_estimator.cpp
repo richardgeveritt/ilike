@@ -15,8 +15,6 @@ LikelihoodEstimator::LikelihoodEstimator(RandomNumberGenerator* rng_in,
                                          const Parameters &algorithm_parameters_in,
                                          bool smcfixed_flag_in)
 {
-  Rcout << "here0.1" << std::endl;
-  
   this->data = data_in;
   this->current_data = this->data;
   //this->model_and_algorithm = ModelAndAlgorithm() ;
@@ -26,8 +24,6 @@ LikelihoodEstimator::LikelihoodEstimator(RandomNumberGenerator* rng_in,
   this->subsampler = NULL;
   this->factors = NULL;
   this->algorithm_parameters = algorithm_parameters_in;
-  
-  Rcout << "here0.2" << std::endl;
 }
 
 LikelihoodEstimator::~LikelihoodEstimator()

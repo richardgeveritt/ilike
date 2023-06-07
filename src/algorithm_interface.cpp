@@ -1966,7 +1966,6 @@ void do_mcmc(const List &model,
     
     IndependentProposalKernel* proposal_in = get_prior_as_proposal(model,
                                                                    parameters);
-    Rcout << "here" << std::endl;
     
     alg = new SMCMCMCMove(&rng,
                           &seed,
@@ -1981,17 +1980,12 @@ void do_mcmc(const List &model,
                           parallel_in,
                           grain_size_in,
                           "");
-    
-    Rcout << "here5" << std::endl;
   }
   else
   {
-    Rcout << "how?" << std::endl;
-    
     std::vector<Parameters> initial_points = make_initial_points(initial_values);
     
     arma::colvec log_probabilities_of_initial_values(initial_points.size());
-    Rcout << "what?" << std::endl;
     
     alg = new SMCMCMCMove(&rng,
                           &seed,
