@@ -412,7 +412,7 @@ List get_single_variable_vector_and_matrix_parameter_info(const List &model_para
   return List::create(variable_names[0],first_param,second_param);
 }
 
-std::vector<LikelihoodEstimator*> get_likelihood_eatimators(RandomNumberGenerator* rng_in,
+std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerator* rng_in,
                                                             size_t* seed_in,
                                                             Data* data_in,
                                                             const List &model,
@@ -762,6 +762,191 @@ IndependentProposalKernel* get_proposal(const List &model,
   if (proposal==NULL)
   {
     stop("No proposal specified.");
+  }
+  else
+  {
+    if (proposals.size()==1)
+    {
+      return proposal;
+    }
+    else
+    {
+      return new CompositeIndependentProposalKernel(proposals);
+    }
+  }
+}
+
+IndependentProposalKernel* get_prior_as_proposal(const List &model,
+                                                 const List &model_parameters)
+{
+  IndependentProposalKernel* proposal = NULL;
+  std::vector<IndependentProposalKernel*> proposals;
+  
+  if ( model.containsElementNamed("factor") )
+  {
+    List factors = model["factor"];
+    
+    for (size_t i=0; i<factors.size(); ++i)
+    {
+      if (Rf_isNewList(factors[i]))
+      {
+        List current_factor = factors[i];
+        if ( current_factor.containsElementNamed("prior") )
+        {
+          if (Rf_isNewList(current_factor["prior"]))
+          {
+            List current_prior = current_factor["prior"];
+            if ( current_prior.containsElementNamed("type") && current_prior.containsElementNamed("variables") )
+            {
+              std::string type = current_prior["type"];
+              
+              if (type=="norm")
+              {
+                List info = get_single_variable_two_double_parameter_info(model_parameters,
+                                                                          current_prior,
+                                                                          type);
+                
+                std::string variable = info[0];
+                double mean = info[1];
+                double sd = info[2];
+                
+                proposal = new GaussianIndependentProposalKernel(variable,
+                                                                 mean,
+                                                                 sd);
+                
+                if (proposal!=NULL)
+                {
+                  proposals.push_back(proposal);
+                }
+                
+              }
+              else if (type=="mvnorm")
+              {
+                List info = get_single_variable_vector_and_matrix_parameter_info(model_parameters,
+                                                                                 current_prior,
+                                                                                 type);
+                
+                std::string variable = info[0];
+                arma::colvec mean = info[1];
+                arma::mat cov = info[2];
+                
+                proposal = new GaussianIndependentProposalKernel(variable,
+                                                                 mean,
+                                                                 cov);
+                
+                if (proposal!=NULL)
+                {
+                  proposals.push_back(proposal);
+                }
+                
+              }
+              else if (type=="lnorm")
+              {
+                List info = get_single_variable_two_double_parameter_info(model_parameters,
+                                                                          current_prior,
+                                                                          type);
+                
+                std::string variable = info[0];
+                double mean = info[1];
+                double sd = info[2];
+                
+                proposal = new LogGaussianIndependentProposalKernel(variable,
+                                                                    mean,
+                                                                    sd);
+                
+                if (proposal!=NULL)
+                {
+                  proposals.push_back(proposal);
+                }
+                
+              }
+              else if (type=="mvlnorm")
+              {
+                List info = get_single_variable_vector_and_matrix_parameter_info(model_parameters,
+                                                                                 current_prior,
+                                                                                 type);
+                
+                std::string variable = info[0];
+                arma::colvec mean = info[1];
+                arma::mat cov = info[2];
+                
+                proposal = new LogGaussianIndependentProposalKernel(variable,
+                                                                    mean,
+                                                                    cov);
+                
+                if (proposal!=NULL)
+                {
+                  proposals.push_back(proposal);
+                }
+                
+              }
+              else if (type=="gamma")
+              {
+                List info = get_single_variable_two_double_parameter_info(model_parameters,
+                                                                          current_prior,
+                                                                          type);
+                
+                std::string variable = info[0];
+                double shape = info[1];
+                double rate = info[2];
+                
+                proposal = new GammaIndependentProposalKernel(variable,
+                                                              shape,
+                                                              rate);
+                
+                if (proposal!=NULL)
+                {
+                  proposals.push_back(proposal);
+                }
+                
+              }
+              else
+              {
+                Rcout << "Prior type " << type;
+                stop("Prior type unknown");
+              }
+            }
+            else
+            {
+              stop("Missing information for prior in model file.");
+            }
+          }
+          else
+          {
+            stop("Error in factors section of model file.");
+          }
+        }
+        else if ((current_factor.containsElementNamed("evaluate_log_prior")) && (current_factor.containsElementNamed("simulate_prior")))
+        {
+          SEXP evaluate_log_prior_SEXP = current_factor["evaluate_log_prior"];
+          
+          SEXP simulate_prior_SEXP = current_factor["simulate_prior"];
+          proposal = new CustomDistributionProposalKernel(load_simulate_distribution(simulate_prior_SEXP),
+                                                          load_evaluate_log_distribution(evaluate_log_prior_SEXP));
+          
+          if (proposal!=NULL)
+          {
+            proposals.push_back(proposal);
+          }
+        }
+        
+      }
+      else
+      {
+        stop("Error in factors section of model file.");
+      }
+      
+    }
+  }
+  
+  if (proposal==NULL)
+  {
+    stop("No suitable prior to use as proposal.");
+  }
+  
+  if (proposal==NULL)
+  {
+    stop("No suitable prior to use as proposal.");
   }
   else
   {
@@ -1442,12 +1627,12 @@ MCMC* make_mcmc(const List &model,
     size_t simulate_mh_proposal_index = 0;
     size_t simulate_independent_mh_proposal_index = 0;
     size_t simulate_m_proposal_index = 0;
-    size_t simulate_independent_m_proposal_index = 0;
     
     for (auto i=order_of_mcmc.begin();
          i!=order_of_mcmc.end();
          ++i)
     {
+      
       if ((*i)==1)
       {
         ProposalKernel* proposal;
@@ -1543,6 +1728,7 @@ MCMC* make_mcmc(const List &model,
       }
       
       moves.push_back(mcmc);
+      
     }
     
     if (model.containsElementNamed("mcmc_weights"))
@@ -1552,17 +1738,21 @@ MCMC* make_mcmc(const List &model,
       NumericVector mcmc_weights;
       List mcmc_weights_list = model["mcmc_weights"];
       List mcmc_weights_list0 = mcmc_weights_list[0];
-      mcmc_weights = mcmc_weights_list0["mcmc_weights"];
+      SEXP mcmc_weights_SEXP = mcmc_weights_list0["mcmc_weights"];
+      mcmc_weights = load_mcmc_weights(mcmc_weights_SEXP);
       
       if (moves.size()==1)
       {
+        Rcout << "one move" << std::endl;
         return mcmc;
       }
       else
       {
+        Rcout << "multiple moves" << std::endl;
         return new StochasticScanMCMC(moves,
                                       mcmc_weights);
       }
+      
     }
     else
     {
@@ -1660,7 +1850,7 @@ void do_importance_sampler(const List &model,
   if ( model.containsElementNamed("importance_proposal") )
   {
     
-    likelihood_estimators = get_likelihood_eatimators(&rng,
+    likelihood_estimators = get_likelihood_estimators(&rng,
                                                       &seed,
                                                       &the_data,
                                                       model,
@@ -1678,7 +1868,7 @@ void do_importance_sampler(const List &model,
   {
     Rcout << "No importance sampling proposal specified; using prior." << std::endl;
     
-    likelihood_estimators = get_likelihood_eatimators(&rng,
+    likelihood_estimators = get_likelihood_estimators(&rng,
                                                       &seed,
                                                       &the_data,
                                                       model,
@@ -1729,6 +1919,7 @@ void do_mcmc(const List &model,
              const List &algorithm_parameter_list,
              const List &initial_values,
              size_t number_of_mcmc_iterations,
+             size_t number_of_chains,
              bool parallel_in,
              size_t grain_size_in,
              const String &results_name_in,
@@ -1745,72 +1936,84 @@ void do_mcmc(const List &model,
   RandomNumberGenerator rng;
   Data the_data = get_data(model);
   
-  //std::string results_name = "/Users/richard/Dropbox/code/ilike/experiments/test";
-  
   // May need to alter for cases where the likelihood needs to be tuned automatically (e.g. in ABC).
   
   // Check if the prior is the proposal: affects what llhd_estimators we include.
   
+  
   std::vector<LikelihoodEstimator*> likelihood_estimators;
-  IndependentProposalKernel* proposal_in;
-  bool proposal_is_evaluated_in;
-    
-  likelihood_estimators = get_likelihood_eatimators(&rng,
+  likelihood_estimators = get_likelihood_estimators(&rng,
                                                     &seed,
                                                     &the_data,
                                                     model,
                                                     parameters,
                                                     true);
   
-  proposal_in = get_proposal(model,
-                             parameters,
-                             &the_data);
-  
   Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list);
+  
+  
   
   MCMC* the_mcmc = make_mcmc(model,
                              parameters,
                              &the_data,
                              number_of_mcmc_iterations);
   
-  std::vector<Parameters> initial_points = make_initial_points(initial_values);
   
-  arma::colvec log_probabilities_of_initial_values(initial_points.size());
+  SMCMCMCMove* alg;
   
-  SMCMCMCMove alg(&rng,
-                  &seed,
-                  &the_data,
-                  algorithm_parameters,
-                  2,
-                  2,
-                  the_mcmc,
-                  likelihood_estimators,
-                  initial_points,
-                  log_probabilities_of_initial_values,
-                  parallel_in,
-                  grain_size_in,
-                  "");
+  if (initial_values.size()==0)
+  {
+    
+    IndependentProposalKernel* proposal_in = get_prior_as_proposal(model,
+                                                                   parameters);
+    Rcout << "here" << std::endl;
+    
+    alg = new SMCMCMCMove(&rng,
+                          &seed,
+                          &the_data,
+                          algorithm_parameters,
+                          number_of_chains,
+                          2,
+                          2,
+                          the_mcmc,
+                          likelihood_estimators,
+                          proposal_in,
+                          parallel_in,
+                          grain_size_in,
+                          "");
+    
+    Rcout << "here5" << std::endl;
+  }
+  else
+  {
+    Rcout << "how?" << std::endl;
+    
+    std::vector<Parameters> initial_points = make_initial_points(initial_values);
+    
+    arma::colvec log_probabilities_of_initial_values(initial_points.size());
+    Rcout << "what?" << std::endl;
+    
+    alg = new SMCMCMCMove(&rng,
+                          &seed,
+                          &the_data,
+                          algorithm_parameters,
+                          2,
+                          2,
+                          the_mcmc,
+                          likelihood_estimators,
+                          initial_points,
+                          log_probabilities_of_initial_values,
+                          parallel_in,
+                          grain_size_in,
+                          "");
+    
+  }
   
-  /*
-  ImportanceSampler alg(&rng,
-                        &seed,
-                        &the_data,
-                        algorithm_parameters,
-                        initial_values.size(),
-                        likelihood_estimators,
-                        proposal_in,
-                        proposal_is_evaluated_in,
-                        true,
-                        true,
-                        parallel_in,
-                        grain_size_in,
-                        "");
-  */
   
   std::chrono::high_resolution_clock::time_point start_time, end_time;
   start_time = std::chrono::high_resolution_clock::now();
   
-  SMCOutput* output = alg.run();
+  SMCOutput* output = alg->run();
   
   end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed_time = end_time - start_time;
@@ -1819,6 +2022,8 @@ void do_mcmc(const List &model,
   if (strcmp(results_name_in.get_cstring(),"") != 0)
     output->write(results_name_in.get_cstring());
   delete output;
+  
+  delete alg;
 }
 
 
@@ -1849,7 +2054,7 @@ void do_smc_mcmc(const List &model,
   
   if ( model.containsElementNamed("importance_proposals") )
   {
-    likelihood_estimators = get_likelihood_eatimators(&rng,
+    likelihood_estimators = get_likelihood_estimators(&rng,
                                                       &seed,
                                                       &the_data,
                                                       model,
@@ -1866,7 +2071,7 @@ void do_smc_mcmc(const List &model,
   {
     Rcout << "No importance sampling proposal specified; using prior." << std::endl;
     
-    likelihood_estimators = get_likelihood_eatimators(&rng,
+    likelihood_estimators = get_likelihood_estimators(&rng,
                                                       &seed,
                                                       &the_data,
                                                       model,

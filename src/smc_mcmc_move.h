@@ -36,6 +36,21 @@ public:
               size_t* seed_in,
               Data* data_in,
               const Parameters &algorithm_parameters,
+              size_t number_of_particles_in,
+              size_t lag_in,
+              size_t lag_proposed_in,
+              MCMC* mcmc_in,
+              const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
+              IndependentProposalKernel* proposal_in,
+              bool parallel_in,
+              size_t grain_size_in,
+              const std::string &results_name_in);
+  
+  // Multiple MCMC chains.
+  SMCMCMCMove(RandomNumberGenerator* rng_in,
+              size_t* seed_in,
+              Data* data_in,
+              const Parameters &algorithm_parameters,
               size_t lag_in,
               size_t lag_proposed_in,
               MCMC* mcmc_in,

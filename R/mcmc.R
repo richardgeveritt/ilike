@@ -3,6 +3,7 @@
 #' @param model A file containing the model, or a pre-compiled model list.
 #' @param results_directory The name of the directory to which results will be written.
 #' @param number_of_mcmc_iterations The number of importance points.
+#' @param number_of_chains (optional) The number of chains.
 #' @param initial_values (optional) A list of lists containing the initial values for the chains.
 #' @param model_parameter_list (optional) A list containing parameters for the model.
 #' @param algorithm_parameter_list (optional) A list containing named parameters for the algorithm.
@@ -14,6 +15,7 @@
 mcmc = function(model,
                 results_directory,
                 number_of_mcmc_iterations,
+                number_of_chains=1,
                 initial_values = list(),
                 model_parameter_list = list(),
                 algorithm_parameter_list = list(),
@@ -29,12 +31,14 @@ mcmc = function(model,
     seed = ilike_rdtsc()
   }
 
-  do_importance_sampler(model,
-                        model_parameter_list,
-                        algorithm_parameter_list,
-                        number_of_importance_points,
-                        parallel_flag,
-                        grain_size,
-                        results_directory,
-                        seed)
+  do_mcmc(model,
+          model_parameter_list,
+          algorithm_parameter_list,
+          initial_values,
+          number_of_mcmc_iterations,
+          number_of_chains,
+          parallel_flag,
+          grain_size,
+          results_directory,
+          seed)
 }

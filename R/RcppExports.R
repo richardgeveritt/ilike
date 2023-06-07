@@ -9,8 +9,8 @@ do_importance_sampler <- function(model, parameters, algorithm_parameter_list, n
     invisible(.Call(`_ilike_do_importance_sampler`, model, parameters, algorithm_parameter_list, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed))
 }
 
-do_mcmc <- function(model, parameters, algorithm_parameter_list, initial_values, number_of_mcmc_iterations, parallel_in, grain_size_in, results_name_in, seed) {
-    invisible(.Call(`_ilike_do_mcmc`, model, parameters, algorithm_parameter_list, initial_values, number_of_mcmc_iterations, parallel_in, grain_size_in, results_name_in, seed))
+do_mcmc <- function(model, parameters, algorithm_parameter_list, initial_values, number_of_mcmc_iterations, number_of_chains, parallel_in, grain_size_in, results_name_in, seed) {
+    invisible(.Call(`_ilike_do_mcmc`, model, parameters, algorithm_parameter_list, initial_values, number_of_mcmc_iterations, number_of_chains, parallel_in, grain_size_in, results_name_in, seed))
 }
 
 do_smc_mcmc <- function(model, parameters, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed) {

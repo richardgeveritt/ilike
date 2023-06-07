@@ -144,7 +144,10 @@ typedef List (*GetDataFromSimulationPtr)(const List &simulation);
 
 typedef Data (*DataPtr)();
 
+typedef NumericVector (*MCMCWeightsPtr)();
 
+
+/*
 EvaluateLogDistributionPtr load_evaluate_log_distribution(const SEXP &evaluate_log_distribution_SEXP);
 
 SimulateDistributionPtr load_simulate_distribution(const SEXP &simulate_distribution_SEXP);
@@ -193,9 +196,12 @@ GetDataFromSimulationPtr load_get_data_from_simulation(const SEXP &get_data_from
 
 //Data load_observed_data(const SEXP &observed_data_SEXP);
 
+NumericVector load_mcmc_weights(const SEXP &mcmc_weights_SEXP);
+
 Data load_data(const SEXP &data_SEXP);
 
 DataPtr load_data_function(const SEXP &data_SEXP);
+*/
 
 // List simulate_distribution_cpp(const SEXP &simulate_distribution_SEXP);
 //
@@ -385,6 +391,13 @@ inline GetDataFromSimulationPtr load_get_data_from_simulation(const SEXP &get_da
 //   XPtr<Data> observed_data_XPtr(observed_data_SEXP);
 //   return *observed_data_XPtr;
 // }
+
+inline NumericVector load_mcmc_weights(const SEXP &mcmc_weights_SEXP)
+{
+  XPtr<MCMCWeightsPtr> mcmc_weights_XPtr(mcmc_weights_SEXP);
+  //return Parameters();
+  return (*mcmc_weights_XPtr)();
+}
 
 inline Data load_data(const SEXP &data_SEXP)
 {

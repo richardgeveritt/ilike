@@ -20,6 +20,7 @@
 SMC::SMC()
   :LikelihoodEstimator()
 {
+  Rcout << "eh?" << std::endl;
   this->particle_simulator = NULL;
   //this->smc_termination = NULL;
   //this->sequencer_parameters = NULL;
@@ -28,6 +29,8 @@ SMC::SMC()
   //this->store_transformed = false;
   this->setup_default_ancestor_variables();
   this->initialised = false;
+  this->the_worker = NULL;
+  this->resampling_criterion = NULL;
   //this->output = NULL;
 }
 
@@ -46,6 +49,8 @@ SMC::SMC(RandomNumberGenerator* rng_in,
          const std::string &results_name_in)
   :LikelihoodEstimator(rng_in, seed_in, data_in, algorithm_parameters_in, smcfixed_flag_in)
 {
+  Rcout << "here0.5" << std::endl;
+  
   //this->output = new SMCOutput(lag_in,
   //                             lag_proposed_in);
   this->number_of_particles = number_of_particles_in;
@@ -238,6 +243,7 @@ SMCOutput* SMC::run()
     this->initialised = true;
   }
   return this->specific_run();
+  //return new SMCOutput;
 }
 
 /*
@@ -290,7 +296,9 @@ void SMC::setup(const Parameters &parameters)
 
 void SMC::setup_variables()
 {
+  
   Parameters dummy_parameters;
+  
   if (this->proposed_particles_inputted)
   {
     dummy_parameters = this->initial_particles[0];
@@ -300,6 +308,7 @@ void SMC::setup_variables()
   {
     dummy_parameters = std::move(this->particle_simulator->simulate(*this->rng,this->factors,this->sequencer.schedule_parameters).parameters);
   }
+  
   this->vector_variables = dummy_parameters.get_nonfixed_vector_variables();
   this->any_variables = dummy_parameters.get_nonfixed_any_variables();
   

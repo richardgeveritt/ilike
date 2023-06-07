@@ -105,6 +105,84 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   this->mcmc_at_last_step = true;
 }
 
+// Multiple MCMC chains.
+SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
+                         size_t* seed_in,
+                         Data* data_in,
+                         const Parameters &algorithm_parameters,
+                         size_t number_of_particles_in,
+                         size_t lag_in,
+                         size_t lag_proposed_in,
+                         MCMC* mcmc_in,
+                         const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
+                         IndependentProposalKernel* proposal_in,
+                         bool parallel_in,
+                         size_t grain_size_in,
+                         const std::string &results_name_in)
+:SMC(rng_in,
+     seed_in,
+     data_in,
+     algorithm_parameters,
+     number_of_particles_in,
+     std::max<size_t>(2,lag_in),
+     lag_proposed_in,
+     0,
+     true,
+     true,
+     true,
+     results_name_in)
+{
+  Rcout << "here2" << std::endl;
+  
+  mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
+  proposal_in->set_proposal_parameters(&this->algorithm_parameters);
+  
+  std::vector<size_t> indices;
+  indices.reserve(likelihood_estimators_in.size());
+  for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
+    indices.push_back(i);
+  this->index = new VectorSingleIndex(indices);
+  
+  this->factors = new VectorFactors(likelihood_estimators_in);
+  
+  this->particle_simulator = new ParameterParticleSimulator(proposal_in,
+                                                            likelihood_estimators_in);
+  
+  Rcout << "here3" << std::endl;
+  this->proposed_particles_inputted = false;
+
+  //this->model_and_algorithm.particle_simulator = new ParameterParticleSimulator(simulate_proposal_in,
+  //                                                                              this->model_and_algorithm.likelihood_estimators);
+  
+  if (parallel_in==TRUE)
+  {
+    //this->the_worker = new RcppParallelSMCWorker(this,
+    //this->model_and_algorithm.particle_simulator,
+    //grain_size_in);
+  }
+  else
+  {
+    this->the_worker = new SequentialSMCWorker(this);
+  }
+  
+  std::vector<double> schedule_in;
+  schedule_in.push_back(0.0);
+  schedule_in.push_back(1.0);
+  std::string variable_in = "power";
+  SMCCriterion* smc_criterion = new CESSSMCCriterion(-1.0);
+  this->sequencer = Sequencer(this->the_worker,
+                              schedule_in,
+                              variable_in,
+                              25,
+                              smc_criterion);
+  
+  Rcout << "here4" << std::endl;
+  
+  this->mcmc = mcmc_in;
+  this->mcmc->set_index(new VectorSingleIndex(indices));
+  this->mcmc_at_last_step = true;
+}
+
 SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          size_t* seed_in,
                          Data* data_in,
