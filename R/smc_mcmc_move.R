@@ -8,8 +8,11 @@
 #' @param adaptive_resampling_ess (optional) Resample each time the ESS drops below this value.
 #' @param adaptive_resampling_method (optional) Specify more generally a method to decide when to reasample.
 #' @param adaptive_target_method (optional) Specify a method to decide how to adapt the sequence of targets.
+#' @param smc_sequencer_method (optional) Method that determines the sequence of targets..
 #' @param smc_termination_method (optional) Method that determines when the SMC terminates (prior to finishing the sequence of targets).
 #' @param mcmc_at_last_step (optional) Do we run the MCMC at the final step (TRUE/FALSE)?
+#' @param smc_iterations_to_store (optional) The number of iterations of SMC output stored in memory as the algorithm is running (cannot be fewer than 2).
+#' @param write_to_file_at_each_iteration (optional) Do we write the algorithm output to file at each SMC step (TRUE/FALSE)?
 #' @param model_parameter_list (optional) A list containing parameters for the model.
 #' @param algorithm_parameter_list (optional) A list containing named parameters for the algorithm.
 #' @param seed (optional) The seed for the random number generator.
@@ -25,6 +28,7 @@ smc_mcmc_move = function(model,
                          adaptive_resampling_ess = NULL,
                          adaptive_resampling_method = NULL,
                          adaptive_target_method = NULL,
+                         smc_sequencer_method = NULL,
                          smc_termination_method = NULL,
                          mcmc_at_last_step = FALSE,
                          smc_iterations_to_store = 2,
@@ -49,7 +53,7 @@ smc_mcmc_move = function(model,
     print("MCMC termination method provided: using this method instead of number_of_mcmc_iterations.")
     if ("values" %in% names(mcmc_termination_method))
     {
-      mcmc_termination_method[["values"]] = paste(mcmc_termination_method[["values"]])
+      mcmc_termination_method[["values"]] = as.list(paste(mcmc_termination_method[["values"]]))
     }
   }
   else
@@ -62,18 +66,18 @@ smc_mcmc_move = function(model,
   {
     print("No method set for adaptive resampling: defaulting to resampling at every iteration.")
     adaptive_resampling_ess = number_of_particles
-    adaptive_resampling_method = list(criterion='ess',values=paste(adaptive_resampling_ess))
+    adaptive_resampling_method = list(criterion='ess',values=as.list(paste(adaptive_resampling_ess)))
   }
   else if (!is.null(adaptive_resampling_ess) && is.null(adaptive_resampling_method) )
   {
     print("No method set for adaptive resampling: using adaptive_resampling_ess.")
-    adaptive_resampling_method = list(criterion='ess',values=paste(adaptive_resampling_ess))
+    adaptive_resampling_method = list(criterion='ess',values=as.list(paste(adaptive_resampling_ess)))
   }
   else if (is.null(adaptive_resampling_ess) && !is.null(adaptive_resampling_method) )
   {
     if ("values" %in% names(adaptive_resampling_method))
     {
-      adaptive_resampling_method[["values"]] = paste(adaptive_resampling_method[["values"]])
+      adaptive_resampling_method[["values"]] = as.list(paste(adaptive_resampling_method[["values"]]))
     }
   }
   else
@@ -81,7 +85,7 @@ smc_mcmc_move = function(model,
     print("Method set for adaptive resampling: ignoring adaptive_resampling_ess.")
     if ("values" %in% names(adaptive_resampling_method))
     {
-      adaptive_resampling_method[["values"]] = paste(adaptive_resampling_method[["values"]])
+      adaptive_resampling_method[["values"]] = as.list(paste(adaptive_resampling_method[["values"]]))
     }
   }
 
@@ -95,7 +99,7 @@ smc_mcmc_move = function(model,
   {
     if ("values" %in% names(adaptive_target_method))
     {
-      adaptive_target_method[["values"]] = paste(adaptive_target_method[["values"]])
+      adaptive_target_method[["values"]] = as.list(paste(adaptive_target_method[["values"]]))
     }
   }
 
@@ -103,31 +107,31 @@ smc_mcmc_move = function(model,
   if (is.null(smc_sequencer_method))
   {
     print("No SMC sequence set. Defaulting to importance sampling with prior as proposal.")
-    smc_sequencer_method = list(types=c("annealing"),variables=c("power"),sequences=paste(c(0,1)))
+    smc_sequencer_method = list(types=c("annealing"),variables=c("power"),schedules=c(0,1))
   }
   else
   {
-    if ("sequences" %in% names(smc_sequencer_method))
-    {
-      if (is.vector(smc_sequencer_method[["sequences"]]))
-      {
-        smc_sequencer_method[["sequences"]] = paste(smc_sequencer_method[["sequences"]])
-      }
-      else if (is.list(smc_sequencer_method[["sequences"]]))
-      {
-        for (i in 1:length(smc_sequencer_method[["sequences"]]))
-        {
-          if (is.vector(smc_sequencer_method[["sequences"]][[i]]))
-          {
-            smc_sequencer_method[["sequences"]][[i]] = paste(smc_sequencer_method[["sequences"]][[i]])
-          }
-        }
-      }
-      else
-      {
-        stop('smc_sequencer_method[["sequences"]] must be a numeric vector or a list of numeric vectors.')
-      }
-    }
+    # if ("schedules" %in% names(smc_sequencer_method))
+    # {
+    #   if (is.vector(smc_sequencer_method[["schedules"]]))
+    #   {
+    #     smc_sequencer_method[["schedules"]] = paste(smc_sequencer_method[["schedules"]])
+    #   }
+    #   else if (is.list(smc_sequencer_method[["sequences"]]))
+    #   {
+    #     for (i in 1:length(smc_sequencer_method[["sequences"]]))
+    #     {
+    #       if (is.vector(smc_sequencer_method[["sequences"]][[i]]))
+    #       {
+    #         smc_sequencer_method[["sequences"]][[i]] = paste(smc_sequencer_method[["sequences"]][[i]])
+    #       }
+    #     }
+    #   }
+    #   else
+    #   {
+    #     stop('smc_sequencer_method[["sequences"]] must be a numeric vector or a list of numeric vectors.')
+    #   }
+    # }
   }
 
   # SMC termination.
@@ -139,7 +143,7 @@ smc_mcmc_move = function(model,
   {
     if ("values" %in% names(smc_termination_method))
     {
-      smc_termination_method[["values"]] = paste(smc_termination_method[["values"]])
+      smc_termination_method[["values"]] = as.list(paste(smc_termination_method[["values"]]))
     }
   }
 
@@ -150,6 +154,7 @@ smc_mcmc_move = function(model,
                    mcmc_termination_method,
                    adaptive_resampling_method,
                    smc_sequencer_method,
+                   adaptive_target_method,
                    smc_termination_method,
                    smc_iterations_to_store,
                    write_to_file_at_each_iteration,

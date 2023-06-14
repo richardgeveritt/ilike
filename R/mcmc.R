@@ -40,7 +40,7 @@ mcmc = function(model,
 
     if ("values" %in% names(mcmc_termination_method))
     {
-      mcmc_termination_method[["values"]] = paste(mcmc_termination_method[["values"]])
+      mcmc_termination_method[["values"]] = as.list(paste(mcmc_termination_method[["values"]]))
     }
   }
   else

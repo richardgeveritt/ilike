@@ -13,6 +13,7 @@ smc_mcmc_move(
   adaptive_resampling_ess = NULL,
   adaptive_resampling_method = NULL,
   adaptive_target_method = NULL,
+  smc_sequencer_method = NULL,
   smc_termination_method = NULL,
   mcmc_at_last_step = FALSE,
   smc_iterations_to_store = 2,
@@ -41,9 +42,15 @@ smc_mcmc_move(
 
 \item{adaptive_target_method}{(optional) Specify a method to decide how to adapt the sequence of targets.}
 
+\item{smc_sequencer_method}{(optional) Method that determines the sequence of targets..}
+
 \item{smc_termination_method}{(optional) Method that determines when the SMC terminates (prior to finishing the sequence of targets).}
 
 \item{mcmc_at_last_step}{(optional) Do we run the MCMC at the final step (TRUE/FALSE)?}
+
+\item{smc_iterations_to_store}{(optional) The number of iterations of SMC output stored in memory as the algorithm is running (cannot be fewer than 2).}
+
+\item{write_to_file_at_each_iteration}{(optional) Do we write the algorithm output to file at each SMC step (TRUE/FALSE)?}
 
 \item{model_parameter_list}{(optional) A list containing parameters for the model.}
 

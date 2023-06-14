@@ -1714,7 +1714,7 @@ MCMCTermination* make_mcmc_termination(const List &model_parameters,
       }
       else
       {
-        stop("No valid method found for MCMC termination.");
+        stop("MCMC termination using iterations requires you to specify only the number of iterations.");
       }
     }
     else if (method=="se")
@@ -1752,7 +1752,7 @@ MCMCTermination* make_mcmc_termination(const List &model_parameters,
       }
       else
       {
-        stop("No valid method found for MCMC termination.");
+        stop("MCMC termination using standard error requires you to specify a threshold.");
       }
     }
     else
@@ -2036,7 +2036,7 @@ SMCCriterion* get_resampling_method(const List &model,
       }
       else
       {
-        stop("No valid method found for adaptive resampling.");
+        stop("Adaptive resampling using ESS requires specification of the desired ESS.");
       }
     }
     else
@@ -2046,7 +2046,7 @@ SMCCriterion* get_resampling_method(const List &model,
   }
   else
   {
-    stop("No valid method found for adaptive resampling.");
+    stop("No valid method found for adaptive resampling (need criterion and values).");
   }
   
   return smc_criterion;
@@ -2058,53 +2058,67 @@ SMCCriterion* get_adaptive_target_method(const List &model,
 {
   SMCCriterion* smc_criterion;
   
-  if (adaptive_target_method.containsElementNamed("criterion") && adaptive_target_method.containsElementNamed("values"))
+  if (adaptive_target_method.containsElementNamed("criterion"))
   {
     std::string method = adaptive_target_method["criterion"];
     if (method=="ess")
     {
-      if (Rf_isNewList(adaptive_target_method["values"]))
+      if (adaptive_target_method.containsElementNamed("values"))
       {
-        List values = adaptive_target_method["values"];
-        
-        if (values.length()==1)
+        if (Rf_isNewList(adaptive_target_method["values"]))
         {
-          double desired_ess = extract_double_parameter(values,
-                                                        model_parameters,
-                                                        0);
-          smc_criterion = new ESSSMCCriterion(desired_ess);
+          List values = adaptive_target_method["values"];
+          
+          if (values.length()==1)
+          {
+            double desired_ess = extract_double_parameter(values,
+                                                          model_parameters,
+                                                          0);
+            smc_criterion = new ESSSMCCriterion(desired_ess);
+          }
+          else
+          {
+            stop("Adaptive target using ESS requires specification of the desired ESS.");
+          }
         }
         else
         {
-          stop("Adaptive target using ESS requires specification of the desired ESS.");
+          stop("No valid method found for adaptive target.");
         }
       }
       else
       {
-        stop("No valid method found for adaptive target.");
+        stop("Adaptive target using ESS requires specification of the desired ESS (values need to be specified).");
       }
     }
     else if (method=="cess")
     {
-      if (Rf_isNewList(adaptive_target_method["values"]))
+      if (adaptive_target_method.containsElementNamed("values"))
       {
-        List values = adaptive_target_method["values"];
-        
-        if (values.length()==1)
+        if (Rf_isNewList(adaptive_target_method["values"]))
         {
-          double desired_cess = extract_double_parameter(values,
-                                                         model_parameters,
-                                                         0);
-          smc_criterion = new CESSSMCCriterion(desired_cess);
+          List values = adaptive_target_method["values"];
+          
+          if (values.length()==1)
+          {
+            double desired_cess = extract_double_parameter(values,
+                                                           model_parameters,
+                                                           0);
+            smc_criterion = new CESSSMCCriterion(desired_cess);
+          }
+          else
+          {
+            stop("Adaptive target using CESS requires specification of the desired CESS.");
+          }
         }
         else
         {
-          stop("Adaptive target using CESS requires specification of the desired CESS.");
+          stop("No valid method found for adaptive target.");
         }
       }
       else
       {
-        stop("No valid method found for adaptive target.");
+        stop("Adaptive target using ESS requires specification of the desired ESS (values need to be specified).");
       }
     }
     else if (method=="positive")
@@ -2118,7 +2132,7 @@ SMCCriterion* get_adaptive_target_method(const List &model,
   }
   else
   {
-    stop("No valid method found for adaptive target.");
+    stop("No valid method found for adaptive target (need criterion).");
   }
   
   return smc_criterion;
@@ -2136,35 +2150,43 @@ SMCTermination* get_smc_termination_method(const List &model,
     return smc_termination;
   }
   
-  if (smc_termination_method.containsElementNamed("criterion") && smc_termination_method.containsElementNamed("values"))
+  if (smc_termination_method.containsElementNamed("criterion"))
   {
     std::string method = smc_termination_method["criterion"];
     if (method=="stable")
     {
-      if (Rf_isNewList(smc_termination_method["values"]))
+      if (smc_termination_method.containsElementNamed("values"))
       {
-        List values = smc_termination_method["values"];
-        
-        if (values.length()==2)
+        if (Rf_isNewList(smc_termination_method["values"]))
         {
-          double threshold = extract_double_parameter(values,
-                                                      model_parameters,
-                                                      0);
-          double number_in_a_row = extract_int_parameter(values,
-                                                         model_parameters,
-                                                         1);
-          smc_termination = new StableSMCTermination(threshold,
-                                                     number_in_a_row);
+          List values = smc_termination_method["values"];
+          
+          if (values.length()==2)
+          {
+            double threshold = extract_double_parameter(values,
+                                                        model_parameters,
+                                                        0);
+            double number_in_a_row = extract_int_parameter(values,
+                                                           model_parameters,
+                                                           1);
+            smc_termination = new StableSMCTermination(threshold,
+                                                       number_in_a_row);
+          }
+          else
+          {
+            stop("SMC termination via stability requires the specificaton of a threshold and the number of iterations in a row that this threshold must be exceeded.");
+          }
         }
         else
         {
-          stop("SMC termination via stability requires the specificaton of a threshold and the number of iterations in a row that this threshold must be exceeded.");
+          stop("No valid method found for SMC termination.");
         }
       }
       else
       {
-        stop("No valid method found for SMC termination.");
+        stop("SMC termination via stability requires specification of the desired ESS (values need to be specified).");
       }
+      
     }
     else if (method=="always")
     {
@@ -2177,7 +2199,7 @@ SMCTermination* get_smc_termination_method(const List &model,
   }
   else
   {
-    stop("No valid method found for SMC termination.");
+    stop("No valid method found for SMC termination (criterion needed).");
   }
   
   return smc_termination;
