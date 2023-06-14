@@ -16,6 +16,10 @@ public:
   
   StochasticScanMCMC(const std::vector<MCMC*> &moves,
                      const arma::colvec &unnormalised_probabilities_in);
+  
+  StochasticScanMCMC(MCMCTermination* termination_in,
+                     const std::vector<MCMC*> &moves_in,
+                     const arma::colvec &unnormalised_probabilities_in);
 
   virtual ~StochasticScanMCMC();
 

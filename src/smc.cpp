@@ -72,6 +72,45 @@ SMC::SMC(RandomNumberGenerator* rng_in,
   // Set up worker?
 }
 
+SMC::SMC(RandomNumberGenerator* rng_in,
+         size_t* seed_in,
+         Data* data_in,
+         const Parameters &algorithm_parameters_in,
+         size_t number_of_particles_in,
+         size_t lag_in,
+         size_t lag_proposed_in,
+         SMCCriterion* adaptive_resampling_method_in,
+         bool proposal_is_evaluated_in,
+         //EvaluateLogDistributionPtr evaluate_log_proposal_in,
+         bool smcfixed_flag_in,
+         bool sequencer_limit_is_fixed_in,
+         const std::string &results_name_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, algorithm_parameters_in, smcfixed_flag_in)
+{
+  //this->output = new SMCOutput(lag_in,
+  //                             lag_proposed_in);
+  this->number_of_particles = number_of_particles_in;
+  this->lag = lag_in;
+  this->lag_proposed = lag_proposed_in;
+  //this->summary_statistics = summary_statistics_in;
+  this->sequencer_limit_is_fixed = sequencer_limit_is_fixed_in;
+  //this->evaluate_log_proposal = evaluate_log_proposal_in;
+  this->proposal_is_evaluated = proposal_is_evaluated_in;
+  this->resampling_criterion = adaptive_resampling_method_in;
+  this->proposed_particles_inputted = false;
+  this->particle_simulator = NULL;
+  //this->smc_termination = NULL;
+  //this->sequencer_parameters = NULL;
+  //this->transform = NULL;
+  //this->store_raw = true;
+  //this->store_transformed = false;
+  this->setup_default_ancestor_variables();
+  this->results_name = results_name_in;
+  
+  this->initialised = false;
+  // Set up worker?
+}
+
 /*
 SMC::SMC(RandomNumberGenerator* rng_in,
          size_t* seed_in,

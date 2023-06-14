@@ -25,6 +25,9 @@ public:
   
   MetropolisHastingsMCMC(size_t number_of_iterations_in,
                          ProposalKernel* proposal_in);
+  
+  MetropolisHastingsMCMC(MCMCTermination* termination_in,
+                         ProposalKernel* proposal_in);
 
   virtual ~MetropolisHastingsMCMC();
 

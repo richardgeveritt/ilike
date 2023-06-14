@@ -8,6 +8,8 @@ using namespace Rcpp;
 #include "particles.h"
 #include "standard_mcmc_output.h"
 
+class MCMC;
+
 class MCMCTermination
 {
 
@@ -22,6 +24,8 @@ public:
   virtual MCMCTermination* duplicate() const=0;
 
   virtual bool terminate()=0;
+  
+  virtual void set_parameters(MCMC* mcmc)=0;
 
 protected:
 

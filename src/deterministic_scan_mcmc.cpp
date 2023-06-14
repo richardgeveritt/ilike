@@ -6,6 +6,20 @@ DeterministicScanMCMC::DeterministicScanMCMC()
 }
 
 DeterministicScanMCMC::DeterministicScanMCMC(const std::vector<MCMC*> &moves_in)
+:MCMC()
+{
+  this->moves = moves_in;
+  this->order.clear();
+  this->order.reserve(this->moves.size());
+  for (size_t i=0; i<this->moves.size(); ++i)
+  {
+    this->order.push_back(i);
+  }
+}
+
+DeterministicScanMCMC::DeterministicScanMCMC(MCMCTermination* termination_in,
+                                             const std::vector<MCMC*> &moves_in)
+:MCMC(termination_in)
 {
   this->moves = moves_in;
   this->order.clear();

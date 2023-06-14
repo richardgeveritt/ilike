@@ -16,8 +16,7 @@ public:
 
   IterationsMCMCTermination();
   
-  IterationsMCMCTermination(size_t number_of_iterations_in,
-                            size_t* counter_pointer);
+  IterationsMCMCTermination(size_t number_of_iterations_in);
 
   virtual ~IterationsMCMCTermination();
 
@@ -27,6 +26,8 @@ public:
   MCMCTermination* duplicate() const;
 
   bool terminate();
+  
+  void set_parameters(MCMC* mcmc);
   
 protected:
   

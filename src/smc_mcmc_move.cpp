@@ -40,7 +40,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
 :SMC(rng_in,
      seed_in,
      data_in,
-     Parameters(),
+     algorithm_parameters,
      initial_points_in.size(),
      std::max<size_t>(2,lag_in),
      lag_proposed_in,
@@ -126,7 +126,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
      number_of_particles_in,
      std::max<size_t>(2,lag_in),
      lag_proposed_in,
-     0,
+     -1.0,
      true,
      true,
      true,
@@ -194,7 +194,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
 :SMC(rng_in,
      seed_in,
      data_in,
-     Parameters(),
+     algorithm_parameters,
      initial_points_in.size(),
      std::max<size_t>(2,lag_in),
      lag_proposed_in,
@@ -258,6 +258,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
 SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          size_t* seed_in,
                          Data* data_in,
+                         const Parameters &algorithm_parameters,
                          size_t number_of_particles_in,
                          size_t lag_in,
                          size_t lag_proposed_in,
@@ -270,7 +271,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
-:SMC(rng_in, seed_in, data_in, Parameters(), number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, -1.0, true, true, true, results_name_in)
+:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, -1.0, true, true, true, results_name_in)
 {
   mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
   
@@ -388,6 +389,7 @@ void SMCMCMCMove::set_multiple_mcmc(RandomNumberGenerator* rng_in,
 SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          size_t* seed_in,
                          Data* data_in,
+                         const Parameters &algorithm_parameters,
                          size_t number_of_particles_in,
                          size_t lag_in,
                          size_t lag_proposed_in,
@@ -403,7 +405,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
-  :SMC(rng_in, seed_in, data_in, Parameters(), number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, true, true, true, results_name_in)
+  :SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, true, true, true, results_name_in)
 {
   mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
   
@@ -504,6 +506,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
 SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          size_t* seed_in,
                          Data* data_in,
+                         const Parameters &algorithm_parameters,
                          size_t number_of_particles_in,
                          size_t lag_in,
                          size_t lag_proposed_in,
@@ -520,7 +523,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
-:SMC(rng_in, seed_in, data_in, Parameters(), number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, true, true, true, results_name_in)
+:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, true, true, true, results_name_in)
 {
   mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
   std::string variable_in = "power";
@@ -624,6 +627,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
 SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          size_t* seed_in,
                          Data* data_in,
+                         const Parameters &algorithm_parameters,
                          size_t number_of_particles_in,
                          size_t lag_in,
                          size_t lag_proposed_in,
@@ -643,7 +647,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
-:SMC(rng_in, seed_in, data_in, Parameters(), number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, results_name_in)
+:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, results_name_in)
 {
   //Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
   
@@ -687,6 +691,84 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   this->sequencer = Sequencer(this->the_worker,
                               schedule_in,
                               sequence_variable_in,
+                              number_of_bisections_in,
+                              smc_criterion,
+                              termination_in);
+  //this->sequencer_parameters = &this->sequencer.schedule_parameters;
+  
+  this->mcmc = mcmc_in;
+  if (this->mcmc!=NULL)
+    this->mcmc->set_index(new VectorSingleIndex(indices));
+  this->mcmc_at_last_step = mcmc_at_last_step_in;
+}
+
+SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
+                         size_t* seed_in,
+                         Data* data_in,
+                         const Parameters &algorithm_parameters,
+                         size_t number_of_particles_in,
+                         size_t lag_in,
+                         size_t lag_proposed_in,
+                         MCMC* mcmc_in,
+                         SMCCriterion* adaptive_resampling_in,
+                         SMCCriterion* adaptive_target_in,
+                         size_t number_of_bisections_in,
+                         SMCTermination* termination_in,
+                         const std::vector<std::string> &sequence_variables_in,
+                         const std::vector<std::vector<double>> &schedules_in,
+                         const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
+                         IndependentProposalKernel* proposal_in,
+                         bool proposal_is_evaluated_in,
+                         bool smcfixed_flag_in,
+                         bool sequencer_limit_is_fixed_in,
+                         bool mcmc_at_last_step_in,
+                         bool parallel_in,
+                         size_t grain_size_in,
+                         const std::string &results_name_in)
+:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, adaptive_resampling_in, proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, results_name_in)
+{
+  //Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
+  
+  mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
+  proposal_in->set_proposal_parameters(&this->algorithm_parameters);
+  
+  std::vector<size_t> indices;
+  indices.reserve(likelihood_estimators_in.size());
+  for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
+    indices.push_back(i);
+  this->index = new VectorSingleIndex(indices);
+  
+  this->factors = new VectorFactors(likelihood_estimators_in);
+  
+  /*
+   for (auto i=likelihood_estimators.begin();
+   i!=likelihood_estimators.end();
+   ++i)
+   {
+   (*i)->setup(candidate_parameters);
+   }
+   */
+  
+  // Need to construct LikelihoodEstimator to read in to this constructor.
+  this->particle_simulator = new ParameterParticleSimulator(proposal_in,
+                                                            likelihood_estimators_in);
+  
+  if (parallel_in==true)
+  {
+    //this->the_worker = new RcppParallelSMCWorker(this,
+    //this->model_and_algorithm.particle_simulator,
+    //grain_size_in);
+  }
+  else
+  {
+    this->the_worker = new SequentialSMCWorker(this);
+  }
+  
+  SMCCriterion* smc_criterion = adaptive_target_in;
+  //this->model_and_algorithm.smc_termination = NULL;
+  this->sequencer = Sequencer(this->the_worker,
+                              schedules_in,
+                              sequence_variables_in,
                               number_of_bisections_in,
                               smc_criterion,
                               termination_in);

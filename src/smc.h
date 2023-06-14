@@ -40,6 +40,21 @@ public:
       bool sequencer_limit_is_fixed_in,
       const std::string &results_name_in);
   
+  SMC(RandomNumberGenerator* rng_in,
+      size_t* seed_in,
+      Data* data_in,
+      const Parameters &algorithm_parameters_in,
+      size_t number_of_particles_in,
+      size_t lag_in,
+      size_t lag_proposed_in,
+      //SummaryStatisticsPtr summary_statistics_in,
+      SMCCriterion* adaptive_resampling_method_in,
+      //EvaluateLogDistributionPtr evaluate_log_proposal_in,
+      bool proposal_is_evaluated_in,
+      bool smcfixed_flag_in,
+      bool sequencer_limit_is_fixed_in,
+      const std::string &results_name_in);
+  
   //SMC(RandomNumberGenerator* rng_in,
   //    size_t* seed_in,
   //    Data* data_in,

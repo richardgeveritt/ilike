@@ -16,8 +16,8 @@ public:
 
   StableSMCTermination();
   
-  StableSMCTermination(size_t number_in_a_row_in,
-                       double threshold_in);
+  StableSMCTermination(double threshold_in,
+                       size_t number_in_a_row_in);
 
   virtual ~StableSMCTermination();
 

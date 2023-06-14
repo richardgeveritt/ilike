@@ -3,6 +3,7 @@
 export(importance_sample)
 export(mcmc)
 export(parse_ilike_model)
+export(smc_mcmc_move)
 importFrom(Rcpp,sourceCpp)
 importFrom(RcppParallel,RcppParallelLibs)
 useDynLib(ilike, .registration = TRUE)

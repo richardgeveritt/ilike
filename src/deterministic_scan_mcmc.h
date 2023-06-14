@@ -15,6 +15,9 @@ public:
   DeterministicScanMCMC();
   
   DeterministicScanMCMC(const std::vector<MCMC*> &moves_in);
+  
+  DeterministicScanMCMC(MCMCTermination* termination_in,
+                        const std::vector<MCMC*> &moves_in);
 
   virtual ~DeterministicScanMCMC();
 

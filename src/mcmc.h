@@ -24,6 +24,7 @@ public:
 
   MCMC();
   MCMC(size_t number_of_iterations_in);
+  MCMC(MCMCTermination* termination_in);
   virtual ~MCMC();
 
   MCMC(const MCMC &another);
@@ -76,6 +77,8 @@ public:
   virtual void set_index(Index* index_in)=0;
   
   virtual void set_proposal_parameters(Parameters* proposal_parameters_in)=0;
+  
+  size_t* get_iteration_counter_pointer();
 
 protected:
   

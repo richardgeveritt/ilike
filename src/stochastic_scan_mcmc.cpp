@@ -8,6 +8,16 @@ StochasticScanMCMC::StochasticScanMCMC()
 
 StochasticScanMCMC::StochasticScanMCMC(const std::vector<MCMC*> &moves_in,
                                        const arma::colvec &unnormalised_probabilities_in)
+:MCMC()
+{
+  this->moves = moves_in;
+  this->probabilities = unnormalised_probabilities_in/sum(unnormalised_probabilities_in);
+}
+
+StochasticScanMCMC::StochasticScanMCMC(MCMCTermination* termination_in,
+                                       const std::vector<MCMC*> &moves_in,
+                                       const arma::colvec &unnormalised_probabilities_in)
+:MCMC(termination_in)
 {
   this->moves = moves_in;
   this->probabilities = unnormalised_probabilities_in/sum(unnormalised_probabilities_in);

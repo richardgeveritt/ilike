@@ -47,6 +47,14 @@ MetropolisHastingsMCMC::MetropolisHastingsMCMC(size_t number_of_iterations_in,
   //                                proposal_variances_in);
 }
 
+MetropolisHastingsMCMC::MetropolisHastingsMCMC(MCMCTermination* termination_in,
+                                               ProposalKernel* proposal_in)
+:MCMC(termination_in)
+{
+  this->proposal = proposal_in;
+  this->index = NULL;
+}
+
 MetropolisHastingsMCMC::~MetropolisHastingsMCMC()
 {
   if (this->proposal!=NULL)

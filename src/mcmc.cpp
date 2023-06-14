@@ -11,14 +11,23 @@ MCMC::MCMC()
   :Kernel()
 {
   this->iteration_counter = 0;
+  this->termination = NULL;
 }
 
 MCMC::MCMC(size_t number_of_iterations_in)
   :Kernel()
 {
   this->iteration_counter = 0;
-  this->termination = new IterationsMCMCTermination(number_of_iterations_in,
-                                                    &this->iteration_counter);
+  this->termination = new IterationsMCMCTermination(number_of_iterations_in);
+  this->termination->set_parameters(this);
+}
+
+MCMC::MCMC(MCMCTermination* termination_in)
+:Kernel()
+{
+  this->iteration_counter = 0;
+  this->termination = termination_in;
+  this->termination->set_parameters(this);
 }
 
 MCMC::~MCMC()
@@ -55,6 +64,8 @@ void MCMC::make_copy(const MCMC &another)
 {
   if (another.termination!=NULL)
     this->termination = another.termination->duplicate();
+  else
+    this->termination = NULL;
   
   //if (another.adaptor!=NULL)
   //  this->adaptor = another.adaptor->duplicate();
@@ -77,6 +88,7 @@ MoveOutput* MCMC::run(RandomNumberGenerator &rng,
                      this->iteration_counter);
     mcmc_output->push_back(current_particle);
   }
+  this->iteration_counter = 0;
   return mcmc_output;
 }
 
@@ -117,6 +129,7 @@ MoveOutput* MCMC::subsample_run(RandomNumberGenerator &rng,
     this->iteration_counter = this->iteration_counter + 1;
     mcmc_output->push_back(current_particle);
   }
+  this->iteration_counter = 0;
   return mcmc_output;
 }
 
@@ -205,4 +218,9 @@ void MCMC::mcmc_adapt(Particle &current_particle,
   this->specific_mcmc_adapt(current_particle,
                             iteration_counter);
   current_particle.erase_mcmc_adaptation_info();
+}
+
+size_t* MCMC::get_iteration_counter_pointer()
+{
+  return &this->iteration_counter;
 }

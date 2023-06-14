@@ -6,8 +6,8 @@ StableSMCTermination::StableSMCTermination()
 {
 }
 
-StableSMCTermination::StableSMCTermination(size_t number_in_a_row_in,
-                                           double threshold_in)
+StableSMCTermination::StableSMCTermination(double threshold_in,
+                                           size_t number_in_a_row_in)
 :SMCTermination()
 {
   this->number_in_a_row = number_in_a_row_in;
@@ -37,7 +37,7 @@ void StableSMCTermination::operator=(const StableSMCTermination &another)
   this->make_copy(another);
 }
 
-SMCTermination* StableSMCTermination::duplicate(void)const
+SMCTermination* StableSMCTermination::duplicate() const
 {
   return( new StableSMCTermination(*this));
 }

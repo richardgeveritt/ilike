@@ -1,16 +1,16 @@
 #include "iterations_mcmc_termination.h"
+#include "mcmc.h"
 
 IterationsMCMCTermination::IterationsMCMCTermination()
   :MCMCTermination()
 {
 }
 
-IterationsMCMCTermination::IterationsMCMCTermination(size_t number_of_iterations_in,
-                                                     size_t* counter_pointer)
+IterationsMCMCTermination::IterationsMCMCTermination(size_t number_of_iterations_in)
 :MCMCTermination()
 {
   this->number_of_iterations = number_of_iterations_in;
-  this->counter = counter_pointer;
+  //this->counter = counter_pointer;
 }
 
 IterationsMCMCTermination::~IterationsMCMCTermination()
@@ -35,7 +35,7 @@ void IterationsMCMCTermination::operator=(const IterationsMCMCTermination &anoth
   this->make_copy(another);
 }
 
-MCMCTermination* IterationsMCMCTermination::duplicate(void)const
+MCMCTermination* IterationsMCMCTermination::duplicate() const
 {
   return( new IterationsMCMCTermination(*this));
 }
@@ -57,4 +57,9 @@ bool IterationsMCMCTermination::terminate()
   {
     return false;
   }
+}
+
+void IterationsMCMCTermination::set_parameters(MCMC* mcmc)
+{
+  this->counter = mcmc->get_iteration_counter_pointer();
 }

@@ -1,4 +1,5 @@
 #include "se_mcmc_termination.h"
+#include "mcmc.h"
 
 SEMCMCTermination::SEMCMCTermination()
   :MCMCTermination()
@@ -11,6 +12,7 @@ SEMCMCTermination::SEMCMCTermination(double threshold_in,
 {
   this->threshold = threshold_in;
   this->max_number_of_iterations = max_number_of_iterations_in;
+  //this->counter = counter_pointer;
 }
 
 SEMCMCTermination::~SEMCMCTermination()
@@ -35,7 +37,7 @@ void SEMCMCTermination::operator=(const SEMCMCTermination &another)
   this->make_copy(another);
 }
 
-MCMCTermination* SEMCMCTermination::duplicate(void)const
+MCMCTermination* SEMCMCTermination::duplicate() const
 {
   return( new SEMCMCTermination(*this));
 }
@@ -44,9 +46,23 @@ void SEMCMCTermination::make_copy(const SEMCMCTermination &another)
 {
   this->threshold = another.threshold;
   this->max_number_of_iterations = another.max_number_of_iterations;
+  this->counter = another.counter;
 }
 
 bool SEMCMCTermination::terminate()
 {
-  return true;
+  if (*this->counter==this->max_number_of_iterations)
+  {
+    *this->counter = 0;
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}
+
+void SEMCMCTermination::set_parameters(MCMC* mcmc)
+{
+  this->counter = mcmc->get_iteration_counter_pointer();
 }

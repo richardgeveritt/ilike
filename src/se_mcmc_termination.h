@@ -26,7 +26,12 @@ public:
 
   bool terminate();
   
+  void set_parameters(MCMC* mcmc);
+  
 protected:
+  
+  // not stored here
+  size_t* counter;
   
   double threshold;
   

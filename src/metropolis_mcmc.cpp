@@ -13,7 +13,7 @@ MetropolisMCMC::MetropolisMCMC()
 }
 
 MetropolisMCMC::MetropolisMCMC(size_t number_of_iterations_in,
-                                               SymmetricProposalKernel* proposal_in)
+                               SymmetricProposalKernel* proposal_in)
   :MCMC(number_of_iterations_in)
 {
   this->proposal = proposal_in;
@@ -21,8 +21,8 @@ MetropolisMCMC::MetropolisMCMC(size_t number_of_iterations_in,
 }
 
 MetropolisMCMC::MetropolisMCMC(size_t number_of_iterations_in,
-                                               const std::vector<Parameters> &initial_points_in,
-                                               const Parameters &proposal_variances_in)
+                               const std::vector<Parameters> &initial_points_in,
+                               const Parameters &proposal_variances_in)
   :MCMC(number_of_iterations_in)
 {
   this->index = NULL;
@@ -31,6 +31,13 @@ MetropolisMCMC::MetropolisMCMC(size_t number_of_iterations_in,
   //this->proposal = ProposalKernel(EvaluateLogMCMCProposalPtr proposal_evaluate_in,
   //                                SimulateMCMCProposalPtr proposal_simulate_in,
   //                                proposal_variances_in);
+}
+
+MetropolisMCMC::MetropolisMCMC(MCMCTermination* termination_in,
+                               SymmetricProposalKernel* proposal_in)
+:MCMC(termination_in)
+{
+  this->proposal = proposal_in;
 }
 
 MetropolisMCMC::~MetropolisMCMC()

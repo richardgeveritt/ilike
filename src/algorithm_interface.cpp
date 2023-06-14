@@ -45,6 +45,15 @@ using namespace Rcpp;
 #include "custom_no_params_symmetric_proposal_kernel.h"
 #include "custom_symmetric_proposal_kernel.h"
 #include "custom_guided_symmetric_proposal_kernel.h"
+#include "iterations_mcmc_termination.h"
+#include "se_mcmc_termination.h"
+#include "ess_smc_criterion.h"
+#include "cess_smc_criterion.h"
+#include "positive_smc_criterion.h"
+#include "utils.h"
+#include "annealed_likelihood_estimator.h"
+#include "stable_smc_termination.h"
+#include "always_smc_termination.h"
 
 std::vector<std::string> split(const std::string &str, const char delimiter)
 {
@@ -96,6 +105,31 @@ bool isMatrixInList(const Rcpp::List &list, int index_from_one)
   }
 }
 
+bool isNumericVectorInList(const Rcpp::List &list, int index_from_one)
+{
+  if (index_from_one<=list.size())
+  {
+    SEXP var = list[index_from_one-1];
+    return Rf_isVector(var) && Rf_isNumeric(var);
+  }
+  else
+  {
+    return false;
+  }
+}
+
+bool isStringVectorInList(const Rcpp::List &list, const std::string &name)
+{
+  SEXP var = list[name];
+  return Rf_isVector(var) && Rf_isString(var);
+}
+
+bool isNumericVectorInList(const Rcpp::List &list, const std::string &name)
+{
+  SEXP var = list[name];
+  return Rf_isVector(var) && Rf_isNumeric(var);
+}
+
 /*
 Data example_data()
 {
@@ -133,6 +167,49 @@ Data get_data(const List &model)
   {
     Rcpp::stop("do_importance_sampler: data not found in model specification.");
   }
+}
+
+int extract_int_parameter(const List &parameters_from_file,
+                          const List &model_parameters,
+                          size_t index)
+{
+  int result;
+  std::string parameter_string = parameters_from_file[index];
+  
+  if (parameter_string.at(0)=='p')
+  {
+    size_t parameter_index;
+    try
+    {
+      parameter_index = std::stoi(parameter_string.substr(1));
+    } catch (...)
+    {
+      Rcpp::stop("Parameter index in model file not an integer.");
+    }
+    
+    if (isDoubleInList(model_parameters,parameter_index))
+    {
+      result = model_parameters[parameter_index-1];
+    }
+    else
+    {
+      Rcpp::stop("Parameter index does not correspond to a real number in the parameters file.");
+    }
+    
+  }
+  else
+  {
+    try
+    {
+      result = std::stoi(parameter_string);
+    }
+    catch (...)
+    {
+      Rcpp::stop("Parameter in model file is not a real number.");
+    }
+  }
+  
+  return result;
 }
 
 double extract_double_parameter(const List &parameters_from_file,
@@ -581,7 +658,6 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
     
   }
 
-  
   likelihood_estimators.push_back(new ExactLikelihoodEstimator(rng_in,
                                                                seed_in,
                                                                data_in,
@@ -1600,7 +1676,6 @@ SymmetricProposalKernel* get_m_proposal(const List &current_proposal,
     stop("Invalid m proposal. Maybe you specified a method to simulate from the proposal, but no method to evaluate it?");
   }
   
-  
   if (proposal==NULL)
   {
     stop("No suitable proposal found in model file.");
@@ -1611,11 +1686,95 @@ SymmetricProposalKernel* get_m_proposal(const List &current_proposal,
   }
 }
 
+MCMCTermination* make_mcmc_termination(const List &model_parameters,
+                                       const List &mcmc_termination_method)
+{
+  MCMCTermination* termination_method;
+  
+  if (mcmc_termination_method.containsElementNamed("method") && mcmc_termination_method.containsElementNamed("values"))
+  {
+    std::string method = mcmc_termination_method["method"];
+    if (method=="iterations")
+    {
+      if (Rf_isNewList(mcmc_termination_method["values"]))
+      {
+        List values = mcmc_termination_method["values"];
+        
+        if (values.length()==1)
+        {
+          int number_of_iterations = extract_int_parameter(values,
+                                                           model_parameters,
+                                                           0);
+          termination_method = new IterationsMCMCTermination(number_of_iterations);
+        }
+        else
+        {
+          stop("MCMC termination using iterations requires you to specify only the number of iterations.");
+        }
+      }
+      else
+      {
+        stop("No valid method found for MCMC termination.");
+      }
+    }
+    else if (method=="se")
+    {
+      if (Rf_isNewList(mcmc_termination_method["values"]))
+      {
+        List values = mcmc_termination_method["values"];
+        
+        if (values.length()==1)
+        {
+          double threshold = extract_double_parameter(values,
+                                                      model_parameters,
+                                                      0);
+          int number_of_iterations = arma::datum::inf;
+          
+          termination_method = new SEMCMCTermination(threshold,
+                                                     number_of_iterations);
+        }
+        else if (values.length()==2)
+        {
+          double threshold = extract_double_parameter(values,
+                                                      model_parameters,
+                                                      0);
+          int number_of_iterations = extract_int_parameter(values,
+                                                           model_parameters,
+                                                           1);
+          
+          termination_method = new SEMCMCTermination(threshold,
+                                                     number_of_iterations);
+        }
+        else
+        {
+          stop("MCMC termination using standard error requires you to specify a threshold.");
+        }
+      }
+      else
+      {
+        stop("No valid method found for MCMC termination.");
+      }
+    }
+    else
+    {
+      stop("Invalid method for MCMC termination.");
+    }
+  }
+  else
+  {
+    stop("No valid method found for MCMC termination.");
+  }
+  
+  return termination_method;
+}
+
 MCMC* make_mcmc(const List &model,
                 const List &model_parameters,
                 const Data* data,
-                size_t number_of_mcmc_iterations)
+                const List &mcmc_termination_method)
 {
+  MCMCTermination* termination_method = make_mcmc_termination(model_parameters,mcmc_termination_method);
+  
   MCMC* mcmc = NULL;
   
   if (model.containsElementNamed("order_of_mcmc"))
@@ -1651,8 +1810,16 @@ MCMC* make_mcmc(const List &model,
             stop("Error in mcmc proposals part of model file.");
           }
           
-          mcmc = new MetropolisHastingsMCMC(number_of_mcmc_iterations,
-                                            proposal);
+          if (order_of_mcmc.size()>1)
+          {
+            mcmc = new MetropolisHastingsMCMC(1,
+                                              proposal);
+          }
+          else
+          {
+            mcmc = new MetropolisHastingsMCMC(termination_method,
+                                              proposal);
+          }
           
           simulate_mh_proposal_index = simulate_mh_proposal_index + 1;
         }
@@ -1681,8 +1848,16 @@ MCMC* make_mcmc(const List &model,
             stop("Error in mcmc proposals part of model file.");
           }
           
-          moves.push_back(new MetropolisHastingsMCMC(number_of_mcmc_iterations,
-                                                     proposal));
+          if (order_of_mcmc.size()>1)
+          {
+            mcmc = new MetropolisHastingsMCMC(1,
+                                              proposal);
+          }
+          else
+          {
+            mcmc = new MetropolisHastingsMCMC(termination_method,
+                                              proposal);
+          }
           
           simulate_independent_mh_proposal_index = simulate_independent_mh_proposal_index + 1;
         }
@@ -1711,8 +1886,16 @@ MCMC* make_mcmc(const List &model,
             stop("Error in mcmc proposals part of model file.");
           }
           
-          moves.push_back(new MetropolisMCMC(number_of_mcmc_iterations,
-                                             proposal));
+          if (order_of_mcmc.size()>1)
+          {
+            mcmc = new MetropolisMCMC(1,
+                                      proposal);
+          }
+          else
+          {
+            mcmc = new MetropolisMCMC(termination_method,
+                                      proposal);
+          }
           
           simulate_m_proposal_index = simulate_m_proposal_index + 1;
         }
@@ -1743,13 +1926,12 @@ MCMC* make_mcmc(const List &model,
       
       if (moves.size()==1)
       {
-        Rcout << "one move" << std::endl;
         return mcmc;
       }
       else
       {
-        Rcout << "multiple moves" << std::endl;
-        return new StochasticScanMCMC(moves,
+        return new StochasticScanMCMC(termination_method,
+                                      moves,
                                       mcmc_weights);
       }
       
@@ -1762,7 +1944,8 @@ MCMC* make_mcmc(const List &model,
       }
       else
       {
-        return new DeterministicScanMCMC(moves);
+        return new DeterministicScanMCMC(termination_method,
+                                         moves);
       }
     }
   }
@@ -1822,6 +2005,351 @@ Parameters make_algorithm_parameters(const List &algorithm_parameter_list)
     }
   }
   return output;
+}
+
+SMCCriterion* get_resampling_method(const List &model,
+                                    const List &model_parameters,
+                                    const List &adaptive_resampling_method)
+{
+  SMCCriterion* smc_criterion;
+  
+  if (adaptive_resampling_method.containsElementNamed("criterion") && adaptive_resampling_method.containsElementNamed("values"))
+  {
+    std::string method = adaptive_resampling_method["criterion"];
+    if (method=="ess")
+    {
+      if (Rf_isNewList(adaptive_resampling_method["values"]))
+      {
+        List values = adaptive_resampling_method["values"];
+        
+        if (values.length()==1)
+        {
+          double desired_ess = extract_double_parameter(values,
+                                                        model_parameters,
+                                                        0);
+          smc_criterion = new ESSSMCCriterion(desired_ess);
+        }
+        else
+        {
+          stop("Adaptive resampling using ESS requires specification of the desired ESS.");
+        }
+      }
+      else
+      {
+        stop("No valid method found for adaptive resampling.");
+      }
+    }
+    else
+    {
+      stop("No valid method found for adaptive resampling.");
+    }
+  }
+  else
+  {
+    stop("No valid method found for adaptive resampling.");
+  }
+  
+  return smc_criterion;
+}
+
+SMCCriterion* get_adaptive_target_method(const List &model,
+                                         const List &model_parameters,
+                                         const List &adaptive_target_method)
+{
+  SMCCriterion* smc_criterion;
+  
+  if (adaptive_target_method.containsElementNamed("criterion") && adaptive_target_method.containsElementNamed("values"))
+  {
+    std::string method = adaptive_target_method["criterion"];
+    if (method=="ess")
+    {
+      if (Rf_isNewList(adaptive_target_method["values"]))
+      {
+        List values = adaptive_target_method["values"];
+        
+        if (values.length()==1)
+        {
+          double desired_ess = extract_double_parameter(values,
+                                                        model_parameters,
+                                                        0);
+          smc_criterion = new ESSSMCCriterion(desired_ess);
+        }
+        else
+        {
+          stop("Adaptive target using ESS requires specification of the desired ESS.");
+        }
+      }
+      else
+      {
+        stop("No valid method found for adaptive target.");
+      }
+    }
+    else if (method=="cess")
+    {
+      if (Rf_isNewList(adaptive_target_method["values"]))
+      {
+        List values = adaptive_target_method["values"];
+        
+        if (values.length()==1)
+        {
+          double desired_cess = extract_double_parameter(values,
+                                                         model_parameters,
+                                                         0);
+          smc_criterion = new CESSSMCCriterion(desired_cess);
+        }
+        else
+        {
+          stop("Adaptive target using CESS requires specification of the desired CESS.");
+        }
+      }
+      else
+      {
+        stop("No valid method found for adaptive target.");
+      }
+    }
+    else if (method=="positive")
+    {
+      smc_criterion = new PositiveSMCCriterion();
+    }
+    else
+    {
+      stop("No valid method found for adaptive target.");
+    }
+  }
+  else
+  {
+    stop("No valid method found for adaptive target.");
+  }
+  
+  return smc_criterion;
+}
+
+SMCTermination* get_smc_termination_method(const List &model,
+                                           const List &model_parameters,
+                                           const List &smc_termination_method)
+{
+  SMCTermination* smc_termination;
+  
+  if (smc_termination_method.length()==0)
+  {
+    smc_termination = NULL;
+    return smc_termination;
+  }
+  
+  if (smc_termination_method.containsElementNamed("criterion") && smc_termination_method.containsElementNamed("values"))
+  {
+    std::string method = smc_termination_method["criterion"];
+    if (method=="stable")
+    {
+      if (Rf_isNewList(smc_termination_method["values"]))
+      {
+        List values = smc_termination_method["values"];
+        
+        if (values.length()==2)
+        {
+          double threshold = extract_double_parameter(values,
+                                                      model_parameters,
+                                                      0);
+          double number_in_a_row = extract_int_parameter(values,
+                                                         model_parameters,
+                                                         1);
+          smc_termination = new StableSMCTermination(threshold,
+                                                     number_in_a_row);
+        }
+        else
+        {
+          stop("SMC termination via stability requires the specificaton of a threshold and the number of iterations in a row that this threshold must be exceeded.");
+        }
+      }
+      else
+      {
+        stop("No valid method found for SMC termination.");
+      }
+    }
+    else if (method=="always")
+    {
+      smc_termination = new AlwaysSMCTermination();
+    }
+    else
+    {
+      stop("No valid method found for SMC termination.");
+    }
+  }
+  else
+  {
+    stop("No valid method found for SMC termination.");
+  }
+  
+  return smc_termination;
+}
+
+List get_smc_sequencer_info(const List &model,
+                            const List &model_parameters,
+                            const List &smc_sequencer_method)
+{
+  if (smc_sequencer_method.containsElementNamed("types") && smc_sequencer_method.containsElementNamed("variables") && smc_sequencer_method.containsElementNamed("schedules"))
+  {
+    int number_of_bisections;
+    if (smc_sequencer_method.containsElementNamed("bisections"))
+    {
+      List values = smc_sequencer_method["bisections"];
+      number_of_bisections = extract_int_parameter(values,
+                                                   model_parameters,
+                                                   0);
+    }
+    else
+    {
+      Rcout << "Bisections not set in adaptive target method, using 100." << std::endl;
+      number_of_bisections = 100;
+    }
+    
+    StringVector types;
+    if (isStringVectorInList(smc_sequencer_method, "types"))
+    {
+      types = smc_sequencer_method["types"];
+    }
+    
+    StringVector variables;
+    if (isStringVectorInList(smc_sequencer_method, "variables"))
+    {
+      variables = smc_sequencer_method["variables"];
+    }
+    
+    List schedules;
+    if (Rf_isNewList(smc_sequencer_method["schedules"]))
+    {
+      schedules = smc_sequencer_method["schedules"];
+    }
+    else if (isNumericVectorInList(smc_sequencer_method,"schedules"))
+    {
+      schedules = List::create(smc_sequencer_method["schedules"]);
+    }
+    else
+    {
+      stop("Invalid specification of schedules for SMC: must be either a numeric vector or a list of numeric vectors.");
+    }
+    
+    if ( (types.size()==variables.size()) && (types.size()==schedules.size()) )
+    {
+      std::vector<std::string> types_for_output;
+      types_for_output.reserve(types.size());
+      for (size_t i=0; i<types.size(); ++i)
+      {
+        types_for_output.push_back(String(types[i]).get_cstring());
+      }
+      
+      std::vector<std::string> variables_for_output;
+      variables_for_output.reserve(variables.size());
+      for (size_t i=0; i<variables.size(); ++i)
+      {
+        variables_for_output.push_back(String(variables[i]).get_cstring());
+      }
+      
+      std::vector<std::vector<double>> schedules_for_output;
+      schedules_for_output.reserve(schedules.size());
+      for (size_t i=0; i<schedules.size(); ++i)
+      {
+        std::vector<double> schedule_for_output;
+        
+        if (isNumericVectorInList(schedules,i+1))
+        {
+          NumericVector schedule = schedules[i];
+          schedule_for_output = as<std::vector<double>>(schedule);
+        }
+        else
+        {
+          stop("Schedule invalid: needs to be a numeric vector.");
+        }
+        
+        schedules_for_output.push_back(schedule_for_output);
+      }
+      
+      return List::create(types_for_output,variables_for_output,schedules_for_output,number_of_bisections);
+    }
+    else
+    {
+      stop("Invalid specification of schedules for SMC: types, variables and schedules (list) must all be the same length.");
+    }
+    
+  }
+  else
+  {
+    stop("No valid method found for SMC sequence: need to specify types, variables and schedules.");
+  }
+}
+
+std::vector<LikelihoodEstimator*> convent_to_annealed_likelihoods_if_needed(RandomNumberGenerator* rng_in,
+                                                                            size_t* seed_in,
+                                                                            Data* data_in,
+                                                                            const std::vector<std::string> &sequencer_types,
+                                                                            const std::vector<std::string> &sequencer_variables,
+                                                                            const std::vector<LikelihoodEstimator*> &likelihood_estimators,
+                                                                            IndependentProposalKernel* proposal,
+                                                                            bool proposal_is_evaluated_in)
+{
+  bool any_annealing = false;
+  std::string annealing_variable;
+  for (size_t i=0; i<sequencer_types.size(); ++i)
+  {
+    if ( (sequencer_types[i]=="annealing") || (sequencer_types[i]=="tempering") )
+    {
+      if (any_annealing==false)
+      {
+        any_annealing = true;
+        annealing_variable = sequencer_variables[i];
+        break;
+      }
+      else
+      {
+        stop("Two annealing variables specified: not currently supported.");
+      }
+    }
+  }
+  
+  if (!any_annealing)
+  {
+    return likelihood_estimators;
+  }
+  
+  std::vector<LikelihoodEstimator*> annealed_likelihood_estimators;
+  annealed_likelihood_estimators.reserve(likelihood_estimators.size());
+  
+  PowerFunctionPtr power = annealing_power;
+  
+  for (auto i=likelihood_estimators.begin();
+       i!=likelihood_estimators.end();
+       ++i)
+  {
+    annealed_likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(rng_in,
+                                                                             seed_in,
+                                                                             data_in,
+                                                                             *i,
+                                                                             power,
+                                                                             annealing_variable,
+                                                                             false));
+  }
+  
+  if (proposal_is_evaluated_in)
+  {
+    ExactLikelihoodEstimator* proposal_for_evaluation = new ExactLikelihoodEstimator(rng_in,
+                                                                                     seed_in,
+                                                                                     data_in,
+                                                                                     proposal,
+                                                                                     true);
+    
+    PowerFunctionPtr second_power = annealing_one_minus_power;
+    
+    annealed_likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(rng_in,
+                                                                             seed_in,
+                                                                             data_in,
+                                                                             proposal_for_evaluation,
+                                                                             second_power,
+                                                                             annealing_variable,
+                                                                             false));
+    
+  }
+
+  return annealed_likelihood_estimators;
 }
 
 // [[Rcpp::export]]
@@ -1918,7 +2446,7 @@ void do_mcmc(const List &model,
              const List &parameters,
              const List &algorithm_parameter_list,
              const List &initial_values,
-             size_t number_of_mcmc_iterations,
+             const List &mcmc_termination_method,
              size_t number_of_chains,
              bool parallel_in,
              size_t grain_size_in,
@@ -1951,12 +2479,10 @@ void do_mcmc(const List &model,
   
   Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list);
   
-  
-  
   MCMC* the_mcmc = make_mcmc(model,
                              parameters,
                              &the_data,
-                             number_of_mcmc_iterations);
+                             mcmc_termination_method);
   
   
   SMCMCMCMove* alg;
@@ -2003,7 +2529,6 @@ void do_mcmc(const List &model,
     
   }
   
-  
   std::chrono::high_resolution_clock::time_point start_time, end_time;
   start_time = std::chrono::high_resolution_clock::now();
   
@@ -2022,13 +2547,21 @@ void do_mcmc(const List &model,
 
 
 // [[Rcpp::export]]
-void do_smc_mcmc(const List &model,
-                 const List &parameters,
-                 size_t number_of_importance_points,
-                 bool parallel_in,
-                 size_t grain_size_in,
-                 const String &results_name_in,
-                 size_t seed)
+void do_smc_mcmc_move(const List &model,
+                      const List &parameters,
+                      const List &algorithm_parameter_list,
+                      size_t number_of_particles,
+                      const List &mcmc_termination_method,
+                      const List &adaptive_resampling_method,
+                      const List &smc_sequencer_method,
+                      const List &adaptive_target_method,
+                      const List &smc_termination_method,
+                      size_t smc_iterations_to_store,
+                      bool write_to_file_at_each_iteration,
+                      bool parallel_in,
+                      size_t grain_size_in,
+                      const String &results_name_in,
+                      size_t seed)
 {
   
   RandomNumberGenerator rng;
@@ -2041,13 +2574,16 @@ void do_smc_mcmc(const List &model,
   
   // Check if the prior is the proposal: affects what llhd_estimators we include.
   
-  
   std::vector<LikelihoodEstimator*> likelihood_estimators;
   IndependentProposalKernel* proposal_in;
   bool proposal_is_evaluated_in;
   
   if ( model.containsElementNamed("importance_proposals") )
   {
+    proposal_in = get_proposal(model,
+                               parameters,
+                               &the_data);
+    
     likelihood_estimators = get_likelihood_estimators(&rng,
                                                       &seed,
                                                       &the_data,
@@ -2055,11 +2591,8 @@ void do_smc_mcmc(const List &model,
                                                       parameters,
                                                       true);
     
-    proposal_in = get_proposal(model,
-                               parameters,
-                               &the_data);
-    
     proposal_is_evaluated_in = true;
+    
   }
   else
   {
@@ -2071,43 +2604,128 @@ void do_smc_mcmc(const List &model,
                                                       model,
                                                       parameters,
                                                       false);
-    /*
+    
     proposal_in = get_prior_as_simulate_only_proposal(model,
                                                       parameters);
     
     proposal_is_evaluated_in = false;
-    */
+    
   }
   
-  /*
-  ImportanceSampler alg(&rng,
-                        &seed,
-                        &the_data,
-                        number_of_importance_points,
-                        likelihood_estimators,
-                        proposal_in,
-                        proposal_is_evaluated_in,
-                        true,
-                        true,
-                        parallel_in,
-                        grain_size_in,
-                        "");
+  List sequencer_info = get_smc_sequencer_info(model,
+                                               parameters,
+                                               smc_sequencer_method);
+  std::vector<std::string> sequencer_variables = sequencer_info[1];
+  std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
   
-  std::chrono::high_resolution_clock::time_point start_time, end_time;
-  start_time = std::chrono::high_resolution_clock::now();
+  // note that this will always result in the temperature being adapted in the SMC algorithm (not smcfixed)
+  likelihood_estimators = convent_to_annealed_likelihoods_if_needed(&rng,
+                                                                    &seed,
+                                                                    &the_data,
+                                                                    sequencer_info[0],
+                                                                    sequencer_info[1],
+                                                                    likelihood_estimators,
+                                                                    proposal_in,
+                                                                    proposal_is_evaluated_in);
   
-  SMCOutput* output = alg.run();
+  Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list);
   
-  end_time = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> elapsed_time = end_time - start_time;
-  output->set_time(elapsed_time.count());
+  MCMC* the_mcmc = make_mcmc(model,
+                             parameters,
+                             &the_data,
+                             mcmc_termination_method);
   
-  if (strcmp(results_name_in.get_cstring(),"") != 0)
-    output->write(results_name_in.get_cstring());
-  delete output;
+  SMCCriterion* resampling_criterion = get_resampling_method(model,
+                                                             parameters,
+                                                             adaptive_resampling_method);
   
-  Rcout << "Sampling finished." << std::endl;
-  if (strcmp(results_name_in.get_cstring(),"") != 0)
-    Rcout << "Results written to " << results_name_in.get_cstring() << "_smc" << std::endl;
-  */
+  SMCCriterion* adaptive_target_criterion = get_adaptive_target_method(model,
+                                                                       parameters,
+                                                                       adaptive_target_method);
+  
+  SMCTermination* smc_termination = get_smc_termination_method(model,
+                                                               parameters,
+                                                               smc_termination_method);
+  
+  if (write_to_file_at_each_iteration)
+  {
+    SMCMCMCMove* alg = new SMCMCMCMove(&rng,
+                                       &seed,
+                                       &the_data,
+                                       algorithm_parameters,
+                                       number_of_particles,
+                                       smc_iterations_to_store,
+                                       smc_iterations_to_store,
+                                       the_mcmc,
+                                       resampling_criterion,
+                                       adaptive_target_criterion,
+                                       sequencer_info[3],
+                                       smc_termination,
+                                       sequencer_variables,
+                                       sequencer_schedules,
+                                       likelihood_estimators,
+                                       proposal_in,
+                                       proposal_is_evaluated_in,
+                                       true,
+                                       true,
+                                       false,
+                                       parallel_in,
+                                       grain_size_in,
+                                       results_name_in.get_cstring());
+    
+    std::chrono::high_resolution_clock::time_point start_time, end_time;
+    start_time = std::chrono::high_resolution_clock::now();
+    
+    SMCOutput* output = alg->run();
+    
+    end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_time = end_time - start_time;
+    output->set_time(elapsed_time.count());
+
+    delete output;
+    
+    delete alg;
+  }
+  else
+  {
+    SMCMCMCMove* alg = new SMCMCMCMove(&rng,
+                                       &seed,
+                                       &the_data,
+                                       algorithm_parameters,
+                                       number_of_particles,
+                                       smc_iterations_to_store,
+                                       smc_iterations_to_store,
+                                       the_mcmc,
+                                       resampling_criterion,
+                                       adaptive_target_criterion,
+                                       sequencer_info[3],
+                                       smc_termination,
+                                       sequencer_variables,
+                                       sequencer_schedules,
+                                       likelihood_estimators,
+                                       proposal_in,
+                                       proposal_is_evaluated_in,
+                                       true,
+                                       true,
+                                       false,
+                                       parallel_in,
+                                       grain_size_in,
+                                       "");
+    
+    std::chrono::high_resolution_clock::time_point start_time, end_time;
+    start_time = std::chrono::high_resolution_clock::now();
+    
+    SMCOutput* output = alg->run();
+    
+    end_time = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed_time = end_time - start_time;
+    output->set_time(elapsed_time.count());
+    
+    if (strcmp(results_name_in.get_cstring(),"") != 0)
+      output->write(results_name_in.get_cstring());
+    delete output;
+    
+    delete alg;
+  }
+
 }

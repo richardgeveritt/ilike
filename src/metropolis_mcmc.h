@@ -24,6 +24,9 @@ public:
   
   MetropolisMCMC(size_t number_of_iterations_in,
                  SymmetricProposalKernel* proposal_in);
+  
+  MetropolisMCMC(MCMCTermination* termination_in,
+                 SymmetricProposalKernel* proposal_in);
 
   virtual ~MetropolisMCMC();
 
