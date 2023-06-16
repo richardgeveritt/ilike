@@ -1,28 +1,24 @@
 #' MCMC
 #'
 #' @param model A file containing the model, or a pre-compiled model list.
-#' @param results_directory The name of the directory to which results will be written.
-#' @param number_of_mcmc_iterations The number of MCMC iterations.
-#' @param mcmc_termination_method (optional) The method used to terminate the MCMC runs.
 #' @param number_of_chains (optional) The number of chains.
 #' @param initial_values (optional) A list of lists containing the initial values for the chains.
+#' @param parallel_flag (optional) Set to true to perform the importance sampling in parallel, false for serial.
+#' @param results_directory The name of the directory to which results will be written.
 #' @param model_parameter_list (optional) A list containing parameters for the model.
 #' @param algorithm_parameter_list (optional) A list containing named parameters for the algorithm.
 #' @param seed (optional) The seed for the random number generator.
-#' @param parallel_flag (optional) Set to true to perform the importance sampling in parallel, false for serial.
 #' @param grain_size (optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).
 #' @return Nothing: output can be found in the output_directory.
 #' @export
 mcmc = function(model,
-                results_directory,
-                number_of_mcmc_iterations = 1,
-                mcmc_termination_method = NULL,
                 number_of_chains=1,
                 initial_values = list(),
+                parallel_flag = FALSE,
+                results_directory = getwd(),
                 model_parameter_list = list(),
                 algorithm_parameter_list = list(),
                 seed = NULL,
-                parallel_flag = FALSE,
                 grain_size = 100000)
 {
   if ((is.character(model)) && (length(model) == 1))
@@ -34,18 +30,26 @@ mcmc = function(model,
   }
 
   # Sort MCMC termination method.
-  if (!is.null(mcmc_termination_method))
+  mcmc_termination_method = NULL
+  if ("method" %in% names(model))
   {
-    print("MCMC termination method provided: using this method instead of number_of_mcmc_iterations.")
-
-    if ("values" %in% names(mcmc_termination_method))
+    methods = model[["method"]]
+    for (i in 1:length(methods))
     {
-      mcmc_termination_method[["values"]] = as.list(paste(mcmc_termination_method[["values"]]))
+      if ("mcmc_termination" %in% names(methods[[i]]) && ("type" %in% names(methods[[i]][["mcmc_termination"]])) && ("parameters" %in% names(methods[[i]][["mcmc_termination"]])) )
+      {
+        mcmc_termination_method = list(method=methods[[i]][["mcmc_termination"]][["type"]],values=methods[[i]][["mcmc_termination"]][["parameters"]])
+      }
     }
   }
   else
   {
-    mcmc_termination_method = list(method="iterations",values=list(as.character(number_of_mcmc_iterations)))
+    stop("Model file needs to specify a valid method for MCMC termination.")
+  }
+
+  if (is.null(mcmc_termination_method))
+  {
+    stop("Model file needs to specify a valid method for MCMC termination.")
   }
 
   if (length(initial_values)==0)

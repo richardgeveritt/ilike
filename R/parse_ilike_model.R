@@ -1,4 +1,5 @@
-split_string <- function(input_string) {
+split_string_at_comma_ignoring_parentheses <- function(input_string)
+{
   result <- vector()
   current_word <- ""
   parentheses_level <- 0
@@ -140,94 +141,134 @@ ilike_parse <- function(input,
   return(list(result_function_text,required_args))
 }
 
-factor_processing = function(factor_number,blocks,block_name,prior_function_types,line_counter)
+factor_processing = function(factor_number,blocks,block_name,prior_function_types,custom_likelihood_function_types,sbi_likelihood_function_types,other_likelihood_function_types,line_counter)
 {
   # Is this a continuation of the current factor, or a new one?
+
+  all_names = c(prior_function_types,custom_likelihood_function_types,sbi_likelihood_function_types,other_likelihood_function_types)
 
   # Get the current factor info.
   if ("factor" %in% names(blocks))
   {
     current_factor_info = blocks[["factor"]][[factor_number]]
 
-    # Possible factors are:
-    # (a) "prior" (prior variant)
-    # (b) one or both of "evaluate_log_prior","simulate_prior" (prior variant)
-    # (c) "evaluate_log_likelihood", alone (likelihood variant)
-    # (d) "simulate_model" and (ABC, SL, etc) (likelihood variant)
+    current_factor_names = names(current_factor_info)
 
     if (block_name %in% prior_function_types)
     {
-      new_is_llhd = FALSE
+      if ("prior" %in% names(current_factor_info))
+      {
+        # factor is complete
+        print_factor_info(factor_number,blocks,line_counter-1)
+        factor_number = factor_number + 1
+      }
+      else if ( ("evaluate_log_prior" %in% names(current_factor_info)) || ("simulate_prior" %in% names(current_factor_info)) || ("evaluate_gradient_log_prior" %in% names(current_factor_info)) || ("evaluate_second_gradient_log_prior" %in% names(current_factor_info)) )
+      {
+        # factor is complete
+        if ( ("evaluate_log_prior" %in% names(current_factor_info)) && (block_name=="evaluate_log_prior") )
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+          factor_number = factor_number + 1
+        }
+        else if ( ("simulate_prior" %in% names(current_factor_info)) && (block_name=="simulate_prior") )
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+          factor_number = factor_number + 1
+        }
+        else if ( ("evaluate_gradient_log_prior" %in% names(current_factor_info)) && (block_name=="evaluate_gradient_log_prior") )
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+          factor_number = factor_number + 1
+        }
+        else if ( ("evaluate_second_gradient_log_prior" %in% names(current_factor_info)) && (block_name=="evaluate_second_gradient_log_prior") )
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+          factor_number = factor_number + 1
+        }
+      }
+
+      # If any of the existing parts of the factor are of a completely different type to the block_name then make a new factor.
+      all_other_names = setdiff(all_names,prior_function_types)
+      for (i in 1:length(current_factor_names))
+      {
+        if ( current_factor_names[i] %in% all_other_names)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+          factor_number = factor_number + 1
+          break
+        }
+      }
+    }
+    else if (block_name %in% custom_likelihood_function_types)
+    {
+      # factor is complete
+      if ( ("evaluate_log_likelihood" %in% names(current_factor_info)) && (block_name=="evaluate_log_likelihood") )
+      {
+        print_factor_info(factor_number,blocks,line_counter-1)
+        factor_number = factor_number + 1
+      }
+      else if ( ("evaluate_gradient_log_likelihood" %in% names(current_factor_info)) && (block_name=="evaluate_gradient_log_likelihood") )
+      {
+        print_factor_info(factor_number,blocks,line_counter-1)
+        factor_number = factor_number + 1
+      }
+      else if ( ("evaluate_second_gradient_log_likelihood" %in% names(current_factor_info)) && (block_name=="evaluate_second_gradient_log_likelihood") )
+      {
+        print_factor_info(factor_number,blocks,line_counter-1)
+        factor_number = factor_number + 1
+      }
+
+      # If any of the existing parts of the factor are of a completely different type to the block_name then make a new factor.
+      all_other_names = setdiff(all_names,custom_likelihood_function_types)
+      for (i in 1:length(current_factor_names))
+      {
+        if ( current_factor_names[i] %in% all_other_names)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+          factor_number = factor_number + 1
+          break
+        }
+      }
+    }
+    else if (block_name %in% sbi_likelihood_function_types)
+    {
+      # factor is complete
+      if ( ("simulate_model" %in% names(current_factor_info)) && (block_name=="simulate_model") )
+      {
+        print_factor_info(factor_number,blocks,line_counter-1)
+        factor_number = factor_number + 1
+      }
+      else if ( ("sbi_likelihood" %in% names(current_factor_info)) && (block_name=="sbi_likelihood") )
+      {
+        print_factor_info(factor_number,blocks,line_counter-1)
+        factor_number = factor_number + 1
+      }
+      else if ( ("summary_statistics" %in% names(current_factor_info)) && (block_name=="summary_statistics") )
+      {
+        print_factor_info(factor_number,blocks,line_counter-1)
+        factor_number = factor_number + 1
+      }
+
+      # If any of the existing parts of the factor are of a completely different type to the block_name then make a new factor.
+      all_other_names = setdiff(all_names,sbi_likelihood_function_types)
+      for (i in 1:length(current_factor_names))
+      {
+        if ( current_factor_names[i] %in% all_other_names)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+          factor_number = factor_number + 1
+          break
+        }
+      }
+    }
+    else if (block_name %in% other_likelihood_function_types)
+    {
+      print_factor_info(factor_number,blocks,line_counter-1)
+      factor_number = factor_number + 1
     }
     else
     {
-      new_is_llhd = TRUE
-    }
-
-    if ("prior" %in% names(current_factor_info))
-    {
-      # factor is complete
-      print_factor_info(factor_number,blocks,line_counter-1)
-      factor_number = factor_number + 1
-    }
-    else if ( ("evaluate_log_prior" %in% names(current_factor_info)) || ("simulate_prior" %in% names(current_factor_info)) )
-    {
-      # factor is complete
-      if ( ("evaluate_log_prior" %in% names(current_factor_info)) && (block_name=="evaluate_log_prior") )
-      {
-        # if ("simulate_prior" %in% names(current_factor_info))
-        # {
-        #   print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_prior and simulate_prior.',sep = ""))
-        # }
-        # else
-        # {
-        #   print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_prior.',sep = ""))
-        # }
-        print_factor_info(factor_number,blocks,line_counter-1)
-        factor_number = factor_number + 1
-      }
-      else if ( ("simulate_prior" %in% names(current_factor_info)) && (block_name=="simulate_prior") )
-      {
-        # if ("evaluate_log_prior" %in% names(current_factor_info))
-        # {
-        #   print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_prior and simulate_prior.',sep = ""))
-        # }
-        # else
-        # {
-        #   print(paste('Factor ends on line ',line_counter-1,'. Contains simulate_prior.',sep = ""))
-        # }
-        print_factor_info(factor_number,blocks,line_counter-1)
-        factor_number = factor_number + 1
-      }
-      else if (new_is_llhd)
-      {
-        # if ( ("evaluate_log_prior" %in% names(current_factor_info)) && ("simulate_prior" %in% names(current_factor_info)) )
-        # {
-        #   print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_prior and simulate_prior.',sep = ""))
-        # }
-        # else if ("evaluate_log_prior" %in% names(current_factor_info))
-        # {
-        #   print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_prior.',sep = ""))
-        # }
-        # else if ("simulate_prior" %in% names(current_factor_info))
-        # {
-        #   print(paste('Factor ends on line ',line_counter-1,'. Contains simulate_prior.',sep = ""))
-        # }
-        print_factor_info(factor_number,blocks,line_counter-1)
-        factor_number = factor_number + 1
-      }
-      else if (block_name=="prior")
-      {
-        print_factor_info(factor_number,blocks,line_counter-1)
-        factor_number = factor_number + 1
-      }
-    }
-    else if ("evaluate_log_likelihood" %in% names(current_factor_info))
-    {
-      # factor is complete
-      #print(paste('Factor ends on line ',line_counter-1,'. Contains evaluate_log_likelihood.',sep = ""))
-      print_factor_info(factor_number,blocks,line_counter-1)
-      factor_number = factor_number + 1
+      stop(paste("Invalid block: ",block_name,'.',sep=""))
     }
   }
   else
@@ -394,14 +435,18 @@ m_proposal_processing = function(m_proposal_number,blocks,block_name,line_counte
   return(m_proposal_number)
 }
 
-mcmc_weights_processing = function(mcmc_weights_number)
+method_processing = function(method_number,blocks,block_name,line_counter)
 {
-  if (mcmc_weights_number!=0)
+  # if (method_number!=0)
+  # {
+  #   stop(paste("Invalid file: line ",line_counter,', method already specified.',sep=""))
+  # }
+  if (method_number>0)
   {
-    stop(paste("Invalid file: line ",line_counter,', mcmc_weights already specified.',sep=""))
+    print_method_info(method_number,blocks,line_counter-1)
   }
-  mcmc_weights_number = mcmc_weights_number + 1
-  return(mcmc_weights_number)
+  method_number = method_number + 1
+  return(method_number)
 }
 
 print_factor_info = function(factor_index,blocks,line_counter)
@@ -479,7 +524,22 @@ print_m_proposal_info = function(m_proposal_index,blocks,line_counter)
   print(paste('m_proposal ends on line ',line_counter,'. Contains ',m_proposal_info_string,'.',sep = ""))
 }
 
-determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,importance_proposal_number,mh_proposal_number,independent_mh_proposal_number,m_proposal_number,data_number,mcmc_weights_number)
+print_method_info = function(method_index,blocks,line_counter)
+{
+  method_info_string = ""
+  last_method_names = names(blocks[["method"]][[method_index]])
+  for (j in 1:length(last_method_names))
+  {
+    method_info_string = paste(method_info_string,last_method_names[j],sep=", ")
+  }
+  if (nchar(method_info_string)>2)
+  {
+    method_info_string = substr(method_info_string,3,nchar(method_info_string))
+  }
+  print(paste('Method ends on line ',line_counter,'. Contains ',method_info_string,'.',sep = ""))
+}
+
+determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,importance_proposal_number,mh_proposal_number,independent_mh_proposal_number,m_proposal_number,data_number,method_number)
 {
   if (length(split_block_name)==1)
   {
@@ -498,21 +558,23 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
     stop(paste("Invalid file: line ",line_counter,", invalid function definition (can only have up two parts, separated by commas).",sep=""))
   }
 
-  prior_function_types = c("prior","evaluate_log_prior","simulate_prior")
-  likelihood_function_types = c("evaluate_log_likelihood","simulate_model")
-  factor_function_types = c(prior_function_types,likelihood_function_types)
+  prior_function_types = c("prior","evaluate_log_prior","simulate_prior","evaluate_gradient_log_prior","evaluate_second_gradient_log_prior")
+  custom_likelihood_function_types = c("evaluate_log_likelihood","evaluate_gradient_log_likelihood","evaluate_second_gradient_log_likelihood")
+  sbi_likelihood_function_types = c("simulate_model","sbi_likelihood","summary_statistics")
+  other_likelihood_function_types = c("likelihood")
+  factor_function_types = c(prior_function_types,custom_likelihood_function_types,sbi_likelihood_function_types,other_likelihood_function_types)
   data_function_types = c("data")
   importance_proposal_types = c("simulate_importance_proposal","evaluate_log_importance_proposal")
   mh_proposal_types = c("simulate_mh_proposal","evaluate_log_mh_proposal","mh_proposal")
   independent_mh_proposal_types = c("simulate_independent_mh_proposal","evaluate_log_independent_mh_proposal","independent_mh_proposal")
   m_proposal_types = c("simulate_m_proposal","m_proposal")
-  mcmc_weights_function_types = c("mcmc_weights")
+  method_function_types = c("mcmc_weights","mcmc_termination","adaptive_resampling","adaptive_target","smc_termination","smc_sequence")
 
   # distinguish between factor, data, etc
   if (block_name %in% factor_function_types)
   {
     block_type = "factor"
-    factor_number = factor_processing(factor_number,blocks,block_name,prior_function_types,line_counter)
+    factor_number = factor_processing(factor_number,blocks,block_name,prior_function_types,custom_likelihood_function_types,sbi_likelihood_function_types,other_likelihood_function_types,line_counter)
     number_to_pass_to_extract_block = factor_number
   }
   else if (block_name %in% data_function_types)
@@ -545,11 +607,11 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
     m_proposal_number = m_proposal_processing(m_proposal_number,blocks,block_name,line_counter)
     number_to_pass_to_extract_block = m_proposal_number
   }
-  else if (block_name %in% mcmc_weights_function_types)
+  else if (block_name %in% method_function_types)
   {
-    block_type = "mcmc_weights"
-    mcmc_weights_number = mcmc_weights_processing(mcmc_weights_number)
-    number_to_pass_to_extract_block = mcmc_weights_number
+    block_type = "method"
+    method_number = method_processing(method_number,blocks,block_name,line_counter)
+    number_to_pass_to_extract_block = method_number
   }
   else
   {
@@ -567,7 +629,7 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
               independent_mh_proposal_number,
               m_proposal_number,
               data_number,
-              mcmc_weights_number))
+              method_number))
 }
 
 extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,parameter_list)
@@ -653,65 +715,20 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
       if (is_like_function==TRUE)
       {
-        if (block_name=="prior")
+        if ( (block_name=="prior") || (block_name=="importance_proposal") || (block_name=="independent_mh_proposal") || (block_name=="mh_proposal") || (block_name=="m_proposal") || (block_name=="sbi_likelihood") || (block_name=="likelihood") || (block_name=="smc_sequence") )
         {
-          split_arg_string = strsplit(arg_string,",")[[1]]
+          split_arg_string = split_string_at_comma_ignoring_parentheses(arg_string)
 
           variables = split_arg_string[1]
 
           parameters = list()
           if (length(split_arg_string)>1)
-          for (k in 2:(length(split_arg_string)))
           {
-            parameters[[k-1]] = split_arg_string[k]
-          }
-
-          # temp_list = blocks[[block_type]]
-          # temp_list[[factor_number]][[block_name]][["type"]] = ilike_type
-          # temp_list[[factor_number]][[block_name]][["variables"]] = variables
-          # temp_list[[factor_number]][[block_name]][["parameters"]] = parameters
-          # blocks[[block_type]] = temp_list
-
-          my_list = list(list(type=ilike_type,
-                              variables=variables,
-                              parameters=parameters))
-          names(my_list) = c(block_name)
-
-          if (length((blocks[[block_type]]))==0)
-          {
-            blocks[[block_type]][[factor_number]] = my_list
-          }
-          else if (factor_number!=length((blocks[[block_type]])))
-          {
-            blocks[[block_type]][[factor_number]] = my_list
-          }
-          else
-          {
-            blocks[[block_type]][[factor_number]] = append(blocks[[block_type]][[factor_number]],my_list)
-          }
-
-          #blocks[[block_type]][[factor_number]][[block_name]][["type"]] = ilike_type
-          #blocks[[block_type]][[factor_number]][[block_name]][["variables"]] = variables
-          #blocks[[block_type]][[factor_number]][[block_name]][["parameters"]] = parameters
-        }
-        else if (block_name=="importance_proposal")
-        {
-          split_arg_string = strsplit(arg_string,",")[[1]]
-
-          variables = split_arg_string[1]
-
-          parameters = list()
-          if (length(split_arg_string)>1)
             for (k in 2:(length(split_arg_string)))
             {
               parameters[[k-1]] = split_arg_string[k]
             }
-
-          # temp_list = blocks[[block_type]]
-          # temp_list[[factor_number]][[block_name]][["type"]] = ilike_type
-          # temp_list[[factor_number]][[block_name]][["variables"]] = variables
-          # temp_list[[factor_number]][[block_name]][["parameters"]] = parameters
-          # blocks[[block_type]] = temp_list
+          }
 
           my_list = list(list(type=ilike_type,
                               variables=variables,
@@ -731,31 +748,21 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             blocks[[block_type]][[factor_number]] = append(blocks[[block_type]][[factor_number]],my_list)
           }
 
-          #blocks[[block_type]][[factor_number]][[block_name]][["type"]] = ilike_type
-          #blocks[[block_type]][[factor_number]][[block_name]][["variables"]] = variables
-          #blocks[[block_type]][[factor_number]][[block_name]][["parameters"]] = parameters
         }
-        else if (block_name=="independent_mh_proposal")
+        else if ( (block_name=="mcmc_termination") || (block_name=="adaptive_resampling") || (block_name=="adaptive_target") || (block_name=="smc_termination") )
         {
-          split_arg_string = strsplit(arg_string,",")[[1]]
-
-          variables = split_arg_string[1]
+          split_arg_string = split_string_at_comma_ignoring_parentheses(arg_string)
 
           parameters = list()
-          if (length(split_arg_string)>1)
-            for (k in 2:(length(split_arg_string)))
+          if (length(split_arg_string)>0)
+          {
+            for (k in 1:(length(split_arg_string)))
             {
-              parameters[[k-1]] = split_arg_string[k]
+              parameters[[k]] = split_arg_string[k]
             }
-
-          # temp_list = blocks[[block_type]]
-          # temp_list[[factor_number]][[block_name]][["type"]] = ilike_type
-          # temp_list[[factor_number]][[block_name]][["variables"]] = variables
-          # temp_list[[factor_number]][[block_name]][["parameters"]] = parameters
-          # blocks[[block_type]] = temp_list
+          }
 
           my_list = list(list(type=ilike_type,
-                              variables=variables,
                               parameters=parameters))
           names(my_list) = c(block_name)
 
@@ -772,9 +779,6 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             blocks[[block_type]][[factor_number]] = append(blocks[[block_type]][[factor_number]],my_list)
           }
 
-          #blocks[[block_type]][[factor_number]][[block_name]][["type"]] = ilike_type
-          #blocks[[block_type]][[factor_number]][[block_name]][["variables"]] = variables
-          #blocks[[block_type]][[factor_number]][[block_name]][["parameters"]] = parameters
         }
         else
         {
@@ -880,6 +884,21 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in a data function.",sep=""))
           }
 
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in a data function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in a data function.",sep=""))
+          }
+
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a prior.",sep=""))
+          }
+
           return_type = "Data"
           arguments = c()
           #args_for_typedef = ""
@@ -897,6 +916,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a prior.",sep=""))
           }
 
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
           return_type = "double"
           arguments = c()
           arguments[1] = "const Parameters &parameters"
@@ -905,6 +934,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
         }
         else if (block_name=="evaluate_log_likelihood")
         {
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
           return_type = "double"
           arguments = c()
           arguments[1] = "const Parameters &parameters"
@@ -917,6 +956,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           if (sum(which_data)>0)
           {
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a prior.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
           if (output_variable=="")
@@ -932,7 +981,13 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
         }
         else if (block_name=="evaluate_log_importance_proposal")
         {
-          if ( (sum(which_data)>0) && (sum(which_proposal_parameters)>0) )
+
+          if (sum(which_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in this function.",sep=""))
+          }
+
+          if ( (sum(which_data)>0) && (sum(which_proposal_parameters)>0)  )
           {
             return_type = "double"
             arguments = c()
@@ -980,6 +1035,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           if (output_variable=="")
           {
             stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in this function.",sep=""))
           }
 
           return_type = "Parameters"
@@ -1081,6 +1146,11 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
           }
 
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
           return_type = "Parameters"
           arguments = c()
 
@@ -1137,6 +1207,11 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
         }
         else if (block_name=="evaluate_log_independent_mh_proposal")
         {
+          if (sum(which_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in this function.",sep=""))
+          }
+
           if ( (sum(which_data)>0) && (sum(which_proposal_parameters)>0) )
           {
             return_type = "double"
@@ -1185,6 +1260,11 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           if (output_variable=="")
           {
             stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
           }
 
           return_type = "Parameters"
@@ -1242,6 +1322,11 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           if (output_variable=="")
           {
             stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
           }
 
           return_type = "Parameters"
@@ -1306,10 +1391,82 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in a mcmc_weights function.",sep=""))
           }
 
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a mcmc_weights function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
           return_type = "NumericVector"
           arguments = c()
 
           function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericVector output = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+        else if (block_name=="simulate_model")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a prior.",sep=""))
+          }
+
+          if (output_variable=="")
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "Data"
+          arguments = c()
+          arguments[1] = "RandomNumberGenerator &rng"
+          arguments[2] = "const Parameters &parameters"
+          #args_for_typedef = "RandomNumberGenerator&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Data output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+        else if (block_name=="summary_statistics")
+        {
+          if (sum(which_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          if (output_variable=="")
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          return_type = "Data"
+          arguments = c()
+          arguments[1] = "const Data &data"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Data output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
         }
         else
         {
@@ -1436,6 +1593,22 @@ check_types = function(blocks)
       if (inherits(current_factor[["evaluate_log_likelihood"]],"XPtr"))
       {
         RcppXPtrUtils::checkXPtr(current_factor[["evaluate_log_likelihood"]],  "double", c("const Parameters&","const Data&"))
+      }
+    }
+
+    if ("simulate_model" %in% names(current_factor))
+    {
+      if (inherits(current_factor[["simulate_model"]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_factor[["simulate_model"]],  "Data", c("RandomNumberGenerator&","const Parameters&"))
+      }
+    }
+
+    if ("summary_statistics" %in% names(current_factor))
+    {
+      if (inherits(current_factor[["summary_statistics"]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_factor[["summary_statistics"]],  "Data", c("const Data&"))
       }
     }
 
@@ -1683,15 +1856,15 @@ check_types = function(blocks)
 
   }
 
-  if ("mcmc_weights" %in% names(blocks))
+  if ("method" %in% names(blocks))
   {
-    for (i in 1:length(blocks[["mcmc_weights"]]))
+    for (i in 1:length(blocks[["method"]]))
     {
-      if ("mcmc_weights" %in% names(blocks[["mcmc_weights"]][[i]]))
+      if ("mcmc_weights" %in% names(blocks[["method"]][[i]]))
       {
-        if (inherits(blocks[["mcmc_weights"]][[i]][["mcmc_weights"]],"XPtr"))
+        if (inherits(blocks[["method"]][[i]][["mcmc_weights"]],"XPtr"))
         {
-          RcppXPtrUtils::checkXPtr(blocks[["mcmc_weights"]][[i]][["mcmc_weights"]], "NumericVector")
+          RcppXPtrUtils::checkXPtr(blocks[["method"]][[i]][["mcmc_weights"]], "NumericVector")
         }
       }
     }
@@ -1765,7 +1938,7 @@ parse_ilike_model <- function(filename,
   independent_mh_proposal_number = 0
   m_proposal_number = 0
   data_number = 0
-  mcmc_weights_number = 0
+  method_number = 0
   block_type = "none"
   block_name = "none"
 
@@ -1807,8 +1980,8 @@ parse_ilike_model <- function(filename,
           {
             stop(paste("Invalid file: line ",line_counter,", new section of file needs a name: use /***name***/.",sep=""))
           }
-          split_block_name = split_string(unparsed_block_name)
-          new_block_info = determine_block_type(split_block_name,blocks,line_counter,block_type,block_name,factor_number,importance_proposal_number,mh_proposal_number,independent_mh_proposal_number,m_proposal_number,data_number,mcmc_weights_number)
+          split_block_name = split_string_at_comma_ignoring_parentheses(unparsed_block_name)
+          new_block_info = determine_block_type(split_block_name,blocks,line_counter,block_type,block_name,factor_number,importance_proposal_number,mh_proposal_number,independent_mh_proposal_number,m_proposal_number,data_number,method_number)
 
           # expect input for each block in one of the following forms:
           # (a) /***evaluate_log_prior***/, followed by a C++ function
@@ -1833,7 +2006,7 @@ parse_ilike_model <- function(filename,
           independent_mh_proposal_number = new_block_info[[9]]
           m_proposal_number = new_block_info[[10]]
           data_number = new_block_info[[11]]
-          mcmc_weights_number = new_block_info[[12]]
+          method_number = new_block_info[[12]]
 
         }
       }
@@ -1871,6 +2044,10 @@ parse_ilike_model <- function(filename,
       if ( (m_proposal_number!=0) && m_proposal_number==length(blocks[["m_proposal"]]))
       {
         print_m_proposal_info(length(blocks[["m_proposal"]]),blocks,line_counter)
+      }
+      if ( (method_number!=0) && (method_number==length(blocks[["method"]])) )
+      {
+        print_method_info(length(blocks[["method"]]),blocks,line_counter)
       }
     }
   }

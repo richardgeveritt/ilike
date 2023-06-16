@@ -21,22 +21,14 @@
 #' @return Nothing: output can be found in the output_directory.
 #' @export
 smc_mcmc_move = function(model,
-                         results_directory,
                          number_of_particles,
-                         number_of_mcmc_iterations = 1,
-                         mcmc_termination_method = NULL,
-                         adaptive_resampling_ess = NULL,
-                         adaptive_resampling_method = NULL,
-                         adaptive_target_method = NULL,
-                         smc_sequencer_method = NULL,
-                         smc_termination_method = NULL,
-                         mcmc_at_last_step = FALSE,
+                         parallel_flag = FALSE,
+                         results_directory = getwd(),
                          smc_iterations_to_store = 2,
                          write_to_file_at_each_iteration = TRUE,
                          model_parameter_list = list(),
                          algorithm_parameter_list = list(),
                          seed = NULL,
-                         parallel_flag = FALSE,
                          grain_size = 100000)
 {
   if ((is.character(model)) && (length(model) == 1))

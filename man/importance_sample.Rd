@@ -6,29 +6,29 @@
 \usage{
 importance_sample(
   model,
-  results_directory,
   number_of_importance_points,
+  parallel_flag = FALSE,
+  results_directory = getwd(),
   model_parameter_list = list(),
   algorithm_parameter_list = list(),
   seed = NULL,
-  parallel_flag = FALSE,
   grain_size = 1e+05
 )
 }
 \arguments{
 \item{model}{A file containing the model, or a pre-compiled model list.}
 
-\item{results_directory}{The name of the directory to which results will be written.}
-
 \item{number_of_importance_points}{The number of importance points.}
+
+\item{parallel_flag}{(optional) Set to true to perform the importance sampling in parallel, false for serial.}
+
+\item{results_directory}{(optional) The name of the directory to which results will be written.}
 
 \item{model_parameter_list}{(optional) A list containing parameters for the model.}
 
 \item{algorithm_parameter_list}{(optional) A list containing named parameters for the algorithm.}
 
 \item{seed}{(optional) The seed for the random number generator.}
-
-\item{parallel_flag}{(optional) Set to true to perform the importance sampling in parallel, false for serial.}
 
 \item{grain_size}{(optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).}
 }

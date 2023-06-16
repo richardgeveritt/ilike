@@ -6,31 +6,37 @@
 \usage{
 smc_mcmc_move(
   model,
-  results_directory,
   number_of_particles,
-  number_of_mcmc_iterations = 1,
-  mcmc_termination_method = NULL,
-  adaptive_resampling_ess = NULL,
-  adaptive_resampling_method = NULL,
-  adaptive_target_method = NULL,
-  smc_sequencer_method = NULL,
-  smc_termination_method = NULL,
-  mcmc_at_last_step = FALSE,
+  parallel_flag = FALSE,
+  results_directory = getwd(),
   smc_iterations_to_store = 2,
   write_to_file_at_each_iteration = TRUE,
   model_parameter_list = list(),
   algorithm_parameter_list = list(),
   seed = NULL,
-  parallel_flag = FALSE,
   grain_size = 1e+05
 )
 }
 \arguments{
 \item{model}{A file containing the model, or a pre-compiled model list.}
 
+\item{number_of_particles}{The number of particles.}
+
+\item{parallel_flag}{(optional) Set to true to perform the importance sampling in parallel, false for serial.}
+
 \item{results_directory}{The name of the directory to which results will be written.}
 
-\item{number_of_particles}{The number of particles.}
+\item{smc_iterations_to_store}{(optional) The number of iterations of SMC output stored in memory as the algorithm is running (cannot be fewer than 2).}
+
+\item{write_to_file_at_each_iteration}{(optional) Do we write the algorithm output to file at each SMC step (TRUE/FALSE)?}
+
+\item{model_parameter_list}{(optional) A list containing parameters for the model.}
+
+\item{algorithm_parameter_list}{(optional) A list containing named parameters for the algorithm.}
+
+\item{seed}{(optional) The seed for the random number generator.}
+
+\item{grain_size}{(optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).}
 
 \item{number_of_mcmc_iterations}{(optional) The number of MCMC iterations.}
 
@@ -47,20 +53,6 @@ smc_mcmc_move(
 \item{smc_termination_method}{(optional) Method that determines when the SMC terminates (prior to finishing the sequence of targets).}
 
 \item{mcmc_at_last_step}{(optional) Do we run the MCMC at the final step (TRUE/FALSE)?}
-
-\item{smc_iterations_to_store}{(optional) The number of iterations of SMC output stored in memory as the algorithm is running (cannot be fewer than 2).}
-
-\item{write_to_file_at_each_iteration}{(optional) Do we write the algorithm output to file at each SMC step (TRUE/FALSE)?}
-
-\item{model_parameter_list}{(optional) A list containing parameters for the model.}
-
-\item{algorithm_parameter_list}{(optional) A list containing named parameters for the algorithm.}
-
-\item{seed}{(optional) The seed for the random number generator.}
-
-\item{parallel_flag}{(optional) Set to true to perform the importance sampling in parallel, false for serial.}
-
-\item{grain_size}{(optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).}
 }
 \value{
 Nothing: output can be found in the output_directory.
