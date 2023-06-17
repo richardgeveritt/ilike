@@ -2375,14 +2375,14 @@ std::vector<LikelihoodEstimator*> convent_to_annealed_likelihoods_if_needed(Rand
 }
 
 // [[Rcpp::export]]
-void do_importance_sampler(const List &model,
-                           const List &parameters,
-                           const List &algorithm_parameter_list,
-                           size_t number_of_importance_points,
-                           bool parallel_in,
-                           size_t grain_size_in,
-                           const String &results_name_in,
-                           size_t seed)
+double do_importance_sampler(const List &model,
+                             const List &parameters,
+                             const List &algorithm_parameter_list,
+                             size_t number_of_importance_points,
+                             bool parallel_in,
+                             size_t grain_size_in,
+                             const String &results_name_in,
+                             size_t seed)
 {
   RandomNumberGenerator rng;
   Data the_data = get_data(model);
@@ -2459,8 +2459,12 @@ void do_importance_sampler(const List &model,
   
   if (strcmp(results_name_in.get_cstring(),"") != 0)
     output->write(results_name_in.get_cstring());
+  
+  double log_likelihood = output->log_likelihood;
+  
   delete output;
   
+  return log_likelihood;
 }
   
 // [[Rcpp::export]]
@@ -2569,21 +2573,21 @@ void do_mcmc(const List &model,
 
 
 // [[Rcpp::export]]
-void do_smc_mcmc_move(const List &model,
-                      const List &parameters,
-                      const List &algorithm_parameter_list,
-                      size_t number_of_particles,
-                      const List &mcmc_termination_method,
-                      const List &adaptive_resampling_method,
-                      const List &smc_sequencer_method,
-                      const List &adaptive_target_method,
-                      const List &smc_termination_method,
-                      size_t smc_iterations_to_store,
-                      bool write_to_file_at_each_iteration,
-                      bool parallel_in,
-                      size_t grain_size_in,
-                      const String &results_name_in,
-                      size_t seed)
+double do_smc_mcmc_move(const List &model,
+                        const List &parameters,
+                        const List &algorithm_parameter_list,
+                        size_t number_of_particles,
+                        const List &mcmc_termination_method,
+                        const List &adaptive_resampling_method,
+                        const List &smc_sequencer_method,
+                        const List &adaptive_target_method,
+                        const List &smc_termination_method,
+                        size_t smc_iterations_to_store,
+                        bool write_to_file_at_each_iteration,
+                        bool parallel_in,
+                        size_t grain_size_in,
+                        const String &results_name_in,
+                        size_t seed)
 {
   
   RandomNumberGenerator rng;
@@ -2704,9 +2708,13 @@ void do_smc_mcmc_move(const List &model,
     std::chrono::duration<double> elapsed_time = end_time - start_time;
     output->set_time(elapsed_time.count());
 
-    delete output;
+    double log_likelihood = output->log_likelihood;
     
+    delete output;
     delete alg;
+    
+    return log_likelihood;
+    
   }
   else
   {
@@ -2745,9 +2753,13 @@ void do_smc_mcmc_move(const List &model,
     
     if (strcmp(results_name_in.get_cstring(),"") != 0)
       output->write(results_name_in.get_cstring());
-    delete output;
     
+    double log_likelihood = output->log_likelihood;
+    
+    delete output;
     delete alg;
+    
+    return log_likelihood;
   }
 
 }

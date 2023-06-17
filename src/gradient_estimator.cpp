@@ -1,6 +1,5 @@
 #include "gradient_estimator.h"
 #include "gradient_estimator_output.h"
-#include "reinforce_gradient_estimator.h"
 #include "proposal_kernel.h"
 #include "direct_gradient_estimator.h"
 

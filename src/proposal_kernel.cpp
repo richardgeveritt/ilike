@@ -6,7 +6,6 @@
 #include "transform.h"
 #include "mcmc_adaptor.h"
 #include "smc_adaptor.h"
-#include "reinforce_gradient_estimator.h"
 #include "direct_gradient_estimator_output.h"
 #include "factor_variables.h"
 #include "factors.h"

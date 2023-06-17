@@ -25,9 +25,10 @@ BEGIN_RCPP
 END_RCPP
 }
 // do_importance_sampler
-void do_importance_sampler(const List& model, const List& parameters, const List& algorithm_parameter_list, size_t number_of_importance_points, bool parallel_in, size_t grain_size_in, const String& results_name_in, size_t seed);
+double do_importance_sampler(const List& model, const List& parameters, const List& algorithm_parameter_list, size_t number_of_importance_points, bool parallel_in, size_t grain_size_in, const String& results_name_in, size_t seed);
 RcppExport SEXP _ilike_do_importance_sampler(SEXP modelSEXP, SEXP parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP number_of_importance_pointsSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
     Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
@@ -37,8 +38,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< size_t >::type grain_size_in(grain_size_inSEXP);
     Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
-    do_importance_sampler(model, parameters, algorithm_parameter_list, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed);
-    return R_NilValue;
+    rcpp_result_gen = Rcpp::wrap(do_importance_sampler(model, parameters, algorithm_parameter_list, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed));
+    return rcpp_result_gen;
 END_RCPP
 }
 // do_mcmc
@@ -61,9 +62,10 @@ BEGIN_RCPP
 END_RCPP
 }
 // do_smc_mcmc_move
-void do_smc_mcmc_move(const List& model, const List& parameters, const List& algorithm_parameter_list, size_t number_of_particles, const List& mcmc_termination_method, const List& adaptive_resampling_method, const List& smc_sequencer_method, const List& adaptive_target_method, const List& smc_termination_method, size_t smc_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const String& results_name_in, size_t seed);
+double do_smc_mcmc_move(const List& model, const List& parameters, const List& algorithm_parameter_list, size_t number_of_particles, const List& mcmc_termination_method, const List& adaptive_resampling_method, const List& smc_sequencer_method, const List& adaptive_target_method, const List& smc_termination_method, size_t smc_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const String& results_name_in, size_t seed);
 RcppExport SEXP _ilike_do_smc_mcmc_move(SEXP modelSEXP, SEXP parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP number_of_particlesSEXP, SEXP mcmc_termination_methodSEXP, SEXP adaptive_resampling_methodSEXP, SEXP smc_sequencer_methodSEXP, SEXP adaptive_target_methodSEXP, SEXP smc_termination_methodSEXP, SEXP smc_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
     Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
@@ -80,8 +82,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< size_t >::type grain_size_in(grain_size_inSEXP);
     Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
-    do_smc_mcmc_move(model, parameters, algorithm_parameter_list, number_of_particles, mcmc_termination_method, adaptive_resampling_method, smc_sequencer_method, adaptive_target_method, smc_termination_method, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed);
-    return R_NilValue;
+    rcpp_result_gen = Rcpp::wrap(do_smc_mcmc_move(model, parameters, algorithm_parameter_list, number_of_particles, mcmc_termination_method, adaptive_resampling_method, smc_sequencer_method, adaptive_target_method, smc_termination_method, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed));
+    return rcpp_result_gen;
 END_RCPP
 }
 

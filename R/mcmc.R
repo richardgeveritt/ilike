@@ -30,26 +30,12 @@ mcmc = function(model,
   }
 
   # Sort MCMC termination method.
-  mcmc_termination_method = NULL
-  if ("method" %in% names(model))
-  {
-    methods = model[["method"]]
-    for (i in 1:length(methods))
-    {
-      if ("mcmc_termination" %in% names(methods[[i]]) && ("type" %in% names(methods[[i]][["mcmc_termination"]])) && ("parameters" %in% names(methods[[i]][["mcmc_termination"]])) )
-      {
-        mcmc_termination_method = list(method=methods[[i]][["mcmc_termination"]][["type"]],values=methods[[i]][["mcmc_termination"]][["parameters"]])
-      }
-    }
-  }
-  else
-  {
-    stop("Model file needs to specify a valid method for MCMC termination.")
-  }
+  mcmc_termination_method = get_method(model,"mcmc_termination")
 
   if (is.null(mcmc_termination_method))
   {
-    stop("Model file needs to specify a valid method for MCMC termination.")
+    print("No MCMC termination method provided: using default of 10^5 iterations.")
+    mcmc_termination_method = list(method="iterations",values=list(as.character(100000)))
   }
 
   if (length(initial_values)==0)

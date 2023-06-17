@@ -24,7 +24,7 @@ smc_mcmc_move(
 
 \item{parallel_flag}{(optional) Set to true to perform the importance sampling in parallel, false for serial.}
 
-\item{results_directory}{The name of the directory to which results will be written.}
+\item{results_directory}{(optional) The name of the directory to which results will be written.}
 
 \item{smc_iterations_to_store}{(optional) The number of iterations of SMC output stored in memory as the algorithm is running (cannot be fewer than 2).}
 
@@ -37,25 +37,9 @@ smc_mcmc_move(
 \item{seed}{(optional) The seed for the random number generator.}
 
 \item{grain_size}{(optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).}
-
-\item{number_of_mcmc_iterations}{(optional) The number of MCMC iterations.}
-
-\item{mcmc_termination_method}{(optional) The method used to terminate the MCMC runs.}
-
-\item{adaptive_resampling_ess}{(optional) Resample each time the ESS drops below this value.}
-
-\item{adaptive_resampling_method}{(optional) Specify more generally a method to decide when to reasample.}
-
-\item{adaptive_target_method}{(optional) Specify a method to decide how to adapt the sequence of targets.}
-
-\item{smc_sequencer_method}{(optional) Method that determines the sequence of targets..}
-
-\item{smc_termination_method}{(optional) Method that determines when the SMC terminates (prior to finishing the sequence of targets).}
-
-\item{mcmc_at_last_step}{(optional) Do we run the MCMC at the final step (TRUE/FALSE)?}
 }
 \value{
-Nothing: output can be found in the output_directory.
+Estimate of the marginal likelihood.
 }
 \description{
 SMC with an MCMC move

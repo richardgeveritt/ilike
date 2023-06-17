@@ -8,16 +8,16 @@
 #' @param algorithm_parameter_list (optional) A list containing named parameters for the algorithm.
 #' @param seed (optional) The seed for the random number generator.
 #' @param grain_size (optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).
-#' @return Nothing: output can be found in the output_directory.
+#' @return Estimate of the marginal likelihood.
 #' @export
-importance_sample = function(model,
-                             number_of_importance_points,
-                             parallel_flag = FALSE,
-                             results_directory = getwd(),
-                             model_parameter_list = list(),
-                             algorithm_parameter_list = list(),
-                             seed = NULL,
-                             grain_size = 100000)
+is = function(model,
+              number_of_importance_points,
+              parallel_flag = FALSE,
+              results_directory = getwd(),
+              model_parameter_list = list(),
+              algorithm_parameter_list = list(),
+              seed = NULL,
+              grain_size = 100000)
 {
   if ((is.character(model)) && (length(model) == 1))
     model = parse_ilike_model(model,model_parameter_list)
@@ -27,12 +27,13 @@ importance_sample = function(model,
     seed = ilike_rdtsc()
   }
 
-  do_importance_sampler(model,
-                        model_parameter_list,
-                        algorithm_parameter_list,
-                        number_of_importance_points,
-                        parallel_flag,
-                        grain_size,
-                        results_directory,
-                        seed)
+  return(do_importance_sampler(model,
+                               model_parameter_list,
+                               algorithm_parameter_list,
+                               number_of_importance_points,
+                               parallel_flag,
+                               grain_size,
+                               results_directory,
+                               seed))
+
 }
