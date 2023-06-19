@@ -23,21 +23,24 @@ smc_mcmc_move = function(model,
                          seed = NULL,
                          grain_size = 100000)
 {
+  results_directory = paste(results_directory,"/ilike",sep="")
+
   if ((is.character(model)) && (length(model) == 1))
     model = parse_ilike_model(model,model_parameter_list)
 
-  if (is.null(seed))
-  {
-    seed = ilike_rdtsc()
-  }
+  # if (is.null(seed))
+  # {
+  #   seed = ilike_rdtsc()
+  # }
+  seed = 1
 
   # Sort MCMC termination method.
   mcmc_termination_method = get_method(model,"mcmc_termination")
 
   if (is.null(mcmc_termination_method))
   {
-    stop("No MCMC termination method provided: using default of 10^5 iterations.")
-    mcmc_termination_method = list(method="iterations",values=list(as.character(100000)))
+    print("No MCMC termination method provided: using default of 1 iteration.")
+    mcmc_termination_method = list(method="iterations",values=list(as.character(1)))
   }
 
   # Adaptive resampling method.
@@ -45,8 +48,8 @@ smc_mcmc_move = function(model,
 
   if (is.null(adaptive_resampling_method))
   {
-    print("No method set for adaptive resampling: using adaptive_resampling_ess.")
-    adaptive_resampling_method = list(criterion='ess',values=as.list(paste(adaptive_resampling_ess)))
+    print("No method set for adaptive resampling: defaulting to resampling whenever the ESS drops below the number of particles.")
+    adaptive_resampling_method = list(criterion='ess',values=as.list(paste(number_of_particles)))
   }
 
   # Adaptive target method.

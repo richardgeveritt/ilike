@@ -21,6 +21,8 @@ mcmc = function(model,
                 seed = NULL,
                 grain_size = 100000)
 {
+  results_directory = paste(results_directory,"/ilike",sep="")
+
   if ((is.character(model)) && (length(model) == 1))
     model = parse_ilike_model(model,model_parameter_list)
 

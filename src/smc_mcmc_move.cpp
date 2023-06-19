@@ -938,7 +938,7 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
@@ -1084,7 +1084,7 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
                                                this->index);
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
     
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
@@ -1248,7 +1248,7 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
@@ -1299,7 +1299,7 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());

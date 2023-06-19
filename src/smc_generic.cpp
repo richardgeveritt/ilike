@@ -242,7 +242,7 @@ void SMCGeneric::simulate_smc(SMCOutput* current_state)
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
   }
   else
   {
@@ -265,7 +265,7 @@ void SMCGeneric::simulate_smc(SMCOutput* current_state)
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     this->evaluate_smcfixed_part_smc(current_state);
     
@@ -452,7 +452,7 @@ void SMCGeneric::simulate_smc(SMCOutput* current_state,
     this->sequencer.find_next_target_bisection(current_state,
                                                this->index);
     
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     /*
     // Different at first step?
@@ -506,7 +506,7 @@ void SMCGeneric::simulate_smc(SMCOutput* current_state,
       current_state->back().schedule_parameters = *this->sequencer_parameters;
     */
     
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     this->evaluate_smcfixed_part_smc(current_state,
                                      conditioned_on_parameters);
@@ -710,7 +710,7 @@ void SMCGeneric::subsample_simulate_smc(SMCOutput* current_state)
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
     
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
   }
   else
   {
@@ -758,7 +758,7 @@ void SMCGeneric::subsample_simulate_smc(SMCOutput* current_state,
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
   }
   else
   {
@@ -781,7 +781,7 @@ void SMCGeneric::subsample_simulate_smc(SMCOutput* current_state,
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     this->subsample_evaluate_smcfixed_part_smc(current_state,
                                                conditioned_on_parameters);

@@ -226,7 +226,7 @@ void SMCMarginal::simulate_smc(SMCOutput* current_state)
     this->sequencer.find_next_target_bisection(current_state,
                                                this->index);
     
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
@@ -250,7 +250,7 @@ void SMCMarginal::simulate_smc(SMCOutput* current_state)
     this->the_worker->move(next_particles,
                            current_particles);
     
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
@@ -427,7 +427,7 @@ void SMCMarginal::simulate_smc(SMCOutput* current_state,
     this->sequencer.find_next_target_bisection(current_state,
                                               this->index);
     
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
@@ -451,7 +451,7 @@ void SMCMarginal::simulate_smc(SMCOutput* current_state,
     this->the_worker->move(next_particles,
                            current_particles);
     
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
@@ -595,7 +595,7 @@ void SMCMarginal::subsample_simulate_smc(SMCOutput* current_state)
     this->sequencer.subsample_find_next_target_bisection(current_state,
                                                          this->index);
     
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
@@ -619,7 +619,7 @@ void SMCMarginal::subsample_simulate_smc(SMCOutput* current_state)
     this->the_worker->subsample_move(next_particles,
                                      current_particles);
     
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
@@ -646,7 +646,7 @@ void SMCMarginal::subsample_simulate_smc(SMCOutput* current_state,
     this->sequencer.subsample_find_next_target_bisection(current_state,
                                                         this->index);
     
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
@@ -670,7 +670,7 @@ void SMCMarginal::subsample_simulate_smc(SMCOutput* current_state,
     this->the_worker->subsample_move(next_particles,
                                      current_particles);
     
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;

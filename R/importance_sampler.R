@@ -10,15 +10,17 @@
 #' @param grain_size (optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).
 #' @return Estimate of the marginal likelihood.
 #' @export
-is = function(model,
-              number_of_importance_points,
-              parallel_flag = FALSE,
-              results_directory = getwd(),
-              model_parameter_list = list(),
-              algorithm_parameter_list = list(),
-              seed = NULL,
-              grain_size = 100000)
+importance_sample = function(model,
+                             number_of_importance_points,
+                             parallel_flag = FALSE,
+                             results_directory = getwd(),
+                             model_parameter_list = list(),
+                             algorithm_parameter_list = list(),
+                             seed = NULL,
+                             grain_size = 100000)
 {
+  results_directory = paste(results_directory,"/ilike",sep="")
+
   if ((is.character(model)) && (length(model) == 1))
     model = parse_ilike_model(model,model_parameter_list)
 

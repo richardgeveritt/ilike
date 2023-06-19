@@ -127,7 +127,7 @@ ilike_parse <- function(input,
         }
         else
         {
-          stop(paste("In call ",arg_string,", parameter ",as.numeric(substr(h,2,nchar(h)))," not found in parameter_list (parameter_list has length ",length(parameter_list),".",sep=""))
+          stop(paste("In call ",arg_string,", parameter ",as.numeric(substr(h,2,nchar(h)))," not found in parameter_list (parameter_list has length ",length(parameter_list),").",sep=""))
         }
       }
     }

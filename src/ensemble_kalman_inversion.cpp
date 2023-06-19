@@ -441,7 +441,7 @@ void EnsembleKalmanInversion::ensemble_kalman_evaluate_smcadaptive_part_given_sm
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     if (current_state->results_name!="")
       current_state->write(results_name);
@@ -618,7 +618,7 @@ void EnsembleKalmanInversion::ensemble_kalman_evaluate_smcadaptive_part_given_sm
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     if (current_state->results_name!="")
       current_state->write(results_name);
@@ -756,7 +756,7 @@ void EnsembleKalmanInversion::ensemble_kalman_subsample_evaluate_smcadaptive_par
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     if (current_state->results_name!="")
       current_state->write(results_name);

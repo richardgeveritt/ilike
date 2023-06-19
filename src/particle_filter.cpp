@@ -338,7 +338,7 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     //current_state->back().set_previous_target_evaluated_to_target_evaluated();
     
@@ -528,7 +528,7 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     //current_state->back().set_previous_target_evaluated_to_target_evaluated();
     
@@ -676,7 +676,7 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     //current_state->back().subsample_set_previous_target_evaluated_to_target_evaluated();
     
@@ -832,7 +832,7 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
-    current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     //current_state->back().subsample_set_previous_target_evaluated_to_target_evaluated();
     

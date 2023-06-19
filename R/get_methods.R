@@ -29,7 +29,7 @@ method_parse <- function(input,
         }
         else
         {
-          stop(paste("In call ",arg_string,", parameter ",as.numeric(substr(h,2,nchar(h)))," not found in parameter_list (parameter_list has length ",length(parameter_list),".",sep=""))
+          stop(paste("In smc_sequence, parameter ",as.numeric(substr(h,2,nchar(h)))," not found in parameter_list (parameter_list has length ",length(parameter_list),").",sep=""))
         }
       }
     }
@@ -81,7 +81,7 @@ get_smc_sequences = function(model,model_parameters)
     {
       if (method_name %in% names(methods[[i]]) && ("type" %in% names(methods[[i]][[method_name]])) && ("variables" %in% names(methods[[i]][[method_name]])) && ("parameters" %in% names(methods[[i]][[method_name]])) )
       {
-        sequence = methods[[i]][[method_name]][["variables"]]
+        sequence = methods[[i]][[method_name]][["parameters"]]
 
         f_info = method_parse(sequence,model_parameters)
 
