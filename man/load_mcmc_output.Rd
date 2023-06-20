@@ -4,17 +4,15 @@
 \alias{load_mcmc_output}
 \title{Loading MCMC output into R memory.}
 \usage{
-load_mcmc_output(results_directory, thinning = 1, for_ggmcmc = TRUE)
+load_mcmc_output(results_directory, for_ggmcmc = TRUE)
 }
 \arguments{
 \item{results_directory}{The folder in which the results are stored.}
 
-\item{thinning}{(optional) The granularity of the thinning of the MCMC output.}
-
 \item{for_ggmcmc}{(optional) Output in tidy format for plotting in ggmcmc package.}
 }
 \value{
-A data frame / tibble containing the MCMC chains.
+A list containing the MCMC chains.
 }
 \description{
 Loading MCMC output into R memory.
