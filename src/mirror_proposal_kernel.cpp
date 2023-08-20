@@ -107,8 +107,8 @@ void MirrorProposalKernel::make_copy(const MirrorProposalKernel &another)
   this->proposal_info = another.proposal_info;
 }
 
-double MirrorProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
-                                                      Particle &old_particle) const
+double MirrorProposalKernel::specific_evaluate_kernel(const Particle &proposed_particle,
+                                                      const Particle &old_particle) const
 {
   double output = 0.0;
   for (auto i=this->proposal_info.begin();
@@ -118,8 +118,8 @@ double MirrorProposalKernel::specific_evaluate_kernel(Particle &proposed_particl
     arma::colvec mean = i->second.get_mean();
     double scale = i->second.get_double_scale();
     double dim = double(mean.n_rows);
-    output = output + dmvnorm_using_precomp(proposed_particle.move_parameters->get_colvec(i->first),
-                                            2.0*mean-old_particle.move_parameters->get_colvec(i->first),
+    output = output + dmvnorm_using_precomp(proposed_particle.get_transformed_parameters(this).get_colvec(i->first),
+                                            2.0*mean-old_particle.get_transformed_parameters(this).get_colvec(i->first),
                                             (1.0/sqrt(scale))*i->second.get_inv(),
                                             dim*log(scale)+i->second.get_logdet());
   }
@@ -139,8 +139,8 @@ double MirrorProposalKernel::specific_evaluate_kernel(Particle &proposed_particl
 }
 */
 
-double MirrorProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                                                Particle &old_particle) const
+double MirrorProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
+                                                                const Particle &old_particle) const
 {
   // no difference since size of data set does not impact on proposal
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
@@ -162,15 +162,15 @@ arma::mat MirrorProposalKernel::get_inverse_covariance(const std::string &variab
 }
 
 Parameters MirrorProposalKernel::simulate(RandomNumberGenerator &rng,
-                                          Particle &particle) const
+                                          const Particle &particle) const
 {
-  Parameters output = *particle.move_parameters;
+  Parameters output = particle.get_transformed_parameters(this);
   for (auto i=this->proposal_info.begin();
        i!=this->proposal_info.end();
        ++i)
   {
     output[i->first] = rmvnorm(rng,
-                               2.0*i->second.get_mean()-particle.move_parameters->get_colvec(i->first),
+                               2.0*i->second.get_mean()-particle.get_transformed_parameters(this).get_colvec(i->first),
                                sqrt(i->second.get_double_scale())*i->second.get_chol(),
                                true);
   }
@@ -187,7 +187,7 @@ Parameters MirrorProposalKernel::simulate(RandomNumberGenerator &rng,
 */
 
 Parameters MirrorProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                    Particle &particle) const
+                                                    const Particle &particle) const
 {
   // no difference since size of data set does not impact on proposal
   return this->simulate(rng,particle);
@@ -205,14 +205,14 @@ Parameters MirrorProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
 
 Parameters MirrorProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                     const std::string &variable,
-                                                    Particle &particle) const
+                                                    const Particle &particle) const
 {
   // no difference since size of data set does not impact on proposal
   auto found = this->proposal_info.find(variable);
   
-  Parameters output = *particle.move_parameters;
+  Parameters output = particle.get_transformed_parameters(this);
   output[variable] = rmvnorm(rng,
-                             2.0*found->second.get_mean()-particle.move_parameters->get_colvec(variable),
+                             2.0*found->second.get_mean()-particle.get_transformed_parameters(this).get_colvec(variable),
                              sqrt(found->second.get_double_scale())*found->second.get_chol(),
                              true);
   return output;
@@ -232,8 +232,8 @@ Parameters MirrorProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
 */
 
 arma::mat MirrorProposalKernel::specific_gradient_of_log(const std::string &variable,
-                                                                     Particle &proposed_particle,
-                                                                     Particle &old_particle)
+                                                         const Particle &proposed_particle,
+                                                         const Particle &old_particle)
 {
   Rcpp::stop("MirrorProposalKernel::specific_gradient_of_log - not written yet.");
 }
@@ -249,8 +249,8 @@ arma::mat MirrorProposalKernel::specific_gradient_of_log(const std::string &vari
 */
 
 arma::mat MirrorProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
-                                                                               Particle &proposed_particle,
-                                                                               Particle &old_particle)
+                                                                   const Particle &proposed_particle,
+                                                                   const Particle &old_particle)
 {
   Rcpp::stop("MirrorProposalKernel::specific_gradient_of_log - not written yet.");
 }
@@ -268,4 +268,20 @@ arma::mat MirrorProposalKernel::specific_subsample_gradient_of_log(const std::st
 void MirrorProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
 {
   
+}
+
+GradientEstimatorOutput* MirrorProposalKernel::simulate_gradient_estimator_output() const
+{
+  return NULL;
+}
+
+std::vector<ProposalKernel*> MirrorProposalKernel::get_proposals()
+{
+  std::vector<ProposalKernel*> output;
+  output.push_back(this);
+  return output;
+}
+
+void MirrorProposalKernel::set_index(Index* index_in)
+{
 }

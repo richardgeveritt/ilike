@@ -24,14 +24,14 @@ public:
   void operator=(const DirectGradientEstimator &another);
   GradientEstimator* duplicate() const;
   
-  GradientEstimatorOutput* initialise() const;
+  GradientEstimatorOutput* initialise();
   
   //GradientEstimatorOutput* generate_new_gradient_estimator_output(ProposalKernel* proposal,
   //                                                                Particle &particle);
   
   arma::mat get_gradient_of_log(const std::string &variable,
                                 const Index* index,
-                                Particle &particle);
+                                const Particle &particle) const;
   
   /*
   arma::mat get_gradient_of_log(const std::string &variable,
@@ -42,7 +42,7 @@ public:
   
   arma::mat subsample_get_gradient_of_log(const std::string &variable,
                                           const Index* index,
-                                          Particle &particle);
+                                          const Particle &particle) const;
   
   /*
   arma::mat subsample_get_gradient_of_log(const std::string &variable,

@@ -32,12 +32,14 @@ public:
       size_t number_of_particles_in,
       size_t lag_in,
       size_t lag_proposed_in,
+      const std::vector<ProposalKernel*> proposals_in,
       //SummaryStatisticsPtr summary_statistics_in,
       double resampling_desired_ess_in,
       //EvaluateLogDistributionPtr evaluate_log_proposal_in,
       bool proposal_is_evaluated_in,
       bool smcfixed_flag_in,
       bool sequencer_limit_is_fixed_in,
+      bool transform_proposed_particles,
       const std::string &results_name_in);
   
   SMC(RandomNumberGenerator* rng_in,
@@ -47,12 +49,14 @@ public:
       size_t number_of_particles_in,
       size_t lag_in,
       size_t lag_proposed_in,
+      const std::vector<ProposalKernel*> proposals_in,
       //SummaryStatisticsPtr summary_statistics_in,
       SMCCriterion* adaptive_resampling_method_in,
       //EvaluateLogDistributionPtr evaluate_log_proposal_in,
       bool proposal_is_evaluated_in,
       bool smcfixed_flag_in,
       bool sequencer_limit_is_fixed_in,
+      bool transform_proposed_particles,
       const std::string &results_name_in);
   
   //SMC(RandomNumberGenerator* rng_in,
@@ -90,7 +94,7 @@ public:
   void resample(SMCOutput* current_state);
   
   virtual MoveOutput* move(RandomNumberGenerator &rng,
-                           Particle &particle)=0;
+                           const Particle &particle)=0;
   //virtual void specific_move(RandomNumberGenerator &rng,
   //                           Particle* new_particle,
   //                           Particle &particle)=0;
@@ -118,7 +122,7 @@ public:
   */
   
   virtual MoveOutput* subsample_move(RandomNumberGenerator &rng,
-                                     Particle &particle)=0;
+                                     const Particle &particle)=0;
   
   /*
   virtual MoveOutput* subsample_move(RandomNumberGenerator &rng,
@@ -250,7 +254,12 @@ protected:
   
   bool initialised;
   
+  // not stored here
+  std::vector<ProposalKernel*> proposals_to_transform_for;
+  std::vector<ProposalKernel*> proposals_to_find_gradient_for;
+  
   std::ofstream log_likelihood_file_stream;
+  std::ofstream output_lengths_file_stream;
   std::ofstream time_file_stream;
   std::ofstream vector_variables_file_stream;
   std::ofstream vector_variable_sizes_file_stream;

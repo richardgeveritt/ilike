@@ -96,7 +96,7 @@ void DeterministicScanMCMC::make_copy(const DeterministicScanMCMC &another)
 }
 
 Particle DeterministicScanMCMC::move(RandomNumberGenerator &rng,
-                                     Particle &particle) const
+                                     const Particle &particle) const
 {
   Particle current_particle = particle;
   for (std::vector<size_t>::const_iterator i=this->order.begin();
@@ -128,7 +128,7 @@ Particle DeterministicScanMCMC::move(RandomNumberGenerator &rng,
 */
 
 Particle DeterministicScanMCMC::subsample_move(RandomNumberGenerator &rng,
-                                               Particle &particle) const
+                                               const Particle &particle) const
 {
   Particle current_particle = particle;
   for (std::vector<size_t>::const_iterator i=this->order.begin();
@@ -179,7 +179,7 @@ void DeterministicScanMCMC::ensemble_adapt(EnsembleKalmanOutput* current_state)
   }
 }
 
-void DeterministicScanMCMC::specific_mcmc_adapt(Particle &current_particle,
+void DeterministicScanMCMC::specific_mcmc_adapt(const Particle &current_particle,
                                                 size_t iteration_counter)
 {
   for (std::vector<MCMC*>::iterator i=this->moves.begin();
@@ -209,4 +209,22 @@ void DeterministicScanMCMC::set_proposal_parameters(Parameters* proposal_paramet
   {
     (*i)->set_proposal_parameters(proposal_parameters_in);
   }
+}
+
+std::vector<ProposalKernel*> DeterministicScanMCMC::get_proposals() const
+{
+  std::vector<ProposalKernel*> all_proposals;
+  
+  for (auto i=this->moves.begin();
+       i!=this->moves.end();
+       ++i)
+  {
+    std::vector<ProposalKernel*> next_proposals = (*i)->get_proposals();
+    if (all_proposals.size()==0)
+    {
+      all_proposals.insert(all_proposals.end(), next_proposals.begin(), next_proposals.end());
+    }
+  }
+  
+  return all_proposals;
 }

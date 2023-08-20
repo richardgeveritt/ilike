@@ -108,7 +108,7 @@ Parameters CustomGuidedDistributionProposalKernel::independent_simulate(RandomNu
 }
 
 Parameters CustomGuidedDistributionProposalKernel::independent_simulate(RandomNumberGenerator &rng,
-                                                                 const Parameters &conditioned_on_parameters) const
+                                                                        const Parameters &conditioned_on_parameters) const
 {
   return this->proposal_simulate(rng,
                                  *this->data);
@@ -123,7 +123,7 @@ Parameters CustomGuidedDistributionProposalKernel::subsample_independent_simulat
 }
 
 Parameters CustomGuidedDistributionProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
-                                                                           const Parameters &conditioned_on_parameters) const
+                                                                                  const Parameters &conditioned_on_parameters) const
 {
   stop("CustomGuidedDistributionProposalKernel::subsample_independent_simulate - not yet written.");
   // no difference since size of data set does not impact on proposal
@@ -132,7 +132,7 @@ Parameters CustomGuidedDistributionProposalKernel::subsample_independent_simulat
 }
 
 Parameters CustomGuidedDistributionProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
-                                                                           const std::string &variable) const
+                                                                                  const std::string &variable) const
 {
   // no difference since size of data set does not impact on proposal
   Rcpp::stop("CustomGuidedDistributionProposalKernel::subsample_independent_simulate - not written yet.");
@@ -184,3 +184,19 @@ arma::mat CustomGuidedDistributionProposalKernel::subsample_independent_gradient
   Rcpp::stop("CustomGuidedDistributionProposalKernel::subsample_independent_gradient_of_log - not written yet.");
 }
 */
+
+GradientEstimatorOutput* CustomGuidedDistributionProposalKernel::simulate_gradient_estimator_output() const
+{
+  return NULL;
+}
+
+std::vector<ProposalKernel*> CustomGuidedDistributionProposalKernel::get_proposals()
+{
+  std::vector<ProposalKernel*> output;
+  output.push_back(this);
+  return output;
+}
+
+void CustomGuidedDistributionProposalKernel::set_index(Index* index_in)
+{
+}

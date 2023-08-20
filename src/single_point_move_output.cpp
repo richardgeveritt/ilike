@@ -10,30 +10,40 @@ SinglePointMoveOutput::SinglePointMoveOutput()
 {
 }
 
-SinglePointMoveOutput::SinglePointMoveOutput(Parameters &&parameters_in,
-                                             Factors* factors_in)
-: output(std::move(parameters_in),factors_in)
+SinglePointMoveOutput::SinglePointMoveOutput(const Parameters &parameters_in,
+                                             Factors* factors_in,
+                                             std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                                             std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in)
+: output(parameters_in,factors_in,proposals_to_transform_for_in,proposals_to_find_gradient_for_in)
 {
-}
-
-SinglePointMoveOutput::SinglePointMoveOutput(Parameters &&parameters_in,
-                                             EnsembleFactors* factors_in)
-: output(std::move(parameters_in),factors_in)
-{
-
 }
 
 SinglePointMoveOutput::SinglePointMoveOutput(const Parameters &parameters_in,
                                              EnsembleFactors* factors_in)
 : output(parameters_in,factors_in)
 {
-  
+
 }
 
-//SinglePointMoveOutput::SinglePointMoveOutput(const Particle &particle_in)
-//{
-//  this->output = particle_in;
-//}
+SinglePointMoveOutput::SinglePointMoveOutput(const Particle &particle_in)
+{
+  this->output = particle_in;
+}
+
+SinglePointMoveOutput::SinglePointMoveOutput(Parameters &&parameters_in,
+                                             Factors* factors_in,
+                                             std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                                             std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in)
+: output(std::move(parameters_in),factors_in,proposals_to_transform_for_in,proposals_to_find_gradient_for_in)
+{
+}
+
+SinglePointMoveOutput::SinglePointMoveOutput(Parameters &&parameters_in,
+                                             EnsembleFactors* factors_in)
+: output(std::move(parameters_in),factors_in)
+{
+  
+}
 
 SinglePointMoveOutput::SinglePointMoveOutput(Particle &&particle_in)
 {
@@ -86,7 +96,7 @@ std::vector<Parameters> SinglePointMoveOutput::get_vector_of_parameters() const
 {
   std::vector<Parameters> local_output;
   local_output.reserve(1);
-  local_output.push_back(*this->output.move_parameters);
+  local_output.push_back(this->output.parameters);
   return local_output;
 }
 
@@ -140,6 +150,11 @@ void SinglePointMoveOutput::write_ensemble_factors(const std::string &directory_
     output.ensemble_factor_variables->write_to_file(directory_name,
                                                     index);
   }
+}
+
+size_t SinglePointMoveOutput::length() const
+{
+  return 1;
 }
 
 void SinglePointMoveOutput::close_ofstreams()

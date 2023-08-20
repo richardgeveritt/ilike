@@ -32,7 +32,7 @@ public:
   // Proposal needs to call simulate in all llhdoutputs
   
   Parameters simulate(RandomNumberGenerator &rng,
-                      Particle &particle) const;
+                      const Particle &particle) const;
   
   /*
   Parameters simulate(RandomNumberGenerator &rng,
@@ -41,7 +41,7 @@ public:
   */
   
   Parameters subsample_simulate(RandomNumberGenerator &rng,
-                                Particle &particle) const;
+                                const Particle &particle) const;
   
   /*
   Parameters subsample_simulate(RandomNumberGenerator &rng,
@@ -51,7 +51,7 @@ public:
   
   Parameters subsample_simulate(RandomNumberGenerator &rng,
                                 const std::string &variable,
-                                Particle &particle) const;
+                                const Particle &particle) const;
   
   /*
   Parameters subsample_simulate(RandomNumberGenerator &rng,
@@ -103,8 +103,8 @@ public:
 
 protected:
   
-  double specific_evaluate_kernel(Particle &proposed_particle,
-                                  Particle &old_particle) const;
+  double specific_evaluate_kernel(const Particle &proposed_particle,
+                                  const Particle &old_particle) const;
   
   /*
   double specific_evaluate_kernel(Particle &proposed_particle,
@@ -112,8 +112,8 @@ protected:
                                   const Parameters &conditioned_on_parameters) const;
   */
   
-  double specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                            Particle &old_particle) const;
+  double specific_subsample_evaluate_kernel(const Particle &proposed_particle,
+                                            const Particle &old_particle) const;
   
   /*
   double specific_subsample_evaluate_kernel(Particle &proposed_particle,
@@ -122,8 +122,8 @@ protected:
   */
   
   arma::mat specific_gradient_of_log(const std::string &variable,
-                                     Particle &proposed_particle,
-                                     Particle &old_particle);
+                                     const Particle &proposed_particle,
+                                     const Particle &old_particle);
   
   /*
   arma::mat specific_gradient_of_log(const std::string &variable,
@@ -133,8 +133,8 @@ protected:
   */
   
   arma::mat specific_subsample_gradient_of_log(const std::string &variable,
-                                               Particle &proposed_particle,
-                                               Particle &old_particle);
+                                               const Particle &proposed_particle,
+                                               const Particle &old_particle);
   
   /*
   arma::mat specific_subsample_gradient_of_log(const std::string &variable,

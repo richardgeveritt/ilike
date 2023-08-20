@@ -385,7 +385,7 @@ double HMMFactorVariables::subsample_evaluate_smcadaptive_part_given_smcfixed_li
   return result;
 }
 
-double HMMFactorVariables::evaluate_likelihoods(const Index* index)
+double HMMFactorVariables::evaluate_likelihoods(const Index* index) const
 {
   if (index->size()>1)
     Rcpp::stop("HMMFactorVariables::evaluate_likelihoods - only one index allowed.");
@@ -450,7 +450,7 @@ double HMMFactorVariables::evaluate_likelihoods(const Index* index,
 }
 */
 
-double HMMFactorVariables::subsample_evaluate_likelihoods(const Index* index)
+double HMMFactorVariables::subsample_evaluate_likelihoods(const Index* index) const
 {
   if (index->size()>1)
     Rcpp::stop("HMMFactorVariables::subsample_evaluate_likelihoods - only one index allowed.");
@@ -640,7 +640,7 @@ arma::mat HMMFactorVariables::direct_subsample_get_gradient_of_log(const std::st
 */
 
 arma::mat HMMFactorVariables::direct_get_gradient_of_log(const Index* index,
-                                                         const std::string &variable)
+                                                         const std::string &variable) const
 {
   Rcpp::stop("HMMFactorVariables::direct_get_gradient_of_log - not written yet..");
   
@@ -689,7 +689,7 @@ arma::mat HMMFactorVariables::direct_get_gradient_of_log(const Index* index,
 */
 
 arma::mat HMMFactorVariables::direct_subsample_get_gradient_of_log(const Index* index,
-                                                                   const std::string &variable)
+                                                                   const std::string &variable) const
 {
   Rcpp::stop("HMMFactorVariables::direct_get_gradient_of_log - not written yet.");
   

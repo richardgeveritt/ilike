@@ -84,33 +84,21 @@ void ProposalKernel::make_copy(const ProposalKernel &another)
 }
 
 Particle ProposalKernel::move(RandomNumberGenerator &rng,
-                              Particle &particle) const
+                              const Particle &particle) const
 {
   Particle proposed_particle;
+  proposed_particle.parameters = particle.parameters;
   
-  //particle.parameters = particle.parameters.deep_copy_nonfixed();
-  proposed_particle.parameters = particle.parameters;//.deep_copy_nonfixed();
   if (this->transform==NULL)
   {
-    particle.set_move_transformed_parameters();
+    //Parameters thing = ;
+    //std::cout << thing << std::endl;
     proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->simulate(rng,particle));
   }
   else
   {
-    // transform particles
-    particle.set_move_transformed_parameters(this->transform);
-    proposed_particle.move_transformed_parameters = this->simulate(rng,particle);
-    proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->transform->inverse_transform(proposed_particle.move_transformed_parameters));
-    
-    // thing to think about...
-    // reason we pass particle is because it has extra info such as gradient
-    // we sometimes set this in the proposal (such as finding grad)
-    // if we pass temp particle, this info won't be stored...
-    // what info do we want stored? gradient of transformed? not sure...
-    // might need to store transformed version in Particle? Try to avoid
-    
-    // put in simulate!
-    // deriv in some algs comes from deriv of prior times llhd in transformed space - need diff bit
+    Parameters proposed_parameters_in_transformed_space = this->simulate(rng,particle);
+    proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->transform->inverse_transform(proposed_parameters_in_transformed_space));
   }
   
   // Outputs are created here, with memory managed by Particle hereafter.
@@ -127,6 +115,8 @@ Particle ProposalKernel::move(RandomNumberGenerator &rng,
     if (old_ensemble_factors!=NULL)
       proposed_particle.simulate_ensemble_factor_variables(old_ensemble_factors);
   }
+  
+  proposed_particle.simulate_proposal_variables(particle.proposals_to_transform_for_pointer, particle.proposals_to_find_gradient_for_pointer);
   
   proposed_particle.accepted_outputs = particle.accepted_outputs;
   
@@ -189,33 +179,19 @@ Particle ProposalKernel::move(RandomNumberGenerator &rng,
 */
 
 Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
-                                        Particle &particle) const
+                                        const Particle &particle) const
 {
   Particle proposed_particle;
+  proposed_particle.parameters = particle.parameters;
   
-  //particle.parameters = particle.parameters.deep_copy_nonfixed();
-  proposed_particle.parameters = particle.parameters;//.deep_copy_nonfixed();
   if (this->transform==NULL)
   {
-    particle.set_move_transformed_parameters();
     proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->subsample_simulate(rng,particle));
   }
   else
   {
-    // transform particles
-    particle.set_move_transformed_parameters(this->transform);
-    proposed_particle.move_transformed_parameters = this->subsample_simulate(rng,particle);
-    proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->transform->inverse_transform(proposed_particle.move_transformed_parameters));
-    
-    // thing to think about...
-    // reason we pass particle is because it has extra info such as gradient
-    // we sometimes set this in the proposal (such as finding grad)
-    // if we pass temp particle, this info won't be stored...
-    // what info do we want stored? gradient of transformed? not sure...
-    // might need to store transformed version in Particle? Try to avoid
-    
-    // put in simulate!
-    // deriv in some algs comes from deriv of prior times llhd in transformed space - need diff bit
+    Parameters proposed_parameters_in_transformed_space = this->subsample_simulate(rng,particle);
+    proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->transform->inverse_transform(proposed_parameters_in_transformed_space));
   }
   
   // Outputs are created here, with memory managed by Particle hereafter.
@@ -232,6 +208,8 @@ Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
     if (old_ensemble_factors!=NULL)
       proposed_particle.subsample_simulate_ensemble_factor_variables(old_ensemble_factors);
   }
+  
+  proposed_particle.simulate_proposal_variables(particle.proposals_to_transform_for_pointer, particle.proposals_to_find_gradient_for_pointer);
   
   proposed_particle.accepted_outputs = particle.accepted_outputs;
   
@@ -275,33 +253,19 @@ Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
 
 Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
                                         const std::string &variable,
-                                        Particle &particle) const
+                                        const Particle &particle) const
 {
   Particle proposed_particle;
+  proposed_particle.parameters = particle.parameters;
   
-  //particle.parameters = particle.parameters.deep_copy_nonfixed();
-  proposed_particle.parameters = particle.parameters;//.deep_copy_nonfixed();
   if (this->transform==NULL)
   {
-    particle.set_move_transformed_parameters();
     proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->subsample_simulate(rng,variable,particle));
   }
   else
   {
-    // transform particles
-    particle.set_move_transformed_parameters(this->transform);
-    proposed_particle.move_transformed_parameters = this->subsample_simulate(rng,variable,particle);
-    proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->transform->inverse_transform(proposed_particle.move_transformed_parameters));
-    
-    // thing to think about...
-    // reason we pass particle is because it has extra info such as gradient
-    // we sometimes set this in the proposal (such as finding grad)
-    // if we pass temp particle, this info won't be stored...
-    // what info do we want stored? gradient of transformed? not sure...
-    // might need to store transformed version in Particle? Try to avoid
-    
-    // put in simulate!
-    // deriv in some algs comes from deriv of prior times llhd in transformed space - need diff bit
+    Parameters proposed_parameters_in_transformed_space = this->subsample_simulate(rng,variable,particle);
+    proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->transform->inverse_transform(proposed_parameters_in_transformed_space));
   }
   
   // Outputs are created here, with memory managed by Particle hereafter.
@@ -319,11 +283,13 @@ Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
       proposed_particle.subsample_simulate_ensemble_factor_variables(old_ensemble_factors);
   }
   
+  proposed_particle.simulate_proposal_variables(particle.proposals_to_transform_for_pointer, particle.proposals_to_find_gradient_for_pointer);
+  
   proposed_particle.accepted_outputs = particle.accepted_outputs;
   
-  proposed_particle.previous_self = &particle;
+  //proposed_particle.previous_self = &particle;
   
-  return proposed_particle;
+  return proposed_particle; // what we need is for previous target eval to be set to eval for this target (when evaluated there)!!!!! we don't want it to know its grad, until evaluated there
 }
 
 /*
@@ -606,7 +572,7 @@ void ProposalKernel::smc_adapt(SMCOutput* current_state)
     this->smc_adaptor->smc_adapt(current_state);
 }
 
-void ProposalKernel::mcmc_adapt(Particle &current_particle,
+void ProposalKernel::mcmc_adapt(const Particle &current_particle,
                                 size_t iteration_counter)
 {
   if (this->mcmc_adaptor!=NULL)
@@ -614,6 +580,7 @@ void ProposalKernel::mcmc_adapt(Particle &current_particle,
                                    iteration_counter);
 }
 
+/*
 void ProposalKernel::use_transform(Particle &particle)
 {
   if (this->transform==NULL)
@@ -625,20 +592,21 @@ void ProposalKernel::use_transform(Particle &particle)
     particle.set_move_transformed_parameters(this->transform);
   }
 }
+*/
 
-double ProposalKernel::evaluate_kernel(Particle &proposed_particle,
-                                       Particle &old_particle) const
+double ProposalKernel::evaluate_kernel(const Particle &proposed_particle,
+                                       const Particle &old_particle) const
 {
   if (this->transform==NULL)
   {
-    proposed_particle.set_move_transformed_parameters();
-    old_particle.set_move_transformed_parameters();
+    //proposed_particle.set_move_transformed_parameters();
+    //old_particle.set_move_transformed_parameters();
     return this->specific_evaluate_kernel(proposed_particle, old_particle);
   }
   else
   {
-    proposed_particle.set_move_transformed_parameters(this->transform);
-    old_particle.set_move_transformed_parameters(this->transform);
+    //proposed_particle.set_move_transformed_parameters(this->transform);
+    //old_particle.set_move_transformed_parameters(this->transform);
     
     // need to include absolute value of Jacobian determinant
     return this->specific_evaluate_kernel(proposed_particle, old_particle) + this->transform->log_abs_jacobian_determinant(proposed_particle.parameters);
@@ -671,20 +639,20 @@ double ProposalKernel::evaluate_kernel(Particle &proposed_particle,
 }
 */
 
-double ProposalKernel::subsample_evaluate_kernel(Particle &proposed_particle,
-                                                 Particle &old_particle) const
+double ProposalKernel::subsample_evaluate_kernel(const Particle &proposed_particle,
+                                                 const Particle &old_particle) const
 {
   if (this->transform==NULL)
   {
-    proposed_particle.set_move_transformed_parameters();
-    old_particle.set_move_transformed_parameters();
+    //proposed_particle.set_move_transformed_parameters();
+    //old_particle.set_move_transformed_parameters();
     return this->specific_subsample_evaluate_kernel(proposed_particle,
                                                     old_particle);
   }
   else
   {
-    proposed_particle.set_move_transformed_parameters(this->transform);
-    old_particle.set_move_transformed_parameters(this->transform);
+    //proposed_particle.set_move_transformed_parameters(this->transform);
+    //old_particle.set_move_transformed_parameters(this->transform);
     
     // need to include absolute value of Jacobian determinant
     return this->specific_subsample_evaluate_kernel(proposed_particle,
@@ -743,8 +711,8 @@ double ProposalKernel::evaluate_kernel(const Particle &proposed_particle,
 */
 
 arma::mat ProposalKernel::gradient_of_log(const std::string &variable,
-                          Particle &proposed_particle,
-                          Particle &old_particle)
+                                          const Particle &proposed_particle,
+                                          const Particle &old_particle)
 {
   arma::mat result = this->specific_gradient_of_log(variable,
                                                     proposed_particle,
@@ -773,8 +741,8 @@ arma::mat ProposalKernel::gradient_of_log(const std::string &variable,
 */
 
 arma::mat ProposalKernel::subsample_gradient_of_log(const std::string &variable,
-                                                    Particle &proposed_particle,
-                                                    Particle &old_particle)
+                                                    const Particle &proposed_particle,
+                                                    const Particle &old_particle)
 {
   arma::mat result = this->specific_subsample_gradient_of_log(variable,
                                                               proposed_particle,

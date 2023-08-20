@@ -91,6 +91,12 @@ public:
   
   void set_proposal_parameters(Parameters* proposal_parameters_in);
   
+  GradientEstimatorOutput* simulate_gradient_estimator_output() const;
+  
+  std::vector<ProposalKernel*> get_proposals();
+  
+  void set_index(Index* index_in);
+  
   //arma::mat subsample_independent_gradient_of_log(const std::string &variable,
   //                                                Variables* proposed_particle,
   //                                                const Parameters &conditioned_on_parameters);

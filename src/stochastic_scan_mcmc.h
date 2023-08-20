@@ -30,7 +30,7 @@ public:
   MCMC* mcmc_duplicate() const;
 
   Particle move(RandomNumberGenerator &rng,
-                Particle &particle) const;
+                const Particle &particle) const;
   
   /*
   Particle move(RandomNumberGenerator &rng,
@@ -39,7 +39,7 @@ public:
   */
   
   Particle subsample_move(RandomNumberGenerator &rng,
-                          Particle &particle) const;
+                          const Particle &particle) const;
   
   /*
   Particle subsample_move(RandomNumberGenerator &rng,
@@ -71,9 +71,11 @@ public:
   
   void set_proposal_parameters(Parameters* proposal_parameters_in);
   
+  std::vector<ProposalKernel*> get_proposals() const;
+  
 protected:
   
-  void specific_mcmc_adapt(Particle &current_particle,
+  void specific_mcmc_adapt(const Particle &current_particle,
                            size_t iteration_counter);
   
   // Stored here.

@@ -42,6 +42,8 @@ public:
   void write_ensemble_factors(const std::string &directory_name,
                               const std::string &index) const;
   
+  size_t length() const;
+  
   void close_ofstreams();
   
 protected:

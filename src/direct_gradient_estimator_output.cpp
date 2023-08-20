@@ -6,6 +6,7 @@
 DirectGradientEstimatorOutput::DirectGradientEstimatorOutput()
   :GradientEstimatorOutput()
 {
+  this->estimator = NULL;
 }
 
 DirectGradientEstimatorOutput::DirectGradientEstimatorOutput(DirectGradientEstimator* estimator_in)
@@ -49,7 +50,7 @@ void DirectGradientEstimatorOutput::make_copy(const DirectGradientEstimatorOutpu
 
 arma::mat DirectGradientEstimatorOutput::get_gradient_of_log(const std::string &variable,
                                                              const Index* index,
-                                                             Particle &particle)
+                                                             const Particle &particle)
 {
   auto found = this->gradients.find(variable);
   
@@ -59,12 +60,12 @@ arma::mat DirectGradientEstimatorOutput::get_gradient_of_log(const std::string &
   }
   else
   {
-    // if proposal is not found, regenerate all of the variables needed to estimate the gradient
+
     arma::mat current_gradient = particle.direct_get_gradient_of_log(variable,
                                                                      index);
     if (this->estimator->proposal->transform!=NULL)
     {
-      current_gradient = arma::reshape(arma::vectorise(current_gradient)*this->estimator->proposal->transform->inverse_jacobian(*particle.move_parameters),current_gradient.n_rows,current_gradient.n_cols);
+      current_gradient = arma::reshape(arma::vectorise(current_gradient)*this->estimator->proposal->transform->inverse_jacobian(particle.get_transformed_parameters(this->estimator->proposal)),current_gradient.n_rows,current_gradient.n_cols);
     }
     this->gradients[variable] = current_gradient;
     return current_gradient;
@@ -101,7 +102,7 @@ arma::mat DirectGradientEstimatorOutput::get_gradient_of_log(const std::string &
 
 arma::mat DirectGradientEstimatorOutput::subsample_get_gradient_of_log(const std::string &variable,
                                                                        const Index* index,
-                                                                       Particle &particle)
+                                                                       const Particle &particle)
 {
   auto found = this->gradients.find(variable);
   
@@ -116,11 +117,16 @@ arma::mat DirectGradientEstimatorOutput::subsample_get_gradient_of_log(const std
                                                                                index);
     if (this->estimator->proposal->transform!=NULL)
     {
-      current_gradient = arma::reshape(arma::vectorise(current_gradient)*this->estimator->proposal->transform->inverse_jacobian(*particle.move_parameters),current_gradient.n_rows,current_gradient.n_cols);
+      current_gradient = arma::reshape(arma::vectorise(current_gradient)*this->estimator->proposal->transform->inverse_jacobian(particle.get_transformed_parameters(this->estimator->proposal)),current_gradient.n_rows,current_gradient.n_cols);
     }
     this->gradients[variable] = current_gradient;
     return current_gradient;
   }
+}
+
+void DirectGradientEstimatorOutput::simulate_auxiliary_variables()
+{
+  
 }
 
 /*

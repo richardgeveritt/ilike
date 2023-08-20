@@ -54,6 +54,7 @@ using namespace Rcpp;
 #include "annealed_likelihood_estimator.h"
 #include "stable_smc_termination.h"
 #include "always_smc_termination.h"
+#include "direct_gradient_estimator.h"
 
 std::vector<std::string> split(const std::string &str, const char delimiter)
 {
@@ -1290,7 +1291,8 @@ ProposalKernel* get_mh_proposal(const List &current_proposal,
           arma::mat cov = info[1];
           
           proposal = new LangevinProposalKernel(variable,
-                                                cov);
+                                                cov,
+                                                new DirectGradientEstimator());
           
         }
         else if (type=="hmc")
@@ -1303,7 +1305,8 @@ ProposalKernel* get_mh_proposal(const List &current_proposal,
           arma::mat cov = info[1];
           
           proposal = new HMCProposalKernel(variable,
-                                           cov);
+                                           cov,
+                                           new DirectGradientEstimator());
           
         }
         else if (type=="barker_dynamics")
@@ -1316,7 +1319,8 @@ ProposalKernel* get_mh_proposal(const List &current_proposal,
           arma::mat cov = info[1];
           
           proposal = new BarkerDynamicsProposalKernel(variable,
-                                                      cov);
+                                                      cov,
+                                                      new DirectGradientEstimator());
           
         }
         else if (type=="mirror")
@@ -2444,6 +2448,7 @@ double do_importance_sampler(const List &model,
                         proposal_is_evaluated_in,
                         true,
                         true,
+                        false,
                         parallel_in,
                         grain_size_in,
                         "");
@@ -2529,6 +2534,7 @@ void do_mcmc(const List &model,
                           the_mcmc,
                           likelihood_estimators,
                           proposal_in,
+                          true,
                           parallel_in,
                           grain_size_in,
                           "");
@@ -2549,6 +2555,7 @@ void do_mcmc(const List &model,
                           likelihood_estimators,
                           initial_points,
                           log_probabilities_of_initial_values,
+                          true,
                           parallel_in,
                           grain_size_in,
                           "");
@@ -2604,7 +2611,7 @@ double do_smc_mcmc_move(const List &model,
   IndependentProposalKernel* proposal_in;
   bool proposal_is_evaluated_in;
   
-  if ( model.containsElementNamed("importance_proposals") )
+  if ( model.containsElementNamed("importance_proposal") )
   {
     proposal_in = get_proposal(model,
                                parameters,
@@ -2695,9 +2702,11 @@ double do_smc_mcmc_move(const List &model,
                                        true,
                                        true,
                                        false,
+                                       true,
                                        parallel_in,
                                        grain_size_in,
                                        results_name_in.get_cstring());
+    
     
     std::chrono::high_resolution_clock::time_point start_time, end_time;
     start_time = std::chrono::high_resolution_clock::now();
@@ -2738,6 +2747,7 @@ double do_smc_mcmc_move(const List &model,
                                        true,
                                        true,
                                        false,
+                                       true,
                                        parallel_in,
                                        grain_size_in,
                                        "");
@@ -2760,6 +2770,8 @@ double do_smc_mcmc_move(const List &model,
     delete alg;
     
     return log_likelihood;
+    
   }
 
+  return 0.0;
 }

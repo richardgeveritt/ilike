@@ -28,6 +28,7 @@ public:
              EvaluateLogDistributionPtr evaluate_log_prior_in,
              SimulateDistributionPtr simulate_proposal_in,
              EvaluateLogDistributionPtr evaluate_log_proposal_in,
+             bool transform_proposed_particles,
              bool parallel_in,
              size_t grain_size_in,
              const std::string &results_name_in);
@@ -39,7 +40,7 @@ public:
   LikelihoodEstimator* duplicate() const;
   
   MoveOutput* move(RandomNumberGenerator &rng,
-                   Particle &particle);
+                   const Particle &particle);
   
   //void weight_for_adapting_sequence(Particles &current_particles);
   
@@ -59,7 +60,7 @@ public:
   */
   
   MoveOutput* subsample_move(RandomNumberGenerator &rng,
-                             Particle &particle);
+                             const Particle &particle);
   
   /*
   MoveOutput* subsample_move(RandomNumberGenerator &rng,

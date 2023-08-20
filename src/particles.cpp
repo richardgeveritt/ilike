@@ -32,14 +32,22 @@ Particles::Particles(const std::vector< MoveOutput* > &particles_in)
 
 Particles::Particles(std::vector<Parameters> &initial_values_in,
                      const arma::colvec &log_probabilities_of_initial_values_in,
-                     Factors* factors_in)
+                     Factors* factors_in,
+                     std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                     std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in)
 {
-  this->setup(initial_values_in, log_probabilities_of_initial_values_in, factors_in);
+  this->setup(initial_values_in,
+              log_probabilities_of_initial_values_in,
+              factors_in,
+              proposals_to_transform_for_in,
+              proposals_to_find_gradient_for_in);
 }
 
 void Particles::setup(std::vector<Parameters> &initial_values_in,
                       const arma::colvec &log_probabilities_of_initial_values_in,
-                      Factors* factors_in)
+                      Factors* factors_in,
+                      std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                      std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in)
 {
   if (initial_values_in.size()!=log_probabilities_of_initial_values_in.n_rows)
   {
@@ -68,7 +76,8 @@ void Particles::setup(std::vector<Parameters> &initial_values_in,
        ++i, ++counter)
   {
     //arma::mat tau = (*i)["tau"];
-    this->push_back(std::move(*i),factors_in);
+    this->push_back(std::move(*i),factors_in,proposals_to_transform_for_in,proposals_to_find_gradient_for_in);
+    //this->push_back(*i,factors_in,proposals_to_transform_for_in,proposals_to_find_gradient_for_in);
     this->particles.back()->back().previous_target_evaluated = log_probabilities_of_initial_values_in[counter];
   }
 }
@@ -76,23 +85,31 @@ void Particles::setup(std::vector<Parameters> &initial_values_in,
 Particles::Particles(std::vector<Parameters> &initial_values_in,
                      const arma::colvec &log_probabilities_of_initial_values_in,
                      Factors* factors_in,
+                     std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                     std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
                      const Parameters &conditioned_on_parameters)
 {
   this->setup(initial_values_in,
               log_probabilities_of_initial_values_in,
               factors_in,
+              proposals_to_transform_for_in,
+              proposals_to_find_gradient_for_in,
               conditioned_on_parameters);
 }
 
 Particles::Particles(std::vector<Parameters> &initial_values_in,
                      const arma::colvec &log_probabilities_of_initial_values_in,
                      Factors* factors_in,
+                     std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                     std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
                      const Parameters &conditioned_on_parameters,
                      const Parameters &sequencer_parameters)
 {
   this->setup(initial_values_in,
               log_probabilities_of_initial_values_in,
               factors_in,
+              proposals_to_transform_for_in,
+              proposals_to_find_gradient_for_in,
               conditioned_on_parameters,
               sequencer_parameters);
 }
@@ -100,6 +117,8 @@ Particles::Particles(std::vector<Parameters> &initial_values_in,
 void Particles::setup(std::vector<Parameters> &initial_values_in,
                       const arma::colvec &log_probabilities_of_initial_values_in,
                       Factors* factors_in,
+                      std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                      std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
                       const Parameters &conditioned_on_parameters)
 {
   if (initial_values_in.size()!=log_probabilities_of_initial_values_in.n_rows)
@@ -130,7 +149,8 @@ void Particles::setup(std::vector<Parameters> &initial_values_in,
   {
     //arma::mat tau = (*i)["tau"];
     i->merge_with_fixed(conditioned_on_parameters);
-    this->push_back(std::move(*i),factors_in);
+    this->push_back(std::move(*i),factors_in,proposals_to_transform_for_in,proposals_to_find_gradient_for_in);
+    //this->push_back(*i,factors_in,proposals_to_transform_for_in,proposals_to_find_gradient_for_in);
     this->particles.back()->back().previous_target_evaluated = log_probabilities_of_initial_values_in[counter];
   }
 }
@@ -138,6 +158,8 @@ void Particles::setup(std::vector<Parameters> &initial_values_in,
 void Particles::setup(std::vector<Parameters> &initial_values_in,
                       const arma::colvec &log_probabilities_of_initial_values_in,
                       Factors* factors_in,
+                      std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                      std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
                       const Parameters &conditioned_on_parameters,
                       const Parameters &sequencer_parameters)
 {
@@ -170,7 +192,7 @@ void Particles::setup(std::vector<Parameters> &initial_values_in,
     //arma::mat tau = (*i)["tau"];
     i->merge_with_fixed(conditioned_on_parameters);
     i->merge_with_fixed(sequencer_parameters);
-    this->push_back(std::move(*i),factors_in);
+    this->push_back(std::move(*i),factors_in,proposals_to_transform_for_in,proposals_to_find_gradient_for_in);
     this->particles.back()->back().previous_target_evaluated = log_probabilities_of_initial_values_in[counter];
   }
 }
@@ -265,17 +287,40 @@ void Particles::push_back(const Particle &particle_in)
 */
 
 void Particles::push_back(Parameters &&parameters_in,
-                          Factors* factors_in)
+                          Factors* factors_in,
+                          std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                          std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in)
 {
   //arma::mat tau = parameters_in["tau"];
   MoveOutput* single_particle = new SinglePointMoveOutput(std::move(parameters_in),
-                                                          factors_in);
+                                                          factors_in,
+                                                          proposals_to_transform_for_in,
+                                                          proposals_to_find_gradient_for_in);
   this->particles.push_back(single_particle);
 }
 
 void Particles::push_back(Particle &&particle_in)
 {
   MoveOutput* single_particle = new SinglePointMoveOutput(std::move(particle_in));
+  this->particles.push_back(single_particle);
+}
+
+void Particles::push_back(const Parameters &parameters_in,
+                          Factors* factors_in,
+                          std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                          std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in)
+{
+  //arma::mat tau = parameters_in["tau"];
+  MoveOutput* single_particle = new SinglePointMoveOutput(parameters_in,
+                                                          factors_in,
+                                                          proposals_to_transform_for_in,
+                                                          proposals_to_find_gradient_for_in);
+  this->particles.push_back(single_particle);
+}
+
+void Particles::push_back(const Particle &particle_in)
+{
+  MoveOutput* single_particle = new SinglePointMoveOutput(particle_in);
   this->particles.push_back(single_particle);
 }
 
@@ -427,6 +472,18 @@ void Particles::resample()
 {
   this->ancestor_variables = stratified_resample(this->normalised_log_weights,
                                                  this->resampling_variables);
+}
+
+arma::rowvec Particles::get_output_lengths() const
+{
+  arma::rowvec output_lengths(this->size());
+  
+  for (size_t i=0; i<this->particles.size(); ++i)
+  {
+    output_lengths[i] = this->particles[i]->length();
+  }
+  
+  return output_lengths;
 }
 
 void Particles::initialise_weights()

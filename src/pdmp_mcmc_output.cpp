@@ -77,6 +77,11 @@ void PDMPMCMCOutput::write_ensemble_factors(const std::string &directory_name,
   
 }
 
+size_t PDMPMCMCOutput::length() const
+{
+  Rcpp::stop("PDMPMCMCOutput::length - not written yet.");
+}
+
 void PDMPMCMCOutput::close_ofstreams()
 {
 }

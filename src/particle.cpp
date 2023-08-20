@@ -12,11 +12,31 @@
 #include "ensemble_factors.h"
 
 Particle::Particle()
-: parameters(),
-move_transformed_parameters()
+: parameters()
+//move_transformed_parameters()
 {
-  this->move_transform = NULL;
-  this->move_parameters = NULL;
+  //this->move_transform = NULL;
+  //this->move_parameters = NULL;
+  
+  this->factor_variables = NULL;
+  this->ensemble_factor_variables = NULL;
+  
+  this->previous_target_evaluated = 0.0;
+  this->target_evaluated = 0.0;
+  this->subsample_previous_target_evaluated = 0.0;
+  this->subsample_target_evaluated = 0.0;
+  
+  this->previous_ensemble_target_evaluated = 0.0;
+  this->subsample_previous_ensemble_target_evaluated = 0.0;
+  this->ensemble_target_evaluated = 0.0;
+  this->subsample_ensemble_target_evaluated = 0.0;
+}
+
+Particle::Particle(const Parameters &parameters_in)
+: parameters(parameters_in)
+{
+  //this->move_transform = NULL;
+  //this->move_parameters = &this->parameters;
   
   this->factor_variables = NULL;
   this->ensemble_factor_variables = NULL;
@@ -33,9 +53,158 @@ move_transformed_parameters()
 }
 
 Particle::Particle(const Parameters &parameters_in,
-                   EnsembleFactors* ensemble_factors_in)
+                   Factors* factors_in,
+                   std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                   std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in)
+: parameters(parameters_in)
+//move_transformed_parameters()
+{
+  if (factors_in!=NULL)
+  {
+    this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
+    this->factor_variables->set_particle(this);
+  }
+  
+  this->simulate_proposal_variables(proposals_to_transform_for_in, proposals_to_find_gradient_for_in);
+  
+  //this->move_transform = NULL;
+  //this->move_parameters = &this->parameters;
+
+  this->ensemble_factor_variables = NULL;
+  
+  this->previous_target_evaluated = 0.0;
+  this->target_evaluated = 0.0;
+  this->subsample_previous_target_evaluated = 0.0;
+  this->subsample_target_evaluated = 0.0;
+  
+  this->previous_ensemble_target_evaluated = 0.0;
+  this->subsample_previous_ensemble_target_evaluated = 0.0;
+  this->ensemble_target_evaluated = 0.0;
+  this->subsample_ensemble_target_evaluated = 0.0;
+}
+
+Particle::Particle(const Parameters &parameters_in,
+                   Factors* factors_in,
+                   std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                   std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
+                   const Parameters &conditioned_on_parameters)
+: parameters(parameters_in)
+//move_transformed_parameters()
+{
+  this->parameters.merge_with_fixed(conditioned_on_parameters);
+  
+  if (factors_in!=NULL)
+  {
+    this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
+    this->factor_variables->set_particle(this);
+  }
+  
+  this->simulate_proposal_variables(proposals_to_transform_for_in, proposals_to_find_gradient_for_in);
+  
+  //this->move_transform = NULL;
+  //this->move_parameters = &this->parameters;
+  
+  this->ensemble_factor_variables = NULL;
+  
+  this->previous_target_evaluated = 0.0;
+  this->target_evaluated = 0.0;
+  this->subsample_previous_target_evaluated = 0.0;
+  this->subsample_target_evaluated = 0.0;
+  
+  this->previous_ensemble_target_evaluated = 0.0;
+  this->subsample_previous_ensemble_target_evaluated = 0.0;
+  this->ensemble_target_evaluated = 0.0;
+  this->subsample_ensemble_target_evaluated = 0.0;
+}
+
+Particle::Particle(const Parameters &parameters_in,
+                   Factors* factors_in,
+                   std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                   std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
+                   const Parameters &conditioned_on_parameters,
+                   const Parameters &sequencer_parameters)
+: parameters(parameters_in)
+//move_transformed_parameters()
+{
+  this->parameters.merge_with_fixed(conditioned_on_parameters);
+  this->parameters.merge_with_fixed(sequencer_parameters);
+  
+  if (factors_in!=NULL)
+  {
+    this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
+    this->factor_variables->set_particle(this);
+  }
+  
+  this->simulate_proposal_variables(proposals_to_transform_for_in, proposals_to_find_gradient_for_in);
+    
+  //this->move_transform = NULL;
+  //this->move_parameters = &this->parameters;
+
+  this->ensemble_factor_variables = NULL;
+  
+  this->previous_target_evaluated = 0.0;
+  this->target_evaluated = 0.0;
+  this->subsample_previous_target_evaluated = 0.0;
+  this->subsample_target_evaluated = 0.0;
+  
+  this->previous_ensemble_target_evaluated = 0.0;
+  this->subsample_previous_ensemble_target_evaluated = 0.0;
+  this->ensemble_target_evaluated = 0.0;
+  this->subsample_ensemble_target_evaluated = 0.0;
+}
+
+Particle::Particle(const Parameters &parameters_in,
+                   FactorVariables* factor_variables_in)
 : parameters(parameters_in),
-move_transformed_parameters()
+//move_transformed_parameters(),
+factor_variables(factor_variables_in)
+{
+  //this->move_transform = NULL;
+  //this->move_parameters = &this->parameters;
+  
+  this->ensemble_factor_variables = NULL;
+
+  this->factor_variables->set_particle(this);
+  
+  this->previous_target_evaluated = 0.0;
+  this->target_evaluated = 0.0;
+  this->subsample_previous_target_evaluated = 0.0;
+  this->subsample_target_evaluated = 0.0;
+  
+  this->previous_ensemble_target_evaluated = 0.0;
+  this->subsample_previous_ensemble_target_evaluated = 0.0;
+  this->ensemble_target_evaluated = 0.0;
+  this->subsample_ensemble_target_evaluated = 0.0;
+}
+
+Particle::Particle(const Parameters &parameters_in,
+                   FactorVariables* factor_variables_in,
+                   double previous_target_evaluated_in)
+: parameters(parameters_in),
+factor_variables(factor_variables_in)
+{
+  //this->move_transform = NULL;
+  //this->move_parameters = &this->parameters;
+  
+  this->ensemble_factor_variables = NULL;
+  
+  this->factor_variables->set_particle(this);
+  
+  this->previous_target_evaluated = previous_target_evaluated_in;
+  this->target_evaluated = 0.0;
+  this->subsample_previous_target_evaluated = 0.0;
+  this->subsample_target_evaluated = 0.0;
+  
+  this->previous_ensemble_target_evaluated = 0.0;
+  this->subsample_previous_ensemble_target_evaluated = 0.0;
+  this->ensemble_target_evaluated = 0.0;
+  this->subsample_ensemble_target_evaluated = 0.0;
+}
+
+Particle::Particle(const Parameters &parameters_in,
+                   EnsembleFactors* ensemble_factors_in)
+: parameters(parameters_in)
+//move_transformed_parameters()
 {
   if (ensemble_factors_in!=NULL)
   {
@@ -43,9 +212,9 @@ move_transformed_parameters()
     this->ensemble_factor_variables->set_particle(this);
   }
   
-  this->move_transform = NULL;
-  this->move_parameters = &this->parameters;
-  
+  //this->move_transform = NULL;
+  //this->move_parameters = &this->parameters;
+
   this->factor_variables = NULL;
   
   this->previous_target_evaluated = 0.0;
@@ -59,20 +228,110 @@ move_transformed_parameters()
   this->subsample_ensemble_target_evaluated = 0.0;
 }
 
-Particle::Particle(Parameters &&parameters_in,
-                   Factors* factors_in)
-: parameters(std::move(parameters_in)),
-move_transformed_parameters()
+Particle::Particle(const Parameters &parameters_in,
+                   EnsembleFactors* ensemble_factors_in,
+                   const Parameters &conditioned_on_parameters)
 {
-  if (factors_in!=NULL)
+  this->parameters = parameters_in;
+  
+  this->parameters.merge_with_fixed(conditioned_on_parameters);
+  
+  //this->move_transformed_parameters = Parameters();
+  //this->move_transform = NULL;
+  //this->move_parameters = &this->parameters;
+  
+  if (ensemble_factors_in!=NULL)
   {
-    this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
-    this->factor_variables->set_particle(this);
+    this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters);
+    this->ensemble_factor_variables->set_particle(this);
+  }
+  else
+  {
+    this->ensemble_factor_variables = NULL;
+  }
+  this->factor_variables = NULL;
+  
+  this->previous_target_evaluated = 0.0;
+  this->target_evaluated = 0.0;
+  this->subsample_previous_target_evaluated = 0.0;
+  this->subsample_target_evaluated = 0.0;
+  
+  this->previous_ensemble_target_evaluated = 0.0;
+  this->subsample_previous_ensemble_target_evaluated = 0.0;
+  this->ensemble_target_evaluated = 0.0;
+  this->subsample_ensemble_target_evaluated = 0.0;
+}
+
+Particle::Particle(const Parameters &parameters_in,
+                   EnsembleFactors* ensemble_factors_in,
+                   const Parameters &conditioned_on_parameters,
+                   const Parameters &sequencer_parameters)
+{
+  this->parameters = parameters_in;
+  
+  this->parameters.merge_with_fixed(conditioned_on_parameters);
+  this->parameters.merge_with_fixed(sequencer_parameters);
+  
+  //this->move_transformed_parameters = Parameters();
+  //this->move_transform = NULL;
+  //this->move_parameters = &this->parameters;
+  
+  if (ensemble_factors_in!=NULL)
+  {
+    this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters);
+    this->ensemble_factor_variables->set_particle(this);
+  }
+  else
+  {
+    this->ensemble_factor_variables = NULL;
+  }
+  this->factor_variables = NULL;
+  
+  this->previous_target_evaluated = 0.0;
+  this->target_evaluated = 0.0;
+  this->subsample_previous_target_evaluated = 0.0;
+  this->subsample_target_evaluated = 0.0;
+  
+  this->previous_ensemble_target_evaluated = 0.0;
+  this->subsample_previous_ensemble_target_evaluated = 0.0;
+  this->ensemble_target_evaluated = 0.0;
+  this->subsample_ensemble_target_evaluated = 0.0;
+}
+
+Particle::Particle(const Parameters &parameters_in,
+                   EnsembleFactorVariables* ensemble_factor_variables_in)
+{
+  this->parameters = parameters_in;
+  //this->move_transformed_parameters = Parameters();
+  //this->move_transform = NULL;
+  //this->move_parameters = &this->parameters;
+  
+  this->ensemble_factor_variables = ensemble_factor_variables_in;
+  this->factor_variables = NULL;
+  if (this->ensemble_factor_variables!=NULL)
+  {
+    this->ensemble_factor_variables->set_particle(this);
   }
   
-  this->move_transform = NULL;
-  this->move_parameters = &this->parameters;
+  this->previous_target_evaluated = 0.0;
+  this->target_evaluated = 0.0;
+  this->subsample_previous_target_evaluated = 0.0;
+  this->subsample_target_evaluated = 0.0;
+  
+  this->previous_ensemble_target_evaluated = 0.0;
+  this->subsample_previous_ensemble_target_evaluated = 0.0;
+  this->ensemble_target_evaluated = 0.0;
+  this->subsample_ensemble_target_evaluated = 0.0;
+}
 
+
+Particle::Particle(Parameters &&parameters_in)
+: parameters(std::move(parameters_in))
+{
+  //this->move_transform = NULL;
+  //this->move_parameters = &this->parameters;
+  
+  this->factor_variables = NULL;
   this->ensemble_factor_variables = NULL;
   
   this->previous_target_evaluated = 0.0;
@@ -88,9 +347,42 @@ move_transformed_parameters()
 
 Particle::Particle(Parameters &&parameters_in,
                    Factors* factors_in,
+                   std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                   std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in)
+: parameters(std::move(parameters_in))
+//move_transformed_parameters()
+{
+  if (factors_in!=NULL)
+  {
+    this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
+    this->factor_variables->set_particle(this);
+  }
+  
+  this->simulate_proposal_variables(proposals_to_transform_for_in, proposals_to_find_gradient_for_in);
+  
+  //this->move_transform = NULL;
+  //this->move_parameters = &this->parameters;
+  
+  this->ensemble_factor_variables = NULL;
+  
+  this->previous_target_evaluated = 0.0;
+  this->target_evaluated = 0.0;
+  this->subsample_previous_target_evaluated = 0.0;
+  this->subsample_target_evaluated = 0.0;
+  
+  this->previous_ensemble_target_evaluated = 0.0;
+  this->subsample_previous_ensemble_target_evaluated = 0.0;
+  this->ensemble_target_evaluated = 0.0;
+  this->subsample_ensemble_target_evaluated = 0.0;
+}
+
+Particle::Particle(Parameters &&parameters_in,
+                   Factors* factors_in,
+                   std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                   std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
                    const Parameters &conditioned_on_parameters)
-: parameters(std::move(parameters_in)),
-move_transformed_parameters()
+: parameters(std::move(parameters_in))
+//move_transformed_parameters()
 {
   this->parameters.merge_with_fixed(conditioned_on_parameters);
   
@@ -100,8 +392,12 @@ move_transformed_parameters()
     this->factor_variables->set_particle(this);
   }
   
-  this->move_transform = NULL;
-  this->move_parameters = &this->parameters;
+  Rcout << "1" << std::endl;
+  
+  this->simulate_proposal_variables(proposals_to_transform_for_in, proposals_to_find_gradient_for_in);
+  
+  //this->move_transform = NULL;
+  //this->move_parameters = &this->parameters;
   
   this->ensemble_factor_variables = NULL;
   
@@ -118,10 +414,12 @@ move_transformed_parameters()
 
 Particle::Particle(Parameters &&parameters_in,
                    Factors* factors_in,
+                   std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                   std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
                    const Parameters &conditioned_on_parameters,
                    const Parameters &sequencer_parameters)
-: parameters(std::move(parameters_in)),
-move_transformed_parameters()
+: parameters(std::move(parameters_in))
+//move_transformed_parameters()
 {
   this->parameters.merge_with_fixed(conditioned_on_parameters);
   this->parameters.merge_with_fixed(sequencer_parameters);
@@ -131,10 +429,12 @@ move_transformed_parameters()
     this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
     this->factor_variables->set_particle(this);
   }
-    
-  this->move_transform = NULL;
-  this->move_parameters = &this->parameters;
-
+  
+  this->simulate_proposal_variables(proposals_to_transform_for_in, proposals_to_find_gradient_for_in);
+  
+  //this->move_transform = NULL;
+  //this->move_parameters = &this->parameters;
+  
   this->ensemble_factor_variables = NULL;
   
   this->previous_target_evaluated = 0.0;
@@ -151,14 +451,14 @@ move_transformed_parameters()
 Particle::Particle(Parameters &&parameters_in,
                    FactorVariables* factor_variables_in)
 : parameters(std::move(parameters_in)),
-move_transformed_parameters(),
+//move_transformed_parameters(),
 factor_variables(factor_variables_in)
 {
-  this->move_transform = NULL;
-  this->move_parameters = &this->parameters;
+  //this->move_transform = NULL;
+  //this->move_parameters = &this->parameters;
   
   this->ensemble_factor_variables = NULL;
-
+  
   this->factor_variables->set_particle(this);
   
   this->previous_target_evaluated = 0.0;
@@ -176,11 +476,10 @@ Particle::Particle(Parameters &&parameters_in,
                    FactorVariables* factor_variables_in,
                    double previous_target_evaluated_in)
 : parameters(std::move(parameters_in)),
-move_transformed_parameters(),
 factor_variables(factor_variables_in)
 {
-  this->move_transform = NULL;
-  this->move_parameters = &this->parameters;
+  //this->move_transform = NULL;
+  //this->move_parameters = &this->parameters;
   
   this->ensemble_factor_variables = NULL;
   
@@ -199,8 +498,8 @@ factor_variables(factor_variables_in)
 
 Particle::Particle(Parameters &&parameters_in,
                    EnsembleFactors* ensemble_factors_in)
-: parameters(std::move(parameters_in)),
-move_transformed_parameters()
+: parameters(std::move(parameters_in))
+//move_transformed_parameters()
 {
   if (ensemble_factors_in!=NULL)
   {
@@ -208,9 +507,9 @@ move_transformed_parameters()
     this->ensemble_factor_variables->set_particle(this);
   }
   
-  this->move_transform = NULL;
-  this->move_parameters = &this->parameters;
-
+  //this->move_transform = NULL;
+  //this->move_parameters = &this->parameters;
+  
   this->factor_variables = NULL;
   
   this->previous_target_evaluated = 0.0;
@@ -232,9 +531,9 @@ Particle::Particle(Parameters &&parameters_in,
   
   this->parameters.merge_with_fixed(conditioned_on_parameters);
   
-  this->move_transformed_parameters = Parameters();
-  this->move_transform = NULL;
-  this->move_parameters = &this->parameters;
+  //this->move_transformed_parameters = Parameters();
+  //this->move_transform = NULL;
+  //this->move_parameters = &this->parameters;
   
   if (ensemble_factors_in!=NULL)
   {
@@ -268,9 +567,9 @@ Particle::Particle(Parameters &&parameters_in,
   this->parameters.merge_with_fixed(conditioned_on_parameters);
   this->parameters.merge_with_fixed(sequencer_parameters);
   
-  this->move_transformed_parameters = Parameters();
-  this->move_transform = NULL;
-  this->move_parameters = &this->parameters;
+  //this->move_transformed_parameters = Parameters();
+  //this->move_transform = NULL;
+  //this->move_parameters = &this->parameters;
   
   if (ensemble_factors_in!=NULL)
   {
@@ -298,9 +597,9 @@ Particle::Particle(Parameters &&parameters_in,
                    EnsembleFactorVariables* ensemble_factor_variables_in)
 {
   this->parameters = std::move(parameters_in);
-  this->move_transformed_parameters = Parameters();
-  this->move_transform = NULL;
-  this->move_parameters = &this->parameters;
+  //this->move_transformed_parameters = Parameters();
+  //this->move_transform = NULL;
+  //this->move_parameters = &this->parameters;
   
   this->ensemble_factor_variables = ensemble_factor_variables_in;
   this->factor_variables = NULL;
@@ -320,10 +619,13 @@ Particle::Particle(Parameters &&parameters_in,
   this->subsample_ensemble_target_evaluated = 0.0;
 }
 
+
+
+
 void Particle::setup(Factors* factors_in)
 {
   this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
-  this->move_parameters = &this->parameters;
+  //this->move_parameters = &this->parameters;
   this->factor_variables->set_particle(this);
 }
 
@@ -333,7 +635,7 @@ void Particle::setup(Factors* factors_in,
   this->parameters.merge_with_fixed(conditioned_on_parameters);
   
   this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
-  this->move_parameters = &this->parameters;
+  //this->move_parameters = &this->parameters;
   this->factor_variables->set_particle(this);
 }
 
@@ -345,7 +647,7 @@ void Particle::setup(Factors* factors_in,
   this->parameters.merge_with_fixed(sequencer_parameters);
   
   this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
-  this->move_parameters = &this->parameters;
+  //this->move_parameters = &this->parameters;
   this->factor_variables->set_particle(this);
 }
 
@@ -354,7 +656,7 @@ void Particle::setup(const Parameters &parameters_in,
 {
   this->parameters = parameters_in;
   this->factor_variables = factors_in->simulate_factor_variables(parameters_in);
-  this->move_parameters = &this->parameters;
+  //this->move_parameters = &this->parameters;
   this->factor_variables->set_particle(this);
 }
 
@@ -366,7 +668,7 @@ void Particle::setup(const Parameters &parameters_in,
   this->parameters.merge_with_fixed(conditioned_on_parameters);
   
   this->factor_variables = factors_in->simulate_factor_variables(parameters_in);
-  this->move_parameters = &this->parameters;
+  //this->move_parameters = &this->parameters;
   this->factor_variables->set_particle(this);
 }
 
@@ -380,7 +682,7 @@ void Particle::setup(const Parameters &parameters_in,
   this->parameters.merge_with_fixed(sequencer_parameters);
   
   this->factor_variables = factors_in->simulate_factor_variables(parameters_in);
-  this->move_parameters = &this->parameters;
+  //this->move_parameters = &this->parameters;
   this->factor_variables->set_particle(this);
 }
 
@@ -389,7 +691,7 @@ void Particle::setup(const Parameters &parameters_in,
 {
   this->parameters = parameters_in;
   this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(parameters_in);
-  this->move_parameters = &this->parameters;
+  //this->move_parameters = &this->parameters;
   this->ensemble_factor_variables->set_particle(this);
 }
 
@@ -401,7 +703,7 @@ void Particle::setup(const Parameters &parameters_in,
   this->parameters.merge_with_fixed(conditioned_on_parameters);
   
   this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(parameters_in);
-  this->move_parameters = &this->parameters;
+  //this->move_parameters = &this->parameters;
   this->ensemble_factor_variables->set_particle(this);
 }
 
@@ -415,7 +717,7 @@ void Particle::setup(const Parameters &parameters_in,
   this->parameters.merge_with_fixed(sequencer_parameters);
   
   this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(parameters_in);
-  this->move_parameters = &this->parameters;
+  //this->move_parameters = &this->parameters;
   this->ensemble_factor_variables->set_particle(this);
 }
 
@@ -427,6 +729,7 @@ Particle::~Particle()
   if (this->ensemble_factor_variables!=NULL)
     delete this->ensemble_factor_variables;
   
+  /*
   for (auto i=this->gradient_estimator_outputs.begin();
        i!=this->gradient_estimator_outputs.end();
        ++i)
@@ -434,6 +737,7 @@ Particle::~Particle()
     if (i->second!=NULL)
       delete i->second;
   }
+  */
 }
 
 //Copy constructor for the Particle class.
@@ -453,6 +757,7 @@ Particle& Particle::operator=(const Particle &another)
   if (this->ensemble_factor_variables!=NULL)
     delete this->ensemble_factor_variables;
   
+  /*
   for (auto i=this->gradient_estimator_outputs.begin();
        i!=this->gradient_estimator_outputs.end();
        ++i)
@@ -461,7 +766,8 @@ Particle& Particle::operator=(const Particle &another)
       delete i->second;
   }
   this->gradient_estimator_outputs.clear();
-
+  */
+   
   this->make_copy(another);
   
   return *this;
@@ -497,6 +803,7 @@ void Particle::make_copy(const Particle &another)
   
   this->parameters = another.parameters;
   
+  /*
   this->gradient_estimator_outputs = boost::unordered_map<const ProposalKernel*, GradientEstimatorOutput*>();
   this->gradient_estimator_outputs.reserve(another.gradient_estimator_outputs.size());
   for (auto i=another.gradient_estimator_outputs.begin();
@@ -508,10 +815,12 @@ void Particle::make_copy(const Particle &another)
     else
       this->gradient_estimator_outputs[i->first] = NULL;
   }
+  */
   
-  this->move_transformed_parameters = another.move_transformed_parameters;
-  this->move_transform = another.move_transform;
+  //this->move_transformed_parameters = another.move_transformed_parameters;
+  //this->move_transform = another.move_transform;
   
+  /*
   if (this->move_parameters==&another.parameters)
   {
     this->move_parameters = &this->parameters;
@@ -520,10 +829,17 @@ void Particle::make_copy(const Particle &another)
   {
     this->move_parameters = &this->move_transformed_parameters;
   }
+  */
   
   this->accepted_outputs = another.accepted_outputs;
   
   this->previous_self = another.previous_self;
+  
+  this->current_proposal_store = another.current_proposal_store;
+  //this->previous_proposal_store = another.previous_proposal_store;
+  
+  this->proposals_to_transform_for_pointer = another.proposals_to_transform_for_pointer;
+  this->proposals_to_find_gradient_for_pointer = another.proposals_to_find_gradient_for_pointer;
 }
 
 //Move constructor for the Particle class.
@@ -543,6 +859,7 @@ Particle& Particle::operator=(Particle &&another)
   if (this->ensemble_factor_variables!=NULL)
     delete this->ensemble_factor_variables;
   
+  /*
   for (auto i=this->gradient_estimator_outputs.begin();
        i!=this->gradient_estimator_outputs.end();
        ++i)
@@ -551,6 +868,7 @@ Particle& Particle::operator=(Particle &&another)
       delete i->second;
   }
   this->gradient_estimator_outputs.clear();
+  */
   
   this->make_copy(std::move(another));
   
@@ -587,6 +905,7 @@ void Particle::make_copy(Particle &&another)
   
   this->parameters = std::move(another.parameters);
   
+  /*
   this->gradient_estimator_outputs = boost::unordered_map<const ProposalKernel*, GradientEstimatorOutput*>();
   this->gradient_estimator_outputs.reserve(another.gradient_estimator_outputs.size());
   for (auto i=another.gradient_estimator_outputs.begin();
@@ -610,10 +929,34 @@ void Particle::make_copy(Particle &&another)
   {
     this->move_parameters = &this->move_transformed_parameters;
   }
+  */
   
   this->accepted_outputs = std::move(another.accepted_outputs);
   
   this->previous_self = another.previous_self;
+  
+  this->current_proposal_store = boost::unordered_map<const ProposalKernel*, ProposalStore>();
+  this->current_proposal_store.reserve(another.current_proposal_store.size());
+  for (auto i=another.current_proposal_store.begin();
+       i!=another.current_proposal_store.end();
+       ++i)
+  {
+    this->current_proposal_store[i->first] = std::move(i->second);
+  }
+  
+  this->proposals_to_transform_for_pointer = another.proposals_to_transform_for_pointer;
+  this->proposals_to_find_gradient_for_pointer = another.proposals_to_find_gradient_for_pointer;
+  
+  /*
+  this->previous_proposal_store = boost::unordered_map<const ProposalKernel*, ProposalStore>();
+  this->previous_proposal_store.reserve(another.previous_proposal_store.size());
+  for (auto i=another.previous_proposal_store.begin();
+       i!=another.previous_proposal_store.end();
+       ++i)
+  {
+    this->previous_proposal_store[i->first] = std::move(i->second);
+  }
+  */
   
   another.factor_variables = NULL;
   another.ensemble_factor_variables = NULL;
@@ -626,12 +969,97 @@ void Particle::make_copy(Particle &&another)
   another.subsample_previous_ensemble_target_evaluated = 0.0;
   another.subsample_ensemble_target_evaluated = 0.0;
   another.parameters = Parameters();
+  /*
   another.gradient_estimator_outputs = boost::unordered_map<const ProposalKernel*, GradientEstimatorOutput*>();
   another.move_transformed_parameters = Parameters();
   another.move_transform = NULL;
   another.move_parameters = NULL;
+  */
   another.accepted_outputs = boost::unordered_map< const ProposalKernel*, bool>();
   another.previous_self = NULL;
+  another.current_proposal_store = boost::unordered_map<const ProposalKernel*, ProposalStore>();
+  //another.previous_proposal_store = boost::unordered_map<const ProposalKernel*, ProposalStore>();
+  
+  another.proposals_to_transform_for_pointer = NULL;
+  another.proposals_to_find_gradient_for_pointer = NULL;
+}
+
+void Particle::simulate_factor_variables()
+{
+  if (this->factor_variables->get_factors()!=NULL)
+  {
+    this->factor_variables = this->factor_variables->get_factors()->simulate_factor_variables(this->parameters);
+    this->factor_variables->set_particle(this);
+  }
+}
+
+void Particle::simulate_ensemble_factor_variables()
+{
+  if (this->ensemble_factor_variables->get_ensemble_factors()!=NULL)
+  {
+    this->ensemble_factor_variables = this->ensemble_factor_variables->get_ensemble_factors()->simulate_ensemble_factor_variables(this->parameters);
+    this->ensemble_factor_variables->set_particle(this);
+  }
+}
+
+void Particle::simulate_proposal_variables(std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                                           std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in)
+{
+  this->proposals_to_find_gradient_for_pointer = proposals_to_find_gradient_for_in;
+  this->proposals_to_transform_for_pointer = proposals_to_transform_for_in;
+  
+  for (auto i=this->proposals_to_find_gradient_for_pointer->begin();
+       i!=this->proposals_to_find_gradient_for_pointer->end();
+       ++i)
+  {
+    GradientEstimatorOutput* simulated = (*i)->simulate_gradient_estimator_output();
+    if (simulated!=NULL)
+    {
+      this->current_proposal_store[*i] = ProposalStore(simulated);
+    }
+  }
+  
+  for (auto i=this->proposals_to_transform_for_pointer->begin();
+       i!=proposals_to_transform_for_pointer->end();
+       ++i)
+  {
+    boost::unordered_map< const ProposalKernel*, ProposalStore>::iterator current_transform_stored_at_proposal = this->current_proposal_store.end();
+    
+    for (auto j=this->current_proposal_store.begin();
+         j!=this->current_proposal_store.end();
+         ++j)
+    {
+      if ((*i)->get_transform()==j->first->get_transform())
+      {
+        current_transform_stored_at_proposal = j;
+      }
+    }
+    
+    auto found = this->current_proposal_store.find(*i);
+    
+    if (found != this->current_proposal_store.end())
+    {
+      if (current_transform_stored_at_proposal==this->current_proposal_store.end())
+      {
+        found->second.set_transformed_parameters((*i)->get_transform()->transform(this->parameters));
+      }
+      else
+      {
+        found->second.set_transformed_parameters(current_transform_stored_at_proposal->second.get_transformed_parameters());
+      }
+    }
+    else
+    {
+      if (current_transform_stored_at_proposal==this->current_proposal_store.end())
+      {
+        this->current_proposal_store[*i] = (*i)->get_transform()->transform(this->parameters);
+      }
+      else
+      {
+        this->current_proposal_store[*i] = current_transform_stored_at_proposal->second.get_transformed_parameters();
+      }
+    }
+  }
 }
 
 Particle Particle::copy_without_factor_variables() const
@@ -651,6 +1079,7 @@ Particle Particle::copy_without_factor_variables() const
   new_particle.parameters = this->parameters;
   new_particle.parameters.self_deep_copy_nonfixed();
   
+  /*
   new_particle.gradient_estimator_outputs = boost::unordered_map<const ProposalKernel*, GradientEstimatorOutput*>();
   new_particle.gradient_estimator_outputs.reserve(this->gradient_estimator_outputs.size());
   for (auto i=this->gradient_estimator_outputs.begin();
@@ -674,6 +1103,7 @@ Particle Particle::copy_without_factor_variables() const
   {
     new_particle.move_parameters = &new_particle.move_transformed_parameters;
   }
+  */
   
   new_particle.accepted_outputs = this->accepted_outputs;
   
@@ -937,7 +1367,7 @@ std::vector<LikelihoodEstimatorOutput*> Particle::get_likelihood_estimator_outpu
 */
 
 arma::mat Particle::direct_get_gradient_of_log(const std::string &variable,
-                                               const Index* index)
+                                               const Index* index) const
 {
   arma::mat current_parameter = this->parameters[variable];
   
@@ -969,7 +1399,7 @@ arma::mat Particle::direct_get_gradient_of_log(const std::string &variable,
 */
 
 arma::mat Particle::direct_subsample_get_gradient_of_log(const std::string &variable,
-                                                         const Index* index)
+                                                         const Index* index) const
 {
   arma::mat current_parameter = this->parameters[variable];
   
@@ -1149,40 +1579,174 @@ arma::rowvec Particle::get_rowvec(const std::vector<std::string> &state_names) c
   return this->parameters.get_rowvec(state_names);
 }
 
+/*
 GradientEstimatorOutput* Particle::initialise_gradient_estimator_output(const ProposalKernel* proposal,
-                                                                         GradientEstimator* gradient_estimator)
+                                                                        GradientEstimator* gradient_estimator)
 {
-  auto found = this->gradient_estimator_outputs.find(proposal);
+  auto found = this->current_proposal_store.find(proposal);
   
-  if (found != this->gradient_estimator_outputs.end())
+  if (found != this->current_proposal_store.end())
   {
-    return found->second;
+    if (found->second!=NULL)
+    {
+      return found->second.get_gradient_estimator_output();
+    }
+    else
+    {
+      // regenerate all of the variables needed to estimate the gradient
+      GradientEstimatorOutput* current_output = gradient_estimator->initialise();
+      found->second.set_gradient_estimator_output(current_output);
+      return current_output;
+    }
   }
   else
   {
+    Rcpp::stop("Particle::initialise_gradient_estimator_output - proposal_info should be initialised by this point.");
     // if proposal is not found, regenerate all of the variables needed to estimate the gradient
-    GradientEstimatorOutput* current_output = gradient_estimator->initialise();
-    this->gradient_estimator_outputs[proposal] = current_output;
-    return current_output;
+    //GradientEstimatorOutput* current_output = gradient_estimator->initialise();
+    //this->current_proposal_store[proposal] = Proposalnfo(current_output);
+    //return current_output;
   }
 }
 
-void Particle::set_move_transformed_parameters()
+GradientEstimatorOutput* Particle::initialise_previous_gradient_estimator_output(const ProposalKernel* proposal,
+                                                                        GradientEstimator* gradient_estimator)
 {
-  this->move_parameters = &this->parameters;
+  auto found = this->previous_proposal_store.find(proposal);
+  
+  if (found != this->previous_proposal_store.end())
+  {
+    if (found->second!=NULL)
+    {
+      return found->second.get_gradient_estimator_output();
+    }
+    else
+    {
+      // regenerate all of the variables needed to estimate the gradient
+      GradientEstimatorOutput* current_output = gradient_estimator->initialise();
+      found->second.set_gradient_estimator_output(current_output);
+      return current_output;
+    }
+  }
+  else
+  {
+    Rcpp::stop("Particle::initialise_previous_gradient_estimator_output - proposal_info should be initialised by this point.");
+    // if proposal is not found, regenerate all of the variables needed to estimate the gradient
+    //GradientEstimatorOutput* current_output = gradient_estimator->initialise();
+    //this->current_proposal_store[proposal] = Proposalnfo(current_output);
+    //return current_output;
+  }
+}
+*/
+
+/*
+void Particle::set_previous_transformed_parameters(const ProposalKernel* proposal_in)
+{
+  //this->move_parameters = &this->parameters;
+  this->previous_proposal_store[proposal_in] = ProposalStore(this->previous_self->parameters);
+  this->move_transform = NULL;
 }
 
-void Particle::set_move_transformed_parameters(Transform* transform_in)
+void Particle::set_previous_transformed_parameters(const ProposalKernel* proposal_in,
+                                                        Transform* transform_in)
 {
   // if the transform is not set, or is a different one to used previously
-  if ( (this->move_transform==NULL) || (this->move_transform!=transform_in) )
+  if ( (this->move_transform==NULL) || (this->previous_self->move_transform!=transform_in) )
   {
     this->move_transform = transform_in;
-    this->move_transformed_parameters = this->move_transform->transform(this->parameters);
+    this->previous_proposal_store[proposal_in] = ProposalStore(this->move_transform->transform(this->previous_self->parameters));
+  }
+  else
+  {
+    this->move_transform = this->previous_self->move_transform;
+    this->previous_proposal_store[proposal_in] = this->previous_self->proposal_store[proposal_in];
   }
   
-  this->move_parameters = &this->move_transformed_parameters;
+  //this->move_parameters = &this->move_transformed_parameters;
 }
+
+void Particle::set_previous(const Particle &previous_particle)
+{
+  this->previous_self = &previous_particle;
+  this->parameters = previous_particle.parameters;
+}
+*/
+
+/*
+void Particle::set_parameters(const ProposalKernel* proposal,
+                              const Parameters &proposed_transformed)
+{
+  // take the transformed parameters, store them in the ProposalInfo, and also go through the inverse transform to set the parameters
+  
+  auto found = this->current_proposal_store.find(proposal);
+  
+  if (found != this->current_proposal_store.end())
+  {
+    found->second.set_transformed_parameters(proposed_transformed);
+  }
+  else
+  {
+    Rcpp::stop("Particle::initialise_gradient_estimator_output - proposal_info should be initialised by this point.");
+  }
+  
+  if (proposal->get_transform()==NULL)
+  {
+    this->parameters.deep_overwrite_with_variables_in_argument(proposed_transformed);
+  }
+  else
+  {
+    this->parameters.deep_overwrite_with_variables_in_argument(proposal->get_transform()->inverse_transform(proposed_transformed));
+  }
+}
+*/
+
+Parameters Particle::get_transformed_parameters(const ProposalKernel* proposal_in) const
+{
+  if (proposal_in->get_transform()==NULL)
+  {
+    return this->parameters;
+  }
+  else
+  {
+    auto found = this->current_proposal_store.find(proposal_in);
+    if (found != this->current_proposal_store.end())
+    {
+      Parameters transformed_parameters = found->second.get_transformed_parameters();
+      if (transformed_parameters.is_empty())
+      {
+        return proposal_in->get_transform()->transform(this->parameters);
+      }
+      else
+      {
+        return transformed_parameters;
+      }
+    }
+    else
+    {
+      return proposal_in->get_transform()->transform(this->parameters);
+    }
+  }
+}
+
+GradientEstimatorOutput* Particle::get_gradient_estimator_output(const ProposalKernel* proposal_in) const
+{
+  auto found = this->current_proposal_store.find(proposal_in);
+  if (found != this->current_proposal_store.end())
+  {
+      return found->second.get_gradient_estimator_output();
+  }
+  else
+  {
+    Rcpp::stop("Particle::get_gradient_estimator_output - gradient information not found for proposal.");
+  }
+}
+
+/*
+Parameters Particle::get_previous_transformed_parameters(const ProposalKernel* proposal_in) const
+{
+  return this->previous_proposal_store[proposal_in].get_transformed_parameters();
+}
+*/
 
 void Particle::set_acceptance(const ProposalKernel* proposal_in,
                                bool accepted_in)

@@ -43,7 +43,7 @@ public:
                                                               const Parameters &conditioned_on_parameters);
   */
   
-  double evaluate_likelihoods(const Index* index);
+  double evaluate_likelihoods(const Index* index) const;
   /*
   double evaluate_likelihoods(const Index* index,
                               const Parameters &conditioned_on_parameters);
@@ -59,26 +59,26 @@ public:
                                                                         const Parameters &conditioned_on_parameters);
   */
   
-  double subsample_evaluate_likelihoods(const Index* index);
+  double subsample_evaluate_likelihoods(const Index* index) const;
   /*
   double subsample_evaluate_likelihoods(const Index* index,
                                         const Parameters &conditioned_on_parameters);
   */
   
-  arma::mat direct_get_gradient_of_log(const std::string &variable);
+  arma::mat direct_get_gradient_of_log(const std::string &variable) const;
   /*
   arma::mat direct_get_gradient_of_log(const std::string &variable,
                                        const Parameters &conditioned_on_parameters);
   */
   
-  arma::mat direct_subsample_get_gradient_of_log(const std::string &variable);
+  arma::mat direct_subsample_get_gradient_of_log(const std::string &variable) const;
   /*
   arma::mat direct_subsample_get_gradient_of_log(const std::string &variable,
                                                  const Parameters &conditioned_on_parameters);
   */
   
   arma::mat direct_get_gradient_of_log(const Index* index,
-                                       const std::string &variable);
+                                       const std::string &variable) const;
   /*
   arma::mat direct_get_gradient_of_log(const Index* index,
                                        const std::string &variable,
@@ -86,7 +86,7 @@ public:
   */
   
   arma::mat direct_subsample_get_gradient_of_log(const Index* index,
-                                                 const std::string &variable);
+                                                 const std::string &variable) const;
   /*
   arma::mat direct_subsample_get_gradient_of_log(const Index* index,
                                                  const std::string &variable,

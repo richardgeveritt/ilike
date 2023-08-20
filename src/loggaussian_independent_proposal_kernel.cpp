@@ -274,3 +274,19 @@ void LogGaussianIndependentProposalKernel::set_proposal_parameters(Parameters* p
 {
   
 }
+
+GradientEstimatorOutput* LogGaussianIndependentProposalKernel::simulate_gradient_estimator_output() const
+{
+  return NULL;
+}
+
+std::vector<ProposalKernel*> LogGaussianIndependentProposalKernel::get_proposals()
+{
+  std::vector<ProposalKernel*> output;
+  output.push_back(this);
+  return output;
+}
+
+void LogGaussianIndependentProposalKernel::set_index(Index* index_in)
+{
+}

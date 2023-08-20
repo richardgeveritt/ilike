@@ -17,6 +17,9 @@ public:
 
   CustomDistributionFactor(EvaluateLogDistributionPtr distribution_in);
   
+  CustomDistributionFactor(EvaluateLogDistributionPtr distribution_in,
+                           EvaluateGradientLogDistributionPtr distribution_gradient_in);
+  
   virtual ~CustomDistributionFactor();
 
   CustomDistributionFactor(const CustomDistributionFactor &another);

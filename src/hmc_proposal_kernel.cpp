@@ -13,7 +13,8 @@ HMCProposalKernel::~HMCProposalKernel()
 {
 }
 
-HMCProposalKernel::HMCProposalKernel(const std::vector<std::string> &variable_names_in)
+HMCProposalKernel::HMCProposalKernel(const std::vector<std::string> &variable_names_in,
+                                     GradientEstimator* gradient_estimator_in)
 :ProposalKernel()
 {
   std::vector<arma::mat> covariances_in;
@@ -28,7 +29,8 @@ HMCProposalKernel::HMCProposalKernel(const std::vector<std::string> &variable_na
 }
 
 HMCProposalKernel::HMCProposalKernel(const std::vector<std::string> &variable_names_in,
-                                     const std::vector<arma::mat> &covariances_in)
+                                     const std::vector<arma::mat> &covariances_in,
+                                     GradientEstimator* gradient_estimator_in)
 :ProposalKernel()
 {
   std::vector<std::string> covariance_names_in;
@@ -40,7 +42,8 @@ HMCProposalKernel::HMCProposalKernel(const std::vector<std::string> &variable_na
 }
 
 HMCProposalKernel::HMCProposalKernel(const std::vector<std::string> &variable_names_in,
-                                     const std::vector<std::string> &covariance_names_in)
+                                     const std::vector<std::string> &covariance_names_in,
+                                     GradientEstimator* gradient_estimator_in)
 :ProposalKernel()
 {
   std::vector<arma::mat> covariances_in;
@@ -52,7 +55,8 @@ HMCProposalKernel::HMCProposalKernel(const std::vector<std::string> &variable_na
 }
 
 HMCProposalKernel::HMCProposalKernel(const std::string &variable_name_in,
-                                     const arma::mat &covariance_in)
+                                     const arma::mat &covariance_in,
+                                     GradientEstimator* gradient_estimator_in)
 :ProposalKernel()
 {
   /*
@@ -65,9 +69,25 @@ HMCProposalKernel::HMCProposalKernel(const std::string &variable_name_in,
   */
 }
 
+HMCProposalKernel::HMCProposalKernel(const std::string &variable_name_in,
+                                     const double &sd_in,
+                                     GradientEstimator* gradient_estimator_in)
+:ProposalKernel()
+{
+  /*
+   this->unused_variables_kept = true;
+   
+   this->gradient_estimator = NULL;
+   this->index = NULL;
+   
+   this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in);
+   */
+}
+
 HMCProposalKernel::HMCProposalKernel(const std::vector<std::string> &variable_names_in,
-                                                                   const std::vector<std::string> &covariance_names_in,
-                                                                   const std::vector<arma::mat> &covariances_in)
+                                     const std::vector<std::string> &covariance_names_in,
+                                     const std::vector<arma::mat> &covariances_in,
+                                     GradientEstimator* gradient_estimator_in)
 :ProposalKernel()
 {
 }
@@ -103,8 +123,8 @@ void HMCProposalKernel::make_copy(const HMCProposalKernel &another)
   this->covariance_names = another.covariance_names;
 }
 
-double HMCProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
-                                                   Particle &old_particle) const
+double HMCProposalKernel::specific_evaluate_kernel(const Particle &proposed_particle,
+                                                   const Particle &old_particle) const
 {
   double output = 0.0;
   /*
@@ -128,8 +148,8 @@ double HMCProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
 }
 */
 
-double HMCProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                                             Particle &old_particle) const
+double HMCProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
+                                                             const Particle &old_particle) const
 {
   // needs changing
   double output = 0.0;
@@ -156,11 +176,11 @@ double HMCProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_
 */
 
 Parameters HMCProposalKernel::simulate(RandomNumberGenerator &rng,
-                                       Particle &particle) const
+                                       const Particle &particle) const
 {
   Parameters output;
-  if (this->unused_variables_kept)
-    output = *particle.move_parameters;
+  //if (this->unused_variables_kept)
+  //  output = particle.get_transformed_parameters(this);
   return output;
 }
 
@@ -177,12 +197,12 @@ Parameters HMCProposalKernel::simulate(RandomNumberGenerator &rng,
 */
 
 Parameters HMCProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                 Particle &particle) const
+                                                 const Particle &particle) const
 {
   // needs changing
   Parameters output;
-  if (this->unused_variables_kept)
-    output = *particle.move_parameters;
+  //if (this->unused_variables_kept)
+  //  output = particle.get_transformed_parameters(this);
   return output;
 }
 
@@ -201,12 +221,12 @@ Parameters HMCProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
 
 Parameters HMCProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                  const std::string &variable,
-                                                 Particle &particle) const
+                                                 const Particle &particle) const
 {
   // needs changing
   Parameters output;
-  if (this->unused_variables_kept)
-    output = *particle.move_parameters;
+  //if (this->unused_variables_kept)
+  //  output = particle.get_transformed_parameters(this);
   return output;
 }
 
@@ -225,8 +245,8 @@ Parameters HMCProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
 */
 
 arma::mat HMCProposalKernel::specific_gradient_of_log(const std::string &variable,
-                                                      Particle &proposed_particle,
-                                                      Particle &old_particle)
+                                                      const Particle &proposed_particle,
+                                                      const Particle &old_particle)
 {
   Rcpp::stop("HMCProposalKernel::specific_gradient_of_log - not written yet.");
 }
@@ -242,8 +262,8 @@ arma::mat HMCProposalKernel::specific_gradient_of_log(const std::string &variabl
 */
 
 arma::mat HMCProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
-                                                                Particle &proposed_particle,
-                                                                Particle &old_particle)
+                                                                const Particle &proposed_particle,
+                                                                const Particle &old_particle)
 {
   Rcpp::stop("HMCProposalKernel::specific_gradient_of_log - not written yet.");
 }
@@ -261,4 +281,23 @@ arma::mat HMCProposalKernel::specific_subsample_gradient_of_log(const std::strin
 void HMCProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
 {
   
+}
+
+GradientEstimatorOutput* HMCProposalKernel::simulate_gradient_estimator_output() const
+{
+  //GradientEstimatorOutput* current_output = gradient_estimator->initialise();
+  //current_output->simulate_auxiliary_variables();
+  //return current_output;
+  return NULL;
+}
+
+std::vector<ProposalKernel*> HMCProposalKernel::get_proposals()
+{
+  std::vector<ProposalKernel*> output;
+  output.push_back(this);
+  return output;
+}
+
+void HMCProposalKernel::set_index(Index* index_in)
+{
 }

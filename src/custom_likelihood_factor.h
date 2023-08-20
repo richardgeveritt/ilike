@@ -16,6 +16,9 @@ public:
   CustomLikelihoodFactor();
   CustomLikelihoodFactor(EvaluateLogLikelihoodPtr likelihood_in,
                          Data* data_in);
+  CustomLikelihoodFactor(EvaluateLogLikelihoodPtr likelihood_in,
+                         EvaluateGradientLogLikelihoodPtr likelihood_gradient_in,
+                         Data* data_in);
 
   virtual ~CustomLikelihoodFactor();
 

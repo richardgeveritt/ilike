@@ -213,3 +213,19 @@ arma::mat CustomGuidedIndependentProposalKernel::subsample_independent_gradient_
   Rcpp::stop("CustomGuidedIndependentProposalKernel::subsample_independent_gradient_of_log - not written yet.");
 }
 */
+
+GradientEstimatorOutput* CustomGuidedIndependentProposalKernel::simulate_gradient_estimator_output() const
+{
+  return NULL;
+}
+
+std::vector<ProposalKernel*> CustomGuidedIndependentProposalKernel::get_proposals()
+{
+  std::vector<ProposalKernel*> output;
+  output.push_back(this);
+  return output;
+}
+
+void CustomGuidedIndependentProposalKernel::set_index(Index* index_in)
+{
+}

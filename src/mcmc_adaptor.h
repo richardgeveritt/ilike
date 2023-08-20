@@ -24,7 +24,7 @@ public:
   void operator=(const MCMCAdaptor &another);
   virtual MCMCAdaptor* duplicate() const=0;
   
-  void mcmc_adapt(Particle &latest_particle,
+  void mcmc_adapt(const Particle &latest_particle,
                   size_t iteration_counter);
   
 // Mh has its own parameters.

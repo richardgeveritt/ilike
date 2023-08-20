@@ -6,7 +6,6 @@ using namespace Rcpp;
 
 #include <string>
 #include "particle.h"
-#include "parameters.h"
 
 class GradientEstimatorOutput
 {
@@ -23,7 +22,11 @@ public:
   
   virtual arma::mat get_gradient_of_log(const std::string &variable,
                                         const Index* index,
-                                        Particle &particle)=0;
+                                        const Particle &particle)=0;
+  
+  //virtual arma::mat get_gradient_of_log_at_previous(const std::string &variable,
+  //                                                  const Index* index,
+  //                                                  const Particle &particle)=0;
   
   /*
   virtual arma::mat get_gradient_of_log(const std::string &variable,
@@ -34,7 +37,13 @@ public:
   
   virtual arma::mat subsample_get_gradient_of_log(const std::string &variable,
                                                   const Index* index,
-                                                  Particle &particle)=0;
+                                                  const Particle &particle)=0;
+  
+  //virtual arma::mat subsample_get_gradient_of_log_at_previous(const std::string &variable,
+  //                                                            const Index* index,
+  //                                                            const Particle &particle)=0;
+  
+  virtual void simulate_auxiliary_variables()=0;
   
   /*
   virtual arma::mat subsample_get_gradient_of_log(const std::string &variable,

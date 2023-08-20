@@ -24,13 +24,20 @@ public:
   virtual ~BarkerDynamicsProposalKernel();
   
   // find cov adaptively
-  BarkerDynamicsProposalKernel(const std::vector<std::string> &variable_names_in);
+  BarkerDynamicsProposalKernel(const std::vector<std::string> &variable_names_in,
+                               GradientEstimator* gradient_estimator_in);
   
   BarkerDynamicsProposalKernel(const std::vector<std::string> &variable_names_in,
-                               const std::vector<arma::mat> &covariances_in);
+                               const std::vector<arma::mat> &covariances_in,
+                               GradientEstimator* gradient_estimator_in);
   
   BarkerDynamicsProposalKernel(const std::string &variable_name_in,
-                               const arma::mat &covariance_in);
+                               const arma::mat &covariance_in,
+                               GradientEstimator* gradient_estimator_in);
+  
+  BarkerDynamicsProposalKernel(const std::string &variable_name_in,
+                               const double &sd_in,
+                               GradientEstimator* gradient_estimator_in);
 
   BarkerDynamicsProposalKernel(const BarkerDynamicsProposalKernel &another);
 
@@ -39,6 +46,12 @@ public:
   ProposalKernel* proposal_kernel_duplicate() const;
   
   void set_proposal_parameters(Parameters* proposal_parameters_in);
+
+  GradientEstimatorOutput* simulate_gradient_estimator_output() const;
+  
+  std::vector<ProposalKernel*> get_proposals();
+  
+  void set_index(Index* index_in);
   
 // Mh has its own parameters.
   // Stochastic has some weights.
@@ -47,8 +60,8 @@ public:
 
 protected:
   
-  double specific_evaluate_kernel(Particle &proposed_particle,
-                                  Particle &old_particle) const;
+  double specific_evaluate_kernel(const Particle &proposed_particle,
+                                  const Particle &old_particle) const;
   
   /*
   double specific_evaluate_kernel(Particle &proposed_particle,
@@ -56,8 +69,8 @@ protected:
                                   const Parameters &conditioned_on_parameters) const;
   */
   
-  double specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                            Particle &old_particle) const;
+  double specific_subsample_evaluate_kernel(const Particle &proposed_particle,
+                                            const Particle &old_particle) const;
   
   /*
   double specific_subsample_evaluate_kernel(Particle &proposed_particle,
@@ -66,7 +79,7 @@ protected:
   */
   
   Parameters simulate(RandomNumberGenerator &rng,
-                      Particle &particle) const;
+                      const Particle &particle) const;
   
   /*
   Parameters simulate(RandomNumberGenerator &rng,
@@ -75,7 +88,7 @@ protected:
   */
   
   Parameters subsample_simulate(RandomNumberGenerator &rng,
-                                Particle &particle) const;
+                                const Particle &particle) const;
   
   /*
   Parameters subsample_simulate(RandomNumberGenerator &rng,
@@ -85,7 +98,7 @@ protected:
   
   Parameters subsample_simulate(RandomNumberGenerator &rng,
                                 const std::string &variable,
-                                Particle &particle) const;
+                                const Particle &particle) const;
   
   /*
   Parameters subsample_simulate(RandomNumberGenerator &rng,
@@ -95,12 +108,12 @@ protected:
   */
   
   arma::mat specific_gradient_of_log(const std::string &variable,
-                                     Particle &proposed_particle,
-                                     Particle &old_particle);
+                                     const Particle &proposed_particle,
+                                     const Particle &old_particle);
   
   arma::mat specific_subsample_gradient_of_log(const std::string &variable,
-                                               Particle &proposed_particle,
-                                               Particle &old_particle);
+                                               const Particle &proposed_particle,
+                                               const Particle &old_particle);
   
   /*
   arma::mat specific_gradient_of_log(const std::string &variable,
@@ -123,7 +136,10 @@ protected:
   
   boost::unordered_map< std::string, GaussianProposalInfo> proposal_info;
   
+  boost::unordered_map< Particle*, ProposalStore> proposal_store;
+  
   // must simulate each dimension of all variables specified in variable names independently from a symmetric proposal
+  // to work, must work on transformed space, with transformation the same as this
   // stored here
   IndependentProposalKernel* proposal_simulate;
   

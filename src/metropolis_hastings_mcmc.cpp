@@ -112,7 +112,7 @@ void MetropolisHastingsMCMC::make_copy(const MetropolisHastingsMCMC &another)
 }
 
 Particle MetropolisHastingsMCMC::move(RandomNumberGenerator &rng,
-                                      Particle &particle) const
+                                      const Particle &particle) const
 {
   Particle proposed_particle = this->proposal->move(rng,
                                                     particle);
@@ -124,10 +124,12 @@ Particle MetropolisHastingsMCMC::move(RandomNumberGenerator &rng,
       this->proposal->evaluate_kernel(particle, proposed_particle) -
       this->proposal->evaluate_kernel(proposed_particle, particle))
   {
+    proposed_particle.set_acceptance(this->proposal,true);
     return proposed_particle;
   }
   else
   {
+    //particle.set_acceptance(this->proposal,false);
     return particle;
   }
   
@@ -161,7 +163,7 @@ Particle MetropolisHastingsMCMC::move(RandomNumberGenerator &rng,
 */
 
 Particle MetropolisHastingsMCMC::subsample_move(RandomNumberGenerator &rng,
-                                                Particle &particle) const
+                                                const Particle &particle) const
 {
   Particle proposed_particle = this->proposal->subsample_move(rng,
                                                               particle);
@@ -178,7 +180,7 @@ Particle MetropolisHastingsMCMC::subsample_move(RandomNumberGenerator &rng,
   }
   else
   {
-    proposed_particle.set_acceptance(this->proposal,false);
+    //proposed_particle.set_acceptance(this->proposal,false);
     return particle;
   }
   
@@ -302,7 +304,7 @@ void MetropolisHastingsMCMC::ensemble_adapt(EnsembleKalmanOutput* current_state)
   this->proposal->ensemble_adapt(current_state);
 }
 
-void MetropolisHastingsMCMC::specific_mcmc_adapt(Particle &current_particle,
+void MetropolisHastingsMCMC::specific_mcmc_adapt(const Particle &current_particle,
                                                  size_t iteration_counter)
 {
   this->proposal->mcmc_adapt(current_particle,
@@ -315,9 +317,17 @@ void MetropolisHastingsMCMC::set_index(Index* index_in)
     delete this->index;
   
   this->index = index_in;
+  this->proposal->set_index(index_in);
 }
 
 void MetropolisHastingsMCMC::set_proposal_parameters(Parameters* proposal_parameters_in)
 {
   this->proposal->set_proposal_parameters(proposal_parameters_in);
+}
+
+std::vector<ProposalKernel*> MetropolisHastingsMCMC::get_proposals() const
+{
+  std::vector<ProposalKernel*> proposals = this->proposal->get_proposals();
+  //proposals.push_back(this->proposal);
+  return proposals;
 }

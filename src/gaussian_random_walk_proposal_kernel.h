@@ -50,6 +50,14 @@ public:
   
   void set_proposal_parameters(Parameters* proposal_parameters_in);
   
+  std::vector<std::string> get_variables() const;
+  
+  GradientEstimatorOutput* simulate_gradient_estimator_output() const;
+  
+  std::vector<ProposalKernel*> get_proposals();
+  
+  void set_index(Index* index_in);
+  
 // Mh has its own parameters.
   // Stochastic has some weights.
   // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.
@@ -57,10 +65,10 @@ public:
 
 protected:
   
-  bool unused_variables_kept;
+  //bool unused_variables_kept;
   
-  double specific_evaluate_kernel(Particle &proposed_particle,
-                                  Particle &old_particle) const;
+  double specific_evaluate_kernel(const Particle &proposed_particle,
+                                  const Particle &old_particle) const;
   
   /*
   double specific_evaluate_kernel(Particle &proposed_particle,
@@ -68,8 +76,8 @@ protected:
                                   const Parameters &conditioned_on_parameters) const;
   */
   
-  double specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                            Particle &old_particle) const;
+  double specific_subsample_evaluate_kernel(const Particle &proposed_particle,
+                                            const Particle &old_particle) const;
   
   /*
   double specific_subsample_evaluate_kernel(Particle &proposed_particle,
@@ -78,7 +86,7 @@ protected:
   */
   
   Parameters simulate(RandomNumberGenerator &rng,
-                      Particle &particle) const;
+                      const Particle &particle) const;
   
   /*
   Parameters simulate(RandomNumberGenerator &rng,
@@ -87,7 +95,7 @@ protected:
   */
   
   Parameters subsample_simulate(RandomNumberGenerator &rng,
-                                Particle &particle) const;
+                                const Particle &particle) const;
   
   /*
   Parameters subsample_simulate(RandomNumberGenerator &rng,
@@ -97,7 +105,7 @@ protected:
   
   Parameters subsample_simulate(RandomNumberGenerator &rng,
                                 const std::string &variable,
-                                Particle &particle) const;
+                                const Particle &particle) const;
   
   /*
   Parameters subsample_simulate(RandomNumberGenerator &rng,
@@ -107,8 +115,8 @@ protected:
   */
   
   arma::mat specific_gradient_of_log(const std::string &variable,
-                                     Particle &proposed_particle,
-                                     Particle &old_particle);
+                                     const Particle &proposed_particle,
+                                     const Particle &old_particle);
   /*
   arma::mat specific_gradient_of_log(const std::string &variable,
                                      Particle &proposed_particle,
@@ -117,8 +125,8 @@ protected:
   */
   
   arma::mat specific_subsample_gradient_of_log(const std::string &variable,
-                                               Particle &proposed_particle,
-                                               Particle &old_particle);
+                                               const Particle &proposed_particle,
+                                               const Particle &old_particle);
   
   /*
   arma::mat specific_subsample_gradient_of_log(const std::string &variable,

@@ -19,7 +19,8 @@ AlwaysSMCTermination::AlwaysSMCTermination(const AlwaysSMCTermination &another)
 
 void AlwaysSMCTermination::operator=(const AlwaysSMCTermination &another)
 {
-  if(this == &another){ //if a==a
+  if(this == &another)
+  {
     return;
   }
   
@@ -27,7 +28,7 @@ void AlwaysSMCTermination::operator=(const AlwaysSMCTermination &another)
   this->make_copy(another);
 }
 
-SMCTermination* AlwaysSMCTermination::duplicate(void)const
+SMCTermination* AlwaysSMCTermination::duplicate() const
 {
   return( new AlwaysSMCTermination(*this));
 }

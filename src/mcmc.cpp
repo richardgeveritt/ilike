@@ -74,10 +74,11 @@ void MCMC::make_copy(const MCMC &another)
 }
 
 MoveOutput* MCMC::run(RandomNumberGenerator &rng,
-                      Particle &particle)
+                      const Particle &particle)
 
 {
   StandardMCMCOutput* mcmc_output = new StandardMCMCOutput();
+  
   Particle current_particle = particle;
   while (!this->termination->terminate())
   {
@@ -115,7 +116,7 @@ MoveOutput* MCMC::run(RandomNumberGenerator &rng,
 */
 
 MoveOutput* MCMC::subsample_run(RandomNumberGenerator &rng,
-                                Particle &particle)
+                                const Particle &particle)
 
 {
   StandardMCMCOutput* mcmc_output = new StandardMCMCOutput();
@@ -212,12 +213,14 @@ EnsembleMember MCMC::subsample_run(RandomNumberGenerator &rng,
 }
 */
 
-void MCMC::mcmc_adapt(Particle &current_particle,
+void MCMC::mcmc_adapt(const Particle &current_particle,
                       size_t iteration_counter)
 {
   this->specific_mcmc_adapt(current_particle,
                             iteration_counter);
-  current_particle.erase_mcmc_adaptation_info();
+  
+  //Rcpp::stop("MCMC::mcmc_adapt - need to clear adaptation info.");
+  //current_particle.erase_mcmc_adaptation_info();
 }
 
 size_t* MCMC::get_iteration_counter_pointer()

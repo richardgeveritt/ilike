@@ -151,6 +151,7 @@ ExactLikelihoodEstimator::~ExactLikelihoodEstimator()
       delete *i;
   }
   
+  /*
   for (auto i=this->numerator_proposals.begin();
        i!=this->numerator_proposals.end();
        ++i)
@@ -158,6 +159,7 @@ ExactLikelihoodEstimator::~ExactLikelihoodEstimator()
     if (*i!=NULL)
       delete *i;
   }
+  */
 }
 
 //Copy constructor for the ExactLikelihoodEstimator class.
@@ -276,7 +278,7 @@ void ExactLikelihoodEstimator::setup(const Parameters &parameters)
   
 }
 
-double ExactLikelihoodEstimator::evaluate(const Parameters &parameters)
+double ExactLikelihoodEstimator::evaluate(const Parameters &parameters) const
 {
   double result = 0.0;
   
@@ -313,7 +315,7 @@ double ExactLikelihoodEstimator::evaluate(const Parameters &parameters)
   return result;
 }
 
-double ExactLikelihoodEstimator::subsample_evaluate(const Parameters &parameters)
+double ExactLikelihoodEstimator::subsample_evaluate(const Parameters &parameters) const
 {
   double result = 0.0;
   
@@ -353,7 +355,7 @@ double ExactLikelihoodEstimator::subsample_evaluate(const Parameters &parameters
 }
 
 arma::mat ExactLikelihoodEstimator::evaluate_gradient(const std::string &variable,
-                                                      const Parameters &parameters)
+                                                      const Parameters &parameters) const
 {
   
   arma::mat parameter = parameters[variable];
@@ -388,7 +390,7 @@ arma::mat ExactLikelihoodEstimator::evaluate_gradient(const std::string &variabl
 }
 
 arma::mat ExactLikelihoodEstimator::subsample_evaluate_gradient(const std::string &variable,
-                                                                const Parameters &parameters)
+                                                                const Parameters &parameters) const
 {
   
   arma::mat parameter = parameters[variable];

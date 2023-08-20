@@ -201,3 +201,20 @@ void TransformedIndependentProposalKernel::set_proposal_parameters(Parameters* p
 {
   this->proposal->set_proposal_parameters(proposal_parameters_in);
 }
+
+GradientEstimatorOutput* TransformedIndependentProposalKernel::simulate_gradient_estimator_output() const
+{
+  return NULL;
+}
+
+std::vector<ProposalKernel*> TransformedIndependentProposalKernel::get_proposals()
+{
+  std::vector<ProposalKernel*> proposals = this->proposal->get_proposals();
+  proposals.push_back(this);
+  return proposals;
+}
+
+void TransformedIndependentProposalKernel::set_index(Index* index_in)
+{
+  this->proposal->set_index(index_in);
+}

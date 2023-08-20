@@ -55,32 +55,32 @@ void CustomSymmetricProposalKernel::make_copy(const CustomSymmetricProposalKerne
   this->proposal_parameters = another.proposal_parameters;
 }
 
-double CustomSymmetricProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
-                                                      Particle &old_particle) const
+double CustomSymmetricProposalKernel::specific_evaluate_kernel(const Particle &proposed_particle,
+                                                               const Particle &old_particle) const
 {
-  return this->proposal_evaluate(*proposed_particle.move_parameters,
-                                 *old_particle.move_parameters,
+  return this->proposal_evaluate(proposed_particle.get_transformed_parameters(this),
+                                 old_particle.get_transformed_parameters(this),
                                  *this->proposal_parameters);
 }
 
-double CustomSymmetricProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                                                Particle &old_particle) const
+double CustomSymmetricProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
+                                                                         const Particle &old_particle) const
 {
   // no difference since size of data set does not impact on proposal
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
 
 Parameters CustomSymmetricProposalKernel::simulate(RandomNumberGenerator &rng,
-                                          Particle &particle) const
+                                                   const Particle &particle) const
 {
   return this->proposal_simulate(rng,
-                                 *particle.move_parameters,
+                                 particle.get_transformed_parameters(this),
                                  *this->proposal_parameters);
 }
 
 
 Parameters CustomSymmetricProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                    Particle &particle) const
+                                                             const Particle &particle) const
 {
   // no difference since size of data set does not impact on proposal
   return this->simulate(rng, particle);
@@ -88,23 +88,23 @@ Parameters CustomSymmetricProposalKernel::subsample_simulate(RandomNumberGenerat
 
 
 Parameters CustomSymmetricProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                    const std::string &variable,
-                                                    Particle &particle) const
+                                                             const std::string &variable,
+                                                             const Particle &particle) const
 {
   // no difference since size of data set does not impact on proposal
   Rcpp::stop("CustomSymmetricProposalKernel::subsample_simulate - not implemented.");
 }
 
 arma::mat CustomSymmetricProposalKernel::specific_gradient_of_log(const std::string &variable,
-                                                         Particle &proposed_particle,
-                                                         Particle &old_particle)
+                                                                  const Particle &proposed_particle,
+                                                                  const Particle &old_particle)
 {
   Rcpp::stop("CustomSymmetricProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
 arma::mat CustomSymmetricProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
-                                                                   Particle &proposed_particle,
-                                                                   Particle &old_particle)
+                                                                            const Particle &proposed_particle,
+                                                                            const Particle &old_particle)
 {
   Rcpp::stop("CustomSymmetricProposalKernel::specific_gradient_of_log - not written yet.");
 }
@@ -112,4 +112,20 @@ arma::mat CustomSymmetricProposalKernel::specific_subsample_gradient_of_log(cons
 void CustomSymmetricProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
 {
   this->proposal_parameters = proposal_parameters_in;
+}
+
+GradientEstimatorOutput* CustomSymmetricProposalKernel::simulate_gradient_estimator_output() const
+{
+  return NULL;
+}
+
+std::vector<ProposalKernel*> CustomSymmetricProposalKernel::get_proposals()
+{
+  std::vector<ProposalKernel*> output;
+  output.push_back(this);
+  return output;
+}
+
+void CustomSymmetricProposalKernel::set_index(Index* index_in)
+{
 }

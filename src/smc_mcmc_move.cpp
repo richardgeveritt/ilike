@@ -34,6 +34,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          EvaluateLogDistributionPtr evaluate_log_prior_in,
                          const std::vector<Parameters> &initial_points_in,
                          const arma::colvec &log_probabilities_of_initial_values_in,
+                         bool transform_proposed_particles,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
@@ -44,10 +45,12 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
      initial_points_in.size(),
      std::max<size_t>(2,lag_in),
      lag_proposed_in,
+     mcmc_in->get_proposals(),
      -1.0,
      false,
      true,
      true,
+     transform_proposed_particles,
      results_name_in)
 {
   mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
@@ -116,6 +119,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          MCMC* mcmc_in,
                          const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
                          IndependentProposalKernel* proposal_in,
+                         bool transform_proposed_particles,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
@@ -126,10 +130,12 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
      number_of_particles_in,
      std::max<size_t>(2,lag_in),
      lag_proposed_in,
+     mcmc_in->get_proposals(),
      -1.0,
      true,
      true,
      true,
+     transform_proposed_particles,
      results_name_in)
 {
   mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
@@ -188,6 +194,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
                          const std::vector<Parameters> &initial_points_in,
                          const arma::colvec &log_probabilities_of_initial_values_in,
+                         bool transform_proposed_particles,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
@@ -198,10 +205,12 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
      initial_points_in.size(),
      std::max<size_t>(2,lag_in),
      lag_proposed_in,
+     mcmc_in->get_proposals(),
      -1.0,
      false,
      true,
      true,
+     transform_proposed_particles,
      results_name_in)
 {
   mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
@@ -268,10 +277,11 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          SimulateDistributionPtr simulate_proposal_in,
                          EvaluateLogDistributionPtr evaluate_log_proposal_in,
                          bool mcmc_at_last_step_in,
+                         bool transform_proposed_particles,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
-:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, -1.0, true, true, true, results_name_in)
+:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, mcmc_in->get_proposals(), -1.0, true, true, true, transform_proposed_particles, results_name_in)
 {
   mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
   
@@ -402,10 +412,11 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          SimulateDistributionPtr simulate_proposal_in,
                          EvaluateLogDistributionPtr evaluate_log_proposal_in,
                          bool mcmc_at_last_step_in,
+                         bool transform_proposed_particles,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
-  :SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, true, true, true, results_name_in)
+  :SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, mcmc_in->get_proposals(), resampling_desired_ess_in, true, true, true, transform_proposed_particles, results_name_in)
 {
   mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
   
@@ -520,10 +531,11 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          SimulateDistributionPtr simulate_proposal_in,
                          EvaluateLogDistributionPtr evaluate_log_proposal_in,
                          bool mcmc_at_last_step_in,
+                         bool transform_proposed_particles,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
-:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, true, true, true, results_name_in)
+:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, mcmc_in->get_proposals(), resampling_desired_ess_in, true, true, true, transform_proposed_particles, results_name_in)
 {
   mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
   std::string variable_in = "power";
@@ -644,10 +656,11 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          bool smcfixed_flag_in,
                          bool sequencer_limit_is_fixed_in,
                          bool mcmc_at_last_step_in,
+                         bool transform_proposed_particles,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
-:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, results_name_in)
+:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, mcmc_in->get_proposals(), resampling_desired_ess_in, proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, transform_proposed_particles, results_name_in)
 {
   //Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
   
@@ -722,10 +735,11 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          bool smcfixed_flag_in,
                          bool sequencer_limit_is_fixed_in,
                          bool mcmc_at_last_step_in,
+                         bool transform_proposed_particles,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
-:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, adaptive_resampling_in, proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, results_name_in)
+:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, mcmc_in->get_proposals(), adaptive_resampling_in, proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, transform_proposed_particles, results_name_in)
 {
   //Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
   
@@ -940,6 +954,10 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
+    std::cout << current_state->back().schedule_parameters << std::endl;
+    
+    if (current_state)
+    
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
@@ -962,7 +980,7 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
 }
 
 MoveOutput* SMCMCMCMove::move(RandomNumberGenerator &rng,
-                              Particle &particle)
+                              const Particle &particle)
 {
   return this->mcmc->run(rng,
                          particle);
@@ -1352,7 +1370,7 @@ void SMCMCMCMove::weight_for_adapting_sequence(const Index* index,
 */
 
 MoveOutput* SMCMCMCMove::subsample_move(RandomNumberGenerator &rng,
-                                        Particle &particle)
+                                        const Particle &particle)
 {
   return this->mcmc->subsample_run(rng,
                                    particle);

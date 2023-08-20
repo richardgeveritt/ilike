@@ -51,32 +51,32 @@ void CustomProposalKernel::make_copy(const CustomProposalKernel &another)
   this->proposal_parameters = another.proposal_parameters;
 }
 
-double CustomProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
-                                                      Particle &old_particle) const
+double CustomProposalKernel::specific_evaluate_kernel(const Particle &proposed_particle,
+                                                      const Particle &old_particle) const
 {
-  return this->proposal_evaluate(*proposed_particle.move_parameters,
-                                 *old_particle.move_parameters,
+  return this->proposal_evaluate(proposed_particle.get_transformed_parameters(this),
+                                 old_particle.get_transformed_parameters(this),
                                  *this->proposal_parameters);
 }
 
-double CustomProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                                                Particle &old_particle) const
+double CustomProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
+                                                                const Particle &old_particle) const
 {
   // no difference since size of data set does not impact on proposal
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
 
 Parameters CustomProposalKernel::simulate(RandomNumberGenerator &rng,
-                                          Particle &particle) const
+                                          const Particle &particle) const
 {
   return this->proposal_simulate(rng,
-                                 *particle.move_parameters,
+                                 particle.get_transformed_parameters(this),
                                  *this->proposal_parameters);
 }
 
 
 Parameters CustomProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                    Particle &particle) const
+                                                    const Particle &particle) const
 {
   // no difference since size of data set does not impact on proposal
   return this->simulate(rng, particle);
@@ -85,22 +85,22 @@ Parameters CustomProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
 
 Parameters CustomProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                     const std::string &variable,
-                                                    Particle &particle) const
+                                                    const Particle &particle) const
 {
   // no difference since size of data set does not impact on proposal
   Rcpp::stop("CustomProposalKernel::subsample_simulate - not implemented.");
 }
 
 arma::mat CustomProposalKernel::specific_gradient_of_log(const std::string &variable,
-                                                         Particle &proposed_particle,
-                                                         Particle &old_particle)
+                                                         const Particle &proposed_particle,
+                                                         const Particle &old_particle)
 {
   Rcpp::stop("CustomProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
 arma::mat CustomProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
-                                                                   Particle &proposed_particle,
-                                                                   Particle &old_particle)
+                                                                   const Particle &proposed_particle,
+                                                                   const Particle &old_particle)
 {
   Rcpp::stop("CustomProposalKernel::specific_gradient_of_log - not written yet.");
 }
@@ -108,4 +108,20 @@ arma::mat CustomProposalKernel::specific_subsample_gradient_of_log(const std::st
 void CustomProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
 {
   this->proposal_parameters = proposal_parameters_in;
+}
+
+GradientEstimatorOutput* CustomProposalKernel::simulate_gradient_estimator_output() const
+{
+  return NULL;
+}
+
+std::vector<ProposalKernel*> CustomProposalKernel::get_proposals()
+{
+  std::vector<ProposalKernel*> output;
+  output.push_back(this);
+  return output;
+}
+
+void CustomProposalKernel::set_index(Index* index_in)
+{
 }

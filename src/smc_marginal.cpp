@@ -35,10 +35,11 @@ SMCMarginal::SMCMarginal(RandomNumberGenerator* rng_in,
                          EvaluateLogDistributionPtr evaluate_log_prior_in,
                          SimulateDistributionPtr simulate_proposal_in,
                          EvaluateLogDistributionPtr evaluate_log_proposal_in,
+                         bool transform_proposed_particles,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
-  :SMC(rng_in, seed_in, data_in, Parameters(), number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, double(number_of_particles_in), true, false, true, results_name_in)
+  :SMC(rng_in, seed_in, data_in, Parameters(), number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, proposal_kernel_in->get_proposals(), double(number_of_particles_in), true, false, true, transform_proposed_particles, results_name_in)
 {
   proposal_kernel_in->set_proposal_parameters(&this->algorithm_parameters);
   
@@ -373,7 +374,7 @@ void SMCMarginal::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
 // finding next target -> weight here appears to be related to type of SMC
 
 MoveOutput* SMCMarginal::move(RandomNumberGenerator &rng,
-                              Particle &particle)
+                              const Particle &particle)
 {
   return new SinglePointMoveOutput(this->proposal_kernel->move(rng,
                                                                particle));
@@ -935,7 +936,7 @@ void SMCMarginal::weight_for_adapting_sequence(const Index* index,
 */
 
 MoveOutput* SMCMarginal::subsample_move(RandomNumberGenerator &rng,
-                                        Particle &particle)
+                                        const Particle &particle)
 {
   return new SinglePointMoveOutput(this->proposal_kernel->subsample_move(rng,
                                                                          particle));

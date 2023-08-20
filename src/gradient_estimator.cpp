@@ -35,3 +35,8 @@ void GradientEstimator::make_copy(const GradientEstimator &another)
 {
   this->proposal = another.proposal;
 }
+
+void GradientEstimator::set_proposal(const ProposalKernel* proposal_in)
+{
+  this->proposal = proposal_in;
+}

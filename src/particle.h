@@ -12,7 +12,7 @@ using namespace Rcpp;
 //#include "variables.h"
 #include "index.h"
 #include "distributions.h"
-//#include "ensemble_member.h"
+#include "proposal_store.h"
 
 class ModelAndAlgorithm;
 class LikelihoodEstimatorOutput;
@@ -33,33 +33,92 @@ public:
   Particle();
   //Particle(const Parameters &&parameters_in);
   
+  Particle(const Parameters &parameters_in);
+  
   Particle(const Parameters &parameters_in,
-           EnsembleFactors* ensemble_factors_in);
-  Particle(Parameters &&parameters_in,
-           Factors* factors_in);
-  Particle(Parameters &&parameters_in,
            Factors* factors_in,
+           std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+           std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in);
+  
+  Particle(const Parameters &parameters_in,
+           Factors* factors_in,
+           std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+           std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
            const Parameters &conditioned_on_parameters);
-  Particle(Parameters &&parameters_in,
+  
+  Particle(const Parameters &parameters_in,
            Factors* factors_in,
+           std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+           std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
            const Parameters &conditioned_on_parameters,
            const Parameters &sequencer_parameters);
+  
+  Particle(const Parameters &parameters_in,
+           FactorVariables* factor_variables_in);
+  
+  Particle(const Parameters &parameters_in,
+           FactorVariables* factor_variables_in,
+           double previous_target_evaluated_in);
+  
+  Particle(const Parameters &parameters_in,
+           EnsembleFactors* ensemble_factors_in);
+  
+  Particle(const Parameters &parameters_in,
+           EnsembleFactors* ensemble_factors_in,
+           const Parameters &conditioned_on_parameters);
+  
+  Particle(const Parameters &parameters_in,
+           EnsembleFactors* ensemble_factors_in,
+           const Parameters &conditioned_on_parameters,
+           const Parameters &sequencer_parameters);
+  
+  Particle(const Parameters &parameters_in,
+           EnsembleFactorVariables* ensemble_factor_variables_in);
+  
+  
+  Particle(Parameters &&parameters_in);
+  
+  Particle(Parameters &&parameters_in,
+           Factors* factors_in,
+           std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+           std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in);
+  
+  Particle(Parameters &&parameters_in,
+           Factors* factors_in,
+           std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+           std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
+           const Parameters &conditioned_on_parameters);
+  
+  Particle(Parameters &&parameters_in,
+           Factors* factors_in,
+           std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+           std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
+           const Parameters &conditioned_on_parameters,
+           const Parameters &sequencer_parameters);
+  
   Particle(Parameters &&parameters_in,
            FactorVariables* factor_variables_in);
+  
   Particle(Parameters &&parameters_in,
            FactorVariables* factor_variables_in,
            double previous_target_evaluated_in);
+  
   Particle(Parameters &&parameters_in,
            EnsembleFactors* ensemble_factors_in);
+  
   Particle(Parameters &&parameters_in,
            EnsembleFactors* ensemble_factors_in,
            const Parameters &conditioned_on_parameters);
+  
   Particle(Parameters &&parameters_in,
            EnsembleFactors* ensemble_factors_in,
            const Parameters &conditioned_on_parameters,
            const Parameters &sequencer_parameters);
+  
   Particle(Parameters &&parameters_in,
            EnsembleFactorVariables* ensemble_factor_variables_in);
+  
+  
   virtual ~Particle();
   
   void setup(Factors* factors_in);
@@ -96,6 +155,11 @@ public:
   Particle& operator=(Particle &&another);
 
   friend std::ostream& operator<<(std::ostream& os, const Particle &p);
+  
+  void simulate_factor_variables();
+  void simulate_ensemble_factor_variables();
+  void simulate_proposal_variables(std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                                   std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in);
   
   /*
   void evaluate_smcfixed_part_of_likelihoods();
@@ -187,24 +251,57 @@ public:
   
   arma::rowvec get_rowvec(const std::vector<std::string> &state_names) const;
   
-  void set_move_transformed_parameters();
-  void set_move_transformed_parameters(Transform* transform_in);
+  Parameters get_transformed_parameters(const ProposalKernel* proposal_in) const;
+  
+  GradientEstimatorOutput* get_gradient_estimator_output(const ProposalKernel* proposal_in) const;
+  /*
+  void set_current_transformed_parameters(const ProposalKernel* proposal_in);
+  void set_previous_transformed_parameters(const ProposalKernel* proposal_in,
+                                                Transform* transform_in);
+  
+  void set_previous(const Particle &previous_particle);
+  
+  Parameters get_previous_transformed_parameters(const ProposalKernel* proposal_in) const;
+  */
+   
+  //void set_previous_move_transformed_parameters();
+  //void set_previous_move_transformed_parameters(Transform* transform_in);
   
   Parameters parameters;
   
   // parameters after they've been put through the transformation of the move recent move
-  Parameters move_transformed_parameters;
+  //Parameters move_transformed_parameters;
+  //Parameters previous_move_transformed_parameters;
+  
+  boost::unordered_map< const ProposalKernel*, ProposalStore> current_proposal_store;
+  
+  std::vector<ProposalKernel*>* proposals_to_transform_for_pointer;
+  std::vector<ProposalKernel*>* proposals_to_find_gradient_for_pointer;
+  
+  //boost::unordered_map< const ProposalKernel*, ProposalStore> previous_proposal_store;
   
   // not stored here - this points to one of the above, depending on which one if being used by the current move
-  Parameters* move_parameters;
+  //Parameters* move_parameters;
+  
+  // not stored here
+  //Transform* move_transform;
   
   // Parameters stored here, proposal kernel is pointed to.
-  boost::unordered_map< const ProposalKernel*, GradientEstimatorOutput*> gradient_estimator_outputs;
+  //boost::unordered_map< const ProposalKernel*, GradientEstimatorOutput*> gradient_estimator_outputs;
   
   // pointer returned will be owned by this class
   // function is member of Variables since we will not always create a new GradientEstimatorOutput if one already exists for this proposal
+  /*
   GradientEstimatorOutput* initialise_gradient_estimator_output(const ProposalKernel* proposal,
                                                                 GradientEstimator* gradient_estimator);
+  
+  GradientEstimatorOutput* initialise_previous_gradient_estimator_output(const ProposalKernel* proposal,
+                                                                         GradientEstimator* gradient_estimator);
+  */
+  
+  // take the transformed parameters, store them in the ProposalInfo, and also go through the inverse transform to set the parameters
+  //void set_parameters(const ProposalKernel* proposal,
+  //                    const Parameters &proposed_transformed);
   
   // Proposal kernel is pointed to
   boost::unordered_map< const ProposalKernel*, bool> accepted_outputs;
@@ -233,7 +330,7 @@ public:
   EnsembleFactorVariables* ensemble_factor_variables;
   
   arma::mat direct_get_gradient_of_log(const std::string &variable,
-                                       const Index* index);
+                                       const Index* index) const;
   
   /*
   arma::mat direct_get_gradient_of_log(const std::string &variable,
@@ -242,7 +339,7 @@ public:
   */
   
   arma::mat direct_subsample_get_gradient_of_log(const std::string &variable,
-                                                 const Index* index);
+                                                 const Index* index) const;
   
   /*
   arma::mat direct_subsample_get_gradient_of_log(const std::string &variable,
@@ -275,12 +372,9 @@ public:
   */
   
   // not stored here
-  Particle* previous_self;
+  const Particle* previous_self;
 
 protected:
-  
-  // not stored here
-  Transform* move_transform;
 
   void make_copy(const Particle &another);
   

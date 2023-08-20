@@ -64,13 +64,15 @@ void TransformedProposalKernel::make_copy(const TransformedProposalKernel &anoth
   this->distribution_on_transformed_space = another.distribution_on_transformed_space;
 }
 
-double TransformedProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
-                                                           Particle &old_particle) const
+double TransformedProposalKernel::specific_evaluate_kernel(const Particle &proposed_particle,
+                                                           const Particle &old_particle) const
 {
+  Rcpp::stop("TransformedProposalKernel::specific_evaluate_kernel - option for distribution_on_transformed_space not written yet.");
+  
   if (this->distribution_on_transformed_space==true)
   {
-    proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->transform.inverse_transform(proposed_particle.parameters));
-    return this->proposal->evaluate_kernel(proposed_particle,old_particle) + this->transform.log_abs_inverse_jacobian_determinant(proposed_particle.parameters);
+    //proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->transform.inverse_transform(proposed_particle.parameters));
+    //return this->proposal->evaluate_kernel(proposed_particle,old_particle) + this->transform.log_abs_inverse_jacobian_determinant(proposed_particle.parameters);
   }
   else
   {
@@ -97,14 +99,15 @@ double TransformedProposalKernel::specific_evaluate_kernel(Particle &proposed_pa
 }
 */
 
-double TransformedProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                                                     Particle &old_particle) const
+double TransformedProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
+                                                                     const Particle &old_particle) const
 {
+  Rcpp::stop("TransformedProposalKernel::specific_subsample_evaluate_kernel - option for distribution_on_transformed_space not written yet.");
+  
   if (this->distribution_on_transformed_space==true)
   {
-    proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->transform.inverse_transform(proposed_particle.parameters));
-    return this->proposal->subsample_evaluate_kernel(proposed_particle,
-                                                     old_particle) + this->transform.log_abs_inverse_jacobian_determinant(proposed_particle.parameters);
+    //proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->transform.inverse_transform(proposed_particle.parameters));
+    //return this->proposal->subsample_evaluate_kernel(proposed_particle,old_particle) + this->transform.log_abs_inverse_jacobian_determinant(proposed_particle.parameters);
   }
   else
   {
@@ -132,7 +135,7 @@ double TransformedProposalKernel::specific_subsample_evaluate_kernel(Particle &p
 */
 
 Parameters TransformedProposalKernel::simulate(RandomNumberGenerator &rng,
-                                               Particle &particle) const
+                                               const Particle &particle) const
 {
   if (this->distribution_on_transformed_space==true)
     return this->transform.transform(this->proposal->simulate(rng,particle));
@@ -163,7 +166,7 @@ Parameters TransformedProposalKernel::simulate(RandomNumberGenerator &rng,
 */
 
 Parameters TransformedProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                         Particle &particle) const
+                                                         const Particle &particle) const
 {
   if (this->distribution_on_transformed_space==true)
     return this->transform.transform(this->proposal->subsample_simulate(rng,particle));
@@ -194,7 +197,7 @@ Parameters TransformedProposalKernel::subsample_simulate(RandomNumberGenerator &
 
 Parameters TransformedProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                          const std::string &variable,
-                                                         Particle &particle) const
+                                                         const Particle &particle) const
 {
   if (this->distribution_on_transformed_space==true)
     return this->transform.transform(this->proposal->subsample_simulate(rng,variable,particle));
@@ -227,8 +230,8 @@ Parameters TransformedProposalKernel::subsample_simulate(RandomNumberGenerator &
 */
 
 arma::mat TransformedProposalKernel::specific_gradient_of_log(const std::string &variable,
-                                                              Particle &proposed_particle,
-                                                              Particle &old_particle)
+                                                              const Particle &proposed_particle,
+                                                              const Particle &old_particle)
 {
   Rcpp::stop("TransformedProposalKernel::specific_gradient_of_log - not written yet.");
 }
@@ -248,8 +251,8 @@ arma::mat TransformedProposalKernel::specific_gradient_of_log(const std::string 
 //                                                     Particle &old_particle)=0;
 
 arma::mat TransformedProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
-                                                                        Particle &proposed_particle,
-                                                                        Particle &old_particle)
+                                                                        const Particle &proposed_particle,
+                                                                        const Particle &old_particle)
 {
   Rcpp::stop("TransformedProposalKernel::specific_gradient_of_log - not written yet.");
 }
@@ -267,4 +270,21 @@ arma::mat TransformedProposalKernel::specific_subsample_gradient_of_log(const st
 void TransformedProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
 {
   this->proposal->set_proposal_parameters(proposal_parameters_in);
+}
+
+GradientEstimatorOutput* TransformedProposalKernel::simulate_gradient_estimator_output() const
+{
+  return NULL;
+}
+
+std::vector<ProposalKernel*> TransformedProposalKernel::get_proposals()
+{
+  std::vector<ProposalKernel*> proposals = this->proposal->get_proposals();
+  proposals.push_back(this);
+  return proposals;
+}
+
+void TransformedProposalKernel::set_index(Index* index_in)
+{
+  this->proposal->set_index(index_in);
 }

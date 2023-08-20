@@ -40,11 +40,13 @@ SMC::SMC(RandomNumberGenerator* rng_in,
          size_t number_of_particles_in,
          size_t lag_in,
          size_t lag_proposed_in,
+         const std::vector<ProposalKernel*> proposals_in,
          double resampling_desired_ess_in,
          bool proposal_is_evaluated_in,
          //EvaluateLogDistributionPtr evaluate_log_proposal_in,
          bool smcfixed_flag_in,
          bool sequencer_limit_is_fixed_in,
+         bool transform_proposed_particles,
          const std::string &results_name_in)
   :LikelihoodEstimator(rng_in, seed_in, data_in, algorithm_parameters_in, smcfixed_flag_in)
 {
@@ -70,6 +72,12 @@ SMC::SMC(RandomNumberGenerator* rng_in,
   
   this->initialised = false;
   // Set up worker?
+  
+  this->proposals_to_find_gradient_for = proposals_in;
+  if (transform_proposed_particles)
+    this->proposals_to_transform_for = proposals_in;
+  else
+    this->proposals_to_transform_for = std::vector<ProposalKernel*>();
 }
 
 SMC::SMC(RandomNumberGenerator* rng_in,
@@ -79,11 +87,13 @@ SMC::SMC(RandomNumberGenerator* rng_in,
          size_t number_of_particles_in,
          size_t lag_in,
          size_t lag_proposed_in,
+         const std::vector<ProposalKernel*> proposals_in,
          SMCCriterion* adaptive_resampling_method_in,
          bool proposal_is_evaluated_in,
          //EvaluateLogDistributionPtr evaluate_log_proposal_in,
          bool smcfixed_flag_in,
          bool sequencer_limit_is_fixed_in,
+         bool transform_proposed_particles,
          const std::string &results_name_in)
 :LikelihoodEstimator(rng_in, seed_in, data_in, algorithm_parameters_in, smcfixed_flag_in)
 {
@@ -109,6 +119,12 @@ SMC::SMC(RandomNumberGenerator* rng_in,
   
   this->initialised = false;
   // Set up worker?
+  
+  this->proposals_to_find_gradient_for = proposals_in;
+  if (transform_proposed_particles)
+    this->proposals_to_transform_for = proposals_in;
+  else
+    this->proposals_to_transform_for = std::vector<ProposalKernel*>();
 }
 
 /*
@@ -149,6 +165,7 @@ SMC::SMC(const SMC &another)
 
 SMC::~SMC()
 {
+  
   if (this->the_worker!=NULL)
     delete this->the_worker;
   
@@ -252,6 +269,9 @@ void SMC::make_copy(const SMC &another)
   this->log_probabilities_of_initial_values = another.log_probabilities_of_initial_values;
   this->initialised = another.initialised;
   this->results_name = another.results_name;
+  
+  this->proposals_to_transform_for = another.proposals_to_transform_for;
+  this->proposals_to_find_gradient_for = another.proposals_to_find_gradient_for;
 }
 
 //Particles SMC::is_step() const
@@ -273,12 +293,15 @@ void SMC::make_copy(const SMC &another)
 
 SMCOutput* SMC::run()
 {
+  
   if (this->initialised==false)
   {
     this->setup();
     this->initialised = true;
   }
+  
   return this->specific_run();
+  //return new SMCOutput;
 }
 
 /*
@@ -321,7 +344,7 @@ SMCOutput* SMC::initialise_smc()
 
 void SMC::setup()
 {
-  this->setup_variables();
+  //this->setup_variables();
 }
 
 void SMC::setup(const Parameters &parameters)
@@ -341,9 +364,16 @@ void SMC::setup_variables()
   }
   else
   {
-    dummy_parameters = std::move(this->particle_simulator->simulate(*this->rng,this->factors,this->sequencer.schedule_parameters).parameters);
+    /*
+    dummy_parameters = std::move(this->particle_simulator->simulate(*this->rng,
+                                                                    this->factors,
+                                                                    &this->proposals_to_transform_for,
+                                                                    &this->proposals_to_find_gradient_for,
+                                                                    this->sequencer.schedule_parameters).parameters);
+    */
   }
   
+  /*
   this->vector_variables = dummy_parameters.get_nonfixed_vector_variables();
   this->any_variables = dummy_parameters.get_nonfixed_any_variables();
   
@@ -351,6 +381,7 @@ void SMC::setup_variables()
   
   if (this->factors!=NULL)
     this->factors->setup(dummy_parameters);
+  */
 }
 
 void SMC::setup_variables(const Parameters &parameters)
@@ -366,6 +397,8 @@ void SMC::setup_variables(const Parameters &parameters)
   {
     dummy_parameters = std::move(this->particle_simulator->simulate(*this->rng,
                                                                     this->factors,
+                                                                    &this->proposals_to_transform_for,
+                                                                    &this->proposals_to_find_gradient_for,
                                                                     parameters,
                                                                     this->sequencer.schedule_parameters).parameters);
   }
@@ -438,7 +471,15 @@ void SMC::simulate_proposal(SMCOutput* current_state)
   else
   {
     //arma::mat tau = this->initial_particles[0]["tau"];
-    next_particles->setup(this->initial_particles, this->log_probabilities_of_initial_values, this->factors,this->sequencer.schedule_parameters);
+    
+    //std::cout << this->initial_particles[0];
+    
+    next_particles->setup(this->initial_particles,
+                          this->log_probabilities_of_initial_values,
+                          this->factors,
+                          &this->proposals_to_transform_for,
+                          &this->proposals_to_find_gradient_for,
+                          this->sequencer.schedule_parameters);
   }
 
   current_state->back().initialise_weights();
@@ -489,6 +530,8 @@ void SMC::simulate_proposal(SMCOutput* current_state,
     next_particles->setup(this->initial_particles,
                           this->log_probabilities_of_initial_values,
                           this->factors,
+                          &this->proposals_to_transform_for,
+                          &this->proposals_to_find_gradient_for,
                           conditioned_on_parameters,
                           this->sequencer.schedule_parameters);
   }

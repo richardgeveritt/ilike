@@ -4,6 +4,8 @@
 CustomLikelihoodFactor::CustomLikelihoodFactor()
   :LikelihoodFactor()
 {
+  this->likelihood = NULL;
+  this->likelihood_gradient = NULL;
 }
 
 CustomLikelihoodFactor::CustomLikelihoodFactor(EvaluateLogLikelihoodPtr likelihood_in,
@@ -11,6 +13,16 @@ CustomLikelihoodFactor::CustomLikelihoodFactor(EvaluateLogLikelihoodPtr likeliho
 :LikelihoodFactor(data_in)
 {
   this->likelihood = likelihood_in;
+  this->likelihood_gradient = NULL;
+}
+
+CustomLikelihoodFactor::CustomLikelihoodFactor(EvaluateLogLikelihoodPtr likelihood_in,
+                                               EvaluateGradientLogLikelihoodPtr likelihood_gradient_in,
+                                               Data* data_in)
+:LikelihoodFactor(data_in)
+{
+  this->likelihood = likelihood_in;
+  this->likelihood_gradient = likelihood_gradient_in;
 }
 
 CustomLikelihoodFactor::~CustomLikelihoodFactor()

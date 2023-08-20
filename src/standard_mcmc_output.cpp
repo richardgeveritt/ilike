@@ -68,7 +68,7 @@ std::vector<Parameters> StandardMCMCOutput::get_vector_of_parameters() const
   local_output.reserve(this->output.size());
   for (auto i=this->output.begin(); i!=this->output.end(); ++i)
   {
-    local_output.push_back(*i->move_parameters);
+    local_output.push_back(i->parameters);
   }
   return local_output;
 }
@@ -133,6 +133,11 @@ void StandardMCMCOutput::write_ensemble_factors(const std::string &directory_nam
                                                   index);
     }
   }
+}
+
+size_t StandardMCMCOutput::length() const
+{
+  return this->output.size();
 }
 
 void StandardMCMCOutput::close_ofstreams()

@@ -35,7 +35,7 @@ public:
   virtual double evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index,
                                                                       const Parameters &conditioned_on_parameters)=0;
   */
-  virtual double evaluate_likelihoods(const Index* index)=0;
+  virtual double evaluate_likelihoods(const Index* index) const=0;
   /*
   virtual double evaluate_likelihoods(const Index* index,
                                       const Parameters &conditioned_on_parameters)=0;
@@ -50,7 +50,7 @@ public:
   virtual double subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index,
                                                                                 const Parameters &conditioned_on_parameters)=0;
   */
-  virtual double subsample_evaluate_likelihoods(const Index* index)=0;
+  virtual double subsample_evaluate_likelihoods(const Index* index) const=0;
   /*
   virtual double subsample_evaluate_likelihoods(const Index* index,
                                                 const Parameters &conditioned_on_parameters)=0;
@@ -67,7 +67,7 @@ public:
   */
   
   virtual arma::mat direct_get_gradient_of_log(const Index* index,
-                                               const std::string &variable)=0;
+                                               const std::string &variable) const=0;
   /*
   virtual arma::mat direct_get_gradient_of_log(const Index* index,
                                                const std::string &variable,
@@ -75,7 +75,7 @@ public:
   */
   
   virtual arma::mat direct_subsample_get_gradient_of_log(const Index* index,
-                                                         const std::string &variable)=0;
+                                                         const std::string &variable) const=0;
   
   /*
   virtual arma::mat direct_subsample_get_gradient_of_log(const Index* index,

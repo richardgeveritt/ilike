@@ -27,6 +27,7 @@ public:
               EvaluateLogDistributionPtr evaluate_log_prior_in,
               const std::vector<Parameters> &initial_points_in,
               const arma::colvec &log_probabilities_of_initial_values_in,
+              bool transform_proposed_particles,
               bool parallel_in,
               size_t grain_size_in,
               const std::string &results_name_in);
@@ -42,6 +43,7 @@ public:
               MCMC* mcmc_in,
               const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
               IndependentProposalKernel* proposal_in,
+              bool transform_proposed_particles,
               bool parallel_in,
               size_t grain_size_in,
               const std::string &results_name_in);
@@ -57,6 +59,7 @@ public:
               const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
               const std::vector<Parameters> &initial_points_in,
               const arma::colvec &log_probabilities_of_initial_values_in,
+              bool transform_proposed_particles,
               bool parallel_in,
               size_t grain_size_in,
               const std::string &results_name_in);
@@ -74,6 +77,7 @@ public:
               SimulateDistributionPtr simulate_proposal_in,
               EvaluateLogDistributionPtr evaluate_log_proposal_in,
               bool mcmc_at_last_step_in,
+              bool transform_proposed_particles,
               bool parallel_in,
               size_t grain_size_in,
               const std::string &results_name_in);
@@ -95,6 +99,7 @@ public:
               SimulateDistributionPtr simulate_proposal_in,
               EvaluateLogDistributionPtr evaluate_log_proposal_in,
               bool mcmc_at_last_step_in,
+              bool transform_proposed_particles,
               bool parallel_in,
               size_t grain_size_in,
               const std::string &results_name_in);
@@ -117,6 +122,7 @@ public:
               SimulateDistributionPtr simulate_proposal_in,
               EvaluateLogDistributionPtr evaluate_log_proposal_in,
               bool mcmc_at_last_step_in,
+              bool transform_proposed_particles,
               bool parallel_in,
               size_t grain_size_in,
               const std::string &results_name_in);
@@ -141,6 +147,7 @@ public:
               bool smcfixed_flag_in,
               bool sequencer_limit_is_fixed_in,
               bool mcmc_at_last_step_in,
+              bool transform_proposed_particles,
               bool parallel_in,
               size_t grain_size_in,
               const std::string &results_name_in);
@@ -165,20 +172,21 @@ public:
               bool smcfixed_flag_in,
               bool sequencer_limit_is_fixed_in,
               bool mcmc_at_last_step_in,
+              bool transform_proposed_particles,
               bool parallel_in,
               size_t grain_size_in,
               const std::string &results_name_in);
   
   SMCMCMCMove(const SMCMCMCMove &another);
   
-  virtual ~SMCMCMCMove(void);
+  virtual ~SMCMCMCMove();
 
   void operator=(const SMCMCMCMove &another);
   SMC* smc_duplicate() const;
   LikelihoodEstimator* duplicate() const;
   
   MoveOutput* move(RandomNumberGenerator &rng,
-                   Particle &particle);
+                   const Particle &particle);
   
   //void weight_for_adapting_sequence(Particles &current_particles);
   
@@ -198,7 +206,7 @@ public:
   */
   
   MoveOutput* subsample_move(RandomNumberGenerator &rng,
-                             Particle &particle);
+                             const Particle &particle);
   
   /*
   MoveOutput* subsample_move(RandomNumberGenerator &rng,

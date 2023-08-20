@@ -97,7 +97,7 @@ void MetropolisMCMC::make_copy(const MetropolisMCMC &another)
 }
 
 Particle MetropolisMCMC::move(RandomNumberGenerator &rng,
-                              Particle &particle) const
+                              const Particle &particle) const
 {
   Particle proposed_particle = this->proposal->move(rng,
                                                     particle);
@@ -107,10 +107,12 @@ Particle MetropolisMCMC::move(RandomNumberGenerator &rng,
   if (log_u < proposed_particle.evaluate_likelihoods(this->index) -
       particle.target_evaluated)
   {
+    proposed_particle.set_acceptance(this->proposal,true);
     return proposed_particle;
   }
   else
   {
+    //proposed_particle.set_acceptance(this->proposal,false);
     return particle;
   }
   
@@ -144,7 +146,7 @@ Particle MetropolisMCMC::move(RandomNumberGenerator &rng,
 */
 
 Particle MetropolisMCMC::subsample_move(RandomNumberGenerator &rng,
-                                        Particle &particle) const
+                                        const Particle &particle) const
 {
   Particle proposed_particle = this->proposal->subsample_move(rng,
                                                               particle);
@@ -154,10 +156,12 @@ Particle MetropolisMCMC::subsample_move(RandomNumberGenerator &rng,
   if (log_u < proposed_particle.subsample_evaluate_likelihoods(this->index) -
       particle.subsample_target_evaluated)
   {
+    proposed_particle.set_acceptance(this->proposal,true);
     return proposed_particle;
   }
   else
   {
+    //particle.set_acceptance(this->proposal,false);
     return particle;
   }
   
@@ -198,7 +202,7 @@ void MetropolisMCMC::ensemble_adapt(EnsembleKalmanOutput* current_state)
   this->proposal->ensemble_adapt(current_state);
 }
 
-void MetropolisMCMC::specific_mcmc_adapt(Particle &current_particle,
+void MetropolisMCMC::specific_mcmc_adapt(const Particle &current_particle,
                                          size_t iteration_counter)
 {
   proposal->mcmc_adapt(current_particle,
@@ -211,9 +215,17 @@ void MetropolisMCMC::set_index(Index* index_in)
     delete this->index;
   
   this->index = index_in;
+  this->proposal->set_index(index_in);
 }
 
 void MetropolisMCMC::set_proposal_parameters(Parameters* proposal_parameters_in)
 {
   this->proposal->set_proposal_parameters(proposal_parameters_in);
+}
+
+std::vector<ProposalKernel*> MetropolisMCMC::get_proposals() const
+{
+  std::vector<ProposalKernel*> proposals = this->proposal->get_proposals();
+  //proposals.push_back(this->proposal);
+  return proposals;
 }

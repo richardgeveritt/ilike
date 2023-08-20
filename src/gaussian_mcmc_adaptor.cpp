@@ -130,6 +130,8 @@ MCMCAdaptor* GaussianMCMCAdaptor::duplicate() const
 void GaussianMCMCAdaptor::specific_mcmc_adapt(const Particle &latest_particle,
                                               size_t iteration_counter)
 {
+  Rcpp::stop("GaussianMCMCAdaptor::specific_mcmc_adapt - need to project particle into the correct space each time. This needs to be done in ther update step.");
+  
   // need to know what proposal we are adapting for, since need to know if we are in transformed space
   // need to set move parameters in base adapt?
   // actually, do this here

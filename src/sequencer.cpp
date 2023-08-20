@@ -111,8 +111,11 @@ void Sequencer::setup(SMCWorker* the_worker_in,
   this->reset();
 }
 
-void Sequencer::set_schedule_parameters()
+void Sequencer::set_initial_schedule_parameters()
 {
+  this->mileometer.reset();
+  this->mileometer.increment();
+  
   for (size_t i=0; i<this->variable_names.size(); ++i)
   {
     double value_to_use;
@@ -128,7 +131,33 @@ void Sequencer::set_schedule_parameters()
     
     if (i==this->variable_names.size()-1)
     {
-      this->current_bisect_value = value_to_use;
+      // do I need use_final?
+      this->current_bisect_value = this->schedules[i][this->mileometer[i]];
+    }
+  }
+}
+
+void Sequencer::set_schedule_parameters()
+{
+  for (size_t i=0; i<this->variable_names.size(); ++i)
+  {
+    double value_to_use;
+    if ((this->use_final[i]==true) && (this->mileometer[i]==0))
+    {
+      value_to_use = this->schedules[i][this->schedules[i].size()-1];
+    }
+    else
+    {
+      value_to_use = this->schedules[i][this->mileometer[i]];
+    }
+    this->schedule_parameters[this->variable_names[i]] = value_to_use;
+    
+    this->mileometer.increment();
+    
+    if (i==this->variable_names.size()-1)
+    {
+      // do I need use_final?
+      this->current_bisect_value = this->schedules[i][this->mileometer[i]];
     }
   }
 }
@@ -293,7 +322,7 @@ void Sequencer::find_next_target_bisection(SMCOutput* current_state,
     this->current_score = (*this->criterion)(current_state->back());
     if (this->current_score>=0.0)
     {
-      this->mileometer.increment();
+      //this->mileometer.increment();
       this->set_schedule_parameters();
       //this->schedule_parameters[this->variable_names.back()] = target_values.back();
       
@@ -355,7 +384,7 @@ void Sequencer::find_next_target_bisection(SMCOutput* current_state,
       }
       //this->current_values.back() = new_bisect_value;
       
-      this->mileometer.increment();
+      //this->mileometer.increment();
       this->set_schedule_parameters();
       
       //current_bisect_value = this->current_values.back();
@@ -375,7 +404,7 @@ void Sequencer::find_next_target_bisection(SMCOutput* current_state,
     this->current_score = (*this->criterion)(current_state->back());
     if (this->current_score>=0.0)
     {
-      this->mileometer.increment();
+      //this->mileometer.increment();
       this->set_schedule_parameters();
       //this->schedule_parameters[this->variable_names.back()] = target_values.back();
       
@@ -712,7 +741,6 @@ void Sequencer::subsample_find_next_target_bisection(SMCOutput* current_state,
     this->current_score = (*this->criterion)(current_state->back());
     if (this->current_score>=0.0)
     {
-      this->mileometer.increment();
       this->set_schedule_parameters();
       //this->schedule_parameters[this->variable_names.back()] = target_values.back();
       
@@ -1057,10 +1085,9 @@ void Sequencer::reset()
   {
     this->direction = -1.0;
   }
-  
-  this->mileometer.reset();
-  this->mileometer.increment();
-  this->set_schedule_parameters();
+
+  //this->mileometer.increment();
+  this->set_initial_schedule_parameters();
   
   //this->extra_bit = 0.001*(this->schedules.back().back()-this->schedules.back().front());
   

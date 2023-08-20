@@ -6,6 +6,7 @@ using namespace Rcpp;
 
 #include <vector>
 #include "particle.h"
+
 class ProposalKernel;
 
 class RecursiveParameterEstimator

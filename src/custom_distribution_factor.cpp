@@ -4,6 +4,8 @@
 CustomDistributionFactor::CustomDistributionFactor()
   :DistributionFactor()
 {
+  this->distribution = NULL;
+  this->distribution_gradient = NULL;
 }
 
 CustomDistributionFactor::CustomDistributionFactor(EvaluateLogDistributionPtr distribution_in)
@@ -11,6 +13,14 @@ CustomDistributionFactor::CustomDistributionFactor(EvaluateLogDistributionPtr di
 {
   this->distribution = distribution_in;
   this->distribution_gradient = NULL;
+}
+
+CustomDistributionFactor::CustomDistributionFactor(EvaluateLogDistributionPtr distribution_in,
+                                                   EvaluateGradientLogDistributionPtr distribution_gradient_in)
+:DistributionFactor()
+{
+  this->distribution = distribution_in;
+  this->distribution_gradient = distribution_gradient_in;
 }
 
 CustomDistributionFactor::~CustomDistributionFactor()

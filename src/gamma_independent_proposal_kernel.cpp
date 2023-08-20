@@ -90,7 +90,7 @@ Parameters GammaIndependentProposalKernel::independent_simulate(RandomNumberGene
 }
 
 Parameters GammaIndependentProposalKernel::independent_simulate(RandomNumberGenerator &rng,
-                                                                   const Parameters &conditioned_on_parameters) const
+                                                                const Parameters &conditioned_on_parameters) const
 {
   return this->independent_simulate(rng);
 }
@@ -102,14 +102,14 @@ Parameters GammaIndependentProposalKernel::subsample_independent_simulate(Random
 }
 
 Parameters GammaIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
-                                                                             const Parameters &conditioned_on_parameters) const
+                                                                          const Parameters &conditioned_on_parameters) const
 {
   // no difference since size of data set does not impact on proposal
   return this->independent_simulate(rng);
 }
 
 Parameters GammaIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
-                                                                             const std::string &variable_in) const
+                                                                          const std::string &variable_in) const
 {
   Parameters output;
   if (this->variable==variable_in)
@@ -118,8 +118,8 @@ Parameters GammaIndependentProposalKernel::subsample_independent_simulate(Random
 }
 
 Parameters GammaIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
-                                                                             const std::string &variable_in,
-                                                                             const Parameters &conditioned_on_parameters) const
+                                                                          const std::string &variable_in,
+                                                                          const Parameters &conditioned_on_parameters) const
 {
   Parameters output;
   if (this->variable==variable_in)
@@ -128,13 +128,13 @@ Parameters GammaIndependentProposalKernel::subsample_independent_simulate(Random
 }
 
 arma::mat GammaIndependentProposalKernel::independent_gradient_of_log(const std::string &variable,
-                                                                         const Parameters &proposed_particle)
+                                                                      const Parameters &proposed_particle)
 {
   Rcpp::stop("GammaIndependentProposalKernel::independent_gradient_of_log - not written yet.");
 }
 
 arma::mat GammaIndependentProposalKernel::subsample_independent_gradient_of_log(const std::string &variable,
-                                                                                   const Parameters &proposed_particle)
+                                                                                const Parameters &proposed_particle)
 {
   Rcpp::stop("GammaIndependentProposalKernel::independent_gradient_of_log - not written yet.");
 }
@@ -142,4 +142,20 @@ arma::mat GammaIndependentProposalKernel::subsample_independent_gradient_of_log(
 void GammaIndependentProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
 {
   
+}
+
+GradientEstimatorOutput* GammaIndependentProposalKernel::simulate_gradient_estimator_output() const
+{
+  return NULL;
+}
+
+std::vector<ProposalKernel*> GammaIndependentProposalKernel::get_proposals()
+{
+  std::vector<ProposalKernel*> output;
+  output.push_back(this);
+  return output;
+}
+
+void GammaIndependentProposalKernel::set_index(Index* index_in)
+{
 }

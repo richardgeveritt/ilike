@@ -26,26 +26,38 @@ public:
   ParticleSimulator* duplicate() const;
 
   Particle simulate(RandomNumberGenerator &rng,
-                    Factors* factors) const;
+                    Factors* factors,
+                    std::vector<ProposalKernel*>* proposals_to_transform_for,
+                    std::vector<ProposalKernel*>* proposals_to_find_gradient_for) const;
   
   Particle subsample_simulate(RandomNumberGenerator &rng,
-                              Factors* factors) const;
+                              Factors* factors,
+                              std::vector<ProposalKernel*>* proposals_to_transform_for,
+                              std::vector<ProposalKernel*>* proposals_to_find_gradient_for) const;
   
   Particle simulate(RandomNumberGenerator &rng,
                     Factors* factors,
+                    std::vector<ProposalKernel*>* proposals_to_transform_for,
+                    std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
                     const Parameters &sequencer_parameters) const;
   
   Particle subsample_simulate(RandomNumberGenerator &rng,
                               Factors* factors,
+                              std::vector<ProposalKernel*>* proposals_to_transform_for,
+                              std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
                               const Parameters &sequencer_parameters) const;
   
   Particle simulate(RandomNumberGenerator &rng,
                     Factors* factors,
+                    std::vector<ProposalKernel*>* proposals_to_transform_for,
+                    std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
                     const Parameters &conditioned_on_parameters,
                     const Parameters &sequencer_parameters) const;
   
   Particle subsample_simulate(RandomNumberGenerator &rng,
                               Factors* factors,
+                              std::vector<ProposalKernel*>* proposals_to_transform_for,
+                              std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
                               const Parameters &conditioned_on_parameters,
                               const Parameters &sequencer_parameters) const;
   
@@ -71,9 +83,9 @@ public:
                                         const Parameters &conditioned_on_parameters) const;
   */
   
-  double evaluate(Particle &input) const;
+  double evaluate(const Particle &input) const;
   
-  double subsample_evaluate(Particle &input) const;
+  double subsample_evaluate(const Particle &input) const;
   
   /*
   double evaluate(Particle &input,

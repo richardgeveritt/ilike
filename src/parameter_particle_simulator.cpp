@@ -80,7 +80,9 @@ void ParameterParticleSimulator::make_copy(const ParameterParticleSimulator &ano
 }
 
 Particle ParameterParticleSimulator::simulate(RandomNumberGenerator &rng,
-                                              Factors* factors) const
+                                              Factors* factors,
+                                              std::vector<ProposalKernel*>* proposals_to_transform_for,
+                                              std::vector<ProposalKernel*>* proposals_to_find_gradient_for) const
 {
   //new_particle->setup(this->proposal->independent_simulate(rng),
   //                    factors);
@@ -94,12 +96,17 @@ Particle ParameterParticleSimulator::simulate(RandomNumberGenerator &rng,
   //FactorVariables* simulated_factor_variables = factors->simulate_factor_variables(simulated_parameters);
   
   // Outputs are created here, with memory managed by Particle hereafter.
-  return Particle(this->proposal->independent_simulate(rng),factors);
+  return Particle(this->proposal->independent_simulate(rng),
+                  factors,
+                  proposals_to_transform_for,
+                  proposals_to_find_gradient_for);
   
 }
 
 Particle ParameterParticleSimulator::simulate(RandomNumberGenerator &rng,
                                               Factors* factors,
+                                              std::vector<ProposalKernel*>* proposals_to_transform_for,
+                                              std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
                                               const Parameters &sequencer_parameters) const
 {
   //new_particle->setup(this->proposal->independent_simulate(rng,
@@ -118,14 +125,24 @@ Particle ParameterParticleSimulator::simulate(RandomNumberGenerator &rng,
   //                                                                       conditioned_on_parameters);
   
   // Outputs are created here, with memory managed by Particle hereafter.
+  
+  //this->proposal->independent_simulate(rng);
+  
+  //return Particle();
+  
   return Particle(this->proposal->independent_simulate(rng),
                   factors,
+                  proposals_to_transform_for,
+                  proposals_to_find_gradient_for,
                   sequencer_parameters);
+  
   
 }
 
 Particle ParameterParticleSimulator::simulate(RandomNumberGenerator &rng,
                                               Factors* factors,
+                                              std::vector<ProposalKernel*>* proposals_to_transform_for,
+                                              std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
                                               const Parameters &conditioned_on_parameters,
                                               const Parameters &sequencer_parameters) const
 {
@@ -148,13 +165,17 @@ Particle ParameterParticleSimulator::simulate(RandomNumberGenerator &rng,
   return Particle(this->proposal->independent_simulate(rng,
                                                        conditioned_on_parameters),
                   factors,
+                  proposals_to_transform_for,
+                  proposals_to_find_gradient_for,
                   conditioned_on_parameters,
                   sequencer_parameters);
   
 }
 
 Particle ParameterParticleSimulator::subsample_simulate(RandomNumberGenerator &rng,
-                                                        Factors* factors) const
+                                                        Factors* factors,
+                                                        std::vector<ProposalKernel*>* proposals_to_transform_for,
+                                                        std::vector<ProposalKernel*>* proposals_to_find_gradient_for) const
 {
   //new_particle->setup(this->proposal->independent_simulate(rng),
   //                    factors);
@@ -168,12 +189,17 @@ Particle ParameterParticleSimulator::subsample_simulate(RandomNumberGenerator &r
   //FactorVariables* simulated_factor_variables = factors->simulate_factor_variables(simulated_parameters);
   
   // Outputs are created here, with memory managed by Particle hereafter.
-  return Particle(this->proposal->subsample_independent_simulate(rng),factors);
+  return Particle(this->proposal->subsample_independent_simulate(rng),
+                  factors,
+                  proposals_to_transform_for,
+                  proposals_to_find_gradient_for);
   
 }
 
 Particle ParameterParticleSimulator::subsample_simulate(RandomNumberGenerator &rng,
                                                         Factors* factors,
+                                                        std::vector<ProposalKernel*>* proposals_to_transform_for,
+                                                        std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
                                                         const Parameters &sequencer_parameters) const
 {
   //new_particle->setup(this->proposal->subsample_independent_simulate(rng,
@@ -194,12 +220,16 @@ Particle ParameterParticleSimulator::subsample_simulate(RandomNumberGenerator &r
   // Outputs are created here, with memory managed by Particle hereafter.
   return Particle(this->proposal->subsample_independent_simulate(rng),
                   factors,
+                  proposals_to_transform_for,
+                  proposals_to_find_gradient_for,
                   sequencer_parameters);
   
 }
 
 Particle ParameterParticleSimulator::subsample_simulate(RandomNumberGenerator &rng,
                                                         Factors* factors,
+                                                        std::vector<ProposalKernel*>* proposals_to_transform_for,
+                                                        std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
                                                         const Parameters &conditioned_on_parameters,
                                                         const Parameters &sequencer_parameters) const
 {
@@ -222,6 +252,8 @@ Particle ParameterParticleSimulator::subsample_simulate(RandomNumberGenerator &r
   return Particle(this->proposal->subsample_independent_simulate(rng,
                                                                  conditioned_on_parameters),
                   factors,
+                  proposals_to_transform_for,
+                  proposals_to_find_gradient_for,
                   conditioned_on_parameters,
                   sequencer_parameters);
   
@@ -289,13 +321,13 @@ void ParameterParticleSimulator::subsample_simulate_and_transform(RandomNumberGe
 }
 */
 
-double ParameterParticleSimulator::evaluate(Particle &input) const
+double ParameterParticleSimulator::evaluate(const Particle &input) const
 {
   // could generalise to evaluating the proposals for the likelihoodestimators
   return this->proposal->evaluate_independent_kernel(input.parameters);
 }
 
-double ParameterParticleSimulator::subsample_evaluate(Particle &input) const
+double ParameterParticleSimulator::subsample_evaluate(const Particle &input) const
 {
   return this->proposal->subsample_evaluate_independent_kernel(input.parameters);
 }

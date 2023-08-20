@@ -30,7 +30,9 @@ public:
   void operator=(const GradientEstimator &another);
   virtual GradientEstimator* duplicate() const=0;
   
-  virtual GradientEstimatorOutput* initialise() const=0;
+  virtual GradientEstimatorOutput* initialise()=0;
+  
+  void set_proposal(const ProposalKernel* proposal_in);
   
   /*
   virtual arma::mat get_gradient_of_log(const std::string &variable,

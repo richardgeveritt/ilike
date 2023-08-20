@@ -35,10 +35,11 @@ ParticleFilter::ParticleFilter(RandomNumberGenerator* rng_in,
                                EvaluateLogDistributionPtr evaluate_log_prior_in,
                                SimulateDistributionPtr simulate_proposal_in,
                                EvaluateLogDistributionPtr evaluate_log_proposal_in,
+                               bool transform_proposed_particles,
                                bool parallel_in,
                                size_t grain_size_in,
                                const std::string &results_name_in)
-  :SMC(rng_in, seed_in, data_in, Parameters(), number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, true, false, true, results_name_in)
+  :SMC(rng_in, seed_in, data_in, Parameters(), number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, proposal_kernel_in->get_proposals(), resampling_desired_ess_in, true, false, true, transform_proposed_particles, results_name_in)
 {
   
   proposal_kernel_in->set_proposal_parameters(&this->algorithm_parameters);
@@ -274,7 +275,7 @@ void ParticleFilter::evaluate_smcfixed_part_smc(SMCOutput* current_state)
 }
 
 MoveOutput* ParticleFilter::move(RandomNumberGenerator &rng,
-                                 Particle &particle)
+                                 const Particle &particle)
 {
   Particle moved_particle;
   for (size_t i=0; i<this->predictions_per_update; ++i)
@@ -873,7 +874,7 @@ void ParticleFilter::weight_for_adapting_sequence(const Index* index,
 */
 
 MoveOutput* ParticleFilter::subsample_move(RandomNumberGenerator &rng,
-                                           Particle &particle)
+                                           const Particle &particle)
 {
   Particle moved_particle;
   for (size_t i=0; i<this->predictions_per_update; ++i)

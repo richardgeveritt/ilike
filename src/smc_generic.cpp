@@ -37,10 +37,11 @@ SMCGeneric::SMCGeneric(RandomNumberGenerator* rng_in,
                        EvaluateLogDistributionPtr evaluate_log_prior_in,
                        SimulateDistributionPtr simulate_proposal_in,
                        EvaluateLogDistributionPtr evaluate_log_proposal_in,
+                       bool transform_proposed_particles,
                        bool parallel_in,
                        size_t grain_size_in,
                        const std::string &results_name_in)
-  :SMC(rng_in, seed_in, data_in, Parameters(), number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, resampling_desired_ess_in, true, false, true, results_name_in)
+  :SMC(rng_in, seed_in, data_in, Parameters(), number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, proposal_kernel_in->get_proposals(), resampling_desired_ess_in, true, false, true, transform_proposed_particles, results_name_in)
 {
   proposal_kernel_in->set_proposal_parameters(&this->algorithm_parameters);
   L_kernel_in->set_proposal_parameters(&this->algorithm_parameters);
@@ -172,12 +173,12 @@ void SMCGeneric::operator=(const SMCGeneric &another)
   this->make_copy(another);
 }
 
-SMC* SMCGeneric::smc_duplicate(void) const
+SMC* SMCGeneric::smc_duplicate() const
 {
   return( new SMCGeneric(*this));
 }
 
-LikelihoodEstimator* SMCGeneric::duplicate(void) const
+LikelihoodEstimator* SMCGeneric::duplicate() const
 {
   return( new SMCGeneric(*this));
 }
@@ -386,7 +387,7 @@ void SMCGeneric::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current
 }
 
 MoveOutput* SMCGeneric::move(RandomNumberGenerator &rng,
-                             Particle &particle)
+                             const Particle &particle)
 {
   return new SinglePointMoveOutput(this->proposal_kernel->move(rng,
                                                                particle));
@@ -658,7 +659,7 @@ MoveOutput* SMCGeneric::move(RandomNumberGenerator &rng,
 //}
 
 MoveOutput* SMCGeneric::subsample_move(RandomNumberGenerator &rng,
-                                       Particle &particle)
+                                       const Particle &particle)
 {
   return new SinglePointMoveOutput(this->proposal_kernel->subsample_move(rng,
                                                                          particle));

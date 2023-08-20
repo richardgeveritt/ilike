@@ -250,7 +250,7 @@ double VectorFactorVariables::subsample_evaluate_smcadaptive_part_given_smcfixed
 }
 */
 
-double VectorFactorVariables::evaluate_likelihoods(const Index* index)
+double VectorFactorVariables::evaluate_likelihoods(const Index* index) const
 {
   double result = 0.0;
   for (auto i=index->begin();
@@ -286,7 +286,7 @@ double VectorFactorVariables::evaluate_likelihoods(const Index* index,
 }
 */
 
-double VectorFactorVariables::subsample_evaluate_likelihoods(const Index* index)
+double VectorFactorVariables::subsample_evaluate_likelihoods(const Index* index) const
 {
   double result = 0.0;
   for (auto i=index->begin();
@@ -322,7 +322,7 @@ double VectorFactorVariables::subsample_evaluate_likelihoods(const Index* index,
 }
 */
 
-arma::mat VectorFactorVariables::direct_get_gradient_of_log(const std::string &variable)
+arma::mat VectorFactorVariables::direct_get_gradient_of_log(const std::string &variable) const
 {
   arma::mat current_parameter = this->particle->parameters[variable];
   arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
@@ -362,7 +362,7 @@ arma::mat VectorFactorVariables::direct_get_gradient_of_log(const std::string &v
 }
 */
 
-arma::mat VectorFactorVariables::direct_subsample_get_gradient_of_log(const std::string &variable)
+arma::mat VectorFactorVariables::direct_subsample_get_gradient_of_log(const std::string &variable) const
 {
   arma::mat current_parameter = this->particle->parameters[variable];
   arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
@@ -403,7 +403,7 @@ arma::mat VectorFactorVariables::direct_subsample_get_gradient_of_log(const std:
 */
 
 arma::mat VectorFactorVariables::direct_get_gradient_of_log(const Index* index,
-                                                            const std::string &variable)
+                                                            const std::string &variable) const
 {
   arma::mat current_parameter = this->particle->parameters[variable];
   arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
@@ -445,7 +445,7 @@ arma::mat VectorFactorVariables::direct_get_gradient_of_log(const Index* index,
 */
 
 arma::mat VectorFactorVariables::direct_subsample_get_gradient_of_log(const Index* index,
-                                                                      const std::string &variable)
+                                                                      const std::string &variable) const
 {
   arma::mat current_parameter = this->particle->parameters[variable];
   arma::mat result(current_parameter.n_rows,current_parameter.n_cols);

@@ -88,6 +88,8 @@ void SequentialSMCWorker::specific_simulate(Particles* next_particles)
     
     next_particles->push_back(this->the_smc->particle_simulator->simulate(local_rng,
                                                                           this->the_smc->factors,
+                                                                          &this->the_smc->proposals_to_transform_for,
+                                                                          &this->the_smc->proposals_to_find_gradient_for,
                                                                           this->the_smc->sequencer.schedule_parameters));
     
     if (this->the_smc->proposal_is_evaluated==true)
@@ -184,6 +186,8 @@ void SequentialSMCWorker::specific_simulate(Particles* next_particles,
     
     next_particles->push_back(this->the_smc->particle_simulator->simulate(local_rng,
                                                                           this->the_smc->factors,
+                                                                          &this->the_smc->proposals_to_transform_for,
+                                                                          &this->the_smc->proposals_to_find_gradient_for,
                                                                           conditioned_on_parameters,
                                                                           this->the_smc->sequencer.schedule_parameters));
     
@@ -283,7 +287,10 @@ void SequentialSMCWorker::subsample_specific_simulate(Particles* next_particles)
     //                                                      conditioned_on_parameters);
     
     next_particles->push_back(this->the_smc->particle_simulator->subsample_simulate(local_rng,
-                                                                                    this->the_smc->factors));
+                                                                                    this->the_smc->factors,
+                                                                                    &this->the_smc->proposals_to_transform_for,
+                                                                                    &this->the_smc->proposals_to_find_gradient_for,
+                                                                                    this->the_smc->sequencer.schedule_parameters));
     
     if (this->the_smc->proposal_is_evaluated==true)
     {
@@ -383,7 +390,10 @@ void SequentialSMCWorker::subsample_specific_simulate(Particles* next_particles,
     
     next_particles->push_back(this->the_smc->particle_simulator->subsample_simulate(local_rng,
                                                                                     this->the_smc->factors,
-                                                                                    conditioned_on_parameters));
+                                                                                    &this->the_smc->proposals_to_transform_for,
+                                                                                    &this->the_smc->proposals_to_find_gradient_for,
+                                                                                    conditioned_on_parameters,
+                                                                                    this->the_smc->sequencer.schedule_parameters));
     
     if (this->the_smc->proposal_is_evaluated==true)
     {

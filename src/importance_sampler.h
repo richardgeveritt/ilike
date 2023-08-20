@@ -24,6 +24,7 @@ public:
                     EvaluateLogLikelihoodPtr evaluate_log_likelihood_in,
                     SimulateDistributionPtr simulate_prior_in,
                     bool smcfixed_flag_in,
+                    bool transform_proposed_particles,
                     bool parallel_in,
                     size_t grain_size_in,
                     const std::string &results_name_in);
@@ -38,6 +39,7 @@ public:
                     SimulateDistributionPtr simulate_proposal_in,
                     EvaluateLogDistributionPtr evaluate_log_proposal_in,
                     bool smcfixed_flag_in,
+                    bool transform_proposed_particles,
                     bool parallel_in,
                     size_t grain_size_in,
                     const std::string &results_name_in);
@@ -51,6 +53,7 @@ public:
                     EvaluateLogDistributionPtr evaluate_log_prior_in,
                     IndependentProposalKernel* proposal_in,
                     bool smcfixed_flag_in,
+                    bool transform_proposed_particles,
                     bool parallel_in,
                     size_t grain_size_in,
                     const std::string &results_name_in);
@@ -65,6 +68,7 @@ public:
                     bool proposal_is_evaluated_in,
                     bool smcfixed_flag_in,
                     bool sequencer_limit_is_fixed_in,
+                    bool transform_proposed_particles,
                     bool parallel_in,
                     size_t grain_size_in,
                     const std::string &results_name_in);
@@ -81,6 +85,7 @@ public:
                     bool proposal_is_evaluated_in,
                     bool smcfixed_flag_in,
                     bool sequencer_limit_is_fixed_in,
+                    bool transform_proposed_particles,
                     bool parallel_in,
                     size_t grain_size_in,
                     const std::string &results_name_in);
@@ -93,7 +98,7 @@ public:
   LikelihoodEstimator* duplicate() const;
   
   MoveOutput* move(RandomNumberGenerator &rng,
-                   Particle &particle);
+                   const Particle &particle);
   
   /*
   MoveOutput* move(RandomNumberGenerator &rng,
@@ -111,7 +116,7 @@ public:
   */
   
   MoveOutput* subsample_move(RandomNumberGenerator &rng,
-                             Particle &particle);
+                             const Particle &particle);
   
   /*
   MoveOutput* subsample_move(RandomNumberGenerator &rng,

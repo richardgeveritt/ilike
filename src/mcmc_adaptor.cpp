@@ -27,10 +27,10 @@ void MCMCAdaptor::make_copy(const MCMCAdaptor &another)
   this->proposal = another.proposal;
 }
 
-void MCMCAdaptor::mcmc_adapt(Particle &latest_particle,
+void MCMCAdaptor::mcmc_adapt(const Particle &latest_particle,
                              size_t iteration_counter)
 {
-  this->proposal->use_transform(latest_particle);
+  //this->proposal->use_transform(latest_particle);
   this->specific_mcmc_adapt(latest_particle,
                             iteration_counter);
 }

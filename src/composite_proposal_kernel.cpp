@@ -3,6 +3,7 @@
 #include "likelihood_estimator_output.h"
 #include "likelihood_estimator.h"
 #include "smc_adaptor.h"
+#include "transform.h"
 
 CompositeProposalKernel::CompositeProposalKernel()
   :ProposalKernel()
@@ -73,8 +74,8 @@ void CompositeProposalKernel::make_copy(const CompositeProposalKernel &another)
   }
 }
 
-double CompositeProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
-                                                         Particle &old_particle) const
+double CompositeProposalKernel::specific_evaluate_kernel(const Particle &proposed_particle,
+                                                         const Particle &old_particle) const
 {
   double output = 0.0;
   for (auto i=this->all_kernels.begin();
@@ -105,8 +106,8 @@ double CompositeProposalKernel::specific_evaluate_kernel(Particle &proposed_part
 }
 */
 
-double CompositeProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                                                   Particle &old_particle) const
+double CompositeProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
+                                                                   const Particle &old_particle) const
 {
   double output = 0.0;
   for (auto i=this->all_kernels.begin();
@@ -138,16 +139,17 @@ double CompositeProposalKernel::specific_subsample_evaluate_kernel(Particle &pro
 */
 
 Parameters CompositeProposalKernel::simulate(RandomNumberGenerator &rng,
-                                             Particle &particle) const
+                                             const Particle &particle) const
 {
   Particle output(particle);
   for (auto i=this->all_kernels.begin();
        i!=this->all_kernels.end();
        ++i)
   {
-    *output.move_parameters = (*i)->simulate(rng,output);
+    Parameters proposed_parameters_in_transformed_space = (*i)->simulate(rng,output);
+    output.parameters.deep_overwrite_with_variables_in_argument((*i)->transform->inverse_transform(proposed_parameters_in_transformed_space));
   }
-  return *output.move_parameters;
+  return output.parameters;
 }
 
 /*
@@ -167,16 +169,17 @@ Parameters CompositeProposalKernel::simulate(RandomNumberGenerator &rng,
 */
 
 Parameters CompositeProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                       Particle &particle) const
+                                                       const Particle &particle) const
 {
   Particle output(particle);
   for (auto i=this->all_kernels.begin();
        i!=this->all_kernels.end();
        ++i)
   {
-    *output.move_parameters = (*i)->subsample_simulate(rng,output);
+    Parameters proposed_parameters_in_transformed_space = (*i)->subsample_simulate(rng,output);
+    output.parameters.deep_overwrite_with_variables_in_argument((*i)->transform->inverse_transform(proposed_parameters_in_transformed_space));
   }
-  return *output.move_parameters;
+  return output.parameters;
 }
 
 /*
@@ -197,18 +200,17 @@ Parameters CompositeProposalKernel::subsample_simulate(RandomNumberGenerator &rn
 
 Parameters CompositeProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                        const std::string &variable,
-                                                       Particle &particle) const
+                                                       const Particle &particle) const
 {
   Particle output(particle);
   for (auto i=this->all_kernels.begin();
        i!=this->all_kernels.end();
        ++i)
   {
-    *output.move_parameters = (*i)->subsample_simulate(rng,
-                                                       variable,
-                                                       output);
+    Parameters proposed_parameters_in_transformed_space = (*i)->subsample_simulate(rng,variable,output);
+    output.parameters.deep_overwrite_with_variables_in_argument((*i)->transform->inverse_transform(proposed_parameters_in_transformed_space));
   }
-  return *output.move_parameters;
+  return output.parameters;
 }
 
 /*
@@ -232,15 +234,15 @@ Parameters CompositeProposalKernel::subsample_simulate(RandomNumberGenerator &rn
 */
 
 arma::mat CompositeProposalKernel::specific_gradient_of_log(const std::string &variable,
-                                                            Particle &proposed_particle,
-                                                            Particle &old_particle)
+                                                            const Particle &proposed_particle,
+                                                            const Particle &old_particle)
 {
   Rcpp::stop("CompositeProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
 arma::mat CompositeProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
-                                                                      Particle &proposed_particle,
-                                                                      Particle &old_particle)
+                                                                      const Particle &proposed_particle,
+                                                                      const Particle &old_particle)
 {
   Rcpp::stop("CompositeProposalKernel::specific_subsample_gradient_of_log - not written yet.");
 }
@@ -252,6 +254,41 @@ void CompositeProposalKernel::set_proposal_parameters(Parameters* proposal_param
        ++i)
   {
     (*i)->set_proposal_parameters(proposal_parameters_in);
+  }
+}
+
+GradientEstimatorOutput* CompositeProposalKernel::simulate_gradient_estimator_output() const
+{
+  return NULL;
+}
+
+std::vector<ProposalKernel*> CompositeProposalKernel::get_proposals()
+{
+  std::vector<ProposalKernel*> all_proposals;
+  
+  for (auto i=this->all_kernels.begin();
+       i!=this->all_kernels.end();
+       ++i)
+  {
+    std::vector<ProposalKernel*> next_proposals = (*i)->get_proposals();
+    if (all_proposals.size()==0)
+    {
+      all_proposals.insert(all_proposals.end(), next_proposals.begin(), next_proposals.end());
+    }
+  }
+  
+  all_proposals.push_back(this);
+  
+  return all_proposals;
+}
+
+void CompositeProposalKernel::set_index(Index* index_in)
+{
+  for (auto i=this->all_kernels.begin();
+       i!=this->all_kernels.end();
+       ++i)
+  {
+    (*i)->set_index(index_in);
   }
 }
 

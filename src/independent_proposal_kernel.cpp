@@ -34,10 +34,10 @@ void IndependentProposalKernel::make_copy(const IndependentProposalKernel &anoth
   //this->proposal_simulate = another.proposal_simulate;
 }
 
-double IndependentProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
-                                                           Particle &old_particle) const
+double IndependentProposalKernel::specific_evaluate_kernel(const Particle &proposed_particle,
+                                                           const Particle &old_particle) const
 {
-  return this->evaluate_independent_kernel(*proposed_particle.move_parameters);
+  return this->evaluate_independent_kernel(proposed_particle.get_transformed_parameters(this));
 }
 
 /*
@@ -49,10 +49,10 @@ double IndependentProposalKernel::specific_evaluate_kernel(Particle &proposed_pa
 }
 */
 
-double IndependentProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                                                     Particle &old_particle) const
+double IndependentProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
+                                                                     const Particle &old_particle) const
 {
-  return this->subsample_evaluate_independent_kernel(*proposed_particle.move_parameters);
+  return this->subsample_evaluate_independent_kernel(proposed_particle.get_transformed_parameters(this));
 }
 
 /*
@@ -65,11 +65,11 @@ double IndependentProposalKernel::specific_subsample_evaluate_kernel(Particle &p
 */
 
 arma::mat IndependentProposalKernel::specific_gradient_of_log(const std::string &variable,
-                                                              Particle &proposed_particle,
-                                                              Particle &old_particle)
+                                                              const Particle &proposed_particle,
+                                                              const Particle &old_particle)
 {
   return this->independent_gradient_of_log(variable,
-                                           *proposed_particle.move_parameters);
+                                           proposed_particle.get_transformed_parameters(this));
 }
 
 /*
@@ -84,11 +84,11 @@ arma::mat IndependentProposalKernel::specific_gradient_of_log(const std::string 
 */
 
 arma::mat IndependentProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
-                                                                        Particle &proposed_particle,
-                                                                        Particle &old_particle)
+                                                                        const Particle &proposed_particle,
+                                                                        const Particle &old_particle)
 {
   return this->subsample_independent_gradient_of_log(variable,
-                                                     *proposed_particle.move_parameters);
+                                                     proposed_particle.get_transformed_parameters(this));
 }
 
 /*
@@ -103,7 +103,7 @@ arma::mat IndependentProposalKernel::specific_subsample_gradient_of_log(const st
 */
 
 Parameters IndependentProposalKernel::simulate(RandomNumberGenerator &rng,
-                                               Particle &particle) const
+                                               const Particle &particle) const
 {
   Parameters output = particle.parameters;
   output.deep_overwrite_with_variables_in_argument(this->independent_simulate(rng));
@@ -121,7 +121,7 @@ Parameters IndependentProposalKernel::simulate(RandomNumberGenerator &rng,
 */
 
 Parameters IndependentProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                         Particle &particle) const
+                                                         const Particle &particle) const
 {
   Parameters output = particle.parameters;
   output.deep_overwrite_with_variables_in_argument(this->subsample_independent_simulate(rng));
@@ -140,7 +140,7 @@ Parameters IndependentProposalKernel::subsample_simulate(RandomNumberGenerator &
 
 Parameters IndependentProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                          const std::string &variable,
-                                                         Particle &particle) const
+                                                         const Particle &particle) const
 {
   Parameters output = particle.parameters;
   output.deep_overwrite_with_variables_in_argument(this->subsample_independent_simulate(rng,variable));

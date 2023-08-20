@@ -116,13 +116,13 @@ public:
 protected:
   
   friend ExactLikelihoodEstimatorOutput;
-  double evaluate(const Parameters &parameters);
+  double evaluate(const Parameters &parameters) const;
   arma::mat evaluate_gradient(const std::string &variable,
-                              const Parameters &parameters);
+                              const Parameters &parameters) const;
   
-  double subsample_evaluate(const Parameters &parameters);
+  double subsample_evaluate(const Parameters &parameters) const;
   arma::mat subsample_evaluate_gradient(const std::string &variable,
-                                        const Parameters &parameters);
+                                        const Parameters &parameters) const;
   //double evaluate(const Parameters &parameters);
   
   /*

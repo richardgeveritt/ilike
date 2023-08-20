@@ -74,6 +74,24 @@ void EnsembleSequencer::setup(EnsembleKalmanWorker* the_worker_in,
   this->reset();
 }
 
+void EnsembleSequencer::set_initial_schedule_parameters()
+{
+  this->mileometer.reset();
+  this->mileometer.increment();
+  
+  double value_to_use;
+  if ((this->use_final==true) && (this->mileometer[0]==0))
+  {
+    value_to_use = this->schedule[this->schedule.size()-1];
+  }
+  else
+  {
+    value_to_use = this->schedule[this->mileometer[0]];
+  }
+  this->schedule_parameters[this->variable_name] = value_to_use;
+  this->current_bisect_value = value_to_use;
+}
+
 void EnsembleSequencer::set_schedule_parameters()
 {
   double value_to_use;
@@ -86,6 +104,9 @@ void EnsembleSequencer::set_schedule_parameters()
     value_to_use = this->schedule[this->mileometer[0]];
   }
   this->schedule_parameters[this->variable_name] = value_to_use;
+  
+  this->mileometer.increment();
+  
   this->current_bisect_value = value_to_use;
 }
 
@@ -207,7 +228,7 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
 {
   if (this->criterion->always_positive())
   {
-    this->mileometer.increment();
+    //this->mileometer.increment();
     this->set_schedule_parameters();
     current_state->back().set_temperature(this->current_bisect_value);
     return;
@@ -227,7 +248,7 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
     
     if (this->current_score>=0.0)
     {
-      this->mileometer.increment();
+      //this->mileometer.increment();
       this->set_schedule_parameters();
       current_state->back().set_temperature(this->current_bisect_value);
       //this->schedule_parameters[this->variable_names.back()] = target_values.back();
@@ -254,7 +275,7 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
     if (this->current_score>=0.0)
     {
       current_state->back().set_temperature(this->schedule[this->mileometer.back()]);
-      this->mileometer.increment();
+      //this->mileometer.increment();
       this->set_schedule_parameters();
       //this->schedule_parameters[this->variable_names.back()] = target_values.back();
       
@@ -411,7 +432,7 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
 {
   if (this->criterion->always_positive())
   {
-    this->mileometer.increment();
+    //this->mileometer.increment();
     this->set_schedule_parameters();
     current_state->back().set_temperature(this->current_bisect_value);
     return;
@@ -431,7 +452,7 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
     
     if (this->current_score>=0.0)
     {
-      this->mileometer.increment();
+      //this->mileometer.increment();
       this->set_schedule_parameters();
       current_state->back().set_temperature(this->current_bisect_value);
       //this->schedule_parameters[this->variable_names.back()] = target_values.back();
@@ -458,7 +479,7 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
     if (this->current_score>=0.0)
     {
       current_state->back().set_temperature(this->schedule[this->mileometer.back()]);
-      this->mileometer.increment();
+      //this->mileometer.increment();
       this->set_schedule_parameters();
       //current_state->back().set_temperature(this->current_bisect_value);
       //current_state->back().set_temperature(this->schedule[this->mileometer.back()]);
@@ -886,9 +907,7 @@ void EnsembleSequencer::reset()
     this->direction = -1.0;
   }
   
-  this->mileometer.reset();
-  this->mileometer.increment();
-  this->set_schedule_parameters();
+  this->set_initial_schedule_parameters();
   
   // Use epsilon_doubling in abc.r if we need help finding a maximum value to begin with.
 }

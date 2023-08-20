@@ -88,7 +88,7 @@ void StochasticScanMCMC::make_copy(const StochasticScanMCMC &another)
 }
 
 Particle StochasticScanMCMC::move(RandomNumberGenerator &rng,
-                                  Particle &particle) const
+                                  const Particle &particle) const
 {
   return this->moves[rdis(rng, this->probabilities)]->move(rng,
                                                            particle);
@@ -106,7 +106,7 @@ Particle StochasticScanMCMC::move(RandomNumberGenerator &rng,
 */
 
 Particle StochasticScanMCMC::subsample_move(RandomNumberGenerator &rng,
-                                            Particle &particle) const
+                                            const Particle &particle) const
 {
   return this->moves[rdis(rng, this->probabilities)]->subsample_move(rng,
                                                                      particle);
@@ -180,7 +180,7 @@ void StochasticScanMCMC::ensemble_adapt(EnsembleKalmanOutput* current_state)
   }
 }
 
-void StochasticScanMCMC::specific_mcmc_adapt(Particle &current_particle,
+void StochasticScanMCMC::specific_mcmc_adapt(const Particle &current_particle,
                                              size_t iteration_counter)
 {
   for (std::vector<MCMC*>::iterator i=this->moves.begin();
@@ -210,4 +210,22 @@ void StochasticScanMCMC::set_proposal_parameters(Parameters* proposal_parameters
   {
     (*i)->set_proposal_parameters(proposal_parameters_in);
   }
+}
+
+std::vector<ProposalKernel*> StochasticScanMCMC::get_proposals() const
+{
+  std::vector<ProposalKernel*> all_proposals;
+  
+  for (auto i=this->moves.begin();
+       i!=this->moves.end();
+       ++i)
+  {
+    std::vector<ProposalKernel*> next_proposals = (*i)->get_proposals();
+    if (all_proposals.size()==0)
+    {
+      all_proposals.insert(all_proposals.end(), next_proposals.begin(), next_proposals.end());
+    }
+  }
+  
+  return all_proposals;
 }

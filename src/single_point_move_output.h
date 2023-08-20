@@ -17,13 +17,21 @@ class SinglePointMoveOutput : public MoveOutput
 
 public:
 
-  SinglePointMoveOutput(Parameters &&parameter_in,
-                        Factors* factors_in);
-  SinglePointMoveOutput(Parameters &&parameter_in,
-                        EnsembleFactors* factors_in);
+  SinglePointMoveOutput(const Parameters &parameter_in,
+                        Factors* factors_in,
+                        std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                        std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in);
   SinglePointMoveOutput(const Parameters &parameter_in,
                         EnsembleFactors* factors_in);
-  //SinglePointMoveOutput(const Particle &particle_in);
+  
+  SinglePointMoveOutput(Parameters &&parameter_in,
+                        Factors* factors_in,
+                        std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                        std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in);
+  SinglePointMoveOutput(Parameters &&parameter_in,
+                        EnsembleFactors* factors_in);
+  
+  SinglePointMoveOutput(const Particle &particle_in);
   SinglePointMoveOutput(Particle &&particle_in);
   SinglePointMoveOutput();
 
@@ -49,6 +57,8 @@ public:
                      const std::string &index) const;
   void write_ensemble_factors(const std::string &directory_name,
                               const std::string &index) const;
+  
+  size_t length() const;
   
   void close_ofstreams();
   

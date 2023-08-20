@@ -29,7 +29,7 @@ public:
   virtual Kernel* duplicate() const=0;
   
   virtual Particle move(RandomNumberGenerator &rng,
-                        Particle &particle) const=0;
+                        const Particle &particle) const=0;
 
   /*
   virtual Particle move(RandomNumberGenerator &rng,
@@ -38,7 +38,7 @@ public:
   */
   
   virtual Particle subsample_move(RandomNumberGenerator &rng,
-                                  Particle &particle) const=0;
+                                  const Particle &particle) const=0;
   
   /*
   virtual Particle subsample_move(RandomNumberGenerator &rng,
@@ -65,7 +65,7 @@ public:
   virtual void smc_adapt(SMCOutput* current_state)=0;
   virtual void ensemble_adapt(EnsembleKalmanOutput* current_state)=0;
   
-  virtual void mcmc_adapt(Particle &current_particle,
+  virtual void mcmc_adapt(const Particle &current_particle,
                           size_t iteration_counter)=0;
   
 // Mh has its own parameters.

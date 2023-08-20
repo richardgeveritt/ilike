@@ -95,6 +95,7 @@ protected:
              SMCCriterion* criterion_in,
              SMCTermination* termination_in);
   
+  void set_initial_schedule_parameters();
   void set_schedule_parameters();
 
   void make_copy(const EnsembleSequencer &another);

@@ -50,11 +50,11 @@ void CustomNoParamsProposalKernel::make_copy(const CustomNoParamsProposalKernel 
   this->proposal_simulate = another.proposal_simulate;
 }
 
-double CustomNoParamsProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
-                                                      Particle &old_particle) const
+double CustomNoParamsProposalKernel::specific_evaluate_kernel(const Particle &proposed_particle,
+                                                              const Particle &old_particle) const
 {
-  return this->proposal_evaluate(*proposed_particle.move_parameters,
-                                 *old_particle.move_parameters);
+  return this->proposal_evaluate(proposed_particle.get_transformed_parameters(this),
+                                 old_particle.get_transformed_parameters(this));
 }
 
 /*
@@ -68,8 +68,8 @@ double CustomNoParamsProposalKernel::specific_evaluate_kernel(Particle &proposed
 }
 */
 
-double CustomNoParamsProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                                                        Particle &old_particle) const
+double CustomNoParamsProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
+                                                                        const Particle &old_particle) const
 {
   // no difference since size of data set does not impact on proposal
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
@@ -86,10 +86,10 @@ double CustomNoParamsProposalKernel::specific_subsample_evaluate_kernel(Particle
 */
 
 Parameters CustomNoParamsProposalKernel::simulate(RandomNumberGenerator &rng,
-                                                  Particle &particle) const
+                                                  const Particle &particle) const
 {
   return this->proposal_simulate(rng,
-                                 *particle.move_parameters);
+                                 particle.get_transformed_parameters(this));
 }
 
 /*
@@ -104,7 +104,7 @@ Parameters CustomNoParamsProposalKernel::simulate(RandomNumberGenerator &rng,
 */
 
 Parameters CustomNoParamsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                            Particle &particle) const
+                                                            const Particle &particle) const
 {
   // no difference since size of data set does not impact on proposal
   return this->simulate(rng, particle);
@@ -122,7 +122,7 @@ Parameters CustomNoParamsProposalKernel::subsample_simulate(RandomNumberGenerato
 
 Parameters CustomNoParamsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                             const std::string &variable,
-                                                            Particle &particle) const
+                                                            const Particle &particle) const
 {
   // no difference since size of data set does not impact on proposal
   Rcpp::stop("CustomNoParamsProposalKernel::subsample_simulate - not implemented.");
@@ -140,8 +140,8 @@ Parameters CustomNoParamsProposalKernel::subsample_simulate(RandomNumberGenerato
 */
 
 arma::mat CustomNoParamsProposalKernel::specific_gradient_of_log(const std::string &variable,
-                                                                 Particle &proposed_particle,
-                                                                 Particle &old_particle)
+                                                                 const Particle &proposed_particle,
+                                                                 const Particle &old_particle)
 {
   Rcpp::stop("CustomNoParamsProposalKernel::specific_gradient_of_log - not written yet.");
 }
@@ -157,8 +157,8 @@ arma::mat CustomNoParamsProposalKernel::specific_gradient_of_log(const std::stri
 */
 
 arma::mat CustomNoParamsProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
-                                                                           Particle &proposed_particle,
-                                                                           Particle &old_particle)
+                                                                           const Particle &proposed_particle,
+                                                                           const Particle &old_particle)
 {
   Rcpp::stop("CustomNoParamsProposalKernel::specific_gradient_of_log - not written yet.");
 }
@@ -166,4 +166,20 @@ arma::mat CustomNoParamsProposalKernel::specific_subsample_gradient_of_log(const
 void CustomNoParamsProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
 {
 
+}
+
+GradientEstimatorOutput* CustomNoParamsProposalKernel::simulate_gradient_estimator_output() const
+{
+  return NULL;
+}
+
+std::vector<ProposalKernel*> CustomNoParamsProposalKernel::get_proposals()
+{
+  std::vector<ProposalKernel*> output;
+  output.push_back(this);
+  return output;
+}
+
+void CustomNoParamsProposalKernel::set_index(Index* index_in)
+{
 }

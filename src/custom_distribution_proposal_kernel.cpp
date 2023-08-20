@@ -283,3 +283,19 @@ arma::mat CustomDistributionProposalKernel::subsample_independent_gradient_of_lo
   Rcpp::stop("CustomDistributionProposalKernel::independent_gradient_of_log - not written yet.");
 }
 */
+
+GradientEstimatorOutput* CustomDistributionProposalKernel::simulate_gradient_estimator_output() const
+{
+  return NULL;
+}
+
+std::vector<ProposalKernel*> CustomDistributionProposalKernel::get_proposals()
+{
+  std::vector<ProposalKernel*> output;
+  output.push_back(this);
+  return output;
+}
+
+void CustomDistributionProposalKernel::set_index(Index* index_in)
+{
+}

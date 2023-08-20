@@ -5,6 +5,7 @@
 #include "likelihood_estimator.h"
 #include "mcmc_adaptor.h"
 #include "particle.h"
+#include "transform.h"
 
 CompositeIndependentProposalKernel::CompositeIndependentProposalKernel()
   :IndependentProposalKernel()
@@ -105,9 +106,10 @@ Parameters CompositeIndependentProposalKernel::independent_simulate(RandomNumber
        i!=this->all_kernels.end();
        ++i)
   {
-    *output.move_parameters = (*i)->independent_simulate(rng,output.parameters);
+    Parameters proposed_parameters_in_transformed_space = (*i)->independent_simulate(rng,output.parameters);
+    output.parameters.deep_overwrite_with_variables_in_argument((*i)->transform->inverse_transform(proposed_parameters_in_transformed_space));
   }
-  return *output.move_parameters;
+  return output.parameters;
 }
 
 Parameters CompositeIndependentProposalKernel::independent_simulate(RandomNumberGenerator &rng,
@@ -119,9 +121,10 @@ Parameters CompositeIndependentProposalKernel::independent_simulate(RandomNumber
        i!=this->all_kernels.end();
        ++i)
   {
-    *output.move_parameters = (*i)->independent_simulate(rng,output.parameters);
+    Parameters proposed_parameters_in_transformed_space = (*i)->independent_simulate(rng,output.parameters);
+    output.parameters.deep_overwrite_with_variables_in_argument((*i)->transform->inverse_transform(proposed_parameters_in_transformed_space));
   }
-  return *output.move_parameters;
+  return output.parameters;
 }
 
 Parameters CompositeIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng) const
@@ -131,9 +134,10 @@ Parameters CompositeIndependentProposalKernel::subsample_independent_simulate(Ra
        i!=this->all_kernels.end();
        ++i)
   {
-    *output.move_parameters = (*i)->subsample_independent_simulate(rng,output.parameters);
+    Parameters proposed_parameters_in_transformed_space = (*i)->subsample_independent_simulate(rng,output.parameters);
+    output.parameters.deep_overwrite_with_variables_in_argument((*i)->transform->inverse_transform(proposed_parameters_in_transformed_space));
   }
-  return *output.move_parameters;
+  return output.parameters;
 }
 
 Parameters CompositeIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
@@ -145,9 +149,10 @@ Parameters CompositeIndependentProposalKernel::subsample_independent_simulate(Ra
        i!=this->all_kernels.end();
        ++i)
   {
-    *output.move_parameters = (*i)->subsample_independent_simulate(rng,output.parameters);
+    Parameters proposed_parameters_in_transformed_space = (*i)->subsample_independent_simulate(rng,output.parameters);
+    output.parameters.deep_overwrite_with_variables_in_argument((*i)->transform->inverse_transform(proposed_parameters_in_transformed_space));
   }
-  return *output.move_parameters;
+  return output.parameters;
 }
 
 Parameters CompositeIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
@@ -158,9 +163,10 @@ Parameters CompositeIndependentProposalKernel::subsample_independent_simulate(Ra
        i!=this->all_kernels.end();
        ++i)
   {
-    *output.move_parameters = (*i)->subsample_independent_simulate(rng,variable,output.parameters);
+    Parameters proposed_parameters_in_transformed_space = (*i)->subsample_independent_simulate(rng,variable,output.parameters);
+    output.parameters.deep_overwrite_with_variables_in_argument((*i)->transform->inverse_transform(proposed_parameters_in_transformed_space));
   }
-  return *output.move_parameters;
+  return output.parameters;
 }
 
 Parameters CompositeIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
@@ -173,9 +179,10 @@ Parameters CompositeIndependentProposalKernel::subsample_independent_simulate(Ra
        i!=this->all_kernels.end();
        ++i)
   {
-    *output.move_parameters = (*i)->subsample_independent_simulate(rng,variable,output.parameters);
+    Parameters proposed_parameters_in_transformed_space = (*i)->subsample_independent_simulate(rng,variable,output.parameters);
+    output.parameters.deep_overwrite_with_variables_in_argument((*i)->transform->inverse_transform(proposed_parameters_in_transformed_space));
   }
-  return *output.move_parameters;
+  return output.parameters;
 }
 
 arma::mat CompositeIndependentProposalKernel::independent_gradient_of_log(const std::string &variable,
@@ -197,5 +204,40 @@ void CompositeIndependentProposalKernel::set_proposal_parameters(Parameters* pro
        ++i)
   {
     (*i)->set_proposal_parameters(proposal_parameters_in);
+  }
+}
+
+GradientEstimatorOutput* CompositeIndependentProposalKernel::simulate_gradient_estimator_output() const
+{
+  return NULL;
+}
+
+std::vector<ProposalKernel*> CompositeIndependentProposalKernel::get_proposals()
+{
+  std::vector<ProposalKernel*> all_proposals;
+  
+  for (auto i=this->all_kernels.begin();
+       i!=this->all_kernels.end();
+       ++i)
+  {
+    std::vector<ProposalKernel*> next_proposals = (*i)->get_proposals();
+    if (all_proposals.size()==0)
+    {
+      all_proposals.insert(all_proposals.end(), next_proposals.begin(), next_proposals.end());
+    }
+  }
+  
+  all_proposals.push_back(this);
+  
+  return all_proposals;
+}
+
+void CompositeIndependentProposalKernel::set_index(Index* index_in)
+{
+  for (auto i=this->all_kernels.begin();
+       i!=this->all_kernels.end();
+       ++i)
+  {
+    (*i)->set_index(index_in);
   }
 }

@@ -273,3 +273,32 @@ void GaussianIndependentProposalKernel::set_proposal_parameters(Parameters* prop
 {
   
 }
+
+std::vector<std::string> GaussianIndependentProposalKernel::get_variables() const
+{
+  std::vector<std::string> variables;
+  variables.reserve(this->proposal_info.size());
+  for (auto i=this->proposal_info.begin();
+       i!=this->proposal_info.end();
+       ++i)
+  {
+    variables.push_back(i->first);
+  }
+  return variables;
+}
+
+GradientEstimatorOutput* GaussianIndependentProposalKernel::simulate_gradient_estimator_output() const
+{
+  return NULL;
+}
+
+std::vector<ProposalKernel*> GaussianIndependentProposalKernel::get_proposals()
+{
+  std::vector<ProposalKernel*> output;
+  output.push_back(this);
+  return output;
+}
+
+void GaussianIndependentProposalKernel::set_index(Index* index_in)
+{
+}

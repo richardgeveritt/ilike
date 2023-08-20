@@ -34,7 +34,7 @@ public:
   // Zig zag can be run to produce a Particle, just as any MCMC can be. This way is can be combined with other MCMC moves.
   // When we call "run" on it, as in the base class, it will use a succession of moves and produce a succession of particles, just as any other MCMC move would.
   Particle move(RandomNumberGenerator &rng,
-                Particle &particle) const;
+                const Particle &particle) const;
   
   /*
   Particle move(RandomNumberGenerator &rng,
@@ -43,7 +43,7 @@ public:
   */
   
   Particle subsample_move(RandomNumberGenerator &rng,
-                          Particle &particle) const;
+                          const Particle &particle) const;
   
   /*
   Particle subsample_move(RandomNumberGenerator &rng,
@@ -69,7 +69,7 @@ public:
   
   // Overrides that just run the PDMP, rather than calling run in the MCMC base class.
   MoveOutput* run(RandomNumberGenerator &rng,
-                  Particle &particle) const; // override?
+                  const Particle &particle) const; // override?
   
   /*
   MoveOutput* run(RandomNumberGenerator &rng,
@@ -78,7 +78,7 @@ public:
   */
   
   MoveOutput* subsample_run(RandomNumberGenerator &rng,
-                            Particle &particle) const;
+                            const Particle &particle) const;
   
   /*
   MoveOutput* subsample_run(RandomNumberGenerator &rng,
@@ -94,9 +94,11 @@ public:
   
   void set_proposal_parameters(Parameters* proposal_parameters_in);
   
+  std::vector<ProposalKernel*> get_proposals() const;
+  
 protected:
   
-  void specific_mcmc_adapt(Particle &current_particle,
+  void specific_mcmc_adapt(const Particle &current_particle,
                            size_t iteration_counter);
   
   // stored here

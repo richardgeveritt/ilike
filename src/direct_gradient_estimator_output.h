@@ -29,7 +29,11 @@ public:
   
   arma::mat get_gradient_of_log(const std::string &variable,
                                 const Index* index,
-                                Particle &particle);
+                                const Particle &particle);
+  
+  //arma::mat get_gradient_of_log_at_previous(const std::string &variable,
+  //                                          const Index* index,
+  //                                          const Particle &particle);
   
   /*
   arma::mat get_gradient_of_log(const std::string &variable,
@@ -40,7 +44,13 @@ public:
   
   arma::mat subsample_get_gradient_of_log(const std::string &variable,
                                           const Index* index,
-                                          Particle &particle);
+                                          const Particle &particle);
+  
+  //arma::mat subsample_get_gradient_of_log_at_previous(const std::string &variable,
+  //                                                    const Index* index,
+  //                                                    const Particle &particle);
+  
+  void simulate_auxiliary_variables();
   
   /*
   arma::mat subsample_get_gradient_of_log(const std::string &variable,

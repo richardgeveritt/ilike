@@ -78,6 +78,8 @@ public:
   
   void merge_with_fixed(const Parameters &conditioned_on_parameters);
   
+  Parameters deep_copy() const;
+  
   Parameters deep_copy_nonfixed() const;
   void self_deep_copy_nonfixed();
   
@@ -589,6 +591,7 @@ inline std::shared_ptr<boost::any> Parameters::get_any_pointer(const std::string
     {
       // if does exist, and is fixed, throw error
       Rcpp::stop("Parameters::operator[] - parameter is fixed and cannot be changed.");
+      Rcpp::stop("Parameters::operator[] - parameter is fixed and cannot be changed.");
     }
   }
 }
@@ -618,6 +621,41 @@ inline void Parameters::merge_with_fixed(const Parameters &conditioned_on_parame
   {
     this->any_parameters[i->first] = std::pair<std::shared_ptr<boost::any>,bool>(i->second.first,true);
   }
+}
+
+inline Parameters Parameters::deep_copy() const
+{
+  Parameters output;
+  
+  for (auto i=this->vector_begin();
+       i!=this->vector_end();
+       ++i)
+  {
+    if (i->second.second==true) // fixed
+    {
+      output.vector_parameters.insert({i->first,std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(*i->second.first),true)});
+    }
+    else // non-fixed
+    {
+      output.vector_parameters.insert({i->first,std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(*i->second.first),false)});
+    }
+  }
+  
+  for (auto i=this->any_begin();
+       i!=this->any_end();
+       ++i)
+  {
+    if (i->second.second==true) // fixed
+    {
+      output.any_parameters.insert({i->first,std::pair<std::shared_ptr<boost::any>,bool>(std::make_shared<boost::any>(*i->second.first),true)});
+    }
+    else // non-fixed
+    {
+      output.any_parameters.insert({i->first,std::pair<std::shared_ptr<boost::any>,bool>(std::make_shared<boost::any>(*i->second.first),false)});
+    }
+  }
+  
+  return output;
 }
 
 inline Parameters Parameters::deep_copy_nonfixed() const

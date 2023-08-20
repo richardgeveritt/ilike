@@ -25,29 +25,41 @@ public:
   Particles(const std::vector< MoveOutput* > &particles_in);
   Particles(std::vector<Parameters> &initial_values_in,
             const arma::colvec &log_probabilities_of_initial_values_in,
-            Factors* factors_in);
+            Factors* factors_in,
+            std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+            std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in);
   Particles(std::vector<Parameters> &initial_values_in,
             const arma::colvec &log_probabilities_of_initial_values_in,
             Factors* factors_in,
+            std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+            std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
             const Parameters &conditioned_on_parameters);
   Particles(std::vector<Parameters> &initial_values_in,
             const arma::colvec &log_probabilities_of_initial_values_in,
             Factors* factors_in,
+            std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+            std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
             const Parameters &conditioned_on_parameters,
             const Parameters &sequencer_parameters);
   
   void setup(std::vector<Parameters> &initial_values_in,
              const arma::colvec &log_probabilities_of_initial_values_in,
-             Factors* factors_in);
+             Factors* factors_in,
+             std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+             std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in);
   
   void setup(std::vector<Parameters> &initial_values_in,
              const arma::colvec &log_probabilities_of_initial_values_in,
              Factors* factors_in,
+             std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+             std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
              const Parameters &conditioned_on_parameters);
   
   void setup(std::vector<Parameters> &initial_values_in,
              const arma::colvec &log_probabilities_of_initial_values_in,
              Factors* factors_in,
+             std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+             std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
              const Parameters &conditioned_on_parameters,
              const Parameters &sequencer_parameters);
 
@@ -65,8 +77,15 @@ public:
   //void push_back(const Particle &particle_in);
   void push_back(MoveOutput* move_output_in);
   void push_back(Parameters &&parameters_in,
-                 Factors* factors_in);
+                 Factors* factors_in,
+                 std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                 std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in);
   void push_back(Particle &&particle_in);
+  void push_back(const Parameters &parameters_in,
+                 Factors* factors_in,
+                 std::vector<ProposalKernel*>* proposals_to_transform_for_in,
+                 std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in);
+  void push_back(const Particle &particle_in);
   
   Particle* add_particle();
   
@@ -80,6 +99,8 @@ public:
   double calculate_log_normalising_constant();
   void normalise_weights();
   void resample();
+  
+  arma::rowvec get_output_lengths() const;
   
   void set_previous_target_evaluated_to_target_evaluated();
   void subsample_set_previous_target_evaluated_to_target_evaluated();

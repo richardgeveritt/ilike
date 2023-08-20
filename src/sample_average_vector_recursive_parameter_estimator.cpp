@@ -50,6 +50,9 @@ void SampleAverageVectorRecursiveParameterEstimator::update(const std::string &v
                                                             size_t iteration_counter,
                                                             ProposalKernel* proposal)
 {
+  Rcpp::stop("SampleAverageVectorRecursiveParameterEstimator::update - need to sort out transform.");
+  
+  /*
   if (iteration_counter==0)
   {
     this->estimated = latest_particle.move_parameters->get_colvec(variable_name);
@@ -58,4 +61,5 @@ void SampleAverageVectorRecursiveParameterEstimator::update(const std::string &v
   {
     this->estimated = this->estimated + this->gain(iteration_counter+1)*(latest_particle.move_parameters->get_colvec(variable_name) - this->estimated);
   }
+  */
 }

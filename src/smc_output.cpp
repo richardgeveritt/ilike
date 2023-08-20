@@ -439,6 +439,20 @@ void SMCOutput::write_to_file(const std::string &dir_name,
         Rcpp::stop("File " + directory_name + "/vector_variable_sizes.txt" + " cannot be opened.");
       }
       
+      if (!this->estimator->output_lengths_file_stream.is_open())
+      {
+        this->estimator->output_lengths_file_stream.open(directory_name + "/output_lengths.txt",std::ios::out | std::ios::app);
+      }
+      if (this->estimator->output_lengths_file_stream.is_open())
+      {
+        this->estimator->output_lengths_file_stream << this->all_particles[deque_index].get_output_lengths();
+        //incremental_log_likelihood_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + directory_name + "/output_lengths.txt" + " cannot be opened.");
+      }
+      
       /*
       std::ofstream any_variables_file_stream;
       any_variables_file_stream.open(directory_name + "/any_variables.txt",std::ios::out | std::ios::app);
@@ -619,6 +633,7 @@ void SMCOutput::close_ofstreams()
   this->estimator->vector_variable_sizes_file_stream.close();
   
   this->estimator->incremental_log_likelihood_file_stream.close();
+  this->estimator->output_lengths_file_stream.close();
   this->estimator->resampled_file_stream.close();
   this->estimator->ess_file_stream.close();
   this->estimator->schedule_parameters_file_stream.close();

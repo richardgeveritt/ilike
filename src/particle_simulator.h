@@ -24,26 +24,38 @@ public:
   virtual ParticleSimulator* duplicate() const=0;
 
   virtual Particle simulate(RandomNumberGenerator &rng,
-                            Factors* factors) const=0;
+                            Factors* factors,
+                            std::vector<ProposalKernel*>* proposals_to_transform_for,
+                            std::vector<ProposalKernel*>* proposals_to_find_gradient_for) const=0;
   
   virtual Particle subsample_simulate(RandomNumberGenerator &rng,
-                                      Factors* factors) const=0;
+                                      Factors* factors,
+                                      std::vector<ProposalKernel*>* proposals_to_transform_for,
+                                      std::vector<ProposalKernel*>* proposals_to_find_gradient_for) const=0;
   
   virtual Particle simulate(RandomNumberGenerator &rng,
                             Factors* factors,
+                            std::vector<ProposalKernel*>* proposals_to_transform_for,
+                            std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
                             const Parameters &sequencer_parameters) const=0;
   
   virtual Particle subsample_simulate(RandomNumberGenerator &rng,
                                       Factors* factors,
+                                      std::vector<ProposalKernel*>* proposals_to_transform_for,
+                                      std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
                                       const Parameters &sequencer_parameters) const=0;
   
   virtual Particle simulate(RandomNumberGenerator &rng,
                             Factors* factors,
+                            std::vector<ProposalKernel*>* proposals_to_transform_for,
+                            std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
                             const Parameters &conditioned_on_parameters,
                             const Parameters &sequencer_parameters) const=0;
   
   virtual Particle subsample_simulate(RandomNumberGenerator &rng,
                                       Factors* factors,
+                                      std::vector<ProposalKernel*>* proposals_to_transform_for,
+                                      std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
                                       const Parameters &conditioned_on_parameters,
                                       const Parameters &sequencer_parameters) const=0;
   
@@ -68,8 +80,8 @@ public:
                                         const Parameters &conditioned_on_parameters) const=0;
   */
   
-  virtual double evaluate(Particle &input) const=0;
-  virtual double subsample_evaluate(Particle &input) const=0;
+  virtual double evaluate(const Particle &input) const=0;
+  virtual double subsample_evaluate(const Particle &input) const=0;
   
   /*
   virtual double evaluate(Particle &input,

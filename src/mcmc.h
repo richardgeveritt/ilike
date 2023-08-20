@@ -33,7 +33,7 @@ public:
   virtual MCMC* mcmc_duplicate() const=0;
   
   MoveOutput* run(RandomNumberGenerator &rng,
-                  Particle &particle);
+                  const Particle &particle);
   
   /*
   MoveOutput* run(RandomNumberGenerator &rng,
@@ -42,7 +42,7 @@ public:
   */
   
   MoveOutput* subsample_run(RandomNumberGenerator &rng,
-                            Particle &particle);
+                            const Particle &particle);
   
   /*
   MoveOutput* subsample_run(RandomNumberGenerator &rng,
@@ -71,7 +71,7 @@ public:
   // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.
   // Proposal needs to call simulate in all llhdoutputs
   
-  void mcmc_adapt(Particle &current_particle,
+  void mcmc_adapt(const Particle &current_particle,
                   size_t iteration_counter);
   
   virtual void set_index(Index* index_in)=0;
@@ -79,6 +79,8 @@ public:
   virtual void set_proposal_parameters(Parameters* proposal_parameters_in)=0;
   
   size_t* get_iteration_counter_pointer();
+  
+  virtual std::vector<ProposalKernel*> get_proposals() const=0;
 
 protected:
   
@@ -87,7 +89,7 @@ protected:
   
   size_t iteration_counter;
   
-  virtual void specific_mcmc_adapt(Particle &current_particle,
+  virtual void specific_mcmc_adapt(const Particle &current_particle,
                                    size_t iteration_counter)=0;
   
   // Stored here.

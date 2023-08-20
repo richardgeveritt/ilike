@@ -89,6 +89,14 @@ public:
   
   void set_proposal_parameters(Parameters* proposal_parameters_in);
   
+  std::vector<std::string> get_variables() const;
+  
+  GradientEstimatorOutput* simulate_gradient_estimator_output() const;
+  
+  std::vector<ProposalKernel*> get_proposals();
+  
+  void set_index(Index* index_in);
+  
 // Mh has its own parameters.
   // Stochastic has some weights.
   // MH has sim prop and eval prop, t**ake in params. Use current value in acceptance, Set current value if accepted.

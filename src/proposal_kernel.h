@@ -19,6 +19,7 @@ class Transform;
 class SMCOutput;
 
 class CompositeProposalKernel;
+class CompositeIndependentProposalKernel;
 class ReinforceGradientEstimator;
 class DirectGradientEstimatorOutput;
 
@@ -38,7 +39,7 @@ public:
   virtual ProposalKernel* proposal_kernel_duplicate() const=0;
 
   Particle move(RandomNumberGenerator &rng,
-                Particle &particle) const;
+                const Particle &particle) const;
   /*
   Particle move(RandomNumberGenerator &rng,
                 Particle &particle,
@@ -46,7 +47,7 @@ public:
   */
   
   Particle subsample_move(RandomNumberGenerator &rng,
-                          Particle &particle) const;
+                          const Particle &particle) const;
   
   /*
   Particle subsample_move(RandomNumberGenerator &rng,
@@ -55,7 +56,7 @@ public:
   */
   Particle subsample_move(RandomNumberGenerator &rng,
                           const std::string &variable,
-                          Particle &particle) const;
+                          const Particle &particle) const;
   
   /*
   Particle subsample_move(RandomNumberGenerator &rng,
@@ -92,21 +93,18 @@ public:
   
   void smc_adapt(SMCOutput* current_state);
   
-  void mcmc_adapt(Particle &current_particle,
+  void mcmc_adapt(const Particle &current_particle,
                   size_t iteration_counter);
   
-  void use_transform(Particle &particle);
+  //void use_transform(const Particle &particle);
   
-  double evaluate_kernel(Particle &proposed_particle,
-                         Particle &old_particle) const;
+  double evaluate_kernel(const Particle &proposed_particle,
+                         const Particle &old_particle) const;
+  double subsample_evaluate_kernel(const Particle &proposed_particle,
+                                   const Particle &old_particle) const;
   
-  /*
-  double evaluate_kernel(Particle &proposed_particle,
-                         Particle &old_particle,
-                         const Parameters &conditioned_on_parameters) const;
-  */
-  double subsample_evaluate_kernel(Particle &proposed_particle,
-                                   Particle &old_particle) const;
+  double evaluate_kernel_for_mh(const Particle &proposed_particle) const;
+  double subsample_evaluate_kernel_for_mh(const Particle &proposed_particle) const;
   
   /*
   double subsample_evaluate_kernel(Particle &proposed_particle,
@@ -115,8 +113,8 @@ public:
   */
   
   arma::mat gradient_of_log(const std::string &variable,
-                            Particle &proposed_particle,
-                            Particle &old_particle);
+                            const Particle &proposed_particle,
+                            const Particle &old_particle);
   
   /*
   arma::mat gradient_of_log(const std::string &variable,
@@ -126,8 +124,8 @@ public:
   */
   
   arma::mat subsample_gradient_of_log(const std::string &variable,
-                                      Particle &proposed_particle,
-                                      Particle &old_particle);
+                                      const Particle &proposed_particle,
+                                      const Particle &old_particle);
   
   /*
   arma::mat subsample_gradient_of_log(const std::string &variable,
@@ -137,7 +135,7 @@ public:
   */
   
   virtual Parameters simulate(RandomNumberGenerator &rng,
-                              Particle &particle) const=0;
+                              const Particle &particle) const=0;
   
   /*
   virtual Parameters simulate(RandomNumberGenerator &rng,
@@ -146,7 +144,7 @@ public:
   */
   
   virtual Parameters subsample_simulate(RandomNumberGenerator &rng,
-                                        Particle &particle) const=0;
+                                        const Particle &particle) const=0;
   
   /*
   virtual Parameters subsample_simulate(RandomNumberGenerator &rng,
@@ -156,7 +154,7 @@ public:
   
   virtual Parameters subsample_simulate(RandomNumberGenerator &rng,
                                         const std::string &variable,
-                                        Particle &particle) const=0;
+                                        const Particle &particle) const=0;
   
   /*
   virtual Parameters subsample_simulate(RandomNumberGenerator &rng,
@@ -169,6 +167,12 @@ public:
   
   virtual void set_proposal_parameters(Parameters* proposal_parameters_in)=0;
   
+  virtual GradientEstimatorOutput* simulate_gradient_estimator_output() const=0;
+  
+  virtual std::vector<ProposalKernel*> get_proposals()=0;
+  
+  virtual void set_index(Index* index_in)=0;
+  
 // Mh has its own parameters.
   // Stochastic has some weights.
   // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.
@@ -177,11 +181,12 @@ public:
 protected:
   
   friend CompositeProposalKernel;
+  friend CompositeIndependentProposalKernel;
   friend ReinforceGradientEstimator;
   friend DirectGradientEstimatorOutput;
   
-  virtual double specific_evaluate_kernel(Particle &proposed_particle,
-                                          Particle &old_particle) const=0;
+  virtual double specific_evaluate_kernel(const Particle &proposed_particle,
+                                          const Particle &old_particle) const=0;
   
   /*
   virtual double specific_evaluate_kernel(Particle &proposed_particle,
@@ -189,8 +194,8 @@ protected:
                                           const Parameters &conditioned_on_parameters) const=0;
   */
   
-  virtual double specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                                    Particle &old_particle) const=0;
+  virtual double specific_subsample_evaluate_kernel(const Particle &proposed_particle,
+                                                    const Particle &old_particle) const=0;
   
   /*
   virtual double specific_subsample_evaluate_kernel(Particle &proposed_particle,
@@ -199,8 +204,8 @@ protected:
   */
    
   virtual arma::mat specific_gradient_of_log(const std::string &variable,
-                                             Particle &proposed_particle,
-                                             Particle &old_particle)=0;
+                                             const Particle &proposed_particle,
+                                             const Particle &old_particle)=0;
   
   /*
   virtual arma::mat specific_gradient_of_log(const std::string &variable,
@@ -210,8 +215,8 @@ protected:
   */
   
   virtual arma::mat specific_subsample_gradient_of_log(const std::string &variable,
-                                                       Particle &proposed_particle,
-                                                       Particle &old_particle)=0;
+                                                       const Particle &proposed_particle,
+                                                       const Particle &old_particle)=0;
   
   /*
   virtual arma::mat specific_subsample_gradient_of_log(const std::string &variable,
