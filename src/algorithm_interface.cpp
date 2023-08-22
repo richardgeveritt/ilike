@@ -2702,11 +2702,10 @@ double do_smc_mcmc_move(const List &model,
                                        true,
                                        true,
                                        false,
-                                       true,
+                                       false,
                                        parallel_in,
                                        grain_size_in,
                                        results_name_in.get_cstring());
-    
     
     std::chrono::high_resolution_clock::time_point start_time, end_time;
     start_time = std::chrono::high_resolution_clock::now();
@@ -2747,7 +2746,7 @@ double do_smc_mcmc_move(const List &model,
                                        true,
                                        true,
                                        false,
-                                       true,
+                                       false,
                                        parallel_in,
                                        grain_size_in,
                                        "");
@@ -2773,5 +2772,4 @@ double do_smc_mcmc_move(const List &model,
     
   }
 
-  return 0.0;
 }

@@ -28,11 +28,10 @@ smc_mcmc_move = function(model,
   if ((is.character(model)) && (length(model) == 1))
     model = parse_ilike_model(model,model_parameter_list)
 
-  # if (is.null(seed))
-  # {
-  #   seed = ilike_rdtsc()
-  # }
-  seed = 1
+  if (is.null(seed))
+  {
+    seed = ilike_rdtsc()
+  }
 
   # Sort MCMC termination method.
   mcmc_termination_method = get_method(model,"mcmc_termination")

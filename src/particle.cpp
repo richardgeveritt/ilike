@@ -384,6 +384,7 @@ Particle::Particle(Parameters &&parameters_in,
 : parameters(std::move(parameters_in))
 //move_transformed_parameters()
 {
+  
   this->parameters.merge_with_fixed(conditioned_on_parameters);
   
   if (factors_in!=NULL)
@@ -392,7 +393,7 @@ Particle::Particle(Parameters &&parameters_in,
     this->factor_variables->set_particle(this);
   }
   
-  Rcout << "1" << std::endl;
+  //Rcout << "1" << std::endl;
   
   this->simulate_proposal_variables(proposals_to_transform_for_in, proposals_to_find_gradient_for_in);
   
@@ -1005,8 +1006,10 @@ void Particle::simulate_ensemble_factor_variables()
 void Particle::simulate_proposal_variables(std::vector<ProposalKernel*>* proposals_to_transform_for_in,
                                            std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in)
 {
+  
   this->proposals_to_find_gradient_for_pointer = proposals_to_find_gradient_for_in;
   this->proposals_to_transform_for_pointer = proposals_to_transform_for_in;
+  
   
   for (auto i=this->proposals_to_find_gradient_for_pointer->begin();
        i!=this->proposals_to_find_gradient_for_pointer->end();
@@ -1019,10 +1022,12 @@ void Particle::simulate_proposal_variables(std::vector<ProposalKernel*>* proposa
     }
   }
   
+  
   for (auto i=this->proposals_to_transform_for_pointer->begin();
        i!=proposals_to_transform_for_pointer->end();
        ++i)
   {
+    
     boost::unordered_map< const ProposalKernel*, ProposalStore>::iterator current_transform_stored_at_proposal = this->current_proposal_store.end();
     
     for (auto j=this->current_proposal_store.begin();
@@ -1041,7 +1046,14 @@ void Particle::simulate_proposal_variables(std::vector<ProposalKernel*>* proposa
     {
       if (current_transform_stored_at_proposal==this->current_proposal_store.end())
       {
-        found->second.set_transformed_parameters((*i)->get_transform()->transform(this->parameters));
+        if ((*i)->get_transform()==NULL)
+        {
+          found->second.set_transformed_parameters(this->parameters);
+        }
+        else
+        {
+          found->second.set_transformed_parameters((*i)->get_transform()->transform(this->parameters));
+        }
       }
       else
       {
@@ -1052,14 +1064,23 @@ void Particle::simulate_proposal_variables(std::vector<ProposalKernel*>* proposa
     {
       if (current_transform_stored_at_proposal==this->current_proposal_store.end())
       {
-        this->current_proposal_store[*i] = (*i)->get_transform()->transform(this->parameters);
+        if ((*i)->get_transform()==NULL)
+        {
+          this->current_proposal_store[*i] = this->parameters;
+        }
+        else
+        {
+          this->current_proposal_store[*i] = (*i)->get_transform()->transform(this->parameters);
+        }
       }
       else
       {
         this->current_proposal_store[*i] = current_transform_stored_at_proposal->second.get_transformed_parameters();
       }
     }
+    
   }
+  
 }
 
 Particle Particle::copy_without_factor_variables() const

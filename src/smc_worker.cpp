@@ -78,6 +78,7 @@ void SMCWorker::make_copy(const SMCWorker &another)
 void SMCWorker::simulate(Particles* next_particles)
 {
   this->specific_simulate(next_particles);
+
   this->set_seed(this->get_seed() + this->get_number_of_particles());
   
   // Initialise weight.
