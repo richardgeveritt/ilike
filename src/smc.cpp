@@ -344,7 +344,7 @@ SMCOutput* SMC::initialise_smc()
 
 void SMC::setup()
 {
-  //this->setup_variables();
+  this->setup_variables();
 }
 
 void SMC::setup(const Parameters &parameters)
@@ -354,7 +354,6 @@ void SMC::setup(const Parameters &parameters)
 
 void SMC::setup_variables()
 {
-  
   Parameters dummy_parameters;
   
   if (this->proposed_particles_inputted)
@@ -364,16 +363,13 @@ void SMC::setup_variables()
   }
   else
   {
-    /*
     dummy_parameters = std::move(this->particle_simulator->simulate(*this->rng,
                                                                     this->factors,
                                                                     &this->proposals_to_transform_for,
                                                                     &this->proposals_to_find_gradient_for,
                                                                     this->sequencer.schedule_parameters).parameters);
-    */
   }
   
-  /*
   this->vector_variables = dummy_parameters.get_nonfixed_vector_variables();
   this->any_variables = dummy_parameters.get_nonfixed_any_variables();
   
@@ -381,7 +377,6 @@ void SMC::setup_variables()
   
   if (this->factors!=NULL)
     this->factors->setup(dummy_parameters);
-  */
 }
 
 void SMC::setup_variables(const Parameters &parameters)
