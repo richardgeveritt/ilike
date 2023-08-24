@@ -3,7 +3,7 @@
 #' @param model A file containing the model, or a pre-compiled model list.
 #' @param number_of_chains (optional) The number of chains.
 #' @param initial_values (optional) A list of lists containing the initial values for the chains.
-#' @param parallel_flag (optional) Set to true to perform the importance sampling in parallel, false for serial.
+#' @param parallel (optional) Set to true to perform the importance sampling in parallel, false for serial.
 #' @param results_directory The name of the directory to which results will be written.
 #' @param model_parameter_list (optional) A list containing parameters for the model.
 #' @param algorithm_parameter_list (optional) A list containing named parameters for the algorithm.
@@ -14,7 +14,7 @@
 mcmc = function(model,
                 number_of_chains=1,
                 initial_values = list(),
-                parallel_flag = FALSE,
+                parallel = FALSE,
                 results_directory = getwd(),
                 model_parameter_list = list(),
                 algorithm_parameter_list = list(),
@@ -59,7 +59,7 @@ mcmc = function(model,
           initial_values,
           mcmc_termination_method,
           number_of_chains,
-          parallel_flag,
+          parallel,
           grain_size,
           results_directory,
           seed)

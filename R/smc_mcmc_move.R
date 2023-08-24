@@ -2,7 +2,7 @@
 #'
 #' @param model A file containing the model, or a pre-compiled model list.
 #' @param number_of_particles The number of particles.
-#' @param parallel_flag (optional) Set to true to perform the importance sampling in parallel, false for serial.
+#' @param parallel (optional) Set to true to perform the importance sampling in parallel, false for serial.
 #' @param results_directory (optional) The name of the directory to which results will be written.
 #' @param smc_iterations_to_store (optional) The number of iterations of SMC output stored in memory as the algorithm is running (cannot be fewer than 2).
 #' @param write_to_file_at_each_iteration (optional) Do we write the algorithm output to file at each SMC step (TRUE/FALSE)?
@@ -14,7 +14,7 @@
 #' @export
 smc_mcmc_move = function(model,
                          number_of_particles,
-                         parallel_flag = FALSE,
+                         parallel = FALSE,
                          results_directory = getwd(),
                          smc_iterations_to_store = 2,
                          write_to_file_at_each_iteration = TRUE,
@@ -88,7 +88,7 @@ smc_mcmc_move = function(model,
                           smc_termination_method,
                           smc_iterations_to_store,
                           write_to_file_at_each_iteration,
-                          parallel_flag,
+                          parallel,
                           grain_size,
                           results_directory,
                           seed))

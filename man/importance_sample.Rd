@@ -7,7 +7,7 @@
 importance_sample(
   model,
   number_of_importance_points,
-  parallel_flag = FALSE,
+  parallel = FALSE,
   results_directory = getwd(),
   model_parameter_list = list(),
   algorithm_parameter_list = list(),
@@ -20,7 +20,7 @@ importance_sample(
 
 \item{number_of_importance_points}{The number of importance points.}
 
-\item{parallel_flag}{(optional) Set to true to perform the importance sampling in parallel, false for serial.}
+\item{parallel}{(optional) Set to true to perform the importance sampling in parallel, false for serial.}
 
 \item{results_directory}{(optional) The name of the directory to which results will be written.}
 

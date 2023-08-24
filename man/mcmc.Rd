@@ -8,7 +8,7 @@ mcmc(
   model,
   number_of_chains = 1,
   initial_values = list(),
-  parallel_flag = FALSE,
+  parallel = FALSE,
   results_directory = getwd(),
   model_parameter_list = list(),
   algorithm_parameter_list = list(),
@@ -23,7 +23,7 @@ mcmc(
 
 \item{initial_values}{(optional) A list of lists containing the initial values for the chains.}
 
-\item{parallel_flag}{(optional) Set to true to perform the importance sampling in parallel, false for serial.}
+\item{parallel}{(optional) Set to true to perform the importance sampling in parallel, false for serial.}
 
 \item{results_directory}{The name of the directory to which results will be written.}
 

@@ -7,7 +7,7 @@
 smc_mcmc_move(
   model,
   number_of_particles,
-  parallel_flag = FALSE,
+  parallel = FALSE,
   results_directory = getwd(),
   smc_iterations_to_store = 2,
   write_to_file_at_each_iteration = TRUE,
@@ -22,7 +22,7 @@ smc_mcmc_move(
 
 \item{number_of_particles}{The number of particles.}
 
-\item{parallel_flag}{(optional) Set to true to perform the importance sampling in parallel, false for serial.}
+\item{parallel}{(optional) Set to true to perform the importance sampling in parallel, false for serial.}
 
 \item{results_directory}{(optional) The name of the directory to which results will be written.}
 

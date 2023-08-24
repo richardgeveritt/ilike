@@ -2,7 +2,7 @@
 #'
 #' @param model A file containing the model, or a pre-compiled model list.
 #' @param number_of_importance_points The number of importance points.
-#' @param parallel_flag (optional) Set to true to perform the importance sampling in parallel, false for serial.
+#' @param parallel (optional) Set to true to perform the importance sampling in parallel, false for serial.
 #' @param results_directory (optional) The name of the directory to which results will be written.
 #' @param model_parameter_list (optional) A list containing parameters for the model.
 #' @param algorithm_parameter_list (optional) A list containing named parameters for the algorithm.
@@ -12,7 +12,7 @@
 #' @export
 importance_sample = function(model,
                              number_of_importance_points,
-                             parallel_flag = FALSE,
+                             parallel = FALSE,
                              results_directory = getwd(),
                              model_parameter_list = list(),
                              algorithm_parameter_list = list(),
@@ -33,7 +33,7 @@ importance_sample = function(model,
                                model_parameter_list,
                                algorithm_parameter_list,
                                number_of_importance_points,
-                               parallel_flag,
+                               parallel,
                                grain_size,
                                results_directory,
                                seed))
