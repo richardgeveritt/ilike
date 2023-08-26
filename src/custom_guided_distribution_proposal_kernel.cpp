@@ -190,9 +190,9 @@ GradientEstimatorOutput* CustomGuidedDistributionProposalKernel::simulate_gradie
   return NULL;
 }
 
-std::vector<ProposalKernel*> CustomGuidedDistributionProposalKernel::get_proposals()
+std::vector<const ProposalKernel*> CustomGuidedDistributionProposalKernel::get_proposals() const
 {
-  std::vector<ProposalKernel*> output;
+  std::vector<const ProposalKernel*> output;
   output.push_back(this);
   return output;
 }

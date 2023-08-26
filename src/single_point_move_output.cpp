@@ -11,15 +11,15 @@ SinglePointMoveOutput::SinglePointMoveOutput()
 }
 
 SinglePointMoveOutput::SinglePointMoveOutput(const Parameters &parameters_in,
-                                             Factors* factors_in,
-                                             std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-                                             std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in)
+                                             const Factors* factors_in,
+                                             const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+                                             const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in)
 : output(parameters_in,factors_in,proposals_to_transform_for_in,proposals_to_find_gradient_for_in)
 {
 }
 
 SinglePointMoveOutput::SinglePointMoveOutput(const Parameters &parameters_in,
-                                             EnsembleFactors* factors_in)
+                                             const EnsembleFactors* factors_in)
 : output(parameters_in,factors_in)
 {
 
@@ -31,15 +31,15 @@ SinglePointMoveOutput::SinglePointMoveOutput(const Particle &particle_in)
 }
 
 SinglePointMoveOutput::SinglePointMoveOutput(Parameters &&parameters_in,
-                                             Factors* factors_in,
-                                             std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-                                             std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in)
+                                             const Factors* factors_in,
+                                             const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+                                             const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in)
 : output(std::move(parameters_in),factors_in,proposals_to_transform_for_in,proposals_to_find_gradient_for_in)
 {
 }
 
 SinglePointMoveOutput::SinglePointMoveOutput(Parameters &&parameters_in,
-                                             EnsembleFactors* factors_in)
+                                             const EnsembleFactors* factors_in)
 : output(std::move(parameters_in),factors_in)
 {
   

@@ -58,7 +58,7 @@ public:
                                                 const Parameters &conditioned_on_parameters)=0;
   */
   
-  virtual EnsembleFactors* get_ensemble_factors()=0;
+  virtual const EnsembleFactors* get_ensemble_factors() const=0;
   
   void set_particle(Particle* particle_in);
   Particle* get_particle();

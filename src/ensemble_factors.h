@@ -30,14 +30,14 @@ public:
   // should be updated to return std::vector<arma::colvec>, one for each factor
   virtual std::vector<arma::colvec*> get_measurements()=0;
   
-  virtual EnsembleFactorVariables* simulate_ensemble_factor_variables(const Parameters &simulated_parameters)=0;
+  virtual EnsembleFactorVariables* simulate_ensemble_factor_variables(const Parameters &simulated_parameters) const=0;
   
   /*
   virtual EnsembleFactorVariables* simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
                                                                       const Parameters &conditioned_on_parameters)=0;
   */
   
-  virtual EnsembleFactorVariables* subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters)=0;
+  virtual EnsembleFactorVariables* subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters) const=0;
   
   /*
   virtual EnsembleFactorVariables* subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters,

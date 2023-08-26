@@ -35,12 +35,12 @@ public:
   // should be updated to return std::vector<arma::colvec>, one for each factor
   std::vector<arma::colvec*> get_measurements();
   
-  EnsembleFactorVariables* simulate_ensemble_factor_variables(const Parameters &simulated_parameters);
+  EnsembleFactorVariables* simulate_ensemble_factor_variables(const Parameters &simulated_parameters) const;
   /*
   EnsembleFactorVariables* simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
                                                               const Parameters &conditioned_on_parameters);
   */
-  EnsembleFactorVariables* subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters);
+  EnsembleFactorVariables* subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters) const;
   /*
   EnsembleFactorVariables* subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
                                                                         const Parameters &conditioned_on_parameters);
@@ -65,7 +65,7 @@ public:
   
   double get_incremental_likelihood(Ensemble* ensemble);
   
-  EnsembleFactors* get_ensemble_factors();
+  const EnsembleFactors* get_ensemble_factors() const;
   
   void setup();
   void setup(const Parameters &conditioned_on_parameters);

@@ -130,7 +130,7 @@ void VectorFactors::set_data(const Index* index)
   }
 }
 
-FactorVariables* VectorFactors::simulate_factor_variables(const Parameters &simulated_parameters)
+FactorVariables* VectorFactors::simulate_factor_variables(const Parameters &simulated_parameters) const
 {
   std::vector<LikelihoodEstimatorOutput*> outputs;
   outputs.reserve(this->likelihood_estimators.size());
@@ -171,7 +171,7 @@ FactorVariables* VectorFactors::simulate_factor_variables(const Parameters &simu
 }
 */
 
-FactorVariables* VectorFactors::subsample_simulate_factor_variables(const Parameters &simulated_parameters)
+FactorVariables* VectorFactors::subsample_simulate_factor_variables(const Parameters &simulated_parameters) const
 {
   std::vector<LikelihoodEstimatorOutput*> outputs;
   outputs.reserve(this->likelihood_estimators.size());

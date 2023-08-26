@@ -11,7 +11,7 @@ VectorEnsembleFactorVariables::VectorEnsembleFactorVariables()
   this->vector_ensemble_factors = NULL;
 }
 
-VectorEnsembleFactorVariables::VectorEnsembleFactorVariables(VectorEnsembleFactors* vector_ensemble_factors_in,
+VectorEnsembleFactorVariables::VectorEnsembleFactorVariables(const VectorEnsembleFactors* vector_ensemble_factors_in,
                                                              const std::vector<MeasurementCovarianceEstimatorOutput*> &measurement_covariance_estimators_in)
 :EnsembleFactorVariables()
 {
@@ -262,7 +262,7 @@ double VectorEnsembleFactorVariables::subsample_evaluate_likelihoods(const Index
 }
 */
 
-EnsembleFactors* VectorEnsembleFactorVariables::get_ensemble_factors()
+const EnsembleFactors* VectorEnsembleFactorVariables::get_ensemble_factors() const
 {
   return this->vector_ensemble_factors;
 }

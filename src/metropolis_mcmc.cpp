@@ -223,9 +223,9 @@ void MetropolisMCMC::set_proposal_parameters(Parameters* proposal_parameters_in)
   this->proposal->set_proposal_parameters(proposal_parameters_in);
 }
 
-std::vector<ProposalKernel*> MetropolisMCMC::get_proposals() const
+std::vector<const ProposalKernel*> MetropolisMCMC::get_proposals() const
 {
-  std::vector<ProposalKernel*> proposals = this->proposal->get_proposals();
+  std::vector<const ProposalKernel*> proposals = this->proposal->get_proposals();
   //proposals.push_back(this->proposal);
   return proposals;
 }

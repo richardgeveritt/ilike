@@ -18,18 +18,18 @@ class SinglePointMoveOutput : public MoveOutput
 public:
 
   SinglePointMoveOutput(const Parameters &parameter_in,
-                        Factors* factors_in,
-                        std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-                        std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in);
+                        const Factors* factors_in,
+                        const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+                        const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
   SinglePointMoveOutput(const Parameters &parameter_in,
-                        EnsembleFactors* factors_in);
+                        const EnsembleFactors* factors_in);
   
   SinglePointMoveOutput(Parameters &&parameter_in,
-                        Factors* factors_in,
-                        std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-                        std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in);
+                        const Factors* factors_in,
+                        const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+                        const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
   SinglePointMoveOutput(Parameters &&parameter_in,
-                        EnsembleFactors* factors_in);
+                        const EnsembleFactors* factors_in);
   
   SinglePointMoveOutput(const Particle &particle_in);
   SinglePointMoveOutput(Particle &&particle_in);

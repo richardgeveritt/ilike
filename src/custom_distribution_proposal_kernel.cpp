@@ -289,9 +289,9 @@ GradientEstimatorOutput* CustomDistributionProposalKernel::simulate_gradient_est
   return NULL;
 }
 
-std::vector<ProposalKernel*> CustomDistributionProposalKernel::get_proposals()
+std::vector<const ProposalKernel*> CustomDistributionProposalKernel::get_proposals() const
 {
-  std::vector<ProposalKernel*> output;
+  std::vector<const ProposalKernel*> output;
   output.push_back(this);
   return output;
 }

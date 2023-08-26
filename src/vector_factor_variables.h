@@ -18,7 +18,7 @@ public:
 
   VectorFactorVariables();
   
-  VectorFactorVariables(VectorFactors* vector_factors,
+  VectorFactorVariables(const VectorFactors* vector_factors,
                         const std::vector<LikelihoodEstimatorOutput*> &likelihood_estimator_outputs_in);
   
   VectorFactorVariables(VectorFactors* vector_factors,
@@ -93,7 +93,7 @@ public:
                                                  const Parameters &conditioned_on_parameters);
   */
   
-  Factors* get_factors();
+  const Factors* get_factors() const;
   
   void write_to_file(const std::string &directory_name,
                      const std::string &index) const;
@@ -103,7 +103,7 @@ public:
 protected:
 
   // not stored here
-  VectorFactors* vector_factors;
+  const VectorFactors* vector_factors;
   
   void make_copy(const VectorFactorVariables &another);
   

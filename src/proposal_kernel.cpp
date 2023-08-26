@@ -104,14 +104,14 @@ Particle ProposalKernel::move(RandomNumberGenerator &rng,
   // Outputs are created here, with memory managed by Particle hereafter.
   if (particle.factor_variables!=NULL)
   {
-    Factors* old_factors = particle.factor_variables->get_factors();
+    const Factors* old_factors = particle.factor_variables->get_factors();
     if (old_factors!=NULL)
       proposed_particle.simulate_factor_variables(old_factors);
   }
   
   if (particle.ensemble_factor_variables!=NULL)
   {
-    EnsembleFactors* old_ensemble_factors = particle.ensemble_factor_variables->get_ensemble_factors();
+    const EnsembleFactors* old_ensemble_factors = particle.ensemble_factor_variables->get_ensemble_factors();
     if (old_ensemble_factors!=NULL)
       proposed_particle.simulate_ensemble_factor_variables(old_ensemble_factors);
   }
@@ -197,14 +197,14 @@ Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
   // Outputs are created here, with memory managed by Particle hereafter.
   if (particle.factor_variables!=NULL)
   {
-    Factors* old_factors = particle.factor_variables->get_factors();
+    const Factors* old_factors = particle.factor_variables->get_factors();
     if (old_factors!=NULL)
       proposed_particle.subsample_simulate_factor_variables(old_factors);
   }
   
   if (particle.ensemble_factor_variables!=NULL)
   {
-    EnsembleFactors* old_ensemble_factors = particle.ensemble_factor_variables->get_ensemble_factors();
+    const EnsembleFactors* old_ensemble_factors = particle.ensemble_factor_variables->get_ensemble_factors();
     if (old_ensemble_factors!=NULL)
       proposed_particle.subsample_simulate_ensemble_factor_variables(old_ensemble_factors);
   }
@@ -271,14 +271,14 @@ Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
   // Outputs are created here, with memory managed by Particle hereafter.
   if (particle.factor_variables!=NULL)
   {
-    Factors* old_factors = particle.factor_variables->get_factors();
+    const Factors* old_factors = particle.factor_variables->get_factors();
     if (old_factors!=NULL)
       proposed_particle.subsample_simulate_factor_variables(old_factors);
   }
   
   if (particle.ensemble_factor_variables!=NULL)
   {
-    EnsembleFactors* old_ensemble_factors = particle.ensemble_factor_variables->get_ensemble_factors();
+    const EnsembleFactors* old_ensemble_factors = particle.ensemble_factor_variables->get_ensemble_factors();
     if (old_ensemble_factors!=NULL)
       proposed_particle.subsample_simulate_ensemble_factor_variables(old_ensemble_factors);
   }

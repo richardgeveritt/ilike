@@ -20,7 +20,7 @@ HMMEnsembleFactorVariables::~HMMEnsembleFactorVariables()
   }
 }
 
-HMMEnsembleFactorVariables::HMMEnsembleFactorVariables(HMMEnsembleFactors* hmm_ensemble_factors_in,
+HMMEnsembleFactorVariables::HMMEnsembleFactorVariables(const HMMEnsembleFactors* hmm_ensemble_factors_in,
                                                        const std::vector<MeasurementCovarianceEstimatorOutput*> &measurement_covariance_estimator_outputs_in)
 : EnsembleFactorVariables()
 {
@@ -258,7 +258,7 @@ double HMMEnsembleFactorVariables::subsample_evaluate_likelihoods(const Index* i
 }
 */
 
-EnsembleFactors* HMMEnsembleFactorVariables::get_ensemble_factors()
+const EnsembleFactors* HMMEnsembleFactorVariables::get_ensemble_factors() const
 {
   return this->hmm_ensemble_factors;
 }

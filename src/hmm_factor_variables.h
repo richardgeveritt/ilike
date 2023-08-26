@@ -20,10 +20,10 @@ public:
 
   HMMFactorVariables();
   
-  HMMFactorVariables(HMMFactors* factors_in,
+  HMMFactorVariables(const HMMFactors* factors_in,
                      const std::vector<LikelihoodEstimatorOutput*> &likelihood_estimator_outputs_in);
   
-  HMMFactorVariables(HMMFactors* factors_in,
+  HMMFactorVariables(const HMMFactors* factors_in,
                      const std::vector<LikelihoodEstimatorOutput*> &likelihood_estimator_outputs_in,
                      Particle* particle_in);
 
@@ -91,7 +91,7 @@ public:
                                                  const Parameters &conditioned_on_parameters);
   */
   
-  Factors* get_factors();
+  const Factors* get_factors() const;
   
   void write_to_file(const std::string &directory_name,
                      const std::string &index) const;
@@ -101,7 +101,7 @@ public:
 protected:
   
   // Stored in likelihood_estimator.
-  HMMFactors* hmm_factors;
+  const HMMFactors* hmm_factors;
   
   double dynamic_smcfixed_part;
 

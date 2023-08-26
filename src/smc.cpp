@@ -40,7 +40,7 @@ SMC::SMC(RandomNumberGenerator* rng_in,
          size_t number_of_particles_in,
          size_t lag_in,
          size_t lag_proposed_in,
-         const std::vector<ProposalKernel*> proposals_in,
+         const std::vector<const ProposalKernel*> proposals_in,
          double resampling_desired_ess_in,
          bool proposal_is_evaluated_in,
          //EvaluateLogDistributionPtr evaluate_log_proposal_in,
@@ -77,7 +77,9 @@ SMC::SMC(RandomNumberGenerator* rng_in,
   if (transform_proposed_particles)
     this->proposals_to_transform_for = proposals_in;
   else
-    this->proposals_to_transform_for = std::vector<ProposalKernel*>();
+    this->proposals_to_transform_for = std::vector<const ProposalKernel*>();
+  
+  this->the_worker = NULL;
 }
 
 SMC::SMC(RandomNumberGenerator* rng_in,
@@ -87,7 +89,7 @@ SMC::SMC(RandomNumberGenerator* rng_in,
          size_t number_of_particles_in,
          size_t lag_in,
          size_t lag_proposed_in,
-         const std::vector<ProposalKernel*> proposals_in,
+         const std::vector<const ProposalKernel*> proposals_in,
          SMCCriterion* adaptive_resampling_method_in,
          bool proposal_is_evaluated_in,
          //EvaluateLogDistributionPtr evaluate_log_proposal_in,
@@ -124,7 +126,9 @@ SMC::SMC(RandomNumberGenerator* rng_in,
   if (transform_proposed_particles)
     this->proposals_to_transform_for = proposals_in;
   else
-    this->proposals_to_transform_for = std::vector<ProposalKernel*>();
+    this->proposals_to_transform_for = std::vector<const ProposalKernel*>();
+  
+  this->the_worker = NULL;
 }
 
 /*

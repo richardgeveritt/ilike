@@ -188,7 +188,7 @@ void ZigZagMCMC::set_proposal_parameters(Parameters* proposal_parameters_in)
   this->proposal->set_proposal_parameters(proposal_parameters_in);
 }
 
-std::vector<ProposalKernel*> ZigZagMCMC::get_proposals() const
+std::vector<const ProposalKernel*> ZigZagMCMC::get_proposals() const
 {
-  return std::vector<ProposalKernel*>();
+  return std::vector<const ProposalKernel*>();
 }

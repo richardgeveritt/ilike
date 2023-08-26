@@ -150,7 +150,7 @@ std::vector<arma::colvec*> VectorEnsembleFactors::get_measurements()
   //return this->measurement_covariance_estimator_temp_data[0]->get_colvec(this->measurement_names);
 }
 
-EnsembleFactorVariables* VectorEnsembleFactors::simulate_ensemble_factor_variables(const Parameters &simulated_parameters)
+EnsembleFactorVariables* VectorEnsembleFactors::simulate_ensemble_factor_variables(const Parameters &simulated_parameters) const
 {
   std::vector<MeasurementCovarianceEstimatorOutput*> outputs;
   outputs.reserve(this->measurement_covariance_estimators.size());
@@ -196,7 +196,7 @@ EnsembleFactorVariables* VectorEnsembleFactors::simulate_ensemble_factor_variabl
 }
 */
 
-EnsembleFactorVariables* VectorEnsembleFactors::subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters)
+EnsembleFactorVariables* VectorEnsembleFactors::subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters) const
 {
   std::vector<MeasurementCovarianceEstimatorOutput*> outputs;
   outputs.reserve(this->measurement_covariance_estimators.size());

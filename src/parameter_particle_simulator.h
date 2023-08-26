@@ -14,7 +14,7 @@ class ParameterParticleSimulator : public ParticleSimulator
 public:
 
   ParameterParticleSimulator();
-  ParameterParticleSimulator(IndependentProposalKernel* proposal_in,
+  ParameterParticleSimulator(const IndependentProposalKernel* proposal_in,
                              const std::vector<LikelihoodEstimator*> &likelihood_estimators_in);
   //ParameterParticleSimulator(SimulateDistributionPtr simulate_parameters_in,
   //                           const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
@@ -26,38 +26,38 @@ public:
   ParticleSimulator* duplicate() const;
 
   Particle simulate(RandomNumberGenerator &rng,
-                    Factors* factors,
-                    std::vector<ProposalKernel*>* proposals_to_transform_for,
-                    std::vector<ProposalKernel*>* proposals_to_find_gradient_for) const;
+                    const Factors* factors,
+                    const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                    const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for) const;
   
   Particle subsample_simulate(RandomNumberGenerator &rng,
-                              Factors* factors,
-                              std::vector<ProposalKernel*>* proposals_to_transform_for,
-                              std::vector<ProposalKernel*>* proposals_to_find_gradient_for) const;
+                              const Factors* factors,
+                              const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                              const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for) const;
   
   Particle simulate(RandomNumberGenerator &rng,
-                    Factors* factors,
-                    std::vector<ProposalKernel*>* proposals_to_transform_for,
-                    std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
+                    const Factors* factors,
+                    const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                    const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for,
                     const Parameters &sequencer_parameters) const;
   
   Particle subsample_simulate(RandomNumberGenerator &rng,
-                              Factors* factors,
-                              std::vector<ProposalKernel*>* proposals_to_transform_for,
-                              std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
+                              const Factors* factors,
+                              const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                              const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for,
                               const Parameters &sequencer_parameters) const;
   
   Particle simulate(RandomNumberGenerator &rng,
-                    Factors* factors,
-                    std::vector<ProposalKernel*>* proposals_to_transform_for,
-                    std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
+                    const Factors* factors,
+                    const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                    const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for,
                     const Parameters &conditioned_on_parameters,
                     const Parameters &sequencer_parameters) const;
   
   Particle subsample_simulate(RandomNumberGenerator &rng,
-                              Factors* factors,
-                              std::vector<ProposalKernel*>* proposals_to_transform_for,
-                              std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
+                              const Factors* factors,
+                              const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                              const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for,
                               const Parameters &conditioned_on_parameters,
                               const Parameters &sequencer_parameters) const;
   
@@ -102,7 +102,7 @@ protected:
   //SimulateDistributionPtr simulate_parameters;
   
   // stored here
-  IndependentProposalKernel* proposal;
+  const IndependentProposalKernel* proposal;
 
   // Not stored here.
   std::vector<LikelihoodEstimator*> likelihood_estimators;

@@ -24,38 +24,38 @@ public:
   virtual ParticleSimulator* duplicate() const=0;
 
   virtual Particle simulate(RandomNumberGenerator &rng,
-                            Factors* factors,
-                            std::vector<ProposalKernel*>* proposals_to_transform_for,
-                            std::vector<ProposalKernel*>* proposals_to_find_gradient_for) const=0;
+                            const Factors* factors,
+                            const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                            const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for) const=0;
   
   virtual Particle subsample_simulate(RandomNumberGenerator &rng,
-                                      Factors* factors,
-                                      std::vector<ProposalKernel*>* proposals_to_transform_for,
-                                      std::vector<ProposalKernel*>* proposals_to_find_gradient_for) const=0;
+                                      const Factors* factors,
+                                      const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                                      const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for) const=0;
   
   virtual Particle simulate(RandomNumberGenerator &rng,
-                            Factors* factors,
-                            std::vector<ProposalKernel*>* proposals_to_transform_for,
-                            std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
+                            const Factors* factors,
+                            const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                            const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for,
                             const Parameters &sequencer_parameters) const=0;
   
   virtual Particle subsample_simulate(RandomNumberGenerator &rng,
-                                      Factors* factors,
-                                      std::vector<ProposalKernel*>* proposals_to_transform_for,
-                                      std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
+                                      const Factors* factors,
+                                      const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                                      const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for,
                                       const Parameters &sequencer_parameters) const=0;
   
   virtual Particle simulate(RandomNumberGenerator &rng,
-                            Factors* factors,
-                            std::vector<ProposalKernel*>* proposals_to_transform_for,
-                            std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
+                            const Factors* factors,
+                            const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                            const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for,
                             const Parameters &conditioned_on_parameters,
                             const Parameters &sequencer_parameters) const=0;
   
   virtual Particle subsample_simulate(RandomNumberGenerator &rng,
-                                      Factors* factors,
-                                      std::vector<ProposalKernel*>* proposals_to_transform_for,
-                                      std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
+                                      const Factors* factors,
+                                      const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                                      const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for,
                                       const Parameters &conditioned_on_parameters,
                                       const Parameters &sequencer_parameters) const=0;
   

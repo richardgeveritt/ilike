@@ -291,9 +291,9 @@ GradientEstimatorOutput* HMCProposalKernel::simulate_gradient_estimator_output()
   return NULL;
 }
 
-std::vector<ProposalKernel*> HMCProposalKernel::get_proposals()
+std::vector<const ProposalKernel*> HMCProposalKernel::get_proposals() const
 {
-  std::vector<ProposalKernel*> output;
+  std::vector<const ProposalKernel*> output;
   output.push_back(this);
   return output;
 }

@@ -159,7 +159,7 @@ void HMMFactors::set_data(const Index* index)
   }
 }
 
-FactorVariables* HMMFactors::simulate_factor_variables(const Parameters &simulated_parameters)
+FactorVariables* HMMFactors::simulate_factor_variables(const Parameters &simulated_parameters) const
 {
   std::vector<LikelihoodEstimatorOutput*> outputs;
   outputs.reserve(this->likelihood_estimators.size());
@@ -200,7 +200,7 @@ FactorVariables* HMMFactors::simulate_factor_variables(const Parameters &simulat
 }
 */
 
-FactorVariables* HMMFactors::subsample_simulate_factor_variables(const Parameters &simulated_parameters)
+FactorVariables* HMMFactors::subsample_simulate_factor_variables(const Parameters &simulated_parameters) const
 {
   std::vector<LikelihoodEstimatorOutput*> outputs;
   outputs.reserve(this->likelihood_estimators.size());

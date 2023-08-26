@@ -207,9 +207,9 @@ GradientEstimatorOutput* TransformedIndependentProposalKernel::simulate_gradient
   return NULL;
 }
 
-std::vector<ProposalKernel*> TransformedIndependentProposalKernel::get_proposals()
+std::vector<const ProposalKernel*> TransformedIndependentProposalKernel::get_proposals() const
 {
-  std::vector<ProposalKernel*> proposals = this->proposal->get_proposals();
+  std::vector<const ProposalKernel*> proposals = this->proposal->get_proposals();
   proposals.push_back(this);
   return proposals;
 }

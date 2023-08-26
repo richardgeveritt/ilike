@@ -49,7 +49,7 @@ public:
 
   GradientEstimatorOutput* simulate_gradient_estimator_output() const;
   
-  std::vector<ProposalKernel*> get_proposals();
+  std::vector<const ProposalKernel*> get_proposals() const;
   
   void set_index(Index* index_in);
   

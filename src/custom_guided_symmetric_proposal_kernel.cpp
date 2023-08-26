@@ -124,9 +124,9 @@ GradientEstimatorOutput* CustomGuidedSymmetricProposalKernel::simulate_gradient_
   return NULL;
 }
 
-std::vector<ProposalKernel*> CustomGuidedSymmetricProposalKernel::get_proposals()
+std::vector<const ProposalKernel*> CustomGuidedSymmetricProposalKernel::get_proposals() const
 {
-  std::vector<ProposalKernel*> output;
+  std::vector<const ProposalKernel*> output;
   output.push_back(this);
   return output;
 }

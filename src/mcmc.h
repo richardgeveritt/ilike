@@ -80,7 +80,7 @@ public:
   
   size_t* get_iteration_counter_pointer();
   
-  virtual std::vector<ProposalKernel*> get_proposals() const=0;
+  virtual std::vector<const ProposalKernel*> get_proposals() const=0;
 
 protected:
   

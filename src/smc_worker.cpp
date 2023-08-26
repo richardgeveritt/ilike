@@ -4,7 +4,7 @@
 #include "likelihood_estimator.h"
 #include "likelihood_estimator_output.h"
 
-SMCWorker::SMCWorker(void)
+SMCWorker::SMCWorker()
 {
   //this->particle_simulator = NULL;
 }

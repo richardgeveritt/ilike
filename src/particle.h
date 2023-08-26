@@ -36,20 +36,20 @@ public:
   Particle(const Parameters &parameters_in);
   
   Particle(const Parameters &parameters_in,
-           Factors* factors_in,
-           std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-           std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in);
+           const Factors* factors_in,
+           const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+           const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
   
   Particle(const Parameters &parameters_in,
-           Factors* factors_in,
-           std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-           std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
+           const Factors* factors_in,
+           const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+           const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in,
            const Parameters &conditioned_on_parameters);
   
   Particle(const Parameters &parameters_in,
-           Factors* factors_in,
-           std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-           std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
+           const Factors* factors_in,
+           const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+           const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in,
            const Parameters &conditioned_on_parameters,
            const Parameters &sequencer_parameters);
   
@@ -61,14 +61,14 @@ public:
            double previous_target_evaluated_in);
   
   Particle(const Parameters &parameters_in,
-           EnsembleFactors* ensemble_factors_in);
+           const EnsembleFactors* ensemble_factors_in);
   
   Particle(const Parameters &parameters_in,
-           EnsembleFactors* ensemble_factors_in,
+           const EnsembleFactors* ensemble_factors_in,
            const Parameters &conditioned_on_parameters);
   
   Particle(const Parameters &parameters_in,
-           EnsembleFactors* ensemble_factors_in,
+           const EnsembleFactors* ensemble_factors_in,
            const Parameters &conditioned_on_parameters,
            const Parameters &sequencer_parameters);
   
@@ -79,20 +79,20 @@ public:
   Particle(Parameters &&parameters_in);
   
   Particle(Parameters &&parameters_in,
-           Factors* factors_in,
-           std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-           std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in);
+           const Factors* factors_in,
+           const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+           const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
   
   Particle(Parameters &&parameters_in,
-           Factors* factors_in,
-           std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-           std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
+           const Factors* factors_in,
+           const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+           const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in,
            const Parameters &conditioned_on_parameters);
   
   Particle(Parameters &&parameters_in,
-           Factors* factors_in,
-           std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-           std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
+           const Factors* factors_in,
+           const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+           const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in,
            const Parameters &conditioned_on_parameters,
            const Parameters &sequencer_parameters);
   
@@ -104,14 +104,14 @@ public:
            double previous_target_evaluated_in);
   
   Particle(Parameters &&parameters_in,
-           EnsembleFactors* ensemble_factors_in);
+           const EnsembleFactors* ensemble_factors_in);
   
   Particle(Parameters &&parameters_in,
-           EnsembleFactors* ensemble_factors_in,
+           const EnsembleFactors* ensemble_factors_in,
            const Parameters &conditioned_on_parameters);
   
   Particle(Parameters &&parameters_in,
-           EnsembleFactors* ensemble_factors_in,
+           const EnsembleFactors* ensemble_factors_in,
            const Parameters &conditioned_on_parameters,
            const Parameters &sequencer_parameters);
   
@@ -158,8 +158,8 @@ public:
   
   void simulate_factor_variables();
   void simulate_ensemble_factor_variables();
-  void simulate_proposal_variables(std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-                                   std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in);
+  void simulate_proposal_variables(const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+                                   const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
   
   /*
   void evaluate_smcfixed_part_of_likelihoods();
@@ -275,8 +275,8 @@ public:
   
   boost::unordered_map< const ProposalKernel*, ProposalStore> current_proposal_store;
   
-  std::vector<ProposalKernel*>* proposals_to_transform_for_pointer;
-  std::vector<ProposalKernel*>* proposals_to_find_gradient_for_pointer;
+  const std::vector<const ProposalKernel*>* proposals_to_transform_for_pointer;
+  const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_pointer;
   
   //boost::unordered_map< const ProposalKernel*, ProposalStore> previous_proposal_store;
   
@@ -347,9 +347,9 @@ public:
                                                  const Parameters &conditioned_on_parameters);
   */
   
-  void simulate_factor_variables(Factors* factors);
+  void simulate_factor_variables(const Factors* factors);
   
-  void simulate_ensemble_factor_variables(EnsembleFactors* ensemble_factors);
+  void simulate_ensemble_factor_variables(const EnsembleFactors* ensemble_factors);
   
   /*
   void simulate_factor_variables(Factors* factors,
@@ -359,9 +359,9 @@ public:
                                           const Parameters &conditioned_on_parameters);
   */
   
-  void subsample_simulate_factor_variables(Factors* factors);
+  void subsample_simulate_factor_variables(const Factors* factors);
   
-  void subsample_simulate_ensemble_factor_variables(EnsembleFactors* ensemble_factors);
+  void subsample_simulate_ensemble_factor_variables(const EnsembleFactors* ensemble_factors);
   
   /*
   void subsample_simulate_factor_variables(Factors* factors,

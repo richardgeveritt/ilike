@@ -178,9 +178,9 @@ GradientEstimatorOutput* CustomGuidedNoParamsProposalKernel::simulate_gradient_e
   return NULL;
 }
 
-std::vector<ProposalKernel*> CustomGuidedNoParamsProposalKernel::get_proposals()
+std::vector<const ProposalKernel*> CustomGuidedNoParamsProposalKernel::get_proposals() const
 {
-  std::vector<ProposalKernel*> output;
+  std::vector<const ProposalKernel*> output;
   output.push_back(this);
   return output;
 }

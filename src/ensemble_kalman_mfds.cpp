@@ -567,7 +567,7 @@ MoveOutput* EnsembleKalmanMFDS::move(RandomNumberGenerator &rng,
   else
   {
     Particle next_particle = particle.copy_without_factor_variables();
-    EnsembleFactors* ensemble_factors = particle.ensemble_factor_variables->get_ensemble_factors();
+    const EnsembleFactors* ensemble_factors = particle.ensemble_factor_variables->get_ensemble_factors();
     if (ensemble_factors!=NULL)
       next_particle.simulate_ensemble_factor_variables(ensemble_factors);
     return new SinglePointMoveOutput(std::move(next_particle));
@@ -880,7 +880,7 @@ MoveOutput* EnsembleKalmanMFDS::subsample_move(RandomNumberGenerator &rng,
   else
   {
     Particle next_particle = particle.copy_without_factor_variables();
-    EnsembleFactors* ensemble_factors = particle.ensemble_factor_variables->get_ensemble_factors();
+    const EnsembleFactors* ensemble_factors = particle.ensemble_factor_variables->get_ensemble_factors();
     if (ensemble_factors!=NULL)
       next_particle.subsample_simulate_ensemble_factor_variables(ensemble_factors);
     return new SinglePointMoveOutput(std::move(next_particle));

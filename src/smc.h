@@ -32,7 +32,7 @@ public:
       size_t number_of_particles_in,
       size_t lag_in,
       size_t lag_proposed_in,
-      const std::vector<ProposalKernel*> proposals_in,
+      const std::vector<const ProposalKernel*> proposals_in,
       //SummaryStatisticsPtr summary_statistics_in,
       double resampling_desired_ess_in,
       //EvaluateLogDistributionPtr evaluate_log_proposal_in,
@@ -49,7 +49,7 @@ public:
       size_t number_of_particles_in,
       size_t lag_in,
       size_t lag_proposed_in,
-      const std::vector<ProposalKernel*> proposals_in,
+      const std::vector<const ProposalKernel*> proposals_in,
       //SummaryStatisticsPtr summary_statistics_in,
       SMCCriterion* adaptive_resampling_method_in,
       //EvaluateLogDistributionPtr evaluate_log_proposal_in,
@@ -255,8 +255,8 @@ protected:
   bool initialised;
   
   // not stored here
-  std::vector<ProposalKernel*> proposals_to_transform_for;
-  std::vector<ProposalKernel*> proposals_to_find_gradient_for;
+  std::vector<const ProposalKernel*> proposals_to_transform_for;
+  std::vector<const ProposalKernel*> proposals_to_find_gradient_for;
   
   std::ofstream log_likelihood_file_stream;
   std::ofstream output_lengths_file_stream;

@@ -259,9 +259,9 @@ GradientEstimatorOutput* UniformRandomWalkProposalKernel::simulate_gradient_esti
   return NULL;
 }
 
-std::vector<ProposalKernel*> UniformRandomWalkProposalKernel::get_proposals()
+std::vector<const ProposalKernel*> UniformRandomWalkProposalKernel::get_proposals() const
 {
-  std::vector<ProposalKernel*> output;
+  std::vector<const  ProposalKernel*> output;
   output.push_back(this);
   return output;
 }

@@ -28,7 +28,7 @@ ParameterParticleSimulator::ParameterParticleSimulator(SimulateDistributionPtr s
 }
 */
 
-ParameterParticleSimulator::ParameterParticleSimulator(IndependentProposalKernel* proposal_in,
+ParameterParticleSimulator::ParameterParticleSimulator(const IndependentProposalKernel* proposal_in,
                                                        const std::vector<LikelihoodEstimator*> &likelihood_estimators_in)
 :ParticleSimulator()
 {
@@ -80,9 +80,9 @@ void ParameterParticleSimulator::make_copy(const ParameterParticleSimulator &ano
 }
 
 Particle ParameterParticleSimulator::simulate(RandomNumberGenerator &rng,
-                                              Factors* factors,
-                                              std::vector<ProposalKernel*>* proposals_to_transform_for,
-                                              std::vector<ProposalKernel*>* proposals_to_find_gradient_for) const
+                                              const Factors* factors,
+                                              const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                                              const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for) const
 {
   //new_particle->setup(this->proposal->independent_simulate(rng),
   //                    factors);
@@ -104,9 +104,9 @@ Particle ParameterParticleSimulator::simulate(RandomNumberGenerator &rng,
 }
 
 Particle ParameterParticleSimulator::simulate(RandomNumberGenerator &rng,
-                                              Factors* factors,
-                                              std::vector<ProposalKernel*>* proposals_to_transform_for,
-                                              std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
+                                              const Factors* factors,
+                                              const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                                              const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for,
                                               const Parameters &sequencer_parameters) const
 {
   //new_particle->setup(this->proposal->independent_simulate(rng,
@@ -130,6 +130,7 @@ Particle ParameterParticleSimulator::simulate(RandomNumberGenerator &rng,
   
   //return Particle();
   
+  
   return Particle(this->proposal->independent_simulate(rng),
                   factors,
                   proposals_to_transform_for,
@@ -140,9 +141,9 @@ Particle ParameterParticleSimulator::simulate(RandomNumberGenerator &rng,
 }
 
 Particle ParameterParticleSimulator::simulate(RandomNumberGenerator &rng,
-                                              Factors* factors,
-                                              std::vector<ProposalKernel*>* proposals_to_transform_for,
-                                              std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
+                                              const Factors* factors,
+                                              const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                                              const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for,
                                               const Parameters &conditioned_on_parameters,
                                               const Parameters &sequencer_parameters) const
 {
@@ -173,9 +174,9 @@ Particle ParameterParticleSimulator::simulate(RandomNumberGenerator &rng,
 }
 
 Particle ParameterParticleSimulator::subsample_simulate(RandomNumberGenerator &rng,
-                                                        Factors* factors,
-                                                        std::vector<ProposalKernel*>* proposals_to_transform_for,
-                                                        std::vector<ProposalKernel*>* proposals_to_find_gradient_for) const
+                                                        const Factors* factors,
+                                                        const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                                                        const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for) const
 {
   //new_particle->setup(this->proposal->independent_simulate(rng),
   //                    factors);
@@ -197,9 +198,9 @@ Particle ParameterParticleSimulator::subsample_simulate(RandomNumberGenerator &r
 }
 
 Particle ParameterParticleSimulator::subsample_simulate(RandomNumberGenerator &rng,
-                                                        Factors* factors,
-                                                        std::vector<ProposalKernel*>* proposals_to_transform_for,
-                                                        std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
+                                                        const Factors* factors,
+                                                        const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                                                        const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for,
                                                         const Parameters &sequencer_parameters) const
 {
   //new_particle->setup(this->proposal->subsample_independent_simulate(rng,
@@ -227,9 +228,9 @@ Particle ParameterParticleSimulator::subsample_simulate(RandomNumberGenerator &r
 }
 
 Particle ParameterParticleSimulator::subsample_simulate(RandomNumberGenerator &rng,
-                                                        Factors* factors,
-                                                        std::vector<ProposalKernel*>* proposals_to_transform_for,
-                                                        std::vector<ProposalKernel*>* proposals_to_find_gradient_for,
+                                                        const Factors* factors,
+                                                        const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                                                        const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for,
                                                         const Parameters &conditioned_on_parameters,
                                                         const Parameters &sequencer_parameters) const
 {

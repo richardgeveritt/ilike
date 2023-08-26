@@ -26,7 +26,7 @@ public:
   void set_data(size_t index);
   virtual void set_data(const Index* index)=0;
   
-  virtual FactorVariables* simulate_factor_variables(const Parameters &simulated_parameters)=0;
+  virtual FactorVariables* simulate_factor_variables(const Parameters &simulated_parameters) const=0;
   
   /*
   virtual FactorVariables* simulate_factor_variables(const Parameters &simulated_parameters,
@@ -34,7 +34,7 @@ public:
    
   */
   
-  virtual FactorVariables* subsample_simulate_factor_variables(const Parameters &simulated_parameters)=0;
+  virtual FactorVariables* subsample_simulate_factor_variables(const Parameters &simulated_parameters) const=0;
   
   /*
   virtual FactorVariables* subsample_simulate_factor_variables(const Parameters &simulated_parameters,

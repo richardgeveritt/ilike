@@ -2438,6 +2438,8 @@ double do_importance_sampler(const List &model,
   
   Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list);
   
+  //Rcout << -2.0 << std::endl;
+  
   ImportanceSampler alg(&rng,
                         &seed,
                         &the_data,
@@ -2453,10 +2455,15 @@ double do_importance_sampler(const List &model,
                         grain_size_in,
                         "");
   
+  //Rcout << -1.0 << std::endl;
+  
   std::chrono::high_resolution_clock::time_point start_time, end_time;
   start_time = std::chrono::high_resolution_clock::now();
   
+  //Rcout << 1.0 << std::endl;
   SMCOutput* output = alg.run();
+  
+  //Rcout << 2.0 << std::endl;
   
   end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed_time = end_time - start_time;
@@ -2468,6 +2475,7 @@ double do_importance_sampler(const List &model,
   double log_likelihood = output->log_likelihood;
   
   delete output;
+  //Rcout << 3.0 << std::endl;
   
   return log_likelihood;
 }
@@ -2565,17 +2573,27 @@ void do_mcmc(const List &model,
   std::chrono::high_resolution_clock::time_point start_time, end_time;
   start_time = std::chrono::high_resolution_clock::now();
   
-  SMCOutput* output = alg->run();
+  //std::ofstream test_file_stream;
+  //test_file_stream.open("/Users/richard/Dropbox/code/ilike/experiments/test.txt",std::ios::out | std::ios::app);
+  Rcout << 1.0 << std::endl;
+  
+  //SMCOutput* output = alg->run();
+  
+  Rcout << 2.0 << std::endl;
   
   end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed_time = end_time - start_time;
-  output->set_time(elapsed_time.count());
+  //output->set_time(elapsed_time.count());
   
-  if (strcmp(results_name_in.get_cstring(),"") != 0)
-    output->write(results_name_in.get_cstring());
-  delete output;
+  //if (strcmp(results_name_in.get_cstring(),"") != 0)
+  //  output->write(results_name_in.get_cstring());
+  //delete output;
+  
+  Rcout << 3.0 << std::endl;
   
   delete alg;
+  
+  Rcout << 4.0 << std::endl;
 }
 
 

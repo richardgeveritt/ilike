@@ -19,7 +19,7 @@ public:
 
   virtual ~HMMEnsembleFactorVariables();
   
-  HMMEnsembleFactorVariables(HMMEnsembleFactors* hmm_ensemble_factors_in,
+  HMMEnsembleFactorVariables(const HMMEnsembleFactors* hmm_ensemble_factors_in,
                              const std::vector<MeasurementCovarianceEstimatorOutput*> &measurement_covariance_estimator_outputs_in);
 
   HMMEnsembleFactorVariables(const HMMEnsembleFactorVariables &another);
@@ -63,7 +63,7 @@ public:
                                         const Parameters &conditioned_on_parameters);
   */
   
-  EnsembleFactors* get_ensemble_factors();
+  const EnsembleFactors* get_ensemble_factors() const;
   
   void write_to_file(const std::string &directory_name,
                      const std::string &index) const;
@@ -112,7 +112,7 @@ public:
 protected:
   
   // Stored in likelihood_estimator.
-  HMMEnsembleFactors* hmm_ensemble_factors;
+  const HMMEnsembleFactors* hmm_ensemble_factors;
 
   void make_copy(const HMMEnsembleFactorVariables &another);
   

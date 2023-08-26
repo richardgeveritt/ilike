@@ -26,40 +26,40 @@ public:
   Particles(std::vector<Parameters> &initial_values_in,
             const arma::colvec &log_probabilities_of_initial_values_in,
             Factors* factors_in,
-            std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-            std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in);
+            const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+            const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
   Particles(std::vector<Parameters> &initial_values_in,
             const arma::colvec &log_probabilities_of_initial_values_in,
             Factors* factors_in,
-            std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-            std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
+            const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+            const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in,
             const Parameters &conditioned_on_parameters);
   Particles(std::vector<Parameters> &initial_values_in,
             const arma::colvec &log_probabilities_of_initial_values_in,
             Factors* factors_in,
-            std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-            std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
+            const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+            const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in,
             const Parameters &conditioned_on_parameters,
             const Parameters &sequencer_parameters);
   
   void setup(std::vector<Parameters> &initial_values_in,
              const arma::colvec &log_probabilities_of_initial_values_in,
              Factors* factors_in,
-             std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-             std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in);
+             const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+             const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
   
   void setup(std::vector<Parameters> &initial_values_in,
              const arma::colvec &log_probabilities_of_initial_values_in,
              Factors* factors_in,
-             std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-             std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
+             const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+             const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in,
              const Parameters &conditioned_on_parameters);
   
   void setup(std::vector<Parameters> &initial_values_in,
              const arma::colvec &log_probabilities_of_initial_values_in,
              Factors* factors_in,
-             std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-             std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
+             const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+             const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in,
              const Parameters &conditioned_on_parameters,
              const Parameters &sequencer_parameters);
 
@@ -78,13 +78,13 @@ public:
   void push_back(MoveOutput* move_output_in);
   void push_back(Parameters &&parameters_in,
                  Factors* factors_in,
-                 std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-                 std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in);
+                 const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+                 const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
   void push_back(Particle &&particle_in);
   void push_back(const Parameters &parameters_in,
                  Factors* factors_in,
-                 std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-                 std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in);
+                 const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+                 const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
   void push_back(const Particle &particle_in);
   
   Particle* add_particle();

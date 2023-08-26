@@ -53,9 +53,9 @@ Particle::Particle(const Parameters &parameters_in)
 }
 
 Particle::Particle(const Parameters &parameters_in,
-                   Factors* factors_in,
-                   std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-                   std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in)
+                   const Factors* factors_in,
+                   const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+                   const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in)
 : parameters(parameters_in)
 //move_transformed_parameters()
 {
@@ -84,9 +84,9 @@ Particle::Particle(const Parameters &parameters_in,
 }
 
 Particle::Particle(const Parameters &parameters_in,
-                   Factors* factors_in,
-                   std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-                   std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
+                   const Factors* factors_in,
+                   const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+                   const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in,
                    const Parameters &conditioned_on_parameters)
 : parameters(parameters_in)
 //move_transformed_parameters()
@@ -118,9 +118,9 @@ Particle::Particle(const Parameters &parameters_in,
 }
 
 Particle::Particle(const Parameters &parameters_in,
-                   Factors* factors_in,
-                   std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-                   std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
+                   const Factors* factors_in,
+                   const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+                   const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in,
                    const Parameters &conditioned_on_parameters,
                    const Parameters &sequencer_parameters)
 : parameters(parameters_in)
@@ -202,7 +202,7 @@ factor_variables(factor_variables_in)
 }
 
 Particle::Particle(const Parameters &parameters_in,
-                   EnsembleFactors* ensemble_factors_in)
+                   const EnsembleFactors* ensemble_factors_in)
 : parameters(parameters_in)
 //move_transformed_parameters()
 {
@@ -229,7 +229,7 @@ Particle::Particle(const Parameters &parameters_in,
 }
 
 Particle::Particle(const Parameters &parameters_in,
-                   EnsembleFactors* ensemble_factors_in,
+                   const EnsembleFactors* ensemble_factors_in,
                    const Parameters &conditioned_on_parameters)
 {
   this->parameters = parameters_in;
@@ -263,7 +263,7 @@ Particle::Particle(const Parameters &parameters_in,
 }
 
 Particle::Particle(const Parameters &parameters_in,
-                   EnsembleFactors* ensemble_factors_in,
+                   const EnsembleFactors* ensemble_factors_in,
                    const Parameters &conditioned_on_parameters,
                    const Parameters &sequencer_parameters)
 {
@@ -346,9 +346,9 @@ Particle::Particle(Parameters &&parameters_in)
 }
 
 Particle::Particle(Parameters &&parameters_in,
-                   Factors* factors_in,
-                   std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-                   std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in)
+                   const Factors* factors_in,
+                   const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+                   const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in)
 : parameters(std::move(parameters_in))
 //move_transformed_parameters()
 {
@@ -377,14 +377,13 @@ Particle::Particle(Parameters &&parameters_in,
 }
 
 Particle::Particle(Parameters &&parameters_in,
-                   Factors* factors_in,
-                   std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-                   std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
+                   const Factors* factors_in,
+                   const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+                   const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in,
                    const Parameters &conditioned_on_parameters)
 : parameters(std::move(parameters_in))
 //move_transformed_parameters()
 {
-  
   this->parameters.merge_with_fixed(conditioned_on_parameters);
   
   if (factors_in!=NULL)
@@ -414,9 +413,9 @@ Particle::Particle(Parameters &&parameters_in,
 }
 
 Particle::Particle(Parameters &&parameters_in,
-                   Factors* factors_in,
-                   std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-                   std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in,
+                   const Factors* factors_in,
+                   const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+                   const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in,
                    const Parameters &conditioned_on_parameters,
                    const Parameters &sequencer_parameters)
 : parameters(std::move(parameters_in))
@@ -498,7 +497,7 @@ factor_variables(factor_variables_in)
 }
 
 Particle::Particle(Parameters &&parameters_in,
-                   EnsembleFactors* ensemble_factors_in)
+                   const EnsembleFactors* ensemble_factors_in)
 : parameters(std::move(parameters_in))
 //move_transformed_parameters()
 {
@@ -525,7 +524,7 @@ Particle::Particle(Parameters &&parameters_in,
 }
 
 Particle::Particle(Parameters &&parameters_in,
-                   EnsembleFactors* ensemble_factors_in,
+                   const EnsembleFactors* ensemble_factors_in,
                    const Parameters &conditioned_on_parameters)
 {
   this->parameters = std::move(parameters_in);
@@ -559,7 +558,7 @@ Particle::Particle(Parameters &&parameters_in,
 }
 
 Particle::Particle(Parameters &&parameters_in,
-                   EnsembleFactors* ensemble_factors_in,
+                   const EnsembleFactors* ensemble_factors_in,
                    const Parameters &conditioned_on_parameters,
                    const Parameters &sequencer_parameters)
 {
@@ -1003,8 +1002,8 @@ void Particle::simulate_ensemble_factor_variables()
   }
 }
 
-void Particle::simulate_proposal_variables(std::vector<ProposalKernel*>* proposals_to_transform_for_in,
-                                           std::vector<ProposalKernel*>* proposals_to_find_gradient_for_in)
+void Particle::simulate_proposal_variables(const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+                                           const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in)
 {
   
   this->proposals_to_find_gradient_for_pointer = proposals_to_find_gradient_for_in;
@@ -1780,7 +1779,7 @@ void Particle::erase_mcmc_adaptation_info()
   this->accepted_outputs.clear();
 }
 
-void Particle::simulate_factor_variables(Factors* factors)
+void Particle::simulate_factor_variables(const Factors* factors)
 {
   FactorVariables* new_factor_variables = factors->simulate_factor_variables(this->parameters);
   
@@ -1793,7 +1792,7 @@ void Particle::simulate_factor_variables(Factors* factors)
   this->factor_variables = new_factor_variables;
 }
 
-void Particle::simulate_ensemble_factor_variables(EnsembleFactors* ensemble_factors)
+void Particle::simulate_ensemble_factor_variables(const EnsembleFactors* ensemble_factors)
 {
   EnsembleFactorVariables* new_ensemble_factor_variables = ensemble_factors->simulate_ensemble_factor_variables(this->parameters);
   
@@ -1837,7 +1836,7 @@ void Particle::simulate_ensemble_factor_variables(EnsembleFactors* ensemble_fact
 }
 */
 
-void Particle::subsample_simulate_factor_variables(Factors* factors)
+void Particle::subsample_simulate_factor_variables(const Factors* factors)
 {
   FactorVariables* new_factor_variables = factors->subsample_simulate_factor_variables(this->parameters);
   
@@ -1850,7 +1849,7 @@ void Particle::subsample_simulate_factor_variables(Factors* factors)
   this->factor_variables = new_factor_variables;
 }
 
-void Particle::subsample_simulate_ensemble_factor_variables(EnsembleFactors* ensemble_factors)
+void Particle::subsample_simulate_ensemble_factor_variables(const EnsembleFactors* ensemble_factors)
 {
   EnsembleFactorVariables* new_ensemble_factor_variables = ensemble_factors->subsample_simulate_ensemble_factor_variables(this->parameters);
   

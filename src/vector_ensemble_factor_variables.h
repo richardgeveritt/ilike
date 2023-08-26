@@ -18,7 +18,7 @@ public:
 
   VectorEnsembleFactorVariables();
   
-  VectorEnsembleFactorVariables(VectorEnsembleFactors* ensemble_factors_in,
+  VectorEnsembleFactorVariables(const VectorEnsembleFactors* ensemble_factors_in,
                                 const std::vector<MeasurementCovarianceEstimatorOutput*> &measurement_covariance_estimator_outputs_in);
 
   virtual ~VectorEnsembleFactorVariables();
@@ -66,7 +66,7 @@ public:
                                         const Parameters &conditioned_on_parameters);
   */
   
-  EnsembleFactors* get_ensemble_factors();
+  const EnsembleFactors* get_ensemble_factors() const;
   
   void write_to_file(const std::string &directory_name,
                      const std::string &index) const;
@@ -115,7 +115,7 @@ public:
 protected:
   
   // Stored in likelihood_estimator.
-  VectorEnsembleFactors* vector_ensemble_factors;
+  const VectorEnsembleFactors* vector_ensemble_factors;
 
   void make_copy(const VectorEnsembleFactorVariables &another);
   

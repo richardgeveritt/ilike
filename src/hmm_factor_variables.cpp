@@ -14,7 +14,7 @@ HMMFactorVariables::HMMFactorVariables()
   this->hmm_factors = NULL;
 }
 
-HMMFactorVariables::HMMFactorVariables(HMMFactors* hmm_factors_in,
+HMMFactorVariables::HMMFactorVariables(const HMMFactors* hmm_factors_in,
                                        const std::vector<LikelihoodEstimatorOutput*> &likelihood_estimator_outputs_in)
 :FactorVariables()
 {
@@ -22,7 +22,7 @@ HMMFactorVariables::HMMFactorVariables(HMMFactors* hmm_factors_in,
   this->likelihood_estimator_outputs = likelihood_estimator_outputs_in;
 }
 
-HMMFactorVariables::HMMFactorVariables(HMMFactors* hmm_factors_in,
+HMMFactorVariables::HMMFactorVariables(const HMMFactors* hmm_factors_in,
                                        const std::vector<LikelihoodEstimatorOutput*> &likelihood_estimator_outputs_in,
                                        Particle* particle_in)
 :FactorVariables(particle_in)
@@ -726,7 +726,7 @@ arma::mat HMMFactorVariables::direct_subsample_get_gradient_of_log(const Index* 
 }
 */
 
-Factors* HMMFactorVariables::get_factors()
+const Factors* HMMFactorVariables::get_factors() const
 {
   return this->hmm_factors;
 }

@@ -137,7 +137,7 @@ void HMMEnsembleFactors::set_data(const Index* index)
   }
 }
 
-EnsembleFactorVariables* HMMEnsembleFactors::simulate_ensemble_factor_variables(const Parameters &simulated_parameters)
+EnsembleFactorVariables* HMMEnsembleFactors::simulate_ensemble_factor_variables(const Parameters &simulated_parameters) const
 {
   std::vector<MeasurementCovarianceEstimatorOutput*> outputs;
   outputs.reserve(this->measurement_covariance_estimators.size());
@@ -176,7 +176,7 @@ EnsembleFactorVariables* HMMEnsembleFactors::simulate_ensemble_factor_variables(
 }
 */
 
-EnsembleFactorVariables* HMMEnsembleFactors::subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters)
+EnsembleFactorVariables* HMMEnsembleFactors::subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters) const
 {
   std::vector<MeasurementCovarianceEstimatorOutput*> outputs;
   outputs.reserve(this->measurement_covariance_estimators.size());

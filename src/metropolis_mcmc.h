@@ -61,7 +61,7 @@ public:
   
   void set_proposal_parameters(Parameters* proposal_parameters_in);
   
-  std::vector<ProposalKernel*> get_proposals() const;
+  std::vector<const ProposalKernel*> get_proposals() const;
   
 protected:
   

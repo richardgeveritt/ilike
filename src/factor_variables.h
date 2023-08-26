@@ -83,7 +83,7 @@ public:
                                                          const Parameters &conditioned_on_parameters)=0;
   */
   
-  virtual Factors* get_factors()=0;
+  virtual const Factors* get_factors() const=0;
   
   void set_particle(Particle* particle_in);
   Particle* get_particle();

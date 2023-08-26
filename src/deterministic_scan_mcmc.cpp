@@ -211,15 +211,15 @@ void DeterministicScanMCMC::set_proposal_parameters(Parameters* proposal_paramet
   }
 }
 
-std::vector<ProposalKernel*> DeterministicScanMCMC::get_proposals() const
+std::vector<const ProposalKernel*> DeterministicScanMCMC::get_proposals() const
 {
-  std::vector<ProposalKernel*> all_proposals;
+  std::vector<const ProposalKernel*> all_proposals;
   
   for (auto i=this->moves.begin();
        i!=this->moves.end();
        ++i)
   {
-    std::vector<ProposalKernel*> next_proposals = (*i)->get_proposals();
+    std::vector<const ProposalKernel*> next_proposals = (*i)->get_proposals();
     if (all_proposals.size()==0)
     {
       all_proposals.insert(all_proposals.end(), next_proposals.begin(), next_proposals.end());

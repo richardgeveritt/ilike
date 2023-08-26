@@ -453,9 +453,9 @@ GradientEstimatorOutput* BarkerDynamicsProposalKernel::simulate_gradient_estimat
   return current_output;
 }
 
-std::vector<ProposalKernel*> BarkerDynamicsProposalKernel::get_proposals()
+std::vector<const ProposalKernel*> BarkerDynamicsProposalKernel::get_proposals() const
 {
-  std::vector<ProposalKernel*> proposals = this->proposal_simulate->get_proposals();
+  std::vector<const ProposalKernel*> proposals = this->proposal_simulate->get_proposals();
   proposals.push_back(this);
   return proposals;
 }

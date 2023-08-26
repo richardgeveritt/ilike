@@ -169,7 +169,7 @@ public:
   
   virtual GradientEstimatorOutput* simulate_gradient_estimator_output() const=0;
   
-  virtual std::vector<ProposalKernel*> get_proposals()=0;
+  virtual std::vector<const ProposalKernel*> get_proposals() const=0;
   
   virtual void set_index(Index* index_in)=0;
   

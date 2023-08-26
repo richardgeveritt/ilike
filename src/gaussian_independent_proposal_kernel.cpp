@@ -292,9 +292,9 @@ GradientEstimatorOutput* GaussianIndependentProposalKernel::simulate_gradient_es
   return NULL;
 }
 
-std::vector<ProposalKernel*> GaussianIndependentProposalKernel::get_proposals()
+std::vector<const ProposalKernel*> GaussianIndependentProposalKernel::get_proposals() const
 {
-  std::vector<ProposalKernel*> output;
+  std::vector<const ProposalKernel*> output;
   output.push_back(this);
   return output;
 }

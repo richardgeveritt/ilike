@@ -22,7 +22,7 @@ VectorFactorVariables::~VectorFactorVariables()
   }
 }
 
-VectorFactorVariables::VectorFactorVariables(VectorFactors* vector_factors_in,
+VectorFactorVariables::VectorFactorVariables(const VectorFactors* vector_factors_in,
                                              const std::vector<LikelihoodEstimatorOutput*> &likelihood_estimator_outputs_in)
 :FactorVariables()
 {
@@ -486,7 +486,7 @@ arma::mat VectorFactorVariables::direct_subsample_get_gradient_of_log(const Inde
 }
 */
 
-Factors* VectorFactorVariables::get_factors()
+const Factors* VectorFactorVariables::get_factors() const
 {
   return this->vector_factors;
 }
