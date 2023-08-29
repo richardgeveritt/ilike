@@ -12,6 +12,16 @@ RcppParallelSMCWorker::RcppParallelSMCWorker(SMC* the_smc_in,
 {
   this->log_unnormalised_incremental_weights = NULL;
   this->simulate_worker = SimulateWorker(this);
+  this->conditional_simulate_worker = ConditionalSimulateWorker(this);
+  this->move_worker = MoveWorker(this);
+  this->weight_worker = WeightWorker(this);
+  this->pf_initial_weight_worker = PFInitialWeightWorker(this);
+  this->smcfixed_weight_worker = SMCFixedWeightWorker(this);
+  this->smcadaptive_given_smcfixed_weight_worker = SMCAdaptiveGivenSMCFixedWeightWorker(this);
+  this->smcadaptive_given_smcfixed_evaluate_target_worker = SMCAdaptiveGivenSMCFixedEvaluateTargetWorker(this);
+  this->marginal_weight_worker = MarginalWeightWorker(this);
+  this->generic_weight_worker = GenericWeightWorker(this);
+  this->pf_weight_worker = PFWeightWorker(this);
   this->grain_size = grain_size_in;
 }
 
@@ -132,6 +142,7 @@ void RcppParallelSMCWorker::specific_move(Particles* next_particles,
   {
     this->move_worker.particles_pointer->push_back(NULL);
   }
+  
   this->move_worker.current_particles_pointer = current_particles;
   parallelFor(0, this->get_number_of_particles(), this->move_worker, this->grain_size);
 }

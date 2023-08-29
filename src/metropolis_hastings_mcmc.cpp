@@ -3,6 +3,7 @@
 #include "utils.h"
 #include "metropolis_hastings_mcmc.h"
 #include "gaussian_random_walk_proposal_kernel.h"
+#include "metropolis_hastings_standard_mcmc_output.h"
 
 MetropolisHastingsMCMC::MetropolisHastingsMCMC()
   :MCMC()
@@ -97,9 +98,13 @@ MCMC* MetropolisHastingsMCMC::mcmc_duplicate() const
   return( new MetropolisHastingsMCMC(*this));
 }
 
+MetropolisHastingsMCMC* MetropolisHastingsMCMC::metropolis_hastings_mcmc_duplicate() const
+{
+  return( new MetropolisHastingsMCMC(*this));
+}
+
 void MetropolisHastingsMCMC::make_copy(const MetropolisHastingsMCMC &another)
 {
-  this->proposal = another.proposal;
   if (another.proposal!=NULL)
     this->proposal = another.proposal->proposal_kernel_duplicate();
   else
@@ -330,4 +335,9 @@ std::vector<const ProposalKernel*> MetropolisHastingsMCMC::get_proposals() const
   std::vector<const ProposalKernel*> proposals = this->proposal->get_proposals();
   //proposals.push_back(this->proposal);
   return proposals;
+}
+
+StandardMCMCOutput* MetropolisHastingsMCMC::initialise_mcmc_output() const
+{
+  return new MetropolisHastingsStandardMCMCOutput(this->metropolis_hastings_mcmc_duplicate());
 }

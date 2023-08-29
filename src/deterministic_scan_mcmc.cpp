@@ -1,4 +1,5 @@
 #include "deterministic_scan_mcmc.h"
+#include "deterministic_scan_standard_mcmc_output.h"
 
 DeterministicScanMCMC::DeterministicScanMCMC()
   :MCMC()
@@ -74,6 +75,11 @@ Kernel* DeterministicScanMCMC::duplicate() const
 }
 
 MCMC* DeterministicScanMCMC::mcmc_duplicate() const
+{
+  return( new DeterministicScanMCMC(*this));
+}
+
+DeterministicScanMCMC* DeterministicScanMCMC::deterministic_scan_mcmc_duplicate() const
 {
   return( new DeterministicScanMCMC(*this));
 }
@@ -227,4 +233,23 @@ std::vector<const ProposalKernel*> DeterministicScanMCMC::get_proposals() const
   }
   
   return all_proposals;
+}
+
+std::vector<MCMC*> DeterministicScanMCMC::get_duplicate_moves() const
+{
+  std::vector<MCMC*> duplicate_moves;
+  duplicate_moves.reserve(this->moves.size());
+  
+  for (std::vector<MCMC*>::const_iterator i=this->moves.begin();
+       i!=this->moves.end();
+       ++i)
+  {
+    duplicate_moves.push_back((*i)->mcmc_duplicate());
+  }
+  return duplicate_moves;
+}
+
+StandardMCMCOutput* DeterministicScanMCMC::initialise_mcmc_output() const
+{
+  return new DeterministicScanStandardMCMCOutput(this->deterministic_scan_mcmc_duplicate());
 }

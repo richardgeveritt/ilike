@@ -266,10 +266,11 @@ void MoveWorker::operator()(std::size_t begin, std::size_t end)
 {
   RandomNumberGenerator local_rng(*this->smc_worker->get_rng());
   local_rng.seed(this->smc_worker->get_seed(),end);
+
   for (std::size_t i = begin; i < end; ++i)
   {
     (*this->particles_pointer)[i] = this->smc_worker->the_smc->move(local_rng,
-                                                        (*this->current_particles_pointer)[current_particles_pointer->ancestor_variables[i]]->back());
+                                                                    (*this->current_particles_pointer)[current_particles_pointer->ancestor_variables[i]]->back());
   }
 }
 

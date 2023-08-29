@@ -4,6 +4,7 @@
 #include "metropolis_mcmc.h"
 #include "symmetric_proposal_kernel.h"
 #include "ensemble_kalman_output.h"
+#include "metropolis_standard_mcmc_output.h"
 
 MetropolisMCMC::MetropolisMCMC()
   :MCMC()
@@ -82,9 +83,13 @@ MCMC* MetropolisMCMC::mcmc_duplicate() const
   return( new MetropolisMCMC(*this));
 }
 
+MetropolisMCMC* MetropolisMCMC::metropolis_mcmc_duplicate() const
+{
+  return( new MetropolisMCMC(*this));
+}
+
 void MetropolisMCMC::make_copy(const MetropolisMCMC &another)
 {
-  this->proposal = another.proposal;
   if (another.proposal!=NULL)
     this->proposal = another.proposal->symmetric_proposal_kernel_duplicate();
   else
@@ -203,10 +208,10 @@ void MetropolisMCMC::ensemble_adapt(EnsembleKalmanOutput* current_state)
 }
 
 void MetropolisMCMC::specific_mcmc_adapt(const Particle &current_particle,
-                                         size_t iteration_counter)
+                                                 size_t iteration_counter)
 {
-  proposal->mcmc_adapt(current_particle,
-                       iteration_counter);
+  this->proposal->mcmc_adapt(current_particle,
+                             iteration_counter);
 }
 
 void MetropolisMCMC::set_index(Index* index_in)
@@ -228,4 +233,9 @@ std::vector<const ProposalKernel*> MetropolisMCMC::get_proposals() const
   std::vector<const ProposalKernel*> proposals = this->proposal->get_proposals();
   //proposals.push_back(this->proposal);
   return proposals;
+}
+
+StandardMCMCOutput* MetropolisMCMC::initialise_mcmc_output() const
+{
+  return new MetropolisStandardMCMCOutput(this->metropolis_mcmc_duplicate());
 }

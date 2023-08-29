@@ -59,7 +59,7 @@ bool IterationsMCMCTermination::terminate()
   }
 }
 
-void IterationsMCMCTermination::set_parameters(MCMC* mcmc)
+void IterationsMCMCTermination::set_parameters(StandardMCMCOutput* mcmc_output)
 {
-  this->counter = mcmc->get_iteration_counter_pointer();
+  this->counter = mcmc_output->get_iteration_counter_pointer();
 }

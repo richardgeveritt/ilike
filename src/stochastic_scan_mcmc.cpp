@@ -1,5 +1,6 @@
 #include "stochastic_scan_mcmc.h"
 #include "distributions.h"
+#include "stochastic_scan_standard_mcmc_output.h"
 
 StochasticScanMCMC::StochasticScanMCMC()
   :MCMC()
@@ -66,6 +67,11 @@ Kernel* StochasticScanMCMC::duplicate() const
 }
 
 MCMC* StochasticScanMCMC::mcmc_duplicate() const
+{
+  return( new StochasticScanMCMC(*this));
+}
+
+StochasticScanMCMC* StochasticScanMCMC::stochastic_scan_mcmc_duplicate() const
 {
   return( new StochasticScanMCMC(*this));
 }
@@ -228,4 +234,23 @@ std::vector<const ProposalKernel*> StochasticScanMCMC::get_proposals() const
   }
   
   return all_proposals;
+}
+
+std::vector<MCMC*> StochasticScanMCMC::get_duplicate_moves() const
+{
+  std::vector<MCMC*> duplicate_moves;
+  duplicate_moves.reserve(this->moves.size());
+  
+  for (std::vector<MCMC*>::const_iterator i=this->moves.begin();
+       i!=this->moves.end();
+       ++i)
+  {
+    duplicate_moves.push_back((*i)->mcmc_duplicate());
+  }
+  return duplicate_moves;
+}
+
+StandardMCMCOutput* StochasticScanMCMC::initialise_mcmc_output() const
+{
+  return new StochasticScanStandardMCMCOutput(this->stochastic_scan_mcmc_duplicate());
 }

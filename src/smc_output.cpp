@@ -15,7 +15,9 @@ SMCOutput::SMCOutput()
   this->estimator = NULL;
   this->smc_iteration = 0;
   this->iteration_written_to_file = -1;
-  this->time = 0.0;
+  //this->time = 0.0;
+  
+  this->start_time = std::chrono::high_resolution_clock::now();
 }
 
 SMCOutput::~SMCOutput()
@@ -36,7 +38,8 @@ SMCOutput::SMCOutput(SMC* estimator_in,
   this->results_name = results_name_in;
   this->smc_iteration = 0;
   this->iteration_written_to_file = -1;
-  this->time = 0.0;
+  //this->time = 0.0;
+  this->start_time = std::chrono::high_resolution_clock::now();
 }
 
 //Copy constructor for the SMCOutput class.
@@ -85,7 +88,8 @@ void SMCOutput::make_copy(const SMCOutput &another)
   this->results_name = another.results_name;
   this->smc_iteration = another.smc_iteration;
   this->iteration_written_to_file = another.iteration_written_to_file;
-  this->time = another.time;
+  this->start_time = another.start_time;
+  this->times = another.times;
 }
 
 void SMCOutput::simulate()
@@ -114,7 +118,6 @@ void SMCOutput::evaluate_smcadaptive_part_given_smcfixed()
   {
     this->estimator->evaluate_smcadaptive_part_given_smcfixed_smc(this);
   }
-  
 }
 
 void SMCOutput::simulate(const Parameters &parameters)
@@ -315,9 +318,12 @@ void SMCOutput::normalise_and_resample_weights()
   this->log_likelihood_pre_last_step = this->log_likelihood;
   this->all_particles.back().normalise_weights();
   this->resample();
+  this->set_time();
   
   if (this->results_name!="")
     this->write(results_name);
+  
+  this->start_time = std::chrono::high_resolution_clock::now();
 }
 
 void SMCOutput::resample()
@@ -347,9 +353,11 @@ arma::mat SMCOutput::subsample_get_gradient_of_log(const std::string &variable,
   Rcpp::stop("SMCOutput::get_gradient_of_log - not yet implemented.");
 }
 
-void SMCOutput::set_time(double time_in)
+void SMCOutput::set_time()
 {
-  this->time = time_in;
+  std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed_time = end_time - this->start_time;
+  this->times.push_back(elapsed_time.count());
 }
 
 void SMCOutput::write_to_file(const std::string &dir_name,
@@ -395,7 +403,12 @@ void SMCOutput::write_to_file(const std::string &dir_name,
       }
       if (this->estimator->time_file_stream.is_open())
       {
-        this->estimator->time_file_stream << this->time << std::endl;
+        double time_sum = 0.0;
+        for (size_t k=0; k<=deque_index; ++k)
+        {
+          time_sum = time_sum + this->times[k];
+        }
+        this->estimator->time_file_stream << time_sum << std::endl;
         //log_likelihood_file_stream.close();
       }
       else

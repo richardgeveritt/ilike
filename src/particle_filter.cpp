@@ -275,7 +275,7 @@ void ParticleFilter::evaluate_smcfixed_part_smc(SMCOutput* current_state)
 }
 
 MoveOutput* ParticleFilter::move(RandomNumberGenerator &rng,
-                                 const Particle &particle)
+                                 const Particle &particle) const
 {
   Particle moved_particle;
   for (size_t i=0; i<this->predictions_per_update; ++i)
@@ -874,7 +874,7 @@ void ParticleFilter::weight_for_adapting_sequence(const Index* index,
 */
 
 MoveOutput* ParticleFilter::subsample_move(RandomNumberGenerator &rng,
-                                           const Particle &particle)
+                                           const Particle &particle) const
 {
   Particle moved_particle;
   for (size_t i=0; i<this->predictions_per_update; ++i)

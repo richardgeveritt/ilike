@@ -16,6 +16,7 @@ class MCMCAdaptor;
 class StochasticScanMCMC;
 class DeterministicScanMCMC;
 class Index;
+class StandardMCMCOutput;
 
 class MCMC : public Kernel
 {
@@ -33,7 +34,7 @@ public:
   virtual MCMC* mcmc_duplicate() const=0;
   
   MoveOutput* run(RandomNumberGenerator &rng,
-                  const Particle &particle);
+                  const Particle &particle) const;
   
   /*
   MoveOutput* run(RandomNumberGenerator &rng,
@@ -42,7 +43,7 @@ public:
   */
   
   MoveOutput* subsample_run(RandomNumberGenerator &rng,
-                            const Particle &particle);
+                            const Particle &particle) const;
   
   /*
   MoveOutput* subsample_run(RandomNumberGenerator &rng,
@@ -71,23 +72,25 @@ public:
   // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.
   // Proposal needs to call simulate in all llhdoutputs
   
-  void mcmc_adapt(const Particle &current_particle,
-                  size_t iteration_counter);
-  
   virtual void set_index(Index* index_in)=0;
   
   virtual void set_proposal_parameters(Parameters* proposal_parameters_in)=0;
   
-  size_t* get_iteration_counter_pointer();
-  
   virtual std::vector<const ProposalKernel*> get_proposals() const=0;
+  
+  void mcmc_adapt(const Particle &current_particle,
+                  size_t iteration_counter);
+  
+  MCMCTermination* get_duplicated_termination() const;
+  
+  //virtual void set_termination_parameters(h)=0;
 
 protected:
   
   friend StochasticScanMCMC;
   friend DeterministicScanMCMC;
   
-  size_t iteration_counter;
+  virtual StandardMCMCOutput* initialise_mcmc_output() const=0;
   
   virtual void specific_mcmc_adapt(const Particle &current_particle,
                                    size_t iteration_counter)=0;

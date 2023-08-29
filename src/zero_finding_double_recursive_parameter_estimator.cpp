@@ -1,5 +1,6 @@
 #include "zero_finding_double_recursive_parameter_estimator.h"
 #include "utils.h"
+#include "proposal_kernel.h"
 
 ZeroFindingDoubleRecursiveParameterEstimator::ZeroFindingDoubleRecursiveParameterEstimator()
   :DoubleRecursiveParameterEstimator()
@@ -56,5 +57,5 @@ void ZeroFindingDoubleRecursiveParameterEstimator::update(const std::string &var
                                                           ProposalKernel* proposal)
 {
   // only uses acceptance at the moment
-  this->estimated = this->estimated + this->gain(iteration_counter+1)*(double(latest_particle.accepted_outputs.find(proposal)->second) - this->target_score);
+  this->estimated = this->estimated + this->gain(iteration_counter+1)*(double(latest_particle.accepted_outputs.find(proposal->get_instance_index())->second) - this->target_score);
 }

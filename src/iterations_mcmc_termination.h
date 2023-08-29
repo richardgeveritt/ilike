@@ -27,7 +27,7 @@ public:
 
   bool terminate();
   
-  void set_parameters(MCMC* mcmc);
+  void set_parameters(StandardMCMCOutput* mcmc_output);
   
 protected:
   

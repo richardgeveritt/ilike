@@ -173,6 +173,8 @@ public:
   
   virtual void set_index(Index* index_in)=0;
   
+  int get_instance_index() const;
+  
 // Mh has its own parameters.
   // Stochastic has some weights.
   // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.
@@ -239,6 +241,9 @@ protected:
   
   // stored here
   Transform* transform;
+  
+  static int instance_counter; // Static member variable to track instances
+  int instance_index; // Instance-specific index
   
   //Parameters proposal_parameters;
 

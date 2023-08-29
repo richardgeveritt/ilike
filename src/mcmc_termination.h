@@ -25,7 +25,7 @@ public:
 
   virtual bool terminate()=0;
   
-  virtual void set_parameters(MCMC* mcmc)=0;
+  virtual void set_parameters(StandardMCMCOutput* mcmc_output)=0;
 
 protected:
 

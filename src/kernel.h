@@ -65,8 +65,8 @@ public:
   virtual void smc_adapt(SMCOutput* current_state)=0;
   virtual void ensemble_adapt(EnsembleKalmanOutput* current_state)=0;
   
-  virtual void mcmc_adapt(const Particle &current_particle,
-                          size_t iteration_counter)=0;
+  //virtual void mcmc_adapt(const Particle &current_particle,
+  //                        size_t iteration_counter)=0;
   
 // Mh has its own parameters.
   // Stochastic has some weights.

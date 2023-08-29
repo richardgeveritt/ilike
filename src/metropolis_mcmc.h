@@ -9,6 +9,7 @@ using namespace Rcpp;
 
 class SymmetricProposalKernel;
 class EnsembleKalmanOutput;
+class StandardMCMCOutput;
 
 class MetropolisMCMC : public MCMC
 {
@@ -35,6 +36,7 @@ public:
   void operator=(const MetropolisMCMC &another);
   Kernel* duplicate() const;
   MCMC* mcmc_duplicate() const;
+  MetropolisMCMC* metropolis_mcmc_duplicate() const;
 
   Particle move(RandomNumberGenerator &rng,
                 const Particle &particle) const;
@@ -68,12 +70,14 @@ protected:
   void specific_mcmc_adapt(const Particle &current_particle,
                            size_t iteration_counter);
   
+  StandardMCMCOutput* initialise_mcmc_output() const;
+  
   // stored here
   SymmetricProposalKernel* proposal;
 
   void make_copy(const MetropolisMCMC &another);
   
-  // stored here
+  // stored here (change to shared pointer so that memory is not duplicated)
   Index* index;
 
 };

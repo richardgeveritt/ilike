@@ -7,6 +7,7 @@
 using namespace Rcpp;
 
 #include <deque>
+#include <chrono>
 
 #include "likelihood_estimator_output.h"
 #include "particles.h"
@@ -83,7 +84,7 @@ public:
   
   void increment_smc_iteration();
   
-  void set_time(double time_in);
+  void set_time();
 
   void print(std::ostream &os) const;
   
@@ -110,6 +111,8 @@ protected:
   std::deque<Particles> all_particles;
 
   std::deque<Particles> all_proposed;
+  
+  std::deque<double> times;
 
   size_t lag;
 
@@ -121,7 +124,7 @@ protected:
   
   std::string results_name;
   
-  double time;
+  std::chrono::high_resolution_clock::time_point start_time;
   
   void close_ofstreams(size_t deque_index);
 

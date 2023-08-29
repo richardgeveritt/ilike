@@ -62,7 +62,7 @@ bool SEMCMCTermination::terminate()
   }
 }
 
-void SEMCMCTermination::set_parameters(MCMC* mcmc)
+void SEMCMCTermination::set_parameters(StandardMCMCOutput* mcmc_output)
 {
-  this->counter = mcmc->get_iteration_counter_pointer();
+  this->counter = mcmc_output->get_iteration_counter_pointer();
 }

@@ -12,9 +12,12 @@
 #include "ensemble_factor_variables.h"
 #include "ensemble_factors.h"
 
+int ProposalKernel::instance_counter = 0;
+
 ProposalKernel::ProposalKernel()
   :Kernel()
 {
+  this->instance_index = this->instance_counter++;
   this->mcmc_adaptor = NULL;
   this->smc_adaptor = NULL;
   this->transform = NULL;
@@ -35,6 +38,7 @@ ProposalKernel::~ProposalKernel()
 ProposalKernel::ProposalKernel(const Parameters &proposal_parameters_in)
   :Kernel()
 {
+  this->instance_index = this->instance_counter++;
   //this->proposal_parameters = proposal_parameters_in;
 }
 
@@ -81,6 +85,8 @@ void ProposalKernel::make_copy(const ProposalKernel &another)
   
   //this->proposal_parameters = another.proposal_parameters;
   
+  this->instance_index = another.instance_index;
+  this->instance_counter = another.instance_counter;
 }
 
 Particle ProposalKernel::move(RandomNumberGenerator &rng,
@@ -689,6 +695,11 @@ double ProposalKernel::subsample_evaluate_kernel(Particle &proposed_particle,
 Transform* ProposalKernel::get_transform() const
 {
   return this->transform;
+}
+
+int ProposalKernel::get_instance_index() const
+{
+  return instance_index;
 }
 
 /*

@@ -392,8 +392,6 @@ Particle::Particle(Parameters &&parameters_in,
     this->factor_variables->set_particle(this);
   }
   
-  //Rcout << "1" << std::endl;
-  
   this->simulate_proposal_variables(proposals_to_transform_for_in, proposals_to_find_gradient_for_in);
   
   //this->move_transform = NULL;
@@ -935,7 +933,8 @@ void Particle::make_copy(Particle &&another)
   
   this->previous_self = another.previous_self;
   
-  this->current_proposal_store = boost::unordered_map<const ProposalKernel*, ProposalStore>();
+  //this->current_proposal_store = boost::unordered_map<const ProposalKernel*, ProposalStore>();
+  this->current_proposal_store = boost::unordered_map<int, ProposalStore>();
   this->current_proposal_store.reserve(another.current_proposal_store.size());
   for (auto i=another.current_proposal_store.begin();
        i!=another.current_proposal_store.end();
@@ -975,9 +974,11 @@ void Particle::make_copy(Particle &&another)
   another.move_transform = NULL;
   another.move_parameters = NULL;
   */
-  another.accepted_outputs = boost::unordered_map< const ProposalKernel*, bool>();
+  //another.accepted_outputs = boost::unordered_map< const ProposalKernel*, bool>();
+  another.accepted_outputs = boost::unordered_map< int, bool>();
   another.previous_self = NULL;
-  another.current_proposal_store = boost::unordered_map<const ProposalKernel*, ProposalStore>();
+  //another.current_proposal_store = boost::unordered_map<const ProposalKernel*, ProposalStore>();
+  another.current_proposal_store = boost::unordered_map<int, ProposalStore>();
   //another.previous_proposal_store = boost::unordered_map<const ProposalKernel*, ProposalStore>();
   
   another.proposals_to_transform_for_pointer = NULL;
@@ -1005,10 +1006,8 @@ void Particle::simulate_ensemble_factor_variables()
 void Particle::simulate_proposal_variables(const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
                                            const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in)
 {
-  
   this->proposals_to_find_gradient_for_pointer = proposals_to_find_gradient_for_in;
   this->proposals_to_transform_for_pointer = proposals_to_transform_for_in;
-  
   
   for (auto i=this->proposals_to_find_gradient_for_pointer->begin();
        i!=this->proposals_to_find_gradient_for_pointer->end();
@@ -1017,65 +1016,70 @@ void Particle::simulate_proposal_variables(const std::vector<const ProposalKerne
     GradientEstimatorOutput* simulated = (*i)->simulate_gradient_estimator_output();
     if (simulated!=NULL)
     {
-      this->current_proposal_store[*i] = ProposalStore(simulated);
+      this->current_proposal_store[(*i)->get_instance_index()] = ProposalStore(simulated);
     }
   }
-  
   
   for (auto i=this->proposals_to_transform_for_pointer->begin();
        i!=proposals_to_transform_for_pointer->end();
        ++i)
   {
     
-    boost::unordered_map< const ProposalKernel*, ProposalStore>::iterator current_transform_stored_at_proposal = this->current_proposal_store.end();
+    boost::unordered_map< int, ProposalStore>::iterator current_transform_stored_at_proposal = this->current_proposal_store.end();
     
+    /*
     for (auto j=this->current_proposal_store.begin();
          j!=this->current_proposal_store.end();
          ++j)
     {
-      if ((*i)->get_transform()==j->first->get_transform())
+      if ((*i)->get_instance_index()==j->first)
       {
         current_transform_stored_at_proposal = j;
       }
     }
+    */
     
-    auto found = this->current_proposal_store.find(*i);
+    auto found = this->current_proposal_store.find((*i)->get_instance_index());
     
-    if (found != this->current_proposal_store.end())
+    if (found != this->current_proposal_store.end()) // if proposal is found in current_proposal_store
     {
-      if (current_transform_stored_at_proposal==this->current_proposal_store.end())
+      //if (current_transform_stored_at_proposal==this->current_proposal_store.end())
+      //{
+      
+      if ((*i)->get_transform()==NULL)
       {
-        if ((*i)->get_transform()==NULL)
-        {
-          found->second.set_transformed_parameters(this->parameters);
-        }
-        else
-        {
-          found->second.set_transformed_parameters((*i)->get_transform()->transform(this->parameters));
-        }
+        found->second.set_transformed_parameters(this->parameters);
       }
       else
       {
-        found->second.set_transformed_parameters(current_transform_stored_at_proposal->second.get_transformed_parameters());
+        found->second.set_transformed_parameters((*i)->get_transform()->transform(this->parameters));
       }
+      
+      //}
+      //else
+      //{
+      //  found->second.set_transformed_parameters(current_transform_stored_at_proposal->second.get_transformed_parameters());
+      //}
     }
     else
     {
-      if (current_transform_stored_at_proposal==this->current_proposal_store.end())
+      //if (current_transform_stored_at_proposal==this->current_proposal_store.end())
+      //{
+      
+      if ((*i)->get_transform()==NULL)
       {
-        if ((*i)->get_transform()==NULL)
-        {
-          this->current_proposal_store[*i] = this->parameters;
-        }
-        else
-        {
-          this->current_proposal_store[*i] = (*i)->get_transform()->transform(this->parameters);
-        }
+        this->current_proposal_store[(*i)->get_instance_index()] = this->parameters;
       }
       else
       {
-        this->current_proposal_store[*i] = current_transform_stored_at_proposal->second.get_transformed_parameters();
+        this->current_proposal_store[(*i)->get_instance_index()] = (*i)->get_transform()->transform(this->parameters);
       }
+      
+      //}
+      //else
+      //{
+      //  this->current_proposal_store[*i] = current_transform_stored_at_proposal->second.get_transformed_parameters();
+      //}
     }
     
   }
@@ -1728,13 +1732,20 @@ Parameters Particle::get_transformed_parameters(const ProposalKernel* proposal_i
   }
   else
   {
-    auto found = this->current_proposal_store.find(proposal_in);
+    auto found = this->current_proposal_store.find(proposal_in->get_instance_index());
     if (found != this->current_proposal_store.end())
     {
       Parameters transformed_parameters = found->second.get_transformed_parameters();
       if (transformed_parameters.is_empty())
       {
-        return proposal_in->get_transform()->transform(this->parameters);
+        if (proposal_in->get_transform()!=NULL)
+        {
+          return proposal_in->get_transform()->transform(this->parameters);
+        }
+        else
+        {
+          return this->parameters;
+        }
       }
       else
       {
@@ -1743,14 +1754,21 @@ Parameters Particle::get_transformed_parameters(const ProposalKernel* proposal_i
     }
     else
     {
-      return proposal_in->get_transform()->transform(this->parameters);
+      if (proposal_in->get_transform()!=NULL)
+      {
+        return proposal_in->get_transform()->transform(this->parameters);
+      }
+      else
+      {
+        return this->parameters;
+      }
     }
   }
 }
 
 GradientEstimatorOutput* Particle::get_gradient_estimator_output(const ProposalKernel* proposal_in) const
 {
-  auto found = this->current_proposal_store.find(proposal_in);
+  auto found = this->current_proposal_store.find(proposal_in->get_instance_index());
   if (found != this->current_proposal_store.end())
   {
       return found->second.get_gradient_estimator_output();
@@ -1771,7 +1789,7 @@ Parameters Particle::get_previous_transformed_parameters(const ProposalKernel* p
 void Particle::set_acceptance(const ProposalKernel* proposal_in,
                                bool accepted_in)
 {
-  this->accepted_outputs[proposal_in] = accepted_in;
+  this->accepted_outputs[proposal_in->get_instance_index()] = accepted_in;
 }
 
 void Particle::erase_mcmc_adaptation_info()

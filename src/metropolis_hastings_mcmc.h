@@ -8,6 +8,8 @@ using namespace Rcpp;
 #include "mcmc.h"
 #include "proposal_kernel.h"
 
+class StandardMCMCOutput;
+
 class MetropolisHastingsMCMC : public MCMC
 {
 
@@ -36,6 +38,7 @@ public:
   void operator=(const MetropolisHastingsMCMC &another);
   Kernel* duplicate() const;
   MCMC* mcmc_duplicate() const;
+  MetropolisHastingsMCMC* metropolis_hastings_mcmc_duplicate() const;
 
   Particle move(RandomNumberGenerator &rng,
                 const Particle &particle) const;
@@ -84,6 +87,8 @@ protected:
   
   void specific_mcmc_adapt(const Particle &current_particle,
                            size_t iteration_counter);
+  
+  StandardMCMCOutput* initialise_mcmc_output() const;
   
   // stored here
   ProposalKernel* proposal;

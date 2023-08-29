@@ -28,18 +28,19 @@ public:
   void operator=(const StochasticScanMCMC &another);
   Kernel* duplicate() const;
   MCMC* mcmc_duplicate() const;
+  StochasticScanMCMC* stochastic_scan_mcmc_duplicate() const;
 
   Particle move(RandomNumberGenerator &rng,
                 const Particle &particle) const;
   
-  /*
-  Particle move(RandomNumberGenerator &rng,
-                Particle &particle,
-                const Parameters &conditioned_on_parameters) const;
-  */
-  
   Particle subsample_move(RandomNumberGenerator &rng,
                           const Particle &particle) const;
+  
+  /*
+   Particle move(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters) const;
+   */
   
   /*
   Particle subsample_move(RandomNumberGenerator &rng,
@@ -77,6 +78,10 @@ protected:
   
   void specific_mcmc_adapt(const Particle &current_particle,
                            size_t iteration_counter);
+  
+  StandardMCMCOutput* initialise_mcmc_output() const;
+  
+  std::vector<MCMC*> get_duplicate_moves() const;
   
   // Stored here.
   std::vector<MCMC*> moves;

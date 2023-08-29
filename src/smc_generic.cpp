@@ -387,7 +387,7 @@ void SMCGeneric::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current
 }
 
 MoveOutput* SMCGeneric::move(RandomNumberGenerator &rng,
-                             const Particle &particle)
+                             const Particle &particle) const
 {
   return new SinglePointMoveOutput(this->proposal_kernel->move(rng,
                                                                particle));
@@ -659,7 +659,7 @@ MoveOutput* SMCGeneric::move(RandomNumberGenerator &rng,
 //}
 
 MoveOutput* SMCGeneric::subsample_move(RandomNumberGenerator &rng,
-                                       const Particle &particle)
+                                       const Particle &particle) const
 {
   return new SinglePointMoveOutput(this->proposal_kernel->subsample_move(rng,
                                                                          particle));

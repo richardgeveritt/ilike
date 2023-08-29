@@ -98,7 +98,7 @@ public:
   LikelihoodEstimator* duplicate() const;
   
   MoveOutput* move(RandomNumberGenerator &rng,
-                   const Particle &particle);
+                   const Particle &particle) const;
   
   /*
   MoveOutput* move(RandomNumberGenerator &rng,
@@ -116,7 +116,7 @@ public:
   */
   
   MoveOutput* subsample_move(RandomNumberGenerator &rng,
-                             const Particle &particle);
+                             const Particle &particle) const;
   
   /*
   MoveOutput* subsample_move(RandomNumberGenerator &rng,

@@ -26,6 +26,7 @@ public:
   void operator=(const DeterministicScanMCMC &another);
   Kernel* duplicate() const;
   MCMC* mcmc_duplicate() const;
+  DeterministicScanMCMC* deterministic_scan_mcmc_duplicate() const;
 
   Particle move(RandomNumberGenerator &rng,
                 const Particle &particle) const;
@@ -56,6 +57,10 @@ protected:
   
   void specific_mcmc_adapt(const Particle &current_particle,
                            size_t iteration_counter);
+  
+  StandardMCMCOutput* initialise_mcmc_output() const;
+  
+  std::vector<MCMC*> get_duplicate_moves() const;
   
   // Stored here.
   std::vector<MCMC*> moves;

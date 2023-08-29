@@ -83,9 +83,6 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   
   if (parallel_in==TRUE)
   {
-    //this->the_worker = new RcppParallelSMCWorker(this,
-    //this->model_and_algorithm.particle_simulator,
-    //grain_size_in);
   }
   else
   {
@@ -240,9 +237,6 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   {
     this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
     //this->the_worker = NULL;
-    //this->the_worker = new RcppParallelSMCWorker(this,
-    //this->model_and_algorithm.particle_simulator,
-    //grain_size_in);
   }
   else
   {
@@ -320,9 +314,6 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   
   if (parallel_in==TRUE)
   {
-    //this->the_worker = new RcppParallelSMCWorker(this,
-    //this->model_and_algorithm.particle_simulator,
-    //grain_size_in);
   }
   else
   {
@@ -370,9 +361,6 @@ void SMCMCMCMove::set_multiple_mcmc(RandomNumberGenerator* rng_in,
   
   if (parallel_in==TRUE)
   {
-    //this->the_worker = new RcppParallelSMCWorker(this,
-    //this->model_and_algorithm.particle_simulator,
-    //grain_size_in);
   }
   else
   {
@@ -489,9 +477,6 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
 
   if (parallel_in==true)
   {
-      //this->the_worker = new RcppParallelSMCWorker(this,
-                                                //this->model_and_algorithm.particle_simulator,
-                                                //grain_size_in);
   }
   else
   {
@@ -606,9 +591,6 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   
   if (parallel_in==true)
   {
-    //this->the_worker = new RcppParallelSMCWorker(this,
-    //this->model_and_algorithm.particle_simulator,
-    //grain_size_in);
   }
   else
   {
@@ -691,9 +673,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   
   if (parallel_in==true)
   {
-    //this->the_worker = new RcppParallelSMCWorker(this,
-    //this->model_and_algorithm.particle_simulator,
-    //grain_size_in);
+    this->the_worker = new RcppParallelSMCWorker(this, grain_size_in);
+    //this->the_worker = NULL;
   }
   else
   {
@@ -768,11 +749,12 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   this->particle_simulator = new ParameterParticleSimulator(proposal_in,
                                                             likelihood_estimators_in);
   
+  //Rcout << "Test" << std::endl;
+  
   if (parallel_in==true)
   {
-    //this->the_worker = new RcppParallelSMCWorker(this,
-    //this->model_and_algorithm.particle_simulator,
-    //grain_size_in);
+    this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
+    //this->the_worker = NULL;
   }
   else
   {
@@ -894,14 +876,26 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state)
     current_state->normalise_and_resample_weights();
     //current_state->resample();
     
+    //std::ofstream test_file_stream;
+    //test_file_stream.open("/Users/richard/Dropbox/code/ilike/experiments/test2.txt",std::ios::out | std::ios::app);
+    
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Particles* current_particles = &current_state->back();
     Particles* next_particles = current_state->add_particles(current_particles);
+    
+    //test_file_stream << "p1" << std::endl;
+    
     this->the_worker->move(next_particles,
                            current_particles);
     
+    //test_file_stream << "p2" << std::endl;
+    
     //this->evaluate_smcfixed_part_smc(current_state);
     current_state->increment_smc_iteration();
+    
+    //test_file_stream << "p3" << std::endl;
+    
+    //test_file_stream.close();
     
     // involves complete evaluation of weights using current adaptive param
   }
@@ -944,20 +938,44 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
   bool terminate = FALSE;
   while (terminate==FALSE)
   {
+    
+    //std::ofstream test_file_stream;
+    //test_file_stream.open("/Users/richard/Dropbox/code/ilike/experiments/test.txt",std::ios::out | std::ios::app);
+    
+    //test_file_stream << "1" << std::endl;
+    
+    //Rcout << "p1" << std::endl;
+    
     this->sequencer.find_desired_criterion(current_state);
+    
+    //test_file_stream << "2" << std::endl;
+    
+    //Rcout << "p2" << std::endl;
     
     // (involves evaluating adaptive weights, using Sequencer)
     this->sequencer.find_next_target_bisection(current_state,this->index);
+    
+    //test_file_stream << "3" << std::endl;
+    
+    //Rcout << "p3" << std::endl;
 
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
+    
+    //test_file_stream << "4" << std::endl;
+    
+    //Rcout << "p4" << std::endl;
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
-    std::cout << current_state->back().schedule_parameters << std::endl;
+    //test_file_stream << "4" << std::endl;
     
-    if (current_state)
+    //Rcout << "p4" << std::endl;
+    
+    Rcout << current_state->back().schedule_parameters << std::endl;
+    
+    //if (current_state)
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
@@ -974,14 +992,20 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
       break;
     }
     
+    //test_file_stream << "5" << std::endl;
+    
     this->simulate_smc(current_state);
+    
+    //test_file_stream << "6" << std::endl;
+    
+    //test_file_stream.close();
     
     current_state->back().set_previous_target_evaluated_to_target_evaluated();
   }
 }
 
 MoveOutput* SMCMCMCMove::move(RandomNumberGenerator &rng,
-                              const Particle &particle)
+                              const Particle &particle) const
 {
   return this->mcmc->run(rng,
                          particle);
@@ -1371,7 +1395,7 @@ void SMCMCMCMove::weight_for_adapting_sequence(const Index* index,
 */
 
 MoveOutput* SMCMCMCMove::subsample_move(RandomNumberGenerator &rng,
-                                        const Particle &particle)
+                                        const Particle &particle) const
 {
   return this->mcmc->subsample_run(rng,
                                    particle);

@@ -3,6 +3,7 @@
 #include "utils.h"
 #include "zig_zag_mcmc.h"
 #include "pdmp_mcmc_output.h"
+#include "metropolis_standard_mcmc_output.h" // will be changed
 
 ZigZagMCMC::ZigZagMCMC()
   :MCMC()
@@ -191,4 +192,9 @@ void ZigZagMCMC::set_proposal_parameters(Parameters* proposal_parameters_in)
 std::vector<const ProposalKernel*> ZigZagMCMC::get_proposals() const
 {
   return std::vector<const ProposalKernel*>();
+}
+
+StandardMCMCOutput* ZigZagMCMC::initialise_mcmc_output() const
+{
+  return new MetropolisStandardMCMCOutput();
 }

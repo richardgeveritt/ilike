@@ -273,7 +273,7 @@ public:
   //Parameters move_transformed_parameters;
   //Parameters previous_move_transformed_parameters;
   
-  boost::unordered_map< const ProposalKernel*, ProposalStore> current_proposal_store;
+  boost::unordered_map< int, ProposalStore> current_proposal_store;
   
   const std::vector<const ProposalKernel*>* proposals_to_transform_for_pointer;
   const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_pointer;
@@ -304,7 +304,8 @@ public:
   //                    const Parameters &proposed_transformed);
   
   // Proposal kernel is pointed to
-  boost::unordered_map< const ProposalKernel*, bool> accepted_outputs;
+  boost::unordered_map< int, bool> accepted_outputs;
+  //boost::unordered_map< const ProposalKernel*, bool> accepted_outputs;
   
   void set_acceptance(const ProposalKernel* proposal_in,
                       bool accepted_in);

@@ -8,6 +8,9 @@ using namespace Rcpp;
 #include "mcmc.h"
 #include "proposal_kernel.h"
 
+// Will not be needed later...
+class StandardMCMCOutput;
+
 class ZigZagMCMC : public MCMC
 {
 
@@ -33,6 +36,7 @@ public:
 
   // Zig zag can be run to produce a Particle, just as any MCMC can be. This way is can be combined with other MCMC moves.
   // When we call "run" on it, as in the base class, it will use a succession of moves and produce a succession of particles, just as any other MCMC move would.
+  // Instead of this, we need to introduce a base class for standard MCMC and another for PDMPs.
   Particle move(RandomNumberGenerator &rng,
                 const Particle &particle) const;
   
@@ -100,6 +104,8 @@ protected:
   
   void specific_mcmc_adapt(const Particle &current_particle,
                            size_t iteration_counter);
+  
+  StandardMCMCOutput* initialise_mcmc_output() const;
   
   // stored here
   ProposalKernel* proposal;

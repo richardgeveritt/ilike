@@ -374,7 +374,7 @@ void SMCMarginal::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
 // finding next target -> weight here appears to be related to type of SMC
 
 MoveOutput* SMCMarginal::move(RandomNumberGenerator &rng,
-                              const Particle &particle)
+                              const Particle &particle) const
 {
   return new SinglePointMoveOutput(this->proposal_kernel->move(rng,
                                                                particle));
@@ -936,7 +936,7 @@ void SMCMarginal::weight_for_adapting_sequence(const Index* index,
 */
 
 MoveOutput* SMCMarginal::subsample_move(RandomNumberGenerator &rng,
-                                        const Particle &particle)
+                                        const Particle &particle) const
 {
   return new SinglePointMoveOutput(this->proposal_kernel->subsample_move(rng,
                                                                          particle));

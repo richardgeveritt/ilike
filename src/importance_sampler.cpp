@@ -58,7 +58,6 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
 
   if (parallel_in==TRUE)
   {
-    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
     this->the_worker = NULL;
   }
   else
@@ -131,7 +130,6 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
 
   if (parallel_in==TRUE)
   {
-    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
   }
   else
   {
@@ -191,7 +189,6 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
   
   if (parallel_in==TRUE)
   {
-    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
   }
   else
   {
@@ -321,7 +318,8 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
   
   if (parallel_in==TRUE)
   {
-    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
+    this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
+    //this->the_worker = NULL;
   }
   else
   {
@@ -487,7 +485,7 @@ void ImportanceSampler::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* 
 }
 
 MoveOutput* ImportanceSampler::move(RandomNumberGenerator &rng,
-                                    const Particle &particle)
+                                    const Particle &particle) const
 {
   return new SinglePointMoveOutput(std::move(particle));
 }
@@ -791,7 +789,7 @@ MoveOutput* ImportanceSampler::move(RandomNumberGenerator &rng,
 //}
 
 MoveOutput* ImportanceSampler::subsample_move(RandomNumberGenerator &rng,
-                                              const Particle &particle)
+                                              const Particle &particle) const
 {
   return new SinglePointMoveOutput(std::move(particle));
 }

@@ -94,7 +94,7 @@ public:
   void resample(SMCOutput* current_state);
   
   virtual MoveOutput* move(RandomNumberGenerator &rng,
-                           const Particle &particle)=0;
+                           const Particle &particle) const=0;
   //virtual void specific_move(RandomNumberGenerator &rng,
   //                           Particle* new_particle,
   //                           Particle &particle)=0;
@@ -122,7 +122,7 @@ public:
   */
   
   virtual MoveOutput* subsample_move(RandomNumberGenerator &rng,
-                                     const Particle &particle)=0;
+                                     const Particle &particle) const=0;
   
   /*
   virtual MoveOutput* subsample_move(RandomNumberGenerator &rng,

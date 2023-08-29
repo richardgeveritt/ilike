@@ -3,10 +3,20 @@
 #include "factor_variables.h"
 #include "ensemble_factor_variables.h"
 #include "transform.h"
+#include "mcmc_termination.h"
+#include "mcmc.h"
 
 StandardMCMCOutput::StandardMCMCOutput()
   :MoveOutput()
 {
+  this->iteration_counter = 0;
+  this->termination = NULL;
+}
+
+StandardMCMCOutput::StandardMCMCOutput(MCMCTermination* termination_in)
+{
+  this->iteration_counter = 0;
+  this->termination = termination_in;
 }
 
 //StandardMCMCOutput::StandardMCMCOutput(const Parameters &parameters_in)
@@ -17,7 +27,8 @@ StandardMCMCOutput::StandardMCMCOutput()
 
 StandardMCMCOutput::~StandardMCMCOutput()
 {
-  
+  if (this->termination!=NULL)
+    delete this->termination;
 }
 
 //Copy constructor for the StandardMCMCOutput class.
@@ -33,17 +44,21 @@ void StandardMCMCOutput::operator=(const StandardMCMCOutput &another)
     return;
   }
   
+  if (this->termination!=NULL)
+    delete this->termination;
+  
   MoveOutput::operator=(another);
   this->make_copy(another);
 }
 
-MoveOutput* StandardMCMCOutput::duplicate() const
-{
-  return( new StandardMCMCOutput(*this));
-}
-
 void StandardMCMCOutput::make_copy(const StandardMCMCOutput &another)
 {
+  if (another.termination!=NULL)
+    this->termination = another.termination->duplicate();
+  else
+    this->termination = NULL;
+  
+  this->iteration_counter = another.iteration_counter;
   this->output = another.output;
 }
 
@@ -156,4 +171,42 @@ void StandardMCMCOutput::close_ofstreams()
       i->ensemble_factor_variables->close_ofstreams();
     }
   }
+}
+
+size_t* StandardMCMCOutput::get_iteration_counter_pointer()
+{
+  return &this->iteration_counter;
+}
+
+void StandardMCMCOutput::increment_counter()
+{
+  this->iteration_counter = this->iteration_counter + 1;
+}
+
+void StandardMCMCOutput::reset_counter()
+{
+  this->iteration_counter = 0;
+}
+
+void StandardMCMCOutput::mcmc_adapt()
+{
+  this->get_mcmc()->mcmc_adapt(this->output.back(),
+                               this->iteration_counter);
+}
+
+bool StandardMCMCOutput::terminate() const
+{
+  return this->termination->terminate();
+}
+
+Particle StandardMCMCOutput::move(RandomNumberGenerator &rng,
+                                  const Particle &particle) const
+{
+  return this->get_mcmc()->move(rng, particle);
+}
+
+Particle StandardMCMCOutput::subsample_move(RandomNumberGenerator &rng,
+                                            const Particle &particle) const
+{
+  return this->get_mcmc()->subsample_move(rng, particle);
 }
