@@ -260,7 +260,7 @@ load_smc_output = function(results_directory,
 #' @param ggmcmc (optional) Output in tidy format for plotting in ggmcmc package.
 #' @return A list containing the MCMC chains.
 #' @export
-load_mcmc_output = function(results.directory,
+load_mcmc_output = function(results_directory,
                             ggmcmc = TRUE)
 {
   return(load_smc_output(results_directory = results_directory,ggsmc = ggmcmc,as.mcmc=TRUE))
@@ -272,7 +272,7 @@ load_mcmc_output = function(results.directory,
 #' @param ggsmc (optional) Output in tidy format for plotting in ggsmc package.
 #' @return A list containing the ensemble members (called particles).
 #' @export
-load_enk_output = function(results.directory,
+load_enk_output = function(results_directory,
                             ggsmc = TRUE)
 {
   return(load_smc_output(results_directory = results_directory,ggsmc = ggsmc,as.enk=TRUE))

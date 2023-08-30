@@ -4,12 +4,12 @@
 \alias{load_enk_output}
 \title{Loading ensemble Kalman output into R memory.}
 \usage{
-load_enk_output(results.directory, ggsmc = TRUE)
+load_enk_output(results_directory, ggsmc = TRUE)
 }
 \arguments{
-\item{ggsmc}{(optional) Output in tidy format for plotting in ggsmc package.}
-
 \item{results_directory}{The folder in which the results are stored.}
+
+\item{ggsmc}{(optional) Output in tidy format for plotting in ggsmc package.}
 }
 \value{
 A list containing the ensemble members (called particles).
