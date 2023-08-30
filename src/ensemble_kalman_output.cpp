@@ -12,6 +12,8 @@ EnsembleKalmanOutput::EnsembleKalmanOutput()
   this->iteration_written_to_file = -1;
   this->transform = NULL;
   this->enk_iteration = 0;
+  
+  this->start_time = std::chrono::high_resolution_clock::now();
 }
 
 EnsembleKalmanOutput::EnsembleKalmanOutput(EnsembleKalman* estimator_in,
@@ -28,6 +30,8 @@ EnsembleKalmanOutput::EnsembleKalmanOutput(EnsembleKalman* estimator_in,
   this->results_name = results_name_in;
   this->transform = transform_in;
   this->enk_iteration = 0;
+  
+  this->start_time = std::chrono::high_resolution_clock::now();
 }
 
 EnsembleKalmanOutput::~EnsembleKalmanOutput()
@@ -64,6 +68,8 @@ void EnsembleKalmanOutput::make_copy(const EnsembleKalmanOutput &another)
   this->subsample_log_likelihood_smcfixed_part = another.subsample_log_likelihood_smcfixed_part;
   this->all_ensembles = another.all_ensembles;
   this->lag = another.lag;
+  this->start_time = another.start_time;
+  this->times = another.times;
   this->results_name = another.results_name;
 }
 
@@ -245,6 +251,13 @@ arma::mat EnsembleKalmanOutput::subsample_get_gradient_of_log(const std::string 
   Rcpp::stop("EnsembleKalmanOutput::subsample_get_gradient_of_log - not yet implemented.");
 }
 
+void EnsembleKalmanOutput::set_time()
+{
+  std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed_time = end_time - this->start_time;
+  this->times.push_back(elapsed_time.count());
+}
+
 size_t EnsembleKalmanOutput::number_of_ensemble_kalman_iterations() const
 {
   return this->all_ensembles.size();
@@ -291,6 +304,25 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
       else
       {
         Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + "cannot be opened.");
+      }
+      
+      if (!this->estimator->time_file_stream.is_open())
+      {
+        this->estimator->time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
+      }
+      if (this->estimator->time_file_stream.is_open())
+      {
+        double time_sum = 0.0;
+        for (size_t k=0; k<=deque_index; ++k)
+        {
+          time_sum = time_sum + this->times[k];
+        }
+        this->estimator->time_file_stream << time_sum << std::endl;
+        //log_likelihood_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
       }
       
       if (!this->estimator->vector_variables_file_stream.is_open())
@@ -450,6 +482,7 @@ void EnsembleKalmanOutput::close_ofstreams()
   this->estimator->schedule_parameters_file_stream.close();
   this->estimator->vector_points_file_stream.close();
   this->estimator->any_points_file_stream.close(); // should be one for each member of Parameters
+  this->estimator->time_file_stream.close();
   
   for (auto i = this->all_ensembles.begin();
        i!=this->all_ensembles.end();
@@ -465,6 +498,7 @@ void EnsembleKalmanOutput::close_ofstreams(size_t deque_index)
   this->estimator->schedule_parameters_file_stream.close();
   this->estimator->vector_points_file_stream.close();
   this->estimator->any_points_file_stream.close(); // should be one for each member of Parameters
+  this->estimator->time_file_stream.close();
   
   this->all_ensembles[deque_index].close_ofstreams();
 }

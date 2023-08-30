@@ -7,6 +7,7 @@
 using namespace Rcpp;
 
 #include <deque>
+#include <chrono>
 
 #include "likelihood_estimator_output.h"
 #include "ensemble.h"
@@ -86,6 +87,8 @@ public:
   
   void increment_enk_iteration();
   
+  void set_time();
+  
   /*
   void set_current_predicted_statistics(const arma::colvec &latest_mean,
                                         const arma::mat &latest_covariance);
@@ -140,7 +143,11 @@ protected:
   
   std::deque<Ensemble> all_ensembles;
   
+  std::deque<double> times;
+  
   size_t lag;
+  
+  std::chrono::high_resolution_clock::time_point start_time;
 
 };
 

@@ -268,6 +268,7 @@ protected:
   std::ofstream ess_file_stream;
   std::ofstream schedule_parameters_file_stream;
   std::ofstream vector_points_file_stream;
+  std::ofstream ancestor_index_file_stream;
   std::ofstream any_points_file_stream; // should be one for each member of Parameters
   std::ofstream normalised_weights_file_stream;
   std::ofstream unnormalised_weights_file_stream;

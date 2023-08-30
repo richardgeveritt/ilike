@@ -1,12 +1,24 @@
-#' Loading MCMC output into R memory.
+#' Loading SMC output into R memory.
 #'
 #' @param results_directory The folder in which the results are stored.
-#' @param for_ggmcmc (optional) Output in tidy format for plotting in ggmcmc package.
-#' @return A list containing the MCMC chains.
+#' @param ggsmc (optional) Output in tidy format for plotting in gggsmc package.
+#' @param as.mcmc (optional) Output treats particles as different MCMC chains.
+#' @param as.enk (optional) Output treats particles as an ensemble.
+#' @param which.targets (optional) The indices of the targets to output (defaults to all).
+#' @return A list containing the SMC output.
 #' @export
-load_mcmc_output = function(results_directory,
-                            for_ggmcmc = TRUE)
+load_smc_output = function(results_directory,
+                           ggsmc = TRUE,
+                           as.mcmc = FALSE,
+                           as.enk = FALSE,
+                           which.targets = NULL)
 {
+  if (as.mcmc && as.enk)
+  {
+    stop("Cannot treat output as both MCMC chains and an ensemble.")
+  }
+
+  description = results_directory
   results_directory = paste(results_directory,"/ilike_smc",sep="")
 
   # Throw error if directory does not exist.
@@ -57,7 +69,7 @@ load_mcmc_output = function(results_directory,
   close(lengths_file)
   output_lengths = as.numeric(strsplit(previous_line,split=" +")[[1]])
   output_lengths = output_lengths[!is.na(output_lengths)]
-  number_of_chains = length(output_lengths)
+  number_of_points = length(output_lengths)
 
   if (length(variable_names)!=length(variable_sizes))
   {
@@ -75,81 +87,118 @@ load_mcmc_output = function(results_directory,
     }
   }
 
-  # Find the final iteration of the SMC algorithm in which the MCMC is stored - this is the folder we need to look in.
-  counter = 0
-  terminate = FALSE
-  iteration_directory = ""
-  while (terminate==FALSE)
-  {
-    previous_iteration_directory = iteration_directory
-    iteration_directory = paste(results_directory,"/iteration",counter,sep="")
-    if (!dir.exists(iteration_directory))
-    {
-      terminate = TRUE
-    }
-    else
-    {
-      counter = counter + 1
-    }
-  }
+  all_output_rows = floor(output_lengths)
 
   # Store the output in a data frame.
 
-  # Get number of lines.
-  points_filename = paste(previous_iteration_directory,"/vector_points.txt",sep="")
-  # points_file = file(points_filename,open="r")
-
-  # # Might not need this part if we write the dimensions to an additional file (see output_lengths file, for example).
-  # number_of_lines = 0
-  # while (TRUE)
-  # {
-  #   line = readLines(sizes_file, n = 1)
-  #
-  #   if (number_of_lines==0)
-  #   {
-  #     output_cols = length(strsplit(line,",")[[1]])
-  #     break
-  #   }
-  #
-  #   # if ( length(line) == 0 )
-  #   # {
-  #   #   break
-  #   # }
-  #   # else
-  #   # {
-  #   #   number_of_lines = number_of_lines + 1
-  #   # }
-  # }
-  # close(points_file)
-
-  all_output_rows = floor(output_lengths)
-
   if (max(all_output_rows)>0)
   {
-    output = read.table(file=points_filename,header=FALSE,sep=",")
 
-    if (nrow(output)!=sum(output_lengths))
+    # Find the final iteration of the SMC algorithm in which the MCMC is stored - this is the folder we need to look in.
+    all_dirs = list.dirs(results_directory,recursive = FALSE)
+
+    if (is.null(which.targets))
     {
-      stop("Number of rows in vector_points.txt file does not correspond to output_lengths.txt file.")
-    }
-
-    iterations_column = matrix(0,nrow(output),1)
-    chains_column = matrix(0,nrow(output),1)
-
-    index = 1
-    for (i in 1:length(output_lengths))
-    {
-      for (j in 1:output_lengths[i])
+      if (!as.mcmc)
       {
-        iterations_column[index] = j
-        chains_column[index] = i
-        index = index + 1
+        which.targets = 1:length(all_dirs)
+      }
+      else
+      {
+        which.targets = length(all_dirs)
+      }
+    }
+    else
+    {
+      inputted_which_targets = which.targets
+
+      target_indices = matrix(0,length(all_dirs))
+      for (k in 1:length(all_dirs))
+      {
+        split = strsplit(all_dirs[k],"/")[[1]]
+        target_indices[i] = strtoi(gsub("iteration","",split[length(split)]))
+      }
+
+      which.targets = matrix(0,length(inputted_which_targets))
+      for (k in 1:length(inputted_which_targets))
+      {
+        which.targets = which(target_indices==inputted_which_targets[k])
       }
     }
 
-    output = cbind(iterations_column,chains_column,output)
+    for (k in which.targets)
+    {
+      split = strsplit(all_dirs[k],"/")[[1]]
+      target = strtoi(gsub("iteration","",split[length(split)]))
 
-    colnames(output) = c('Iteration','Chain',output_names)
+      iteration_directory = all_dirs[k]
+
+      points_filename = paste(iteration_directory,"/vector_points.txt",sep="")
+
+      output = read.table(file=points_filename,header=FALSE,sep=",")
+
+      if (nrow(output)!=sum(output_lengths))
+      {
+        stop("Number of rows in vector_points.txt file does not correspond to output_lengths.txt file.")
+      }
+
+      iterations_column = matrix(0,nrow(output),1)
+      chains_column = matrix(0,nrow(output),1)
+      target_column = matrix(0,nrow(output),1)
+
+      index = 1
+      for (i in 1:length(output_lengths))
+      {
+        for (j in 1:output_lengths[i])
+        {
+          iterations_column[index] = j
+          chains_column[index] = i
+          target_column[index] = target
+          index = index + 1
+        }
+      }
+
+      if (as.mcmc)
+      {
+        output = cbind(iterations_column,chains_column,output)
+        colnames(output) = c('Iteration','Chain',output_names)
+      }
+      else
+      {
+        if (as.enk)
+        {
+          output = cbind(target_column,iterations_column,chains_column,output)
+          colnames(output) = c('Target','Iteration','Particle',output_names)
+        }
+        else
+        {
+          log_weight_filename = paste(iteration_directory,"/normalised_log_weights.txt",sep="")
+          log_weight = read.table(file=log_weight_filename,header=FALSE,sep=",")
+
+          if (target>0)
+          {
+            ancestor_index_filename = paste(iteration_directory,"/ancestor_index.txt",sep="")
+            ancestor_index = read.table(file=ancestor_index_filename,header=FALSE,sep=",") + 1
+          }
+          else
+          {
+            ancestor_index = 1:(nrow(log_weight))
+          }
+
+          output = cbind(target_column,iterations_column,chains_column,ancestor_index,log_weight,output)
+          colnames(output) = c('Target','Iteration','Particle','AncestorIndex','LogWeight',output_names)
+        }
+      }
+
+      if ((k==1) || (as.mcmc))
+      {
+        all_output = output
+      }
+      else
+      {
+        all_output = rbind(all_output,output)
+      }
+    }
 
     # points_file = file(points_filename,open="r")
     # line_counter = 0
@@ -184,22 +233,47 @@ load_mcmc_output = function(results_directory,
     # }
     # close(points_file)
 
-    if (for_ggmcmc==TRUE)
+    if (ggsmc==TRUE)
     {
       nParameters =
-        output = tidyr::pivot_longer(output, output_names, names_to = "Parameter", values_to = "value")
-      attr(output,"nChains") = length(output_lengths)
+        all_output = tidyr::pivot_longer(all_output, all_of(output_names), names_to = "Parameter", values_to = "value")
+      attr(output,"nTargets") = length(all_dirs)
+      attr(output,"nParticles") = length(output_lengths)
       attr(output,"nParameters") = length(output_names)
       attr(output,"nIterations") = max(all_output_rows)
       attr(output,"nBurnin") = 0
       attr(output,"nThin") = 1
-      attr(output,"description") = "Test"
+      attr(output,"description") = description
     }
 
-    return(output)
+    return(all_output)
   }
   else
   {
     stop("No rows found for output.")
   }
+}
+
+#' Loading MCMC output into R memory.
+#'
+#' @param results_directory The folder in which the results are stored.
+#' @param ggmcmc (optional) Output in tidy format for plotting in ggmcmc package.
+#' @return A list containing the MCMC chains.
+#' @export
+load_mcmc_output = function(results.directory,
+                            ggmcmc = TRUE)
+{
+  return(load_smc_output(results_directory = results_directory,ggsmc = ggmcmc,as.mcmc=TRUE))
+}
+
+#' Loading ensemble Kalman output into R memory.
+#'
+#' @param results_directory The folder in which the results are stored.
+#' @param ggsmc (optional) Output in tidy format for plotting in ggsmc package.
+#' @return A list containing the ensemble members (called particles).
+#' @export
+load_enk_output = function(results.directory,
+                            ggsmc = TRUE)
+{
+  return(load_smc_output(results_directory = results_directory,ggsmc = ggsmc,as.enk=TRUE))
 }

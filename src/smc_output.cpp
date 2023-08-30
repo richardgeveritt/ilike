@@ -588,6 +588,27 @@ void SMCOutput::write_to_file(const std::string &dir_name,
         Rcpp::stop("File " + smc_iteration_directory + "/any_points.txt" + " cannot be opened.");
       }
       
+      if(!this->estimator->ancestor_index_file_stream.is_open())
+      {
+        this->estimator->ancestor_index_file_stream.open(smc_iteration_directory + "/ancestor_index.txt",std::ios::out | std::ios::app);
+      }
+      if(this->estimator->ancestor_index_file_stream.is_open())
+      {
+        if (deque_index>0)
+        {
+          for (auto i = this->all_particles[deque_index-1].ancestor_variables.begin();
+               i!=this->all_particles[deque_index-1].ancestor_variables.end();
+               ++i)
+          {
+            this->estimator->ancestor_index_file_stream << *i << std::endl;
+          }
+        }
+      }
+      else
+      {
+        Rcpp::stop("File " + smc_iteration_directory + "/ancestor_index.txt" + " cannot be opened.");
+      }
+      
       if(!this->estimator->normalised_weights_file_stream.is_open())
       {
         this->estimator->normalised_weights_file_stream.open(smc_iteration_directory + "/normalised_log_weights.txt",std::ios::out | std::ios::app);
@@ -652,6 +673,7 @@ void SMCOutput::close_ofstreams()
   this->estimator->schedule_parameters_file_stream.close();
   this->estimator->vector_points_file_stream.close();
   this->estimator->any_points_file_stream.close(); // should be one for each member of Parameters
+  this->estimator->ancestor_index_file_stream.close();
   this->estimator->normalised_weights_file_stream.close();
   this->estimator->unnormalised_weights_file_stream.close();
   
@@ -671,11 +693,13 @@ void SMCOutput::close_ofstreams(size_t deque_index)
   this->estimator->vector_variable_sizes_file_stream.close();
   
   this->estimator->incremental_log_likelihood_file_stream.close();
+  this->estimator->output_lengths_file_stream.close();
   this->estimator->resampled_file_stream.close();
   this->estimator->ess_file_stream.close();
   this->estimator->schedule_parameters_file_stream.close();
   this->estimator->vector_points_file_stream.close();
   this->estimator->any_points_file_stream.close(); // should be one for each member of Parameters
+  this->estimator->ancestor_index_file_stream.close();
   this->estimator->normalised_weights_file_stream.close();
   this->estimator->unnormalised_weights_file_stream.close();
   

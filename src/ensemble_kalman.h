@@ -213,6 +213,7 @@ protected:
   std::ofstream schedule_parameters_file_stream;
   std::ofstream vector_points_file_stream;
   std::ofstream any_points_file_stream;
+  std::ofstream time_file_stream;
 
   void make_copy(const EnsembleKalman &another);
 

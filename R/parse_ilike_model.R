@@ -1874,9 +1874,9 @@ check_types = function(blocks)
 }
 
 
-#' Parse .cpp file to give ilike model.
+#' Parse .ilike file to give ilike model.
 #'
-#' @param filename The name (and path) of the .cpp file containing the model.
+#' @param filename The name (and path) of the .ilike file containing the model.
 #' @param parameter_list (optional) A list containing parameters for the model.
 #' @param julia_bin_dir (optional) The directory containing the Julia bin file - only needed if Julia functions are used.
 #' @param julia_required_libraries (optional) Vector of strings, each of which is a Julia packge that will be installed and loaded.

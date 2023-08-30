@@ -4,12 +4,12 @@
 \alias{load_mcmc_output}
 \title{Loading MCMC output into R memory.}
 \usage{
-load_mcmc_output(results_directory, for_ggmcmc = TRUE)
+load_mcmc_output(results.directory, ggmcmc = TRUE)
 }
 \arguments{
-\item{results_directory}{The folder in which the results are stored.}
+\item{ggmcmc}{(optional) Output in tidy format for plotting in ggmcmc package.}
 
-\item{for_ggmcmc}{(optional) Output in tidy format for plotting in ggmcmc package.}
+\item{results_directory}{The folder in which the results are stored.}
 }
 \value{
 A list containing the MCMC chains.

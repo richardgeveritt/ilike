@@ -444,7 +444,11 @@ void EnsembleKalmanInversion::ensemble_kalman_evaluate_smcadaptive_part_given_sm
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     if (current_state->results_name!="")
+    {
+      current_state->set_time();
       current_state->write(results_name);
+      current_state->start_time = std::chrono::high_resolution_clock::now();
+    }
     
     // check termination, using sequencer
     if (this->sequencer.check_termination())
@@ -621,7 +625,11 @@ void EnsembleKalmanInversion::ensemble_kalman_evaluate_smcadaptive_part_given_sm
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     if (current_state->results_name!="")
+    {
+      current_state->set_time();
       current_state->write(results_name);
+      current_state->start_time = std::chrono::high_resolution_clock::now();
+    }
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
@@ -759,7 +767,11 @@ void EnsembleKalmanInversion::ensemble_kalman_subsample_evaluate_smcadaptive_par
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     if (current_state->results_name!="")
+    {
+      current_state->set_time();
       current_state->write(results_name);
+      current_state->start_time = std::chrono::high_resolution_clock::now();
+    }
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());

@@ -2,7 +2,7 @@
 % Please edit documentation in R/parse_ilike_model.R
 \name{parse_ilike_model}
 \alias{parse_ilike_model}
-\title{Parse .cpp file to give ilike model.}
+\title{Parse .ilike file to give ilike model.}
 \usage{
 parse_ilike_model(
   filename,
@@ -12,7 +12,7 @@ parse_ilike_model(
 )
 }
 \arguments{
-\item{filename}{The name (and path) of the .cpp file containing the model.}
+\item{filename}{The name (and path) of the .ilike file containing the model.}
 
 \item{parameter_list}{(optional) A list containing parameters for the model.}
 
@@ -24,5 +24,5 @@ parse_ilike_model(
 A list containing the model details.
 }
 \description{
-Parse .cpp file to give ilike model.
+Parse .ilike file to give ilike model.
 }
