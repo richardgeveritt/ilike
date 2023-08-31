@@ -548,10 +548,12 @@ void SMC::resample(SMCOutput* current_state)
     // Sample ancestor variables.
     current_particles_iterator->resampled_flag = true;
     current_particles_iterator->resample();
+    //current_state->back().previous_normalised_log_weights.fill(-log(double(this->number_of_particles)));
   }
   else
   {
     current_particles_iterator->ancestor_variables = this->default_ancestor_variables;
+    //current_state->back().previous_normalised_log_weights = current_state->back().normalised_log_weights;
   }
 }
 

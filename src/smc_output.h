@@ -113,6 +113,8 @@ protected:
   std::deque<Particles> all_proposed;
   
   std::deque<double> times;
+  
+  std::deque<double> llhds;
 
   size_t lag;
 

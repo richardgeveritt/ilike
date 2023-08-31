@@ -145,6 +145,8 @@ protected:
   
   std::deque<double> times;
   
+  std::deque<double> llhds;
+  
   size_t lag;
   
   std::chrono::high_resolution_clock::time_point start_time;

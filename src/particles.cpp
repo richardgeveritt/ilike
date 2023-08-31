@@ -506,8 +506,10 @@ void Particles::update_weights(const arma::colvec &latest_unnormalised_log_incre
   else
     Rcpp::stop("SMCOutput::update_unnormalised_log_weights: weights have the wrong length.");
   
-  this->unnormalised_log_weights = this->previous_normalised_log_weights + latest_unnormalised_log_incremental_weights;
+  //this->unnormalised_log_weights = this->previous_normalised_log_weights + latest_unnormalised_log_incremental_weights;
+  
   this->incremental_log_weights = std::move(latest_unnormalised_log_incremental_weights);
+  
   //this->unnormalised_log_weights = latest_unnormalised_log_weights;
   //this->log_normalising_constant_ratio = log_sum_exp(this->unnormalised_log_weights);
   

@@ -70,6 +70,7 @@ void EnsembleKalmanOutput::make_copy(const EnsembleKalmanOutput &another)
   this->lag = another.lag;
   this->start_time = another.start_time;
   this->times = another.times;
+  this->llhds = another.llhds;
   this->results_name = another.results_name;
 }
 
@@ -287,43 +288,46 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
        ++iteration)
   {
     size_t distance_from_end = this->enk_iteration-iteration;
+    
+    size_t llhd_index = this->llhds.size()-1-distance_from_end;
+    
+    if (!this->estimator->log_likelihood_file_stream.is_open())
+    {
+      this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt");
+    }
+    if (this->estimator->log_likelihood_file_stream.is_open())
+    {
+      //log_likelihood_file_stream << this->all_ensembles[deque_index].log_normalising_constant << std::endl;
+      this->estimator->log_likelihood_file_stream << this->llhds[llhd_index] << std::endl;
+      //log_likelihood_file_stream.close();
+    }
+    else
+    {
+      Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + "cannot be opened.");
+    }
+    
+    if (!this->estimator->time_file_stream.is_open())
+    {
+      this->estimator->time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
+    }
+    if (this->estimator->time_file_stream.is_open())
+    {
+      double time_sum = 0.0;
+      for (size_t k=0; k<=llhd_index; ++k)
+      {
+        time_sum = time_sum + this->times[k];
+      }
+      this->estimator->time_file_stream << time_sum << std::endl;
+      //log_likelihood_file_stream.close();
+    }
+    else
+    {
+      Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
+    }
+    
     if (this->all_ensembles.size() > distance_from_end)
     {
       size_t deque_index = this->all_ensembles.size()-1-distance_from_end;
-      
-      if (!this->estimator->log_likelihood_file_stream.is_open())
-      {
-        this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt");
-      }
-      if (this->estimator->log_likelihood_file_stream.is_open())
-      {
-        //log_likelihood_file_stream << this->all_ensembles[deque_index].log_normalising_constant << std::endl;
-        this->estimator->log_likelihood_file_stream << this->log_likelihood << std::endl;
-        //log_likelihood_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + "cannot be opened.");
-      }
-      
-      if (!this->estimator->time_file_stream.is_open())
-      {
-        this->estimator->time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
-      }
-      if (this->estimator->time_file_stream.is_open())
-      {
-        double time_sum = 0.0;
-        for (size_t k=0; k<=deque_index; ++k)
-        {
-          time_sum = time_sum + this->times[k];
-        }
-        this->estimator->time_file_stream << time_sum << std::endl;
-        //log_likelihood_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
-      }
       
       if (!this->estimator->vector_variables_file_stream.is_open())
       {
@@ -361,7 +365,7 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
         Rcpp::stop("File " + directory_name + "/vector_variable_sizes.txt" + "cannot be opened.");
       }
       
-      std::string smc_iteration_directory = directory_name + "/iteration" + std::to_string(iteration);
+      std::string smc_iteration_directory = directory_name + "/iteration" + std::to_string(iteration+1);
       
       if (!directory_exists(smc_iteration_directory))
       {

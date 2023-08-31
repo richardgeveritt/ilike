@@ -1,6 +1,6 @@
 #include "importance_sampler.h"
 #include "smc_worker.h"
-#include "rcppparallel_smc_worker.h"
+//#include "rcppparallel_smc_worker.h"
 #include "sequential_smc_worker.h"
 #include "smc_output.h"
 #include "exact_likelihood_estimator.h"
@@ -252,8 +252,8 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
   
   if (parallel_in==TRUE)
   {
-    this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
-    //this->the_worker = NULL;
+    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
+    this->the_worker = NULL;
   }
   else
   {
@@ -318,8 +318,8 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
   
   if (parallel_in==TRUE)
   {
-    this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
-    //this->the_worker = NULL;
+    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
+    this->the_worker = NULL;
   }
   else
   {

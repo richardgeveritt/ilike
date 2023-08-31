@@ -445,6 +445,7 @@ void EnsembleKalmanInversion::ensemble_kalman_evaluate_smcadaptive_part_given_sm
     
     if (current_state->results_name!="")
     {
+      current_state->llhds.push_back(current_state->log_likelihood);
       current_state->set_time();
       current_state->write(results_name);
       current_state->start_time = std::chrono::high_resolution_clock::now();
@@ -626,6 +627,7 @@ void EnsembleKalmanInversion::ensemble_kalman_evaluate_smcadaptive_part_given_sm
     
     if (current_state->results_name!="")
     {
+      current_state->llhds.push_back(current_state->log_likelihood);
       current_state->set_time();
       current_state->write(results_name);
       current_state->start_time = std::chrono::high_resolution_clock::now();
@@ -768,6 +770,7 @@ void EnsembleKalmanInversion::ensemble_kalman_subsample_evaluate_smcadaptive_par
     
     if (current_state->results_name!="")
     {
+      current_state->llhds.push_back(current_state->log_likelihood);
       current_state->set_time();
       current_state->write(results_name);
       current_state->start_time = std::chrono::high_resolution_clock::now();

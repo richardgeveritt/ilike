@@ -57,19 +57,34 @@ load_smc_output = function(results_directory,
   variable_sizes = as.numeric(strsplit(previous_line,";")[[1]])
 
   lengths_file = file(paste(results_directory,"/output_lengths.txt",sep=""),open="r")
+  output_lengths = vector("list", length(variable_sizes))
+  counter = 1
+  line = ""
   while (TRUE)
   {
     previous_line = line
     line = readLines(lengths_file, n = 1)
+
     if ( length(line) == 0 )
     {
       break
     }
+    else
+    {
+      output_lengths[[counter]] = as.numeric(strsplit(line,split=" +")[[1]])
+      output_lengths[[counter]] = output_lengths[[counter]][!is.na(output_lengths[[counter]])]
+
+      if (sum(output_lengths[[counter]])==0)
+      {
+        stop("Output reported to be of length 0 in output_lengths.txt. Error in output files.")
+      }
+
+      counter = counter + 1
+    }
   }
   close(lengths_file)
-  output_lengths = as.numeric(strsplit(previous_line,split=" +")[[1]])
-  output_lengths = output_lengths[!is.na(output_lengths)]
-  number_of_points = length(output_lengths)
+
+  #number_of_points = length(output_lengths)
 
   if (length(variable_names)!=length(variable_sizes))
   {
@@ -87,171 +102,198 @@ load_smc_output = function(results_directory,
     }
   }
 
-  all_output_rows = floor(output_lengths)
-
   # Store the output in a data frame.
 
-  if (max(all_output_rows)>0)
+  # Find the final iteration of the SMC algorithm in which the MCMC is stored - this is the folder we need to look in.
+  all_dirs = list.dirs(results_directory,recursive = FALSE)
+
+  if (is.null(which.targets))
   {
-
-    # Find the final iteration of the SMC algorithm in which the MCMC is stored - this is the folder we need to look in.
-    all_dirs = list.dirs(results_directory,recursive = FALSE)
-
-    if (is.null(which.targets))
+    if (!as.mcmc)
     {
-      if (!as.mcmc)
-      {
-        which.targets = 1:length(all_dirs)
-      }
-      else
-      {
-        which.targets = length(all_dirs)
-      }
+      which.targets = 1:length(all_dirs)
     }
     else
     {
-      inputted_which_targets = which.targets
+      which.targets = length(all_dirs)
+    }
+  }
+  else
+  {
+    inputted_which_targets = which.targets
 
-      target_indices = matrix(0,length(all_dirs))
-      for (k in 1:length(all_dirs))
-      {
-        split = strsplit(all_dirs[k],"/")[[1]]
-        target_indices[i] = strtoi(gsub("iteration","",split[length(split)]))
-      }
+    target_indices = matrix(0,length(all_dirs))
+    for (k in 1:length(all_dirs))
+    {
+      split = strsplit(all_dirs[k],"/")[[1]]
+      target_indices[i] = strtoi(gsub("iteration","",split[length(split)]))
+    }
 
-      which.targets = matrix(0,length(inputted_which_targets))
-      for (k in 1:length(inputted_which_targets))
+    which.targets = matrix(0,length(inputted_which_targets))
+    for (k in 1:length(inputted_which_targets))
+    {
+      which.targets = which(target_indices==inputted_which_targets[k])
+    }
+  }
+
+  for (k in which.targets)
+  {
+    split = strsplit(all_dirs[k],"/")[[1]]
+    target = strtoi(gsub("iteration","",split[length(split)]))
+
+    iteration_directory = all_dirs[k]
+
+    points_filename = paste(iteration_directory,"/vector_points.txt",sep="")
+
+    output = read.table(file=points_filename,header=FALSE,sep=",")
+
+    if (nrow(output)!=sum(output_lengths[[k]]))
+    {
+      stop("Number of rows in vector_points.txt file does not correspond to output_lengths.txt file.")
+    }
+
+    schedule_parameters_filename = paste(iteration_directory,"/schedule_parameters.txt",sep="")
+    tryCatch( {schedule_parameters = read.table(file=schedule_parameters_filename,header=FALSE) }
+              , error = function(e) {schedule_parameters <<- NULL})
+    if (is.null(schedule_parameters))
+    {
+      schedule_parameters_column = matrix(0,nrow(output),1)
+    }
+    else
+    {
+      schedule_parameters_column = matrix(paste(schedule_parameters),nrow(output),1)
+    }
+
+    iterations_column = matrix(0,nrow(output),1)
+    chains_column = matrix(0,nrow(output),1)
+    target_column = matrix(0,nrow(output),1)
+
+    index = 1
+    for (i in 1:length(output_lengths[[k]]))
+    {
+      for (j in 1:output_lengths[[k]][i])
       {
-        which.targets = which(target_indices==inputted_which_targets[k])
+        iterations_column[index] = j
+        chains_column[index] = i
+        target_column[index] = target
+        index = index + 1
       }
     }
 
-    for (k in which.targets)
+    if (as.mcmc)
     {
-      split = strsplit(all_dirs[k],"/")[[1]]
-      target = strtoi(gsub("iteration","",split[length(split)]))
-
-      iteration_directory = all_dirs[k]
-
-      points_filename = paste(iteration_directory,"/vector_points.txt",sep="")
-
-      output = read.table(file=points_filename,header=FALSE,sep=",")
-
-      if (nrow(output)!=sum(output_lengths))
+      output = cbind(iterations_column,chains_column,output)
+      colnames(output) = c('Iteration','Chain',output_names)
+    }
+    else
+    {
+      if (as.enk)
       {
-        stop("Number of rows in vector_points.txt file does not correspond to output_lengths.txt file.")
-      }
-
-      iterations_column = matrix(0,nrow(output),1)
-      chains_column = matrix(0,nrow(output),1)
-      target_column = matrix(0,nrow(output),1)
-
-      index = 1
-      for (i in 1:length(output_lengths))
-      {
-        for (j in 1:output_lengths[i])
-        {
-          iterations_column[index] = j
-          chains_column[index] = i
-          target_column[index] = target
-          index = index + 1
-        }
-      }
-
-      if (as.mcmc)
-      {
-        output = cbind(iterations_column,chains_column,output)
-        colnames(output) = c('Iteration','Chain',output_names)
-      }
-      else
-      {
-        if (as.enk)
+        if (is.null(schedule_parameters))
         {
           output = cbind(target_column,iterations_column,chains_column,output)
           colnames(output) = c('Target','Iteration','Particle',output_names)
         }
         else
         {
-          log_weight_filename = paste(iteration_directory,"/normalised_log_weights.txt",sep="")
-          log_weight = read.table(file=log_weight_filename,header=FALSE,sep=",")
-
-          if (target>0)
-          {
-            ancestor_index_filename = paste(iteration_directory,"/ancestor_index.txt",sep="")
-            ancestor_index = read.table(file=ancestor_index_filename,header=FALSE,sep=",") + 1
-          }
-          else
-          {
-            ancestor_index = 1:(nrow(log_weight))
-          }
-
-          output = cbind(target_column,iterations_column,chains_column,ancestor_index,log_weight,output)
-          colnames(output) = c('Target','Iteration','Particle','AncestorIndex','LogWeight',output_names)
+          output = cbind(target_column,schedule_parameters_column,iterations_column,chains_column,output)
+          colnames(output) = c('Target','TargetParameters','Iteration','Particle',output_names)
         }
-      }
-
-      if ((k==1) || (as.mcmc))
-      {
-        all_output = output
       }
       else
       {
-        all_output = rbind(all_output,output)
+        log_weight_filename = paste(iteration_directory,"/normalised_log_weights.txt",sep="")
+        log_weight = read.table(file=log_weight_filename,header=FALSE,sep=",")
+
+        ancestor_index_filename = paste(iteration_directory,"/ancestor_index.txt",sep="")
+        tryCatch( {ancestor_index = read.table(file=ancestor_index_filename,header=FALSE,sep=",") + 1 }
+                  , error = function(e) {ancestor_index <<- 1:(nrow(log_weight))})
+
+        if (is.null(schedule_parameters))
+        {
+          output = cbind(target_column,iterations_column,chains_column,ancestor_index,log_weight,output)
+          colnames(output) = c('Target','Iteration','Particle','AncestorIndex','LogWeight',output_names)
+        }
+        else
+        {
+          output = cbind(target_column,schedule_parameters_column,iterations_column,chains_column,ancestor_index,log_weight,output)
+          colnames(output) = c('Target','TargetParameters','Iteration','Particle','AncestorIndex','LogWeight',output_names)
+        }
       }
     }
 
-    # points_file = file(points_filename,open="r")
-    # line_counter = 0
-    # point_index = 0
-    # chain_index = 1
-    # iteration = 1
-    #
-    # while (TRUE)
-    # {
-    #   line = readLines(sizes_file, n = 1)
-    #   line_counter = line_counter + 1
-    #
-    #   if ( length(line) == 0 )
-    #   {
-    #     break
-    #   }
-    #   else
-    #   {
-    #     if ((line_counter %% thinning)==0)
-    #     {
-    #       point_index = point_index + 1
-    #       output[point_index,] = c(iteration,chain_index,as.numeric(strsplit(line,",")[[1]]))
-    #       iteration = iteration + 1
-    #     }
-    #   }
-    #
-    #   if ((line_counter %% sum(output_lengths[1:chain_index]))==0)
-    #   {
-    #     chain_index = chain_index + 1
-    #     iteration = 1
-    #   }
-    # }
-    # close(points_file)
-
-    if (ggsmc==TRUE)
+    if ((k==1) || (as.mcmc))
     {
-      nParameters =
-        all_output = tidyr::pivot_longer(all_output, all_of(output_names), names_to = "Parameter", values_to = "value")
-      attr(output,"nTargets") = length(all_dirs)
-      attr(output,"nParticles") = length(output_lengths)
-      attr(output,"nParameters") = length(output_names)
-      attr(output,"nIterations") = max(all_output_rows)
-      attr(output,"nBurnin") = 0
-      attr(output,"nThin") = 1
-      attr(output,"description") = description
+      all_output = output
+    }
+    else
+    {
+      all_output = rbind(all_output,output)
     }
 
-    return(all_output)
   }
-  else
+
+  # points_file = file(points_filename,open="r")
+  # line_counter = 0
+  # point_index = 0
+  # chain_index = 1
+  # iteration = 1
+  #
+  # while (TRUE)
+  # {
+  #   line = readLines(sizes_file, n = 1)
+  #   line_counter = line_counter + 1
+  #
+  #   if ( length(line) == 0 )
+  #   {
+  #     break
+  #   }
+  #   else
+  #   {
+  #     if ((line_counter %% thinning)==0)
+  #     {
+  #       point_index = point_index + 1
+  #       output[point_index,] = c(iteration,chain_index,as.numeric(strsplit(line,",")[[1]]))
+  #       iteration = iteration + 1
+  #     }
+  #   }
+  #
+  #   if ((line_counter %% sum(output_lengths[1:chain_index]))==0)
+  #   {
+  #     chain_index = chain_index + 1
+  #     iteration = 1
+  #   }
+  # }
+  # close(points_file)
+
+  if ( (ggsmc==TRUE) && (as.mcmc==TRUE) )
   {
-    stop("No rows found for output.")
+    nParameters =
+      all_output = tidyr::pivot_longer(all_output, all_of(output_names), names_to = "Parameter", values_to = "Value")
+    attr(output,"nChains") = length(output_lengths[[k]])
+    attr(output,"nParameters") = length(output_names)
+    attr(output,"nIterations") = max(output_lengths[[k]])
+    attr(output,"nBurnin") = 0
+    attr(output,"nThin") = 1
+    attr(output,"description") = description
   }
+
+  if ( (ggsmc==TRUE) && (as.mcmc==FALSE) )
+  {
+    nParameters =
+      all_output = tidyr::pivot_longer(all_output, all_of(output_names), names_to = "Parameter", values_to = "Value")
+    attr(all_output,"nTargets") = length(all_dirs)
+    attr(all_output,"nParticles") = length(output_lengths[[k]])
+    attr(all_output,"nParameters") = length(output_names)
+    attr(all_output,"nIterations") = max(output_lengths[[k]])
+    attr(all_output,"nBurnin") = 0
+    attr(all_output,"nThin") = 1
+    attr(all_output,"description") = description
+  }
+
+  all_output$Target = as.integer(all_output$Target)
+
+  return(all_output)
 }
 
 #' Loading MCMC output into R memory.

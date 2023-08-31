@@ -928,13 +928,13 @@ inline std::ostream& operator<<(std::ostream& os, const Parameters &p)
   {
     if (it->first!="")
     {
-      os << it->first << ":";
+      os << it->first << "=";
       for (arma::mat::const_iterator i=it->second.first->begin(); i!=it->second.first->end(); ++i)
       {
         if (i==it->second.first->begin())
           os << *i;
         else
-          os << "," << *i;
+          os << ", " << *i;
       }
       //os << std::endl;
     }
@@ -944,7 +944,7 @@ inline std::ostream& operator<<(std::ostream& os, const Parameters &p)
   {
     if (it2->first!="")
     {
-      os << it2->first << ":";
+      os << it2->first << "=";
       os << it2->second.first;
       os << std::endl;
     }

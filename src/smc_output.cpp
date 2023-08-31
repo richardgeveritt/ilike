@@ -90,6 +90,7 @@ void SMCOutput::make_copy(const SMCOutput &another)
   this->iteration_written_to_file = another.iteration_written_to_file;
   this->start_time = another.start_time;
   this->times = another.times;
+  this->llhds = another.llhds;
 }
 
 void SMCOutput::simulate()
@@ -316,6 +317,7 @@ void SMCOutput::update_weights(const arma::colvec &latest_unnormalised_log_incre
 void SMCOutput::normalise_and_resample_weights()
 {
   this->log_likelihood_pre_last_step = this->log_likelihood;
+  this->llhds.push_back(this->log_likelihood);
   this->all_particles.back().normalise_weights();
   this->resample();
   this->set_time();
@@ -379,42 +381,45 @@ void SMCOutput::write_to_file(const std::string &dir_name,
        ++iteration)
   {
     size_t distance_from_end = this->smc_iteration-iteration;
+   
+    size_t llhd_index = this->llhds.size()-1-distance_from_end;
+    
+    if (!this->estimator->log_likelihood_file_stream.is_open())
+    {
+      this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
+    }
+    if (this->estimator->log_likelihood_file_stream.is_open())
+    {
+      this->estimator->log_likelihood_file_stream << this->llhds[llhd_index] << std::endl;
+      //log_likelihood_file_stream.close();
+    }
+    else
+    {
+      Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + " cannot be opened.");
+    }
+    
+    if (!this->estimator->time_file_stream.is_open())
+    {
+      this->estimator->time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
+    }
+    if (this->estimator->time_file_stream.is_open())
+    {
+      double time_sum = 0.0;
+      for (size_t k=0; k<=llhd_index; ++k)
+      {
+        time_sum = time_sum + this->times[k];
+      }
+      this->estimator->time_file_stream << time_sum << std::endl;
+      //log_likelihood_file_stream.close();
+    }
+    else
+    {
+      Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
+    }
+    
     if (this->all_particles.size() > distance_from_end)
     {
       size_t deque_index = this->all_particles.size()-1-distance_from_end;
-      
-      if (!this->estimator->log_likelihood_file_stream.is_open())
-      {
-        this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
-      }
-      if (this->estimator->log_likelihood_file_stream.is_open())
-      {
-        this->estimator->log_likelihood_file_stream << this->log_likelihood << std::endl;
-        //log_likelihood_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + " cannot be opened.");
-      }
-      
-      if (!this->estimator->time_file_stream.is_open())
-      {
-        this->estimator->time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
-      }
-      if (this->estimator->time_file_stream.is_open())
-      {
-        double time_sum = 0.0;
-        for (size_t k=0; k<=deque_index; ++k)
-        {
-          time_sum = time_sum + this->times[k];
-        }
-        this->estimator->time_file_stream << time_sum << std::endl;
-        //log_likelihood_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
-      }
       
       if (!this->estimator->vector_variables_file_stream.is_open())
       {
@@ -484,7 +489,7 @@ void SMCOutput::write_to_file(const std::string &dir_name,
       }
       */
       
-      std::string smc_iteration_directory = directory_name + "/iteration" + std::to_string(iteration);
+      std::string smc_iteration_directory = directory_name + "/iteration" + std::to_string(iteration+1);
       
       if (!directory_exists(smc_iteration_directory))
       {

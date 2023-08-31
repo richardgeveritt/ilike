@@ -306,7 +306,8 @@ void Sequencer::find_next_target_bisection(SMCOutput* current_state,
   //arma::colvec incremental_log_weights;
   
   // see if we need to do the bisection
-  //this->schedule_parameters[this->variable_names.back()] = target_values.back();
+  
+  this->schedule_parameters[this->variable_names.back()] = this->current_bisect_value;
   
   // if we want to make this generic, need to hide the next two lines in a function that can have different choices
   
@@ -728,6 +729,8 @@ void Sequencer::subsample_find_next_target_bisection(SMCOutput* current_state,
   //this->schedule_parameters[this->variable_names.back()] = target_values.back();
   
   // if we want to make this generic, need to hide the next two lines in a function that can have different choices
+  
+  this->schedule_parameters[this->variable_names.back()] = this->current_bisect_value;
   
   // if we have not just found a value for the parameter that is at one of the points in the schedule
   if (this->current_bisect_value>=this->schedules.back()[this->mileometer.back()])

@@ -6,7 +6,7 @@
 #include "annealed_likelihood_estimator.h"
 #include "utils.h"
 #include "parameter_particle_simulator.h"
-#include "rcppparallel_smc_worker.h"
+//#include "rcppparallel_smc_worker.h"
 #include "sequential_smc_worker.h"
 #include "mcmc.h"
 #include "move_output.h"
@@ -156,8 +156,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   
   if (parallel_in==TRUE)
   {
-    this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
-    //this->the_worker = NULL;
+    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
+    this->the_worker = NULL;
   }
   else
   {
@@ -235,8 +235,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   
   if (parallel_in==TRUE)
   {
-    this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
-    //this->the_worker = NULL;
+    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
+    this->the_worker = NULL;
   }
   else
   {
@@ -673,8 +673,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   
   if (parallel_in==true)
   {
-    this->the_worker = new RcppParallelSMCWorker(this, grain_size_in);
-    //this->the_worker = NULL;
+    //this->the_worker = new RcppParallelSMCWorker(this, grain_size_in);
+    this->the_worker = NULL;
   }
   else
   {
@@ -753,8 +753,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   
   if (parallel_in==true)
   {
-    this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
-    //this->the_worker = NULL;
+    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
+    this->the_worker = NULL;
   }
   else
   {
@@ -973,7 +973,7 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
     
     //Rcout << "p4" << std::endl;
     
-    Rcout << current_state->back().schedule_parameters << std::endl;
+    //Rcout << current_state->back().schedule_parameters << std::endl;
     
     //if (current_state)
     
