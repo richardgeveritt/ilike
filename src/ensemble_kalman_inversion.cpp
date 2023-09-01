@@ -768,9 +768,10 @@ void EnsembleKalmanInversion::ensemble_kalman_subsample_evaluate_smcadaptive_par
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
+    current_state->llhds.push_back(current_state->log_likelihood);
+    
     if (current_state->results_name!="")
     {
-      current_state->llhds.push_back(current_state->log_likelihood);
       current_state->set_time();
       current_state->write(results_name);
       current_state->start_time = std::chrono::high_resolution_clock::now();

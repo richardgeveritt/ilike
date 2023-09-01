@@ -5,13 +5,17 @@
 #' @param as.mcmc (optional) Output treats particles as different MCMC chains.
 #' @param as.enk (optional) Output treats particles as an ensemble.
 #' @param which.targets (optional) The indices of the targets to output (defaults to all).
+#' @param directory_prefix (optional; for nested output only) The first part of the name of the directory within results_directory that contains the results. (default is "ilike", giving a directory of results_directory/ilike_smc)
+#' @param number_of_external_points (optional; for nested output only) The number of importance points external to the current folder. (defaults is 1, to be used at the top level of nested output)
 #' @return A list containing the SMC output.
 #' @export
 load_smc_output = function(results_directory,
                            ggsmc = TRUE,
                            as.mcmc = FALSE,
                            as.enk = FALSE,
-                           which.targets = NULL)
+                           which.targets = NULL,
+                           directory_prefix = "ilike",
+                           number_of_external_points = 1)
 {
   if (as.mcmc && as.enk)
   {
@@ -19,7 +23,7 @@ load_smc_output = function(results_directory,
   }
 
   description = results_directory
-  results_directory = paste(results_directory,"/ilike_smc",sep="")
+  results_directory = paste(results_directory,"/",directory_prefix,"_smc",sep="")
 
   # Throw error if directory does not exist.
   if (!dir.exists(results_directory))
@@ -28,6 +32,11 @@ load_smc_output = function(results_directory,
   }
 
   # Make the output names.
+
+  # New line for each iteration of SMC; one element in the line for each importance point -
+  # tells us the length of the MCMC or single point. (since the file vector_points.txt is concatenated,
+  # so we need this to split the file into different importance points). Same format for vector_variable_sizes and vector_variables.
+  # When nested, a new line is written to these files for every external particle.
 
   names_file = file(paste(results_directory,"/vector_variables.txt",sep=""),open="r")
   line = ""
@@ -84,6 +93,9 @@ load_smc_output = function(results_directory,
   }
   close(lengths_file)
 
+  num_output_lengths_to_keep = length(output_lengths)/number_of_external_points
+  output_lengths = output_lengths[1:num_output_lengths_to_keep]
+
   #number_of_points = length(output_lengths)
 
   if (length(variable_names)!=length(variable_sizes))
@@ -104,7 +116,6 @@ load_smc_output = function(results_directory,
 
   # Store the output in a data frame.
 
-  # Find the final iteration of the SMC algorithm in which the MCMC is stored - this is the folder we need to look in.
   all_dirs = list.dirs(results_directory,recursive = FALSE)
 
   if (is.null(which.targets))
@@ -145,11 +156,15 @@ load_smc_output = function(results_directory,
 
     points_filename = paste(iteration_directory,"/vector_points.txt",sep="")
 
-    output = read.table(file=points_filename,header=FALSE,sep=",")
+    output = read.table(file=points_filename,header=FALSE)
 
-    if (nrow(output)!=sum(output_lengths[[k]]))
+    if (nrow(output)!=number_of_external_points*sum(output_lengths[[k]]))
     {
       stop("Number of rows in vector_points.txt file does not correspond to output_lengths.txt file.")
+    }
+    if (ncol(output)!=sum(variable_sizes))
+    {
+      stop("Number of columns in vector_points.txt file does not correspond to output_lengths.txt file.")
     }
 
     schedule_parameters_filename = paste(iteration_directory,"/schedule_parameters.txt",sep="")
@@ -161,29 +176,34 @@ load_smc_output = function(results_directory,
     }
     else
     {
-      schedule_parameters_column = matrix(paste(schedule_parameters),nrow(output),1)
+      schedule_parameters_column = matrix(paste(schedule_parameters[1,]),nrow(output),1)
     }
 
+    external_column = matrix(0,nrow(output))
     iterations_column = matrix(0,nrow(output),1)
     chains_column = matrix(0,nrow(output),1)
     target_column = matrix(0,nrow(output),1)
 
     index = 1
-    for (i in 1:length(output_lengths[[k]]))
+    for (p in 1:number_of_external_points)
     {
-      for (j in 1:output_lengths[[k]][i])
+      for (i in 1:length(output_lengths[[k]]))
       {
-        iterations_column[index] = j
-        chains_column[index] = i
-        target_column[index] = target
-        index = index + 1
+        for (j in 1:output_lengths[[k]][i])
+        {
+          iterations_column[index] = j
+          chains_column[index] = i
+          target_column[index] = target
+          external_column[index] = p
+          index = index + 1
+        }
       }
     }
 
     if (as.mcmc)
     {
-      output = cbind(iterations_column,chains_column,output)
-      colnames(output) = c('Iteration','Chain',output_names)
+      output = cbind(external_column,iterations_column,chains_column,output)
+      colnames(output) = c('ExternalIndex','Iteration','Chain',output_names)
     }
     else
     {
@@ -191,33 +211,34 @@ load_smc_output = function(results_directory,
       {
         if (is.null(schedule_parameters))
         {
-          output = cbind(target_column,iterations_column,chains_column,output)
-          colnames(output) = c('Target','Iteration','Particle',output_names)
+          output = cbind(external_column,target_column,iterations_column,chains_column,output)
+          colnames(output) = c('ExternalIndex','Target','Iteration','Particle',output_names)
         }
         else
         {
-          output = cbind(target_column,schedule_parameters_column,iterations_column,chains_column,output)
-          colnames(output) = c('Target','TargetParameters','Iteration','Particle',output_names)
+          output = cbind(external_column,target_column,schedule_parameters_column,iterations_column,chains_column,output)
+          colnames(output) = c('ExternalIndex','Target','TargetParameters','Iteration','Particle',output_names)
         }
       }
       else
       {
-        log_weight_filename = paste(iteration_directory,"/normalised_log_weights.txt",sep="")
+        log_weight_filename = paste(iteration_directory,"/unnormalised_log_weights.txt",sep="")
         log_weight = read.table(file=log_weight_filename,header=FALSE,sep=",")
+        log_weight = log_weight$V1 - log_sum_exp(log_weight$V1)
 
         ancestor_index_filename = paste(iteration_directory,"/ancestor_index.txt",sep="")
         tryCatch( {ancestor_index = read.table(file=ancestor_index_filename,header=FALSE,sep=",") + 1 }
-                  , error = function(e) {ancestor_index <<- 1:(nrow(log_weight))})
+                  , error = function(e) {ancestor_index <<- 1:(length(log_weight))})
 
         if (is.null(schedule_parameters))
         {
-          output = cbind(target_column,iterations_column,chains_column,ancestor_index,log_weight,output)
-          colnames(output) = c('Target','Iteration','Particle','AncestorIndex','LogWeight',output_names)
+          output = cbind(external_column,target_column,iterations_column,chains_column,ancestor_index,log_weight,output)
+          colnames(output) = c('ExternalIndex','Target','Iteration','Particle','AncestorIndex','LogWeight',output_names)
         }
         else
         {
-          output = cbind(target_column,schedule_parameters_column,iterations_column,chains_column,ancestor_index,log_weight,output)
-          colnames(output) = c('Target','TargetParameters','Iteration','Particle','AncestorIndex','LogWeight',output_names)
+          output = cbind(external_column,target_column,schedule_parameters_column,iterations_column,chains_column,ancestor_index,log_weight,output)
+          colnames(output) = c('ExternalIndex','Target','TargetParameters','Iteration','Particle','AncestorIndex','LogWeight',output_names)
         }
       }
     }

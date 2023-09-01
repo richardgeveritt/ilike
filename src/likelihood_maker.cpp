@@ -97,7 +97,8 @@ ImportanceSampler* make_fixed_epsilon_lp_uniform_abc_likelihood(RandomNumberGene
   
   IndependentProposalKernel* model_simulator = new CustomIndependentProposalKernel(simulate_model_in);
   IndependentProposalKernel* summary_model_simulator = new TransformedIndependentProposalKernel(model_simulator,
-                                                                                                Transform(summary_statistics_in));
+                                                                                                Transform(summary_statistics_in),
+                                                                                                true);
   
   return new ImportanceSampler(rng_in,
                                seed_in,
@@ -215,6 +216,7 @@ DensityLikelihoodEstimator* make_sl_likelihood(RandomNumberGenerator* rng_in,
   return new DensityLikelihoodEstimator(rng_in,
                                         seed_in,
                                         data_in,
+                                        Parameters(),
                                         number_of_sl_simulations_in,
                                         true,
                                         density_estimator,
@@ -245,6 +247,7 @@ DensityLikelihoodEstimator* make_sl_likelihood(RandomNumberGenerator* rng_in,
   return new DensityLikelihoodEstimator(rng_in,
                                         seed_in,
                                         summary_data_in,
+                                        Parameters(),
                                         number_of_sl_simulations_in,
                                         true,
                                         density_estimator,

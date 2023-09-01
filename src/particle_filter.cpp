@@ -336,6 +336,7 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
     
     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
+    current_state->llhds.push_back(current_state->log_likelihood);
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
@@ -526,6 +527,7 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
 
     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
+    current_state->llhds.push_back(current_state->log_likelihood);
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
@@ -673,7 +675,7 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
     }
     
     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
+    current_state->subsample_log_likelihood = current_state->subsample_log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
@@ -829,7 +831,7 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
     }
     
     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
+    current_state->subsample_log_likelihood = current_state->subsample_log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;

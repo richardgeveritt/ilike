@@ -349,6 +349,7 @@ void SMCMarginal::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
     
     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     current_state->log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
+    current_state->llhds.push_back(current_state->log_likelihood);
     
     //current_state->back().set_previous_target_evaluated_to_target_evaluated();
     
@@ -564,6 +565,7 @@ void SMCMarginal::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
 
     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     current_state->log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
+    current_state->llhds.push_back(current_state->log_likelihood);
     
     //current_state->back().set_previous_target_evaluated_to_target_evaluated();
     
@@ -803,7 +805,7 @@ void SMCMarginal::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
     }
     
     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-    current_state->log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
+    current_state->subsample_log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
     
     //current_state->back().set_previous_target_evaluated_to_target_evaluated();
     
@@ -887,7 +889,7 @@ void SMCMarginal::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
     }
     
     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-    current_state->log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
+    current_state->subsample_log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
 
     //current_state->back().set_previous_target_evaluated_to_target_evaluated();
     

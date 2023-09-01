@@ -94,6 +94,10 @@ public:
   
   void write_to_file(const std::string &directory_name,
                      const std::string &index = "");
+  
+  std::deque<double> times;
+  
+  std::deque<double> llhds;
 
 protected:
   
@@ -111,10 +115,6 @@ protected:
   std::deque<Particles> all_particles;
 
   std::deque<Particles> all_proposed;
-  
-  std::deque<double> times;
-  
-  std::deque<double> llhds;
 
   size_t lag;
 

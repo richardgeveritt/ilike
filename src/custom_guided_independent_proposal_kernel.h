@@ -90,7 +90,7 @@ protected:
   
   SimulateGuidedIndependentProposalPtr proposal_simulate;
   
-  // not stored here - points to algoritbm_parameters
+  // not stored here - points to algorithm_parameters
   Parameters* proposal_parameters;
   
   const Data* data;

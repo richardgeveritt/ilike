@@ -16,6 +16,7 @@ DensityLikelihoodEstimator::DensityLikelihoodEstimator()
 DensityLikelihoodEstimator::DensityLikelihoodEstimator(RandomNumberGenerator* rng_in,
                                                        size_t* seed_in,
                                                        Data* data_in,
+                                                       const Parameters &algorithm_parameters_in,
                                                        size_t number_of_points_in,
                                                        bool smcfixed_flag_in,
                                                        DensityEstimator* density_estimator_in,
@@ -23,8 +24,9 @@ DensityLikelihoodEstimator::DensityLikelihoodEstimator(RandomNumberGenerator* rn
                                                        bool make_subsample_version_in,
                                                        bool parallel_in,
                                                        size_t grain_size_in)
-:LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, algorithm_parameters_in, smcfixed_flag_in)
 {
+  proposal_in->set_proposal_parameters(&this->algorithm_parameters);
   this->density_estimator = density_estimator_in;
   if (make_subsample_version_in==true)
     this->subsample_density_estimator = density_estimator_in->duplicate();

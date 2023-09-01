@@ -317,7 +317,6 @@ void SMCOutput::update_weights(const arma::colvec &latest_unnormalised_log_incre
 void SMCOutput::normalise_and_resample_weights()
 {
   this->log_likelihood_pre_last_step = this->log_likelihood;
-  this->llhds.push_back(this->log_likelihood);
   this->all_particles.back().normalise_weights();
   this->resample();
   this->set_time();
@@ -405,7 +404,7 @@ void SMCOutput::write_to_file(const std::string &dir_name,
     if (this->estimator->time_file_stream.is_open())
     {
       double time_sum = 0.0;
-      for (size_t k=0; k<=llhd_index; ++k)
+      for (size_t k=0; k<this->times.size(); ++k)
       {
         time_sum = time_sum + this->times[k];
       }

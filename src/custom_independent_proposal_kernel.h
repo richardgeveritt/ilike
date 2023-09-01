@@ -90,6 +90,7 @@ protected:
   
   SimulateIndependentProposalPtr proposal_simulate;
   
+  // not stored here - points to algorithm_parameters
   Parameters* proposal_parameters;
   
 };

@@ -123,7 +123,8 @@ Parameters TransformedIndependentProposalKernel::independent_simulate(RandomNumb
                                                                           conditioned_on_parameters));
   else
   {
-    Parameters output(this->proposal->independent_simulate(rng));
+    Parameters output(this->proposal->independent_simulate(rng,
+                                                           conditioned_on_parameters));
     output.deep_overwrite_with_variables_in_argument(this->transform.transform(output));
     return output;
   }

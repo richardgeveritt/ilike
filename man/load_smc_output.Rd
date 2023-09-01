@@ -9,7 +9,9 @@ load_smc_output(
   ggsmc = TRUE,
   as.mcmc = FALSE,
   as.enk = FALSE,
-  which.targets = NULL
+  which.targets = NULL,
+  directory_prefix = "ilike",
+  number_of_external_points = 1
 )
 }
 \arguments{
@@ -22,6 +24,10 @@ load_smc_output(
 \item{as.enk}{(optional) Output treats particles as an ensemble.}
 
 \item{which.targets}{(optional) The indices of the targets to output (defaults to all).}
+
+\item{directory_prefix}{(optional; for nested output only) The first part of the name of the directory within results_directory that contains the results. (default is "ilike", giving a directory of results_directory/ilike_smc)}
+
+\item{number_of_external_points}{(optional; for nested output only) The number of importance points external to the current folder. (defaults is 1, to be used at the top level of nested output)}
 }
 \value{
 A list containing the SMC output.

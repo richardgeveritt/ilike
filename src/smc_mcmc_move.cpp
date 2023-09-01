@@ -960,6 +960,7 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
     //Rcout << "p3" << std::endl;
 
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
+    current_state->llhds.push_back(current_state->log_likelihood);
     
     //test_file_stream << "4" << std::endl;
     
@@ -1126,6 +1127,7 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
     this->sequencer.find_next_target_bisection(current_state,
                                                this->index);
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
+    current_state->llhds.push_back(current_state->log_likelihood);
     
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
@@ -1287,7 +1289,7 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
     this->sequencer.subsample_find_next_target_bisection(current_state,
                                                          this->index);
     
-    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
+    current_state->subsample_log_likelihood = current_state->subsample_log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
@@ -1338,7 +1340,7 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
     this->sequencer.subsample_find_next_target_bisection(current_state,
                                                          this->index);
     
-    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
+    current_state->subsample_log_likelihood = current_state->subsample_log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;

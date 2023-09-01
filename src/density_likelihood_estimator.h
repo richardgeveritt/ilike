@@ -28,6 +28,7 @@ public:
   DensityLikelihoodEstimator(RandomNumberGenerator* rng_in,
                              size_t* seed_in,
                              Data* data_in,
+                             const Parameters &algorithm_parameters_in,
                              size_t number_of_points_in,
                              bool smcfixed_flag_in,
                              DensityEstimator* density_estimator_in,
