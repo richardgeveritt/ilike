@@ -1,7 +1,8 @@
 #' Loading SMC output into R memory.
 #'
 #' @param results_directory The folder in which the results are stored.
-#' @param ggsmc (optional) Output in tidy format for plotting in gggsmc package.
+#' @param ggmcmc (optional) Output in tidy format for plotting in ggmcmc package.
+#' @param ggsmc (optional) Output in tidy format for plotting in ggsmc package.
 #' @param as.mcmc (optional) Output treats particles as different MCMC chains.
 #' @param as.enk (optional) Output treats particles as an ensemble.
 #' @param which.targets (optional) The indices of the targets to output (defaults to all).
@@ -10,6 +11,7 @@
 #' @return A list containing the SMC output.
 #' @export
 load_smc_output = function(results_directory,
+                           ggmcmc = FALSE,
                            ggsmc = TRUE,
                            as.mcmc = FALSE,
                            as.enk = FALSE,
@@ -20,6 +22,16 @@ load_smc_output = function(results_directory,
   if (as.mcmc && as.enk)
   {
     stop("Cannot treat output as both MCMC chains and an ensemble.")
+  }
+
+  if ( (ggmcmc==TRUE) && (as.mcmc==FALSE))
+  {
+    stop('as.mcmc must be set to TRUE if correct input for the ggmcmc package is to be produced.')
+  }
+
+  if ( (ggsmc==TRUE) && (as.mcmc==TRUE))
+  {
+    stop('as.mcmc must be set to FALSE if correct input for the ggsmc package is to be produced.')
   }
 
   description = results_directory
@@ -104,12 +116,14 @@ load_smc_output = function(results_directory,
   }
 
   output_names = rep("",sum(variable_sizes))
+  output_index = rep("",sum(variable_sizes))
   counter = 1
   for (i in 1:length(variable_sizes))
   {
     for (j in 1:variable_sizes[i])
     {
-      output_names[counter] = paste(variable_names[i],j,sep="")
+      output_names[counter] = variable_names[i]
+      output_index[counter] = j
       counter = counter + 1
     }
   }
@@ -167,6 +181,17 @@ load_smc_output = function(results_directory,
       stop("Number of columns in vector_points.txt file does not correspond to output_lengths.txt file.")
     }
 
+    old_column_names = names(output)
+    number_of_points = nrow(output)
+    number_of_importance_points = nrow(output) / number_of_external_points # number_of_importance_points in the waste-free SMC viewpoint
+    chain_length = length(output_lengths[[k]])
+    number_of_chains = number_of_importance_points/chain_length
+
+    output_names_column = rep(output_names,number_of_points)
+    output_index_column = rep(output_index,number_of_points)
+
+    # number_of_points (=nrow(output)) equals number_of_external points multiplied by number of importance points
+
     schedule_parameters_filename = paste(iteration_directory,"/schedule_parameters.txt",sep="")
     tryCatch( {schedule_parameters = read.table(file=schedule_parameters_filename,header=FALSE) }
               , error = function(e) {schedule_parameters <<- NULL})
@@ -176,34 +201,54 @@ load_smc_output = function(results_directory,
     }
     else
     {
-      schedule_parameters_column = matrix(paste(schedule_parameters[1,]),nrow(output),1)
+      schedule_parameters_column = matrix(paste(schedule_parameters[1,]),nrow(output)*ncol(output),1)
     }
 
-    external_column = matrix(0,nrow(output))
-    iterations_column = matrix(0,nrow(output),1)
-    chains_column = matrix(0,nrow(output),1)
-    target_column = matrix(0,nrow(output),1)
+    # 1, ncol(output)*number_of_importance_points times
+    # 2, ncol(output)*number_of_importance_points times
+    # ...
+    # number_of_external_points, ncol(output)*number_of_importance_points times
+    external_column_matrix = sapply(lapply(1:number_of_external_points,FUN=function(i) { rep(i,ncol(output)*number_of_importance_points) } ),c)
+    external_column = matrix(external_column_matrix,length(external_column_matrix))
 
-    index = 1
-    for (p in 1:number_of_external_points)
-    {
-      for (i in 1:length(output_lengths[[k]]))
-      {
-        for (j in 1:output_lengths[[k]][i])
-        {
-          iterations_column[index] = j
-          chains_column[index] = i
-          target_column[index] = target
-          external_column[index] = p
-          index = index + 1
-        }
-      }
-    }
+    # all from this target
+    target_column = rep(target,length(external_column))
+
+    # (repeat each value (1:nchains) ncol(output)*niterations times)*number_of_external_points
+    chain_fn = function(i) {rep(i,ncol(output)*chain_length)}
+    chains_column = rep(sapply(lapply(1:number_of_chains,FUN=chain_fn),c),number_of_external_points)
+
+    # (repeat each value (1:niterations) ncol(output) times)*number_of_external_points*nchains
+    iteration_fn = function(i) {rep(i,ncol(output))}
+    iterations_column = rep(sapply(lapply(1:chain_length,FUN=iteration_fn),c),number_of_external_points*number_of_chains)
+
+    output = tidyr::pivot_longer(output,cols= everything(), values_to="Value")
+
+    #external_column = matrix(0,nrow(output))
+    #iterations_column = matrix(0,nrow(output),1)
+    #chains_column = matrix(0,nrow(output),1)
+    #target_column = matrix(0,nrow(output),1)
+
+    # index = 1
+    # for (p in 1:number_of_external_points)
+    # {
+    #   for (i in 1:length(output_lengths[[k]]))
+    #   {
+    #     for (j in 1:output_lengths[[k]][i])
+    #     {
+    #       #iterations_column[index] = j
+    #       #chains_column[index] = i
+    #       #target_column[index] = target
+    #       #external_column[index] = p
+    #       index = index + 1
+    #     }
+    #   }
+    # }
 
     if (as.mcmc)
     {
-      output = cbind(external_column,iterations_column,chains_column,output)
-      colnames(output) = c('ExternalIndex','Iteration','Chain',output_names)
+      output = cbind(external_column,iterations_column,chains_column,output_names_column,output_index_column,output$Value)
+      colnames(output) = c('ExternalIndex','Iteration','Chain','ParameterName','ParameterIndex',"Value")
     }
     else
     {
@@ -211,13 +256,13 @@ load_smc_output = function(results_directory,
       {
         if (is.null(schedule_parameters))
         {
-          output = cbind(external_column,target_column,iterations_column,chains_column,output)
-          colnames(output) = c('ExternalIndex','Target','Iteration','Particle',output_names)
+          output = cbind(external_column,target_column,iterations_column,chains_column,output_names_column,output_index_column,output$Value)
+          colnames(output) = c('ExternalIndex','Target','Iteration','Particle','ParameterName','ParameterIndex',"Value")
         }
         else
         {
-          output = cbind(external_column,target_column,schedule_parameters_column,iterations_column,chains_column,output)
-          colnames(output) = c('ExternalIndex','Target','TargetParameters','Iteration','Particle',output_names)
+          output = cbind(external_column,target_column,schedule_parameters_column,iterations_column,chains_column,output_names_column,output_index_column,output$Value)
+          colnames(output) = c('ExternalIndex','Target','TargetParameters','Iteration','Particle','ParameterName','ParameterIndex',"Value")
         }
       }
       else
@@ -226,22 +271,33 @@ load_smc_output = function(results_directory,
         log_weight = read.table(file=log_weight_filename,header=FALSE,sep=",")
         log_weight = log_weight$V1 - log_sum_exp(log_weight$V1)
 
+        # (repeat each value of log_weight (1:nchains) ncol(output)*niterations times)*number_of_external_points
+        log_weight_fn = function(i) {rep(log_weight[i],sum(variable_sizes)*chain_length)}
+        log_weight_column = rep(sapply(lapply(1:number_of_chains,FUN=log_weight_fn),c),number_of_external_points)
+
         ancestor_index_filename = paste(iteration_directory,"/ancestor_index.txt",sep="")
         tryCatch( {ancestor_index = read.table(file=ancestor_index_filename,header=FALSE,sep=",") + 1 }
                   , error = function(e) {ancestor_index <<- 1:(length(log_weight))})
 
+        # (repeat each value of ancestor (1:nchains) ncol(output)*niterations times)*number_of_external_points
+        ancestor_fn = function(i) {rep(ancestor_index[i],sum(variable_sizes)*chain_length)}
+        ancestor_index_column = rep(sapply(lapply(1:number_of_chains,FUN=ancestor_fn),c),number_of_external_points)
+
         if (is.null(schedule_parameters))
         {
-          output = cbind(external_column,target_column,iterations_column,chains_column,ancestor_index,log_weight,output)
-          colnames(output) = c('ExternalIndex','Target','Iteration','Particle','AncestorIndex','LogWeight',output_names)
+          output = cbind(external_column,target_column,iterations_column,chains_column,ancestor_index_column,log_weight_column,output_names_column,output_index_column,output$Value)
+          colnames(output) = c('ExternalIndex','Target','Iteration','Particle','AncestorIndex','LogWeight','ParameterName','ParameterIndex',"Value")
         }
         else
         {
-          output = cbind(external_column,target_column,schedule_parameters_column,iterations_column,chains_column,ancestor_index,log_weight,output)
-          colnames(output) = c('ExternalIndex','Target','TargetParameters','Iteration','Particle','AncestorIndex','LogWeight',output_names)
+          output = cbind(external_column,target_column,schedule_parameters_column,iterations_column,chains_column,ancestor_index_column,log_weight_column,output_names_column,output_index_column,output$Value)
+          colnames(output) = c('ExternalIndex','Target','TargetParameters','Iteration','Particle','AncestorIndex','LogWeight','ParameterName','ParameterIndex',"Value")
         }
+
       }
     }
+
+    output = as.data.frame(output)
 
     if ((k==1) || (as.mcmc))
     {
@@ -287,32 +343,59 @@ load_smc_output = function(results_directory,
   # }
   # close(points_file)
 
-  if ( (ggsmc==TRUE) && (as.mcmc==TRUE) )
+  all_output$ParameterIndex = as.integer(all_output$ParameterIndex)
+  all_output$ExternalIndex = as.integer(all_output$ExternalIndex)
+  all_output$Value = as.numeric(all_output$Value)
+  all_output$Iteration = as.integer(all_output$Iteration)
+
+  if ("Target" %in% names(all_output))
   {
-    nParameters =
-      all_output = tidyr::pivot_longer(all_output, all_of(output_names), names_to = "Parameter", values_to = "Value")
+    all_output$Target = as.integer(all_output$Target)
+  }
+
+  if ("AncestorIndex" %in% names(all_output))
+  {
+    all_output$AncestorIndex = as.integer(all_output$AncestorIndex)
+  }
+
+  if ("LogWeight" %in% names(all_output))
+  {
+    all_output$LogWeight = as.numeric(all_output$LogWeight)
+  }
+
+  if ("Particle" %in% names(all_output))
+  {
+    all_output$Particle = as.integer(all_output$Particle)
+  }
+
+  if ("Chain" %in% names(all_output))
+  {
+    all_output$Chain = as.integer(all_output$Chain)
+  }
+
+  if ( (ggmcmc==TRUE) && (as.mcmc==TRUE) )
+  {
+    new_variable_names = mapply(FUN = function(a,b) { paste(a,"_",b,sep="") },output$ParameterName,output$ParameterIndex)
+    output = subset(output,select = -c(ParameterName,ParameterIndex))
+    output$Parameter = new_variable_names
+
     attr(output,"nChains") = length(output_lengths[[k]])
-    attr(output,"nParameters") = length(output_names)
+    attr(output,"nParameters") = length(unique(new_variable_names))
     attr(output,"nIterations") = max(output_lengths[[k]])
     attr(output,"nBurnin") = 0
     attr(output,"nThin") = 1
     attr(output,"description") = description
+
+    return(output)
   }
 
-  if ( (ggsmc==TRUE) && (as.mcmc==FALSE) )
+  if (ggsmc==FALSE)
   {
-    nParameters =
-      all_output = tidyr::pivot_longer(all_output, all_of(output_names), names_to = "Parameter", values_to = "Value")
-    attr(all_output,"nTargets") = length(all_dirs)
-    attr(all_output,"nParticles") = length(output_lengths[[k]])
-    attr(all_output,"nParameters") = length(output_names)
-    attr(all_output,"nIterations") = max(output_lengths[[k]])
-    attr(all_output,"nBurnin") = 0
-    attr(all_output,"nThin") = 1
-    attr(all_output,"description") = description
+    new_variable_names = mapply(FUN = function(a,b) { paste(a,"_",b,sep="") },all_output$ParameterName,all_output$ParameterIndex)
+    all_output = subset(all_output,select = -c(ParameterName,ParameterIndex))
+    all_output$Parameter = new_variable_names
+    all_output = tidyr::pivot_wider(all_output, names_from = "Parameter", values_from = "Value")
   }
-
-  all_output$Target = as.integer(all_output$Target)
 
   return(all_output)
 }
@@ -326,7 +409,7 @@ load_smc_output = function(results_directory,
 load_mcmc_output = function(results_directory,
                             ggmcmc = TRUE)
 {
-  return(load_smc_output(results_directory = results_directory,ggsmc = ggmcmc,as.mcmc=TRUE))
+  return(load_smc_output(results_directory = results_directory,ggmcmc = ggmcmc,ggsmc = FALSE,as.mcmc=TRUE))
 }
 
 #' Loading ensemble Kalman output into R memory.

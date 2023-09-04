@@ -6,6 +6,7 @@
 \usage{
 load_smc_output(
   results_directory,
+  ggmcmc = FALSE,
   ggsmc = TRUE,
   as.mcmc = FALSE,
   as.enk = FALSE,
@@ -17,7 +18,9 @@ load_smc_output(
 \arguments{
 \item{results_directory}{The folder in which the results are stored.}
 
-\item{ggsmc}{(optional) Output in tidy format for plotting in gggsmc package.}
+\item{ggmcmc}{(optional) Output in tidy format for plotting in ggmcmc package.}
+
+\item{ggsmc}{(optional) Output in tidy format for plotting in ggsmc package.}
 
 \item{as.mcmc}{(optional) Output treats particles as different MCMC chains.}
 
