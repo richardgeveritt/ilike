@@ -248,7 +248,7 @@ load_smc_output = function(results_directory,
     if (as.mcmc)
     {
       output = cbind(external_column,iterations_column,chains_column,output_names_column,output_index_column,output$Value)
-      colnames(output) = c('ExternalIndex','Iteration','Chain','ParameterName','ParameterIndex',"Value")
+      colnames(output) = c('ExternalIndex','Iteration','Chain','ParameterName','Dimension',"Value")
     }
     else
     {
@@ -257,12 +257,12 @@ load_smc_output = function(results_directory,
         if (is.null(schedule_parameters))
         {
           output = cbind(external_column,target_column,iterations_column,chains_column,output_names_column,output_index_column,output$Value)
-          colnames(output) = c('ExternalIndex','Target','Iteration','Particle','ParameterName','ParameterIndex',"Value")
+          colnames(output) = c('ExternalIndex','Target','Iteration','Particle','ParameterName','Dimension',"Value")
         }
         else
         {
           output = cbind(external_column,target_column,schedule_parameters_column,iterations_column,chains_column,output_names_column,output_index_column,output$Value)
-          colnames(output) = c('ExternalIndex','Target','TargetParameters','Iteration','Particle','ParameterName','ParameterIndex',"Value")
+          colnames(output) = c('ExternalIndex','Target','TargetParameters','Iteration','Particle','ParameterName','Dimension',"Value")
         }
       }
       else
@@ -286,12 +286,12 @@ load_smc_output = function(results_directory,
         if (is.null(schedule_parameters))
         {
           output = cbind(external_column,target_column,iterations_column,chains_column,ancestor_index_column,log_weight_column,output_names_column,output_index_column,output$Value)
-          colnames(output) = c('ExternalIndex','Target','Iteration','Particle','AncestorIndex','LogWeight','ParameterName','ParameterIndex',"Value")
+          colnames(output) = c('ExternalIndex','Target','Iteration','Particle','AncestorIndex','LogWeight','ParameterName','Dimension',"Value")
         }
         else
         {
           output = cbind(external_column,target_column,schedule_parameters_column,iterations_column,chains_column,ancestor_index_column,log_weight_column,output_names_column,output_index_column,output$Value)
-          colnames(output) = c('ExternalIndex','Target','TargetParameters','Iteration','Particle','AncestorIndex','LogWeight','ParameterName','ParameterIndex',"Value")
+          colnames(output) = c('ExternalIndex','Target','TargetParameters','Iteration','Particle','AncestorIndex','LogWeight','ParameterName','Dimension',"Value")
         }
 
       }
@@ -343,7 +343,7 @@ load_smc_output = function(results_directory,
   # }
   # close(points_file)
 
-  all_output$ParameterIndex = as.integer(all_output$ParameterIndex)
+  all_output$Dimension = as.integer(all_output$Dimension)
   all_output$ExternalIndex = as.integer(all_output$ExternalIndex)
   all_output$Value = as.numeric(all_output$Value)
   all_output$Iteration = as.integer(all_output$Iteration)
@@ -375,8 +375,8 @@ load_smc_output = function(results_directory,
 
   if ( (ggmcmc==TRUE) && (as.mcmc==TRUE) )
   {
-    new_variable_names = mapply(FUN = function(a,b) { paste(a,"_",b,sep="") },output$ParameterName,output$ParameterIndex)
-    output = subset(output,select = -c(ParameterName,ParameterIndex))
+    new_variable_names = mapply(FUN = function(a,b) { paste(a,"_",b,sep="") },output$ParameterName,output$Dimension)
+    output = subset(output,select = -c(ParameterName,Dimension))
     output$Parameter = new_variable_names
 
     attr(output,"nChains") = length(output_lengths[[k]])
@@ -391,8 +391,8 @@ load_smc_output = function(results_directory,
 
   if (ggsmc==FALSE)
   {
-    new_variable_names = mapply(FUN = function(a,b) { paste(a,"_",b,sep="") },all_output$ParameterName,all_output$ParameterIndex)
-    all_output = subset(all_output,select = -c(ParameterName,ParameterIndex))
+    new_variable_names = mapply(FUN = function(a,b) { paste(a,"_",b,sep="") },all_output$ParameterName,all_output$Dimension)
+    all_output = subset(all_output,select = -c(ParameterName,Dimension))
     all_output$Parameter = new_variable_names
     all_output = tidyr::pivot_wider(all_output, names_from = "Parameter", values_from = "Value")
   }
