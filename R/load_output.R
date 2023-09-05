@@ -271,21 +271,28 @@ load_smc_output = function(results_directory,
       {
         log_weight_filename = paste(iteration_directory,"/unnormalised_log_weights.txt",sep="")
         log_weight = read.table(file=log_weight_filename,header=FALSE,sep=",")
-        browser()
-        log_weight = log_weight$V1 - log_sum_exp(log_weight$V1)
+
+        log_weights_for_each_external_point = lapply(1:number_of_external_points,FUN=function(i) { lw = nrow(log_weight)/number_of_external_points; o = matrix(0,lw); for (j in 1:lw) { o[j] = log_weight[j+lw*(i-1),] }; return(o); })
+        normalised_weights_for_each_external_point = lapply(log_weights_for_each_external_point,FUN=function(i) { i-log_sum_exp(i) })
+        log_weight_list = lapply(1:number_of_external_points,FUN=function(i){ normalised_weights_for_each_external_point[[i]] + external_log_weights[i] })
+
+        log_weight_fn = function(j) {matrix(sapply(1:length(log_weight_list[[j]]),FUN=function(i) { rep(log_weight_list[[j]][i],sum(variable_sizes)) }),sum(variable_sizes)*length(log_weight_list[[j]]))}
+
+        log_weight_column = matrix(sapply(1:number_of_external_points,FUN=function(i) { log_weight_fn(i) }),length(iterations_column))
+
+        #browser()
+        #log_weight = log_weight$V1 - log_sum_exp(log_weight$V1)
 
         # (repeat each value of log_weight (1:nchains) ncol(output)*niterations times)*number_of_external_points
-        log_weight_fn = function(i) {rep(log_weight[i],sum(variable_sizes)*chain_length)}
-        log_weight_column = rep(sapply(lapply(1:number_of_chains,FUN=log_weight_fn),c),number_of_external_points)
+        #log_weight_fn = function(i) {rep(log_weight[i],sum(variable_sizes)*chain_length)}
+        #log_weight_column = rep(sapply(lapply(1:number_of_chains,FUN=log_weight_fn),c),number_of_external_points)
 
-        browser()
-
-        external_log_weight_fn = function(i) {rep(external_log_weights[i],length(log_weight_column)/length(external_log_weights))}
-        external_log_weight_column = matrix(apply(lapply(1:number_of_external_points,FUN=log_weight_fn),c),length(log_weight_column))
+        #external_log_weight_fn = function(i) {rep(external_log_weights[i],length(log_weight_column)/length(external_log_weights))}
+        #external_log_weight_column = matrix(apply(lapply(1:number_of_external_points,FUN=log_weight_fn),c),length(log_weight_column))
 
         ancestor_index_filename = paste(iteration_directory,"/ancestor_index.txt",sep="")
         tryCatch( {ancestor_index = read.table(file=ancestor_index_filename,header=FALSE,sep=",") + 1 }
-                  , error = function(e) {ancestor_index <<- matrix(1:(length(log_weight)),length(log_weight))})
+                  , error = function(e) {ancestor_index <<- matrix(1:number_of_chains,number_of_chains)})
 
         # (repeat each value of ancestor (1:nchains) ncol(output)*niterations times)*number_of_external_points
         ancestor_fn = function(i) {rep(ancestor_index[i,],sum(variable_sizes)*chain_length)}
