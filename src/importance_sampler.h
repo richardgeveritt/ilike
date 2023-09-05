@@ -63,6 +63,7 @@ public:
                     Data* data_in,
                     const Parameters &algorithm_parameters_in,
                     size_t number_of_particles_in,
+                    const std::string &target_variable_in,
                     const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
                     IndependentProposalKernel* proposal_in,
                     bool proposal_is_evaluated_in,

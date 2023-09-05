@@ -211,6 +211,7 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                      Data* data_in,
                                      const Parameters &algorithm_parameters_in,
                                      size_t number_of_particles_in,
+                                     const std::string &target_variable_in,
                                      const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
                                      IndependentProposalKernel* proposal_in,
                                      bool proposal_is_evaluated_in,
@@ -265,8 +266,8 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
   SMCCriterion* smc_criterion = new PositiveSMCCriterion();
   this->sequencer = Sequencer(this->the_worker,
                               schedule_in,
-                              "",
-                              25,
+                              target_variable_in,
+                              100,
                               smc_criterion);
 }
 

@@ -6,8 +6,8 @@ StableSMCTermination::StableSMCTermination()
 {
 }
 
-StableSMCTermination::StableSMCTermination(double threshold_in,
-                                           size_t number_in_a_row_in)
+StableSMCTermination::StableSMCTermination(size_t number_in_a_row_in,
+                                           double threshold_in)
 :SMCTermination()
 {
   this->number_in_a_row = number_in_a_row_in;

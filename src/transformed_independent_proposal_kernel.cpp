@@ -126,6 +126,7 @@ Parameters TransformedIndependentProposalKernel::independent_simulate(RandomNumb
     Parameters output(this->proposal->independent_simulate(rng,
                                                            conditioned_on_parameters));
     output.deep_overwrite_with_variables_in_argument(this->transform.transform(output));
+    //std::cout << output << std::endl;
     return output;
   }
 }

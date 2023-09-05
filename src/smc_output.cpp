@@ -657,6 +657,10 @@ void SMCOutput::write_to_file(const std::string &dir_name,
       this->close_ofstreams(deque_index);
     }
     
+    if (iteration+1 >= 3)
+    {
+      int thing = 1;
+    }
   }
   
   this->iteration_written_to_file = this->smc_iteration;
