@@ -12,7 +12,7 @@ load_smc_output(
   as.enk = FALSE,
   which.targets = NULL,
   directory_prefix = "ilike",
-  number_of_external_points = 1
+  external_log_weights = c(0)
 )
 }
 \arguments{
@@ -30,7 +30,7 @@ load_smc_output(
 
 \item{directory_prefix}{(optional; for nested output only) The first part of the name of the directory within results_directory that contains the results. (default is "ilike", giving a directory of results_directory/ilike_smc)}
 
-\item{number_of_external_points}{(optional; for nested output only) The number of importance points external to the current folder. (defaults is 1, to be used at the top level of nested output)}
+\item{external_log_weights}{(optional; for nested output only) The weights of the importance points external to the current folder. (defaults is 1, to be used at the top level of nested output)}
 }
 \value{
 A list containing the SMC output.

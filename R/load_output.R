@@ -271,6 +271,7 @@ load_smc_output = function(results_directory,
       {
         log_weight_filename = paste(iteration_directory,"/unnormalised_log_weights.txt",sep="")
         log_weight = read.table(file=log_weight_filename,header=FALSE,sep=",")
+        browser()
         log_weight = log_weight$V1 - log_sum_exp(log_weight$V1)
 
         # (repeat each value of log_weight (1:nchains) ncol(output)*niterations times)*number_of_external_points
@@ -278,6 +279,9 @@ load_smc_output = function(results_directory,
         log_weight_column = rep(sapply(lapply(1:number_of_chains,FUN=log_weight_fn),c),number_of_external_points)
 
         browser()
+
+        external_log_weight_fn = function(i) {rep(external_log_weights[i],length(log_weight_column)/length(external_log_weights))}
+        external_log_weight_column = matrix(apply(lapply(1:number_of_external_points,FUN=log_weight_fn),c),length(log_weight_column))
 
         ancestor_index_filename = paste(iteration_directory,"/ancestor_index.txt",sep="")
         tryCatch( {ancestor_index = read.table(file=ancestor_index_filename,header=FALSE,sep=",") + 1 }
