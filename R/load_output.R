@@ -174,6 +174,7 @@ load_smc_output = function(results_directory,
 
     if (nrow(output)!=number_of_external_points*sum(output_lengths[[k]]))
     {
+      browser()
       stop("Number of rows in vector_points.txt file does not correspond to output_lengths.txt file.")
     }
     if (ncol(output)!=sum(variable_sizes))
@@ -184,7 +185,7 @@ load_smc_output = function(results_directory,
     old_column_names = names(output)
     number_of_points = nrow(output)
     number_of_importance_points = nrow(output) / number_of_external_points # number_of_importance_points in the waste-free SMC viewpoint
-    chain_length = length(output_lengths[[k]])
+    chain_length = max(output_lengths[[k]])
     number_of_chains = number_of_importance_points/chain_length
 
     output_names_column = rep(output_names,number_of_points)
@@ -277,10 +278,10 @@ load_smc_output = function(results_directory,
 
         ancestor_index_filename = paste(iteration_directory,"/ancestor_index.txt",sep="")
         tryCatch( {ancestor_index = read.table(file=ancestor_index_filename,header=FALSE,sep=",") + 1 }
-                  , error = function(e) {ancestor_index <<- 1:(length(log_weight))})
+                  , error = function(e) {ancestor_index <<- matrix(1:(length(log_weight)),length(log_weight))})
 
         # (repeat each value of ancestor (1:nchains) ncol(output)*niterations times)*number_of_external_points
-        ancestor_fn = function(i) {rep(ancestor_index[i],sum(variable_sizes)*chain_length)}
+        ancestor_fn = function(i) {rep(ancestor_index[i,],sum(variable_sizes)*chain_length)}
         ancestor_index_column = rep(sapply(lapply(1:number_of_chains,FUN=ancestor_fn),c),number_of_external_points)
 
         if (is.null(schedule_parameters))
@@ -298,6 +299,11 @@ load_smc_output = function(results_directory,
     }
 
     output = as.data.frame(output)
+
+    output$Dimension = as.integer(output$Dimension)
+    output$ExternalIndex = as.integer(output$ExternalIndex)
+    output$Value = as.numeric(output$Value)
+    output$Iteration = as.integer(output$Iteration)
 
     if ((k==1) || (as.mcmc))
     {
@@ -342,11 +348,6 @@ load_smc_output = function(results_directory,
   #   }
   # }
   # close(points_file)
-
-  all_output$Dimension = as.integer(all_output$Dimension)
-  all_output$ExternalIndex = as.integer(all_output$ExternalIndex)
-  all_output$Value = as.numeric(all_output$Value)
-  all_output$Iteration = as.integer(all_output$Iteration)
 
   if ("Target" %in% names(all_output))
   {
