@@ -175,7 +175,6 @@ load_smc_output = function(results_directory,
 
     if (nrow(output)!=number_of_external_points*sum(output_lengths[[k]]))
     {
-      browser()
       stop("Number of rows in vector_points.txt file does not correspond to output_lengths.txt file.")
     }
     if (ncol(output)!=sum(variable_sizes))
@@ -269,6 +268,7 @@ load_smc_output = function(results_directory,
       }
       else
       {
+
         log_weight_filename = paste(iteration_directory,"/unnormalised_log_weights.txt",sep="")
         log_weight = read.table(file=log_weight_filename,header=FALSE,sep=",")
 
@@ -409,6 +409,7 @@ load_smc_output = function(results_directory,
     new_variable_names = mapply(FUN = function(a,b) { paste(a,"_",b,sep="") },all_output$ParameterName,all_output$Dimension)
     all_output = subset(all_output,select = -c(ParameterName,Dimension))
     all_output$Parameter = new_variable_names
+    output = output %>% distinct()
     all_output = tidyr::pivot_wider(all_output, names_from = "Parameter", values_from = "Value")
   }
 
