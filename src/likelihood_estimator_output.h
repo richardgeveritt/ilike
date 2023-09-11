@@ -69,6 +69,8 @@ public:
   virtual arma::mat subsample_get_gradient_of_log(const std::string &variable,
                                                   const Parameters &x)=0;
   
+  virtual void forget_you_were_already_written_to_file()=0;
+  
   void write(const std::string &directory_name);
 
   friend std::ostream& operator<<(std::ostream& os, const LikelihoodEstimatorOutput &p);

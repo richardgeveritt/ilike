@@ -7,7 +7,9 @@
 #' @param as.enk (optional) Output treats particles as an ensemble.
 #' @param which.targets (optional) The indices of the targets to output (defaults to all).
 #' @param directory_prefix (optional; for nested output only) The first part of the name of the directory within results_directory that contains the results. (default is "ilike", giving a directory of results_directory/ilike_smc)
-#' @param external_log_weights (optional; for nested output only) The weights of the importance points external to the current folder. (defaults is 1, to be used at the top level of nested output)
+#' @param external_log_weights (optional; for nested output only) The weights of the importance points external to the current folder. (default is 1, to be used at the top level of nested output)
+#' @param nesting_level (optional; for nested output only) The level of nesting at which to extract points. (default is 0, representing the top level of nested output)
+#' @param factor (optional; for nested output only) The factor from which to extract points. (default is 0)
 #' @return A list containing the SMC output.
 #' @export
 load_smc_output = function(results_directory,
@@ -17,8 +19,76 @@ load_smc_output = function(results_directory,
                            as.enk = FALSE,
                            which.targets = NULL,
                            directory_prefix = "ilike",
-                           external_log_weights = c(0))
+                           external_log_weights = c(0),
+                           nesting_level = 0,
+                           factor = 0)
 {
+  description = results_directory
+  if (as.enk==TRUE)
+  {
+    results_directory = paste(results_directory,"/",directory_prefix,"_enk",sep="")
+  }
+  else
+  {
+    results_directory = paste(results_directory,"/",directory_prefix,"_smc",sep="")
+  }
+
+  # Throw error if directory does not exist.
+  if (!dir.exists(results_directory))
+  {
+    stop(paste("Results directory ",results_directory," does not exist.",sep=""))
+  }
+
+  all_dirs = list.dirs(results_directory,recursive = FALSE)
+
+  # Factor name.
+  factor_name = paste("factor",factor,sep="")
+
+  # If nesting_level == 0, then we are at the top level of the nesting hierarchy.
+  # We need to run the main body of the function.
+  # If nesting_level != 0, we are not at the top level.
+  # We need to run load_smc_output at the top level to get the external points.
+  # We need to find a list of subdirectories, and call load_smc_output (using external points input)
+  # in each subdirectory, and concatenate the output.
+  # For now, throw error if nesting_level>1, since then we need to do something additional to make the correct external_weights
+  # to pass into the function.
+  if (nesting_level==1)
+  {
+    for (i in 1:length(all_dirs))
+    {
+      sub_output = load_smc_output(results_directory=all_dirs[i],
+                                   ggmcmc=ggmcmc,
+                                   ggsmc=ggsmc,
+                                   as.mcmc = as.mcmc,
+                                   as.enk = as.enk,
+                                   which.targets = which.targets,
+                                   directory_prefix=factor_name,
+                                   external_log_weights = dplyr::filter(dplyr::filter(theta_output,Target==i),Dimension==1)$LogWeight,
+                                   nesting_level = nesting_level-1)
+
+      numbers = stringr::str_extract_all(all_dirs[i], "\\d+")
+      target_id = as.integer(numbers[[1]][length(numbers[[1]])])
+      sub_output$ExternalTarget = rep(target_id,nrow(sub_output))
+      sub_output$ExternalTargetParameters = rep(dplyr::filter(theta_output,Target==target_id)$TargetParameters[1],nrow(sub_output))
+
+      if (i==1)
+      {
+        lines_output = sub_output
+      }
+      else
+      {
+        lines_output = rbind(lines_output,sub_output)
+      }
+    }
+
+    return(lines_output)
+  }
+
+  if (nesting_level==2)
+  {
+    stop("Currently function only written for nesting_level = 0 or 1.")
+  }
+
   number_of_external_points = length(external_log_weights)
   if (as.mcmc && as.enk)
   {
@@ -33,15 +103,6 @@ load_smc_output = function(results_directory,
   if ( (ggsmc==TRUE) && (as.mcmc==TRUE))
   {
     stop('as.mcmc must be set to FALSE if correct input for the ggsmc package is to be produced.')
-  }
-
-  description = results_directory
-  results_directory = paste(results_directory,"/",directory_prefix,"_smc",sep="")
-
-  # Throw error if directory does not exist.
-  if (!dir.exists(results_directory))
-  {
-    stop(paste("Results directory ",results_directory," does not exist.",sep=""))
   }
 
   # Make the output names.
@@ -106,6 +167,53 @@ load_smc_output = function(results_directory,
   }
   close(lengths_file)
 
+  llhds_file = file(paste(results_directory,"/log_likelihood.txt",sep=""),open="r")
+  llhds = vector("list", length(variable_sizes))
+  counter = 1
+  line = ""
+  while (TRUE)
+  {
+    previous_line = line
+    line = readLines(lengths_file, n = 1)
+
+    if ( length(line) == 0 )
+    {
+      break
+    }
+    else
+    {
+      llhds[[counter]] = as.numeric(strsplit(line,split=" +")[[1]])
+      #llhds[[counter]] = llhds[[counter]][!is.na(output_lengths[[counter]])]
+
+      counter = counter + 1
+    }
+  }
+  close(llhds_file)
+
+  time_file = file(paste(results_directory,"/time.txt",sep=""),open="r")
+  times = vector("list", length(variable_sizes))
+  counter = 1
+  line = ""
+  while (TRUE)
+  {
+    previous_line = line
+    line = readLines(lengths_file, n = 1)
+
+    if ( length(line) == 0 )
+    {
+      break
+    }
+    else
+    {
+      times[[counter]] = as.numeric(strsplit(line,split=" +")[[1]])
+      #llhds[[counter]] = llhds[[counter]][!is.na(output_lengths[[counter]])]
+
+      counter = counter + 1
+    }
+  }
+  close(time_file)
+
+
   num_output_lengths_to_keep = length(output_lengths)/number_of_external_points
   output_lengths = output_lengths[1:num_output_lengths_to_keep]
 
@@ -130,8 +238,6 @@ load_smc_output = function(results_directory,
   }
 
   # Store the output in a data frame.
-
-  all_dirs = list.dirs(results_directory,recursive = FALSE)
 
   if (is.null(which.targets))
   {
@@ -191,6 +297,9 @@ load_smc_output = function(results_directory,
     output_names_column = rep(output_names,number_of_points)
     output_index_column = rep(output_index,number_of_points)
 
+    llhd_column = rep(llhds[[k]],ncol(output)*number_of_importance_points*number_of_external_points)
+    time_column = rep(times[[k]],ncol(output)*number_of_importance_points*number_of_external_points)
+
     # number_of_points (=nrow(output)) equals number_of_external points multiplied by number of importance points
 
     schedule_parameters_filename = paste(iteration_directory,"/schedule_parameters.txt",sep="")
@@ -222,6 +331,14 @@ load_smc_output = function(results_directory,
     # (repeat each value (1:niterations) ncol(output) times)*number_of_external_points*nchains
     iteration_fn = function(i) {rep(i,ncol(output))}
     iterations_column = rep(sapply(lapply(1:chain_length,FUN=iteration_fn),c),number_of_external_points*number_of_chains)
+
+    ess_filename = paste(iteration_directory,"/ess.txt",sep="")
+    ess = read.table(file=ess_filename,header=FALSE,sep=",")
+
+    ess_for_each_external_point = lapply(1:number_of_external_points,FUN=function(i) { lw = nrow(ess)/number_of_external_points; o = matrix(0,lw); for (j in 1:lw) { o[j] = ess[j+lw*(i-1),] }; return(o); })
+    ess_list = lapply(1:number_of_external_points,FUN=function(i){ ess_for_each_external_point[[i]] })
+    ess_fn = function(j) {matrix(sapply(1:length(ess_list[[j]]),FUN=function(i) { rep(ess_list[[j]][i],sum(variable_sizes)) }),sum(variable_sizes)*length(ess_list[[j]]))}
+    ess_column = matrix(sapply(1:number_of_external_points,FUN=function(i) { ess_fn(i) }),length(iterations_column))
 
     output = tidyr::pivot_longer(output,cols= everything(), values_to="Value")
 
@@ -257,23 +374,23 @@ load_smc_output = function(results_directory,
       {
         if (is.null(schedule_parameters))
         {
-          output = cbind(external_column,target_column,iterations_column,chains_column,output_names_column,output_index_column,output$Value)
-          colnames(output) = c('ExternalIndex','Target','Iteration','Particle','ParameterName','Dimension',"Value")
+          output = cbind(external_column,target_column,time_column,llhd_column,ess_column,iterations_column,chains_column,output_names_column,output_index_column,output$Value)
+          colnames(output) = c('ExternalIndex','Target','Time','NormalisingConstant','ISESS','Iteration','Particle','ParameterName','Dimension',"Value")
         }
         else
         {
-          output = cbind(external_column,target_column,schedule_parameters_column,iterations_column,chains_column,output_names_column,output_index_column,output$Value)
-          colnames(output) = c('ExternalIndex','Target','TargetParameters','Iteration','Particle','ParameterName','Dimension',"Value")
+          output = cbind(external_column,target_column,time_column,llhd_column,ess_column,schedule_parameters_column,iterations_column,chains_column,output_names_column,output_index_column,output$Value)
+          colnames(output) = c('ExternalIndex','Target','Time','NormalisingConstant','ISESS','TargetParameters','Iteration','Particle','ParameterName','Dimension',"Value")
         }
       }
       else
       {
-
         log_weight_filename = paste(iteration_directory,"/unnormalised_log_weights.txt",sep="")
         log_weight = read.table(file=log_weight_filename,header=FALSE,sep=",")
 
         log_weights_for_each_external_point = lapply(1:number_of_external_points,FUN=function(i) { lw = nrow(log_weight)/number_of_external_points; o = matrix(0,lw); for (j in 1:lw) { o[j] = log_weight[j+lw*(i-1),] }; return(o); })
         normalised_weights_for_each_external_point = lapply(log_weights_for_each_external_point,FUN=function(i) { i-log_sum_exp(i) })
+        normalised_weights_for_each_external_point = lapply(normalised_weights_for_each_external_point,FUN=function(i) { which_nan = which(is.nan(i)); o = i; o[which_nan] = -Inf; o })
         log_weight_list = lapply(1:number_of_external_points,FUN=function(i){ normalised_weights_for_each_external_point[[i]] + external_log_weights[i] })
 
         log_weight_fn = function(j) {matrix(sapply(1:length(log_weight_list[[j]]),FUN=function(i) { rep(log_weight_list[[j]][i],sum(variable_sizes)) }),sum(variable_sizes)*length(log_weight_list[[j]]))}
@@ -300,13 +417,13 @@ load_smc_output = function(results_directory,
 
         if (is.null(schedule_parameters))
         {
-          output = cbind(external_column,target_column,iterations_column,chains_column,ancestor_index_column,log_weight_column,output_names_column,output_index_column,output$Value)
-          colnames(output) = c('ExternalIndex','Target','Iteration','Particle','AncestorIndex','LogWeight','ParameterName','Dimension',"Value")
+          output = cbind(external_column,target_column,time_column,llhd_column,ess_column,,iterations_column,chains_column,ancestor_index_column,log_weight_column,output_names_column,output_index_column,output$Value)
+          colnames(output) = c('ExternalIndex','Target','Time','NormalisingConstant','ISESS','Iteration','Particle','AncestorIndex','LogWeight','ParameterName','Dimension',"Value")
         }
         else
         {
-          output = cbind(external_column,target_column,schedule_parameters_column,iterations_column,chains_column,ancestor_index_column,log_weight_column,output_names_column,output_index_column,output$Value)
-          colnames(output) = c('ExternalIndex','Target','TargetParameters','Iteration','Particle','AncestorIndex','LogWeight','ParameterName','Dimension',"Value")
+          output = cbind(external_column,target_column,time_column,llhd_column,ess_column,schedule_parameters_column,iterations_column,chains_column,ancestor_index_column,log_weight_column,output_names_column,output_index_column,output$Value)
+          colnames(output) = c('ExternalIndex','Target','Time','NormalisingConstant','ISESS','TargetParameters','Iteration','Particle','AncestorIndex','LogWeight','ParameterName','Dimension',"Value")
         }
 
       }

@@ -269,6 +269,11 @@ void EnsembleKalmanOutput::increment_enk_iteration()
   this->enk_iteration = this->enk_iteration + 1;
 }
 
+void EnsembleKalmanOutput::forget_you_were_already_written_to_file()
+{
+  this->iteration_written_to_file = -1;
+}
+
 void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
                                          const std::string &index)
 {

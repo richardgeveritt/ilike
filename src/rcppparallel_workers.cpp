@@ -506,7 +506,19 @@ void SMCAdaptiveGivenSMCFixedWeightWorker::operator()(std::size_t begin, std::si
 {
   for (std::size_t i = begin; i < end; ++i)
   {
-    this->my_log_unnormalised_incremental_weights[i] = (*this->current_particles_pointer)[i]->back().evaluate_smcadaptive_part_given_smcfixed_likelihoods(this->index_pointer) - (*this->current_particles_pointer)[i]->back().previous_target_evaluated;
+    //double prev = current_particles[i]->back().previous_target_evaluated;
+    double a = (*this->current_particles_pointer)[i]->back().evaluate_smcadaptive_part_given_smcfixed_likelihoods(this->index_pointer);
+    double b = (*this->current_particles_pointer)[i]->back().previous_target_evaluated;
+    if (a==-arma::datum::inf)
+    {
+      this->my_log_unnormalised_incremental_weights[i] = -arma::datum::inf;
+    }
+    else
+    {
+      this->my_log_unnormalised_incremental_weights[i] = a - b;
+    }
+    
+    //this->my_log_unnormalised_incremental_weights[i] = (*this->current_particles_pointer)[i]->back().evaluate_smcadaptive_part_given_smcfixed_likelihoods(this->index_pointer) - (*this->current_particles_pointer)[i]->back().previous_target_evaluated;
   }
 }
 

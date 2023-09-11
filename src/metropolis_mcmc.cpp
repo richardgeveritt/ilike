@@ -109,15 +109,22 @@ Particle MetropolisMCMC::move(RandomNumberGenerator &rng,
   
   double log_u = log(runif(rng));
   
-  if (log_u < proposed_particle.evaluate_likelihoods(this->index) -
-      particle.target_evaluated)
+  double numerator = proposed_particle.evaluate_likelihoods(this->index);
+  double denominator = particle.target_evaluated;
+  
+  if ( (numerator==-arma::datum::inf) || (denominator==-arma::datum::inf) )
+  {
+    return particle;
+  }
+  
+  if (log_u < numerator - denominator)
   {
     proposed_particle.set_acceptance(this->proposal,true);
     return proposed_particle;
   }
   else
   {
-    //proposed_particle.set_acceptance(this->proposal,false);
+    //particle.set_acceptance(this->proposal,false);
     return particle;
   }
   
@@ -158,8 +165,15 @@ Particle MetropolisMCMC::subsample_move(RandomNumberGenerator &rng,
   
   double log_u = log(runif(rng));
   
-  if (log_u < proposed_particle.subsample_evaluate_likelihoods(this->index) -
-      particle.subsample_target_evaluated)
+  double numerator = proposed_particle.subsample_evaluate_likelihoods(this->index);
+  double denominator = particle.subsample_target_evaluated;
+  
+  if ( (numerator==-arma::datum::inf) || (denominator==-arma::datum::inf) )
+  {
+    return particle;
+  }
+  
+  if (log_u < numerator - denominator)
   {
     proposed_particle.set_acceptance(this->proposal,true);
     return proposed_particle;

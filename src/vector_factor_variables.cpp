@@ -491,6 +491,16 @@ const Factors* VectorFactorVariables::get_factors() const
   return this->vector_factors;
 }
 
+void VectorFactorVariables::forget_you_were_already_written_to_file()
+{
+  for (size_t i=0;
+       i<this->likelihood_estimator_outputs.size();
+       ++i)
+  {
+    this->likelihood_estimator_outputs[i]->forget_you_were_already_written_to_file();
+  }
+}
+
 void VectorFactorVariables::write_to_file(const std::string &directory_name,
                                           const std::string &index) const
 {

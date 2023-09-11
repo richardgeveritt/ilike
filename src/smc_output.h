@@ -91,9 +91,8 @@ public:
   double log_likelihood_pre_last_step;
   
   void close_ofstreams();
-  
-  void write_to_file(const std::string &directory_name,
-                     const std::string &index = "");
+
+  void forget_you_were_already_written_to_file();
   
   std::deque<double> times;
   
@@ -127,6 +126,9 @@ protected:
   std::string results_name;
   
   std::chrono::high_resolution_clock::time_point start_time;
+  
+  void write_to_file(const std::string &directory_name,
+                     const std::string &index = "");
   
   void close_ofstreams(size_t deque_index);
 

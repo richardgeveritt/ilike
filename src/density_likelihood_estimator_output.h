@@ -53,6 +53,8 @@ public:
   void fit(const std::vector<Parameters> &points);
   void subsample_fit(const std::vector<Parameters> &points);
 
+  void forget_you_were_already_written_to_file();
+  
   void close_ofstreams();
   
   void print(std::ostream &os) const;

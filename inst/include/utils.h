@@ -76,6 +76,7 @@ inline std::vector<size_t> stratified_resample(const arma::colvec &log_weights,
   arma::colvec norm_log_weights = log_weights - log_sum_exp(log_weights);
   arma::colvec W = exp(norm_log_weights);
   arma::colvec cw = cumsum(W / sum(W));
+  //std::cout << cw.t() << std::endl;
   arma::colvec resampling_variables_over_n = resampling_variables/double(n);
   
   arma::colvec seq(n);
@@ -85,6 +86,10 @@ inline std::vector<size_t> stratified_resample(const arma::colvec &log_weights,
   }
   
   arma::colvec v = resampling_variables_over_n + seq/double(n);
+  
+  //std::cout << v.t() << std::endl;
+  
+  //std::cout << resampling_variables_over_n.t() << std::endl;
 
   size_t j = 0;
   for (size_t i=0; i<n; ++i)

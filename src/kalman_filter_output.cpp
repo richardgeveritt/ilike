@@ -220,6 +220,11 @@ void KalmanFilterOutput::print(std::ostream &os) const
 
 }
 
+void KalmanFilterOutput::forget_you_were_already_written_to_file()
+{
+  //int iteration_written_to_file = -1;
+}
+
 void KalmanFilterOutput::write_to_file(const std::string &directory_name,
                                        const std::string &index)
 {

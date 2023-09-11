@@ -267,6 +267,10 @@ const EnsembleFactors* VectorEnsembleFactorVariables::get_ensemble_factors() con
   return this->vector_ensemble_factors;
 }
 
+void VectorEnsembleFactorVariables::forget_you_were_already_written_to_file()
+{
+}
+
 void VectorEnsembleFactorVariables::write_to_file(const std::string &directory_name,
                                                   const std::string &index) const
 {

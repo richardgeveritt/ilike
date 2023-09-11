@@ -111,6 +111,8 @@ public:
   void print(std::ostream &os) const;
   */
   
+  void forget_you_were_already_written_to_file();
+  
   void close_ofstreams();
 
 protected:
@@ -134,10 +136,10 @@ protected:
   
   std::shared_ptr<Transform> transform;
   
+  void close_ofstreams(size_t deque_index);
+  
   void write_to_file(const std::string &directory_name,
                      const std::string &index = "");
-  
-  void close_ofstreams(size_t deque_index);
 
   void make_copy(const EnsembleKalmanOutput &another);
   

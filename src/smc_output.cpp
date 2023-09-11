@@ -361,6 +361,11 @@ void SMCOutput::set_time()
   this->times.push_back(elapsed_time.count());
 }
 
+void SMCOutput::forget_you_were_already_written_to_file()
+{
+  this->iteration_written_to_file = -1;
+}
+
 void SMCOutput::write_to_file(const std::string &dir_name,
                               const std::string &index)
 {
@@ -656,11 +661,6 @@ void SMCOutput::write_to_file(const std::string &dir_name,
       
       this->close_ofstreams(deque_index);
     }
-    
-    if (iteration+1 >= 3)
-    {
-      int thing = 1;
-    }
   }
   
   this->iteration_written_to_file = this->smc_iteration;
@@ -717,6 +717,7 @@ void SMCOutput::close_ofstreams(size_t deque_index)
 void SMCOutput::increment_smc_iteration()
 {
   this->smc_iteration = this->smc_iteration + 1;
+  std::cout << this->smc_iteration << std::endl;
 }
 
 void SMCOutput::print(std::ostream &os) const

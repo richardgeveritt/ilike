@@ -142,6 +142,10 @@ void ExactLikelihoodEstimatorOutput::write_to_file(const std::string &dir_name,
   }
 }
 
+void ExactLikelihoodEstimatorOutput::forget_you_were_already_written_to_file()
+{
+}
+
 void ExactLikelihoodEstimatorOutput::close_ofstreams()
 {
   this->estimator->log_likelihood_file_stream.close();

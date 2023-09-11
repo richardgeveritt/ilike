@@ -41,6 +41,8 @@ public:
   arma::mat subsample_get_gradient_of_log(const std::string &variable,
                                           const Parameters &x);
 
+  void forget_you_were_already_written_to_file();
+  
   void close_ofstreams();
   
   void print(std::ostream &os) const;

@@ -71,6 +71,8 @@ public:
   void write_to_file(const std::string &directory_name,
                      const std::string &index) const;
   
+  void forget_you_were_already_written_to_file();
+  
   void close_ofstreams();
   
   /*

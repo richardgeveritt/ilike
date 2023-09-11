@@ -267,6 +267,11 @@ void AnnealedLikelihoodEstimatorOutput::write_to_file(const std::string &dir_nam
   this->estimator_output->write_to_file(directory_name,index);
 }
 
+void AnnealedLikelihoodEstimatorOutput::forget_you_were_already_written_to_file()
+{
+  this->estimator_output->forget_you_were_already_written_to_file();
+}
+
 void AnnealedLikelihoodEstimatorOutput::close_ofstreams()
 {
   this->estimator->log_likelihood_file_stream.close();

@@ -88,6 +88,8 @@ public:
   void set_particle(Particle* particle_in);
   Particle* get_particle();
   
+  virtual void forget_you_were_already_written_to_file()=0;
+  
   virtual void write_to_file(const std::string &directory_name,
                              const std::string &index) const=0;
   

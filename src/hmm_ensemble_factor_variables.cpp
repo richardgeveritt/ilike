@@ -263,6 +263,10 @@ const EnsembleFactors* HMMEnsembleFactorVariables::get_ensemble_factors() const
   return this->hmm_ensemble_factors;
 }
 
+void HMMEnsembleFactorVariables::forget_you_were_already_written_to_file()
+{
+}
+
 void HMMEnsembleFactorVariables::write_to_file(const std::string &directory_name,
                                                const std::string &index) const
 {

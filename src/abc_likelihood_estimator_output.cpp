@@ -158,6 +158,10 @@ void ABCLikelihoodEstimatorOutput::write_to_file(const std::string &dir_name,
   }
 }
 
+void ABCLikelihoodEstimatorOutput::forget_you_were_already_written_to_file()
+{
+}
+
 void ABCLikelihoodEstimatorOutput::close_ofstreams()
 {
   this->estimator->log_likelihood_file_stream.close();

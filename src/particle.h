@@ -374,6 +374,8 @@ public:
   
   // not stored here
   const Particle* previous_self;
+  
+  void tell_factors_to_forget_they_were_already_written_to_file();
 
 protected:
 

@@ -75,11 +75,16 @@ MoveOutput* MCMC::run(RandomNumberGenerator &rng,
   StandardMCMCOutput* mcmc_output = this->initialise_mcmc_output();//new StandardMCMCOutput();
   
   Particle current_particle = particle;
+  Particle* old_pointer = &current_particle;
   while (!mcmc_output->terminate())
   {
     current_particle = mcmc_output->move(rng,
                                          current_particle);
     mcmc_output->increment_counter();
+    if (&current_particle==old_pointer)
+    {
+      current_particle.tell_factors_to_forget_they_were_already_written_to_file();
+    }
     mcmc_output->push_back(current_particle);
     mcmc_output->mcmc_adapt();
   }
@@ -116,11 +121,16 @@ MoveOutput* MCMC::subsample_run(RandomNumberGenerator &rng,
   StandardMCMCOutput* mcmc_output = this->initialise_mcmc_output();
   
   Particle current_particle = particle;
+  Particle* old_pointer = &current_particle;
   while (!mcmc_output->terminate())
   {
     current_particle = this->subsample_move(rng,
                                             current_particle);
     mcmc_output->increment_counter();
+    if (&current_particle==old_pointer)
+    {
+      current_particle.tell_factors_to_forget_they_were_already_written_to_file();
+    }
     mcmc_output->push_back(current_particle);
     mcmc_output->mcmc_adapt();
   }

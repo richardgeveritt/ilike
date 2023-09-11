@@ -70,6 +70,7 @@ void EnsembleSequencer::setup(EnsembleKalmanWorker* the_worker_in,
   this->use_final = true;
 
   this->mileometer = Mileometer(sizes);
+  this->schedule_difference = arma::datum::inf;
       
   this->reset();
 }
@@ -77,6 +78,7 @@ void EnsembleSequencer::setup(EnsembleKalmanWorker* the_worker_in,
 void EnsembleSequencer::set_initial_schedule_parameters()
 {
   this->mileometer.reset();
+  this->previous_bisect_value = this->schedule.front();
   this->mileometer.increment();
   
   double value_to_use;
@@ -137,6 +139,7 @@ void EnsembleSequencer::make_copy(const EnsembleSequencer &another)
   //this->termination = another.termination;
   this->direction = another.direction;
   this->current_bisect_value = another.current_bisect_value;
+  this->previous_bisect_value = another.previous_bisect_value;
   this->mileometer = another.mileometer;
   this->current_score = another.current_score;
   this->number_of_bisections = another.number_of_bisections;
@@ -151,6 +154,7 @@ void EnsembleSequencer::make_copy(const EnsembleSequencer &another)
   else
     this->termination = NULL;
   this->variable_name = another.variable_name;
+  this->schedule_difference = another.schedule_difference;
   this->schedule_parameters = another.schedule_parameters;
   this->use_final = another.use_final;
 }
@@ -182,6 +186,7 @@ void EnsembleSequencer::make_copy(EnsembleSequencer &&another)
   //this->termination = another.termination;
   this->direction = std::move(another.direction);
   this->current_bisect_value = std::move(another.current_bisect_value);
+  this->previous_bisect_value = std::move(another.previous_bisect_value);
   this->mileometer = std::move(another.mileometer);
   this->current_score = std::move(another.current_score);
   this->number_of_bisections = std::move(another.number_of_bisections);
@@ -196,12 +201,14 @@ void EnsembleSequencer::make_copy(EnsembleSequencer &&another)
   else
     this->termination = NULL;
   this->variable_name = std::move(another.variable_name);
+  this->schedule_difference = std::move(another.schedule_difference);
   this->schedule_parameters = std::move(another.schedule_parameters);
   this->use_final = std::move(another.use_final);
   
   another.schedule = std::vector<double>();
   another.direction = 0.0;
   another.current_bisect_value = 0.0;
+  another.previous_bisect_value = 0.0;
   another.mileometer = Mileometer();
   another.current_score = 0.0;
   another.number_of_bisections = 0;
@@ -209,6 +216,7 @@ void EnsembleSequencer::make_copy(EnsembleSequencer &&another)
   another.criterion = NULL;
   another.termination = NULL;
   another.variable_name = "";
+  another.schedule_difference = 0.0;
   another.schedule_parameters = Parameters();
   another.use_final = false;
 }
@@ -226,28 +234,38 @@ void EnsembleSequencer::find_desired_criterion(EnsembleKalmanOutput* current_sta
 void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current_state,
                                                    const Index* index)
 {
+  // used here since if we are not doing things adaptively, we never need to calculate a weight
   if (this->criterion->always_positive())
   {
+    this->schedule_difference = this->schedule[this->mileometer.back()]-this->schedule[this->mileometer.back()-1];
     //this->mileometer.increment();
     this->set_schedule_parameters();
     current_state->back().set_temperature(this->current_bisect_value);
     return;
   }
   
+  this->schedule_parameters[this->variable_name] = this->current_bisect_value;
+  
   // if we have not just found a value for the parameter that is at one of the points in the schedule
-  if (this->current_bisect_value>=this->schedule[this->mileometer.back()])
+  if (this->direction * this->current_bisect_value>= this->direction * this->schedule[this->mileometer.back()])
   {
     // check to see if we already reached the next point in the schedule
     
+    //this->the_worker->the_enk->the_worker->weight(&current_state->back(),
+    //                                              index,
+    //                                              1.0/(this->schedule[this->mileometer.back()]-this->schedule[this->mileometer.back()-1]));
     this->the_worker->the_enk->the_worker->weight(&current_state->back(),
                                                   index,
-                                                  1.0/(this->schedule[this->mileometer.back()]-this->schedule[this->mileometer.back()-1]));
+                                                  1.0/(this->schedule[this->mileometer.back()]-this->previous_bisect_value));
+    
     current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
     this->current_score = (*this->criterion)(current_state->all_ensembles.back());
     
     if (this->current_score>=0.0)
     {
+      this->schedule_difference = this->schedule[this->mileometer.back()]-this->schedule[this->mileometer.back()-1];
+      
       //this->mileometer.increment();
       this->set_schedule_parameters();
       current_state->back().set_temperature(this->current_bisect_value);
@@ -258,40 +276,20 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
       
       return;
     }
-    
-    this->current_bisect_value = this->schedule[this->mileometer.back()-1];
-  }
-  else
-  {
-    this->schedule_parameters[this->variable_name] = this->schedule[this->mileometer.back()];
-    
-    this->the_worker->the_enk->the_worker->weight(&current_state->back(),
-                                                  index,
-                                                  1.0/(this->schedule[this->mileometer.back()]-this->current_bisect_value));
-    current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-    
-    this->current_score = (*this->criterion)(current_state->all_ensembles.back());
-    
-    if (this->current_score>=0.0)
-    {
-      current_state->back().set_temperature(this->schedule[this->mileometer.back()]);
-      //this->mileometer.increment();
-      this->set_schedule_parameters();
-      //this->schedule_parameters[this->variable_names.back()] = target_values.back();
-      
-      //this->mileometer.increment();
-      //this->current_values = this->mileometer.get_current_values(this->schedules);
-      
-      return;
-    }
+
+    this->current_bisect_value = this->previous_bisect_value;
   }
   
-  double starting_bisect_value = this->current_bisect_value;
+  //double starting_bisect_value = this->current_bisect_value;
+  
+  this->previous_bisect_value = this->current_bisect_value;
+
   double next_value = this->schedule[this->mileometer.back()];
   // target_values.back();//+this->extra_bit;
   double bisect_size = abs(next_value-this->current_bisect_value)/2.0;
   double current_direction = this->direction;
   double new_bisect_value = 0.0;
+  double starting_value = this->current_bisect_value;
   
   for (size_t i=0; i<this->number_of_bisections; ++i)
   {
@@ -304,7 +302,7 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
     // Call SMC specific weight here (done for MCMC, just target for PMC).
     this->the_worker->the_enk->the_worker->weight(&current_state->back(),
                                                   index,
-                                                  1.0/(new_bisect_value-starting_bisect_value));
+                                                  1.0/(new_bisect_value-starting_value));
     current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
     this->current_score = (*this->criterion)(current_state->back());
@@ -321,6 +319,14 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
   }
   
   current_state->back().set_temperature(this->current_bisect_value);
+  
+  this->schedule_difference = this->current_bisect_value - starting_value;
+  this->previous_bisect_value = this->current_bisect_value;
+  
+  if ((this->direction * this->current_bisect_value >= this->direction * this->schedule[this->mileometer.back()]))
+  {
+    this->mileometer.increment();
+  }
   
   /*
   this->set_schedule_parameters();
@@ -430,28 +436,38 @@ arma::colvec EnsembleSequencer::find_next_target_quantile(EnsembleKalmanOutput* 
 void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutput* current_state,
                                                              const Index* index)
 {
+  // used here since if we are not doing things adaptively, we never need to calculate a weight
   if (this->criterion->always_positive())
   {
+    this->schedule_difference = this->schedule[this->mileometer.back()]-this->schedule[this->mileometer.back()-1];
     //this->mileometer.increment();
     this->set_schedule_parameters();
     current_state->back().set_temperature(this->current_bisect_value);
     return;
   }
   
+  this->schedule_parameters[this->variable_name] = this->current_bisect_value;
+  
   // if we have not just found a value for the parameter that is at one of the points in the schedule
-  if (this->current_bisect_value>=this->schedule[this->mileometer.back()])
+  if (this->direction * this->current_bisect_value>= this->direction * this->schedule[this->mileometer.back()])
   {
     // check to see if we already reached the next point in the schedule
     
+    //this->the_worker->the_enk->the_worker->weight(&current_state->back(),
+    //                                              index,
+    //                                              1.0/(this->schedule[this->mileometer.back()]-this->schedule[this->mileometer.back()-1]));
     this->the_worker->the_enk->the_worker->subsample_weight(&current_state->back(),
-                                                  index,
-                                                  1.0/(this->schedule[this->mileometer.back()]-this->schedule[this->mileometer.back()-1]));
+                                                            index,
+                                                            1.0/(this->schedule[this->mileometer.back()]-this->previous_bisect_value));
+    
     current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
     this->current_score = (*this->criterion)(current_state->all_ensembles.back());
     
     if (this->current_score>=0.0)
     {
+      this->schedule_difference = this->schedule[this->mileometer.back()]-this->schedule[this->mileometer.back()-1];
+      
       //this->mileometer.increment();
       this->set_schedule_parameters();
       current_state->back().set_temperature(this->current_bisect_value);
@@ -463,41 +479,19 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
       return;
     }
     
-    this->current_bisect_value = this->schedule[this->mileometer.back()-1];
-  }
-  else
-  {
-    this->schedule_parameters[this->variable_name] = this->schedule[this->mileometer.back()];
-    
-    this->the_worker->the_enk->the_worker->subsample_weight(&current_state->back(),
-                                                            index,
-                                                            1.0/(this->schedule[this->mileometer.back()]-this->current_bisect_value));
-    current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-    
-    this->current_score = (*this->criterion)(current_state->all_ensembles.back());
-    
-    if (this->current_score>=0.0)
-    {
-      current_state->back().set_temperature(this->schedule[this->mileometer.back()]);
-      //this->mileometer.increment();
-      this->set_schedule_parameters();
-      //current_state->back().set_temperature(this->current_bisect_value);
-      //current_state->back().set_temperature(this->schedule[this->mileometer.back()]);
-      //this->schedule_parameters[this->variable_names.back()] = target_values.back();
-      
-      //this->mileometer.increment();
-      //this->current_values = this->mileometer.get_current_values(this->schedules);
-      
-      return;
-    }
+    this->current_bisect_value = this->previous_bisect_value;
   }
   
-  double starting_bisect_value = this->current_bisect_value;
+  //double starting_bisect_value = this->current_bisect_value;
+  
+  this->previous_bisect_value = this->current_bisect_value;
+  
   double next_value = this->schedule[this->mileometer.back()];
   // target_values.back();//+this->extra_bit;
   double bisect_size = abs(next_value-this->current_bisect_value)/2.0;
   double current_direction = this->direction;
   double new_bisect_value = 0.0;
+  double starting_value = this->current_bisect_value;
   
   for (size_t i=0; i<this->number_of_bisections; ++i)
   {
@@ -509,8 +503,8 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
     
     // Call SMC specific weight here (done for MCMC, just target for PMC).
     this->the_worker->the_enk->the_worker->subsample_weight(&current_state->back(),
-                                                  index,
-                                                  1.0/(new_bisect_value-starting_bisect_value));
+                                                            index,
+                                                            1.0/(new_bisect_value-starting_value));
     current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
     this->current_score = (*this->criterion)(current_state->back());
@@ -528,101 +522,112 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
   
   current_state->back().set_temperature(this->current_bisect_value);
   
+  this->schedule_difference = this->current_bisect_value - starting_value;
+  this->previous_bisect_value = this->current_bisect_value;
+  
+  if ((this->direction * this->current_bisect_value >= this->direction * this->schedule[this->mileometer.back()]))
+  {
+    this->mileometer.increment();
+  }
+  
   /*
-  this->set_schedule_parameters();
-  
-  double current_bisect_value = this->current_value;
-  //double previous_bisect_value;// = this->schedule.front();
-  std::vector< std::vector<double> > schedules;
-  schedules.push_back(this->schedule);
-  std::vector<double> target_values = this->mileometer.get_current_values(schedules);
-  //arma::colvec incremental_log_weights;
-  
-  if (this->criterion->always_positive())
-  {
-    this->set_schedule_parameters();
-    this->schedule_parameters[this->variable_name] = target_values.back();
-    
-    this->mileometer.increment();
-    
-    this->current_value = target_values.back();
-    current_state->back().set_temperature(this->current_value);
-    
-    return;
-  }
-  
-  // thing to sort out:
-  // don't actually want the last target value - want to reach the next one from the current
-  // when we reach the target, want to increment, and set the current to be this
-  
-  this->the_worker->the_enk->the_worker->subsample_weight(&current_state->back(),
-                                                          index,
-                                                          1.0/(target_values.back()-current_bisect_value));
-  current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-  
-  this->current_score = (*this->criterion)(current_state->all_ensembles.back());
-  
-  if (this->current_score>=0.0)
-  {
-    this->set_schedule_parameters();
-    this->schedule_parameters[this->variable_name] = target_values.back();
-    
-    this->mileometer.increment();
-    
-    this->current_value = target_values.back();
-    current_state->back().set_temperature(this->current_value);
-    
-    return;
-  }
-  
-  double starting_bisect_value = current_bisect_value;
-  double next_value = target_values.back();//+this->extra_bit;
-  double bisect_size = abs(next_value-current_bisect_value)/2.0;
-  double current_direction = this->direction;
-  double new_bisect_value = 0.0;
-  
-  for (size_t i=0; i<100; ++i)
-  {
-    new_bisect_value = current_bisect_value + current_direction*bisect_size;
-    
-    bisect_size = bisect_size/2.0;
-    
-    // Call SMC specific weight here (done for MCMC, just target for PMC).
-    this->the_worker->the_enk->the_worker->subsample_weight(&current_state->back(),
-                                                            index,
-                                                            1.0/(new_bisect_value-starting_bisect_value));
-    
-    current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-    
-    this->current_score = (*this->criterion)(current_state->all_ensembles.back());
-    
-    current_direction = std::copysign(1.0,this->current_score)*this->direction;
-    
-    //previous_bisect_value = current_bisect_value;
-    current_bisect_value = new_bisect_value;
-    
-    if (this->current_score==0.0)
-    {
-      break;
-    }
-    
-  }
-  
-  this->current_value = new_bisect_value;
-  this->schedule_parameters[this->variable_name] = new_bisect_value;
-  
-  // Check if we went past the end.
-  if ((std::copysign(1.0,current_bisect_value-target_values.back())*this->direction)>0)
-  {
-    this->schedule_parameters[this->variable_name] = target_values.back();
-    
-    this->mileometer.increment();
-    
-    this->current_value = target_values.back();
-  }
-  
-  current_state->back().set_temperature(this->current_value);
-  */
+   this->set_schedule_parameters();
+   
+   double current_bisect_value = this->current_value;
+   //double previous_bisect_value;// = this->schedule.front();
+   std::vector< std::vector<double> > schedules;
+   schedules.push_back(this->schedule);
+   std::vector<double> target_values = this->mileometer.get_current_values(schedules);
+   //arma::colvec incremental_log_weights;
+   
+   //arma::colvec incremental_log_weights;
+   
+   if (this->criterion->always_positive())
+   {
+   this->set_schedule_parameters();
+   this->schedule_parameters[this->variable_name] = target_values.back();
+   
+   this->mileometer.increment();
+   
+   this->current_value = target_values.back();
+   current_state->back().set_temperature(this->current_value);
+   
+   return;
+   }
+   
+   this->the_worker->the_enk->the_worker->weight(&current_state->back(),
+   index,
+   1.0/(target_values.back()-current_bisect_value));
+   current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
+   
+   this->current_score = (*this->criterion)(current_state->all_ensembles.back());
+   
+   if (this->current_score>=0.0)
+   {
+   this->set_schedule_parameters();
+   this->schedule_parameters[this->variable_name] = target_values.back();
+   
+   this->mileometer.increment();
+   
+   this->current_value = target_values.back();
+   current_state->back().set_temperature(this->current_value);
+   
+   return;
+   }
+   
+   double starting_bisect_value = current_bisect_value;
+   double next_value = target_values.back();//+this->extra_bit;
+   double bisect_size = abs(next_value-current_bisect_value)/2.0;
+   double current_direction = this->direction;
+   double new_bisect_value = 0.0;
+   
+   for (size_t i=0; i<100; ++i)
+   {
+   new_bisect_value = current_bisect_value + current_direction*bisect_size;
+   
+   bisect_size = bisect_size/2.0;
+   
+   // Call SMC specific weight here (done for MCMC, just target for PMC).
+   this->the_worker->the_enk->the_worker->weight(&current_state->back(),
+   index,
+   1.0/(new_bisect_value-starting_bisect_value));
+   current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
+   
+   //incremental_log_weights = this->the_worker->get_unnormalised_log_incremental_weights();
+   
+   this->current_score = (*this->criterion)(current_state->all_ensembles.back());
+   
+   current_direction = std::copysign(1.0,this->current_score)*this->direction;
+   
+   //previous_bisect_value = current_bisect_value;
+   current_bisect_value = new_bisect_value;
+   
+   if (this->current_score==0.0)
+   {
+   break;
+   }
+   
+   }
+   
+   this->current_value = new_bisect_value;
+   this->schedule_parameters[this->variable_name] = new_bisect_value;
+   
+   // Check if we went past the end.
+   if ((std::copysign(1.0,current_bisect_value-target_values.back())*this->direction)>0)
+   {
+   //this->the_worker->weight(current_state->all_ensembles.back(),
+   //                         new_bisect_value-previous_bisect_value);
+   
+   //incremental_log_weights = this->the_worker->get_unnormalised_log_incremental_weights();
+   this->schedule_parameters[this->variable_name] = target_values.back();
+   
+   this->mileometer.increment();
+   
+   this->current_value = target_values.back();
+   }
+   
+   current_state->back().set_temperature(this->current_value);
+   */
 }
 
 /*

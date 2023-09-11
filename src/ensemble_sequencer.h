@@ -107,6 +107,7 @@ protected:
   Mileometer mileometer;
   
   double current_bisect_value;
+  double previous_bisect_value;
   
   // The back end of the vector contains the variable we will cycle over fastest.
   std::vector<double> schedule;
@@ -115,6 +116,8 @@ protected:
   double direction; // does not need to be read in
   
   double current_score;
+  
+  double schedule_difference;
   
   size_t number_of_bisections;
   

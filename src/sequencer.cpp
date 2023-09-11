@@ -383,8 +383,6 @@ void Sequencer::find_next_target_bisection(SMCOutput* current_state,
         }
       }
       
-      int thing = 1;
-      
       /*
       // change sequencer
       std::vector<double> new_final_values;
@@ -418,30 +416,6 @@ void Sequencer::find_next_target_bisection(SMCOutput* current_state,
       this->current_bisect_value = this->previous_bisect_value;
     }
     
-  }
-  else
-  {
-    int thing = 1;
-    /*
-    this->schedule_parameters[this->variable_names.back()] = this->schedules.back()[this->mileometer.back()];
-    this->the_worker->the_smc->weight_for_adapting_sequence(index,
-                                                            current_state->back());
-    current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-    
-    this->current_score = (*this->criterion)(current_state->back());
-    if (this->current_score>=0.0)
-    {
-      this->schedule_difference = this->schedules.back()[this->mileometer.back()]-this->current_bisect_value;
-      //this->mileometer.increment();
-      this->set_schedule_parameters();
-      //this->schedule_parameters[this->variable_names.back()] = target_values.back();
-      
-      //this->mileometer.increment();
-      //this->current_values = this->mileometer.get_current_values(this->schedules);
-      
-      return;
-    }
-    */
   }
   
   this->previous_bisect_value = this->current_bisect_value;
@@ -480,6 +454,11 @@ void Sequencer::find_next_target_bisection(SMCOutput* current_state,
   
   this->schedule_difference = this->current_bisect_value - starting_value;
   this->previous_bisect_value = this->current_bisect_value;
+  
+  if ((this->direction * this->current_bisect_value >= this->direction * this->schedules.back()[this->mileometer.back()]))
+  {
+    this->mileometer.increment();
+  }
   
   //this->current_values.back() = new_bisect_value;
   
@@ -756,17 +735,26 @@ void Sequencer::find_next_target_quantile(SMCOutput* current_state,
 void Sequencer::subsample_find_next_target_bisection(SMCOutput* current_state,
                                                      const Index* index)
 {
+  //Parameters all_parameters = Parameters();
+  //for (size_t i=0; i<this->current_values.size(); ++i)
+  //{
+  //  all_parameters[this->variable_names[i]] = this->current_values[i];
+  //}
+  
+  //this->set_schedule_parameters();
+  
+  //double current_bisect_value = this->current_values.back();
+  //std::vector<double> target_values = this->mileometer.get_current_values(this->schedules);
   //arma::colvec incremental_log_weights;
   
   // see if we need to do the bisection
-  //this->schedule_parameters[this->variable_names.back()] = target_values.back();
-  
-  // if we want to make this generic, need to hide the next two lines in a function that can have different choices
   
   this->schedule_parameters[this->variable_names.back()] = this->current_bisect_value;
   
+  // if we want to make this generic, need to hide the next two lines in a function that can have different choices
+  
   // if we have not just found a value for the parameter that is at one of the points in the schedule
-  if (this->current_bisect_value>=this->schedules.back()[this->mileometer.back()])
+  if (this->direction * this->current_bisect_value >= this->direction * this->schedules.back()[this->mileometer.back()])
   {
     // check to see if we already reached the next point in the schedule
     
@@ -777,6 +765,8 @@ void Sequencer::subsample_find_next_target_bisection(SMCOutput* current_state,
     this->current_score = (*this->criterion)(current_state->back());
     if (this->current_score>=0.0)
     {
+      this->schedule_difference = this->schedules.back()[this->mileometer.back()]-this->schedules.back()[this->mileometer.back()-1];
+      //this->mileometer.increment();
       this->set_schedule_parameters();
       //this->schedule_parameters[this->variable_names.back()] = target_values.back();
       
@@ -789,7 +779,7 @@ void Sequencer::subsample_find_next_target_bisection(SMCOutput* current_state,
     // if there is only one value in the schedule, but we did not get to the end in one go, then we need to determine the start point in order to do the bisection.
     
     // first identify if there is only one value in the schedule
-    if (this->schedules.back().size()==1)
+    if (this->previous_bisect_value==arma::datum::inf) // change to checking for infinity
     {
       // we will assume that we need to find an upper bound
       // perform a doubling routine, which we keep doing until we obtain an upper bound (max 300 iterations)
@@ -813,67 +803,64 @@ void Sequencer::subsample_find_next_target_bisection(SMCOutput* current_state,
         
         this->current_score = (*this->criterion)(current_state->back());
         
+        this->current_bisect_value = new_bisect_value;
+        
         if (this->current_score>=0.0)
         {
           break;
         }
-        
-        this->current_bisect_value = new_bisect_value;
       }
       
-      // change sequencer
-      std::vector<double> new_final_values;
-      new_final_values.push_back(new_bisect_value);
-      new_final_values.push_back(this->schedules.back()[0]);
-      this->schedules.back() = new_final_values;
-      
-      this->mileometer.reset_final_dimension(2);
-      if (new_final_values[1]>new_final_values[0])
+      if (this->schedules.back().size()>1)
       {
-        this->direction = 1.0;
+        if (this->current_bisect_value<this->schedules.back()[1]) // don't think this can happen, but checking anyway
+        {
+          Rcpp::stop("Sequencer::find_next_target_bisection - first non-infinite value of schedule set too small.");
+        }
       }
-      else
-      {
-        this->direction = -1.0;
-      }
-      //this->current_values.back() = new_bisect_value;
       
-      this->mileometer.increment();
-      this->set_schedule_parameters();
-      
-      //current_bisect_value = this->current_values.back();
-      //target_values = this->mileometer.get_current_values(this->schedules);
+      /*
+       // change sequencer
+       std::vector<double> new_final_values;
+       new_final_values.push_back(new_bisect_value);
+       new_final_values.push_back(this->schedules.back()[0]);
+       this->schedules.back() = new_final_values;
+       
+       this->mileometer.reset_final_dimension(2);
+       if (new_final_values[1]>new_final_values[0])
+       {
+       this->direction = 1.0;
+       }
+       else
+       {
+       this->direction = -1.0;
+       }
+       //this->current_values.back() = new_bisect_value;
+       
+       //this->mileometer.increment();
+       this->set_schedule_parameters();
+       
+       //current_bisect_value = this->current_values.back();
+       //target_values = this->mileometer.get_current_values(this->schedules);
+       */
     }
-    
-    //next_value = this->current_bisect_value;//schedule_parameters[this->variable_names.back()][0];
-    this->current_bisect_value = this->schedules.back()[this->mileometer.back()-1];
-  }
-  else
-  {
-    this->schedule_parameters[this->variable_names.back()] = this->schedules.back()[this->mileometer.back()];
-    this->the_worker->the_smc->subsample_weight_for_adapting_sequence(index,
-                                                                      current_state->back());
-    current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-    
-    this->current_score = (*this->criterion)(current_state->back());
-    if (this->current_score>=0.0)
+    else
     {
-      this->mileometer.increment();
-      this->set_schedule_parameters();
-      //this->schedule_parameters[this->variable_names.back()] = target_values.back();
       
-      //this->mileometer.increment();
-      //this->current_values = this->mileometer.get_current_values(this->schedules);
-      
-      return;
+      //next_value = this->current_bisect_value;//schedule_parameters[this->variable_names.back()][0];
+      //this->current_bisect_value = this->schedules.back()[this->mileometer.back()-1];
+      this->current_bisect_value = this->previous_bisect_value;
     }
+    
   }
   
+  this->previous_bisect_value = this->current_bisect_value;
   double next_value = this->schedules.back()[this->mileometer.back()];
   // target_values.back();//+this->extra_bit;
   double bisect_size = abs(next_value-this->current_bisect_value)/2.0;
   double current_direction = this->direction;
   double new_bisect_value = 0.0;
+  double starting_value = this->current_bisect_value;
   
   for (size_t i=0; i<this->number_of_bisections; ++i)
   {
@@ -901,146 +888,36 @@ void Sequencer::subsample_find_next_target_bisection(SMCOutput* current_state,
     
   }
   
-  int thing = 0.0;
+  this->schedule_difference = this->current_bisect_value - starting_value;
+  this->previous_bisect_value = this->current_bisect_value;
   
-  /*
-  this->set_schedule_parameters();
-  
-  double current_bisect_value = this->current_values.back();
-  std::vector<double> target_values = this->mileometer.get_current_values(this->schedules);
-  arma::colvec incremental_log_weights;
-  
-  // see if we need to do the bisection
-  this->schedule_parameters[this->variable_names.back()] = target_values.back();
-  
-  
-  this->the_worker->the_smc->subsample_weight_for_adapting_sequence(index,
-                                                                    current_state->back());
-  current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-  
-  this->current_score = (*this->criterion)(current_state->back());
-  if (this->current_score>0.0)
+  if ((this->direction * this->current_bisect_value >= this->direction * this->schedules.back()[this->mileometer.back()]))
   {
-    //incremental_log_weights = this->the_worker->get_unnormalised_log_incremental_weights();
-    this->set_schedule_parameters();
-    this->schedule_parameters[this->variable_names.back()] = target_values.back();
-    
     this->mileometer.increment();
-    this->current_values = this->mileometer.get_current_values(this->schedules);
-    
-    return;
   }
   
-  // if there is only one value in the schedule, but we did not get to the end in one go, then we need to determine the start point in order to do the bisection.
-  
-  // first identify if there is only one value in the schedule
-  if (this->schedules.back().size()==1)
-  {
-    // we will assume that we need to find an upper bound
-    // perform a doubling routine, which we keep doing until we obtain an upper bound (max 300 iterations)
-    
-    std::vector<double> target_values = this->mileometer.get_current_values(this->schedules);
-    current_bisect_value = target_values[0];
-    if (current_bisect_value==0.0)
-      current_bisect_value = current_bisect_value + 0.00001;
-    double new_bisect_value = 0.0;
-    
-    for (size_t i=0; i<300; ++i)
-    {
-      new_bisect_value = 2.0*current_bisect_value;
-      
-      this->schedule_parameters[this->variable_names.back()] = new_bisect_value;
-      
-      // Call SMC specific weight here (done for MCMC, just target for PMC).
-      this->the_worker->the_smc->subsample_weight_for_adapting_sequence(index,
-                                                                        current_state->back());
-      current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-      
-      this->current_score = (*this->criterion)(current_state->back());
-      
-      if (this->current_score>=0.0)
-      {
-        break;
-      }
-      
-      current_bisect_value = new_bisect_value;
-    }
-    
-    // change sequencer
-    std::vector<double> new_final_values;
-    new_final_values.push_back(new_bisect_value);
-    new_final_values.push_back(target_values[0]);
-    this->schedules.back() = new_final_values;
-    
-    this->mileometer.reset_final_dimension(2);
-    if (new_final_values[1]>new_final_values[0])
-    {
-      this->direction = 1.0;
-    }
-    else
-    {
-      this->direction = -1.0;
-    }
-    this->current_values.back() = new_bisect_value;
-    
-    this->mileometer.increment();
-    
-    current_bisect_value = this->current_values.back();
-    target_values = this->mileometer.get_current_values(this->schedules);
-  }
-  
-  double next_value = target_values.back();//+this->extra_bit;
-  double bisect_size = abs(next_value-current_bisect_value)/2.0;
-  double current_direction = this->direction;
-  double new_bisect_value = 0.0;
-  
-  for (size_t i=0; i<100; ++i)
-  {
-    new_bisect_value = current_bisect_value + current_direction*bisect_size;
-    
-    bisect_size = bisect_size/2.0;
-    
-    this->schedule_parameters[this->variable_names.back()] = new_bisect_value;
-    
-    // Call SMC specific weight here (done for MCMC, just target for PMC).
-    this->the_worker->the_smc->subsample_weight_for_adapting_sequence(index,
-                                                                      current_state->back());
-    current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-    
-    this->current_score = (*this->criterion)(current_state->back());
-    
-    current_direction = std::copysign(1.0,this->current_score)*this->direction;
-    
-    current_bisect_value = new_bisect_value;
-    
-    if (this->current_score==0.0)
-    {
-      break;
-    }
-    
-  }
-  
-  this->current_values.back() = new_bisect_value;
-  this->schedule_parameters[this->variable_names.back()] = new_bisect_value;
+  //this->current_values.back() = new_bisect_value;
   
   // Check if we went past the end.
-  if ((std::copysign(1.0,current_bisect_value-target_values.back())*this->direction)>0)
-  {
-    new_bisect_value = target_values.back();
-    this->schedule_parameters[this->variable_names.back()] = new_bisect_value;
-    this->the_worker->the_smc->subsample_weight_for_adapting_sequence(index,
-                                                                      current_state->back());
-    current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-    
-    this->set_schedule_parameters();
-    this->schedule_parameters[this->variable_names.back()] = new_bisect_value;
-    
-    this->mileometer.increment();
-    this->current_values = this->mileometer.get_current_values(this->schedules);
-  }
+  /*
+   if ((std::copysign(1.0,this->current_bisect_value-target_values.back())*this->direction)>0)
+   {
+   new_bisect_value = target_values.back();
+   this->schedule_parameters[this->variable_names.back()] = new_bisect_value;
+   this->the_worker->the_smc->weight_for_adapting_sequence(index,
+   current_state->back());
+   current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
+   
+   this->mileometer.increment();
+   this->current_values = this->mileometer.get_current_values(this->schedules);
+   
+   this->set_schedule_parameters();
+   this->schedule_parameters[this->variable_names.back()] = new_bisect_value;
+   
+   }
+   */
   
   //return incremental_log_weights;
-  */
 }
 
 void Sequencer::subsample_find_next_target_quantile(SMCOutput* current_state,

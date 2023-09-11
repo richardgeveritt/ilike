@@ -95,6 +95,8 @@ public:
   
   const Factors* get_factors() const;
   
+  void forget_you_were_already_written_to_file();
+  
   void write_to_file(const std::string &directory_name,
                      const std::string &index) const;
   

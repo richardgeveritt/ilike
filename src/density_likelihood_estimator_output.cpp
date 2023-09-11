@@ -240,6 +240,10 @@ void DensityLikelihoodEstimatorOutput::write_to_file(const std::string &dir_name
   }
 }
 
+void DensityLikelihoodEstimatorOutput::forget_you_were_already_written_to_file()
+{
+}
+
 void DensityLikelihoodEstimatorOutput::close_ofstreams()
 {
   this->estimator->log_likelihood_file_stream.close();

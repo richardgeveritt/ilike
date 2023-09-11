@@ -44,6 +44,8 @@ public:
 
   void close_ofstreams();
   
+  void forget_you_were_already_written_to_file();
+  
   void print(std::ostream &os) const;
 
 protected:

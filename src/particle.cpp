@@ -1880,6 +1880,15 @@ void Particle::subsample_simulate_ensemble_factor_variables(const EnsembleFactor
   this->ensemble_factor_variables = new_ensemble_factor_variables;
 }
 
+void Particle::tell_factors_to_forget_they_were_already_written_to_file()
+{
+  if (this->factor_variables!=NULL)
+    this->factor_variables->forget_you_were_already_written_to_file();
+  
+  if (this->ensemble_factor_variables!=NULL)
+    this->ensemble_factor_variables->forget_you_were_already_written_to_file();
+}
+
 /*
 void Particle::simulate_factor_variables(Factors* factors,
                                          const Parameters &conditioned_on_parameters)

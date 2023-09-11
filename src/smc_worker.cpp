@@ -112,6 +112,7 @@ void SMCWorker::move(Particles* next_particles,
 {
   this->specific_move(next_particles,
                       current_particles);
+  
   this->set_seed(this->get_seed() + this->get_number_of_particles());
   
   // Simulate random numbers for resampling.

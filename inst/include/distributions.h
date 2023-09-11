@@ -10,6 +10,7 @@
 #include <dqrng_distribution.h>
 #include <dqrng_generator.h>
 #include <boost/random/uniform_real_distribution.hpp>
+#include <boost/random/exponential_distribution.hpp>
 #include <boost/random/gamma_distribution.hpp>
 #include <boost/random/lognormal_distribution.hpp>
 #include <boost/random/discrete_distribution.hpp>
@@ -458,6 +459,32 @@ inline double dmvnorm_estimated_params(const arma::colvec &x,
   //  Rcpp::stop("mvnormal_logpdf_unbiased_with_estimated_params - it might be that n<=d-3.");
   //}
 
+}
+
+inline double rexp(RandomNumberGenerator &rng, double rate)
+{
+  boost::random::exponential_distribution<double> my_exponential(rate);
+  return my_exponential(rng);
+}
+
+inline arma::colvec rexp(RandomNumberGenerator &rng, size_t n, double rate)
+{
+  boost::random::exponential_distribution<double> my_exponential(rate);
+  arma::colvec output(n);
+  for (size_t i=0; i<n; ++i)
+  {
+    output(i) = my_exponential(rng);
+  }
+  return output;
+}
+
+inline double dexp(double x, double rate)
+{
+  if ( (rate<=0) )
+    return double(NAN);
+  if (x<0)
+    return -arma::datum::inf;
+  return log(rate) - rate*x;
 }
 
 inline double rgamma(RandomNumberGenerator &rng, double shape, double rate)

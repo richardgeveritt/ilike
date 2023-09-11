@@ -36,7 +36,7 @@ void ESSSMCCriterion::operator=(const ESSSMCCriterion &another)
   this->make_copy(another);
 }
 
-SMCCriterion* ESSSMCCriterion::duplicate(void)const
+SMCCriterion* ESSSMCCriterion::duplicate() const
 {
   return( new ESSSMCCriterion(*this));
 }
