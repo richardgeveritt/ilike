@@ -1,8 +1,11 @@
 #include "lp_uniform_abc_kernel_factor.h"
 #include "utils.h"
 
+namespace ilike::exact_factor
+{
+
 LpUniformABCKernelFactor::LpUniformABCKernelFactor()
-  :ABCKernelFactor()
+:ABCKernelFactor()
 {
 }
 
@@ -20,10 +23,10 @@ LpUniformABCKernelFactor::LpUniformABCKernelFactor(double p_in,
 }
 
 LpUniformABCKernelFactor::LpUniformABCKernelFactor(double p_in,
-                                const std::vector<std::string> &data_variables_in,
-                                const std::string &epsilon_variable_in,
-                                const std::string &scale_variable_in,
-                                Data* data_in)
+                                                   const std::vector<std::string> &data_variables_in,
+                                                   const std::string &epsilon_variable_in,
+                                                   const std::string &scale_variable_in,
+                                                   Data* data_in)
 :ABCKernelFactor(data_variables_in,
                  epsilon_variable_in,
                  scale_variable_in,
@@ -39,7 +42,7 @@ LpUniformABCKernelFactor::~LpUniformABCKernelFactor()
 }
 
 LpUniformABCKernelFactor::LpUniformABCKernelFactor(const LpUniformABCKernelFactor &another)
-  :ABCKernelFactor(another)
+:ABCKernelFactor(another)
 {
   this->make_copy(another);
 }
@@ -48,7 +51,7 @@ void LpUniformABCKernelFactor::operator=(const LpUniformABCKernelFactor &another
 {
   if(this == &another)
     return;
-
+  
   ABCKernelFactor::operator=(another);
   this->make_copy(another);
 }
@@ -148,4 +151,6 @@ arma::mat LpUniformABCKernelFactor::likelihood_evaluate_gradient(const std::stri
                                                                  const Parameters &input) const
 {
   return arma::mat(input[variable].n_elem,1);
+}
+
 }

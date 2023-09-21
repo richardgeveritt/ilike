@@ -1,8 +1,11 @@
 #include "gaussian_abc_kernel_factor.h"
 #include "utils.h"
 
+namespace ilike::exact_factor
+{
+
 GaussianABCKernelFactor::GaussianABCKernelFactor()
-  :ABCKernelFactor()
+:ABCKernelFactor()
 {
 }
 
@@ -35,7 +38,7 @@ GaussianABCKernelFactor::~GaussianABCKernelFactor()
 }
 
 GaussianABCKernelFactor::GaussianABCKernelFactor(const GaussianABCKernelFactor &another)
-  :ABCKernelFactor(another)
+:ABCKernelFactor(another)
 {
   this->make_copy(another);
 }
@@ -44,7 +47,7 @@ void GaussianABCKernelFactor::operator=(const GaussianABCKernelFactor &another)
 {
   if(this == &another)
     return;
-
+  
   ABCKernelFactor::operator=(another);
   this->make_copy(another);
 }
@@ -129,7 +132,7 @@ arma::mat GaussianABCKernelFactor::likelihood_evaluate_gradient(const std::strin
                                                                 const Parameters &input) const
 {
   double epsilon = input[this->epsilon_variable][0];
-      
+  
   
   if (this->scale_variable!="")
     return -(1.0/(epsilon*epsilon))*(input[variable]-this->data_colvec(arma::span(this->packing_instructions[variable].first,
@@ -137,8 +140,10 @@ arma::mat GaussianABCKernelFactor::likelihood_evaluate_gradient(const std::strin
   else
   {
     arma::colvec variable_scale = input[this->scale_variable](arma::span(this->packing_instructions[variable].first,
-                                                                          this->packing_instructions[variable].second),0);
+                                                                         this->packing_instructions[variable].second),0);
     return -(1.0/(epsilon*epsilon))*variable_scale%(input[variable]-this->data_colvec(arma::span(this->packing_instructions[variable].first,
                                                                                                  this->packing_instructions[variable].second)));
   }
+}
+
 }

@@ -1,8 +1,11 @@
 #include "abc_kernel_factor.h"
 #include "utils.h"
 
+namespace ilike::exact_factor
+{
+
 ABCKernelFactor::ABCKernelFactor()
-  :LikelihoodFactor()
+:LikelihoodFactor()
 {
 }
 
@@ -36,18 +39,20 @@ ABCKernelFactor::~ABCKernelFactor()
 }
 
 ABCKernelFactor::ABCKernelFactor(const ABCKernelFactor &another)
-  :LikelihoodFactor(another)
+:LikelihoodFactor(another)
 {
   this->make_copy(another);
 }
 
-void ABCKernelFactor::operator=(const ABCKernelFactor &another)
+ABCKernelFactor& ABCKernelFactor::operator=(const ABCKernelFactor &another)
 {
   if(this == &another)
-    return;
-
+    return *this;
+  
   LikelihoodFactor::operator=(another);
   this->make_copy(another);
+  
+  return *this;
 }
 
 void ABCKernelFactor::make_copy(const ABCKernelFactor &another)
@@ -57,4 +62,6 @@ void ABCKernelFactor::make_copy(const ABCKernelFactor &another)
   this->scale_variable = another.scale_variable;
   this->data_colvec = another.data_colvec;
   this->packing_instructions = another.packing_instructions;
+}
+
 }

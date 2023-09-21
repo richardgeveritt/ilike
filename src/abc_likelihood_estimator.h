@@ -13,6 +13,8 @@ using namespace Rcpp;
 class ABCLikelihoodEstimatorOutput;
 class IndependentProposalKernel;
 
+using namespace ilike::exact_factor;
+
 class ABCLikelihoodEstimator : public LikelihoodEstimator
 {
 
