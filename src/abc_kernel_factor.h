@@ -8,7 +8,9 @@ using namespace Rcpp;
 #include "likelihood_factor.h"
 #include "packing_instructions_map.h"
 
-namespace ilike::exact_factor
+namespace ilike
+{
+namespace exact_factor
 {
 
 /// An ABCKernel type of Factor, to be used in an ExactLikelihoodEstimator.
@@ -77,6 +79,7 @@ protected:
   PackingInstructionsMap packing_instructions;
   
 };
+}
 }
 
 #endif

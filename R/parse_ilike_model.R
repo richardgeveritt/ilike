@@ -127,7 +127,7 @@ ilike_parse <- function(input,
         }
         else
         {
-          stop(paste("In call ",arg_string,", parameter ",as.numeric(substr(h,2,nchar(h)))," not found in parameter_list (parameter_list has length ",length(parameter_list),").",sep=""))
+          stop(paste("In call ",input,", parameter ",as.numeric(substr(h,2,nchar(h)))," not found in parameter_list (parameter_list has length ",length(parameter_list),").",sep=""))
         }
       }
     }
@@ -279,7 +279,7 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
   return(factor_number)
 }
 
-data_processing = function(data_number)
+data_processing = function(data_number,line_counter)
 {
   if (data_number!=0)
   {
@@ -580,7 +580,7 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
   else if (block_name %in% data_function_types)
   {
     block_type = "data"
-    data_number = data_processing(data_number)
+    data_number = data_processing(data_number,line_counter)
     number_to_pass_to_extract_block = data_number
   }
   else if (block_name %in% importance_proposal_types)
@@ -1199,7 +1199,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
           else
           {
-            top(paste("Block ",block_name,", line number ",line_counter,": no parameters used, should this have been specified as simulate_independent_mh_proposal?",sep=""))
+            stop(paste("Block ",block_name,", line number ",line_counter,": no parameters used, should this have been specified as simulate_independent_mh_proposal?",sep=""))
           }
 
           #args_for_typedef = "RandomNumberGenerator&"
@@ -1311,7 +1311,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
           else
           {
-            top(paste("Block ",block_name,", line number ",line_counter,": parameters used, should this have been specified as simulate_mh_proposal?",sep=""))
+            stop(paste("Block ",block_name,", line number ",line_counter,": parameters used, should this have been specified as simulate_mh_proposal?",sep=""))
           }
 
           #args_for_typedef = "RandomNumberGenerator&"
@@ -1377,7 +1377,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
           else
           {
-            top(paste("Block ",block_name,", line number ",line_counter,": no parameters used, invalid proposal type?",sep=""))
+            stop(paste("Block ",block_name,", line number ",line_counter,": no parameters used, invalid proposal type?",sep=""))
           }
 
           #args_for_typedef = "RandomNumberGenerator&"
@@ -1532,7 +1532,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
         if ("type" %in% names(blocks[[block_type]][[factor_number]]))
         {
-          if (blocks[[block_type]][[factor_number]][[type]]!=proposal_type)
+          if (blocks[[block_type]][[factor_number]][["type"]]!=proposal_type)
             stop(paste("Block ",block_name,", line number ",line_counter,": different parts of the proposal are of different types (maybe one relies on additional parameters and/or data, and the other does not?)",sep=""))
         }
 

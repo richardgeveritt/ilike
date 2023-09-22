@@ -8,6 +8,7 @@
 #' @param which.targets (optional) The indices of the targets to output (defaults to all).
 #' @param directory_prefix (optional; for nested output only) The first part of the name of the directory within results_directory that contains the results. (default is "ilike", giving a directory of results_directory/ilike_smc)
 #' @param external_log_weights (optional; for nested output only) The weights of the importance points external to the current folder. (default is 1, to be used at the top level of nested output)
+#' @param external_target_parameters (optional; for nested output only) The parameters of the target external to the current folder. (default is "", corresponding to no parameters)
 #' @param nesting_level (optional; for nested output only) The level of nesting at which to extract points. (default is 0, representing the top level of nested output)
 #' @param factor (optional; for nested output only) The factor from which to extract points. (default is 0)
 #' @return A list containing the SMC output.
@@ -20,6 +21,7 @@ load_smc_output = function(results_directory,
                            which.targets = NULL,
                            directory_prefix = "ilike",
                            external_log_weights = c(0),
+                           external_target_parameters = "",
                            nesting_level = 0,
                            factor = 0)
 {
@@ -63,13 +65,13 @@ load_smc_output = function(results_directory,
                                    as.enk = as.enk,
                                    which.targets = which.targets,
                                    directory_prefix=factor_name,
-                                   external_log_weights = dplyr::filter(dplyr::filter(theta_output,Target==i),Dimension==1)$LogWeight,
+                                   external_log_weights = external_log_weights,#dplyr::filter(dplyr::filter(theta_output,Target==i),Dimension==1)$LogWeight,
                                    nesting_level = nesting_level-1)
 
       numbers = stringr::str_extract_all(all_dirs[i], "\\d+")
       target_id = as.integer(numbers[[1]][length(numbers[[1]])])
       sub_output$ExternalTarget = rep(target_id,nrow(sub_output))
-      sub_output$ExternalTargetParameters = rep(dplyr::filter(theta_output,Target==target_id)$TargetParameters[1],nrow(sub_output))
+      sub_output$ExternalTargetParameters = rep(external_target_parameters,nrow(sub_output))#rep(dplyr::filter(theta_output,Target==target_id)$TargetParameters[1],nrow(sub_output))
 
       if (i==1)
       {
@@ -277,7 +279,7 @@ load_smc_output = function(results_directory,
 
     points_filename = paste(iteration_directory,"/vector_points.txt",sep="")
 
-    output = read.table(file=points_filename,header=FALSE)
+    output = utils::read.table(file=points_filename,header=FALSE)
 
     if (nrow(output)!=number_of_external_points*sum(output_lengths[[k]]))
     {
@@ -303,7 +305,7 @@ load_smc_output = function(results_directory,
     # number_of_points (=nrow(output)) equals number_of_external points multiplied by number of importance points
 
     schedule_parameters_filename = paste(iteration_directory,"/schedule_parameters.txt",sep="")
-    tryCatch( {schedule_parameters = read.table(file=schedule_parameters_filename,header=FALSE) }
+    tryCatch( {schedule_parameters = utils::read.table(file=schedule_parameters_filename,header=FALSE) }
               , error = function(e) {schedule_parameters <<- NULL})
     if (is.null(schedule_parameters))
     {
@@ -333,14 +335,14 @@ load_smc_output = function(results_directory,
     iterations_column = rep(sapply(lapply(1:chain_length,FUN=iteration_fn),c),number_of_external_points*number_of_chains)
 
     ess_filename = paste(iteration_directory,"/ess.txt",sep="")
-    ess = read.table(file=ess_filename,header=FALSE,sep=",")
+    ess = utils::read.table(file=ess_filename,header=FALSE,sep=",")
 
     ess_for_each_external_point = lapply(1:number_of_external_points,FUN=function(i) { lw = nrow(ess)/number_of_external_points; o = matrix(0,lw); for (j in 1:lw) { o[j] = ess[j+lw*(i-1),] }; return(o); })
     ess_list = lapply(1:number_of_external_points,FUN=function(i){ ess_for_each_external_point[[i]] })
     ess_fn = function(j) {matrix(sapply(1:length(ess_list[[j]]),FUN=function(i) { rep(ess_list[[j]][i],sum(variable_sizes)) }),sum(variable_sizes)*length(ess_list[[j]]))}
     ess_column = matrix(sapply(1:number_of_external_points,FUN=function(i) { ess_fn(i) }),length(iterations_column))
 
-    output = tidyr::pivot_longer(output,cols= everything(), values_to="Value")
+    output = tidyr::pivot_longer(output,cols = dplyr::everything(), values_to="Value")
 
     #external_column = matrix(0,nrow(output))
     #iterations_column = matrix(0,nrow(output),1)
@@ -386,7 +388,7 @@ load_smc_output = function(results_directory,
       else
       {
         log_weight_filename = paste(iteration_directory,"/unnormalised_log_weights.txt",sep="")
-        log_weight = read.table(file=log_weight_filename,header=FALSE,sep=",")
+        log_weight = utils::read.table(file=log_weight_filename,header=FALSE,sep=",")
 
         log_weights_for_each_external_point = lapply(1:number_of_external_points,FUN=function(i) { lw = nrow(log_weight)/number_of_external_points; o = matrix(0,lw); for (j in 1:lw) { o[j] = log_weight[j+lw*(i-1),] }; return(o); })
         normalised_weights_for_each_external_point = lapply(log_weights_for_each_external_point,FUN=function(i) { i-log_sum_exp(i) })
@@ -408,7 +410,7 @@ load_smc_output = function(results_directory,
         #external_log_weight_column = matrix(apply(lapply(1:number_of_external_points,FUN=log_weight_fn),c),length(log_weight_column))
 
         ancestor_index_filename = paste(iteration_directory,"/ancestor_index.txt",sep="")
-        tryCatch( {ancestor_index = read.table(file=ancestor_index_filename,header=FALSE,sep=",") + 1 }
+        tryCatch( {ancestor_index = utils::read.table(file=ancestor_index_filename,header=FALSE,sep=",") + 1 }
                   , error = function(e) {ancestor_index <<- matrix(1:number_of_chains,number_of_chains)})
 
         # (repeat each value of ancestor (1:nchains) ncol(output)*niterations times)*number_of_external_points
@@ -526,7 +528,7 @@ load_smc_output = function(results_directory,
     new_variable_names = mapply(FUN = function(a,b) { paste(a,"_",b,sep="") },all_output$ParameterName,all_output$Dimension)
     all_output = subset(all_output,select = -c(ParameterName,Dimension))
     all_output$Parameter = new_variable_names
-    output = output %>% distinct()
+    output = dplyr::distinct(output)
     all_output = tidyr::pivot_wider(all_output, names_from = "Parameter", values_from = "Value")
   }
 

@@ -47,7 +47,7 @@ stratified_resample_u<-function(log_weights,u)
 stratified_resample<-function(log_weights)
 {
   n = length(log_weights)
-  u = runif(n,0,1)/n
+  u = stats::runif(n,0,1)/n
   return(stratified_resample_u(log_weights,u))
 }
 
@@ -55,7 +55,7 @@ stratified_resample<-function(log_weights)
 # can take unnormalised weights
 ess <- function(log_weights)
 {
-  the_ess = exp(2*logsumexp(log_weights) - logsumexp(2*log_weights))
+  the_ess = exp(2*log_sum_exp(log_weights) - log_sum_exp(2*log_weights))
 
   if (is.nan(the_ess))
   {

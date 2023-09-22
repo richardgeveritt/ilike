@@ -38,7 +38,7 @@ method_parse <- function(input,
     required_args = setdiff(required_args,parameter_arguments)
   }
 
-  eval(parse(text = paste('result_function <- function(', paste(required_args,collapse=","), ') { return(' , input , ')}', sep='')))
+  result_function = eval(parse(text = paste('result_function <- function(', paste(required_args,collapse=","), ') { return(' , input , ')}', sep='')))
   #result_function_text = paste(' <- function(', paste(required_args,collapse=","), ') { return(' , input , ')}', sep='')
   return(list(result_function,required_args))
 }

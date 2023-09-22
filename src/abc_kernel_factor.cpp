@@ -1,7 +1,9 @@
 #include "abc_kernel_factor.h"
 #include "utils.h"
 
-namespace ilike::exact_factor
+namespace ilike
+{
+namespace exact_factor
 {
 
 ABCKernelFactor::ABCKernelFactor()
@@ -64,4 +66,5 @@ void ABCKernelFactor::make_copy(const ABCKernelFactor &another)
   this->packing_instructions = another.packing_instructions;
 }
 
+}
 }
