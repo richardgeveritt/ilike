@@ -7,7 +7,9 @@ using namespace Rcpp;
 #include <vector>
 #include "abc_kernel_factor.h"
 
-namespace ilike::exact_factor
+namespace ilike
+{
+namespace exact_factor
 {
 
 class GaussianABCKernelFactor : public ABCKernelFactor
@@ -55,6 +57,7 @@ protected:
   double constant;
   
 };
+}
 }
 
 #endif

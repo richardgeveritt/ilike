@@ -1,7 +1,9 @@
 #include "gaussian_abc_kernel_factor.h"
 #include "utils.h"
 
-namespace ilike::exact_factor
+namespace ilike
+{
+namespace exact_factor
 {
 
 GaussianABCKernelFactor::GaussianABCKernelFactor()
@@ -146,4 +148,5 @@ arma::mat GaussianABCKernelFactor::likelihood_evaluate_gradient(const std::strin
   }
 }
 
+}
 }

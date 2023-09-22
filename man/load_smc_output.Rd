@@ -13,6 +13,7 @@ load_smc_output(
   which.targets = NULL,
   directory_prefix = "ilike",
   external_log_weights = c(0),
+  external_target_parameters = "",
   nesting_level = 0,
   factor = 0
 )
@@ -33,6 +34,8 @@ load_smc_output(
 \item{directory_prefix}{(optional; for nested output only) The first part of the name of the directory within results_directory that contains the results. (default is "ilike", giving a directory of results_directory/ilike_smc)}
 
 \item{external_log_weights}{(optional; for nested output only) The weights of the importance points external to the current folder. (default is 1, to be used at the top level of nested output)}
+
+\item{external_target_parameters}{(optional; for nested output only) The parameters of the target external to the current folder. (default is "", corresponding to no parameters)}
 
 \item{nesting_level}{(optional; for nested output only) The level of nesting at which to extract points. (default is 0, representing the top level of nested output)}
 

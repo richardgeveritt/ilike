@@ -1,7 +1,9 @@
 #include "lp_uniform_abc_kernel_factor.h"
 #include "utils.h"
 
-namespace ilike::exact_factor
+namespace ilike
+{
+namespace exact_factor
 {
 
 LpUniformABCKernelFactor::LpUniformABCKernelFactor()
@@ -153,4 +155,5 @@ arma::mat LpUniformABCKernelFactor::likelihood_evaluate_gradient(const std::stri
   return arma::mat(input[variable].n_elem,1);
 }
 
+}
 }
