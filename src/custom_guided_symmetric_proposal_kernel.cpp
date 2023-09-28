@@ -134,3 +134,7 @@ std::vector<const ProposalKernel*> CustomGuidedSymmetricProposalKernel::get_prop
 void CustomGuidedSymmetricProposalKernel::set_index(Index* index_in)
 {
 }
+
+void CustomGuidedSymmetricProposalKernel::set_index_if_null(Index* index_in)
+{
+}

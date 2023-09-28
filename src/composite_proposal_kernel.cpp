@@ -292,6 +292,16 @@ void CompositeProposalKernel::set_index(Index* index_in)
   }
 }
 
+void CompositeProposalKernel::set_index_if_null(Index* index_in)
+{
+  for (auto i=this->all_kernels.begin();
+       i!=this->all_kernels.end();
+       ++i)
+  {
+    (*i)->set_index_if_null(index_in);
+  }
+}
+
 /*
 arma::mat CompositeProposalKernel::specific_gradient_of_log(const std::string &variable,
                                            Particle &proposed_particle,

@@ -288,3 +288,8 @@ void TransformedProposalKernel::set_index(Index* index_in)
 {
   this->proposal->set_index(index_in);
 }
+
+void TransformedProposalKernel::set_index_if_null(Index* index_in)
+{
+  this->proposal->set_index_if_null(index_in);
+}

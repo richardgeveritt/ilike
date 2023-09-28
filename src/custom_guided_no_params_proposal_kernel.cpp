@@ -188,3 +188,7 @@ std::vector<const ProposalKernel*> CustomGuidedNoParamsProposalKernel::get_propo
 void CustomGuidedNoParamsProposalKernel::set_index(Index* index_in)
 {
 }
+
+void CustomGuidedNoParamsProposalKernel::set_index_if_null(Index* index_in)
+{
+}

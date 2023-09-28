@@ -208,6 +208,16 @@ void StochasticScanMCMC::set_index(Index* index_in)
   }
 }
 
+void StochasticScanMCMC::set_index_if_null(Index* index_in)
+{
+  for (auto i=this->moves.begin();
+       i!=this->moves.end();
+       ++i)
+  {
+    (*i)->set_index_if_null(index_in);
+  }
+}
+
 void StochasticScanMCMC::set_proposal_parameters(Parameters* proposal_parameters_in)
 {
   for (auto i=this->moves.begin();

@@ -187,3 +187,7 @@ std::vector<const ProposalKernel*> CustomNoParamsSymmetricProposalKernel::get_pr
 void CustomNoParamsSymmetricProposalKernel::set_index(Index* index_in)
 {
 }
+
+void CustomNoParamsSymmetricProposalKernel::set_index_if_null(Index* index_in)
+{
+}

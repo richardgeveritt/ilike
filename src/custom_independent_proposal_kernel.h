@@ -76,6 +76,7 @@ public:
   std::vector<const ProposalKernel*> get_proposals() const;
   
   void set_index(Index* index_in);
+  void set_index_if_null(Index* index_in);
   
 // Mh has its own parameters.
   // Stochastic has some weights.

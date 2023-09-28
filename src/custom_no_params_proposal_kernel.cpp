@@ -183,3 +183,7 @@ std::vector<const ProposalKernel*> CustomNoParamsProposalKernel::get_proposals()
 void CustomNoParamsProposalKernel::set_index(Index* index_in)
 {
 }
+
+void CustomNoParamsProposalKernel::set_index_if_null(Index* index_in)
+{
+}

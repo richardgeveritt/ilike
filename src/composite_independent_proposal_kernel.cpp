@@ -241,3 +241,13 @@ void CompositeIndependentProposalKernel::set_index(Index* index_in)
     (*i)->set_index(index_in);
   }
 }
+
+void CompositeIndependentProposalKernel::set_index_if_null(Index* index_in)
+{
+  for (auto i=this->all_kernels.begin();
+       i!=this->all_kernels.end();
+       ++i)
+  {
+    (*i)->set_index_if_null(index_in);
+  }
+}

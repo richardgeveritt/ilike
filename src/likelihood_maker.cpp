@@ -13,6 +13,7 @@
 #include "annealed_likelihood_estimator.h"
 #include "utils.h"
 #include "stable_smc_termination.h"
+#include "vector_single_index.h"
 
 ABCLikelihoodEstimator* make_lp_uniform_abc_kernel(RandomNumberGenerator* rng_in,
                                                    size_t* seed_in,
@@ -396,6 +397,12 @@ SMCMCMCMove* make_fixed_epsilon_lp_uniform_abc_mcmc(RandomNumberGenerator* rng_i
                                                                                   abc_grain_size_in));
   
   arma::colvec log_probabilities_of_initial_values(initial_points_in.size(),arma::fill::zeros);
+  
+  std::vector<size_t> indices;
+  indices.reserve(abc_likelihood_and_prior.size());
+  for (size_t i=0; i<abc_likelihood_and_prior.size(); ++i)
+    indices.push_back(i);
+  Index* an_index = new VectorSingleIndex(indices);
 
   return new SMCMCMCMove(rng_in,
                          seed_in,
@@ -407,6 +414,8 @@ SMCMCMCMove* make_fixed_epsilon_lp_uniform_abc_mcmc(RandomNumberGenerator* rng_i
                          abc_likelihood_and_prior,
                          initial_points_in,
                          log_probabilities_of_initial_values,
+                         an_index,
+                         an_index->duplicate(),
                          transform_proposed_particles,
                          mcmc_parallel_in,
                          mcmc_grain_size_in,
@@ -703,6 +712,12 @@ SMCMCMCMove* make_sl_mcmc(RandomNumberGenerator* rng_in,
   
   arma::colvec log_probabilities_of_initial_values(initial_points_in.size(),arma::fill::zeros);
   
+  std::vector<size_t> indices;
+  indices.reserve(sl_likelihood_and_prior.size());
+  for (size_t i=0; i<sl_likelihood_and_prior.size(); ++i)
+    indices.push_back(i);
+  Index* an_index = new VectorSingleIndex(indices);
+  
   return new SMCMCMCMove(rng_in,
                          seed_in,
                          summary_data_in,
@@ -713,6 +728,8 @@ SMCMCMCMove* make_sl_mcmc(RandomNumberGenerator* rng_in,
                          sl_likelihood_and_prior,
                          initial_points_in,
                          log_probabilities_of_initial_values,
+                         an_index,
+                         an_index->duplicate(),
                          transform_proposed_particles,
                          mcmc_parallel_in,
                          mcmc_grain_size_in,

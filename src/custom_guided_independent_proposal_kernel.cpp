@@ -229,3 +229,7 @@ std::vector<const ProposalKernel*> CustomGuidedIndependentProposalKernel::get_pr
 void CustomGuidedIndependentProposalKernel::set_index(Index* index_in)
 {
 }
+
+void CustomGuidedIndependentProposalKernel::set_index_if_null(Index* index_in)
+{
+}

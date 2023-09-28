@@ -301,3 +301,7 @@ std::vector<const ProposalKernel*> HMCProposalKernel::get_proposals() const
 void HMCProposalKernel::set_index(Index* index_in)
 {
 }
+
+void HMCProposalKernel::set_index_if_null(Index* index_in)
+{
+}

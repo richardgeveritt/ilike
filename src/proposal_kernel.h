@@ -173,6 +173,8 @@ public:
   
   virtual void set_index(Index* index_in)=0;
   
+  virtual void set_index_if_null(Index* index_in)=0;
+  
   int get_instance_index() const;
   
 // Mh has its own parameters.

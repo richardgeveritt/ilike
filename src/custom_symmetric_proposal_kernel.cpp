@@ -129,3 +129,7 @@ std::vector<const ProposalKernel*> CustomSymmetricProposalKernel::get_proposals(
 void CustomSymmetricProposalKernel::set_index(Index* index_in)
 {
 }
+
+void CustomSymmetricProposalKernel::set_index_if_null(Index* index_in)
+{
+}

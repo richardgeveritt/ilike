@@ -19,5 +19,5 @@ do_smc_mcmc_move <- function(model, parameters, algorithm_parameter_list, number
 
 # Register entry points for exported C++ functions
 methods::setLoadAction(function(ns) {
-    .Call('_ilike_RcppExport_registerCCallable', PACKAGE = 'ilike')
+    .Call(`_ilike_RcppExport_registerCCallable`)
 })

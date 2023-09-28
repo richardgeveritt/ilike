@@ -302,3 +302,7 @@ std::vector<const ProposalKernel*> GaussianIndependentProposalKernel::get_propos
 void GaussianIndependentProposalKernel::set_index(Index* index_in)
 {
 }
+
+void GaussianIndependentProposalKernel::set_index_if_null(Index* index_in)
+{
+}

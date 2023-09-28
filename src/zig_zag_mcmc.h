@@ -95,6 +95,7 @@ public:
   void ensemble_adapt(EnsembleKalmanOutput* current_state);
   
   void set_index(Index* index_in);
+  void set_index_if_null(Index* index_in);
   
   void set_proposal_parameters(Parameters* proposal_parameters_in);
   

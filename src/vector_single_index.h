@@ -32,6 +32,8 @@ public:
   size_t size() const;
   
   arma::uvec get_uvec() const;
+  
+  //void add_index(const size_t &number);
 
 protected:
 

@@ -88,13 +88,20 @@ void VectorFactorVariables::make_copy(const VectorFactorVariables &another)
 
 void VectorFactorVariables::evaluate_smcfixed_part_of_likelihoods(const Index* index)
 {
-  for (auto i=index->begin();
-       i!=index->end();
-       ++i)
+  if (index==NULL)
   {
-    if (this->likelihood_estimator_outputs[*i]!=NULL)
+    Rcout << "Index is NULL." << std::endl;
+  }
+  else
+  {
+    for (auto i=index->begin();
+         i!=index->end();
+         ++i)
     {
-      this->likelihood_estimator_outputs[*i]->evaluate_smcfixed_part(this->particle->parameters);
+      if (this->likelihood_estimator_outputs[*i]!=NULL)
+      {
+        this->likelihood_estimator_outputs[*i]->evaluate_smcfixed_part(this->particle->parameters);
+      }
     }
   }
 }
@@ -183,8 +190,10 @@ double VectorFactorVariables::evaluate_smcadaptive_part_given_smcfixed_likelihoo
   {
     //if (this->likelihood_estimator_outputs[*i]!=NULL)
     //{
+    
     this->likelihood_estimator_outputs[*i]->evaluate_smcadaptive_part_given_smcfixed(this->particle->parameters);
     result = result + this->likelihood_estimator_outputs[*i]->log_likelihood;
+    
     //}
   }
   //this->target_evaluated = result;

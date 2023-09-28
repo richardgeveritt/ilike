@@ -125,3 +125,7 @@ std::vector<const ProposalKernel*> CustomProposalKernel::get_proposals() const
 void CustomProposalKernel::set_index(Index* index_in)
 {
 }
+
+void CustomProposalKernel::set_index_if_null(Index* index_in)
+{
+}

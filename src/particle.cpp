@@ -1248,7 +1248,9 @@ double Particle::subsample_evaluate_likelihoods(const Index* index,
 void Particle::evaluate_smcfixed_part_of_likelihoods(const Index* index)
 {
   if (this->factor_variables!=NULL)
+  {
     this->factor_variables->evaluate_smcfixed_part_of_likelihoods(index);
+  }
 }
 
 /*

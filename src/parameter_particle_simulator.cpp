@@ -130,6 +130,7 @@ Particle ParameterParticleSimulator::simulate(RandomNumberGenerator &rng,
   
   //return Particle();
   
+  
   return Particle(this->proposal->independent_simulate(rng),
                   factors,
                   proposals_to_transform_for,

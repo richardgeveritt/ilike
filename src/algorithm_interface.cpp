@@ -55,6 +55,7 @@ using namespace Rcpp;
 #include "stable_smc_termination.h"
 #include "always_smc_termination.h"
 #include "direct_gradient_estimator.h"
+#include "vector_single_index.h"
 
 std::vector<std::string> split(const std::string &str, const char delimiter)
 {
@@ -495,15 +496,47 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                             Data* data_in,
                                                             const List &model,
                                                             const List &model_parameters,
-                                                            bool include_priors)
+                                                            bool include_priors,
+                                                            const std::vector<std::string> &sequencer_types,
+                                                            const std::vector<std::string> &sequencer_variables,
+                                                            IndependentProposalKernel* proposal_in,
+                                                            Index* &without_cancelled_index,
+                                                            Index* &full_index,
+                                                            bool &any_annealing)
 {
+  std::vector<size_t> without_cancelled_index_vector;
+  std::vector<size_t> full_index_vector;
+  
+  any_annealing = false;
+  std::string annealing_variable;
+  for (size_t i=0; i<sequencer_types.size(); ++i)
+  {
+    if ( (sequencer_types[i]=="annealing") || (sequencer_types[i]=="tempering") )
+    {
+      if (any_annealing==false)
+      {
+        any_annealing = true;
+        annealing_variable = sequencer_variables[i];
+        break;
+      }
+      else
+      {
+        stop("Two annealing variables specified: not currently supported.");
+      }
+    }
+  }
+  
+  PowerFunctionPtr power = annealing_power;
+  PowerFunctionPtr second_power = annealing_one_minus_power;
   
   std::vector<LikelihoodEstimator*> likelihood_estimators;
-  std::vector<DistributionFactor*> numerator_distribution_factors;
-  std::vector<LikelihoodFactor*> numerator_likelihood_factors;
+  //std::vector<DistributionFactor*> numerator_distribution_factors;
+  //std::vector<LikelihoodFactor*> numerator_likelihood_factors;
   
-  std::vector<DistributionFactor*> prior_factors;
-  std::vector<LikelihoodFactor*> exact_likelihood_factors;
+  //std::vector<DistributionFactor*> prior_factors;
+  //std::vector<LikelihoodFactor*> exact_likelihood_factors;
+  
+  //std::vector<IndependentProposalKernel*> numerator_proposal_factors;
 
   if ( model.containsElementNamed("factor") )
   {
@@ -519,129 +552,208 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
         List current_factor = factors[i];
         if ( current_factor.containsElementNamed("prior") )
         {
-          if (include_priors)
+          DistributionFactor* new_factor;
+          
+          if (Rf_isNewList(current_factor["prior"]))
           {
             
-            if (Rf_isNewList(current_factor["prior"]))
+            List current_prior = current_factor["prior"];
+            if ( current_prior.containsElementNamed("type") && current_prior.containsElementNamed("variables") )
             {
+              std::string type = current_prior["type"];
               
-              List current_prior = current_factor["prior"];
-              if ( current_prior.containsElementNamed("type") && current_prior.containsElementNamed("variables") )
+              
+              if (type=="norm")
               {
-                std::string type = current_prior["type"];
+                List info = get_single_variable_two_double_parameter_info(model_parameters,
+                                                                          current_prior,
+                                                                          type);
                 
+                std::string variable = info[0];
+                double mean = info[1];
+                double sd = info[2];
                 
-                if (type=="norm")
-                {
-                  List info = get_single_variable_two_double_parameter_info(model_parameters,
-                                                                            current_prior,
-                                                                            type);
-                  
-                  std::string variable = info[0];
-                  double mean = info[1];
-                  double sd = info[2];
-                  
-                  prior_factors.push_back(new GaussianDistributionFactor(variable,
-                                                                         mean,
-                                                                         sd));
-                  
-                }
-                else if (type=="mvnorm")
-                {
-                  List info = get_single_variable_vector_and_matrix_parameter_info(model_parameters,
-                                                                                   current_prior,
-                                                                                   type);
-                  
-                  std::string variable = info[0];
-                  arma::colvec mean = info[1];
-                  arma::mat cov = info[2];
-                  
-                  prior_factors.push_back(new GaussianDistributionFactor(variable,
-                                                                         mean,
-                                                                         cov));
-                  
-                }
-                else if (type=="lnorm")
-                {
-                  List info = get_single_variable_two_double_parameter_info(model_parameters,
-                                                                            current_prior,
-                                                                            type);
-                  
-                  std::string variable = info[0];
-                  double mean = info[1];
-                  double sd = info[2];
-                  
-                  prior_factors.push_back(new LogGaussianDistributionFactor(variable,
-                                                                            mean,
-                                                                            sd));
-                  
-                }
-                else if (type=="mvlnorm")
-                {
-                  List info = get_single_variable_vector_and_matrix_parameter_info(model_parameters,
-                                                                                   current_prior,
-                                                                                   type);
-                  
-                  std::string variable = info[0];
-                  arma::colvec mean = info[1];
-                  arma::mat cov = info[2];
-                  
-                  prior_factors.push_back(new LogGaussianDistributionFactor(variable,
-                                                                            mean,
-                                                                            cov));
-                  
-                }
-                else if (type=="gamma")
-                {
-                  List info = get_single_variable_two_double_parameter_info(model_parameters,
-                                                                     current_prior,
-                                                                     type);
-                  
-                  std::string variable = info[0];
-                  double shape = info[1];
-                  double rate = info[2];
-                  
-                  prior_factors.push_back(new GammaDistributionFactor(variable,
-                                                                      shape,
-                                                                      rate));
-                  
-                }
-                else
-                {
-                  Rcout << "Prior type " << type;
-                  stop("Prior type unknown");
-                }
+                new_factor = new GaussianDistributionFactor(variable,
+                                                            mean,
+                                                            sd);
+                
+              }
+              else if (type=="mvnorm")
+              {
+                List info = get_single_variable_vector_and_matrix_parameter_info(model_parameters,
+                                                                                 current_prior,
+                                                                                 type);
+                
+                std::string variable = info[0];
+                arma::colvec mean = info[1];
+                arma::mat cov = info[2];
+                
+                new_factor = new GaussianDistributionFactor(variable,
+                                                            mean,
+                                                            cov);
+                
+              }
+              else if (type=="lnorm")
+              {
+                List info = get_single_variable_two_double_parameter_info(model_parameters,
+                                                                          current_prior,
+                                                                          type);
+                
+                std::string variable = info[0];
+                double mean = info[1];
+                double sd = info[2];
+                
+                new_factor = new LogGaussianDistributionFactor(variable,
+                                                               mean,
+                                                               sd);
+                
+              }
+              else if (type=="mvlnorm")
+              {
+                List info = get_single_variable_vector_and_matrix_parameter_info(model_parameters,
+                                                                                 current_prior,
+                                                                                 type);
+                
+                std::string variable = info[0];
+                arma::colvec mean = info[1];
+                arma::mat cov = info[2];
+                
+                new_factor = new LogGaussianDistributionFactor(variable,
+                                                               mean,
+                                                               cov);
+                
+              }
+              else if (type=="gamma")
+              {
+                List info = get_single_variable_two_double_parameter_info(model_parameters,
+                                                                   current_prior,
+                                                                   type);
+                
+                std::string variable = info[0];
+                double shape = info[1];
+                double rate = info[2];
+                
+                new_factor = new GammaDistributionFactor(variable,
+                                                         shape,
+                                                         rate);
                 
               }
               else
               {
-                stop("Missing information for prior in model file.");
+                Rcout << "Prior type " << type;
+                stop("Prior type unknown");
+              }
+              
+              LikelihoodEstimator* new_likelihood_estimator = new ExactLikelihoodEstimator(rng_in,
+                                                                                           seed_in,
+                                                                                           data_in,
+                                                                                           new_factor,
+                                                                                           true);
+              
+              
+              full_index_vector.push_back(likelihood_estimators.size());
+              if (include_priors)
+              {
+                without_cancelled_index_vector.push_back(likelihood_estimators.size());
+                
+                if (any_annealing)
+                {
+                  likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(rng_in,
+                                                                                  seed_in,
+                                                                                  data_in,
+                                                                                  new_likelihood_estimator,
+                                                                                  power,
+                                                                                  annealing_variable,
+                                                                                  false));
+                }
+                else
+                {
+                  likelihood_estimators.push_back(new_likelihood_estimator);
+                }
+              }
+              else
+              {
+                likelihood_estimators.push_back(new_likelihood_estimator);
               }
               
             }
             else
             {
-              stop("Error in factors section of model file.");
+              stop("Missing information for prior in model file.");
             }
             
           }
+          else
+          {
+            stop("Error in factors section of model file.");
+          }
+          
         }
         else if (current_factor.containsElementNamed("evaluate_log_prior"))
         {
+          SEXP evaluate_log_prior_SEXP = current_factor["evaluate_log_prior"];
+          DistributionFactor* new_factor = new CustomDistributionFactor(load_evaluate_log_distribution(evaluate_log_prior_SEXP));
+          LikelihoodEstimator* new_likelihood_estimator = new ExactLikelihoodEstimator(rng_in,
+                                                                                       seed_in,
+                                                                                       data_in,
+                                                                                       new_factor,
+                                                                                       true);
+          full_index_vector.push_back(likelihood_estimators.size());
+                                                                      
           if (include_priors)
           {
+            without_cancelled_index_vector.push_back(likelihood_estimators.size());
             
-            SEXP evaluate_log_prior_SEXP = current_factor["evaluate_log_prior"];
-            prior_factors.push_back(new CustomDistributionFactor(load_evaluate_log_distribution(evaluate_log_prior_SEXP)));
-            
+            if (any_annealing)
+            {
+              likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(rng_in,
+                                                                              seed_in,
+                                                                              data_in,
+                                                                              new_likelihood_estimator,
+                                                                              power,
+                                                                              annealing_variable,
+                                                                              false));
+            }
+            else
+            {
+              likelihood_estimators.push_back(new_likelihood_estimator);
+            }
           }
+          else
+          {
+            likelihood_estimators.push_back(new_likelihood_estimator);
+          }
+          
         }
         else if ( current_factor.containsElementNamed("evaluate_log_likelihood") )
         {
           
           SEXP evaluate_log_likelihood_SEXP = current_factor["evaluate_log_likelihood"];
-          exact_likelihood_factors.push_back(new CustomLikelihoodFactor(load_evaluate_log_likelihood(evaluate_log_likelihood_SEXP),
-                                                                        data_in));
+          LikelihoodFactor* new_factor = new CustomLikelihoodFactor(load_evaluate_log_likelihood(evaluate_log_likelihood_SEXP),
+                                                                    data_in);
+          LikelihoodEstimator* new_likelihood_estimator = new ExactLikelihoodEstimator(rng_in,
+                                                                                       seed_in,
+                                                                                       data_in,
+                                                                                       new_factor,
+                                                                                       true);
+          
+          full_index_vector.push_back(likelihood_estimators.size());
+          without_cancelled_index_vector.push_back(likelihood_estimators.size());
+          
+          if (any_annealing)
+          {
+            likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(rng_in,
+                                                                            seed_in,
+                                                                            data_in,
+                                                                            new_likelihood_estimator,
+                                                                            power,
+                                                                            annealing_variable,
+                                                                            false));
+          }
+          else
+          {
+            likelihood_estimators.push_back(new_likelihood_estimator);
+          }
           
         }
         else
@@ -659,12 +771,45 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
     
   }
 
+  /*
   likelihood_estimators.push_back(new ExactLikelihoodEstimator(rng_in,
                                                                seed_in,
                                                                data_in,
                                                                prior_factors,
                                                                exact_likelihood_factors,
                                                                true));
+  */
+  
+  
+  if ( (include_priors) && (any_annealing) )
+  {
+    full_index_vector.push_back(likelihood_estimators.size());
+    without_cancelled_index_vector.push_back(likelihood_estimators.size());
+    
+    ExactLikelihoodEstimator* proposal_for_evaluation = new ExactLikelihoodEstimator(rng_in,
+                                                                                     seed_in,
+                                                                                     data_in,
+                                                                                     proposal_in,
+                                                                                     true);
+    likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(rng_in,
+                                                                    seed_in,
+                                                                    data_in,
+                                                                    proposal_for_evaluation,
+                                                                    second_power,
+                                                                    annealing_variable,
+                                                                    false));
+    
+  }
+  
+  
+  full_index = new VectorSingleIndex(full_index_vector);
+  without_cancelled_index = new VectorSingleIndex(without_cancelled_index_vector);
+  
+  /*
+  Rcout << full_index_vector.size() << std::endl;
+  Rcout << without_cancelled_index_vector.size() << std::endl;
+  Rcout << likelihood_estimators.size() << std::endl;
+  */
   
   return likelihood_estimators;
   
@@ -1775,7 +1920,8 @@ MCMCTermination* make_mcmc_termination(const List &model_parameters,
 MCMC* make_mcmc(const List &model,
                 const List &model_parameters,
                 const Data* data,
-                const List &mcmc_termination_method)
+                const List &mcmc_termination_method,
+                Index* full_index)
 {
   MCMCTermination* termination_method = make_mcmc_termination(model_parameters,mcmc_termination_method);
   
@@ -1930,13 +2076,16 @@ MCMC* make_mcmc(const List &model,
       
       if (moves.size()==1)
       {
+        mcmc->set_index_if_null(full_index);
         return mcmc;
       }
       else
       {
-        return new StochasticScanMCMC(termination_method,
-                                      moves,
-                                      mcmc_weights);
+        MCMC* new_mcmc = new StochasticScanMCMC(termination_method,
+                                                moves,
+                                                mcmc_weights);
+        new_mcmc->set_index_if_null(full_index);
+        return new_mcmc;
       }
       
     }
@@ -1944,12 +2093,15 @@ MCMC* make_mcmc(const List &model,
     {
       if (moves.size()==1)
       {
+        mcmc->set_index_if_null(full_index);
         return mcmc;
       }
       else
       {
-        return new DeterministicScanMCMC(termination_method,
-                                         moves);
+        MCMC* new_mcmc = new DeterministicScanMCMC(termination_method,
+                                                   moves);
+        new_mcmc->set_index_if_null(full_index);
+        return new_mcmc;
       }
     }
   }
@@ -2300,7 +2452,12 @@ List get_smc_sequencer_info(const List &model,
   }
   else
   {
-    stop("No valid method found for SMC sequence: need to specify types, variables and schedules.");
+    std::vector<std::string> types_for_output;
+    std::vector<std::string> variables_for_output;
+    std::vector<std::vector<double>> schedules_for_output;
+    size_t number_of_bisections = 100;
+    return List::create(types_for_output,variables_for_output,schedules_for_output,number_of_bisections);
+    //stop("No valid method found for SMC sequence: need to specify types, variables and schedules.");
   }
 }
 
@@ -2401,19 +2558,36 @@ double do_importance_sampler(const List &model,
   IndependentProposalKernel* proposal_in;
   bool proposal_is_evaluated_in;
   
+  List sequencer_info = get_smc_sequencer_info(model,
+                                               parameters,
+                                               List());
+  std::vector<std::string> sequencer_types = sequencer_info[0];
+  std::vector<std::string> sequencer_variables = sequencer_info[1];
+  std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
+  
+  Index* without_cancelled_index = NULL;
+  Index* full_index = NULL;
+  bool any_annealing;
+  
   if ( model.containsElementNamed("importance_proposal") )
   {
+    
+    proposal_in = get_proposal(model,
+                               parameters,
+                               &the_data);
     
     likelihood_estimators = get_likelihood_estimators(&rng,
                                                       &seed,
                                                       &the_data,
                                                       model,
                                                       parameters,
-                                                      true);
-    
-    proposal_in = get_proposal(model,
-                               parameters,
-                               &the_data);
+                                                      true,
+                                                      sequencer_types,
+                                                      sequencer_variables,
+                                                      proposal_in,
+                                                      without_cancelled_index,
+                                                      full_index,
+                                                      any_annealing);
     
     proposal_is_evaluated_in = true;
     
@@ -2422,15 +2596,21 @@ double do_importance_sampler(const List &model,
   {
     Rcout << "No importance sampling proposal specified; using prior." << std::endl;
     
+    proposal_in = get_prior_as_simulate_only_proposal(model,
+                                                      parameters);
+    
     likelihood_estimators = get_likelihood_estimators(&rng,
                                                       &seed,
                                                       &the_data,
                                                       model,
                                                       parameters,
-                                                      false);
-    
-    proposal_in = get_prior_as_simulate_only_proposal(model,
-                                                      parameters);
+                                                      false,
+                                                      sequencer_types,
+                                                      sequencer_variables,
+                                                      proposal_in,
+                                                      without_cancelled_index,
+                                                      full_index,
+                                                      any_annealing);
     
     proposal_is_evaluated_in = false;
   }
@@ -2508,6 +2688,16 @@ void do_mcmc(const List &model,
   
   // Check if the prior is the proposal: affects what llhd_estimators we include.
   
+  List sequencer_info = get_smc_sequencer_info(model,
+                                               parameters,
+                                               List());
+  std::vector<std::string> sequencer_types = sequencer_info[0];
+  std::vector<std::string> sequencer_variables = sequencer_info[1];
+  std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
+  
+  Index* without_cancelled_index = NULL;
+  Index* full_index = NULL;
+  bool any_annealing = false;
   
   std::vector<LikelihoodEstimator*> likelihood_estimators;
   likelihood_estimators = get_likelihood_estimators(&rng,
@@ -2515,15 +2705,21 @@ void do_mcmc(const List &model,
                                                     &the_data,
                                                     model,
                                                     parameters,
-                                                    true);
+                                                    true,
+                                                    sequencer_types,
+                                                    sequencer_variables,
+                                                    NULL,
+                                                    without_cancelled_index,
+                                                    full_index,
+                                                    any_annealing);
   
   Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list);
   
   MCMC* the_mcmc = make_mcmc(model,
                              parameters,
                              &the_data,
-                             mcmc_termination_method);
-  
+                             mcmc_termination_method,
+                             full_index);
   
   SMCMCMCMove* alg;
   
@@ -2543,6 +2739,8 @@ void do_mcmc(const List &model,
                           the_mcmc,
                           likelihood_estimators,
                           proposal_in,
+                          without_cancelled_index,
+                          full_index,
                           true,
                           parallel_in,
                           grain_size_in,
@@ -2564,6 +2762,8 @@ void do_mcmc(const List &model,
                           likelihood_estimators,
                           initial_points,
                           log_probabilities_of_initial_values,
+                          without_cancelled_index,
+                          full_index,
                           true,
                           parallel_in,
                           grain_size_in,
@@ -2630,6 +2830,18 @@ double do_smc_mcmc_move(const List &model,
   IndependentProposalKernel* proposal_in;
   bool proposal_is_evaluated_in;
   
+  List sequencer_info = get_smc_sequencer_info(model,
+                                               parameters,
+                                               smc_sequencer_method);
+  std::vector<std::string> sequencer_types = sequencer_info[0];
+  std::vector<std::string> sequencer_variables = sequencer_info[1];
+  std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
+  
+  Index* without_cancelled_index = NULL;
+  Index* full_index = NULL;
+  
+  bool any_annealing;
+  
   if ( model.containsElementNamed("importance_proposal") )
   {
     proposal_in = get_proposal(model,
@@ -2641,7 +2853,13 @@ double do_smc_mcmc_move(const List &model,
                                                       &the_data,
                                                       model,
                                                       parameters,
-                                                      true);
+                                                      true,
+                                                      sequencer_types,
+                                                      sequencer_variables,
+                                                      proposal_in,
+                                                      without_cancelled_index,
+                                                      full_index,
+                                                      any_annealing);
     
     proposal_is_evaluated_in = true;
     
@@ -2650,27 +2868,28 @@ double do_smc_mcmc_move(const List &model,
   {
     Rcout << "No importance sampling proposal specified; using prior." << std::endl;
     
+    proposal_in = get_prior_as_simulate_only_proposal(model,
+                                                      parameters);
+    
     likelihood_estimators = get_likelihood_estimators(&rng,
                                                       &seed,
                                                       &the_data,
                                                       model,
                                                       parameters,
-                                                      false);
-    
-    proposal_in = get_prior_as_simulate_only_proposal(model,
-                                                      parameters);
+                                                      false,
+                                                      sequencer_types,
+                                                      sequencer_variables,
+                                                      proposal_in,
+                                                      without_cancelled_index,
+                                                      full_index,
+                                                      any_annealing);
     
     proposal_is_evaluated_in = false;
     
   }
   
-  List sequencer_info = get_smc_sequencer_info(model,
-                                               parameters,
-                                               smc_sequencer_method);
-  std::vector<std::string> sequencer_variables = sequencer_info[1];
-  std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
-  
   // note that this will always result in the temperature being adapted in the SMC algorithm (not smcfixed)
+  /*
   likelihood_estimators = convent_to_annealed_likelihoods_if_needed(&rng,
                                                                     &seed,
                                                                     &the_data,
@@ -2679,13 +2898,15 @@ double do_smc_mcmc_move(const List &model,
                                                                     likelihood_estimators,
                                                                     proposal_in,
                                                                     proposal_is_evaluated_in);
+  */
   
   Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list);
   
   MCMC* the_mcmc = make_mcmc(model,
                              parameters,
                              &the_data,
-                             mcmc_termination_method);
+                             mcmc_termination_method,
+                             full_index);
   
   SMCCriterion* resampling_criterion = get_resampling_method(model,
                                                              parameters,
@@ -2698,6 +2919,18 @@ double do_smc_mcmc_move(const List &model,
   SMCTermination* smc_termination = get_smc_termination_method(model,
                                                                parameters,
                                                                smc_termination_method);
+  
+  /*
+  if (without_cancelled_index==NULL)
+  {
+    Rcout << "Without cancelled index is NULL." << std::endl;
+  }
+  
+  if (full_index==NULL)
+  {
+    Rcout << "Full index is NULL." << std::endl;
+  }
+  */
   
   if (write_to_file_at_each_iteration)
   {
@@ -2717,6 +2950,8 @@ double do_smc_mcmc_move(const List &model,
                                        sequencer_schedules,
                                        likelihood_estimators,
                                        proposal_in,
+                                       without_cancelled_index,
+                                       full_index,
                                        proposal_is_evaluated_in,
                                        true,
                                        true,
@@ -2729,12 +2964,6 @@ double do_smc_mcmc_move(const List &model,
     //Rcout << "Hi" << std::endl;
     
     SMCOutput* output = alg->run();
-    
-    //end_time = std::chrono::high_resolution_clock::now();
-    //std::chrono::duration<double> elapsed_time = end_time - start_time;
-    
-    //Rcout << elapsed_time.count() << std::endl;
-    //output->set_time(elapsed_time.count());
 
     double log_likelihood = output->log_likelihood;
     
@@ -2762,6 +2991,8 @@ double do_smc_mcmc_move(const List &model,
                                        sequencer_schedules,
                                        likelihood_estimators,
                                        proposal_in,
+                                       without_cancelled_index,
+                                       full_index,
                                        proposal_is_evaluated_in,
                                        true,
                                        true,

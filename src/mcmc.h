@@ -73,6 +73,7 @@ public:
   // Proposal needs to call simulate in all llhdoutputs
   
   virtual void set_index(Index* index_in)=0;
+  virtual void set_index_if_null(Index* index_in)=0;
   
   virtual void set_proposal_parameters(Parameters* proposal_parameters_in)=0;
   

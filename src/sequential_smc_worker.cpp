@@ -727,13 +727,6 @@ void SequentialSMCWorker::smcadaptive_given_smcfixed_weight(const Index* index,
     {
       this->log_unnormalised_incremental_weights[i] = a - b;
     }
-    
-    
-    if (isnan(this->log_unnormalised_incremental_weights[i]))
-    {
-      
-      int thing = 0.0;
-    }
   }
 }
 

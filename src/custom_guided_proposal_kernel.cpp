@@ -130,3 +130,7 @@ std::vector<const ProposalKernel*> CustomGuidedProposalKernel::get_proposals() c
 void CustomGuidedProposalKernel::set_index(Index* index_in)
 {
 }
+
+void CustomGuidedProposalKernel::set_index_if_null(Index* index_in)
+{
+}

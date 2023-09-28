@@ -464,3 +464,9 @@ void BarkerDynamicsProposalKernel::set_index(Index* index_in)
 {
   this->index = index_in;
 }
+
+void BarkerDynamicsProposalKernel::set_index_if_null(Index* index_in)
+{
+  if (this->index==NULL)
+    this->index = index_in;
+}

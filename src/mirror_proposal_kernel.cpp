@@ -285,3 +285,7 @@ std::vector<const ProposalKernel*> MirrorProposalKernel::get_proposals() const
 void MirrorProposalKernel::set_index(Index* index_in)
 {
 }
+
+void MirrorProposalKernel::set_index_if_null(Index* index_in)
+{
+}

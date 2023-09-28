@@ -299,3 +299,7 @@ std::vector<const ProposalKernel*> CustomDistributionProposalKernel::get_proposa
 void CustomDistributionProposalKernel::set_index(Index* index_in)
 {
 }
+
+void CustomDistributionProposalKernel::set_index_if_null(Index* index_in)
+{
+}

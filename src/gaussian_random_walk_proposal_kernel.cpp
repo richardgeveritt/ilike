@@ -294,3 +294,7 @@ std::vector<const ProposalKernel*> GaussianRandomWalkProposalKernel::get_proposa
 void GaussianRandomWalkProposalKernel::set_index(Index* index_in)
 {
 }
+
+void GaussianRandomWalkProposalKernel::set_index_if_null(Index* index_in)
+{
+}

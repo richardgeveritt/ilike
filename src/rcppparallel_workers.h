@@ -7,6 +7,8 @@
 
 #include "particles.h"
 
+class MoveOutput;
+
 class RcppParallelSMCWorker;
 
 class SimulateWorker : public RcppParallel::Worker {

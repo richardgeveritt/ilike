@@ -200,3 +200,7 @@ std::vector<const ProposalKernel*> CustomGuidedDistributionProposalKernel::get_p
 void CustomGuidedDistributionProposalKernel::set_index(Index* index_in)
 {
 }
+
+void CustomGuidedDistributionProposalKernel::set_index_if_null(Index* index_in)
+{
+}

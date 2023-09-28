@@ -6,7 +6,7 @@
 #include "annealed_likelihood_estimator.h"
 #include "utils.h"
 #include "parameter_particle_simulator.h"
-//#include "rcppparallel_smc_worker.h"
+#include "rcppparallel_smc_worker.h"
 #include "sequential_smc_worker.h"
 #include "mcmc.h"
 #include "move_output.h"
@@ -116,6 +116,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          MCMC* mcmc_in,
                          const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
                          IndependentProposalKernel* proposal_in,
+                         Index* without_cancelled_index,
+                         Index* full_index,
                          bool transform_proposed_particles,
                          bool parallel_in,
                          size_t grain_size_in,
@@ -138,11 +140,12 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
   proposal_in->set_proposal_parameters(&this->algorithm_parameters);
   
-  std::vector<size_t> indices;
-  indices.reserve(likelihood_estimators_in.size());
-  for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
-    indices.push_back(i);
-  this->index = new VectorSingleIndex(indices);
+  //std::vector<size_t> indices;
+  //indices.reserve(likelihood_estimators_in.size());
+  //for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
+  //  indices.push_back(i);
+  //this->index = new VectorSingleIndex(indices);
+  this->index = without_cancelled_index;
   
   this->factors = new VectorFactors(likelihood_estimators_in);
   
@@ -157,7 +160,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   if (parallel_in==TRUE)
   {
     //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
-    this->the_worker = NULL;
+    Rcpp::stop("Parallel worker not set up.");
   }
   else
   {
@@ -176,7 +179,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                               smc_criterion);
   
   this->mcmc = mcmc_in;
-  this->mcmc->set_index(new VectorSingleIndex(indices));
+  if (this->mcmc!=NULL)
+    this->mcmc->set_index_if_null(full_index);
   this->mcmc_at_last_step = true;
 }
 
@@ -190,6 +194,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
                          const std::vector<Parameters> &initial_points_in,
                          const arma::colvec &log_probabilities_of_initial_values_in,
+                         Index* without_cancelled_index,
+                         Index* full_index,
                          bool transform_proposed_particles,
                          bool parallel_in,
                          size_t grain_size_in,
@@ -211,11 +217,12 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
 {
   mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
   
-  std::vector<size_t> indices;
-  indices.reserve(likelihood_estimators_in.size());
-  for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
-    indices.push_back(i);
-  this->index = new VectorSingleIndex(indices);
+  //std::vector<size_t> indices;
+  //indices.reserve(likelihood_estimators_in.size());
+  //for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
+  //  indices.push_back(i);
+  //this->index = new VectorSingleIndex(indices);
+  this->index = without_cancelled_index;
   
   this->factors = new VectorFactors(likelihood_estimators_in);
   
@@ -236,7 +243,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   if (parallel_in==TRUE)
   {
     //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
-    this->the_worker = NULL;
+    Rcpp::stop("Parallel worker not set up.");
   }
   else
   {
@@ -255,7 +262,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                               smc_criterion);
   
   this->mcmc = mcmc_in;
-  this->mcmc->set_index(new VectorSingleIndex(indices));
+  if (this->mcmc!=NULL)
+    this->mcmc->set_index_if_null(full_index);
   this->mcmc_at_last_step = true;
 }
 
@@ -674,7 +682,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   if (parallel_in==true)
   {
     //this->the_worker = new RcppParallelSMCWorker(this, grain_size_in);
-    this->the_worker = NULL;
+    Rcpp::stop("Parallel worker not set up.");
   }
   else
   {
@@ -713,6 +721,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          const std::vector<std::vector<double>> &schedules_in,
                          const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
                          IndependentProposalKernel* proposal_in,
+                         Index* without_cancelled_index,
+                         Index* full_index,
                          bool proposal_is_evaluated_in,
                          bool smcfixed_flag_in,
                          bool sequencer_limit_is_fixed_in,
@@ -728,11 +738,12 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
   proposal_in->set_proposal_parameters(&this->algorithm_parameters);
   
-  std::vector<size_t> indices;
-  indices.reserve(likelihood_estimators_in.size());
-  for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
-    indices.push_back(i);
-  this->index = new VectorSingleIndex(indices);
+  //std::vector<size_t> indices;
+  //indices.reserve(likelihood_estimators_in.size());
+  //for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
+  //  indices.push_back(i);
+  //this->index = new VectorSingleIndex(indices);
+  this->index = without_cancelled_index;
   
   this->factors = new VectorFactors(likelihood_estimators_in);
   
@@ -754,7 +765,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   if (parallel_in==true)
   {
     //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
-    this->the_worker = NULL;
+    Rcpp::stop("Parallel worker not set up.");
   }
   else
   {
@@ -773,7 +784,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   
   this->mcmc = mcmc_in;
   if (this->mcmc!=NULL)
-    this->mcmc->set_index(new VectorSingleIndex(indices));
+    this->mcmc->set_index_if_null(full_index);
+                                  
   this->mcmc_at_last_step = mcmc_at_last_step_in;
 }
 
@@ -837,6 +849,11 @@ void SMCMCMCMove::make_copy(const SMCMCMCMove &another)
 
 SMCOutput* SMCMCMCMove::specific_run()
 {
+  //if (this->index==NULL)
+  //{
+  //  Rcout << "Full index is NULL." << std::endl;
+  //}
+  
   SMCOutput* simulation = this->initialise_smc();
   this->simulate_smc(simulation);
   this->evaluate_smc(simulation);

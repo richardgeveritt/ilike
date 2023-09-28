@@ -220,3 +220,8 @@ void TransformedIndependentProposalKernel::set_index(Index* index_in)
 {
   this->proposal->set_index(index_in);
 }
+
+void TransformedIndependentProposalKernel::set_index_if_null(Index* index_in)
+{
+  this->proposal->set_index_if_null(index_in);
+}

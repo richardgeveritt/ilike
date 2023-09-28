@@ -91,3 +91,10 @@ arma::uvec VectorSingleIndex::get_uvec() const
   }
   return result;
 }
+
+/*
+void VectorSingleIndex::add_index(const size_t &number)
+{
+  this->indices.push_back(number);
+}
+*/

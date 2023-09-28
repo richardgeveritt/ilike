@@ -269,3 +269,7 @@ std::vector<const ProposalKernel*> UniformRandomWalkProposalKernel::get_proposal
 void UniformRandomWalkProposalKernel::set_index(Index* index_in)
 {
 }
+
+void UniformRandomWalkProposalKernel::set_index_if_null(Index* index_in)
+{
+}

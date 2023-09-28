@@ -88,6 +88,7 @@ void SMCWorker::simulate(Particles* next_particles)
   this->the_smc->rng->seed(this->get_seed(),this->get_number_of_particles());
   next_particles->simulate_resampling_variables(*this->the_smc->rng);
   this->set_seed(this->get_seed() + this->get_number_of_particles());
+  
 }
 
 void SMCWorker::simulate(Particles* next_particles,

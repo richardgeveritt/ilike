@@ -193,3 +193,7 @@ std::vector<const ProposalKernel*> CustomGuidedNoParamsSymmetricProposalKernel::
 void CustomGuidedNoParamsSymmetricProposalKernel::set_index(Index* index_in)
 {
 }
+
+void CustomGuidedNoParamsSymmetricProposalKernel::set_index_if_null(Index* index_in)
+{
+}

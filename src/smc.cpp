@@ -463,6 +463,7 @@ void SMC::simulate_proposal(SMCOutput* current_state)
   if (!this->proposed_particles_inputted)
   {
     this->the_worker->simulate(next_particles);
+    
     //Particles particles(this->the_worker->get_particles());
     //current_state->initialise_normalised_log_weights();
     //current_state->initialise_unnormalised_log_incremental_weights(this->the_worker->get_unnormalised_log_incremental_weights());
