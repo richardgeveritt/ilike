@@ -7,6 +7,7 @@
 parse_ilike_model(
   filename,
   parameter_list = list(),
+  external_packages = c(),
   julia_bin_dir = "",
   julia_required_libraries = c()
 )
@@ -15,6 +16,8 @@ parse_ilike_model(
 \item{filename}{The name (and path) of the .ilike file containing the model.}
 
 \item{parameter_list}{(optional) A list containing parameters for the model.}
+
+\item{external_packages}{(optional) A vector of names of other R packages the functions rely on.}
 
 \item{julia_bin_dir}{(optional) The directory containing the Julia bin file - only needed if Julia functions are used.}
 

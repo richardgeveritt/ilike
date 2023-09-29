@@ -632,7 +632,7 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
               method_number))
 }
 
-extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,parameter_list)
+extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,parameter_list,external_packages)
 {
   # Get information about the order in which MCMC moves are included.
   if ( (block_type=="mh_proposal") || (block_type=="independent_mh_proposal") || (block_type=="m_proposal") )
@@ -662,7 +662,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
   {
     if (is_custom==TRUE)
     {
-      my_list = list(RcppXPtrUtils::cppXPtr(block_code,plugins=c("cpp11"),depends = c("ilike","RcppArmadillo","BH","dqrng","sitmo")))
+      my_list = list(RcppXPtrUtils::cppXPtr(block_code,plugins=c("cpp11"),depends = paste(c("ilike","RcppArmadillo","BH","dqrng","sitmo"),external_packages) ))
       names(my_list) = c(block_name)
 
       if (length((blocks[[block_type]]))==0)
@@ -1518,7 +1518,6 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
         close(fileConn)
 
-        #browser()
         Rcpp::sourceCpp(temp_filename)
         file.remove(temp_filename)
 
@@ -1878,12 +1877,14 @@ check_types = function(blocks)
 #'
 #' @param filename The name (and path) of the .ilike file containing the model.
 #' @param parameter_list (optional) A list containing parameters for the model.
+#' @param external_packages (optional) A vector of names of other R packages the functions rely on.
 #' @param julia_bin_dir (optional) The directory containing the Julia bin file - only needed if Julia functions are used.
 #' @param julia_required_libraries (optional) Vector of strings, each of which is a Julia packge that will be installed and loaded.
 #' @return A list containing the model details.
 #' @export
 parse_ilike_model <- function(filename,
                               parameter_list = list(),
+                              external_packages = c(),
                               julia_bin_dir="",
                               julia_required_libraries=c())
 {
@@ -1941,6 +1942,7 @@ parse_ilike_model <- function(filename,
   method_number = 0
   block_type = "none"
   block_name = "none"
+  #header = ""
 
   while ( TRUE ) {
     line = readLines(the_file, n = 1)
@@ -1969,7 +1971,7 @@ parse_ilike_model <- function(filename,
           }
           else # end current block
           {
-            blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list)
+            blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,external_packages)
             is_custom = FALSE
             block_code = ""
           }
@@ -2017,6 +2019,11 @@ parse_ilike_model <- function(filename,
       block_code = paste(block_code,line,sep="\n")
     }
 
+    # if (in_block==FALSE)
+    # {
+    #   header = paste(header,line,sep="\n")
+    # }
+
   }
 
   if (in_block==TRUE)
@@ -2024,7 +2031,7 @@ parse_ilike_model <- function(filename,
     # ignore block if block number is not positive
     if (number_to_pass_to_extract_block>0)
     {
-      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list)
+      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,external_packages)
       if ( (factor_number!=0) && (factor_number==length(blocks[["factor"]])) )
       {
         print_factor_info(length(blocks[["factor"]]),blocks,line_counter)

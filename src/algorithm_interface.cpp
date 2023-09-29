@@ -56,6 +56,31 @@ using namespace Rcpp;
 #include "always_smc_termination.h"
 #include "direct_gradient_estimator.h"
 #include "vector_single_index.h"
+#include "likelihood_maker.h"
+
+// from https://stackoverflow.com/questions/2165921/converting-from-a-stdstring-to-bool
+bool stob(const std::string &s)
+{
+  auto result = false;    // failure to assert is false
+  
+  std::istringstream is(s);
+  // first try simple integer conversion
+  is >> result;
+  
+  if (is.fail())
+  {
+    // simple integer failed; try boolean
+    is.clear();
+    is >> std::boolalpha >> result;
+  }
+  
+  if (is.fail())
+  {
+    stop(s + " is not convertable to bool");
+  }
+  
+  return result;
+}
 
 std::vector<std::string> split(const std::string &str, const char delimiter)
 {
@@ -74,6 +99,19 @@ bool isDoubleInList(const Rcpp::List &list, int index_from_one)
   {
     SEXP var = list[index_from_one-1];
     return Rf_isReal(var) && Rf_length(var) == 1;
+  }
+  else
+  {
+    return false;
+  }
+}
+
+bool isStringInList(const Rcpp::List &list, int index_from_one)
+{
+  if (index_from_one<=list.size())
+  {
+    SEXP var = list[index_from_one-1];
+    return Rf_isString(var) && Rf_length(var) == 1;
   }
   else
   {
@@ -171,6 +209,49 @@ Data get_data(const List &model)
   }
 }
 
+bool extract_bool_parameter(const List &parameters_from_file,
+                            const List &model_parameters,
+                            size_t index)
+{
+  bool result;
+  std::string parameter_string = parameters_from_file[index];
+  
+  if (parameter_string.at(0)=='p')
+  {
+    size_t parameter_index;
+    try
+    {
+      parameter_index = std::stoi(parameter_string.substr(1));
+    } catch (...)
+    {
+      Rcpp::stop("Parameter index in model file not an integer.");
+    }
+    
+    if (isDoubleInList(model_parameters,parameter_index))
+    {
+      result = model_parameters[parameter_index-1];
+    }
+    else
+    {
+      Rcpp::stop("Parameter index does not correspond to a real number in the parameters file.");
+    }
+    
+  }
+  else
+  {
+    try
+    {
+      result = stob(parameter_string);
+    }
+    catch (...)
+    {
+      Rcpp::stop("Parameter in model file is not a real number.");
+    }
+  }
+  
+  return result;
+}
+
 int extract_int_parameter(const List &parameters_from_file,
                           const List &model_parameters,
                           size_t index)
@@ -255,6 +336,14 @@ double extract_double_parameter(const List &parameters_from_file,
   }
   
   return result;
+}
+
+std::string extract_string_parameter(const List &parameters_from_file,
+                                     const List &model_parameters,
+                                     size_t index)
+{
+  std::string parameter_string = parameters_from_file[index];
+  return parameter_string;
 }
 
 arma::colvec extract_vector_parameter(const List &parameters_from_file,
@@ -491,6 +580,114 @@ List get_single_variable_vector_and_matrix_parameter_info(const List &model_para
   return List::create(variable_names[0],first_param,second_param);
 }
 
+List get_abc_euclidean_uniform_parameter_info(const List &model_parameters,
+                                              const List &current_sbi,
+                                              const std::string &sbi_name)
+{
+  std::string augmented_variable_names = current_sbi["variables"];
+  
+  // split string in ;
+  std::vector<std::string> variable_names = split(augmented_variable_names,';');
+  
+  // throw error if more than one variable
+  if (variable_names.size()!=1)
+    Rcpp::stop("Only one variable allowed for " + sbi_name + ".");
+  
+  if (!current_sbi.containsElementNamed("parameters"))
+    Rcpp::stop("Missing parameters for " + sbi_name + " (3-5 parameters required).");
+  
+  List parameters = current_sbi["parameters"];
+  
+  if (! ( (parameters.size()==3) || (parameters.size()==4) || (parameters.size()==5) ) )
+    Rcpp::stop("3-5 parameters required for " + sbi_name + ".");
+  
+  int number_of_points = extract_int_parameter(parameters,
+                                               model_parameters,
+                                               0);
+  
+  std::string tolerance_variable = extract_string_parameter(parameters,
+                                                            model_parameters,
+                                                            1);
+  
+  double tolerance = extract_double_parameter(parameters,
+                                              model_parameters,
+                                              2);
+  
+  bool parallel = false;
+  if (parameters.size()>3)
+  {
+    parallel = extract_bool_parameter(parameters,
+                                      model_parameters,
+                                      3);
+  }
+  
+  int grain_size = 100000;
+  if (parameters.size()>4)
+  {
+    grain_size = extract_int_parameter(parameters,
+                                       model_parameters,
+                                       4);
+  }
+  
+  return List::create(variable_names[0],number_of_points,tolerance_variable,tolerance,parallel,grain_size);
+}
+
+List get_abc_lp_uniform_parameter_info(const List &model_parameters,
+                                       const List &current_sbi,
+                                       const std::string &sbi_name)
+{
+  std::string augmented_variable_names = current_sbi["variables"];
+  
+  // split string in ;
+  std::vector<std::string> variable_names = split(augmented_variable_names,';');
+  
+  // throw error if more than one variable
+  if (variable_names.size()!=1)
+    Rcpp::stop("Only one variable allowed for " + sbi_name + ".");
+  
+  if (!current_sbi.containsElementNamed("parameters"))
+    Rcpp::stop("Missing parameters for " + sbi_name + " (4-6 parameters required).");
+  
+  List parameters = current_sbi["parameters"];
+  
+  if (! ( (parameters.size()==4) || (parameters.size()==5) || (parameters.size()==6) ) )
+    Rcpp::stop("4-6 parameters required for " + sbi_name + ".");
+  
+  int number_of_points = extract_int_parameter(parameters,
+                                               model_parameters,
+                                               0);
+  
+  std::string tolerance_variable = extract_string_parameter(parameters,
+                                                            model_parameters,
+                                                            1);
+  
+  double tolerance = extract_double_parameter(parameters,
+                                              model_parameters,
+                                              2);
+  
+  double p = extract_double_parameter(parameters,
+                                      model_parameters,
+                                      3);
+  
+  bool parallel = false;
+  if (parameters.size()>4)
+  {
+    parallel = extract_bool_parameter(parameters,
+                                      model_parameters,
+                                      4);
+  }
+  
+  int grain_size = 100000;
+  if (parameters.size()>5)
+  {
+    grain_size = extract_int_parameter(parameters,
+                                       model_parameters,
+                                       5);
+  }
+  
+  return List::create(variable_names[0],number_of_points,tolerance_variable,tolerance,p,parallel,grain_size);
+}
+
 std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerator* rng_in,
                                                             size_t* seed_in,
                                                             Data* data_in,
@@ -499,11 +696,15 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                             bool include_priors,
                                                             const std::vector<std::string> &sequencer_types,
                                                             const std::vector<std::string> &sequencer_variables,
+                                                            const std::vector<std::vector<double>> &sequencer_schedules,
                                                             IndependentProposalKernel* proposal_in,
                                                             Index* &without_cancelled_index,
                                                             Index* &full_index,
-                                                            bool &any_annealing)
+                                                            bool &any_annealing,
+                                                            std::vector<Data> &data_created_in_get_likelihood_estimators)
 {
+  data_created_in_get_likelihood_estimators.clear();
+  
   std::vector<size_t> without_cancelled_index_vector;
   std::vector<size_t> full_index_vector;
   
@@ -511,7 +712,10 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
   std::string annealing_variable;
   for (size_t i=0; i<sequencer_types.size(); ++i)
   {
-    if ( (sequencer_types[i]=="annealing") || (sequencer_types[i]=="tempering") )
+    //Rcout << sequencer_types[i] << std::endl;
+    //Rcout << sequencer_schedules[i][0] << std::endl;
+    //Rcout << sequencer_schedules[i][1] << std::endl;
+    if ( ( (sequencer_types[i]=="annealing") || (sequencer_types[i]=="tempering") ) && (!( (sequencer_schedules[i].size()==2) && (sequencer_schedules[i][0]==0.0) && (sequencer_schedules[i][1]==1.0)) ) )
     {
       if (any_annealing==false)
       {
@@ -626,8 +830,8 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
               else if (type=="gamma")
               {
                 List info = get_single_variable_two_double_parameter_info(model_parameters,
-                                                                   current_prior,
-                                                                   type);
+                                                                          current_prior,
+                                                                          type);
                 
                 std::string variable = info[0];
                 double shape = info[1];
@@ -641,7 +845,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
               else
               {
                 Rcout << "Prior type " << type;
-                stop("Prior type unknown");
+                stop("Prior type unknown.");
               }
               
               LikelihoodEstimator* new_likelihood_estimator = new ExactLikelihoodEstimator(rng_in,
@@ -736,6 +940,183 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                        data_in,
                                                                                        new_factor,
                                                                                        true);
+          
+          full_index_vector.push_back(likelihood_estimators.size());
+          without_cancelled_index_vector.push_back(likelihood_estimators.size());
+          
+          if (any_annealing)
+          {
+            likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(rng_in,
+                                                                            seed_in,
+                                                                            data_in,
+                                                                            new_likelihood_estimator,
+                                                                            power,
+                                                                            annealing_variable,
+                                                                            false));
+          }
+          else
+          {
+            likelihood_estimators.push_back(new_likelihood_estimator);
+          }
+          
+        }
+        else if ( current_factor.containsElementNamed("sbi_likelihood") )
+        {
+          SimulateModelPtr simulate_model_in;
+          if (current_factor.containsElementNamed("simulate_model"))
+          {
+            SEXP simulate_model_SEXP = current_factor["simulate_model"];
+            simulate_model_in = load_simulate_model(simulate_model_SEXP);
+          }
+          else
+          {
+            stop("sbi_likelihood factor must also contain simulate_model.");
+          }
+          
+          LikelihoodEstimator* new_likelihood_estimator;
+          
+          List current_sbi = current_factor["sbi_likelihood"];
+          if ( current_sbi.containsElementNamed("type") && current_sbi.containsElementNamed("variables") )
+          {
+            std::string type = current_sbi["type"];
+            
+            if ( (type=="abc_euclidean_uniform") || (type=="abc_lp_uniform") )
+            {
+              std::string data_variable;
+              size_t number_of_points;
+              std::string tolerance_variable;
+              double tolerance;
+              double p;
+              bool parallel;
+              size_t grain_size;
+              
+              if (type=="abc_euclidean_uniform")
+              {
+                List info = get_abc_euclidean_uniform_parameter_info(model_parameters,
+                                                                     current_sbi,
+                                                                     type);
+                
+                std::string temp_data_variable = info[0];
+                data_variable = temp_data_variable;
+                number_of_points = info[1];
+                std::string temp_tolerance_variable = info[2];
+                tolerance_variable = temp_tolerance_variable;
+                tolerance = info[3];
+                p = 2.0;
+                parallel = info[4];
+                grain_size = info[5];
+              }
+              else
+              {
+                List info = get_abc_lp_uniform_parameter_info(model_parameters,
+                                                              current_sbi,
+                                                              type);
+                
+                std::string temp_data_variable = info[0];
+                data_variable = temp_data_variable;
+                number_of_points = info[1];
+                std::string temp_tolerance_variable = info[2];
+                tolerance_variable = temp_tolerance_variable;
+                tolerance = info[3];
+                p = info[4];
+                parallel = info[5];
+                grain_size = info[6];
+              }
+              
+              bool adaptive = false;
+              for (auto k=sequencer_variables.begin();
+                   k!=sequencer_variables.end();
+                   ++k)
+              {
+                if (*k==tolerance_variable)
+                {
+                  adaptive = true;
+                }
+              }
+              
+              std::vector<std::string> data_variables_in;
+              data_variables_in.push_back(data_variable);
+              
+              if (current_factor.containsElementNamed("summary_statistics"))
+              {
+                SEXP summary_statistics_SEXP = current_factor["summary_statistics"];
+                SummaryStatisticsPtr summary_stats = load_summary_statistics(summary_statistics_SEXP);
+                
+                data_created_in_get_likelihood_estimators.push_back(summary_stats(*data_in));
+                
+                if (adaptive==false)
+                {
+                  new_likelihood_estimator = make_fixed_epsilon_lp_uniform_abc_likelihood(rng_in,
+                                                                                          seed_in,
+                                                                                          &data_created_in_get_likelihood_estimators.back(),
+                                                                                          p,
+                                                                                          data_variables_in,
+                                                                                          tolerance_variable,
+                                                                                          tolerance,
+                                                                                          simulate_model_in,
+                                                                                          summary_stats,
+                                                                                          number_of_points,
+                                                                                          parallel,
+                                                                                          grain_size);
+                }
+                else
+                {
+                  new_likelihood_estimator = make_varying_epsilon_lp_uniform_abc_likelihood(rng_in,
+                                                                                            seed_in,
+                                                                                            &data_created_in_get_likelihood_estimators.back(),
+                                                                                            p,
+                                                                                            data_variables_in,
+                                                                                            tolerance_variable,
+                                                                                            simulate_model_in,
+                                                                                            summary_stats,
+                                                                                            number_of_points,
+                                                                                            parallel,
+                                                                                            grain_size);
+                }
+              }
+              else
+              {
+                if (adaptive==false)
+                {
+                  new_likelihood_estimator = make_fixed_epsilon_lp_uniform_abc_likelihood(rng_in,
+                                                                                          seed_in,
+                                                                                          data_in,
+                                                                                          p,
+                                                                                          data_variables_in,
+                                                                                          tolerance_variable,
+                                                                                          tolerance,
+                                                                                          simulate_model_in,
+                                                                                          number_of_points,
+                                                                                          parallel,
+                                                                                          grain_size);
+                }
+                else
+                {
+                  new_likelihood_estimator = make_varying_epsilon_lp_uniform_abc_likelihood(rng_in,
+                                                                                            seed_in,
+                                                                                            data_in,
+                                                                                            p,
+                                                                                            data_variables_in,
+                                                                                            tolerance_variable,
+                                                                                            simulate_model_in,
+                                                                                            number_of_points,
+                                                                                            parallel,
+                                                                                            grain_size);
+                }
+              }
+              
+            }
+            else
+            {
+              Rcout << "SBI type " << type;
+              stop("SBI type unknown.");
+            }
+            
+          }
+          else
+          {
+            stop("Missing information for SBI in model file.");
+          }
           
           full_index_vector.push_back(likelihood_estimators.size());
           without_cancelled_index_vector.push_back(likelihood_estimators.size());
@@ -2547,6 +2928,7 @@ double do_importance_sampler(const List &model,
 {
   RandomNumberGenerator rng;
   Data the_data = get_data(model);
+  std::vector<Data> data_created_in_get_likelihood_estimators;
   
   //std::string results_name = "/Users/richard/Dropbox/code/ilike/experiments/test";
   
@@ -2567,7 +2949,7 @@ double do_importance_sampler(const List &model,
   
   Index* without_cancelled_index = NULL;
   Index* full_index = NULL;
-  bool any_annealing;
+  bool any_annealing = false;
   
   if ( model.containsElementNamed("importance_proposal") )
   {
@@ -2584,10 +2966,12 @@ double do_importance_sampler(const List &model,
                                                       true,
                                                       sequencer_types,
                                                       sequencer_variables,
+                                                      sequencer_schedules,
                                                       proposal_in,
                                                       without_cancelled_index,
                                                       full_index,
-                                                      any_annealing);
+                                                      any_annealing,
+                                                      data_created_in_get_likelihood_estimators);
     
     proposal_is_evaluated_in = true;
     
@@ -2607,10 +2991,12 @@ double do_importance_sampler(const List &model,
                                                       false,
                                                       sequencer_types,
                                                       sequencer_variables,
+                                                      sequencer_schedules,
                                                       proposal_in,
                                                       without_cancelled_index,
                                                       full_index,
-                                                      any_annealing);
+                                                      any_annealing,
+                                                      data_created_in_get_likelihood_estimators);
     
     proposal_is_evaluated_in = false;
   }
@@ -2683,6 +3069,7 @@ void do_mcmc(const List &model,
   
   RandomNumberGenerator rng;
   Data the_data = get_data(model);
+  std::vector<Data> data_created_in_get_likelihood_estimators;
   
   // May need to alter for cases where the likelihood needs to be tuned automatically (e.g. in ABC).
   
@@ -2708,10 +3095,12 @@ void do_mcmc(const List &model,
                                                     true,
                                                     sequencer_types,
                                                     sequencer_variables,
+                                                    sequencer_schedules,
                                                     NULL,
                                                     without_cancelled_index,
                                                     full_index,
-                                                    any_annealing);
+                                                    any_annealing,
+                                                    data_created_in_get_likelihood_estimators);
   
   Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list);
   
@@ -2819,6 +3208,7 @@ double do_smc_mcmc_move(const List &model,
   RandomNumberGenerator rng;
   
   Data the_data = get_data(model);
+  std::vector<Data> data_created_in_get_likelihood_estimators;
   
   //std::string results_name = "/Users/richard/Dropbox/code/ilike/experiments/test";
   
@@ -2840,7 +3230,7 @@ double do_smc_mcmc_move(const List &model,
   Index* without_cancelled_index = NULL;
   Index* full_index = NULL;
   
-  bool any_annealing;
+  bool any_annealing = false;
   
   if ( model.containsElementNamed("importance_proposal") )
   {
@@ -2856,10 +3246,12 @@ double do_smc_mcmc_move(const List &model,
                                                       true,
                                                       sequencer_types,
                                                       sequencer_variables,
+                                                      sequencer_schedules,
                                                       proposal_in,
                                                       without_cancelled_index,
                                                       full_index,
-                                                      any_annealing);
+                                                      any_annealing,
+                                                      data_created_in_get_likelihood_estimators);
     
     proposal_is_evaluated_in = true;
     
@@ -2879,10 +3271,12 @@ double do_smc_mcmc_move(const List &model,
                                                       false,
                                                       sequencer_types,
                                                       sequencer_variables,
+                                                      sequencer_schedules,
                                                       proposal_in,
                                                       without_cancelled_index,
                                                       full_index,
-                                                      any_annealing);
+                                                      any_annealing,
+                                                      data_created_in_get_likelihood_estimators);
     
     proposal_is_evaluated_in = false;
     
