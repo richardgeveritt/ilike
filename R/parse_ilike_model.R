@@ -141,11 +141,11 @@ ilike_parse <- function(input,
   return(list(result_function_text,required_args))
 }
 
-factor_processing = function(factor_number,blocks,block_name,prior_function_types,custom_likelihood_function_types,sbi_likelihood_function_types,other_likelihood_function_types,line_counter)
+factor_processing = function(factor_number,blocks,block_name,prior_function_types,custom_likelihood_function_types,sbi_likelihood_function_types,linear_gaussian_data_model_types,nonlinear_gaussian_data_model_types,other_likelihood_function_types,line_counter)
 {
   # Is this a continuation of the current factor, or a new one?
 
-  all_names = c(prior_function_types,custom_likelihood_function_types,sbi_likelihood_function_types,other_likelihood_function_types)
+  all_names = c(prior_function_types,custom_likelihood_function_types,sbi_likelihood_function_types,linear_gaussian_data_model_types,nonlinear_gaussian_data_model_types,other_likelihood_function_types)
 
   # Get the current factor info.
   if ("factor" %in% names(blocks))
@@ -261,6 +261,68 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
         }
       }
     }
+    else if (block_name %in% linear_gaussian_data_model_types)
+    {
+      # factor is complete
+      if ( ("data_model" %in% names(current_factor_info)) && (block_name=="data_model") )
+      {
+        print_factor_info(factor_number,blocks,line_counter-1)
+        factor_number = factor_number + 1
+      }
+      else if ( ("data_matrix" %in% names(current_factor_info)) && (block_name=="data_matrix") )
+      {
+        print_factor_info(factor_number,blocks,line_counter-1)
+        factor_number = factor_number + 1
+      }
+      else if ( ("data_covariance" %in% names(current_factor_info)) && (block_name=="data_covariance") )
+      {
+        print_factor_info(factor_number,blocks,line_counter-1)
+        factor_number = factor_number + 1
+      }
+
+      # If any of the existing parts of the factor are of a completely different type to the block_name then make a new factor.
+      all_other_names = setdiff(all_names,linear_gaussian_data_model_types)
+      for (i in 1:length(current_factor_names))
+      {
+        if ( current_factor_names[i] %in% all_other_names)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+          factor_number = factor_number + 1
+          break
+        }
+      }
+    }
+    else if (block_name %in% nonlinear_gaussian_data_model_types)
+    {
+      # factor is complete
+      if ( ("data_model" %in% names(current_factor_info)) && (block_name=="data_model") )
+      {
+        print_factor_info(factor_number,blocks,line_counter-1)
+        factor_number = factor_number + 1
+      }
+      else if ( ("data_function" %in% names(current_factor_info)) && (block_name=="data_function") )
+      {
+        print_factor_info(factor_number,blocks,line_counter-1)
+        factor_number = factor_number + 1
+      }
+      else if ( ("data_covariance" %in% names(current_factor_info)) && (block_name=="data_covariance") )
+      {
+        print_factor_info(factor_number,blocks,line_counter-1)
+        factor_number = factor_number + 1
+      }
+
+      # If any of the existing parts of the factor are of a completely different type to the block_name then make a new factor.
+      all_other_names = setdiff(all_names,nonlinear_gaussian_data_model_types)
+      for (i in 1:length(current_factor_names))
+      {
+        if ( current_factor_names[i] %in% all_other_names)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+          factor_number = factor_number + 1
+          break
+        }
+      }
+    }
     else if (block_name %in% other_likelihood_function_types)
     {
       print_factor_info(factor_number,blocks,line_counter-1)
@@ -277,6 +339,125 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
   }
 
   return(factor_number)
+}
+
+transition_model_processing = function(transition_model_number,blocks,block_name,linear_gaussian_transition_model_types,nonlinear_gaussian_transition_model_types,custom_transition_model_types,line_counter)
+{
+  # Is this a continuation of the current transition_model, or a new one?
+
+  all_names = c(linear_gaussian_transition_model_types,nonlinear_gaussian_transition_model_types,custom_transition_model_typess)
+
+  # Get the current transition_model info.
+  if ("transition_model" %in% names(blocks))
+  {
+    current_transition_model_info = blocks[["transition_model"]][[transition_model_number]]
+
+    current_transition_model_names = names(current_transition_model_info)
+
+    if (block_name %in% custom_transition_model_function_types)
+    {
+      # transition_model is complete
+      if ( ("evaluate_log_transition_model" %in% names(current_transition_model_info)) && (block_name=="evaluate_log_transition_model") )
+      {
+        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        transition_model_number = transition_model_number + 1
+      }
+      else if ( ("evaluate_gradient_log_likelihood" %in% names(current_transition_model_info)) && (block_name=="evaluate_gradient_log_likelihood") )
+      {
+        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        transition_model_number = transition_model_number + 1
+      }
+
+      # If any of the existing parts of the transition_model are of a completely different type to the block_name then make a new transition_model.
+      all_other_names = setdiff(all_names,custom_likelihood_function_types)
+      for (i in 1:length(current_transition_model_names))
+      {
+        if ( current_transition_model_names[i] %in% all_other_names)
+        {
+          print_transition_model_info(transition_model_number,blocks,line_counter-1)
+          transition_model_number = transition_model_number + 1
+          break
+        }
+      }
+    }
+    else if (block_name %in% linear_gaussian_data_model_types)
+    {
+      # transition_model is complete
+      if ( ("data_model" %in% names(current_transition_model_info)) && (block_name=="data_model") )
+      {
+        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        transition_model_number = transition_model_number + 1
+      }
+      else if ( ("data_matrix" %in% names(current_transition_model_info)) && (block_name=="data_matrix") )
+      {
+        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        transition_model_number = transition_model_number + 1
+      }
+      else if ( ("data_covariance" %in% names(current_transition_model_info)) && (block_name=="data_covariance") )
+      {
+        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        transition_model_number = transition_model_number + 1
+      }
+
+      # If any of the existing parts of the transition_model are of a completely different type to the block_name then make a new transition_model.
+      all_other_names = setdiff(all_names,linear_gaussian_data_model_types)
+      for (i in 1:length(current_transition_model_names))
+      {
+        if ( current_transition_model_names[i] %in% all_other_names)
+        {
+          print_transition_model_info(transition_model_number,blocks,line_counter-1)
+          transition_model_number = transition_model_number + 1
+          break
+        }
+      }
+    }
+    else if (block_name %in% nonlinear_gaussian_data_model_types)
+    {
+      # transition_model is complete
+      if ( ("data_model" %in% names(current_transition_model_info)) && (block_name=="data_model") )
+      {
+        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        transition_model_number = transition_model_number + 1
+      }
+      else if ( ("data_function" %in% names(current_transition_model_info)) && (block_name=="data_function") )
+      {
+        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        transition_model_number = transition_model_number + 1
+      }
+      else if ( ("data_covariance" %in% names(current_transition_model_info)) && (block_name=="data_covariance") )
+      {
+        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        transition_model_number = transition_model_number + 1
+      }
+
+      # If any of the existing parts of the transition_model are of a completely different type to the block_name then make a new transition_model.
+      all_other_names = setdiff(all_names,nonlinear_gaussian_data_model_types)
+      for (i in 1:length(current_transition_model_names))
+      {
+        if ( current_transition_model_names[i] %in% all_other_names)
+        {
+          print_transition_model_info(transition_model_number,blocks,line_counter-1)
+          transition_model_number = transition_model_number + 1
+          break
+        }
+      }
+    }
+    else if (block_name %in% other_likelihood_function_types)
+    {
+      print_transition_model_info(transition_model_number,blocks,line_counter-1)
+      transition_model_number = transition_model_number + 1
+    }
+    else
+    {
+      stop(paste("Invalid block: ",block_name,'.',sep=""))
+    }
+  }
+  else
+  {
+    transition_model_number = transition_model_number + 1
+  }
+
+  return(transition_model_number)
 }
 
 data_processing = function(data_number,line_counter)
@@ -435,6 +616,45 @@ m_proposal_processing = function(m_proposal_number,blocks,block_name,line_counte
   return(m_proposal_number)
 }
 
+transition_proposal_processing = function(transition_proposal_number,blocks,block_name,line_counter)
+{
+  # Is this a continuation of the current transition_proposal, or a new one?
+
+  # Get the current transition_proposal info.
+  if ("transition_proposal" %in% names(blocks))
+  {
+    current_transition_proposal_info = blocks[["transition_proposal"]][[transition_proposal_number]]
+
+    if ("transition_proposal" %in% names(current_transition_proposal_info))
+    {
+      # transition_proposal is complete
+      print_transition_proposal_info(transition_proposal_number,blocks,line_counter-1)
+      transition_proposal_number = transition_proposal_number + 1
+    }
+    else if ( ("evaluate_log_transition_proposal" %in% names(current_transition_proposal_info)) || ("simulate_transition_proposal" %in% names(current_transition_proposal_info)) )
+    {
+      # transition_proposal is complete
+      if ( ("evaluate_log_transition_proposal" %in% names(current_transition_proposal_info)) && ("simulate_transition_proposal" %in% names(current_transition_proposal_info)) )
+      {
+        print_transition_proposal_info(transition_proposal_number,blocks,line_counter-1)
+        transition_proposal_number = transition_proposal_number + 1
+      }
+
+      if (block_name=="transition_proposal")
+      {
+        stop(paste("Invalid file: line ",line_counter,', transition_proposal specified, but previous importance proposal block is incomplete (did you specify both evaluate_log_transition_proposal and simulate_transition_proposal?',sep=""))
+      }
+
+    }
+  }
+  else
+  {
+    transition_proposal_number = transition_proposal_number + 1
+  }
+
+  return(transition_proposal_number)
+}
+
 method_processing = function(method_number,blocks,block_name,line_counter)
 {
   # if (method_number!=0)
@@ -462,6 +682,21 @@ print_factor_info = function(factor_index,blocks,line_counter)
     factor_info_string = substr(factor_info_string,3,nchar(factor_info_string))
   }
   print(paste('Factor ends on line ',line_counter,'. Contains ',factor_info_string,'.',sep = ""))
+}
+
+print_transition_model_info = function(transition_model_index,blocks,line_counter)
+{
+  transition_model_info_string = ""
+  last_transition_model_names = names(blocks[["transition_model"]][[transition_model_index]])
+  for (j in 1:length(last_transition_model_names))
+  {
+    transition_model_info_string = paste(transition_model_info_string,last_transition_model_names[j],sep=", ")
+  }
+  if (nchar(transition_model_info_string)>2)
+  {
+    transition_model_info_string = substr(transition_model_info_string,3,nchar(transition_model_info_string))
+  }
+  print(paste('Transition model ends on line ',line_counter,'. Contains ',transition_model_info_string,'.',sep = ""))
 }
 
 print_importance_proposal_info = function(importance_proposal_index,blocks,line_counter)
@@ -524,6 +759,21 @@ print_m_proposal_info = function(m_proposal_index,blocks,line_counter)
   print(paste('m_proposal ends on line ',line_counter,'. Contains ',m_proposal_info_string,'.',sep = ""))
 }
 
+print_transition_proposal_info = function(transition_proposal_index,blocks,line_counter)
+{
+  transition_proposal_info_string = ""
+  last_transition_proposal_names = names(blocks[["transition_proposal"]][[transition_proposal_index]])
+  for (j in 1:length(last_transition_proposal_names))
+  {
+    transition_proposal_info_string = paste(transition_proposal_info_string,last_transition_proposal_names[j],sep=", ")
+  }
+  if (nchar(transition_proposal_info_string)>2)
+  {
+    transition_proposal_info_string = substr(transition_proposal_info_string,3,nchar(transition_proposal_info_string))
+  }
+  print(paste('transition_proposal ends on line ',line_counter,'. Contains ',transition_proposal_info_string,'.',sep = ""))
+}
+
 print_method_info = function(method_index,blocks,line_counter)
 {
   method_info_string = ""
@@ -539,7 +789,7 @@ print_method_info = function(method_index,blocks,line_counter)
   print(paste('Method ends on line ',line_counter,'. Contains ',method_info_string,'.',sep = ""))
 }
 
-determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,importance_proposal_number,mh_proposal_number,independent_mh_proposal_number,m_proposal_number,data_number,method_number)
+determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,importance_proposal_number,mh_proposal_number,independent_mh_proposal_number,m_proposal_number,transition_proposal_number,data_number,method_number)
 {
   if (length(split_block_name)==1)
   {
@@ -560,22 +810,35 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
 
   prior_function_types = c("prior","evaluate_log_prior","simulate_prior","evaluate_gradient_log_prior","evaluate_second_gradient_log_prior")
   custom_likelihood_function_types = c("evaluate_log_likelihood","evaluate_gradient_log_likelihood","evaluate_second_gradient_log_likelihood")
-  sbi_likelihood_function_types = c("simulate_model","sbi_likelihood","summary_statistics")
+  sbi_likelihood_function_types = c("simulate_data_model","sbi_likelihood","summary_statistics")
+  linear_gaussian_data_model_types = c("data_model","data_matrix","data_covariance")
+  nonlinear_gaussian_data_model_types = c("data_model","data_function","data_covariance")
   other_likelihood_function_types = c("likelihood")
-  factor_function_types = c(prior_function_types,custom_likelihood_function_types,sbi_likelihood_function_types,other_likelihood_function_types)
+  factor_function_types = c(prior_function_types,custom_likelihood_function_types,sbi_likelihood_function_types,linear_gaussian_data_model_types,nonlinear_gaussian_data_model_types,other_likelihood_function_types)
+  linear_gaussian_transition_model_types = c("transition_model","transition_matrix","transition_covariance")
+  nonlinear_gaussian_transition_model_types = c("transition_model","transition_function","transition_covariance")
+  custom_transition_model_types = c("simulate_transition_model","evaluate_log_transition_model")
+  transition_model_types = c(linear_gaussian_transition_model_types,nonlinear_gaussian_transition_model_types,custom_transition_model_types)
   data_function_types = c("data")
   importance_proposal_types = c("simulate_importance_proposal","evaluate_log_importance_proposal")
   mh_proposal_types = c("simulate_mh_proposal","evaluate_log_mh_proposal","mh_proposal")
   independent_mh_proposal_types = c("simulate_independent_mh_proposal","evaluate_log_independent_mh_proposal","independent_mh_proposal")
   m_proposal_types = c("simulate_m_proposal","m_proposal")
+  transition_proposal_types = c("simulate_transition_proposal","evaluate_log_transition_proposal")
   method_function_types = c("mcmc_weights","mcmc_termination","adaptive_resampling","adaptive_target","smc_termination","smc_sequence")
 
   # distinguish between factor, data, etc
   if (block_name %in% factor_function_types)
   {
     block_type = "factor"
-    factor_number = factor_processing(factor_number,blocks,block_name,prior_function_types,custom_likelihood_function_types,sbi_likelihood_function_types,other_likelihood_function_types,line_counter)
+    factor_number = factor_processing(factor_number,blocks,block_name,prior_function_types,custom_likelihood_function_types,sbi_likelihood_function_types,linear_gaussian_data_model_types,nonlinear_gaussian_data_model_types,other_likelihood_function_types,line_counter)
     number_to_pass_to_extract_block = factor_number
+  }
+  else if (block_name %in% transition_model_types)
+  {
+    block_type = "transition_model"
+    transition_model_number = transition_model_processing(transition_model_number,blocks,block_name,linear_gaussian_transition_model_types,nonlinear_gaussian_transition_model_types,custom_transition_model_types,line_counter)
+    number_to_pass_to_extract_block = transition_model_number
   }
   else if (block_name %in% data_function_types)
   {
@@ -607,6 +870,12 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
     m_proposal_number = m_proposal_processing(m_proposal_number,blocks,block_name,line_counter)
     number_to_pass_to_extract_block = m_proposal_number
   }
+  else if (block_name %in% transition_proposal_types)
+  {
+    block_type = "transition_proposal"
+    transition_proposal_number = transition_proposal_processing(transition_proposal_number,blocks,block_name,line_counter)
+    number_to_pass_to_extract_block = transition_proposal_number
+  }
   else if (block_name %in% method_function_types)
   {
     block_type = "method"
@@ -624,10 +893,12 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
               is_custom,
               block_function,
               factor_number,
+              transition_model_number,
               importance_proposal_number,
               mh_proposal_number,
               independent_mh_proposal_number,
               m_proposal_number,
+              transition_proposal_number,
               data_number,
               method_number))
 }
@@ -1934,10 +2205,12 @@ parse_ilike_model <- function(filename,
   in_factor = FALSE
 
   factor_number = 0
+  transition_model_number = 0
   importance_proposal_number = 0
   mh_proposal_number = 0
   independent_mh_proposal_number = 0
   m_proposal_number = 0
+  transition_proposal_number = 0
   data_number = 0
   method_number = 0
   block_type = "none"
@@ -1983,7 +2256,7 @@ parse_ilike_model <- function(filename,
             stop(paste("Invalid file: line ",line_counter,", new section of file needs a name: use /***name***/.",sep=""))
           }
           split_block_name = split_string_at_comma_ignoring_parentheses(unparsed_block_name)
-          new_block_info = determine_block_type(split_block_name,blocks,line_counter,block_type,block_name,factor_number,importance_proposal_number,mh_proposal_number,independent_mh_proposal_number,m_proposal_number,data_number,method_number)
+          new_block_info = determine_block_type(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,importance_proposal_number,mh_proposal_number,independent_mh_proposal_number,m_proposal_number,transition_proposal_number,data_number,method_number)
 
           # expect input for each block in one of the following forms:
           # (a) /***evaluate_log_prior***/, followed by a C++ function
@@ -2003,12 +2276,14 @@ parse_ilike_model <- function(filename,
           is_custom = new_block_info[[4]]
           block_function = new_block_info[[5]]
           factor_number = new_block_info[[6]]
-          importance_proposal_number = new_block_info[[7]]
-          mh_proposal_number = new_block_info[[8]]
-          independent_mh_proposal_number = new_block_info[[9]]
-          m_proposal_number = new_block_info[[10]]
-          data_number = new_block_info[[11]]
-          method_number = new_block_info[[12]]
+          transition_model_number = new_block_info[[7]]
+          importance_proposal_number = new_block_info[[8]]
+          mh_proposal_number = new_block_info[[9]]
+          independent_mh_proposal_number = new_block_info[[10]]
+          m_proposal_number = new_block_info[[11]]
+          transition_proposal_number = new_block_info[[12]]
+          data_number = new_block_info[[13]]
+          method_number = new_block_info[[14]]
 
         }
       }
