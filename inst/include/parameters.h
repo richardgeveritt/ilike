@@ -467,7 +467,7 @@ inline arma::mat Parameters::operator[](const std::string &variable) const
   if (found != this->vector_parameters.end())
     return(*found->second.first);
   else
-    Rcpp::stop("Parameters::operator[]: variable not found in Parameters.");
+    Rcpp::stop("Parameters::operator[]: variable '" + variable + "' not found in Parameters.");
 }
 
 inline arma::colvec Parameters::operator[](const std::vector<std::string> &variables) const
