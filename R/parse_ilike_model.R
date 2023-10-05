@@ -3287,6 +3287,8 @@ parse_ilike_model <- function(filename,
       blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,external_packages,julia_bin_dir,julia_required_libraries)
       in_block = FALSE
       starting_block_flag = TRUE
+      is_custom = FALSE
+      block_code = ""
     }
     else if (nchar(line)>=8)
     {
