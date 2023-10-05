@@ -230,10 +230,36 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
         }
       }
     }
+    # else if (block_name %in% file_likelihood_function_types)
+    # {
+    #   # factor is complete
+    #   if ( ("importance_sample" %in% names(current_factor_info)) && (block_name=="importance_sample") )
+    #   {
+    #     print_factor_info(factor_number,blocks,line_counter-1)
+    #     factor_number = factor_number + 1
+    #   }
+    #   else if ( ("smc_mcmc_move" %in% names(current_factor_info)) && (block_name=="smc_mcmc_move") )
+    #   {
+    #     print_factor_info(factor_number,blocks,line_counter-1)
+    #     factor_number = factor_number + 1
+    #   }
+    #
+    #   # If any of the existing parts of the factor are of a completely different type to the block_name then make a new factor.
+    #   all_other_names = setdiff(all_names,file_likelihood_function_types)
+    #   for (i in 1:length(current_factor_names))
+    #   {
+    #     if ( current_factor_names[i] %in% all_other_names)
+    #     {
+    #       print_factor_info(factor_number,blocks,line_counter-1)
+    #       factor_number = factor_number + 1
+    #       break
+    #     }
+    #   }
+    # }
     else if (block_name %in% sbi_likelihood_function_types)
     {
       # factor is complete
-      if ( ("simulate_model" %in% names(current_factor_info)) && (block_name=="simulate_model") )
+      if ( ("simulate_data_model" %in% names(current_factor_info)) && (block_name=="simulate_data_model") )
       {
         print_factor_info(factor_number,blocks,line_counter-1)
         factor_number = factor_number + 1
@@ -264,17 +290,17 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
     else if (block_name %in% linear_gaussian_data_model_types)
     {
       # factor is complete
-      if ( ("data_model" %in% names(current_factor_info)) && (block_name=="data_model") )
+      if ( ("linear_gaussian_data_model" %in% names(current_factor_info)) && (block_name=="linear_gaussian_data_model") )
       {
         print_factor_info(factor_number,blocks,line_counter-1)
         factor_number = factor_number + 1
       }
-      else if ( ("data_matrix" %in% names(current_factor_info)) && (block_name=="data_matrix") )
+      else if ( ("linear_gaussian_data_matrix" %in% names(current_factor_info)) && (block_name=="linear_gaussian_data_matrix") )
       {
         print_factor_info(factor_number,blocks,line_counter-1)
         factor_number = factor_number + 1
       }
-      else if ( ("data_covariance" %in% names(current_factor_info)) && (block_name=="data_covariance") )
+      else if ( ("linear_gaussian_data_covariance" %in% names(current_factor_info)) && (block_name=="linear_gaussian_data_covariance") )
       {
         print_factor_info(factor_number,blocks,line_counter-1)
         factor_number = factor_number + 1
@@ -295,17 +321,17 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
     else if (block_name %in% nonlinear_gaussian_data_model_types)
     {
       # factor is complete
-      if ( ("data_model" %in% names(current_factor_info)) && (block_name=="data_model") )
+      if ( ("nonlinear_gaussian_data_model" %in% names(current_factor_info)) && (block_name=="nonlinear_gaussian_data_model") )
       {
         print_factor_info(factor_number,blocks,line_counter-1)
         factor_number = factor_number + 1
       }
-      else if ( ("data_function" %in% names(current_factor_info)) && (block_name=="data_function") )
+      else if ( ("nonlinear_gaussian_data_function" %in% names(current_factor_info)) && (block_name=="nonlinear_gaussian_data_function") )
       {
         print_factor_info(factor_number,blocks,line_counter-1)
         factor_number = factor_number + 1
       }
-      else if ( ("data_covariance" %in% names(current_factor_info)) && (block_name=="data_covariance") )
+      else if ( ("nonlinear_gaussian_data_covariance" %in% names(current_factor_info)) && (block_name=="nonlinear_gaussian_data_covariance") )
       {
         print_factor_info(factor_number,blocks,line_counter-1)
         factor_number = factor_number + 1
@@ -341,11 +367,11 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
   return(factor_number)
 }
 
-transition_model_processing = function(transition_model_number,blocks,block_name,linear_gaussian_transition_model_types,nonlinear_gaussian_transition_model_types,custom_transition_model_types,line_counter)
+transition_model_processing = function(transition_model_number,blocks,block_name,ilike_transition_model_types,linear_gaussian_transition_model_types,nonlinear_gaussian_transition_model_types,custom_transition_model_types,line_counter)
 {
   # Is this a continuation of the current transition_model, or a new one?
 
-  all_names = c(linear_gaussian_transition_model_types,nonlinear_gaussian_transition_model_types,custom_transition_model_typess)
+  all_names = c(ilike_transition_model_types,linear_gaussian_transition_model_types,nonlinear_gaussian_transition_model_types,custom_transition_model_typess)
 
   # Get the current transition_model info.
   if ("transition_model" %in% names(blocks))
@@ -354,7 +380,28 @@ transition_model_processing = function(transition_model_number,blocks,block_name
 
     current_transition_model_names = names(current_transition_model_info)
 
-    if (block_name %in% custom_transition_model_function_types)
+    if (block_name %in% ilike_transition_model_function_types)
+    {
+      # transition_model is complete
+      if ( ("transition_model" %in% names(current_transition_model_info)) && (block_name=="transition_model") )
+      {
+        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        transition_model_number = transition_model_number + 1
+      }
+
+      # If any of the existing parts of the transition_model are of a completely different type to the block_name then make a new transition_model.
+      all_other_names = setdiff(all_names,ilike_likelihood_function_types)
+      for (i in 1:length(current_transition_model_names))
+      {
+        if ( current_transition_model_names[i] %in% all_other_names)
+        {
+          print_transition_model_info(transition_model_number,blocks,line_counter-1)
+          transition_model_number = transition_model_number + 1
+          break
+        }
+      }
+    }
+    else if (block_name %in% custom_transition_model_function_types)
     {
       # transition_model is complete
       if ( ("evaluate_log_transition_model" %in% names(current_transition_model_info)) && (block_name=="evaluate_log_transition_model") )
@@ -362,7 +409,7 @@ transition_model_processing = function(transition_model_number,blocks,block_name
         print_transition_model_info(transition_model_number,blocks,line_counter-1)
         transition_model_number = transition_model_number + 1
       }
-      else if ( ("evaluate_gradient_log_likelihood" %in% names(current_transition_model_info)) && (block_name=="evaluate_gradient_log_likelihood") )
+      else if ( ("simulate_transition_model" %in% names(current_transition_model_info)) && (block_name=="simulate_transition_model") )
       {
         print_transition_model_info(transition_model_number,blocks,line_counter-1)
         transition_model_number = transition_model_number + 1
@@ -380,27 +427,27 @@ transition_model_processing = function(transition_model_number,blocks,block_name
         }
       }
     }
-    else if (block_name %in% linear_gaussian_data_model_types)
+    else if (block_name %in% linear_gaussian_transition_model_types)
     {
       # transition_model is complete
-      if ( ("data_model" %in% names(current_transition_model_info)) && (block_name=="data_model") )
+      if ( ("linear_gaussian_transition_model" %in% names(current_transition_model_info)) && (block_name=="linear_gaussian_transition_model") )
       {
         print_transition_model_info(transition_model_number,blocks,line_counter-1)
         transition_model_number = transition_model_number + 1
       }
-      else if ( ("data_matrix" %in% names(current_transition_model_info)) && (block_name=="data_matrix") )
+      else if ( ("linear_gaussian_transition_matrix" %in% names(current_transition_model_info)) && (block_name=="linear_gaussian_transition_matrix") )
       {
         print_transition_model_info(transition_model_number,blocks,line_counter-1)
         transition_model_number = transition_model_number + 1
       }
-      else if ( ("data_covariance" %in% names(current_transition_model_info)) && (block_name=="data_covariance") )
+      else if ( ("linear_gaussian_transition_covariance" %in% names(current_transition_model_info)) && (block_name=="linear_gaussian_transition_covariance") )
       {
         print_transition_model_info(transition_model_number,blocks,line_counter-1)
         transition_model_number = transition_model_number + 1
       }
 
       # If any of the existing parts of the transition_model are of a completely different type to the block_name then make a new transition_model.
-      all_other_names = setdiff(all_names,linear_gaussian_data_model_types)
+      all_other_names = setdiff(all_names,linear_gaussian_transition_model_types)
       for (i in 1:length(current_transition_model_names))
       {
         if ( current_transition_model_names[i] %in% all_other_names)
@@ -411,27 +458,27 @@ transition_model_processing = function(transition_model_number,blocks,block_name
         }
       }
     }
-    else if (block_name %in% nonlinear_gaussian_data_model_types)
+    else if (block_name %in% nonlinear_gaussian_transition_model_types)
     {
       # transition_model is complete
-      if ( ("data_model" %in% names(current_transition_model_info)) && (block_name=="data_model") )
+      if ( ("nonlinear_gaussian_transition_model" %in% names(current_transition_model_info)) && (block_name=="nonlinear_gaussian_transition_model") )
       {
         print_transition_model_info(transition_model_number,blocks,line_counter-1)
         transition_model_number = transition_model_number + 1
       }
-      else if ( ("data_function" %in% names(current_transition_model_info)) && (block_name=="data_function") )
+      else if ( ("nonlinear_gaussian_transition_function" %in% names(current_transition_model_info)) && (block_name=="nonlinear_gaussian_transition_function") )
       {
         print_transition_model_info(transition_model_number,blocks,line_counter-1)
         transition_model_number = transition_model_number + 1
       }
-      else if ( ("data_covariance" %in% names(current_transition_model_info)) && (block_name=="data_covariance") )
+      else if ( ("nonlinear_gaussian_transition_covariance" %in% names(current_transition_model_info)) && (block_name=="nonlinear_gaussian_transition_covariance") )
       {
         print_transition_model_info(transition_model_number,blocks,line_counter-1)
         transition_model_number = transition_model_number + 1
       }
 
       # If any of the existing parts of the transition_model are of a completely different type to the block_name then make a new transition_model.
-      all_other_names = setdiff(all_names,nonlinear_gaussian_data_model_types)
+      all_other_names = setdiff(all_names,nonlinear_gaussian_transition_model_types)
       for (i in 1:length(current_transition_model_names))
       {
         if ( current_transition_model_names[i] %in% all_other_names)
@@ -458,6 +505,74 @@ transition_model_processing = function(transition_model_number,blocks,block_name
   }
 
   return(transition_model_number)
+}
+
+potential_function_processing = function(transition_model_number,blocks,block_name,custom_potential_function_types,ilike_potential_function_types,line_counter)
+{
+  # Is this a continuation of the current potential_function, or a new one?
+
+  all_names = c(custom_potential_function_types,ilike_potential_function_types)
+
+  # Get the current potential_function info.
+  if ("potential_function" %in% names(blocks))
+  {
+    current_potential_function_info = blocks[["potential_function"]][[potential_function_number]]
+
+    current_potential_function_names = names(current_potential_function_info)
+
+    if (block_name %in% ilike_potential_function_function_types)
+    {
+      # potential_function is complete
+      if ( ("potential_function" %in% names(current_potential_function_info)) && (block_name=="potential_function") )
+      {
+        print_potential_function_info(potential_function_number,blocks,line_counter-1)
+        potential_function_number = potential_function_number + 1
+      }
+
+      # If any of the existing parts of the potential_function are of a completely different type to the block_name then make a new potential_function.
+      all_other_names = setdiff(all_names,ilike_likelihood_function_types)
+      for (i in 1:length(current_potential_function_names))
+      {
+        if ( current_potential_function_names[i] %in% all_other_names)
+        {
+          print_potential_function_info(potential_function_number,blocks,line_counter-1)
+          potential_function_number = potential_function_number + 1
+          break
+        }
+      }
+    }
+    if (block_name %in% custom_potential_function_function_types)
+    {
+      # potential_function is complete
+      if ( ("evaluate_log_potential_function" %in% names(current_potential_function_info)) && (block_name=="evaluate_log_potential_function") )
+      {
+        print_potential_function_info(potential_function_number,blocks,line_counter-1)
+        potential_function_number = potential_function_number + 1
+      }
+
+      # If any of the existing parts of the potential_function are of a completely different type to the block_name then make a new potential_function.
+      all_other_names = setdiff(all_names,custom_likelihood_function_types)
+      for (i in 1:length(current_potential_function_names))
+      {
+        if ( current_potential_function_names[i] %in% all_other_names)
+        {
+          print_potential_function_info(potential_function_number,blocks,line_counter-1)
+          potential_function_number = potential_function_number + 1
+          break
+        }
+      }
+    }
+    else
+    {
+      stop(paste("Invalid block: ",block_name,'.',sep=""))
+    }
+  }
+  else
+  {
+    potential_function_number = potential_function_number + 1
+  }
+
+  return(potential_function_number)
 }
 
 data_processing = function(data_number,line_counter)
@@ -496,7 +611,7 @@ importance_proposal_processing = function(importance_proposal_number,blocks,bloc
 
       if (block_name=="importance_proposal")
       {
-        stop(paste("Invalid file: line ",line_counter,', importance_proposal specified, but previous importance proposal block is incomplete (did you specify both evaluate_log_importance_proposal and simulate_importance_proposal?',sep=""))
+        stop(paste("Invalid file: line ",line_counter,', importance_proposal specified, but previous importance proposal block is incomplete (did you specify both evaluate_log_importance_proposal and simulate_importance_proposal?)',sep=""))
       }
 
     }
@@ -524,18 +639,30 @@ mh_proposal_processing = function(mh_proposal_number,blocks,block_name,line_coun
       print_mh_proposal_info(mh_proposal_number,blocks,line_counter-1)
       mh_proposal_number = mh_proposal_number + 1
     }
-    else if ( ("evaluate_log_mh_proposal" %in% names(current_mh_proposal_info)) || ("simulate_mh_proposal" %in% names(current_mh_proposal_info)) )
+    else if ( ("evaluate_log_mh_proposal" %in% names(current_mh_proposal_info)) || ("simulate_mh_proposal" %in% names(current_mh_proposal_info)) || ("mh_transform" %in% names(current_mh_proposal_info)) || ("mh_inverse_transform" %in% names(current_mh_proposal_info)) || ("mh_transform_jacobian_matrix" %in% names(current_mh_proposal_info)) )
     {
-      # mh_proposal is complete
-      if ( ("evaluate_log_mh_proposal" %in% names(current_mh_proposal_info)) && ("simulate_mh_proposal" %in% names(current_mh_proposal_info)) )
+      if ( ("mh_transform" %in% names(current_mh_proposal_info)) || ("mh_inverse_transform" %in% names(current_mh_proposal_info)) || ("mh_transform_jacobian_matrix" %in% names(current_mh_proposal_info)) )
       {
-        print_mh_proposal_info(mh_proposal_number,blocks,line_counter-1)
-        mh_proposal_number = mh_proposal_number + 1
+        # mh_proposal is complete
+        if ( ("evaluate_log_mh_proposal" %in% names(current_mh_proposal_info)) && ("simulate_mh_proposal" %in% names(current_mh_proposal_info)) && ("mh_transform" %in% names(current_mh_proposal_info)) && ("mh_inverse_transform" %in% names(current_mh_proposal_info)) && ("mh_transform_jacobian_matrix" %in% names(current_mh_proposal_info)) )
+        {
+          print_mh_proposal_info(mh_proposal_number,blocks,line_counter-1)
+          mh_proposal_number = mh_proposal_number + 1
+        }
+      }
+      else
+      {
+        # mh_proposal is complete
+        if ( ("evaluate_log_mh_proposal" %in% names(current_mh_proposal_info)) && ("simulate_mh_proposal" %in% names(current_mh_proposal_info)) )
+        {
+          print_mh_proposal_info(mh_proposal_number,blocks,line_counter-1)
+          mh_proposal_number = mh_proposal_number + 1
+        }
       }
 
       if (block_name=="mh_proposal")
       {
-        stop(paste("Invalid file: line ",line_counter,', mh_proposal specified, but previous importance proposal block is incomplete (did you specify both evaluate_log_mh_proposal and simulate_mh_proposal?',sep=""))
+        stop(paste("Invalid file: line ",line_counter,', mh_proposal specified, but previous importance proposal block is incomplete (did you specify both evaluate_log_mh_proposal and simulate_mh_proposal, and if proposing on a transformed space, the transform, inverse transform and jacobian_matrix?)',sep=""))
       }
 
     }
@@ -563,18 +690,30 @@ independent_mh_proposal_processing = function(independent_mh_proposal_number,blo
       print_independent_mh_proposal_info(independent_mh_proposal_number,blocks,line_counter-1)
       independent_mh_proposal_number = independent_mh_proposal_number + 1
     }
-    else if ( ("evaluate_log_independent_mh_proposal" %in% names(current_independent_mh_proposal_info)) || ("simulate_independent_mh_proposal" %in% names(current_independent_mh_proposal_info)) )
+    else if ( ("evaluate_log_independent_mh_proposal" %in% names(current_independent_mh_proposal_info)) || ("simulate_independent_mh_proposal" %in% names(current_independent_mh_proposal_info)) || ("independent_mh_transform" %in% names(current_mh_independent_proposal_info)) || ("independent_mh_inverse_transform" %in% names(current_mh_independent_proposal_info)) || ("independent_mh_transform_jacobian_matrix" %in% names(current_mh_independent_proposal_info)) )
     {
-      # independent_mh_proposal is complete
-      if ( ("evaluate_log_independent_mh_proposal" %in% names(current_independent_mh_proposal_info)) && ("simulate_independent_mh_proposal" %in% names(current_independent_mh_proposal_info)) )
+      if ( ("independent_mh_transform" %in% names(current_independent_mh_proposal_info)) || ("independent_mh_inverse_transform" %in% names(current_independent_mh_proposal_info)) || ("independent_mh_transform_jacobian_matrix" %in% names(current_independent_mh_proposal_info)) )
       {
-        print_independent_mh_proposal_info(independent_mh_proposal_number,blocks,line_counter-1)
-        independent_mh_proposal_number = independent_mh_proposal_number + 1
+        # independent_mh_proposal is complete
+        if ( ("evaluate_log_independent_mh_proposal" %in% names(current_independent_mh_proposal_info)) && ("simulate_independent_mh_proposal" %in% names(current_independent_mh_proposal_info)) && ("independent_mh_transform" %in% names(current_independent_mh_proposal_info)) && ("independent_mh_inverse_transform" %in% names(current_independent_mh_proposal_info)) && ("independent_mh_transform_jacobian_matrix" %in% names(current_independent_mh_proposal_info)) )
+        {
+          print_independent_mh_proposal_info(independent_mh_proposal_number,blocks,line_counter-1)
+          independent_mh_proposal_number = independent_mh_proposal_number + 1
+        }
+      }
+      else
+      {
+        # independent_mh_proposal is complete
+        if ( ("evaluate_log_independent_mh_proposal" %in% names(current_independent_mh_proposal_info)) && ("simulate_independent_mh_proposal" %in% names(current_independent_mh_proposal_info)) )
+        {
+          print_independent_mh_proposal_info(independent_mh_proposal_number,blocks,line_counter-1)
+          independent_mh_proposal_number = independent_mh_proposal_number + 1
+        }
       }
 
       if (block_name=="independent_mh_proposal")
       {
-        stop(paste("Invalid file: line ",line_counter,', independent_mh_proposal specified, but previous importance proposal block is incomplete (did you specify both evaluate_log_independent_mh_proposal and simulate_independent_mh_proposal?',sep=""))
+        stop(paste("Invalid file: line ",line_counter,', independent_mh_proposal specified, but previous importance proposal block is incomplete (did you specify both evaluate_log_independent_mh_proposal and simulate_independent_mh_proposaland if proposing on a transformed space, the transform, inverse transform and jacobian_matrix?)',sep=""))
       }
 
     }
@@ -602,10 +741,32 @@ m_proposal_processing = function(m_proposal_number,blocks,block_name,line_counte
       print_m_proposal_info(m_proposal_number,blocks,line_counter-1)
       m_proposal_number = m_proposal_number + 1
     }
-    else if ("simulate_m_proposal" %in% names(current_m_proposal_info))
+    else if ( ("simulate_m_proposal" %in% names(current_m_proposal_info)) || ("m_transform" %in% names(current_m_proposal_info)) || ("m_inverse_transform" %in% names(current_m_proposal_info)) || ("m_transform_jacobian_matrix" %in% names(current_m_proposal_info)) )
     {
-      print_m_proposal_info(m_proposal_number,blocks,line_counter-1)
-      m_proposal_number = m_proposal_number + 1
+      if ( ("m_transform" %in% names(current_m_proposal_info)) || ("m_inverse_transform" %in% names(current_m_proposal_info)) || ("m_transform_jacobian_matrix" %in% names(current_m_proposal_info)) )
+      {
+        # m_proposal is complete
+        if ( ("simulate_m_proposal" %in% names(current_m_proposal_info)) && ("m_transform" %in% names(current_m_proposal_info)) && ("m_inverse_transform" %in% names(current_m_proposal_info)) && ("m_transform_jacobian_matrix" %in% names(current_m_proposal_info)) )
+        {
+          print_m_proposal_info(m_proposal_number,blocks,line_counter-1)
+          m_proposal_number = m_proposal_number + 1
+        }
+      }
+      else
+      {
+        # m_proposal is complete
+        if ( ("simulate_m_proposal" %in% names(current_m_proposal_info)) )
+        {
+          print_m_proposal_info(m_proposal_number,blocks,line_counter-1)
+          m_proposal_number = m_proposal_number + 1
+        }
+      }
+
+      if (block_name=="m_proposal")
+      {
+        stop(paste("Invalid file: line ",line_counter,', m_proposal specified, but previous importance proposal block is incomplete (did you specify simulate_m_proposal,and if proposing on a transformed space, the transform, inverse transform and jacobian_matrix?)',sep=""))
+      }
+
     }
   }
   else
@@ -642,7 +803,7 @@ transition_proposal_processing = function(transition_proposal_number,blocks,bloc
 
       if (block_name=="transition_proposal")
       {
-        stop(paste("Invalid file: line ",line_counter,', transition_proposal specified, but previous importance proposal block is incomplete (did you specify both evaluate_log_transition_proposal and simulate_transition_proposal?',sep=""))
+        stop(paste("Invalid file: line ",line_counter,', transition_proposal specified, but previous importance proposal block is incomplete (did you specify both evaluate_log_transition_proposal and simulate_transition_proposal?)',sep=""))
       }
 
     }
@@ -653,6 +814,59 @@ transition_proposal_processing = function(transition_proposal_number,blocks,bloc
   }
 
   return(transition_proposal_number)
+}
+
+enk_transform_processing = function(enk_transform_number,blocks,block_name,line_counter)
+{
+  # Is this a continuation of the current enk_transform, or a new one?
+
+  # Get the current enk_transform info.
+  if ("enk_transform" %in% names(blocks))
+  {
+    current_enk_transform_info = blocks[["enk_transform"]][[enk_transform_number]]
+
+    if ("enk_transform" %in% names(current_enk_transform_info))
+    {
+      # enk_transform is complete
+      print_enk_transform_info(enk_transform_number,blocks,line_counter-1)
+      enk_transform_number = enk_transform_number + 1
+    }
+    else if ( ("enk_transform" %in% names(current_enk_transform_info)) || ("enk_inverse_transform" %in% names(current_enk_transform_info)) )
+    {
+      # enk_transform is complete
+      if ( ("enk_transform" %in% names(current_enk_transform_info)) && ("enk_inverse_transform" %in% names(current_enk_transform_info)) )
+      {
+        print_enk_transform_info(enk_transform_number,blocks,line_counter-1)
+        enk_transform_number = enk_transform_number + 1
+      }
+
+      if (block_name=="enk_transform")
+      {
+        stop(paste("Invalid file: line ",line_counter,', enk_transform specified, but previous importance proposal block is incomplete (did you specify both enk_transform and enk_inverse_transform?)',sep=""))
+      }
+
+    }
+  }
+  else
+  {
+    enk_transform_number = enk_transform_number + 1
+  }
+
+  return(enk_transform_number)
+}
+
+reinforce_gradient_processing = function(reinforce_gradient_number,blocks,block_name,line_counter)
+{
+  # if (reinforce_gradient_number!=0)
+  # {
+  #   stop(paste("Invalid file: line ",line_counter,', reinforce_gradient already specified.',sep=""))
+  # }
+  if (reinforce_gradient_number>0)
+  {
+    print_reinforce_gradient_info(reinforce_gradient_number,blocks,line_counter-1)
+  }
+  reinforce_gradient_number = reinforce_gradient_number + 1
+  return(reinforce_gradient_number)
 }
 
 method_processing = function(method_number,blocks,block_name,line_counter)
@@ -697,6 +911,21 @@ print_transition_model_info = function(transition_model_index,blocks,line_counte
     transition_model_info_string = substr(transition_model_info_string,3,nchar(transition_model_info_string))
   }
   print(paste('Transition model ends on line ',line_counter,'. Contains ',transition_model_info_string,'.',sep = ""))
+}
+
+print_potential_function_info = function(potential_function_index,blocks,line_counter)
+{
+  potential_function_info_string = ""
+  last_potential_function_names = names(blocks[["potential_function"]][[potential_function_index]])
+  for (j in 1:length(last_potential_function_names))
+  {
+    potential_function_info_string = paste(potential_function_info_string,last_potential_function_names[j],sep=", ")
+  }
+  if (nchar(potential_function_info_string)>2)
+  {
+    potential_function_info_string = substr(potential_function_info_string,3,nchar(potential_function_info_string))
+  }
+  print(paste('Potential function ends on line ',line_counter,'. Contains ',potential_function_info_string,'.',sep = ""))
 }
 
 print_importance_proposal_info = function(importance_proposal_index,blocks,line_counter)
@@ -774,6 +1003,36 @@ print_transition_proposal_info = function(transition_proposal_index,blocks,line_
   print(paste('transition_proposal ends on line ',line_counter,'. Contains ',transition_proposal_info_string,'.',sep = ""))
 }
 
+print_enk_transform_info = function(enk_transform_index,blocks,line_counter)
+{
+  enk_transform_info_string = ""
+  last_enk_transform_names = names(blocks[["enk_transform"]][[enk_transform_index]])
+  for (j in 1:length(last_enk_transform_names))
+  {
+    enk_transform_info_string = paste(enk_transform_info_string,last_enk_transform_names[j],sep=", ")
+  }
+  if (nchar(enk_transform_info_string)>2)
+  {
+    enk_transform_info_string = substr(enk_transform_info_string,3,nchar(enk_transform_info_string))
+  }
+  print(paste('enk_transform ends on line ',line_counter,'. Contains ',enk_transform_info_string,'.',sep = ""))
+}
+
+print_reinforce_gradient_info = function(reinforce_gradient_index,blocks,line_counter)
+{
+  reinforce_gradient_info_string = ""
+  last_reinforce_gradient_names = names(blocks[["reinforce_gradient"]][[reinforce_gradient_index]])
+  for (j in 1:length(last_reinforce_gradient_names))
+  {
+    reinforce_gradient_info_string = paste(reinforce_gradient_info_string,last_reinforce_gradient_names[j],sep=", ")
+  }
+  if (nchar(reinforce_gradient_info_string)>2)
+  {
+    reinforce_gradient_info_string = substr(reinforce_gradient_info_string,3,nchar(reinforce_gradient_info_string))
+  }
+  print(paste('reinforce_gradient ends on line ',line_counter,'. Contains ',reinforce_gradient_info_string,'.',sep = ""))
+}
+
 print_method_info = function(method_index,blocks,line_counter)
 {
   method_info_string = ""
@@ -789,7 +1048,22 @@ print_method_info = function(method_index,blocks,line_counter)
   print(paste('Method ends on line ',line_counter,'. Contains ',method_info_string,'.',sep = ""))
 }
 
-determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,importance_proposal_number,mh_proposal_number,independent_mh_proposal_number,m_proposal_number,transition_proposal_number,data_number,method_number)
+print_data_info = function(data_index,blocks,line_counter)
+{
+  data_info_string = ""
+  last_data_names = names(blocks[["data"]][[data_index]])
+  for (j in 1:length(last_data_names))
+  {
+    data_info_string = paste(data_info_string,last_data_names[j],sep=", ")
+  }
+  if (nchar(data_info_string)>2)
+  {
+    data_info_string = substr(data_info_string,3,nchar(data_info_string))
+  }
+  print(paste('data ends on line ',line_counter,'. Contains ',data_info_string,'.',sep = ""))
+}
+
+determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,potential_function_number,importance_proposal_number,mh_proposal_number,independent_mh_proposal_number,m_proposal_number,enk_transform_number,transition_proposal_number,data_number,method_number)
 {
   if (length(split_block_name)==1)
   {
@@ -810,22 +1084,29 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
 
   prior_function_types = c("prior","evaluate_log_prior","simulate_prior","evaluate_gradient_log_prior","evaluate_second_gradient_log_prior")
   custom_likelihood_function_types = c("evaluate_log_likelihood","evaluate_gradient_log_likelihood","evaluate_second_gradient_log_likelihood")
+  #file_likelihood_types = c("importance_sample","smc_mcmc_move")
   sbi_likelihood_function_types = c("simulate_data_model","sbi_likelihood","summary_statistics")
-  linear_gaussian_data_model_types = c("data_model","data_matrix","data_covariance")
-  nonlinear_gaussian_data_model_types = c("data_model","data_function","data_covariance")
+  linear_gaussian_data_model_types = c("linear_gaussian_data_model","linear_gaussian_data_matrix","linear_gaussian_data_covariance")
+  nonlinear_gaussian_data_model_types = c("nonlinear_gaussian_data_model","nonlinear_gaussian_data_function","nonlinear_gaussian_data_covariance")
   other_likelihood_function_types = c("likelihood")
   factor_function_types = c(prior_function_types,custom_likelihood_function_types,sbi_likelihood_function_types,linear_gaussian_data_model_types,nonlinear_gaussian_data_model_types,other_likelihood_function_types)
-  linear_gaussian_transition_model_types = c("transition_model","transition_matrix","transition_covariance")
-  nonlinear_gaussian_transition_model_types = c("transition_model","transition_function","transition_covariance")
+  ilike_transition_model_types = c("transition_model")
+  linear_gaussian_transition_model_types = c("linear_gaussian_transition_model","linear_gaussian_transition_matrix","linear_gaussian_transition_covariance")
+  nonlinear_gaussian_transition_model_types = c("nonlinear_gaussian_transition_model","nonlinear_gaussian_transition_function","nonlinear_gaussian_transition_covariance")
   custom_transition_model_types = c("simulate_transition_model","evaluate_log_transition_model")
-  transition_model_types = c(linear_gaussian_transition_model_types,nonlinear_gaussian_transition_model_types,custom_transition_model_types)
+  transition_model_types = c(ilike_transition_model_types,linear_gaussian_transition_model_types,nonlinear_gaussian_transition_model_types,custom_transition_model_types)
+  custom_potential_function_types = c("evaluate_log_potential_function")
+  ilike_potential_function_types = c("potential_function")
+  potential_function_types = c(custom_potential_function_types,ilike_potential_function_types)
   data_function_types = c("data")
   importance_proposal_types = c("simulate_importance_proposal","evaluate_log_importance_proposal")
-  mh_proposal_types = c("simulate_mh_proposal","evaluate_log_mh_proposal","mh_proposal")
-  independent_mh_proposal_types = c("simulate_independent_mh_proposal","evaluate_log_independent_mh_proposal","independent_mh_proposal")
-  m_proposal_types = c("simulate_m_proposal","m_proposal")
+  mh_proposal_types = c("simulate_mh_proposal","evaluate_log_mh_proposal","mh_proposal","mh_transform","mh_inverse_transform","mh_transform_jacobian_matrix")
+  independent_mh_proposal_types = c("simulate_independent_mh_proposal","evaluate_log_independent_mh_proposal","independent_mh_proposal","independent_mh_transform","independent_mh_inverse_transform","independent_mh_transform_jacobian_matrix")
+  m_proposal_types = c("simulate_m_proposal","m_proposal","m_transform","m_inverse_transform","m_transform_jacobian_matrix")
   transition_proposal_types = c("simulate_transition_proposal","evaluate_log_transition_proposal")
-  method_function_types = c("mcmc_weights","mcmc_termination","adaptive_resampling","adaptive_target","smc_termination","smc_sequence")
+  enk_transform_types = c("enk_transform","enk_inverse_transform")
+  #reinforce_gradient = c("reinforce_gradient")
+  method_function_types = c("mcmc_weights","mcmc_termination","adaptive_resampling","adaptive_target","smc_termination","smc_sequence","reinforce_gradient")
 
   # distinguish between factor, data, etc
   if (block_name %in% factor_function_types)
@@ -837,8 +1118,14 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
   else if (block_name %in% transition_model_types)
   {
     block_type = "transition_model"
-    transition_model_number = transition_model_processing(transition_model_number,blocks,block_name,linear_gaussian_transition_model_types,nonlinear_gaussian_transition_model_types,custom_transition_model_types,line_counter)
+    transition_model_number = transition_model_processing(transition_model_number,blocks,block_name,ilike_transition_model_types,linear_gaussian_transition_model_types,nonlinear_gaussian_transition_model_types,custom_transition_model_types,line_counter)
     number_to_pass_to_extract_block = transition_model_number
+  }
+  else if (block_name %in% potential_function_types)
+  {
+    block_type = "potential_function"
+    potential_function_number = potential_function_processing(potential_function_number,blocks,block_name,custom_potential_function_types,ilike_potential_function_types,line_counter)
+    number_to_pass_to_extract_block = potential_function_number
   }
   else if (block_name %in% data_function_types)
   {
@@ -870,12 +1157,24 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
     m_proposal_number = m_proposal_processing(m_proposal_number,blocks,block_name,line_counter)
     number_to_pass_to_extract_block = m_proposal_number
   }
+  else if (block_name %in% enk_transform_types)
+  {
+    block_type = "enk_transform"
+    enk_transform_number = enk_transform_processing(enk_transform_number,blocks,block_name,line_counter)
+    number_to_pass_to_extract_block = enk_transform_number
+  }
   else if (block_name %in% transition_proposal_types)
   {
     block_type = "transition_proposal"
     transition_proposal_number = transition_proposal_processing(transition_proposal_number,blocks,block_name,line_counter)
     number_to_pass_to_extract_block = transition_proposal_number
   }
+  #else if (block_name %in% reinforce_gradient_types)
+  #{
+  #  block_type = "reinforce_gradient"
+  #  reinforce_gradient_number = reinforce_gradient_processing(reinforce_gradient_number,blocks,block_name,line_counter)
+  #  number_to_pass_to_extract_block = reinforce_gradient_number
+  #}
   else if (block_name %in% method_function_types)
   {
     block_type = "method"
@@ -894,16 +1193,18 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
               block_function,
               factor_number,
               transition_model_number,
+              potential_function_number,
               importance_proposal_number,
               mh_proposal_number,
               independent_mh_proposal_number,
               m_proposal_number,
+              enk_transform_number,
               transition_proposal_number,
               data_number,
               method_number))
 }
 
-extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,parameter_list,external_packages)
+extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,parameter_list,external_packages,julia_bin_dir,julia_required_libraries)
 {
   # Get information about the order in which MCMC moves are included.
   if ( (block_type=="mh_proposal") || (block_type=="independent_mh_proposal") || (block_type=="m_proposal") )
@@ -986,7 +1287,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
       if (is_like_function==TRUE)
       {
-        if ( (block_name=="prior") || (block_name=="importance_proposal") || (block_name=="independent_mh_proposal") || (block_name=="mh_proposal") || (block_name=="m_proposal") || (block_name=="sbi_likelihood") || (block_name=="likelihood") || (block_name=="smc_sequence") )
+        if ( (block_name=="prior") || (block_name=="importance_proposal") || (block_name=="independent_mh_proposal") || (block_name=="mh_proposal") || (block_name=="m_proposal") || (block_name=="sbi_likelihood") || (block_name=="smc_sequence") || (block_name=="linear_gaussian_transition_model") || (block_name=="nonlinear_gaussian_transition_model") || (block_name=="linear_gaussian_data_model") || (block_name=="nonlinear_gaussian_data_model") )
         {
           split_arg_string = split_string_at_comma_ignoring_parentheses(arg_string)
 
@@ -1020,7 +1321,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
 
         }
-        else if ( (block_name=="mcmc_termination") || (block_name=="adaptive_resampling") || (block_name=="adaptive_target") || (block_name=="smc_termination") )
+        else if ( (block_name=="mcmc_termination") || (block_name=="adaptive_resampling") || (block_name=="adaptive_target") || (block_name=="smc_termination") || (block_name=="reinforce_gradient") )
         {
           split_arg_string = split_string_at_comma_ignoring_parentheses(arg_string)
 
@@ -1050,6 +1351,39 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             blocks[[block_type]][[factor_number]] = append(blocks[[block_type]][[factor_number]],my_list)
           }
 
+        }
+        else if (block_name=="likelihood")
+        {
+          split_arg_string = split_string_at_comma_ignoring_parentheses(arg_string)
+
+          filename = split_arg_string[1]
+
+          parameters = list()
+          if (length(split_arg_string)>1)
+          {
+            for (k in 2:(length(split_arg_string)))
+            {
+              parameters[[k-1]] = split_arg_string[k]
+            }
+          }
+
+          my_list = list(list(type=ilike_type,
+                              model=ilike::parse_ilike_model(filename,parameter_list,external_packages,julia_bin_dir,julia_required_libraries),
+                              parameters=parameters))
+          names(my_list) = c(block_name)
+
+          if (length((blocks[[block_type]]))==0)
+          {
+            blocks[[block_type]][[factor_number]] = my_list
+          }
+          else if (factor_number!=length((blocks[[block_type]])))
+          {
+            blocks[[block_type]][[factor_number]] = my_list
+          }
+          else
+          {
+            blocks[[block_type]][[factor_number]] = append(blocks[[block_type]][[factor_number]],my_list)
+          }
         }
         else
         {
@@ -1682,11 +2016,11 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericVector output = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
         }
-        else if (block_name=="simulate_model")
+        else if (block_name=="simulate_data_model")
         {
           if (sum(which_data)>0)
           {
-            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a prior.",sep=""))
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a data_model.",sep=""))
           }
 
           if (output_variable=="")
@@ -1715,7 +2049,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
         {
           if (sum(which_parameters)>0)
           {
-            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in this function.",sep=""))
           }
 
           if (sum(which_proposed_parameters)>0)
@@ -1738,6 +2072,578 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[1] = "const Data &data"
           #args_for_typedef = "const Parameters&"
           function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Data output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+        else if (block_name=="nonlinear_gaussian_data_function")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          if (output_variable=="")
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          return_type = "Data"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Data output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+        else if (block_name=="simulate_transition_model")
+        {
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          if (output_variable=="")
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          return_type = "Parameters"
+          arguments = c()
+          arguments[1] = "RandomNumberGenerator &rng"
+          arguments[2] = "const Parameters &parameters"
+          arguments[3] = "const Data &data"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+        else if (block_name=="nonlinear_gaussian_transition_function")
+        {
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          if (output_variable=="")
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          return_type = "Parameters"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          arguments[2] = "const Data &data"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+        else if (block_name=="simulate_transition_proposal")
+        {
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          if (output_variable=="")
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          return_type = "Parameters"
+          arguments = c()
+          arguments[1] = "RandomNumberGenerator &rng"
+          arguments[2] = "const Parameters &parameters"
+          arguments[3] = "const Data &data"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+        else if (block_name=="enk_transform")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          if (output_variable=="")
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          return_type = "Parameters"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+        else if (block_name=="enk_inverse_transform")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          if (output_variable=="")
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          return_type = "Parameters"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+        else if (block_name=="linear_gaussian_data_matrix")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "arma::mat"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+        }
+        else if (block_name=="linear_gaussian_data_covariance")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "arma::mat"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+        }
+        else if (block_name=="nonlinear_gaussian_data_covariance")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "arma::mat"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+        }
+        else if (block_name=="linear_gaussian_transition_matrix")
+        {
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "arma::mat"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          arguments[2] = "const Data &data"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+        }
+        else if (block_name=="linear_gaussian_transition_covariance")
+        {
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "arma::mat"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          arguments[2] = "const Data &data"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+        }
+        else if (block_name=="nonlinear_gaussian_transition_covariance")
+        {
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "arma::mat"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          arguments[2] = "const Data &data"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+        }
+        else if (block_name=="evaluate_log_transition_model")
+        {
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "double"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          arguments[2] = "const Data &data"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return NumericVector(f(',cpp_function_arguments_string,'))[0]; return output;',sep="")
+        }
+        else if (block_name=="evaluate_log_potential_function")
+        {
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "double"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          arguments[2] = "const Data &data"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return NumericVector(f(',cpp_function_arguments_string,'))[0]; return output;',sep="")
+        }
+        else if (block_name=="evaluate_log_transition_proposal")
+        {
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "double"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          arguments[2] = "const Data &data"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return NumericVector(f(',cpp_function_arguments_string,'))[0]; return output;',sep="")
+        }
+        else if (block_name=="m_transform")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          if (output_variable=="")
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          return_type = "Parameters"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+        else if (block_name=="m_inverse_transform")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          if (output_variable=="")
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          return_type = "Parameters"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+        else if (block_name=="m_transform_jacobian_matrix")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "arma::mat"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+        }
+        else if (block_name=="mh_transform")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          if (output_variable=="")
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          return_type = "Parameters"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+        else if (block_name=="mh_inverse_transform")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          if (output_variable=="")
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          return_type = "Parameters"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+        else if (block_name=="mh_transform_jacobian_matrix")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "arma::mat"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+        }
+        else if (block_name=="independent_mh_transform")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          if (output_variable=="")
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          return_type = "Parameters"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+        else if (block_name=="independent_mh_inverse_transform")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          if (output_variable=="")
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          }
+
+          return_type = "Parameters"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+        }
+        else if (block_name=="independent_mh_transform_jacobian_ma")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "arma::mat"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          #args_for_typedef = "const Parameters&"
+          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
         }
         else
         {
@@ -1866,11 +2772,11 @@ check_types = function(blocks)
       }
     }
 
-    if ("simulate_model" %in% names(current_factor))
+    if ("simulate_data_model" %in% names(current_factor))
     {
-      if (inherits(current_factor[["simulate_model"]],"XPtr"))
+      if (inherits(current_factor[["simulate_data_model"]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[["simulate_model"]],  "Data", c("RandomNumberGenerator&","const Parameters&"))
+        RcppXPtrUtils::checkXPtr(current_factor[["simulate_data_model"]],  "Data", c("RandomNumberGenerator&","const Parameters&"))
       }
     }
 
@@ -1879,6 +2785,38 @@ check_types = function(blocks)
       if (inherits(current_factor[["summary_statistics"]],"XPtr"))
       {
         RcppXPtrUtils::checkXPtr(current_factor[["summary_statistics"]],  "Data", c("const Data&"))
+      }
+    }
+
+    if ("nonlinear_gaussian_data_function" %in% names(current_factor))
+    {
+      if (inherits(current_factor[["nonlinear_gaussian_data_function"]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_factor[["nonlinear_gaussian_data_function"]],  "Data", c("const Parameters&"))
+      }
+    }
+
+    if ("linear_gaussian_data_matrix" %in% names(current_factor))
+    {
+      if (inherits(current_factor[["linear_gaussian_data_matrix"]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_factor[["linear_gaussian_data_matrix"]],  "arma::mat", c("const Parameters&"))
+      }
+    }
+
+    if ("linear_gaussian_data_covariance" %in% names(current_factor))
+    {
+      if (inherits(current_factor[["linear_gaussian_data_covariance"]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_factor[["linear_gaussian_data_covariance"]],  "arma::mat", c("const Parameters&"))
+      }
+    }
+
+    if ("nonlinear_gaussian_data_covariance" %in% names(current_factor))
+    {
+      if (inherits(current_factor[["nonlinear_gaussian_data_covariance"]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_factor[["nonlinear_gaussian_data_covariance"]],  "arma::mat", c("const Parameters&"))
       }
     }
 
@@ -2126,6 +3064,118 @@ check_types = function(blocks)
 
   }
 
+  for (i in 1:length(blocks[["transition_model"]]))
+  {
+    current_transition_model = blocks[["transition_model"]][[i]]
+
+    if ("evaluate_log_transition_model" %in% names(current_transition_model))
+    {
+      if (inherits(current_transition_model[["evaluate_log_transition_model"]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_transition_model[["evaluate_log_transition_model"]],  "double", c("const Parameters&","const Parameters&","const Data&"))
+      }
+    }
+
+    if ("simulate_transition_model" %in% names(current_transition_model))
+    {
+      if (inherits(current_transition_model[["simulate_transition_model"]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_transition_model[["simulate_transition_model"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&"))
+      }
+    }
+
+    if ("nonlinear_gaussian_transition_function" %in% names(current_transition_model))
+    {
+      if (inherits(current_transition_model[["nonlinear_gaussian_transition_function"]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_transition_model[["nonlinear_gaussian_transition_function"]],  "Data", c("const Parameters&","const Data&"))
+      }
+    }
+
+    if ("linear_gaussian_transition_matrix" %in% names(current_transition_model))
+    {
+      if (inherits(current_transition_model[["linear_gaussian_transition_matrix"]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_transition_model[["linear_gaussian_transition_matrix"]],  "arma::mat", c("const Parameters&","const Data&"))
+      }
+    }
+
+    if ("linear_gaussian_transition_covariance" %in% names(current_transition_model))
+    {
+      if (inherits(current_transition_model[["linear_gaussian_transition_covariance"]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_transition_model[["linear_gaussian_transition_covariance"]],  "arma::mat", c("const Parameters&","const Data&"))
+      }
+    }
+
+    if ("nonlinear_gaussian_transition_covariance" %in% names(current_transition_model))
+    {
+      if (inherits(current_transition_model[["nonlinear_gaussian_transition_covariance"]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_transition_model[["nonlinear_gaussian_transition_covariance"]],  "arma::mat", c("const Parameters&","const Data&"))
+      }
+    }
+
+  }
+
+  for (i in 1:length(blocks[["transition_proposal"]]))
+  {
+    current_transition_proposal = blocks[["transition_proposal"]][[i]]
+
+    if ("evaluate_log_transition_proposal" %in% names(current_transition_proposal))
+    {
+      if (inherits(current_transition_proposal[["evaluate_log_transition_proposal"]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_transition_proposal[["evaluate_log_transition_proposal"]],  "double", c("const Parameters&","const Parameters&","const Data&"))
+      }
+    }
+
+    if ("simulate_transition_proposal" %in% names(current_transition_proposal))
+    {
+      if (inherits(current_transition_proposal[["simulate_transition_proposal"]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_transition_proposal[["simulate_transition_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&"))
+      }
+    }
+
+  }
+
+  for (i in 1:length(blocks[["enk_transform"]]))
+  {
+    current_enk_transform = blocks[["enk_transform"]][[i]]
+
+    if ("enk_transform" %in% names(current_enk_transform))
+    {
+      if (inherits(current_enk_transform[["enk_transform"]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_enk_transform[["enk_transform"]],  "Parameters", c("const Parameters&"))
+      }
+    }
+
+    if ("enk_inverse_transform" %in% names(current_enk_transform))
+    {
+      if (inherits(current_enk_transform[["enk_inverse_transform"]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_enk_transform[["enk_inverse_transform"]],  "Parameters", c("const Parameters&"))
+      }
+    }
+
+  }
+
+  for (i in 1:length(blocks[["potential_function"]]))
+  {
+    current_potential_function = blocks[["potential_function"]][[i]]
+
+    if ("evaluate_log_potential_function" %in% names(current_potential_function))
+    {
+      if (inherits(current_potential_function[["evaluate_log_potential_function"]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_potential_function[["evaluate_log_potential_function"]],  "double", c("const Parameters&","const Parameters&","const Data&"))
+      }
+    }
+
+  }
+
   if ("method" %in% names(blocks))
   {
     for (i in 1:length(blocks[["method"]]))
@@ -2206,12 +3256,15 @@ parse_ilike_model <- function(filename,
 
   factor_number = 0
   transition_model_number = 0
+  potential_function_number = 0
   importance_proposal_number = 0
   mh_proposal_number = 0
   independent_mh_proposal_number = 0
   m_proposal_number = 0
+  enk_transform_number = 0
   transition_proposal_number = 0
   data_number = 0
+  #reinforce_gradient_number = 0
   method_number = 0
   block_type = "none"
   block_name = "none"
@@ -2229,7 +3282,13 @@ parse_ilike_model <- function(filename,
       starting_block_flag = FALSE
     }
 
-    if (nchar(line)>=8)
+    if ( (nchar(line)>=3) && (substr(line, 1, 3)=="//#") )
+    {
+      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,external_packages,julia_bin_dir,julia_required_libraries)
+      in_block = FALSE
+      starting_block_flag = TRUE
+    }
+    else if (nchar(line)>=8)
     {
       if (substr(line, 1, 4)=="/***")
       {
@@ -2238,13 +3297,13 @@ parse_ilike_model <- function(filename,
           # legitimate new section
           starting_block_flag = TRUE
 
-          if (in_block==FALSE) # first block
+          if (in_block==FALSE) # first block, or previous block wrapped up using //#
           {
             in_block = TRUE
           }
           else # end current block
           {
-            blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,external_packages)
+            blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,external_packages,julia_bin_dir,julia_required_libraries)
             is_custom = FALSE
             block_code = ""
           }
@@ -2256,7 +3315,7 @@ parse_ilike_model <- function(filename,
             stop(paste("Invalid file: line ",line_counter,", new section of file needs a name: use /***name***/.",sep=""))
           }
           split_block_name = split_string_at_comma_ignoring_parentheses(unparsed_block_name)
-          new_block_info = determine_block_type(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,importance_proposal_number,mh_proposal_number,independent_mh_proposal_number,m_proposal_number,transition_proposal_number,data_number,method_number)
+          new_block_info = determine_block_type(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,potential_function_number,importance_proposal_number,mh_proposal_number,independent_mh_proposal_number,m_proposal_number,enk_transform_number,transition_proposal_number,data_number,method_number)
 
           # expect input for each block in one of the following forms:
           # (a) /***evaluate_log_prior***/, followed by a C++ function
@@ -2277,13 +3336,16 @@ parse_ilike_model <- function(filename,
           block_function = new_block_info[[5]]
           factor_number = new_block_info[[6]]
           transition_model_number = new_block_info[[7]]
-          importance_proposal_number = new_block_info[[8]]
-          mh_proposal_number = new_block_info[[9]]
-          independent_mh_proposal_number = new_block_info[[10]]
-          m_proposal_number = new_block_info[[11]]
-          transition_proposal_number = new_block_info[[12]]
-          data_number = new_block_info[[13]]
-          method_number = new_block_info[[14]]
+          potential_function_number = new_block_info[[8]]
+          importance_proposal_number = new_block_info[[9]]
+          mh_proposal_number = new_block_info[[10]]
+          independent_mh_proposal_number = new_block_info[[11]]
+          m_proposal_number = new_block_info[[12]]
+          enk_transform_number = new_block_info[[13]]
+          transition_proposal_number = new_block_info[[14]]
+          data_number = new_block_info[[15]]
+          #reinforce_gradient_number = new_block_info[[17]]
+          method_number = new_block_info[[16]]
 
         }
       }
@@ -2306,10 +3368,18 @@ parse_ilike_model <- function(filename,
     # ignore block if block number is not positive
     if (number_to_pass_to_extract_block>0)
     {
-      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,external_packages)
+      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,external_packages,julia_bin_dir,julia_required_libraries)
       if ( (factor_number!=0) && (factor_number==length(blocks[["factor"]])) )
       {
         print_factor_info(length(blocks[["factor"]]),blocks,line_counter)
+      }
+      if ( (transition_model_number!=0) && (transition_model_number==length(blocks[["transition_model"]])) )
+      {
+        print_transition_model_info(length(blocks[["transition_model"]]),blocks,line_counter)
+      }
+      if ( (potential_function_number!=0) && (potential_function_number==length(blocks[["potential_function"]])) )
+      {
+        print_potential_function_info(length(blocks[["potential_function"]]),blocks,line_counter)
       }
       if ( (importance_proposal_number!=0) && importance_proposal_number==length(blocks[["importance_proposal"]]))
       {
@@ -2327,10 +3397,27 @@ parse_ilike_model <- function(filename,
       {
         print_m_proposal_info(length(blocks[["m_proposal"]]),blocks,line_counter)
       }
+      if ( (enk_transform_number!=0) && (enk_transform_number==length(blocks[["enk_transform"]])) )
+      {
+        print_enk_transform_info(length(blocks[["enk_transform"]]),blocks,line_counter)
+      }
+      if ( (transition_proposal_number!=0) && (transition_proposal_number==length(blocks[["transition_proposal"]])) )
+      {
+        print_transition_proposal_info(length(blocks[["transition_proposal"]]),blocks,line_counter)
+      }
+      if ( (data_number!=0) && (data_number==length(blocks[["data"]])) )
+      {
+        print_data_info(length(blocks[["data"]]),blocks,line_counter)
+      }
+      #if ( (reinforce_gradient_number!=0) && (reinforce_gradient_number==length(blocks[["reinforce_gradient"]])) )
+      #{
+      #  print_reinforce_gradient_info(length(blocks[["reinforce_gradient"]]),blocks,line_counter)
+      #}
       if ( (method_number!=0) && (method_number==length(blocks[["method"]])) )
       {
         print_method_info(length(blocks[["method"]]),blocks,line_counter)
       }
+
     }
   }
 
