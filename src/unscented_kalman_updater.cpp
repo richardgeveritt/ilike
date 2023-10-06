@@ -49,7 +49,7 @@ void UnscentedKalmanUpdater::operator=(const UnscentedKalmanUpdater &another)
   this->make_copy(another);
 }
 
-KalmanUpdater* UnscentedKalmanUpdater::duplicate(void) const
+KalmanUpdater* UnscentedKalmanUpdater::duplicate() const
 {
   return( new UnscentedKalmanUpdater(*this));
 }

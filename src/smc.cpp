@@ -381,6 +381,8 @@ void SMC::setup_variables()
   
   if (this->factors!=NULL)
     this->factors->setup(dummy_parameters);
+  
+  //this->setup_moves_and_proposals();
 }
 
 void SMC::setup_variables(const Parameters &parameters)

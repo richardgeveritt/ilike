@@ -70,6 +70,7 @@ GaussianProposalInfo* GaussianProposalInfo::duplicate() const
 void GaussianProposalInfo::make_copy(const GaussianProposalInfo &another)
 {
   this->covariance = another.covariance;
+  this->A = another.A;
   this->chol = another.chol;
   this->inv = another.inv;
   this->logdet = another.logdet;
@@ -98,6 +99,7 @@ GaussianProposalInfo& GaussianProposalInfo::operator=(GaussianProposalInfo &&ano
 void GaussianProposalInfo::make_copy(GaussianProposalInfo &&another)
 {
   this->covariance = std::move(another.covariance);
+  this->A = std::move(another.A);
   this->chol = std::move(another.chol);
   this->inv = std::move(another.inv);
   this->logdet = std::move(another.logdet);
@@ -106,6 +108,7 @@ void GaussianProposalInfo::make_copy(GaussianProposalInfo &&another)
   this->scale = std::move(another.scale);
   
   another.covariance = arma::mat();
+  another.A = arma::mat();
   another.chol = arma::mat();
   another.inv = arma::mat();
   another.logdet = 0.0;
@@ -134,6 +137,11 @@ void GaussianProposalInfo::set_covariance(const arma::mat &covariance_in)
   }
 }
 
+void GaussianProposalInfo::set_A(const arma::mat &A_in)
+{
+  this->A = A_in;
+}
+
 void GaussianProposalInfo::set_covariance_info()
 {
   if ( (this->covariance.n_rows!=0) && (this->covariance.n_cols!=0) )
@@ -156,6 +164,11 @@ arma::colvec GaussianProposalInfo::get_mean() const
 arma::mat GaussianProposalInfo::get_covariance() const
 {
   return this->covariance;
+}
+
+arma::mat GaussianProposalInfo::get_A() const
+{
+  return this->A;
 }
 
 double GaussianProposalInfo::get_double_scale() const
@@ -196,6 +209,11 @@ arma::colvec& GaussianProposalInfo::get_mean()
 arma::mat& GaussianProposalInfo::get_covariance()
 {
   return this->covariance;
+}
+
+arma::mat& GaussianProposalInfo::get_A()
+{
+  return this->A;
 }
 
 double& GaussianProposalInfo::get_double_scale()

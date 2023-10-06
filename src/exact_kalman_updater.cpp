@@ -44,7 +44,7 @@ void ExactKalmanUpdater::operator=(const ExactKalmanUpdater &another)
   this->make_copy(another);
 }
 
-KalmanUpdater* ExactKalmanUpdater::duplicate(void) const
+KalmanUpdater* ExactKalmanUpdater::duplicate() const
 {
   return( new ExactKalmanUpdater(*this));
 }

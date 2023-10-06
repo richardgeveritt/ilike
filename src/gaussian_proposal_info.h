@@ -35,10 +35,12 @@ public:
   
   void set_mean(const arma::colvec &mean_in);
   void set_covariance(const arma::mat &covariance_in);
+  void set_A(const arma::mat &A_in);
   //void set_only_covariance(const arma::mat &covariance_in);
   void set_covariance_info();
   
   arma::colvec get_mean() const;
+  arma::mat get_A() const;
   arma::mat get_covariance() const;
   double get_double_scale() const;
   Scale get_scale() const;
@@ -48,6 +50,7 @@ public:
   double get_logdet() const;
   
   arma::colvec& get_mean();
+  arma::mat& get_A();
   arma::mat& get_covariance();
   double& get_double_scale();
   Scale& get_scale();
@@ -63,6 +66,7 @@ protected:
   void make_copy(GaussianProposalInfo &&another);
   
   arma::colvec mean;
+  arma::mat A;
   arma::mat covariance;
   Scale scale;
   arma::mat chol;

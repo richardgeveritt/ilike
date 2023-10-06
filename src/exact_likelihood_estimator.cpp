@@ -99,6 +99,16 @@ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in
 ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
                                                    size_t* seed_in,
                                                    Data* data_in,
+                                                   ProposalKernel* dist_in,
+                                                   bool smcfixed_flag_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
+{
+  this->numerator_likelihood_proposals.push_back(dist_in);
+}
+
+ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
+                                                   size_t* seed_in,
+                                                   Data* data_in,
                                                    EvaluateLogDistributionPtr prior_in,
                                                    EvaluateLogLikelihoodPtr llhd_in,
                                                    bool smcfixed_flag_in)
@@ -193,15 +203,6 @@ void ExactLikelihoodEstimator::operator=(const ExactLikelihoodEstimator &another
   }
   this->numerator_likelihood_factors.clear();
   
-  for (auto i=this->numerator_proposals.begin();
-       i!=this->numerator_proposals.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
-  this->numerator_proposals.clear();
-  
   LikelihoodEstimator::operator=(another);
   this->make_copy(another);
 }
@@ -237,6 +238,10 @@ void ExactLikelihoodEstimator::make_copy(const ExactLikelihoodEstimator &another
       this->numerator_likelihood_factors.push_back(NULL);
   }
   
+  this->numerator_proposals = another.numerator_proposals;
+  this->numerator_likelihood_proposals = another.numerator_likelihood_proposals;
+  
+  /*
   this->numerator_proposals.resize(0);
   this->numerator_proposals.reserve(another.numerator_proposals.size());
   for (auto i=another.numerator_proposals.begin();
@@ -248,6 +253,7 @@ void ExactLikelihoodEstimator::make_copy(const ExactLikelihoodEstimator &another
     else
       this->numerator_proposals.push_back(NULL);
   }
+  */
   //if (this->output!=NULL)
   //  this->output = another.output->duplicate();
 }
@@ -309,6 +315,17 @@ double ExactLikelihoodEstimator::evaluate(const Parameters &parameters) const
     if (result!=-arma::datum::inf)
     {
       result = result + (*i)->evaluate_independent_kernel(parameters);
+    }
+  }
+  
+  for (auto i=this->numerator_likelihood_proposals.begin();
+       i!=this->numerator_likelihood_proposals.end();
+       ++i)
+  {
+    if (result!=-arma::datum::inf)
+    {
+      result = result + (*i)->evaluate_kernel(*this->data,
+                                              parameters);
     }
   }
   

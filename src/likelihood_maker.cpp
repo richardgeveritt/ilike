@@ -82,7 +82,7 @@ ImportanceSampler* make_fixed_epsilon_lp_uniform_abc_likelihood(RandomNumberGene
                                                                 const std::string &epsilon_variable_in,
                                                                 double epsilon_in,
                                                                 SimulateModelPtr simulate_model_in,
-                                                                SummaryStatisticsPtr summary_statistics_in,
+                                                                std::shared_ptr<Transform> summary_statistics_in,
                                                                 size_t number_of_abc_simulations_in,
                                                                 bool parallel_in,
                                                                 size_t grain_size_in)
@@ -98,7 +98,7 @@ ImportanceSampler* make_fixed_epsilon_lp_uniform_abc_likelihood(RandomNumberGene
   
   IndependentProposalKernel* model_simulator = new CustomIndependentProposalKernel(simulate_model_in);
   IndependentProposalKernel* summary_model_simulator = new TransformedIndependentProposalKernel(model_simulator,
-                                                                                                Transform(summary_statistics_in),
+                                                                                                summary_statistics_in,
                                                                                                 true);
   
   return new ImportanceSampler(rng_in,
@@ -165,7 +165,7 @@ ImportanceSampler* make_varying_epsilon_lp_uniform_abc_likelihood(RandomNumberGe
                                                                   const std::vector<std::string> &summary_data_variables_in,
                                                                   const std::string &epsilon_variable_in,
                                                                   SimulateModelPtr simulate_model_in,
-                                                                  SummaryStatisticsPtr summary_statistics_in,
+                                                                  std::shared_ptr<Transform> summary_statistics_in,
                                                                   size_t number_of_abc_simulations_in,
                                                                   bool parallel_in,
                                                                   size_t grain_size_in)
@@ -181,7 +181,7 @@ ImportanceSampler* make_varying_epsilon_lp_uniform_abc_likelihood(RandomNumberGe
   
   IndependentProposalKernel* model_simulator = new CustomIndependentProposalKernel(simulate_model_in);
   IndependentProposalKernel* summary_model_simulator = new TransformedIndependentProposalKernel(model_simulator,
-                                                                                                Transform(summary_statistics_in),
+                                                                                                summary_statistics_in,
                                                                                                 false);
   
   return new ImportanceSampler(rng_in,
@@ -235,7 +235,7 @@ DensityLikelihoodEstimator* make_sl_likelihood(RandomNumberGenerator* rng_in,
                                                Data* summary_data_in,
                                                const std::vector<std::string> &summary_data_variables_in,
                                                SimulateModelPtr simulate_model_in,
-                                               SummaryStatisticsPtr summary_statistics_in,
+                                               std::shared_ptr<Transform> summary_statistics_in,
                                                size_t number_of_sl_simulations_in,
                                                bool unbiased_in,
                                                bool parallel_in,
@@ -243,7 +243,7 @@ DensityLikelihoodEstimator* make_sl_likelihood(RandomNumberGenerator* rng_in,
 {
   IndependentProposalKernel* model_simulator = new CustomIndependentProposalKernel(simulate_model_in);
   IndependentProposalKernel* summary_model_simulator = new TransformedIndependentProposalKernel(model_simulator,
-                                                                                                Transform(summary_statistics_in));
+                                                                                                summary_statistics_in);
   
   DensityEstimator* density_estimator = new GaussianDensityEstimator(summary_data_variables_in,
                                                                      unbiased_in);
@@ -318,7 +318,7 @@ ImportanceSampler* make_fixed_epsilon_lp_uniform_abc_is(RandomNumberGenerator* r
                                                         const std::string &epsilon_variable_in,
                                                         double epsilon_in,
                                                         SimulateModelPtr simulate_model_in,
-                                                        SummaryStatisticsPtr summary_statistics_in,
+                                                        std::shared_ptr<Transform> summary_statistics_in,
                                                         size_t number_of_abc_simulations_in,
                                                         bool abc_parallel_in,
                                                         size_t abc_grain_size_in,
@@ -368,7 +368,7 @@ SMCMCMCMove* make_fixed_epsilon_lp_uniform_abc_mcmc(RandomNumberGenerator* rng_i
                                                     const std::string &epsilon_variable_in,
                                                     double epsilon_in,
                                                     SimulateModelPtr simulate_model_in,
-                                                    SummaryStatisticsPtr summary_statistics_in,
+                                                    std::shared_ptr<Transform> summary_statistics_in,
                                                     size_t number_of_abc_simulations_in,
                                                     bool transform_proposed_particles,
                                                     bool abc_parallel_in,
@@ -500,7 +500,7 @@ SMCMCMCMove* make_ess_epsilon_lp_uniform_abc_is(RandomNumberGenerator* rng_in,
                                                 double target_ess_in,
                                                 size_t number_of_bisections_in,
                                                 SimulateModelPtr simulate_model_in,
-                                                SummaryStatisticsPtr summary_statistics_in,
+                                                std::shared_ptr<Transform> summary_statistics_in,
                                                 size_t number_of_abc_simulations_in,
                                                 bool transform_proposed_particles,
                                                 bool abc_parallel_in,
@@ -574,7 +574,7 @@ SMCMCMCMove* make_cess_epsilon_lp_uniform_abc_smc(RandomNumberGenerator* rng_in,
                                                   size_t number_of_iterations_for_similar_epsilon_for_termination,
                                                   double threshold_to_determine_similar_epsilon_for_termination,
                                                   SimulateModelPtr simulate_model_in,
-                                                  SummaryStatisticsPtr summary_statistics_in,
+                                                  std::shared_ptr<Transform> summary_statistics_in,
                                                   size_t number_of_abc_simulations_in,
                                                   bool transform_proposed_particles,
                                                   bool abc_parallel_in,
@@ -637,7 +637,7 @@ ImportanceSampler* make_sl_is(RandomNumberGenerator* rng_in,
                               IndependentProposalKernel* prior_in,
                               const std::vector<std::string> &summary_data_variables_in,
                               SimulateModelPtr simulate_model_in,
-                              SummaryStatisticsPtr summary_statistics_in,
+                              std::shared_ptr<Transform> summary_statistics_in,
                               size_t number_of_sl_simulations_in,
                               bool unbiased_in,
                               bool sl_parallel_in,
@@ -683,7 +683,7 @@ SMCMCMCMove* make_sl_mcmc(RandomNumberGenerator* rng_in,
                           DistributionFactor* prior_in,
                           const std::vector<std::string> &summary_data_variables_in,
                           SimulateModelPtr simulate_model_in,
-                          SummaryStatisticsPtr summary_statistics_in,
+                          std::shared_ptr<Transform> summary_statistics_in,
                           size_t number_of_sl_simulations_in,
                           bool unbiased_in,
                           bool transform_proposed_particles,
@@ -748,7 +748,7 @@ SMCMCMCMove* make_cess_annealing_sl_smc(RandomNumberGenerator* rng_in,
                                         double annealing_desired_cess_in,
                                         size_t number_of_bisections_in,
                                         SimulateModelPtr simulate_model_in,
-                                        SummaryStatisticsPtr summary_statistics_in,
+                                        std::shared_ptr<Transform> summary_statistics_in,
                                         size_t number_of_sl_simulations_in,
                                         bool unbiased_in,
                                         bool transform_proposed_particles,
@@ -840,7 +840,7 @@ LikelihoodEstimator* make_likelihood_estimator(const List &model,
   //   EvaluateLogABCKernelPtr evaluate_log_abc_kernel = load_evaluate_log_abc_kernel(evaluate_log_abc_kernel_SEXP);
   //
   //   SEXP summary_statistics_SEXP = algorithm["summary_statistics"];
-  //   SummaryStatisticsPtr summary_statistics = load_summary_statistics(summary_statistics_SEXP);
+  //   std::shared_ptr<Transform> summary_statistics = load_summary_statistics(summary_statistics_SEXP);
   //
   //   double abc_tolerance = algorithm["abc_tolerance"];
   //

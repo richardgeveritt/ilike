@@ -69,7 +69,7 @@ public:
   
   EnsembleKalmanInversion(const EnsembleKalmanInversion &another);
   
-  virtual ~EnsembleKalmanInversion(void);
+  virtual ~EnsembleKalmanInversion();
 
   void operator=(const EnsembleKalmanInversion &another);
   EnsembleKalman* ensemble_kalman_duplicate() const;

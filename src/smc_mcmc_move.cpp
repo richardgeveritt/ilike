@@ -159,8 +159,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   
   if (parallel_in==TRUE)
   {
-    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
-    Rcpp::stop("Parallel worker not set up.");
+    this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
+    //Rcpp::stop("Parallel worker not set up.");
   }
   else
   {
@@ -242,8 +242,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   
   if (parallel_in==TRUE)
   {
-    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
-    Rcpp::stop("Parallel worker not set up.");
+    this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
+    //Rcpp::stop("Parallel worker not set up.");
   }
   else
   {
@@ -681,8 +681,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   
   if (parallel_in==true)
   {
-    //this->the_worker = new RcppParallelSMCWorker(this, grain_size_in);
-    Rcpp::stop("Parallel worker not set up.");
+    this->the_worker = new RcppParallelSMCWorker(this, grain_size_in);
+    //Rcpp::stop("Parallel worker not set up.");
   }
   else
   {
@@ -764,8 +764,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   
   if (parallel_in==true)
   {
-    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
-    Rcpp::stop("Parallel worker not set up.");
+    this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
+    //Rcpp::stop("Parallel worker not set up.");
   }
   else
   {

@@ -17,7 +17,3 @@ do_smc_mcmc_move <- function(model, parameters, algorithm_parameter_list, number
     .Call(`_ilike_do_smc_mcmc_move`, model, parameters, algorithm_parameter_list, number_of_particles, mcmc_termination_method, adaptive_resampling_method, smc_sequencer_method, adaptive_target_method, smc_termination_method, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed)
 }
 
-# Register entry points for exported C++ functions
-methods::setLoadAction(function(ns) {
-    .Call(`_ilike_RcppExport_registerCCallable`)
-})

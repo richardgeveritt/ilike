@@ -4,8 +4,6 @@
 #include "../inst/include/ilike.h"
 #include <RcppArmadillo.h>
 #include <Rcpp.h>
-#include <string>
-#include <set>
 
 using namespace Rcpp;
 
@@ -87,26 +85,11 @@ BEGIN_RCPP
 END_RCPP
 }
 
-// validate (ensure exported C++ functions exist before calling them)
-static int _ilike_RcppExport_validate(const char* sig) { 
-    static std::set<std::string> signatures;
-    if (signatures.empty()) {
-    }
-    return signatures.find(sig) != signatures.end();
-}
-
-// registerCCallable (register entry points for exported C++ functions)
-RcppExport SEXP _ilike_RcppExport_registerCCallable() { 
-    R_RegisterCCallable("ilike", "_ilike_RcppExport_validate", (DL_FUNC)_ilike_RcppExport_validate);
-    return R_NilValue;
-}
-
 static const R_CallMethodDef CallEntries[] = {
     {"_ilike_ilike_rdtsc", (DL_FUNC) &_ilike_ilike_rdtsc, 0},
     {"_ilike_do_importance_sampler", (DL_FUNC) &_ilike_do_importance_sampler, 8},
     {"_ilike_do_mcmc", (DL_FUNC) &_ilike_do_mcmc, 10},
     {"_ilike_do_smc_mcmc_move", (DL_FUNC) &_ilike_do_smc_mcmc_move, 15},
-    {"_ilike_RcppExport_registerCCallable", (DL_FUNC) &_ilike_RcppExport_registerCCallable, 0},
     {NULL, NULL, 0}
 };
 

@@ -26,23 +26,27 @@ ParticleFilter::ParticleFilter()
 ParticleFilter::ParticleFilter(RandomNumberGenerator* rng_in,
                                size_t* seed_in,
                                Data* data_in,
+                               const Parameters &algorithm_parameters,
                                size_t number_of_particles_in,
                                size_t lag_in,
                                size_t lag_proposed_in,
-                               double resampling_desired_ess_in,
-                               ProposalKernel* proposal_kernel_in,
-                               EvaluateLogLikelihoodPtr evaluate_log_likelihood_in,
-                               EvaluateLogDistributionPtr evaluate_log_prior_in,
-                               SimulateDistributionPtr simulate_proposal_in,
-                               EvaluateLogDistributionPtr evaluate_log_proposal_in,
+                               SMCCriterion* adaptive_resampling_in,
+                               size_t min_time_index,
+                               size_t max_time_index,
+                               const std::vector<LikelihoodEstimator*> &measurement_models,
+                               IndependentProposalKernel* proposal_in,
+                               ProposalKernel* transition_model_in,
+                               bool proposal_is_evaluated_in,
+                               bool smcfixed_flag_in,
+                               bool sequencer_limit_is_fixed_in,
                                bool transform_proposed_particles,
                                bool parallel_in,
                                size_t grain_size_in,
                                const std::string &results_name_in)
-  :SMC(rng_in, seed_in, data_in, Parameters(), number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, proposal_kernel_in->get_proposals(), resampling_desired_ess_in, true, false, true, transform_proposed_particles, results_name_in)
+  :SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, transition_model_in->get_proposals(), adaptive_resampling_in, proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, transform_proposed_particles, results_name_in)
 {
   
-  proposal_kernel_in->set_proposal_parameters(&this->algorithm_parameters);
+  proposal_in->set_proposal_parameters(&this->algorithm_parameters);
   
   // also need to set up first proposal
   

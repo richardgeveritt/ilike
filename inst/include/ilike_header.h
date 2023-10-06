@@ -182,7 +182,7 @@ SimulateGuidedMCMCProposalPtr load_simulate_guided_mcmc_proposal(const SEXP &sim
 
 EvaluateLogLikelihoodPtr load_evaluate_log_likelihood(const SEXP &evaluate_log_likelihood_SEXP);
 
-SimulateModelPtr load_simulate_model(const SEXP &simulate_model_SEXP);
+SimulateModelPtr load_simulate_data_model(const SEXP &simulate_data_model_SEXP);
 
 SimulateAuxiliaryVariablesPtr load_simulate_auxiliary_variables(const SEXP &simulate_auxiliary_variables_SEXP);
 
@@ -217,7 +217,7 @@ DataPtr load_data_function(const SEXP &data_SEXP);
 //                                    const List &observed_data,
 //                                    const List &auxiliary_variables);
 //
-// List simulate_model_cpp(const SEXP &simulate_model_SEXP,
+// List simulate_data_model_cpp(const SEXP &simulate_data_model_SEXP,
 //                         const List &parameter,
 //                         const List &observed_data);
 //
@@ -350,10 +350,10 @@ inline EstimateLogLikelihoodPtr load_estimate_log_likelihood(const SEXP &estimat
   return *estimate_log_likelihood_XPtr;
 }
 
-inline SimulateModelPtr load_simulate_model(const SEXP &simulate_model_SEXP)
+inline SimulateModelPtr load_simulate_data_model(const SEXP &simulate_data_model_SEXP)
 {
-  XPtr<SimulateModelPtr> simulate_model_XPtr(simulate_model_SEXP);
-  return *simulate_model_XPtr;
+  XPtr<SimulateModelPtr> simulate_data_model_XPtr(simulate_data_model_SEXP);
+  return *simulate_data_model_XPtr;
 }
 
 inline SimulateAuxiliaryVariablesPtr load_simulate_auxiliary_variables(const SEXP &simulate_auxiliary_variables_SEXP)
@@ -448,12 +448,12 @@ inline DataPtr load_data_function(const SEXP &data_SEXP)
 // }
 //
 // // [[Rcpp::export]]
-// List simulate_model_cpp(const SEXP &simulate_model_SEXP,
+// List simulate_data_model_cpp(const SEXP &simulate_data_model_SEXP,
 //                         const List &parameter,
 //                         const List &observed_data)
 // {
-//   SimulateModelPtr simulate_model = load_simulate_model(simulate_model_SEXP);
-//   return simulate_model(parameter, observed_data);
+//   SimulateModelPtr simulate_data_model = load_simulate_data_model(simulate_data_model_SEXP);
+//   return simulate_data_model(parameter, observed_data);
 // }
 //
 // // [[Rcpp::export]]

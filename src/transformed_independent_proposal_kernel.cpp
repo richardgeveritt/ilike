@@ -20,7 +20,7 @@ TransformedIndependentProposalKernel::~TransformedIndependentProposalKernel()
 
 // find mean and cov adaptively
 TransformedIndependentProposalKernel::TransformedIndependentProposalKernel(IndependentProposalKernel* proposal_in,
-                                                                           const Transform &transform_in,
+                                                                           std::shared_ptr<Transform> transform_in,
                                                                            bool distribution_on_transformed_space_in)
   :IndependentProposalKernel(), transform(transform_in), distribution_on_transformed_space(distribution_on_transformed_space_in)
 {
@@ -75,7 +75,7 @@ double TransformedIndependentProposalKernel::evaluate_independent_kernel(const P
 {
   if (this->distribution_on_transformed_space==true)
   {
-    return this->proposal->evaluate_independent_kernel(this->transform.inverse_transform(proposed_particle)) + this->transform.log_abs_inverse_jacobian_determinant(proposed_particle);
+    return this->proposal->evaluate_independent_kernel(this->transform->inverse_transform(proposed_particle)) + this->transform->log_abs_inverse_jacobian_determinant(proposed_particle);
   }
   else
   {
@@ -95,7 +95,7 @@ double TransformedIndependentProposalKernel::subsample_evaluate_independent_kern
 {
   if (this->distribution_on_transformed_space==true)
   {
-    return this->proposal->subsample_evaluate_independent_kernel(this->transform.inverse_transform(proposed_particle)) + this->transform.log_abs_inverse_jacobian_determinant(proposed_particle);
+    return this->proposal->subsample_evaluate_independent_kernel(this->transform->inverse_transform(proposed_particle)) + this->transform->log_abs_inverse_jacobian_determinant(proposed_particle);
   }
   else
   {
@@ -106,11 +106,11 @@ double TransformedIndependentProposalKernel::subsample_evaluate_independent_kern
 Parameters TransformedIndependentProposalKernel::independent_simulate(RandomNumberGenerator &rng) const
 {
   if (this->distribution_on_transformed_space==true)
-    return this->transform.transform(this->proposal->independent_simulate(rng));
+    return this->transform->transform(this->proposal->independent_simulate(rng));
   else
   {
     Parameters output(this->proposal->independent_simulate(rng));
-    output.deep_overwrite_with_variables_in_argument(this->transform.transform(output));
+    output.deep_overwrite_with_variables_in_argument(this->transform->transform(output));
     return output;
   }
 }
@@ -119,13 +119,13 @@ Parameters TransformedIndependentProposalKernel::independent_simulate(RandomNumb
                                                                       const Parameters &conditioned_on_parameters) const
 {
   if (this->distribution_on_transformed_space==true)
-    return this->transform.transform(this->proposal->independent_simulate(rng,
+    return this->transform->transform(this->proposal->independent_simulate(rng,
                                                                           conditioned_on_parameters));
   else
   {
     Parameters output(this->proposal->independent_simulate(rng,
                                                            conditioned_on_parameters));
-    output.deep_overwrite_with_variables_in_argument(this->transform.transform(output));
+    output.deep_overwrite_with_variables_in_argument(this->transform->transform(output));
     //std::cout << output << std::endl;
     return output;
   }
@@ -134,11 +134,11 @@ Parameters TransformedIndependentProposalKernel::independent_simulate(RandomNumb
 Parameters TransformedIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng) const
 {
   if (this->distribution_on_transformed_space==true)
-    return this->transform.transform(this->proposal->subsample_independent_simulate(rng));
+    return this->transform->transform(this->proposal->subsample_independent_simulate(rng));
   else
   {
     Parameters output(this->proposal->independent_simulate(rng));
-    output.deep_overwrite_with_variables_in_argument(this->transform.transform(output));
+    output.deep_overwrite_with_variables_in_argument(this->transform->transform(output));
     return output;
   }
 }
@@ -147,12 +147,12 @@ Parameters TransformedIndependentProposalKernel::subsample_independent_simulate(
                                                                                 const Parameters &conditioned_on_parameters) const
 {
   if (this->distribution_on_transformed_space==true)
-    return this->transform.transform(this->proposal->subsample_independent_simulate(rng,
-                                                                                    conditioned_on_parameters));
+    return this->transform->transform(this->proposal->subsample_independent_simulate(rng,
+                                                                                     conditioned_on_parameters));
   else
   {
     Parameters output(this->proposal->independent_simulate(rng));
-    output.deep_overwrite_with_variables_in_argument(this->transform.transform(output));
+    output.deep_overwrite_with_variables_in_argument(this->transform->transform(output));
     return output;
   }
 }
@@ -161,12 +161,12 @@ Parameters TransformedIndependentProposalKernel::subsample_independent_simulate(
                                                                                 const std::string &variable) const
 {
   if (this->distribution_on_transformed_space==true)
-    return this->transform.transform(this->proposal->subsample_independent_simulate(rng,
-                                                                                    variable));
+    return this->transform->transform(this->proposal->subsample_independent_simulate(rng,
+                                                                                     variable));
   else
   {
     Parameters output(this->proposal->independent_simulate(rng));
-    output.deep_overwrite_with_variables_in_argument(this->transform.transform(output));
+    output.deep_overwrite_with_variables_in_argument(this->transform->transform(output));
     return output;
   }
 }
@@ -176,13 +176,13 @@ Parameters TransformedIndependentProposalKernel::subsample_independent_simulate(
                                                                                 const Parameters &conditioned_on_parameters) const
 {
   if (this->distribution_on_transformed_space==true)
-    return this->transform.transform(this->proposal->subsample_independent_simulate(rng,
+    return this->transform->transform(this->proposal->subsample_independent_simulate(rng,
                                                                                     variable,
                                                                                     conditioned_on_parameters));
   else
   {
     Parameters output(this->proposal->independent_simulate(rng));
-    output.deep_overwrite_with_variables_in_argument(this->transform.transform(output));
+    output.deep_overwrite_with_variables_in_argument(this->transform->transform(output));
     return output;
   }
 }

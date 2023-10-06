@@ -2,10 +2,10 @@
 #define PARTICLEFILTER_H
 
 #include "smc.h"
-#include "proposal_kernel.h"
 
 class SMCOutput;
 class MoveOutput;
+class IndependentProposalKernel;
 
 class ParticleFilter : public SMC
 {
@@ -18,15 +18,19 @@ public:
   ParticleFilter(RandomNumberGenerator* rng_in,
                  size_t* seed_in,
                  Data* data_in,
+                 const Parameters &algorithm_parameters,
                  size_t number_of_particles_in,
                  size_t lag_in,
                  size_t lag_proposed_in,
-                 double resampling_desired_ess_in,
-                 ProposalKernel* proposal_kernel_in,
-                 EvaluateLogLikelihoodPtr evaluate_log_likelihood_in,
-                 EvaluateLogDistributionPtr evaluate_log_prior_in,
-                 SimulateDistributionPtr simulate_proposal_in,
-                 EvaluateLogDistributionPtr evaluate_log_proposal_in,
+                 SMCCriterion* adaptive_resampling_in,
+                 size_t min_time_index,
+                 size_t max_time_index,
+                 const std::vector<LikelihoodEstimator*> &measurement_models,
+                 IndependentProposalKernel* proposal_in,
+                 ProposalKernel* transition_model,
+                 bool proposal_is_evaluated_in,
+                 bool smcfixed_flag_in,
+                 bool sequencer_limit_is_fixed_in,
                  bool transform_proposed_particles,
                  bool parallel_in,
                  size_t grain_size_in,

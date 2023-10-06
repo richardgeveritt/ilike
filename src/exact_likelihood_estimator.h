@@ -14,6 +14,7 @@ class ExactLikelihoodEstimatorOutput;
 class IndependentProposalKernel;
 class DistributionFactor;
 class LikelihoodFactor;
+class ProposalKernel;
 
 class ExactLikelihoodEstimator : public LikelihoodEstimator
 {
@@ -69,6 +70,12 @@ public:
                            size_t* seed_in,
                            Data* data_in,
                            IndependentProposalKernel* dist_in,
+                           bool smcfixed_flag_in);
+  
+  ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
+                           size_t* seed_in,
+                           Data* data_in,
+                           ProposalKernel* dist_in,
                            bool smcfixed_flag_in);
   
   ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
@@ -145,6 +152,9 @@ protected:
   
   // not stored here
   std::vector<IndependentProposalKernel*> numerator_proposals;
+  
+  // not stored here
+  std::vector<ProposalKernel*> numerator_likelihood_proposals;
   
   // Stored here.
   //ExactLikelihoodEstimatorOutput* output;

@@ -103,8 +103,8 @@ public:
   double subsample_evaluate_kernel(const Particle &proposed_particle,
                                    const Particle &old_particle) const;
   
-  double evaluate_kernel_for_mh(const Particle &proposed_particle) const;
-  double subsample_evaluate_kernel_for_mh(const Particle &proposed_particle) const;
+  //double evaluate_kernel_for_mh(const Particle &proposed_particle) const;
+  //double subsample_evaluate_kernel_for_mh(const Particle &proposed_particle) const;
   
   /*
   double subsample_evaluate_kernel(Particle &proposed_particle,

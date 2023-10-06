@@ -57,6 +57,7 @@ using namespace Rcpp;
 #include "direct_gradient_estimator.h"
 #include "vector_single_index.h"
 #include "likelihood_maker.h"
+#include "transform.h"
 
 // from https://stackoverflow.com/questions/2165921/converting-from-a-stdstring-to-bool
 bool stob(const std::string &s)
@@ -962,15 +963,15 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
         }
         else if ( current_factor.containsElementNamed("sbi_likelihood") )
         {
-          SimulateModelPtr simulate_model_in;
-          if (current_factor.containsElementNamed("simulate_model"))
+          SimulateModelPtr simulate_data_model_in;
+          if (current_factor.containsElementNamed("simulate_data_model"))
           {
-            SEXP simulate_model_SEXP = current_factor["simulate_model"];
-            simulate_model_in = load_simulate_model(simulate_model_SEXP);
+            SEXP simulate_data_model_SEXP = current_factor["simulate_data_model"];
+            simulate_data_model_in = load_simulate_data_model(simulate_data_model_SEXP);
           }
           else
           {
-            stop("sbi_likelihood factor must also contain simulate_model.");
+            stop("sbi_likelihood factor must also contain simulate_data_model.");
           }
           
           LikelihoodEstimator* new_likelihood_estimator;
@@ -1053,8 +1054,8 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                           data_variables_in,
                                                                                           tolerance_variable,
                                                                                           tolerance,
-                                                                                          simulate_model_in,
-                                                                                          summary_stats,
+                                                                                          simulate_data_model_in,
+                                                                                          std::make_shared<Transform>(summary_stats),
                                                                                           number_of_points,
                                                                                           parallel,
                                                                                           grain_size);
@@ -1067,8 +1068,8 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                             p,
                                                                                             data_variables_in,
                                                                                             tolerance_variable,
-                                                                                            simulate_model_in,
-                                                                                            summary_stats,
+                                                                                            simulate_data_model_in,
+                                                                                            std::make_shared<Transform>(summary_stats),
                                                                                             number_of_points,
                                                                                             parallel,
                                                                                             grain_size);
@@ -1085,7 +1086,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                           data_variables_in,
                                                                                           tolerance_variable,
                                                                                           tolerance,
-                                                                                          simulate_model_in,
+                                                                                          simulate_data_model_in,
                                                                                           number_of_points,
                                                                                           parallel,
                                                                                           grain_size);
@@ -1098,7 +1099,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                             p,
                                                                                             data_variables_in,
                                                                                             tolerance_variable,
-                                                                                            simulate_model_in,
+                                                                                            simulate_data_model_in,
                                                                                             number_of_points,
                                                                                             parallel,
                                                                                             grain_size);

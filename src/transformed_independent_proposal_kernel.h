@@ -19,7 +19,7 @@ public:
   virtual ~TransformedIndependentProposalKernel();
   
   TransformedIndependentProposalKernel(IndependentProposalKernel* proposal_in,
-                                       const Transform &transform_in,
+                                       std::shared_ptr<Transform> transform_in,
                                        bool distribution_on_transformed_space_in=true);
 
   TransformedIndependentProposalKernel(const TransformedIndependentProposalKernel &another);
@@ -77,7 +77,7 @@ protected:
   // stored here
   IndependentProposalKernel* proposal;
   
-  Transform transform;
+  std::shared_ptr<Transform> transform;
   
   bool distribution_on_transformed_space;
   
