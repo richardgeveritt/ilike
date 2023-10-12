@@ -207,9 +207,11 @@ protected:
   //EnsembleKalmanOutput* output;
   
   std::ofstream log_likelihood_file_stream;
+  std::ofstream output_lengths_file_stream;
   std::ofstream vector_variables_file_stream;
   std::ofstream vector_variable_sizes_file_stream;
   std::ofstream incremental_log_likelihood_file_stream;
+  std::ofstream ess_file_stream;
   std::ofstream schedule_parameters_file_stream;
   std::ofstream vector_points_file_stream;
   std::ofstream any_points_file_stream;

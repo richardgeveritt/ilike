@@ -54,6 +54,8 @@ public:
   
   size_t size() const;
   
+  arma::rowvec get_output_lengths() const;
+  
   void find_measurement_covariances();
   void find_measurement_covariances(const Parameters &conditioned_on_parameters);
   

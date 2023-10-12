@@ -294,8 +294,8 @@ inline arma::mat chol2inv(const arma::mat &chol)
 }
 
 inline double chol2logdet(const arma::mat &chol)
-{;
-  return 2.0*log(trace(chol));
+{
+  return 2.0*trace(log(chol));
 }
 
 // rmvnorm from https://gallery.rcpp.org/articles/simulate-multivariate-normal/

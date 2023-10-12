@@ -318,7 +318,8 @@ void Sequencer::find_next_target_bisection(SMCOutput* current_state,
   // if we want to make this generic, need to hide the next two lines in a function that can have different choices
   
   // if we have not just found a value for the parameter that is at one of the points in the schedule
-  if (this->direction * this->current_bisect_value >= this->direction * this->schedules.back()[this->mileometer.back()])
+  double small_value = (this->schedules.back()[this->mileometer.back()] - this->schedules.back()[this->mileometer.back()-1])*pow(0.5,30.0);
+  if (this->direction * this->current_bisect_value >= this->direction * this->schedules.back()[this->mileometer.back()] - small_value)
   {
     // check to see if we already reached the next point in the schedule
     
@@ -329,7 +330,7 @@ void Sequencer::find_next_target_bisection(SMCOutput* current_state,
     this->current_score = (*this->criterion)(current_state->back());
     if (this->current_score>=0.0)
     {
-      this->schedule_difference = this->schedules.back()[this->mileometer.back()]-this->schedules.back()[this->mileometer.back()-1];
+      this->schedule_difference = this->schedules.back()[this->mileometer.back()]-this->current_bisect_value;//-this->schedules.back()[this->mileometer.back()-1];
       //this->mileometer.increment();
       this->set_schedule_parameters();
       //this->schedule_parameters[this->variable_names.back()] = target_values.back();
@@ -753,8 +754,9 @@ void Sequencer::subsample_find_next_target_bisection(SMCOutput* current_state,
   
   // if we want to make this generic, need to hide the next two lines in a function that can have different choices
   
+  double small_value = (this->schedules.back()[this->mileometer.back()] - this->schedules.back()[this->mileometer.back()-1])*pow(0.5,30.0);
   // if we have not just found a value for the parameter that is at one of the points in the schedule
-  if (this->direction * this->current_bisect_value >= this->direction * this->schedules.back()[this->mileometer.back()])
+  if (this->direction * this->current_bisect_value >= this->direction * this->schedules.back()[this->mileometer.back()] - small_value)
   {
     // check to see if we already reached the next point in the schedule
     

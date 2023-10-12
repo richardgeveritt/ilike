@@ -118,13 +118,21 @@ void GaussianIndependentProposalKernel::make_copy(const GaussianIndependentPropo
 void GaussianIndependentProposalKernel::set_mean(const std::string &variable,
                                                  const arma::colvec &mean_in)
 {
+  //auto found = this->proposal_info.find(variable);
+  //if (found!=this->proposal_info.end())
+  //{
   this->proposal_info[variable].set_mean(mean_in);
+  //}
 }
 
 void GaussianIndependentProposalKernel::set_covariance(const std::string &variable,
                                                        const arma::mat &covariance_in)
 {
+  //auto found = this->proposal_info.find(variable);
+  //if (found!=this->proposal_info.end())
+  //{
   this->proposal_info[variable].set_covariance(covariance_in);
+  //}
 }
 
 arma::mat GaussianIndependentProposalKernel::get_inverse_covariance(const std::string &variable)

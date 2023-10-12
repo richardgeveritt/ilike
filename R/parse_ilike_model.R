@@ -1204,7 +1204,7 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
               method_number))
 }
 
-extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,parameter_list,external_packages,julia_bin_dir,julia_required_libraries)
+extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries)
 {
   # Get information about the order in which MCMC moves are included.
   if ( (block_type=="mh_proposal") || (block_type=="independent_mh_proposal") || (block_type=="m_proposal") )
@@ -1482,6 +1482,15 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
         proposal_type = 0
 
+        if (R_functions)
+        {
+          R_function_arguments_string = ""
+          for (r in 1:length(R_function_arguments))
+          {
+            paste(R_function_arguments_string,sep="")
+          }
+        }
+
         if (block_name=="data")
         {
           if (sum(which_parameters)>0)
@@ -1512,7 +1521,15 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
           }
 
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Data output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function() { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Data output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
         }
         else if (block_name=="evaluate_log_prior")
         {
@@ -1535,7 +1552,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(parameters) { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
+          }
+
         }
         else if (block_name=="evaluate_log_likelihood")
         {
@@ -1554,7 +1580,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[1] = "const Parameters &parameters"
           arguments[2] = "const Data &data"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(parameters,data) { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
+          }
+
         }
         else if (block_name=="simulate_prior")
         {
@@ -1582,7 +1617,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "RandomNumberGenerator &rng"
           #args_for_typedef = "RandomNumberGenerator&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function() { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
         }
         else if (block_name=="evaluate_log_importance_proposal")
         {
@@ -1633,7 +1677,15 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             proposal_type = 1
           }
 
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
+          }
+
         }
         else if (block_name=="simulate_importance_proposal")
         {
@@ -1693,7 +1745,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
 
           #args_for_typedef = "RandomNumberGenerator&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
         }
         else if (block_name=="evaluate_log_mh_proposal")
         {
@@ -1742,7 +1803,15 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             proposal_type = 1
           }
 
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
+          }
+
         }
         else if (block_name=="simulate_mh_proposal")
         {
@@ -1807,8 +1876,15 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": no parameters used, should this have been specified as simulate_independent_mh_proposal?",sep=""))
           }
 
-          #args_for_typedef = "RandomNumberGenerator&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
         }
         else if (block_name=="evaluate_log_independent_mh_proposal")
         {
@@ -1858,7 +1934,15 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             proposal_type = 1
           }
 
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
+          }
+
         }
         else if (block_name=="simulate_independent_mh_proposal")
         {
@@ -1919,8 +2003,15 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": parameters used, should this have been specified as simulate_mh_proposal?",sep=""))
           }
 
-          #args_for_typedef = "RandomNumberGenerator&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
         }
         else if (block_name=="simulate_m_proposal")
         {
@@ -1985,8 +2076,14 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": no parameters used, invalid proposal type?",sep=""))
           }
 
-          #args_for_typedef = "RandomNumberGenerator&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
 
         }
         else if (block_name=="mcmc_weights")
@@ -2014,7 +2111,15 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           return_type = "NumericVector"
           arguments = c()
 
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericVector output = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function() { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericVector output = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
         }
         else if (block_name=="simulate_data_model")
         {
@@ -2043,7 +2148,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[1] = "RandomNumberGenerator &rng"
           arguments[2] = "const Parameters &parameters"
           #args_for_typedef = "RandomNumberGenerator&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Data output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Data output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
         }
         else if (block_name=="summary_statistics")
         {
@@ -2071,7 +2185,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Data &data"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Data output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Data output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
         }
         else if (block_name=="nonlinear_gaussian_data_function")
         {
@@ -2099,7 +2222,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Data output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Data output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
         }
         else if (block_name=="simulate_transition_model")
         {
@@ -2125,7 +2257,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[2] = "const Parameters &parameters"
           arguments[3] = "const Data &data"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
         }
         else if (block_name=="nonlinear_gaussian_transition_function")
         {
@@ -2150,7 +2291,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[1] = "const Parameters &parameters"
           arguments[2] = "const Data &data"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
         }
         else if (block_name=="simulate_transition_proposal")
         {
@@ -2176,7 +2326,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[2] = "const Parameters &parameters"
           arguments[3] = "const Data &data"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
         }
         else if (block_name=="enk_transform")
         {
@@ -2204,7 +2363,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
         }
         else if (block_name=="enk_inverse_transform")
         {
@@ -2232,7 +2400,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
         }
         else if (block_name=="linear_gaussian_data_matrix")
         {
@@ -2255,7 +2432,15 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+          }
         }
         else if (block_name=="linear_gaussian_data_covariance")
         {
@@ -2278,7 +2463,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+          }
+
         }
         else if (block_name=="nonlinear_gaussian_data_covariance")
         {
@@ -2301,7 +2495,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+          }
+
         }
         else if (block_name=="linear_gaussian_transition_matrix")
         {
@@ -2321,7 +2524,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[1] = "const Parameters &parameters"
           arguments[2] = "const Data &data"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+          }
+
         }
         else if (block_name=="linear_gaussian_transition_covariance")
         {
@@ -2341,7 +2553,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[1] = "const Parameters &parameters"
           arguments[2] = "const Data &data"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+          }
+
         }
         else if (block_name=="nonlinear_gaussian_transition_covariance")
         {
@@ -2361,7 +2582,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[1] = "const Parameters &parameters"
           arguments[2] = "const Data &data"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+          }
+
         }
         else if (block_name=="evaluate_log_transition_model")
         {
@@ -2376,7 +2606,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[1] = "const Parameters &parameters"
           arguments[2] = "const Data &data"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return NumericVector(f(',cpp_function_arguments_string,'))[0]; return output;',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
+          }
+
         }
         else if (block_name=="evaluate_log_potential_function")
         {
@@ -2391,7 +2630,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[1] = "const Parameters &parameters"
           arguments[2] = "const Data &data"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return NumericVector(f(',cpp_function_arguments_string,'))[0]; return output;',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
+          }
+
         }
         else if (block_name=="evaluate_log_transition_proposal")
         {
@@ -2434,7 +2682,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
+          }
+
         }
         else if (block_name=="m_inverse_transform")
         {
@@ -2462,7 +2719,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
         }
         else if (block_name=="m_transform_jacobian_matrix")
         {
@@ -2485,7 +2751,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+          }
+
         }
         else if (block_name=="mh_transform")
         {
@@ -2513,7 +2788,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
         }
         else if (block_name=="mh_inverse_transform")
         {
@@ -2541,7 +2825,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
         }
         else if (block_name=="mh_transform_jacobian_matrix")
         {
@@ -2564,7 +2857,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+          }
+
         }
         else if (block_name=="independent_mh_transform")
         {
@@ -2592,7 +2894,16 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
         }
         else if (block_name=="independent_mh_inverse_transform")
         {
@@ -2620,9 +2931,18 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
         }
-        else if (block_name=="independent_mh_transform_jacobian_ma")
+        else if (block_name=="independent_mh_transform_jacobian_matrix")
         {
           if (sum(which_data)>0)
           {
@@ -2643,62 +2963,78 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+          }
+
         }
         else
         {
           stop(paste("Block ",block_name,", line number ",line_counter,": block is of unknown type.",sep=""))
         }
 
-        args_for_typedef = paste(arguments,collapse=",")
-
-        code = paste(return_type,' ',cpp_function_name,'(',sep="")
-        if (length(arguments)>0)
+        if (R_functions)
         {
-          for (i in 1:length(arguments))
+          my_list = list(eval(parse(text=function_body)))
+        }
+        else
+        {
+          args_for_typedef = paste(arguments,collapse=",")
+
+          code = paste(return_type,' ',cpp_function_name,'(',sep="")
+          if (length(arguments)>0)
           {
-            code = paste(code,arguments[i],sep="")
-            if (i!=length(arguments))
+            for (i in 1:length(arguments))
             {
-              code = paste(code,',',sep="")
+              code = paste(code,arguments[i],sep="")
+              if (i!=length(arguments))
+              {
+                code = paste(code,',',sep="")
+              }
             }
           }
+          code = paste(code,') {',function_body,' }',sep="")
+
+          fileConn<-file(temp_filename)
+
+          writeLines(c(
+            '#include <RcppArmadillo.h>',
+            '// [[Rcpp::depends(RcppArmadillo)]]',
+            '// [[Rcpp::depends(ilike)]]',
+            '// [[Rcpp::depends(BH)]]',
+            '// [[Rcpp::depends(dqrng)]]',
+            '// [[Rcpp::depends(sitmo)]]',
+            '/*** R',
+            paste(R_function_name,function_info[[1]],sep=""),
+            '*/',
+            'using namespace Rcpp;',
+            '#include <ilike.h>',
+            paste("SEXP ",xptr_name,"();",sep=""),
+            code,
+            "// [[Rcpp::export]]",
+            paste("SEXP ",xptr_name,"() {",sep=""),
+            paste("  typedef", return_type, "(*funcPtr)(", args_for_typedef, ");"),
+            paste("  return XPtr<funcPtr>(new funcPtr(&", cpp_function_name, "));"),
+            "}"), fileConn)
+
+          # writeLines(c(
+          #   '/*** R',
+          #   paste(R_function_name,function_info[[1]],sep=""),
+          #   '*/'), fileConn)
+
+          close(fileConn)
+
+          Rcpp::sourceCpp(temp_filename)
+          file.remove(temp_filename)
+
+          my_list = list(get(xptr_name)())
         }
-        code = paste(code,') {',function_body,' }',sep="")
-
-        fileConn<-file(temp_filename)
-
-        writeLines(c(
-          '#include <RcppArmadillo.h>',
-          '// [[Rcpp::depends(RcppArmadillo)]]',
-          '// [[Rcpp::depends(ilike)]]',
-          '// [[Rcpp::depends(BH)]]',
-          '// [[Rcpp::depends(dqrng)]]',
-          '// [[Rcpp::depends(sitmo)]]',
-          '/*** R',
-          paste(R_function_name,function_info[[1]],sep=""),
-          '*/',
-          'using namespace Rcpp;',
-          '#include <ilike.h>',
-          paste("SEXP ",xptr_name,"();",sep=""),
-          code,
-          "// [[Rcpp::export]]",
-          paste("SEXP ",xptr_name,"() {",sep=""),
-          paste("  typedef", return_type, "(*funcPtr)(", args_for_typedef, ");"),
-          paste("  return XPtr<funcPtr>(new funcPtr(&", cpp_function_name, "));"),
-          "}"), fileConn)
-
-        # writeLines(c(
-        #   '/*** R',
-        #   paste(R_function_name,function_info[[1]],sep=""),
-        #   '*/'), fileConn)
-
-        close(fileConn)
-
-        Rcpp::sourceCpp(temp_filename)
-        file.remove(temp_filename)
-
-        my_list = list(get(xptr_name)())
         #my_list = list(RcppXPtrUtils::cppXPtr(code,plugins=c("cpp11"),depends = c("ilike","RcppArmadillo","BH","dqrng","sitmo")))
 
         names(my_list) = c(block_name)
@@ -3198,6 +3534,7 @@ check_types = function(blocks)
 #'
 #' @param filename The name (and path) of the .ilike file containing the model.
 #' @param parameter_list (optional) A list containing parameters for the model.
+#' @param R_functions (optional) If TRUE, returns R functions. If FALSE, returns C++ functions.
 #' @param external_packages (optional) A vector of names of other R packages the functions rely on.
 #' @param julia_bin_dir (optional) The directory containing the Julia bin file - only needed if Julia functions are used.
 #' @param julia_required_libraries (optional) Vector of strings, each of which is a Julia packge that will be installed and loaded.
@@ -3205,6 +3542,7 @@ check_types = function(blocks)
 #' @export
 parse_ilike_model <- function(filename,
                               parameter_list = list(),
+                              R_functions = FALSE,
                               external_packages = c(),
                               julia_bin_dir="",
                               julia_required_libraries=c())
@@ -3284,7 +3622,7 @@ parse_ilike_model <- function(filename,
 
     if ( (nchar(line)>=3) && (substr(line, 1, 3)=="//#") )
     {
-      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,external_packages,julia_bin_dir,julia_required_libraries)
+      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries)
       in_block = FALSE
       starting_block_flag = TRUE
       is_custom = FALSE
@@ -3305,7 +3643,7 @@ parse_ilike_model <- function(filename,
           }
           else # end current block
           {
-            blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,external_packages,julia_bin_dir,julia_required_libraries)
+            blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries)
             is_custom = FALSE
             block_code = ""
           }
@@ -3370,7 +3708,7 @@ parse_ilike_model <- function(filename,
     # ignore block if block number is not positive
     if (number_to_pass_to_extract_block>0)
     {
-      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,external_packages,julia_bin_dir,julia_required_libraries)
+      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,external_packages,R_functions,julia_bin_dir,julia_required_libraries)
       if ( (factor_number!=0) && (factor_number==length(blocks[["factor"]])) )
       {
         print_factor_info(length(blocks[["factor"]]),blocks,line_counter)

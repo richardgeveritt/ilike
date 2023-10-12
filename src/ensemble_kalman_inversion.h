@@ -7,6 +7,7 @@
 class EnsembleKalmanOutput;
 class MCMC;
 class MoveOutput;
+class GaussianNoiseProposalKernel;
 
 class EnsembleKalmanInversion : public EnsembleKalman
 {
@@ -21,10 +22,10 @@ public:
                           size_t number_of_ensemble_members_in,
                           size_t lag_in,
                           EnsembleShifter* shifter_in,
-                          SimulateDistributionPtr simulate_prior_in,
+                          IndependentProposalKernel* prior_in,
                           SimulateModelPtr simulate_model_in,
-                          std::shared_ptr<Transform> transform_in,
                           std::shared_ptr<Transform> summary_statistics_in,
+                          std::shared_ptr<Transform> transform_in,
                           bool parallel_in,
                           size_t grain_size_in,
                           const std::string &results_name_in);
@@ -39,10 +40,11 @@ public:
                           double annealing_desired_cess_in,
                           size_t number_of_bisections_in,
                           const std::string &sequence_variable_in,
-                          SimulateDistributionPtr simulate_prior_in,
+                          const std::vector<double> &schedule_in,
+                          IndependentProposalKernel* prior_in,
                           SimulateModelPtr simulator_model_in,
-                          std::shared_ptr<Transform> transform_in,
                           std::shared_ptr<Transform> summary_statistics_in,
+                          std::shared_ptr<Transform> transform_in,
                           bool parallel_in,
                           size_t grain_size_in,
                           const std::string &results_name_in);
@@ -57,12 +59,13 @@ public:
                           double annealing_desired_cess_in,
                           size_t number_of_bisections_in,
                           const std::string &sequence_variable_in,
-                          SimulateDistributionPtr simulate_prior_in,
+                          const std::vector<double> &schedule_in,
+                          IndependentProposalKernel* prior_in,
                           std::shared_ptr<Transform> measurement_transform_function_in,
                           const std::vector<std::string> &measurement_variables,
                           const std::vector<GetMeasurementMatrixPtr> &measurement_noise_functions,
-                          std::shared_ptr<Transform> transform_in,
                           std::shared_ptr<Transform> summary_statistics_in,
+                          std::shared_ptr<Transform> transform_in,
                           bool parallel_in,
                           size_t grain_size_in,
                           const std::string &results_name_in);

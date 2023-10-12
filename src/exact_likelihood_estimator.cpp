@@ -89,6 +89,20 @@ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in
 ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
                                                    size_t* seed_in,
                                                    Data* data_in,
+                                                   const std::vector<DistributionFactor*> &numerator_distribution_factors_in,
+                                                   const std::vector<LikelihoodFactor*> &numerator_likelihood_factors_in,
+                                                   const std::vector<ProposalKernel*> &numerator_likelihood_proposals_in,
+                                                   bool smcfixed_flag_in)
+:LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
+{
+  this->numerator_distribution_factors = numerator_distribution_factors_in;
+  this->numerator_likelihood_factors = numerator_likelihood_factors_in;
+  this->numerator_likelihood_proposals = numerator_likelihood_proposals_in;
+}
+
+ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
+                                                   size_t* seed_in,
+                                                   Data* data_in,
                                                    IndependentProposalKernel* dist_in,
                                                    bool smcfixed_flag_in)
 :LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)

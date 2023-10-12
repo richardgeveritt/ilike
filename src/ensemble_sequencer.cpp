@@ -109,7 +109,7 @@ void EnsembleSequencer::set_schedule_parameters()
   
   this->mileometer.increment();
   
-  this->current_bisect_value = value_to_use;
+  this->current_bisect_value = this->schedule[this->mileometer[0]];
 }
 
 EnsembleSequencer::EnsembleSequencer(const EnsembleSequencer &another)
@@ -246,8 +246,9 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
   
   this->schedule_parameters[this->variable_name] = this->current_bisect_value;
   
+  double small_value = (this->schedule[this->mileometer.back()] - this->schedule[this->mileometer.back()-1])*pow(0.5,30.0);
   // if we have not just found a value for the parameter that is at one of the points in the schedule
-  if (this->direction * this->current_bisect_value>= this->direction * this->schedule[this->mileometer.back()])
+  if (this->direction * this->current_bisect_value>= this->direction * this->schedule[this->mileometer.back()] - small_value)
   {
     // check to see if we already reached the next point in the schedule
     
@@ -267,8 +268,8 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
       this->schedule_difference = this->schedule[this->mileometer.back()]-this->schedule[this->mileometer.back()-1];
       
       //this->mileometer.increment();
-      this->set_schedule_parameters();
       current_state->back().set_temperature(this->current_bisect_value);
+      this->set_schedule_parameters();
       //this->schedule_parameters[this->variable_names.back()] = target_values.back();
       
       //this->mileometer.increment();
@@ -448,8 +449,9 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
   
   this->schedule_parameters[this->variable_name] = this->current_bisect_value;
   
+  double small_value = (this->schedule[this->mileometer.back()] - this->schedule[this->mileometer.back()-1])*pow(0.5,30.0);
   // if we have not just found a value for the parameter that is at one of the points in the schedule
-  if (this->direction * this->current_bisect_value>= this->direction * this->schedule[this->mileometer.back()])
+  if (this->direction * this->current_bisect_value>= this->direction * this->schedule[this->mileometer.back()] - small_value)
   {
     // check to see if we already reached the next point in the schedule
     
@@ -469,8 +471,8 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
       this->schedule_difference = this->schedule[this->mileometer.back()]-this->schedule[this->mileometer.back()-1];
       
       //this->mileometer.increment();
-      this->set_schedule_parameters();
       current_state->back().set_temperature(this->current_bisect_value);
+      this->set_schedule_parameters();
       //this->schedule_parameters[this->variable_names.back()] = target_values.back();
       
       //this->mileometer.increment();

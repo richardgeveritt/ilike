@@ -40,8 +40,8 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
                                        const Parameters &prior_covariances,
                                        SimulateModelPtr simulate_model_in,
                                        size_t update_type,
-                                       std::shared_ptr<Transform> transform_in,
                                        std::shared_ptr<Transform> summary_statistics_in,
+                                       std::shared_ptr<Transform> transform_in,
                                        bool parallel_in,
                                        size_t grain_size_in,
                                        const std::string &results_name_in)
@@ -196,9 +196,9 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
                                        size_t number_of_iterations_in,
                                        std::shared_ptr<Transform> measurement_transform_function_in,
                                        const std::vector<std::string> &measurement_variables,
-                                       const std::vector<arma::mat> &measurement_noises,
-                                       std::shared_ptr<Transform> transform_in,
+                                       const std::vector<GetMeasurementMatrixPtr> &measurement_noise_functions,
                                        std::shared_ptr<Transform> summary_statistics_in,
+                                       std::shared_ptr<Transform> transform_in,
                                        bool parallel_in,
                                        size_t grain_size_in,
                                        const std::string &results_name_in)
@@ -239,7 +239,7 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
                                                                                                summary_statistics_in,
                                                                                                measurement_transform_function_in,
                                                                                                measurement_variables,
-                                                                                               measurement_noises));
+                                                                                               measurement_noise_functions));
   measurement_covariance_estimators.back()->change_data();
     
   indices.push_back(0);
@@ -295,8 +295,8 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
                                        double delta_t_in,
                                        size_t number_of_iterations_in,
                                        SimulateModelPtr simulate_model_in,
-                                       std::shared_ptr<Transform> transform_in,
                                        std::shared_ptr<Transform> summary_statistics_in,
+                                       std::shared_ptr<Transform> transform_in,
                                        bool parallel_in,
                                        size_t grain_size_in,
                                        const std::string &results_name_in)
@@ -511,6 +511,7 @@ void EnsembleKalmanMFDS::ensemble_kalman_evaluate_smcadaptive_part_given_smcfixe
   bool terminate = FALSE;
   while (terminate==FALSE)
   {
+    //std::cout << current_state->back().members[0]->back().parameters << std::endl;
     this->the_worker->pack(&current_state->back());
     this->find_measurement_covariances(current_state);
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
@@ -518,9 +519,15 @@ void EnsembleKalmanMFDS::ensemble_kalman_evaluate_smcadaptive_part_given_smcfixe
     this->ensemble_factors->set_temperature(this->ensemble_factors->get_temperature() + this->delta_t);
     this->predict(current_state);
     this->the_worker->unpack_with_predicted(&current_state->back());
+    //std::cout << current_state->back().members[0]->back().parameters << std::endl;
+    
+    current_state->llhds.push_back(current_state->log_likelihood);
+    current_state->set_time();
     
     if (current_state->results_name!="")
       current_state->write(results_name);
+    
+    current_state->start_time = std::chrono::high_resolution_clock::now();
     
     //this->sequencer.find_desired_criterion(current_state);
     
@@ -686,14 +693,20 @@ void EnsembleKalmanMFDS::ensemble_kalman_evaluate_smcadaptive_part_given_smcfixe
   bool terminate = FALSE;
   while (terminate==FALSE)
   {
+    
     this->the_worker->pack(&current_state->back());
     this->find_measurement_covariances(current_state);
     this->the_worker->shift(&current_state->back());
     this->predict(current_state);
-    this->the_worker->unpack(&current_state->back());
+    this->the_worker->unpack_with_predicted(&current_state->back());
+    
+    current_state->llhds.push_back(current_state->log_likelihood);
+    current_state->set_time();
     
     if (current_state->results_name!="")
       current_state->write(results_name);
+    
+    current_state->start_time = std::chrono::high_resolution_clock::now();
     
     //this->sequencer.find_desired_criterion(current_state);
     
@@ -805,10 +818,15 @@ void EnsembleKalmanMFDS::ensemble_kalman_subsample_evaluate_smcadaptive_part_giv
     this->find_measurement_covariances(current_state);
     this->the_worker->shift(&current_state->back());
     this->predict(current_state);
-    this->the_worker->unpack(&current_state->back());
+    this->the_worker->unpack_with_predicted(&current_state->back());
+    
+    current_state->llhds.push_back(current_state->log_likelihood);
+    current_state->set_time();
     
     if (current_state->results_name!="")
       current_state->write(results_name);
+    
+    current_state->start_time = std::chrono::high_resolution_clock::now();
     
     //this->sequencer.find_desired_criterion(current_state);
     

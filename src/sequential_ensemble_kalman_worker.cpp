@@ -189,10 +189,9 @@ void SequentialEnsembleKalmanWorker::unpack_with_predicted(Ensemble* ensemble)
          j<this->the_enk->packing_instructions.states_names.size();
          ++j)
     {
-      /*
       ensemble->members[i]->back().parameters[this->the_enk->packing_instructions.states_names[j]] = ensemble->partially_packed_members_col[i](arma::span(this->the_enk->packing_instructions.states_start_and_end[j].first,
                                                                                                                                                           this->the_enk->packing_instructions.states_start_and_end[j].second));
-      */
+      
       
       //ensemble->predicted_members[i]->back().
       

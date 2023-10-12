@@ -1,5 +1,6 @@
 #include "direct_gaussian_measurement_covariance_estimator.h"
 #include "direct_gaussian_measurement_covariance_estimator_output.h"
+#include "transform.h"
 
 DirectGaussianMeasurementCovarianceEstimator::DirectGaussianMeasurementCovarianceEstimator()
   :GaussianMeasurementCovarianceEstimator()
@@ -120,11 +121,40 @@ void DirectGaussianMeasurementCovarianceEstimator::setup_measurement_variables()
 {
   //Data dummy_data = this->transform_function(Parameters());
   //this->measurement_variables = dummy_data.get_vector_variables();
+  Data dummy_data = this->transform_function->transform(Parameters());
+  for (size_t i=0;
+       i<this->measurement_variables.size();
+       ++i)
+  {
+    this->kernel.set_mean(this->measurement_variables[i],
+                          arma::colvec(dummy_data[this->measurement_variables[i]].n_elem));
+    this->kernel.set_covariance(this->measurement_variables[i],
+                                this->measurement_noise_functions[i](Parameters()));
+  }
 }
 
 void DirectGaussianMeasurementCovarianceEstimator::setup_measurement_variables(const Parameters &conditioned_on_parameters)
 {
-  //Data dummy_data = this->transform_function(conditioned_on_parameters);
+  Data dummy_data = this->transform_function->transform(conditioned_on_parameters);
+  for (size_t i=0;
+       i<this->measurement_variables.size();
+       ++i)
+  {
+    this->kernel.set_mean(this->measurement_variables[i],
+                          arma::colvec(dummy_data[this->measurement_variables[i]].n_elem));
+    this->kernel.set_covariance(this->measurement_variables[i],
+                                this->measurement_noise_functions[i](conditioned_on_parameters));
+  }
+  
+  /*
+  for (auto i=dummy_data.vector_begin();
+       i!=dummy_data.vector_end();
+       ++i)
+  {
+    this->kernel.set_mean(i->first,arma::colvec(i->second.first->n_elem));
+  }
+  */
+  //std::cout << dummy_data << std::endl;
   //this->measurement_variables = dummy_data.get_vector_variables();
 }
 

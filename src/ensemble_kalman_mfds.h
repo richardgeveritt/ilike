@@ -14,7 +14,7 @@ public:
 
   EnsembleKalmanMFDS();
   
-  // constructor for all varianta that have a joint representation as intractable and Gaussian
+  // constructor for all variants that have a joint representation as intractable and Gaussian
   EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
                      size_t* seed_in,
                      Data* data_in,
@@ -27,13 +27,13 @@ public:
                      const Parameters &prior_covariances,
                      SimulateModelPtr simulate_model_in,
                      size_t update_type,
-                     std::shared_ptr<Transform> inverse_transform_in,
                      std::shared_ptr<Transform> summary_statistics_in,
+                     std::shared_ptr<Transform> transform_in,
                      bool parallel_in,
                      size_t grain_size_in,
                      const std::string &results_name_in);
   
-  // constructor for case of everything Gaussians - must construct data and Gaussian info in the correct way
+  // constructor for case of everything Gaussians - must construct data and Gaussian info in the correct way (data must include prior, etc)
   EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
                      size_t* seed_in,
                      Data* data_in,
@@ -43,15 +43,15 @@ public:
                      double delta_t_in,
                      size_t number_of_iterations_in,
                      std::shared_ptr<Transform> measurement_transform_function_in,
-                     const std::vector<std::string> &measurement_noises,
-                     const std::vector<arma::mat> &measurement_noise_functions,
-                     std::shared_ptr<Transform> inverse_transform_in,
+                     const std::vector<std::string> &measurement_variables,
+                     const std::vector<GetMeasurementMatrixPtr> &measurement_noise_functions,
                      std::shared_ptr<Transform> summary_statistics_in,
+                     std::shared_ptr<Transform> transform_in,
                      bool parallel_in,
                      size_t grain_size_in,
                      const std::string &results_name_in);
   
-  // constructor for case of everything intractable - must construct data and projection to measurements in the correct way
+  // constructor for case of everything intractable - must construct data and projection to measurements in the correct way (data must include prior, etc)
   EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
                      size_t* seed_in,
                      Data* data_in,
@@ -61,8 +61,8 @@ public:
                      double delta_t_in,
                      size_t number_of_iterations_in,
                      SimulateModelPtr simulate_model_in,
-                     std::shared_ptr<Transform> inverse_transform_in,
                      std::shared_ptr<Transform> summary_statistics_in,
+                     std::shared_ptr<Transform> transform_in,
                      bool parallel_in,
                      size_t grain_size_in,
                      const std::string &results_name_in);
@@ -157,6 +157,8 @@ protected:
   
   double delta_t;
   size_t number_of_iterations;
+  
+  //arma::colvec predicted_mean;
   
   // stored here
   Index* index;

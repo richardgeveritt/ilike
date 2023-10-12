@@ -114,7 +114,7 @@ double LinearGaussianNoiseProposalKernel::specific_evaluate_kernel(const Particl
        i!=this->proposal_info.end();
        ++i)
   {
-    arma::colvec mean = i->second.get_A()*old_particle.get_transformed_parameters(this).get_colvec(i->first);
+    arma::colvec mean = i->second.get_A()*old_particle.get_transformed_parameters(this).get_colvec(conditioned_on_variable_names);
     double scale = i->second.get_double_scale();
     double dim = double(mean.n_rows);
     output = output + dmvnorm_using_precomp(proposed_particle.get_transformed_parameters(this).get_colvec(i->first),
@@ -135,7 +135,7 @@ double LinearGaussianNoiseProposalKernel::specific_evaluate_kernel(const Particl
  */
 
 double LinearGaussianNoiseProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
-                                                                            const Particle &old_particle) const
+                                                                             const Particle &old_particle) const
 {
   // no difference since size of data set does not impact on proposal
   return this->specific_evaluate_kernel(proposed_particle, old_particle);

@@ -351,6 +351,18 @@ double Ensemble::calculate_log_normalising_constant()
   return this->log_normalising_constant_ratio;
 }
 
+arma::rowvec Ensemble::get_output_lengths() const
+{
+  arma::rowvec output_lengths(this->size());
+  
+  for (size_t i=0; i<this->members.size(); ++i)
+  {
+    output_lengths[i] = this->members[i]->length();
+  }
+  
+  return output_lengths;
+}
+
 void Ensemble::find_measurement_covariances()
 {
   this->Cxys.clear();

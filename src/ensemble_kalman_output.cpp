@@ -370,6 +370,20 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
         Rcpp::stop("File " + directory_name + "/vector_variable_sizes.txt" + "cannot be opened.");
       }
       
+      if (!this->estimator->output_lengths_file_stream.is_open())
+      {
+        this->estimator->output_lengths_file_stream.open(directory_name + "/output_lengths.txt",std::ios::out | std::ios::app);
+      }
+      if (this->estimator->output_lengths_file_stream.is_open())
+      {
+        this->estimator->output_lengths_file_stream << this->all_ensembles[deque_index].get_output_lengths();
+        //incremental_log_likelihood_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + directory_name + "/output_lengths.txt" + " cannot be opened.");
+      }
+      
       std::string smc_iteration_directory = directory_name + "/iteration" + std::to_string(iteration+1);
       
       if (!directory_exists(smc_iteration_directory))
@@ -389,6 +403,20 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
       else
       {
         Rcpp::stop("File " + smc_iteration_directory + "/incremental_log_likelihood.txt" + "cannot be opened.");
+      }
+      
+      if (!this->estimator->ess_file_stream.is_open())
+      {
+        this->estimator->ess_file_stream.open(smc_iteration_directory + "/ess.txt",std::ios::out | std::ios::app);
+      }
+      if (this->estimator->ess_file_stream.is_open())
+      {
+        this->estimator->ess_file_stream << this->all_ensembles[deque_index].ess << std::endl;
+        //ess_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + smc_iteration_directory + "/ess.txt" + " cannot be opened.");
       }
       
       if (!this->estimator->schedule_parameters_file_stream.is_open())
@@ -488,6 +516,8 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
 void EnsembleKalmanOutput::close_ofstreams()
 {
   this->estimator->incremental_log_likelihood_file_stream.close();
+  this->estimator->output_lengths_file_stream.close();
+  this->estimator->ess_file_stream.close();
   this->estimator->schedule_parameters_file_stream.close();
   this->estimator->vector_points_file_stream.close();
   this->estimator->any_points_file_stream.close(); // should be one for each member of Parameters
@@ -504,6 +534,8 @@ void EnsembleKalmanOutput::close_ofstreams()
 void EnsembleKalmanOutput::close_ofstreams(size_t deque_index)
 {
   this->estimator->incremental_log_likelihood_file_stream.close();
+  this->estimator->output_lengths_file_stream.close();
+  this->estimator->ess_file_stream.close();
   this->estimator->schedule_parameters_file_stream.close();
   this->estimator->vector_points_file_stream.close();
   this->estimator->any_points_file_stream.close(); // should be one for each member of Parameters
