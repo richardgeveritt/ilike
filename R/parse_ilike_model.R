@@ -1418,6 +1418,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
         R_function_arguments = function_info[[2]]
 
         cpp_function_arguments_string = ""
+        R_function_arguments_string = ""
         which_proposed_parameters = c()
         which_parameters = c()
         which_proposal_parameters = c()
@@ -1439,10 +1440,12 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             else if (length(split_at_dot)==1)
             {
               cpp_function_arguments_string = paste(cpp_function_arguments_string,split_at_dot[1],sep=",")
+              R_function_arguments_string = paste(R_function_arguments_string,split_at_dot[1],sep=",")
             }
             else if (length(split_at_dot)>=2)
             {
               cpp_function_arguments_string = paste(cpp_function_arguments_string,',',split_at_dot[1],'["',paste(split_at_dot[2:length(split_at_dot)],collapse=""),'"]',sep="")
+              R_function_arguments_string = paste(R_function_arguments_string,',',split_at_dot[1],'$',paste(split_at_dot[2:length(split_at_dot)],collapse=""),sep="")
 
               if (split_at_dot[1]=="proposed_parameters")
               {
@@ -1467,6 +1470,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
 
           cpp_function_arguments_string = substr(cpp_function_arguments_string,2,nchar(cpp_function_arguments_string))
+          R_function_arguments_string = substr(R_function_arguments_string,2,nchar(R_function_arguments_string))
         }
 
         # give C++ wrapper for this
@@ -1482,14 +1486,14 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
         proposal_type = 0
 
-        if (R_functions)
-        {
-          R_function_arguments_string = ""
-          for (r in 1:length(R_function_arguments))
-          {
-            paste(R_function_arguments_string,sep="")
-          }
-        }
+        # if (R_functions)
+        # {
+        #   R_function_arguments_string = ""
+        #   for (r in 1:length(R_function_arguments))
+        #   {
+        #     paste(R_function_arguments_string,sep="")
+        #   }
+        # }
 
         if (block_name=="data")
         {
@@ -1563,6 +1567,73 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
 
         }
+        else if (block_name=="evaluate_gradient_log_prior")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "arma::mat"
+          arguments = c()
+          arguments[1] = "const std::string &variable"
+          arguments[2] = "const Parameters &parameters"
+          #args_for_typedef = "const Parameters&"
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(variable,parameters) { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
+          }
+
+        }
+        else if (block_name=="evaluate_second_gradient_log_prior")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "arma::mat"
+          arguments = c()
+          arguments[1] = "const std::string &variable1"
+          arguments[2] = "const std::string &variable2"
+          arguments[3] = "const Parameters &parameters"
+          #args_for_typedef = "const Parameters&"
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(variable1,variable2,parameters) { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
+          }
+
+        }
         else if (block_name=="evaluate_log_likelihood")
         {
           if (sum(which_proposed_parameters)>0)
@@ -1588,6 +1659,65 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           else
           {
             function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
+          }
+
+        }
+        else if (block_name=="evaluate_gradient_log_likelihood")
+        {
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "arma::mat"
+          arguments = c()
+          arguments[1] = "const std::string &variable"
+          arguments[2] = "const Parameters &parameters"
+          arguments[3] = "const Data &data"
+          #args_for_typedef = "const Parameters&"
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(variable,parameters,data) { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
+          }
+
+        }
+        else if (block_name=="evaluate_second_gradient_log_likelihood")
+        {
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "arma::mat"
+          arguments = c()
+          arguments[1] = "const std::string &variable1"
+          arguments[2] = "const std::string &variable2"
+          arguments[3] = "const Parameters &parameters"
+          arguments[4] = "const Data &data"
+          #args_for_typedef = "const Parameters&"
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(variable1,variable2,parameters,data) { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
           }
 
         }
@@ -2439,7 +2569,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
           else
           {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
           }
         }
         else if (block_name=="linear_gaussian_data_covariance")
@@ -2470,7 +2600,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
           else
           {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
           }
 
         }
@@ -2502,7 +2632,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
           else
           {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
           }
 
         }
@@ -2531,7 +2661,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
           else
           {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
           }
 
         }
@@ -2560,7 +2690,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
           else
           {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
           }
 
         }
@@ -2589,7 +2719,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
           else
           {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
           }
 
         }
@@ -2765,7 +2895,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
           else
           {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
           }
 
         }
@@ -2871,7 +3001,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
           else
           {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
           }
 
         }
@@ -2977,7 +3107,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
           else
           {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return f(',cpp_function_arguments_string,');',sep="")
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
           }
 
         }

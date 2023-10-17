@@ -14,8 +14,8 @@ LazyData: true
 SystemRequirements: C++11, GNU make
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
-URL: https://github.com/richard.g.everitt/ilike
-BugReports: https://github.com/richard.g.everitt/ilike/issues
+URL: https://github.com/richardgeveritt/ilike
+BugReports: https://github.com/richardgeveritt/ilike/issues
 LinkingTo: Rcpp, RcppArmadillo, RcppParallel, BH, dqrng, sitmo
 Imports: Rcpp, RcppXPtrUtils, RcppParallel, reticulate, JuliaCall, formula.tools, tidyr, stringr, dplyr, utils, stats
 Suggests: knitr, rmarkdown, testthat
