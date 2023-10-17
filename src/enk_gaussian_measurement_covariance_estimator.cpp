@@ -73,7 +73,12 @@ void EnKGaussianMeasurementCovarianceEstimator::setup_measurement_variables(cons
   this->measurement_variables = dummy_data.get_vector_variables();
 }
 
-arma::mat EnKGaussianMeasurementCovarianceEstimator::get_measurement_covariance()
+arma::mat EnKGaussianMeasurementCovarianceEstimator::get_measurement_covariance() const
+{
+  return arma::mat();
+}
+
+arma::mat EnKGaussianMeasurementCovarianceEstimator::get_Cygivenx() const
 {
   return arma::mat();
 }

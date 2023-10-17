@@ -437,7 +437,7 @@ void EnsembleKalmanInversion::ensemble_kalman_evaluate_smcadaptive_part_given_sm
     // (involves evaluating adaptive weights, using Sequencer)
     this->sequencer.find_next_target_bisection(current_state,
                                                this->index);
-    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
+    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_inversion_latest_log_normalising_constant_ratio();
     this->the_worker->shift(&current_state->back());
     this->the_worker->unpack(&current_state->back());
     
@@ -615,6 +615,8 @@ void EnsembleKalmanInversion::ensemble_kalman_evaluate_smcadaptive_part_given_sm
     this->sequencer.find_next_target_bisection(current_state,
                                                this->index);
     
+    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_inversion_latest_log_normalising_constant_ratio();
+    
     /*
     this->sequencer.find_desired_criterion(current_state,
                                            conditioned_on_parameters);
@@ -739,7 +741,7 @@ void EnsembleKalmanInversion::ensemble_kalman_subsample_evaluate_smcfixed_part(E
 }
 
 void EnsembleKalmanInversion::ensemble_kalman_subsample_evaluate_smcadaptive_part_given_smcfixed(EnsembleKalmanOutput* current_state,
-                                                                         const Parameters &conditioned_on_parameters)
+                                                                                                 const Parameters &conditioned_on_parameters)
 {
   if (!this->sequencer_limit_is_fixed)
     this->sequencer.set_next_with_parameter(conditioned_on_parameters);
@@ -768,6 +770,8 @@ void EnsembleKalmanInversion::ensemble_kalman_subsample_evaluate_smcadaptive_par
                                                          this->index,
                                                          conditioned_on_parameters);
     */
+    
+    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_inversion_latest_log_normalising_constant_ratio();
     
     this->the_worker->shift(&current_state->back());
     this->the_worker->unpack(&current_state->back());

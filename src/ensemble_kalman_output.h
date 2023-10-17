@@ -48,6 +48,7 @@ public:
   Ensemble& back();
   
   double calculate_latest_log_normalising_constant_ratio();
+  double calculate_inversion_latest_log_normalising_constant_ratio();
   
   void simulate();
   

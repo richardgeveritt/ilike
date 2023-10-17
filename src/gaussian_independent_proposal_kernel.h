@@ -56,9 +56,9 @@ public:
   void set_covariance(const std::string &variable,
                       const arma::mat &covariance_in);
   
-  arma::mat get_inverse_covariance(const std::string &variable);
-  arma::mat get_covariance(const std::string &variable);
-  arma::mat get_covariance(const std::vector<std::string> &variables);
+  arma::mat get_inverse_covariance(const std::string &variable) const;
+  arma::mat get_covariance(const std::string &variable) const;
+  arma::mat get_covariance(const std::vector<std::string> &variables) const;
   
   double evaluate_independent_kernel(const Parameters &proposed_particle) const;
   //double evaluate_independent_kernel(Variables* proposed_particle,

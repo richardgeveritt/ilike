@@ -2,6 +2,7 @@
 #include "utils.h"
 
 GaussianProposalInfo::GaussianProposalInfo()
+: scale(1.0)
 {
 }
 

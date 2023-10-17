@@ -289,9 +289,10 @@ void HMMEnsembleFactors::find_Cygivenx(const arma::mat &inv_Cxx,
 }
 
 std::vector<arma::mat> HMMEnsembleFactors::get_adjustments(const arma::mat &Zf,
-                                                           const arma::mat &Ginv,
-                                                           const arma::mat &Ftranspose,
-                                                           const std::vector<arma::mat> &Vs,
+                                                           const arma::mat &Dhathalf,
+                                                           const arma::mat &P,
+                                                           const arma::mat &Vtranspose,
+                                                           const std::vector<arma::mat> &Yhats,
                                                            double inverse_incremental_temperature) const
 {
   std::vector<arma::mat> adjustments;
@@ -301,9 +302,10 @@ std::vector<arma::mat> HMMEnsembleFactors::get_adjustments(const arma::mat &Zf,
        ++i)
   {
     adjustments.push_back(this->measurement_covariance_estimators[i]->get_adjustment(Zf,
-                                                                                     Ginv,
-                                                                                     Ftranspose,
-                                                                                     Vs[i],
+                                                                                     Dhathalf,
+                                                                                     P,
+                                                                                     Vtranspose,
+                                                                                     Yhats[i],
                                                                                      inverse_incremental_temperature));
   }
   return adjustments;
@@ -327,6 +329,31 @@ double HMMEnsembleFactors::get_incremental_likelihood(Ensemble* ensemble)
     
     ensemble->kalman_gains.push_back(ensemble->Cxys[i]*unconditional_measurement_covariance.i());
     llhd = llhd + dmvnorm(*this->measurement_covariance_estimators[i]->get_measurement_pointer(),ensemble->myys[i],unconditional_measurement_covariance);
+  }
+  
+  return llhd;
+}
+
+double HMMEnsembleFactors::get_inversion_incremental_likelihood(Ensemble* ensemble)
+{
+  double inverse_incremental_temperature = 1.0/(this->temperature - this->previous_temperature);
+  
+  double llhd = 0.0;
+  ensemble->kalman_gains.clear();
+  ensemble->kalman_gains.reserve(this->measurement_covariance_estimators.size());
+  
+  for (size_t i=0;
+       i<this->measurement_covariance_estimators.size();
+       ++i)
+  {
+    arma::mat unconditional_measurement_covariance = this->measurement_covariance_estimators[i]->get_unconditional_measurement_covariance(ensemble->Cyys[i],
+                                                                                                                                          inverse_incremental_temperature);
+    
+    arma::mat Cygivenx = this->measurement_covariance_estimators[i]->get_Cygivenx();
+    double d = Cygivenx.n_rows;
+    //arma::mat non_tempered_unconditional_measurement_covariance = this->measurement_covariance_estimators[i]->get_unconditional_measurement_covariance(ensemble->Cyys[i],1.0);
+    ensemble->kalman_gains.push_back(ensemble->Cxys[i]*unconditional_measurement_covariance.i());
+    llhd = llhd + (d/2.0)*log(inverse_incremental_temperature) + (d/2.0)*(1.0-(1.0/inverse_incremental_temperature))*log(2.0*M_PI) + (1/2.0)*(1.0-(1.0/inverse_incremental_temperature))*arma::log_det_sympd(Cygivenx) + dmvnorm(*this->measurement_covariance_estimators[i]->get_measurement_pointer(),ensemble->myys[i],unconditional_measurement_covariance);
   }
   
   return llhd;

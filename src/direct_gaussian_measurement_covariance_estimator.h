@@ -46,9 +46,11 @@ public:
   
   void set_parameters(const Parameters &conditioned_on_parameters_in);
   
+  arma::mat get_Cygivenx() const;
+  
   //void set_parameters(const Parameters &conditioned_on_parameters_in);
   
-  arma::mat get_measurement_covariance();
+  arma::mat get_measurement_covariance() const;
   
   void setup();
   void setup(const Parameters &parameters);

@@ -27,6 +27,7 @@ public:
              arma::colvec &position,
              const std::vector<arma::colvec*> &measurements,
              const std::vector<arma::mat> &kalman_gains,
+             const std::vector<arma::colvec> &myys,
              double inverse_incremental_temperature) const;
   
 protected:

@@ -90,6 +90,7 @@ void SequentialEnsembleKalmanWorker::shift(Ensemble* ensemble)
                                            ensemble->partially_packed_members_col[i],
                                            measurements,
                                            ensemble->kalman_gains,
+                                           ensemble->myys,
                                            inverse_incremental_temperature);
   }
 }

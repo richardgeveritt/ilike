@@ -56,14 +56,16 @@ public:
                      const std::vector<arma::mat> &Cyys);
   
   std::vector<arma::mat> get_adjustments(const arma::mat &Zf,
-                                         const arma::mat &Ginv,
-                                         const arma::mat &Ftranspose,
-                                         const std::vector<arma::mat> &Vs,
+                                         const arma::mat &Dhathalf,
+                                         const arma::mat &P,
+                                         const arma::mat &Vtranspose,
+                                         const std::vector<arma::mat> &Yhats,
                                          double inverse_incremental_temperature) const;
   
   //std::vector<arma::colvec> pack_measurements() const;
   
   double get_incremental_likelihood(Ensemble* ensemble);
+  double get_inversion_incremental_likelihood(Ensemble* ensemble);
   
   const EnsembleFactors* get_ensemble_factors() const;
   

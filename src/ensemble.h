@@ -64,6 +64,7 @@ public:
   void update_weights(const arma::colvec &latest_unnormalised_log_incremental_weights);
   
   double calculate_log_normalising_constant();
+  double calculate_inversion_log_normalising_constant();
   
   void set_previous_target_evaluated_to_target_evaluated();
   void subsample_set_previous_target_evaluated_to_target_evaluated();

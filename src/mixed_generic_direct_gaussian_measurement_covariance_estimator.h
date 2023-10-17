@@ -53,23 +53,24 @@ public:
                      const arma::mat &Cyy);
   
   arma::mat get_adjustment(const arma::mat &Zf,
-                           const arma::mat &Ginv,
-                           const arma::mat &Ftranspose,
-                           const arma::mat &V,
+                           const arma::mat &Dhathalf,
+                           const arma::mat &P,
+                           const arma::mat &Vtranspose,
+                           const arma::mat &Yhat,
                            double inverse_incremental_temperature);
   
   arma::mat get_Cygivenx() const;
   
   arma::mat get_unconditional_measurement_covariance(const arma::mat &Cyy,
-                                                     double inverse_incremental_temperature);
+                                                     double inverse_incremental_temperature) const;
   
   Parameters simulate(const Parameters &current_state);
   
   arma::colvec gaussian_simulate();
   
-  arma::mat get_prior_measurement_covariance();
-  arma::mat get_prior_measurement_covariance_embeddeed_in_full_space();
-  arma::mat get_measurement_covariance_for_likelihood_ratio(double inverse_incremental_temperature);
+  arma::mat get_prior_measurement_covariance() const;
+  arma::mat get_prior_measurement_covariance_embedded_in_full_space() const;
+  arma::mat get_measurement_covariance_for_likelihood_ratio(double inverse_incremental_temperature) const;
   
   void change_data();
   void change_data(Data* new_data);

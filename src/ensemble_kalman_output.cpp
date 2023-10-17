@@ -115,6 +115,11 @@ double EnsembleKalmanOutput::calculate_latest_log_normalising_constant_ratio()
   return this->all_ensembles.back().calculate_log_normalising_constant();
 }
 
+double EnsembleKalmanOutput::calculate_inversion_latest_log_normalising_constant_ratio()
+{
+  return this->all_ensembles.back().calculate_inversion_log_normalising_constant();
+}
+
 void EnsembleKalmanOutput::simulate()
 {
   this->estimator->ensemble_kalman_simulate(this);

@@ -696,6 +696,7 @@ void EnsembleKalmanMFDS::ensemble_kalman_evaluate_smcadaptive_part_given_smcfixe
     
     this->the_worker->pack(&current_state->back());
     this->find_measurement_covariances(current_state);
+    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
     this->the_worker->shift(&current_state->back());
     this->predict(current_state);
     this->the_worker->unpack_with_predicted(&current_state->back());
@@ -816,6 +817,7 @@ void EnsembleKalmanMFDS::ensemble_kalman_subsample_evaluate_smcadaptive_part_giv
   {
     this->the_worker->pack(&current_state->back());
     this->find_measurement_covariances(current_state);
+    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
     this->the_worker->shift(&current_state->back());
     this->predict(current_state);
     this->the_worker->unpack_with_predicted(&current_state->back());

@@ -351,6 +351,13 @@ double Ensemble::calculate_log_normalising_constant()
   return this->log_normalising_constant_ratio;
 }
 
+double Ensemble::calculate_inversion_log_normalising_constant()
+{
+  this->log_normalising_constant_ratio = this->ensemble_factors->get_inversion_incremental_likelihood(this);
+  this->ess = exp(2.0*log_sum_exp(this->unnormalised_log_weights) - log_sum_exp(2.0*this->unnormalised_log_weights));
+  return this->log_normalising_constant_ratio;
+}
+
 arma::rowvec Ensemble::get_output_lengths() const
 {
   arma::rowvec output_lengths(this->size());

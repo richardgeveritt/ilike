@@ -135,17 +135,19 @@ void GaussianIndependentProposalKernel::set_covariance(const std::string &variab
   //}
 }
 
-arma::mat GaussianIndependentProposalKernel::get_inverse_covariance(const std::string &variable)
+arma::mat GaussianIndependentProposalKernel::get_inverse_covariance(const std::string &variable) const
 {
-  return this->proposal_info[variable].get_inv();
+  auto found = this->proposal_info.find(variable);
+  return found->second.get_inv();
 }
 
-arma::mat GaussianIndependentProposalKernel::get_covariance(const std::string &variable)
+arma::mat GaussianIndependentProposalKernel::get_covariance(const std::string &variable) const
 {
-  return this->proposal_info[variable].get_covariance();
+  auto found = this->proposal_info.find(variable);
+  return found->second.get_covariance();
 }
 
-arma::mat GaussianIndependentProposalKernel::get_covariance(const std::vector<std::string> &variables)
+arma::mat GaussianIndependentProposalKernel::get_covariance(const std::vector<std::string> &variables) const
 {
   size_t total_dimension = 0;
   std::vector<arma::mat> covariances;

@@ -22,7 +22,9 @@ public:
   MeasurementCovarianceEstimator* duplicate() const;
   GaussianMeasurementCovarianceEstimator* gaussian_duplicate() const;
   
-  arma::mat get_measurement_covariance();
+  arma::mat get_Cygivenx() const;
+  
+  arma::mat get_measurement_covariance() const;
   
   void setup();
   void setup(const Parameters &parameters);

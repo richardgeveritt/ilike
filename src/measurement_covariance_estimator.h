@@ -55,13 +55,16 @@ public:
                              const arma::mat &Cyy)=0;
   
   virtual arma::mat get_unconditional_measurement_covariance(const arma::mat &Cyy,
-                                                             double inverse_incremental_temperature)=0;
+                                                             double inverse_incremental_temperature) const=0;
   
   virtual arma::mat get_adjustment(const arma::mat &Zf,
-                                   const arma::mat &Ginv,
-                                   const arma::mat &Ftranspose,
-                                   const arma::mat &V,
+                                   const arma::mat &Dhathalf,
+                                   const arma::mat &P,
+                                   const arma::mat &Vtranspose,
+                                   const arma::mat &Yhat,
                                    double inverse_incremental_temperature)=0;
+  
+  virtual arma::mat get_Cygivenx() const=0;
   
   virtual void change_data()=0;
   virtual void change_data(Data* new_data)=0;

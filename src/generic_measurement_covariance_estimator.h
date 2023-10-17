@@ -46,15 +46,16 @@ public:
                      const arma::mat &Cyy);
   
   arma::mat get_adjustment(const arma::mat &Zf,
-                           const arma::mat &Ginv,
-                           const arma::mat &Ftranspose,
-                           const arma::mat &V,
+                           const arma::mat &Dhathalf,
+                           const arma::mat &P,
+                           const arma::mat &Vtranspose,
+                           const arma::mat &Yhat,
                            double inverse_incremental_temperature);
   
   arma::mat get_Cygivenx() const;
   
   arma::mat get_unconditional_measurement_covariance(const arma::mat &Cyy,
-                                                     double inverse_incremental_temperature);
+                                                     double inverse_incremental_temperature) const;
   
   Parameters simulate(const Parameters &current_state);
   

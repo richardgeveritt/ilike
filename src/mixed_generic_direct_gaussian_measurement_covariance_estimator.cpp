@@ -163,13 +163,58 @@ arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_Cygivenx
 }
 
 arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_adjustment(const arma::mat &Zf,
+                                                                                   const arma::mat &Dhathalf,
+                                                                                   const arma::mat &P,
+                                                                                   const arma::mat &Vtranspose,
+                                                                                   const arma::mat &Yhat,
+                                                                                   double inverse_incremental_temperature)
+{
+  // follows https://arxiv.org/abs/2006.02941
+  //arma::mat for_eig = V*((inverse_incremental_temperature-1.0)*this->Cygivenx + inverse_incremental_temperature*this->get_prior_measurement_covariance_embedded_in_full_space())*V.t();
+  
+  arma::mat I;
+  I.eye(Vtranspose.n_cols,Vtranspose.n_cols);
+  
+  arma::mat for_eig = Vtranspose*(arma::inv_sympd(I + Yhat*arma::inv_sympd((inverse_incremental_temperature-1.0)*this->get_Cygivenx() + inverse_incremental_temperature*this->get_prior_measurement_covariance_embedded_in_full_space())*Yhat.t()))*Vtranspose.t();
+  
+  //std::cout << for_eig << std::endl;
+  
+  arma::mat U;
+  arma::vec diagD;
+  //arma::mat Utrans;
+  arma::eig_sym(diagD,U,for_eig);
+  
+  //std::cout << U << std::endl;
+  
+  arma::mat Dsqrt(diagD.n_elem,diagD.n_elem);
+  Dsqrt.diag() = arma::sqrt(diagD);
+
+  /*
+  std::cout << P.t() << std::endl;
+  std::cout << arma::pinv(Dhathalf) << std::endl;
+  std::cout << arma::pinv(Dhathalf)*P.t() << std::endl;
+  std::cout << Dsqrt << std::endl;
+  std::cout << Dsqrt*arma::pinv(Dhathalf)*P.t() << std::endl;
+  std::cout << U << std::endl;
+  std::cout << U*Dsqrt*arma::pinv(Dhathalf)*P.t() << std::endl;
+  std::cout << Dhathalf << std::endl;
+  std::cout << Dhathalf*U*Dsqrt*arma::pinv(Dhathalf)*P.t() << std::endl;
+  std::cout << P << std::endl;
+  std::cout << P*Dhathalf*U*Dsqrt*arma::pinv(Dhathalf)*P.t() << std::endl;
+  */
+  
+  return P*Dhathalf*U*Dsqrt*arma::pinv(Dhathalf)*P.t();
+}
+
+/*
+arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_adjustment(const arma::mat &Zf,
                                                                                    const arma::mat &Ginv,
                                                                                    const arma::mat &Ftranspose,
                                                                                    const arma::mat &V,
                                                                                    double inverse_incremental_temperature)
 {
   // follows https://arxiv.org/abs/2006.02941
-  arma::mat for_eig = V*((inverse_incremental_temperature-1.0)*this->Cygivenx + inverse_incremental_temperature*this->get_prior_measurement_covariance_embeddeed_in_full_space())*V.t();
+  arma::mat for_eig = V*((inverse_incremental_temperature-1.0)*this->Cygivenx + inverse_incremental_temperature*this->get_prior_measurement_covariance_embedded_in_full_space())*V.t();
   
   arma::mat C;
   arma::vec diagGamma;
@@ -183,6 +228,7 @@ arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_adjustme
   
   return Zf*C*arma::sqrtmat_sympd(arma::inv_sympd(I+Gamma))*Ginv*Ftranspose;
 }
+*/
 
 void MixedGenericDirectGaussianMeasurementCovarianceEstimator::set_parameters(const Parameters &conditioned_on_parameters_in)
 {
@@ -224,7 +270,7 @@ void MixedGenericDirectGaussianMeasurementCovarianceEstimator::find_Cygivenx(con
 }
 
 arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_unconditional_measurement_covariance(const arma::mat &Cyy,
-                                                                                                             double inverse_incremental_temperature)
+                                                                                                             double inverse_incremental_temperature) const
 {
   arma::mat gaussian_meas_cov = this->get_prior_measurement_covariance();
   arma::mat total_gaussian_meas_cov = arma::mat(Cyy.n_rows,Cyy.n_cols);
@@ -232,19 +278,19 @@ arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_uncondit
   return Cyy + (inverse_incremental_temperature-1.0)*this->Cygivenx + inverse_incremental_temperature*total_gaussian_meas_cov;
 }
 
-arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_prior_measurement_covariance()
+arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_prior_measurement_covariance() const
 {
   return this->kernel.get_covariance(this->prior_measurement_variables);
 }
 
-arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_prior_measurement_covariance_embeddeed_in_full_space()
+arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_prior_measurement_covariance_embedded_in_full_space() const
 {
   arma::mat output(this->Cygivenx.n_rows,this->Cygivenx.n_rows);
   output.submat(this->measurement_dimension, this->measurement_dimension, this->Cygivenx.n_rows-1, this->Cygivenx.n_rows-1) = this->get_prior_measurement_covariance();
   return output;
 }
 
-arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_measurement_covariance_for_likelihood_ratio(double inverse_incremental_temperature)
+arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_measurement_covariance_for_likelihood_ratio(double inverse_incremental_temperature) const
 {
   arma::mat likelihood_part = inverse_incremental_temperature*this->Cygivenx;
   arma::mat prior_part = inverse_incremental_temperature*this->get_prior_measurement_covariance();

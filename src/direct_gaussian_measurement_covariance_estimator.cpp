@@ -158,7 +158,12 @@ void DirectGaussianMeasurementCovarianceEstimator::setup_measurement_variables(c
   //this->measurement_variables = dummy_data.get_vector_variables();
 }
 
-arma::mat DirectGaussianMeasurementCovarianceEstimator::get_measurement_covariance()
+arma::mat DirectGaussianMeasurementCovarianceEstimator::get_measurement_covariance() const
+{
+  return this->kernel.get_covariance(this->measurement_variables);
+}
+
+arma::mat DirectGaussianMeasurementCovarianceEstimator::get_Cygivenx() const
 {
   return this->kernel.get_covariance(this->measurement_variables);
 }

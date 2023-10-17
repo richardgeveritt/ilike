@@ -239,8 +239,9 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
   {
     this->schedule_difference = this->schedule[this->mileometer.back()]-this->schedule[this->mileometer.back()-1];
     //this->mileometer.increment();
-    this->set_schedule_parameters();
     current_state->back().set_temperature(this->current_bisect_value);
+    this->set_schedule_parameters();
+    
     return;
   }
   
@@ -442,8 +443,9 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
   {
     this->schedule_difference = this->schedule[this->mileometer.back()]-this->schedule[this->mileometer.back()-1];
     //this->mileometer.increment();
-    this->set_schedule_parameters();
     current_state->back().set_temperature(this->current_bisect_value);
+    this->set_schedule_parameters();
+    
     return;
   }
   

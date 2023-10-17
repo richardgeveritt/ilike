@@ -1523,7 +1523,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function() { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+            function_body = paste('function() { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
           }
           else
           {
@@ -1555,7 +1555,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(parameters) { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+            function_body = paste('function(parameters) { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
           }
           else
           {
@@ -1583,7 +1583,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(parameters,data) { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+            function_body = paste('function(parameters,data) { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
           }
           else
           {
@@ -1620,7 +1620,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function() { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+            function_body = paste('function() { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
           }
           else
           {
@@ -1679,7 +1679,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
           }
           else
           {
@@ -1748,7 +1748,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
           }
           else
           {
@@ -1805,7 +1805,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
           }
           else
           {
@@ -1878,7 +1878,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
           }
           else
           {
@@ -1936,7 +1936,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
           }
           else
           {
@@ -2005,7 +2005,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
           }
           else
           {
@@ -2078,7 +2078,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
           }
           else
           {
@@ -2113,7 +2113,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function() { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+            function_body = paste('function() { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
           }
           else
           {
@@ -2151,7 +2151,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
           }
           else
           {
@@ -2188,7 +2188,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
           }
           else
           {
@@ -2225,7 +2225,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
           }
           else
           {
@@ -2260,7 +2260,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
           }
           else
           {
@@ -2294,7 +2294,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
           }
           else
           {
@@ -2329,7 +2329,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
           }
           else
           {
@@ -2366,7 +2366,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
           }
           else
           {
@@ -2403,7 +2403,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
           }
           else
           {
@@ -2435,7 +2435,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
           }
           else
           {
@@ -2466,7 +2466,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
           }
           else
           {
@@ -2498,7 +2498,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
           }
           else
           {
@@ -2527,7 +2527,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
           }
           else
           {
@@ -2556,7 +2556,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
           }
           else
           {
@@ -2585,7 +2585,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
           }
           else
           {
@@ -2609,7 +2609,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
           }
           else
           {
@@ -2633,7 +2633,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
           }
           else
           {
@@ -2654,7 +2654,14 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[1] = "const Parameters &parameters"
           arguments[2] = "const Data &data"
           #args_for_typedef = "const Parameters&"
-          function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return NumericVector(f(',cpp_function_arguments_string,'))[0]; return output;',sep="")
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return NumericVector(f(',cpp_function_arguments_string,'))[0]; return output;',sep="")
+          }
         }
         else if (block_name=="m_transform")
         {
@@ -2685,7 +2692,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
           }
           else
           {
@@ -2722,7 +2729,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
           }
           else
           {
@@ -2754,7 +2761,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
           }
           else
           {
@@ -2791,7 +2798,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
           }
           else
           {
@@ -2828,7 +2835,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
           }
           else
           {
@@ -2860,7 +2867,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
           }
           else
           {
@@ -2897,7 +2904,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
           }
           else
           {
@@ -2934,7 +2941,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { output=list(); output["',output_variable,'"] = ',R_function_name,'(',R_function_arguments_string,',); return(output)}',sep="")
+            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
           }
           else
           {
@@ -2966,7 +2973,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (R_functions==TRUE)
           {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,',)) }',sep="")
+            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
           }
           else
           {
@@ -2981,6 +2988,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
         if (R_functions)
         {
+          eval(parse(text=paste(R_function_name,function_info[[1]],sep="")))
           my_list = list(eval(parse(text=function_body)))
         }
         else
@@ -3040,12 +3048,14 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
         names(my_list) = c(block_name)
 
         if (proposal_type!=0)
+        {
           my_list[["type"]] = proposal_type
 
-        if ("type" %in% names(blocks[[block_type]][[factor_number]]))
-        {
-          if (blocks[[block_type]][[factor_number]][["type"]]!=proposal_type)
-            stop(paste("Block ",block_name,", line number ",line_counter,": different parts of the proposal are of different types (maybe one relies on additional parameters and/or data, and the other does not?)",sep=""))
+          if ("type" %in% names(blocks[[block_type]][[factor_number]]))
+          {
+            if (blocks[[block_type]][[factor_number]][["type"]]!=proposal_type)
+              stop(paste("Block ",block_name,", line number ",line_counter,": different parts of the proposal are of different types (maybe one relies on additional parameters and/or data, and the other does not?)",sep=""))
+          }
         }
 
         if (length((blocks[[block_type]]))==0)
@@ -3708,7 +3718,8 @@ parse_ilike_model <- function(filename,
     # ignore block if block number is not positive
     if (number_to_pass_to_extract_block>0)
     {
-      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,external_packages,R_functions,julia_bin_dir,julia_required_libraries)
+      browser
+      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries)
       if ( (factor_number!=0) && (factor_number==length(blocks[["factor"]])) )
       {
         print_factor_info(length(blocks[["factor"]]),blocks,line_counter)
