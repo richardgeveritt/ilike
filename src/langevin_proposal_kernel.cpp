@@ -264,10 +264,9 @@ Parameters LangevinProposalKernel::simulate(RandomNumberGenerator &rng,
     arma::colvec mean = particle.get_transformed_parameters(this).get_colvec(i->first);
     double scale = i->second.get_double_scale();
     //double dim = double(mean.n_rows);
-    output[i->first] = rmvnorm(rng,
-                               mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first,this->index,particle))/2.0,
-                               sqrt(scale)*i->second.get_chol(),
-                               true);
+    output[i->first] = rmvnorm_using_chol(rng,
+                                          mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first,this->index,particle))/2.0,
+                                          sqrt(scale)*i->second.get_chol());
   }
   return output;
 }
@@ -329,10 +328,9 @@ Parameters LangevinProposalKernel::subsample_simulate(RandomNumberGenerator &rng
     arma::colvec mean = particle.get_transformed_parameters(this).get_colvec(i->first);
     double scale = i->second.get_double_scale();
     //double dim = double(mean.n_rows);
-    output[i->first] = rmvnorm(rng,
-                               mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->subsample_get_gradient_of_log(i->first,this->index,particle))/2.0,
-                               sqrt(scale)*i->second.get_chol(),
-                               true);
+    output[i->first] = rmvnorm_using_chol(rng,
+                                          mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->subsample_get_gradient_of_log(i->first,this->index,particle))/2.0,
+                                          sqrt(scale)*i->second.get_chol());
   }
   return output;
 }
@@ -394,10 +392,9 @@ Parameters LangevinProposalKernel::subsample_simulate(RandomNumberGenerator &rng
   arma::colvec mean = particle.get_transformed_parameters(this).get_colvec(found->first);
   double scale = found->second.get_double_scale();
   //double dim = double(mean.n_rows);
-  output[found->first] = rmvnorm(rng,
-                             mean + scale*found->second.get_covariance()*arma::vectorise(gradient_estimator_output->subsample_get_gradient_of_log(found->first,this->index,particle))/2.0,
-                             sqrt(scale)*found->second.get_chol(),
-                             true);
+  output[found->first] = rmvnorm_using_chol(rng,
+                                            mean + scale*found->second.get_covariance()*arma::vectorise(gradient_estimator_output->subsample_get_gradient_of_log(found->first,this->index,particle))/2.0,
+                                            sqrt(scale)*found->second.get_chol());
   return output;
 }
 

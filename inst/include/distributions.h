@@ -324,6 +324,68 @@ inline arma::colvec rmvnorm(RandomNumberGenerator &rng,
     return (mu + arma::chol(sigma)*Y);
 }
 
+inline arma::colvec rmvnorm_using_chol(RandomNumberGenerator &rng,
+                                       const arma::colvec &mu,
+                                       const arma::mat &chol)
+{
+  //size_t n = 1;
+  //int ncols = sigma.n_cols;
+  //arma::mat Y = rnorm(rng,
+  //                    std::pair<size_t,size_t>(ncols,n));
+  //if (sigma_is_chol)
+  //  return (arma::repmat(mu, n, 1) + sigma*Y).as_col();
+  //else
+  //  return (arma::repmat(mu, n, 1) + arma::chol(sigma)*Y).as_col();
+  
+  size_t n = 1;
+  int ncols = chol.n_cols;
+  arma::mat Y = rnorm(rng,
+                      std::pair<size_t,size_t>(ncols,n));
+  return (mu + chol*Y);
+}
+
+inline arma::colvec rmvnorm(RandomNumberGenerator &rng,
+                            const arma::colvec &mu,
+                            const arma::mat &sigma)
+{
+  //size_t n = 1;
+  //int ncols = sigma.n_cols;
+  //arma::mat Y = rnorm(rng,
+  //                    std::pair<size_t,size_t>(ncols,n));
+  //if (sigma_is_chol)
+  //  return (arma::repmat(mu, n, 1) + sigma*Y).as_col();
+  //else
+  //  return (arma::repmat(mu, n, 1) + arma::chol(sigma)*Y).as_col();
+  
+  size_t n = 1;
+  int ncols = sigma.n_cols;
+  arma::mat Y = rnorm(rng,
+                      std::pair<size_t,size_t>(ncols,n));
+  return (mu + arma::chol(sigma)*Y);
+}
+
+inline arma::mat rmvnorm(RandomNumberGenerator &rng,
+                         size_t n,
+                         const arma::colvec &mu,
+                         const arma::mat &sigma)
+{
+  //size_t n = 1;
+  //int ncols = sigma.n_cols;
+  //arma::mat Y = rnorm(rng,
+  //                    std::pair<size_t,size_t>(ncols,n));
+  //if (sigma_is_chol)
+  //  return (arma::repmat(mu, n, 1) + sigma*Y).as_col();
+  //else
+  //  return (arma::repmat(mu, n, 1) + arma::chol(sigma)*Y).as_col();
+  
+  int ncols = sigma.n_cols;
+  arma::mat Y = rnorm(rng,
+                      std::pair<size_t,size_t>(ncols,n));
+  arma::mat prod = arma::chol(sigma)*Y;
+  prod.each_col() += mu;
+  return (prod);
+}
+
 inline double dmvnorm_using_precomp(const arma::colvec &x,
                                     const arma::colvec &mu,
                                     const arma::mat &inv_sigma,

@@ -419,7 +419,7 @@ load_smc_output = function(results_directory,
 
         if (is.null(schedule_parameters))
         {
-          output = cbind(external_column,target_column,time_column,llhd_column,ess_column,,iterations_column,chains_column,ancestor_index_column,log_weight_column,output_names_column,output_index_column,output$Value)
+          output = cbind(external_column,target_column,time_column,llhd_column,ess_column,iterations_column,chains_column,ancestor_index_column,log_weight_column,output_names_column,output_index_column,output$Value)
           colnames(output) = c('ExternalIndex','Target','Time','NormalisingConstant','ISESS','Iteration','Particle','AncestorIndex','LogWeight','ParameterName','Dimension',"Value")
         }
         else
