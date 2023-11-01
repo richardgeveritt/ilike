@@ -48,7 +48,7 @@ smc_mcmc_move = function(model,
   if (is.null(adaptive_resampling_method))
   {
     print("No method set for adaptive resampling: defaulting to resampling whenever the ESS drops below the number of particles.")
-    adaptive_resampling_method = list(criterion='ess',values=as.list(paste(number_of_particles)))
+    adaptive_resampling_method = list(method='ess',values=as.list(paste(number_of_particles)))
   }
 
   # Adaptive target method.
@@ -57,7 +57,7 @@ smc_mcmc_move = function(model,
   if (is.null(adaptive_target_method))
   {
     print("No method set for adaptive sequence of target distributions in SMC: defaulting to moving directly from one distribution to another.")
-    adaptive_target_method = list(criterion='positive')
+    adaptive_target_method = list(method='positive')
   }
 
   # SMC sequencing.

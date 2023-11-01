@@ -11,6 +11,13 @@ CustomNoParamsProposalKernel::~CustomNoParamsProposalKernel()
 {
 }
 
+CustomNoParamsProposalKernel::CustomNoParamsProposalKernel(SimulateNoParamsMCMCProposalPtr proposal_simulate_in)
+:ProposalKernel()
+{
+  this->proposal_evaluate = NULL;
+  this->proposal_simulate = proposal_simulate_in;
+}
+
 CustomNoParamsProposalKernel::CustomNoParamsProposalKernel(SimulateNoParamsMCMCProposalPtr proposal_simulate_in,
                                                            EvaluateLogNoParamsMCMCProposalPtr proposal_evaluate_in)
   :ProposalKernel()

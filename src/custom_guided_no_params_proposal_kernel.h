@@ -20,6 +20,9 @@ public:
   virtual ~CustomGuidedNoParamsProposalKernel();
   
   CustomGuidedNoParamsProposalKernel(SimulateGuidedNoParamsMCMCProposalPtr proposal_simulate_in,
+                                     const Data* data_in);
+  
+  CustomGuidedNoParamsProposalKernel(SimulateGuidedNoParamsMCMCProposalPtr proposal_simulate_in,
                                      EvaluateLogGuidedNoParamsMCMCProposalPtr proposal_evaluate_in,
                                      const Data* data_in);
 

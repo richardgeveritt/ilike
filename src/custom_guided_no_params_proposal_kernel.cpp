@@ -12,6 +12,15 @@ CustomGuidedNoParamsProposalKernel::~CustomGuidedNoParamsProposalKernel()
 }
 
 CustomGuidedNoParamsProposalKernel::CustomGuidedNoParamsProposalKernel(SimulateGuidedNoParamsMCMCProposalPtr proposal_simulate_in,
+                                                                       const Data* data_in)
+:ProposalKernel()
+{
+  this->proposal_evaluate = NULL;
+  this->proposal_simulate = proposal_simulate_in;
+  this->data = data_in;
+}
+
+CustomGuidedNoParamsProposalKernel::CustomGuidedNoParamsProposalKernel(SimulateGuidedNoParamsMCMCProposalPtr proposal_simulate_in,
                                                                        EvaluateLogGuidedNoParamsMCMCProposalPtr proposal_evaluate_in,
                                                                        const Data* data_in)
   :ProposalKernel()

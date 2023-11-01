@@ -12,6 +12,15 @@ CustomGuidedProposalKernel::~CustomGuidedProposalKernel()
 }
 
 CustomGuidedProposalKernel::CustomGuidedProposalKernel(SimulateGuidedMCMCProposalPtr proposal_simulate_in,
+                                                       const Data* data_in)
+:ProposalKernel()
+{
+  this->proposal_evaluate = NULL;
+  this->proposal_simulate = proposal_simulate_in;
+  this->data = data_in;
+}
+
+CustomGuidedProposalKernel::CustomGuidedProposalKernel(SimulateGuidedMCMCProposalPtr proposal_simulate_in,
                                                        EvaluateLogGuidedMCMCProposalPtr proposal_evaluate_in,
                                                        const Data* data_in)
   :ProposalKernel()

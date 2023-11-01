@@ -29,6 +29,7 @@ using namespace Rcpp;
 #include "smc_output.h"
 #include "metropolis_mcmc.h"
 #include "metropolis_hastings_mcmc.h"
+#include "unadjusted_mcmc.h"
 #include "stochastic_scan_mcmc.h"
 #include "deterministic_scan_mcmc.h"
 #include "gaussian_random_walk_proposal_kernel.h"
@@ -202,7 +203,11 @@ Data get_data(const List &model)
     List data_list = model["data"];
     List data_list0 = data_list[0];
     SEXP data_SEXP = data_list0["data"];
-    return load_data(data_SEXP);
+    
+    Data output = load_data(data_SEXP);
+    return output;
+    
+    //return load_data(data_SEXP);
   }
   else
   {
@@ -716,7 +721,8 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
     //Rcout << sequencer_types[i] << std::endl;
     //Rcout << sequencer_schedules[i][0] << std::endl;
     //Rcout << sequencer_schedules[i][1] << std::endl;
-    if ( ( (sequencer_types[i]=="annealing") || (sequencer_types[i]=="tempering") ) && (!( (sequencer_schedules[i].size()==2) && (sequencer_schedules[i][0]==0.0) && (sequencer_schedules[i][1]==1.0)) ) )
+    //if ( ( (sequencer_types[i]=="annealing") || (sequencer_types[i]=="tempering") ) && (!( (sequencer_schedules[i].size()==2) && (sequencer_schedules[i][0]==0.0) && (sequencer_schedules[i][1]==1.0)) ) )
+    if ( (sequencer_types[i]=="annealing") || (sequencer_types[i]=="tempering") )
     {
       if (any_annealing==false)
       {
@@ -904,13 +910,17 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                        new_factor,
                                                                                        true);
           full_index_vector.push_back(likelihood_estimators.size());
-                                                                      
+                             
+          //Rcout << "loading evaluate_log_prior" << std::endl;
           if (include_priors)
           {
+            //Rcout << "include priors" << std::endl;
+            
             without_cancelled_index_vector.push_back(likelihood_estimators.size());
             
             if (any_annealing)
             {
+              //Rcout << "any annealing" << std::endl;
               likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(rng_in,
                                                                               seed_in,
                                                                               data_in,
@@ -921,11 +931,13 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
             }
             else
             {
+              //Rcout << "no annealing" << std::endl;
               likelihood_estimators.push_back(new_likelihood_estimator);
             }
           }
           else
           {
+            //Rcout << "not including priors" << std::endl;
             likelihood_estimators.push_back(new_likelihood_estimator);
           }
           
@@ -1928,6 +1940,189 @@ ProposalKernel* get_mh_proposal(const List &current_proposal,
   }
 }
 
+ProposalKernel* get_unadjusted_proposal(const List &current_proposal,
+                                const List &model_parameters,
+                                const Data* data)
+{
+  ProposalKernel* proposal;
+  if ( current_proposal.containsElementNamed("unadjusted_proposal") )
+  {
+    List proposal_info = current_proposal["unadjusted_proposal"];
+    
+    if (Rf_isNewList(proposal_info))
+    {
+      if ( proposal_info.containsElementNamed("type") && proposal_info.containsElementNamed("variables") )
+      {
+        std::string type = proposal_info["type"];
+        if (type=="norm_rw")
+        {
+          List info = get_single_variable_one_double_parameter_info(model_parameters,
+                                                                    proposal_info,
+                                                                    type);
+          
+          std::string variable = info[0];
+          double sd = info[1];
+          
+          proposal = new GaussianRandomWalkProposalKernel(variable,
+                                                          sd);
+          
+        }
+        else if (type=="mvnorm_rw")
+        {
+          List info = get_single_variable_matrix_parameter_info(model_parameters,
+                                                                proposal_info,
+                                                                type);
+          
+          std::string variable = info[0];
+          arma::mat cov = info[1];
+          
+          proposal = new GaussianRandomWalkProposalKernel(variable,
+                                                          cov);
+          
+        }
+        if (type=="unif_rw")
+        {
+          List info = get_single_variable_one_double_parameter_info(model_parameters,
+                                                                    proposal_info,
+                                                                    type);
+          
+          std::string variable = info[0];
+          double sd = info[1];
+          
+          proposal = new UniformRandomWalkProposalKernel(variable,
+                                                         sd);
+          
+        }
+        if (type=="mvunif_rw")
+        {
+          List info = get_single_variable_vector_parameter_info(model_parameters,
+                                                                proposal_info,
+                                                                type);
+          
+          std::string variable = info[0];
+          arma::colvec halfwidth = info[1];
+          
+          proposal = new UniformRandomWalkProposalKernel(variable,
+                                                         halfwidth);
+          
+        }
+        else if (type=="langevin")
+        {
+          List info = get_single_variable_matrix_parameter_info(model_parameters,
+                                                                proposal_info,
+                                                                type);
+          
+          std::string variable = info[0];
+          arma::mat cov = info[1];
+          
+          proposal = new LangevinProposalKernel(variable,
+                                                cov,
+                                                new DirectGradientEstimator());
+          
+        }
+        else if (type=="hmc")
+        {
+          List info = get_single_variable_matrix_parameter_info(model_parameters,
+                                                                proposal_info,
+                                                                type);
+          
+          std::string variable = info[0];
+          arma::mat cov = info[1];
+          
+          proposal = new HMCProposalKernel(variable,
+                                           cov,
+                                           new DirectGradientEstimator());
+          
+        }
+        else if (type=="barker_dynamics")
+        {
+          List info = get_single_variable_matrix_parameter_info(model_parameters,
+                                                                proposal_info,
+                                                                type);
+          
+          std::string variable = info[0];
+          arma::mat cov = info[1];
+          
+          proposal = new BarkerDynamicsProposalKernel(variable,
+                                                      cov,
+                                                      new DirectGradientEstimator());
+          
+        }
+        else if (type=="mirror")
+        {
+          List info = get_single_variable_vector_and_matrix_parameter_info(model_parameters,
+                                                                           proposal_info,
+                                                                           type);
+          
+          std::string variable = info[0];
+          arma::colvec mean = info[1];
+          arma::mat cov = info[2];
+          
+          proposal = new MirrorProposalKernel(variable,
+                                              mean,
+                                              cov);
+          
+        }
+        else
+        {
+          Rcout << "Proposal type " << type;
+          stop("Proposal type unknown");
+        }
+      }
+      else
+      {
+        stop("Missing information for proposal in model file.");
+      }
+      
+    }
+    else
+    {
+      stop("Error in proposal section of model file.");
+    }
+  }
+  else if ( current_proposal.containsElementNamed("simulate_unadjusted_proposal") && current_proposal.containsElementNamed("type") )
+  {
+    SEXP simulate_unadjusted_proposal_SEXP = current_proposal["simulate_unadjusted_proposal"];
+    size_t type = current_proposal["type"];
+    if (type==1)
+    {
+      proposal = new CustomNoParamsProposalKernel(load_simulate_no_params_mcmc_proposal(simulate_unadjusted_proposal_SEXP));
+    }
+    else if (type==2)
+    {
+      proposal = new CustomProposalKernel(load_simulate_mcmc_proposal(simulate_unadjusted_proposal_SEXP));
+    }
+    else if (type==3)
+    {
+      proposal = new CustomGuidedNoParamsProposalKernel(load_simulate_guided_no_params_mcmc_proposal(simulate_unadjusted_proposal_SEXP),
+                                                        data);
+    }
+    else if (type==4)
+    {
+      proposal = new CustomGuidedProposalKernel(load_simulate_guided_mcmc_proposal(simulate_unadjusted_proposal_SEXP),
+                                                data);
+    }
+    else
+    {
+      stop("Functions read in for proposal are invalid.");
+    }
+  }
+  else
+  {
+    stop("Invalid mh proposal. Maybe you specified a method to simulate from the proposal, but no method to evaluate it?");
+  }
+  
+  
+  if (proposal==NULL)
+  {
+    stop("No suitable proposal found in model file.");
+  }
+  else
+  {
+    return proposal;
+  }
+}
+
 IndependentProposalKernel* get_independent_mh_proposal(const List &current_proposal,
                                                        const List &model_parameters,
                                                        const Data* data)
@@ -2316,6 +2511,7 @@ MCMC* make_mcmc(const List &model,
     moves.reserve(order_of_mcmc.size());
     
     size_t simulate_mh_proposal_index = 0;
+    size_t simulate_unadjusted_proposal_index = 0;
     size_t simulate_independent_mh_proposal_index = 0;
     size_t simulate_m_proposal_index = 0;
     
@@ -2437,6 +2633,43 @@ MCMC* make_mcmc(const List &model,
         }
         
       }
+      else if ((*i)==4)
+      {
+        ProposalKernel* proposal;
+        
+        if (model.containsElementNamed("unadjusted_proposal"))
+        {
+          List proposal_infos = model["unadjusted_proposal"];
+          if (Rf_isNewList(proposal_infos[simulate_unadjusted_proposal_index]))
+          {
+            proposal = get_unadjusted_proposal(proposal_infos[simulate_unadjusted_proposal_index],
+                                               model_parameters,
+                                               data);
+          }
+          else
+          {
+            stop("Error in mcmc proposals part of model file.");
+          }
+          
+          if (order_of_mcmc.size()>1)
+          {
+            mcmc = new UnadjustedMCMC(1,
+                                      proposal);
+          }
+          else
+          {
+            mcmc = new UnadjustedMCMC(termination_method,
+                                      proposal);
+          }
+          
+          simulate_unadjusted_proposal_index = simulate_unadjusted_proposal_index + 1;
+        }
+        else
+        {
+          stop("No unadjusted_proposal found.");
+        }
+        
+      }
       else
       {
         Rcpp::stop("get_mcmc: invalid type in order_of_mcmc.");
@@ -2547,13 +2780,14 @@ Parameters make_algorithm_parameters(const List &algorithm_parameter_list)
 
 SMCCriterion* get_resampling_method(const List &model,
                                     const List &model_parameters,
-                                    const List &adaptive_resampling_method)
+                                    const List &adaptive_resampling_method,
+                                    size_t number_of_particles)
 {
-  SMCCriterion* smc_criterion;
+  SMCCriterion* smc_method;
   
-  if (adaptive_resampling_method.containsElementNamed("criterion") && adaptive_resampling_method.containsElementNamed("values"))
+  if (adaptive_resampling_method.containsElementNamed("method") && adaptive_resampling_method.containsElementNamed("values"))
   {
-    std::string method = adaptive_resampling_method["criterion"];
+    std::string method = adaptive_resampling_method["method"];
     if (method=="ess")
     {
       if (Rf_isNewList(adaptive_resampling_method["values"]))
@@ -2562,19 +2796,19 @@ SMCCriterion* get_resampling_method(const List &model,
         
         if (values.length()==1)
         {
-          double desired_ess = extract_double_parameter(values,
-                                                        model_parameters,
-                                                        0);
-          smc_criterion = new ESSSMCCriterion(desired_ess);
+          double proportion = extract_double_parameter(values,
+                                                       model_parameters,
+                                                       0);
+          smc_method = new ESSSMCCriterion(proportion*double(number_of_particles));
         }
         else
         {
-          stop("Adaptive resampling using ESS requires specification of the desired ESS.");
+          stop("Adaptive resampling using ESS requires specification of the proportion of the total number of particles.");
         }
       }
       else
       {
-        stop("Adaptive resampling using ESS requires specification of the desired ESS.");
+        stop("Adaptive resampling using ESS requires specification of the proportion of the total number of particles.");
       }
     }
     else
@@ -2584,21 +2818,22 @@ SMCCriterion* get_resampling_method(const List &model,
   }
   else
   {
-    stop("No valid method found for adaptive resampling (need criterion and values).");
+    stop("No valid method found for adaptive resampling (need method and values).");
   }
   
-  return smc_criterion;
+  return smc_method;
 }
 
 SMCCriterion* get_adaptive_target_method(const List &model,
                                          const List &model_parameters,
-                                         const List &adaptive_target_method)
+                                         const List &adaptive_target_method,
+                                         size_t number_of_particles)
 {
-  SMCCriterion* smc_criterion;
+  SMCCriterion* smc_method;
   
-  if (adaptive_target_method.containsElementNamed("criterion"))
+  if (adaptive_target_method.containsElementNamed("method"))
   {
-    std::string method = adaptive_target_method["criterion"];
+    std::string method = adaptive_target_method["method"];
     if (method=="ess")
     {
       if (adaptive_target_method.containsElementNamed("values"))
@@ -2609,14 +2844,14 @@ SMCCriterion* get_adaptive_target_method(const List &model,
           
           if (values.length()==1)
           {
-            double desired_ess = extract_double_parameter(values,
-                                                          model_parameters,
-                                                          0);
-            smc_criterion = new ESSSMCCriterion(desired_ess);
+            double proportion = extract_double_parameter(values,
+                                                         model_parameters,
+                                                         0);
+            smc_method = new ESSSMCCriterion(proportion*double(number_of_particles));
           }
           else
           {
-            stop("Adaptive target using ESS requires specification of the desired ESS.");
+            stop("Adaptive target using ESS requires specification of the proportion of the total number of particles.");
           }
         }
         else
@@ -2626,7 +2861,7 @@ SMCCriterion* get_adaptive_target_method(const List &model,
       }
       else
       {
-        stop("Adaptive target using ESS requires specification of the desired ESS (values need to be specified).");
+        stop("Adaptive target using ESS requires specification of the proportion of the total number of particles (values need to be specified).");
       }
     }
     else if (method=="cess")
@@ -2639,14 +2874,16 @@ SMCCriterion* get_adaptive_target_method(const List &model,
           
           if (values.length()==1)
           {
-            double desired_cess = extract_double_parameter(values,
-                                                           model_parameters,
-                                                           0);
-            smc_criterion = new CESSSMCCriterion(desired_cess);
+            double proportion = extract_double_parameter(values,
+                                                         model_parameters,
+                                                         0);
+            //Rcout << proportion << std::endl;
+            //Rcout << proportion*double(number_of_particles) << std::endl;
+            smc_method = new CESSSMCCriterion(proportion*double(number_of_particles));
           }
           else
           {
-            stop("Adaptive target using CESS requires specification of the desired CESS.");
+            stop("Adaptive target using CESS requires specification of the proportion of the total number of particles.");
           }
         }
         else
@@ -2656,12 +2893,12 @@ SMCCriterion* get_adaptive_target_method(const List &model,
       }
       else
       {
-        stop("Adaptive target using ESS requires specification of the desired ESS (values need to be specified).");
+        stop("Adaptive target using ESS requires specification the proportion of the total number of particles (values need to be specified).");
       }
     }
     else if (method=="positive")
     {
-      smc_criterion = new PositiveSMCCriterion();
+      smc_method = new PositiveSMCCriterion();
     }
     else
     {
@@ -2670,10 +2907,10 @@ SMCCriterion* get_adaptive_target_method(const List &model,
   }
   else
   {
-    stop("No valid method found for adaptive target (need criterion).");
+    stop("No valid method found for adaptive target (need method).");
   }
   
-  return smc_criterion;
+  return smc_method;
 }
 
 SMCTermination* get_smc_termination_method(const List &model,
@@ -2688,9 +2925,9 @@ SMCTermination* get_smc_termination_method(const List &model,
     return smc_termination;
   }
   
-  if (smc_termination_method.containsElementNamed("criterion"))
+  if (smc_termination_method.containsElementNamed("method"))
   {
-    std::string method = smc_termination_method["criterion"];
+    std::string method = smc_termination_method["method"];
     if (method=="stable")
     {
       if (smc_termination_method.containsElementNamed("values"))
@@ -2737,7 +2974,7 @@ SMCTermination* get_smc_termination_method(const List &model,
   }
   else
   {
-    stop("No valid method found for SMC termination (criterion needed).");
+    stop("No valid method found for SMC termination (method needed).");
   }
   
   return smc_termination;
@@ -2843,6 +3080,7 @@ List get_smc_sequencer_info(const List &model,
   }
 }
 
+/*
 std::vector<LikelihoodEstimator*> convent_to_annealed_likelihoods_if_needed(RandomNumberGenerator* rng_in,
                                                                             size_t* seed_in,
                                                                             Data* data_in,
@@ -2916,6 +3154,7 @@ std::vector<LikelihoodEstimator*> convent_to_annealed_likelihoods_if_needed(Rand
 
   return annealed_likelihood_estimators;
 }
+*/
 
 // [[Rcpp::export]]
 double do_importance_sampler(const List &model,
@@ -3305,11 +3544,13 @@ double do_smc_mcmc_move(const List &model,
   
   SMCCriterion* resampling_criterion = get_resampling_method(model,
                                                              parameters,
-                                                             adaptive_resampling_method);
+                                                             adaptive_resampling_method,
+                                                             number_of_particles);
   
   SMCCriterion* adaptive_target_criterion = get_adaptive_target_method(model,
                                                                        parameters,
-                                                                       adaptive_target_method);
+                                                                       adaptive_target_method,
+                                                                       number_of_particles);
   
   SMCTermination* smc_termination = get_smc_termination_method(model,
                                                                parameters,

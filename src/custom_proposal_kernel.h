@@ -19,6 +19,8 @@ public:
   CustomProposalKernel();
   virtual ~CustomProposalKernel();
   
+  CustomProposalKernel(SimulateMCMCProposalPtr proposal_simulate_in);
+  
   CustomProposalKernel(SimulateMCMCProposalPtr proposal_simulate_in,
                        EvaluateLogMCMCProposalPtr proposal_evaluate_in);
 

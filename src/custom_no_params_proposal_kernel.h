@@ -19,6 +19,8 @@ public:
   CustomNoParamsProposalKernel();
   virtual ~CustomNoParamsProposalKernel();
   
+  CustomNoParamsProposalKernel(SimulateNoParamsMCMCProposalPtr proposal_simulate_in);
+  
   CustomNoParamsProposalKernel(SimulateNoParamsMCMCProposalPtr proposal_simulate_in,
                                EvaluateLogNoParamsMCMCProposalPtr proposal_evaluate_in);
 

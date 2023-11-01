@@ -20,6 +20,9 @@ public:
   virtual ~CustomGuidedProposalKernel();
   
   CustomGuidedProposalKernel(SimulateGuidedMCMCProposalPtr proposal_simulate_in,
+                             const Data* data_in);
+  
+  CustomGuidedProposalKernel(SimulateGuidedMCMCProposalPtr proposal_simulate_in,
                              EvaluateLogGuidedMCMCProposalPtr proposal_evaluate_in,
                              const Data* data_in);
 

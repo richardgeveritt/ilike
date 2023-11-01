@@ -11,6 +11,13 @@ CustomProposalKernel::~CustomProposalKernel()
 {
 }
 
+CustomProposalKernel::CustomProposalKernel(SimulateMCMCProposalPtr proposal_simulate_in)
+:ProposalKernel()
+{
+  this->proposal_evaluate = NULL;
+  this->proposal_simulate = proposal_simulate_in;
+}
+
 CustomProposalKernel::CustomProposalKernel(SimulateMCMCProposalPtr proposal_simulate_in,
                                            EvaluateLogMCMCProposalPtr proposal_evaluate_in)
   :ProposalKernel()

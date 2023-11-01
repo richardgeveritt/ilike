@@ -96,6 +96,8 @@ void AnnealedLikelihoodEstimatorOutput::evaluate_smcadaptive_part_given_smcfixed
   {
     double current_power = this->estimator->function_power(parameters,
                                                            this->estimator->power_variable);
+    
+    //Rcout << "power:" << current_power << std::endl;
     if (current_power!=0.0)
       this->log_likelihood = current_power * this->estimator_output->log_likelihood;
     else

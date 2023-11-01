@@ -27,6 +27,8 @@ typedef boost::unordered_map< std::string, std::pair<std::shared_ptr<boost::any>
 
 RCPP_EXPOSED_CLASS(Parameters)
 
+using boost::any_cast;
+
 class Parameters
 {
   
@@ -37,6 +39,7 @@ public:
              double value_in);
   Parameters(const std::string &variable_in,
              const arma::mat &value_in);
+  //Parameters(const Rcpp::List &list_in);
   
   virtual ~Parameters();
   
@@ -109,6 +112,8 @@ public:
   
   std::vector<size_t> get_variable_n_elems(const std::vector<std::string> &variables) const;
   
+  //Rcpp::List as_list() const;
+  
   friend std::ostream& operator<<(std::ostream& os, const Parameters &p);
   
 protected:
@@ -145,6 +150,37 @@ inline Parameters::Parameters(const std::string &variable_in,
 {
   (*this)[variable_in] = value_in;
 }
+
+/*
+inline Parameters::Parameters(const Rcpp::List &list_in)
+{
+  Rcpp::CharacterVector names = list_in.names();
+  
+  for (size_t i=0; i<names.size(); ++i)
+  {
+    for (size_t i=0; i<names.size(); ++i)
+    {
+      try
+      {
+        (*this)[Rcpp::as<std::string>(names[i])] = Rcpp::as<arma::mat>(list_in[i]);
+      }
+      catch (const std::runtime_error& re)
+      {
+        (*this)(Rcpp::as<std::string>(names[i])) = list_in[i];
+      }
+      catch(const std::exception& ex)
+      {
+        (*this)(Rcpp::as<std::string>(names[i]))= list_in[i];
+      }
+      catch(...)
+      {
+        std::cerr << "Parameters::Parameters(const Rcpp::List &list_in) - cannot read this element into Parameters." << std::endl;
+      }
+      
+    }
+  }
+}
+*/
 
 inline Parameters::~Parameters()
 {
@@ -921,6 +957,27 @@ inline std::vector<size_t> Parameters::get_variable_n_elems(const std::vector<st
   }
   return n_elems;
 }
+
+/*
+inline Rcpp::List Parameters::as_list() const
+{
+  Rcpp::List output;
+  
+  for (auto it=this->vector_parameters.begin();it!=this->vector_parameters.end();++it)
+  {
+    output[it->first] = *it->second.first;
+  }
+  
+  
+  for (auto it2=this->any_parameters.begin();it2!=this->any_parameters.end();++it2)
+  {
+    output[it2->first] = boost::any_cast<SEXP>(*it2->second.first);
+  }
+  
+  
+  return output;
+}
+*/
 
 inline std::ostream& operator<<(std::ostream& os, const Parameters &p)
 {

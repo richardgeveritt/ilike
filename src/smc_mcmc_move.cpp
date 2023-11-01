@@ -701,7 +701,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   
   this->mcmc = mcmc_in;
   if (this->mcmc!=NULL)
-    this->mcmc->set_index(new VectorSingleIndex(indices));
+    this->mcmc->set_index_if_null(new VectorSingleIndex(indices));
   this->mcmc_at_last_step = mcmc_at_last_step_in;
 }
 

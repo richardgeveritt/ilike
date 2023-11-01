@@ -662,7 +662,7 @@ mh_proposal_processing = function(mh_proposal_number,blocks,block_name,line_coun
 
       if (block_name=="mh_proposal")
       {
-        stop(paste("Invalid file: line ",line_counter,', mh_proposal specified, but previous importance proposal block is incomplete (did you specify both evaluate_log_mh_proposal and simulate_mh_proposal, and if proposing on a transformed space, the transform, inverse transform and jacobian_matrix?)',sep=""))
+        stop(paste("Invalid file: line ",line_counter,', mh_proposal specified, but previous mh proposal block is incomplete (did you specify both evaluate_log_mh_proposal and simulate_mh_proposal, and if proposing on a transformed space, the transform, inverse transform and jacobian_matrix?)',sep=""))
       }
 
     }
@@ -673,6 +673,57 @@ mh_proposal_processing = function(mh_proposal_number,blocks,block_name,line_coun
   }
 
   return(mh_proposal_number)
+}
+
+unadjusted_proposal_processing = function(unadjusted_proposal_number,blocks,block_name,line_counter)
+{
+  # Is this a continuation of the current unadjusted_proposal, or a new one?
+
+  # Get the current unadjusted_proposal info.
+  if ("unadjusted_proposal" %in% names(blocks))
+  {
+    current_unadjusted_proposal_info = blocks[["unadjusted_proposal"]][[unadjusted_proposal_number]]
+
+    if ("unadjusted_proposal" %in% names(current_unadjusted_proposal_info))
+    {
+      # unadjusted_proposal is complete
+      print_unadjusted_proposal_info(unadjusted_proposal_number,blocks,line_counter-1)
+      unadjusted_proposal_number = unadjusted_proposal_number + 1
+    }
+    else if ( ("simulate_unadjusted_proposal" %in% names(current_unadjusted_proposal_info)) || ("unadjusted_transform" %in% names(current_unadjusted_proposal_info)) || ("unadjusted_inverse_transform" %in% names(current_unadjusted_proposal_info)) || ("unadjusted_transform_jacobian_matrix" %in% names(current_unadjusted_proposal_info)) )
+    {
+      if ( ("unadjusted_transform" %in% names(current_unadjusted_proposal_info)) || ("unadjusted_inverse_transform" %in% names(current_unadjusted_proposal_info)) || ("unadjusted_transform_jacobian_matrix" %in% names(current_unadjusted_proposal_info)) )
+      {
+        # unadjusted_proposal is complete
+        if ( ("simulate_unadjusted_proposal" %in% names(current_unadjusted_proposal_info)) && ("unadjusted_transform" %in% names(current_unadjusted_proposal_info)) && ("unadjusted_inverse_transform" %in% names(current_unadjusted_proposal_info)) && ("unadjusted_transform_jacobian_matrix" %in% names(current_unadjusted_proposal_info)) )
+        {
+          print_unadjusted_proposal_info(unadjusted_proposal_number,blocks,line_counter-1)
+          unadjusted_proposal_number = unadjusted_proposal_number + 1
+        }
+      }
+      else
+      {
+        # unadjusted_proposal is complete
+        if ( ("simulate_unadjusted_proposal" %in% names(current_unadjusted_proposal_info)) )
+        {
+          print_unadjusted_proposal_info(unadjusted_proposal_number,blocks,line_counter-1)
+          unadjusted_proposal_number = unadjusted_proposal_number + 1
+        }
+      }
+
+      if (block_name=="unadjusted_proposal")
+      {
+        stop(paste("Invalid file: line ",line_counter,', unadjusted_proposal specified, but previous proposal block is incomplete (if proposing on a transformed space did you specify the transform, inverse transform and jacobian_matrix?)',sep=""))
+      }
+
+    }
+  }
+  else
+  {
+    unadjusted_proposal_number = unadjusted_proposal_number + 1
+  }
+
+  return(unadjusted_proposal_number)
 }
 
 independent_mh_proposal_processing = function(independent_mh_proposal_number,blocks,block_name,line_counter)
@@ -958,6 +1009,21 @@ print_mh_proposal_info = function(mh_proposal_index,blocks,line_counter)
   print(paste('mh_proposal ends on line ',line_counter,'. Contains ',mh_proposal_info_string,'.',sep = ""))
 }
 
+print_unadjusted_proposal_info = function(unadjusted_proposal_index,blocks,line_counter)
+{
+  unadjusted_proposal_info_string = ""
+  last_unadjusted_proposal_names = names(blocks[["unadjusted_proposal"]][[unadjusted_proposal_index]])
+  for (j in 1:length(last_unadjusted_proposal_names))
+  {
+    unadjusted_proposal_info_string = paste(unadjusted_proposal_info_string,last_unadjusted_proposal_names[j],sep=", ")
+  }
+  if (nchar(unadjusted_proposal_info_string)>2)
+  {
+    unadjusted_proposal_info_string = substr(unadjusted_proposal_info_string,3,nchar(unadjusted_proposal_info_string))
+  }
+  print(paste('unadjusted_proposal ends on line ',line_counter,'. Contains ',unadjusted_proposal_info_string,'.',sep = ""))
+}
+
 print_independent_mh_proposal_info = function(independent_mh_proposal_index,blocks,line_counter)
 {
   independent_mh_proposal_info_string = ""
@@ -1063,7 +1129,7 @@ print_data_info = function(data_index,blocks,line_counter)
   print(paste('data ends on line ',line_counter,'. Contains ',data_info_string,'.',sep = ""))
 }
 
-determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,potential_function_number,importance_proposal_number,mh_proposal_number,independent_mh_proposal_number,m_proposal_number,enk_transform_number,transition_proposal_number,data_number,method_number)
+determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,potential_function_number,importance_proposal_number,mh_proposal_number,unadjusted_proposal_number,independent_mh_proposal_number,m_proposal_number,enk_transform_number,transition_proposal_number,data_number,method_number)
 {
   if (length(split_block_name)==1)
   {
@@ -1101,6 +1167,7 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
   data_function_types = c("data")
   importance_proposal_types = c("simulate_importance_proposal","evaluate_log_importance_proposal")
   mh_proposal_types = c("simulate_mh_proposal","evaluate_log_mh_proposal","mh_proposal","mh_transform","mh_inverse_transform","mh_transform_jacobian_matrix")
+  unadjusted_proposal_types = c("simulate_unadjusted_proposal","unadjusted_proposal","unadjusted_transform","unadjusted_inverse_transform","unadjusted_transform_jacobian_matrix")
   independent_mh_proposal_types = c("simulate_independent_mh_proposal","evaluate_log_independent_mh_proposal","independent_mh_proposal","independent_mh_transform","independent_mh_inverse_transform","independent_mh_transform_jacobian_matrix")
   m_proposal_types = c("simulate_m_proposal","m_proposal","m_transform","m_inverse_transform","m_transform_jacobian_matrix")
   transition_proposal_types = c("simulate_transition_proposal","evaluate_log_transition_proposal")
@@ -1144,6 +1211,12 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
     block_type = "mh_proposal"
     mh_proposal_number = mh_proposal_processing(mh_proposal_number,blocks,block_name,line_counter)
     number_to_pass_to_extract_block = mh_proposal_number
+  }
+  else if (block_name %in% unadjusted_proposal_types)
+  {
+    block_type = "unadjusted_proposal"
+    unadjusted_proposal_number = unadjusted_proposal_processing(unadjusted_proposal_number,blocks,block_name,line_counter)
+    number_to_pass_to_extract_block = unadjusted_proposal_number
   }
   else if (block_name %in% independent_mh_proposal_types)
   {
@@ -1196,6 +1269,7 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
               potential_function_number,
               importance_proposal_number,
               mh_proposal_number,
+              unadjusted_proposal_number,
               independent_mh_proposal_number,
               m_proposal_number,
               enk_transform_number,
@@ -1204,10 +1278,68 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
               method_number))
 }
 
+get_parameters_output_function_body <- function(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
+{
+  if (output_variable=="")
+  {
+    #stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+
+    if (R_functions==TRUE)
+    {
+      function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,'))',sep="")
+    }
+    else
+    {
+      function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return list_to_parameters(f(',cpp_function_arguments_string,'));',sep="")
+    }
+  }
+  else
+  {
+    if (R_functions==TRUE)
+    {
+      function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
+    }
+    else
+    {
+      function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+    }
+  }
+
+  return(function_body)
+}
+
+get_double_output_function_body <- function(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
+{
+  if (R_functions==TRUE)
+  {
+    function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
+  }
+  else
+  {
+    function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
+  }
+
+  return(function_body)
+}
+
+get_matrix_output_function_body <- function(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
+{
+  if (R_functions==TRUE)
+  {
+    function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
+  }
+  else
+  {
+    function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
+  }
+
+  return(function_body)
+}
+
 extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries)
 {
   # Get information about the order in which MCMC moves are included.
-  if ( (block_type=="mh_proposal") || (block_type=="independent_mh_proposal") || (block_type=="m_proposal") )
+  if ( (block_type=="mh_proposal") || (block_type=="unadjusted_proposal") || (block_type=="independent_mh_proposal") || (block_type=="m_proposal") )
   {
     # Are we adding to an existing block? If we are not, then we need to add in the information about the order of the new MCMC move.
     if (factor_number>length(blocks[[block_type]]))
@@ -1225,6 +1357,11 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
       if (block_type=="m_proposal")
       {
         blocks[["order_of_mcmc"]] = c(blocks[["order_of_mcmc"]],3)
+      }
+
+      if (block_type=="unadjusted_proposal")
+      {
+        blocks[["order_of_mcmc"]] = c(blocks[["order_of_mcmc"]],4)
       }
     }
   }
@@ -1287,7 +1424,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
       if (is_like_function==TRUE)
       {
-        if ( (block_name=="prior") || (block_name=="importance_proposal") || (block_name=="independent_mh_proposal") || (block_name=="mh_proposal") || (block_name=="m_proposal") || (block_name=="sbi_likelihood") || (block_name=="smc_sequence") || (block_name=="linear_gaussian_transition_model") || (block_name=="nonlinear_gaussian_transition_model") || (block_name=="linear_gaussian_data_model") || (block_name=="nonlinear_gaussian_data_model") )
+        if ( (block_name=="prior") || (block_name=="importance_proposal") || (block_name=="independent_mh_proposal") || (block_name=="mh_proposal") || (block_name=="unadjusted_proposal") || (block_name=="m_proposal") || (block_name=="sbi_likelihood") || (block_name=="smc_sequence") || (block_name=="linear_gaussian_transition_model") || (block_name=="nonlinear_gaussian_transition_model") || (block_name=="linear_gaussian_data_model") || (block_name=="nonlinear_gaussian_data_model") )
         {
           split_arg_string = split_string_at_comma_ignoring_parentheses(arg_string)
 
@@ -1368,7 +1505,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
 
           my_list = list(list(type=ilike_type,
-                              model=ilike::parse_ilike_model(filename,parameter_list,external_packages,julia_bin_dir,julia_required_libraries),
+                              model=ilike::compile(filename,parameter_list,external_packages,julia_bin_dir,julia_required_libraries),
                               parameters=parameters))
           names(my_list) = c(block_name)
 
@@ -1433,39 +1570,53 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           for (i in 1:length(R_function_arguments))
           {
             split_at_dot = strsplit(R_function_arguments[i],"\\.")[[1]]
+
+            any_lists = FALSE
+
+            if (split_at_dot[1]=="proposed_parameters")
+            {
+              which_proposed_parameters[i] = 1
+              any_lists = TRUE
+            }
+
+            if (split_at_dot[1]=="parameters")
+            {
+              which_parameters[i] = 1
+              any_lists = TRUE
+            }
+
+            if (split_at_dot[1]=="proposal_parameters")
+            {
+              which_proposal_parameters[i] = 1
+              any_lists = TRUE
+            }
+
+            if (split_at_dot[1]=="data")
+            {
+              which_data[i] = 1
+              any_lists = TRUE
+            }
+
             if (length(split_at_dot)==0)
             {
               stop(paste("Block ",block_name,", line number ",line_counter,": argument is of size zero.",sep=""))
             }
             else if (length(split_at_dot)==1)
             {
-              cpp_function_arguments_string = paste(cpp_function_arguments_string,split_at_dot[1],sep=",")
+              if (any_lists)
+              {
+                cpp_function_arguments_string = paste(cpp_function_arguments_string,',parameters_to_list(',split_at_dot[1],')',sep="")
+              }
+              else
+              {
+                cpp_function_arguments_string = paste(cpp_function_arguments_string,split_at_dot[1],sep=",")
+              }
               R_function_arguments_string = paste(R_function_arguments_string,split_at_dot[1],sep=",")
             }
             else if (length(split_at_dot)>=2)
             {
               cpp_function_arguments_string = paste(cpp_function_arguments_string,',',split_at_dot[1],'["',paste(split_at_dot[2:length(split_at_dot)],collapse=""),'"]',sep="")
               R_function_arguments_string = paste(R_function_arguments_string,',',split_at_dot[1],'$',paste(split_at_dot[2:length(split_at_dot)],collapse=""),sep="")
-
-              if (split_at_dot[1]=="proposed_parameters")
-              {
-                which_proposed_parameters[i] = 1
-              }
-
-              if (split_at_dot[1]=="parameters")
-              {
-                which_parameters[i] = 1
-              }
-
-              if (split_at_dot[1]=="proposal_parameters")
-              {
-                which_proposal_parameters[i] = 1
-              }
-
-              if (split_at_dot[1]=="data")
-              {
-                which_data[i] = 1
-              }
             }
           }
 
@@ -1520,19 +1671,9 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           return_type = "Data"
           arguments = c()
           #args_for_typedef = ""
-          if (output_variable=="")
-          {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
-          }
+          R_args = ""
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function() { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Data output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
-          }
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="evaluate_log_prior")
@@ -1556,15 +1697,9 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(parameters) { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
-          }
+          function_body = get_double_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="evaluate_gradient_log_prior")
@@ -1589,15 +1724,9 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[1] = "const std::string &variable"
           arguments[2] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
+          R_args = "variable,parameters"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(variable,parameters) { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
-          }
+          function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="evaluate_second_gradient_log_prior")
@@ -1624,14 +1753,9 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[3] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(variable1,variable2,parameters) { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
-          }
+          R_args = "variable1,variable2,parameters"
+
+          function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="evaluate_log_likelihood")
@@ -1652,14 +1776,9 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[2] = "const Data &data"
           #args_for_typedef = "const Parameters&"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(parameters,data) { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
-          }
+          R_args = "parameters,data"
+
+          function_body = get_double_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="evaluate_gradient_log_likelihood")
@@ -1681,14 +1800,9 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[3] = "const Data &data"
           #args_for_typedef = "const Parameters&"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(variable,parameters,data) { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
-          }
+          R_args = "variable,parameters,data"
+
+          function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="evaluate_second_gradient_log_likelihood")
@@ -1711,14 +1825,9 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[4] = "const Data &data"
           #args_for_typedef = "const Parameters&"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(variable1,variable2,parameters,data) { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
-          }
+          R_args = "variable1,variable2,parameters,data"
+
+          function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="simulate_prior")
@@ -1738,24 +1847,14 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
-          if (output_variable=="")
-          {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
-          }
-
           return_type = "Parameters"
           arguments = c()
           arguments[1] = "RandomNumberGenerator &rng"
           #args_for_typedef = "RandomNumberGenerator&"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function() { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
-          }
+          R_args = ""
+
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="evaluate_log_importance_proposal")
@@ -1774,7 +1873,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             arguments[2] = "const Parameters &proposal_parameters"
             arguments[3] = "const Data &data"
             #args_for_typedef = "const Parameters&"
-
+            R_args = "proposed_parameters,proposal_parameters,data"
             proposal_type = 4
           }
           else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
@@ -1784,7 +1883,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             arguments[1] = "const Parameters &proposed_parameters"
             arguments[2] = "const Data &data"
             #args_for_typedef = "const Parameters&"
-
+            R_args = "proposed_parameters,data"
             proposal_type = 3
           }
           else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
@@ -1794,7 +1893,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             arguments[1] = "const Parameters &proposed_parameters"
             arguments[2] = "const Parameters &proposal_parameters"
             #args_for_typedef = "const Parameters&"
-
+            R_args = "proposed_parameters,proposal_parameters"
             proposal_type = 2
           }
           else
@@ -1803,26 +1902,19 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             arguments = c()
             arguments[1] = "const Parameters &proposed_parameters"
             #args_for_typedef = "const Parameters&"
-
+            R_args = "proposed_parameters"
             proposal_type = 1
           }
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
-          }
+          function_body = get_double_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="simulate_importance_proposal")
         {
-          if (output_variable=="")
-          {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
-          }
+          # if (output_variable=="")
+          # {
+          #   stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
+          # }
 
           if (sum(which_proposed_parameters)>0)
           {
@@ -1844,6 +1936,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             arguments[2] = "const Parameters &proposal_parameters"
             arguments[3] = "const Data &data"
             #args_for_typedef = "const Parameters&"
+            R_args = "proposal_parameters,data"
 
             proposal_type = 4
           }
@@ -1853,6 +1946,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             arguments[1] = "RandomNumberGenerator &rng"
             arguments[2] = "const Data &data"
             #args_for_typedef = "const Parameters&"
+            R_args = "data"
 
             proposal_type = 3
           }
@@ -1862,7 +1956,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             arguments[1] = "RandomNumberGenerator &rng"
             arguments[2] = "const Parameters &proposal_parameters"
             #args_for_typedef = "const Parameters&"
-
+            R_args = "proposal_parameters,data"
             proposal_type = 2
           }
           else
@@ -1870,20 +1964,11 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             arguments = c()
             arguments[1] = "RandomNumberGenerator &rng"
             #args_for_typedef = "const Parameters&"
-
+            R_args = ""
             proposal_type = 1
           }
 
-          #args_for_typedef = "RandomNumberGenerator&"
-
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
-          }
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="evaluate_log_mh_proposal")
@@ -1897,6 +1982,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             arguments[3] = "const Parameters &proposal_parameters"
             arguments[4] = "const Data &data"
             #args_for_typedef = "const Parameters&"
+            R_args = "proposed_parameters,parameters,proposal_parameters,data"
 
             proposal_type = 4
           }
@@ -1908,7 +1994,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             arguments[2] = "const Parameters &parameters"
             arguments[3] = "const Data &data"
             #args_for_typedef = "const Parameters&"
-
+            R_args = "proposed_parameters,parameters,data"
             proposal_type = 3
           }
           else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
@@ -1919,7 +2005,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             arguments[2] = "const Parameters &parameters"
             arguments[3] = "const Parameters &proposal_parameters"
             #args_for_typedef = "const Parameters&"
-
+            R_args = "proposed_parameters,parameters,proposal_parameters"
             proposal_type = 2
           }
           else
@@ -1929,26 +2015,15 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             arguments[1] = "const Parameters &proposed_parameters"
             arguments[2] = "const Parameters &parameters"
             #args_for_typedef = "const Parameters&"
-
+            R_args = "proposed_parameters,parameters"
             proposal_type = 1
           }
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
-          }
+          function_body = get_double_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="simulate_mh_proposal")
         {
-          if (output_variable=="")
-          {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
-          }
 
           if (sum(which_proposed_parameters)>0)
           {
@@ -1968,7 +2043,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
               arguments[3] = "const Parameters &proposal_parameters"
               arguments[4] = "const Data &data"
               #args_for_typedef = "const Parameters&"
-
+              R_args = "parameters,proposal_parameters,data"
               proposal_type = 4
             }
             else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
@@ -1978,7 +2053,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
               arguments[2] = "const Parameters &parameters"
               arguments[3] = "const Data &data"
               #args_for_typedef = "const Parameters&"
-
+              R_args = "parameters,data"
               proposal_type = 3
             }
             else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
@@ -1988,7 +2063,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
               arguments[2] = "const Parameters &parameters"
               arguments[3] = "const Parameters &proposal_parameters"
               #args_for_typedef = "const Parameters&"
-
+              R_args = "parameters,proposal_parameters"
               proposal_type = 2
             }
             else
@@ -1997,7 +2072,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
               arguments[1] = "RandomNumberGenerator &rng"
               arguments[2] = "const Parameters &parameters"
               #args_for_typedef = "const Parameters&"
-
+              R_args = "parameters"
               proposal_type = 1
             }
           }
@@ -2006,14 +2081,69 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": no parameters used, should this have been specified as simulate_independent_mh_proposal?",sep=""))
           }
 
-          if (R_functions==TRUE)
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
+
+        }
+        else if (block_name=="simulate_unadjusted_proposal")
+        {
+
+          if (sum(which_proposed_parameters)>0)
           {
-            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "Parameters"
+          arguments = c()
+
+          if (sum(which_parameters)>0)
+          {
+            if ( (sum(which_data)>0) && (sum(which_proposal_parameters)>0) )
+            {
+              arguments = c()
+              arguments[1] = "RandomNumberGenerator &rng"
+              arguments[2] = "const Parameters &parameters"
+              arguments[3] = "const Parameters &proposal_parameters"
+              arguments[4] = "const Data &data"
+              #args_for_typedef = "const Parameters&"
+              R_args = "parameters,proposal_parameters,data"
+              proposal_type = 4
+            }
+            else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
+            {
+              arguments = c()
+              arguments[1] = "RandomNumberGenerator &rng"
+              arguments[2] = "const Parameters &parameters"
+              arguments[3] = "const Data &data"
+              #args_for_typedef = "const Parameters&"
+              R_args = "parameters,data"
+              proposal_type = 3
+            }
+            else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
+            {
+              arguments = c()
+              arguments[1] = "RandomNumberGenerator &rng"
+              arguments[2] = "const Parameters &parameters"
+              arguments[3] = "const Parameters &proposal_parameters"
+              #args_for_typedef = "const Parameters&"
+              R_args = "parameters,proposal_parameters"
+              proposal_type = 2
+            }
+            else
+            {
+              arguments = c()
+              arguments[1] = "RandomNumberGenerator &rng"
+              arguments[2] = "const Parameters &parameters"
+              #args_for_typedef = "const Parameters&"
+              R_args = "parameters"
+              proposal_type = 1
+            }
           }
           else
           {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+            stop(paste("Block ",block_name,", line number ",line_counter,": no parameters used, should this have been specified as simulate_independent_mh_proposal?",sep=""))
           }
+
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="evaluate_log_independent_mh_proposal")
@@ -2031,7 +2161,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             arguments[2] = "const Parameters &proposal_parameters"
             arguments[3] = "const Data &data"
             #args_for_typedef = "const Parameters&"
-
+            R_args = "proposed_parameters,proposal_parameters,data"
             proposal_type = 4
           }
           else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
@@ -2041,7 +2171,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             arguments[1] = "const Parameters &proposed_parameters"
             arguments[2] = "const Data &data"
             #args_for_typedef = "const Parameters&"
-
+            R_args = "proposed_parameters,data"
             proposal_type = 3
           }
           else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
@@ -2051,7 +2181,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             arguments[1] = "const Parameters &proposed_parameters"
             arguments[2] = "const Parameters &proposal_parameters"
             #args_for_typedef = "const Parameters&"
-
+            R_args = "proposed_parameters,proposal_parameters"
             proposal_type = 2
           }
           else
@@ -2060,27 +2190,15 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             arguments = c()
             arguments[1] = "const Parameters &proposed_parameters"
             #args_for_typedef = "const Parameters&"
-
+            R_args = "parameters"
             proposal_type = 1
           }
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
-          }
+          function_body = get_double_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="simulate_independent_mh_proposal")
         {
-          if (output_variable=="")
-          {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
-          }
-
           if (sum(which_proposed_parameters)>0)
           {
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
@@ -2098,7 +2216,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
               arguments[2] = "const Parameters &proposal_parameters"
               arguments[3] = "const Data &data"
               #args_for_typedef = "const Parameters&"
-
+              R_args = "proposal_parameters,data"
               proposal_type = 4
             }
             else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
@@ -2107,7 +2225,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
               arguments[1] = "RandomNumberGenerator &rng"
               arguments[2] = "const Data &data"
               #args_for_typedef = "const Parameters&"
-
+              R_args = "data"
               proposal_type = 3
             }
             else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
@@ -2116,7 +2234,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
               arguments[1] = "RandomNumberGenerator &rng"
               arguments[2] = "const Parameters &proposal_parameters"
               #args_for_typedef = "const Parameters&"
-
+              R_args = "proposal_parameters"
               proposal_type = 2
             }
             else
@@ -2124,7 +2242,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
               arguments = c()
               arguments[1] = "RandomNumberGenerator &rng"
               #args_for_typedef = "const Parameters&"
-
+              R_args = ""
               proposal_type = 1
             }
           }
@@ -2133,22 +2251,11 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": parameters used, should this have been specified as simulate_mh_proposal?",sep=""))
           }
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
-          }
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="simulate_m_proposal")
         {
-          if (output_variable=="")
-          {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
-          }
 
           if (sum(which_proposed_parameters)>0)
           {
@@ -2168,7 +2275,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
               arguments[3] = "const Parameters &proposal_parameters"
               arguments[4] = "const Data &data"
               #args_for_typedef = "const Parameters&"
-
+              R_args = "parameters,proposal_parameters,data"
               proposal_type = 4
             }
             else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
@@ -2178,7 +2285,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
               arguments[2] = "const Parameters &parameters"
               arguments[3] = "const Data &data"
               #args_for_typedef = "const Parameters&"
-
+              R_args = "parameters,data"
               proposal_type = 3
             }
             else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
@@ -2188,7 +2295,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
               arguments[2] = "const Parameters &parameters"
               arguments[3] = "const Parameters &proposal_parameters"
               #args_for_typedef = "const Parameters&"
-
+              R_args = "parameters,proposal_parameters"
               proposal_type = 2
             }
             else
@@ -2197,7 +2304,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
               arguments[1] = "RandomNumberGenerator &rng"
               arguments[2] = "const Parameters &parameters"
               #args_for_typedef = "const Parameters&"
-
+              R_args = "parameters"
               proposal_type = 1
             }
           }
@@ -2206,14 +2313,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": no parameters used, invalid proposal type?",sep=""))
           }
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
-          }
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="mcmc_weights")
@@ -2258,11 +2358,6 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a data_model.",sep=""))
           }
 
-          if (output_variable=="")
-          {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
-          }
-
           if (sum(which_proposed_parameters)>0)
           {
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
@@ -2278,15 +2373,9 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[1] = "RandomNumberGenerator &rng"
           arguments[2] = "const Parameters &parameters"
           #args_for_typedef = "RandomNumberGenerator&"
+          R_args = "parameters"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Data output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
-          }
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="summary_statistics")
@@ -2306,24 +2395,13 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
-          if (output_variable=="")
-          {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
-          }
-
           return_type = "Data"
           arguments = c()
           arguments[1] = "const Data &data"
           #args_for_typedef = "const Parameters&"
+          R_args = "data"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Data output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
-          }
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="nonlinear_gaussian_data_function")
@@ -2343,24 +2421,13 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
-          if (output_variable=="")
-          {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
-          }
-
           return_type = "Data"
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Data output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
-          }
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="simulate_transition_model")
@@ -2376,26 +2443,15 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
-          if (output_variable=="")
-          {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
-          }
-
           return_type = "Parameters"
           arguments = c()
           arguments[1] = "RandomNumberGenerator &rng"
           arguments[2] = "const Parameters &parameters"
           arguments[3] = "const Data &data"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters,data"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
-          }
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="nonlinear_gaussian_transition_function")
@@ -2411,25 +2467,14 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
-          if (output_variable=="")
-          {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
-          }
-
           return_type = "Parameters"
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           arguments[2] = "const Data &data"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters,data"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
-          }
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="simulate_transition_proposal")
@@ -2445,26 +2490,15 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
-          if (output_variable=="")
-          {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
-          }
-
           return_type = "Parameters"
           arguments = c()
           arguments[1] = "RandomNumberGenerator &rng"
           arguments[2] = "const Parameters &parameters"
           arguments[3] = "const Data &data"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters,data"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
-          }
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="enk_transform")
@@ -2484,24 +2518,13 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
-          if (output_variable=="")
-          {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
-          }
-
           return_type = "Parameters"
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
-          }
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="enk_inverse_transform")
@@ -2521,24 +2544,13 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
-          if (output_variable=="")
-          {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
-          }
-
           return_type = "Parameters"
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
-          }
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="linear_gaussian_data_matrix")
@@ -2562,15 +2574,9 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
-          }
+          function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
         }
         else if (block_name=="linear_gaussian_data_covariance")
         {
@@ -2593,15 +2599,9 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
-          }
+          function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="nonlinear_gaussian_data_covariance")
@@ -2625,15 +2625,9 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
-          }
+          function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="linear_gaussian_transition_matrix")
@@ -2654,15 +2648,9 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[1] = "const Parameters &parameters"
           arguments[2] = "const Data &data"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters,data"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
-          }
+          function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="linear_gaussian_transition_covariance")
@@ -2683,15 +2671,9 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[1] = "const Parameters &parameters"
           arguments[2] = "const Data &data"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters,data"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
-          }
+          function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="nonlinear_gaussian_transition_covariance")
@@ -2712,15 +2694,9 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[1] = "const Parameters &parameters"
           arguments[2] = "const Data &data"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters,data"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
-          }
+          function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="evaluate_log_transition_model")
@@ -2736,15 +2712,9 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[1] = "const Parameters &parameters"
           arguments[2] = "const Data &data"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters,data"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
-          }
+          function_body = get_double_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="evaluate_log_potential_function")
@@ -2760,15 +2730,9 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[1] = "const Parameters &parameters"
           arguments[2] = "const Data &data"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters,data"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
-          }
+          function_body = get_double_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="evaluate_log_transition_proposal")
@@ -2784,14 +2748,9 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[1] = "const Parameters &parameters"
           arguments[2] = "const Data &data"
           #args_for_typedef = "const Parameters&"
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); return NumericVector(f(',cpp_function_arguments_string,'))[0]; return output;',sep="")
-          }
+          R_args = "parameters,data"
+
+          function_body = get_double_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
         }
         else if (block_name=="m_transform")
         {
@@ -2810,24 +2769,13 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
-          if (output_variable=="")
-          {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
-          }
-
           return_type = "Parameters"
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return NumericVector(f(',cpp_function_arguments_string,'))[0];',sep="")
-          }
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="m_inverse_transform")
@@ -2847,24 +2795,13 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
-          if (output_variable=="")
-          {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
-          }
-
           return_type = "Parameters"
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
-          }
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="m_transform_jacobian_matrix")
@@ -2888,15 +2825,9 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
-          }
+          function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="mh_transform")
@@ -2916,24 +2847,13 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
-          if (output_variable=="")
-          {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
-          }
-
           return_type = "Parameters"
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
-          }
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="mh_inverse_transform")
@@ -2953,24 +2873,13 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
-          if (output_variable=="")
-          {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
-          }
-
           return_type = "Parameters"
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
-          }
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="mh_transform_jacobian_matrix")
@@ -2994,15 +2903,87 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters"
 
-          if (R_functions==TRUE)
+          function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
+
+        }
+        else if (block_name=="unadjusted_transform")
+        {
+          if (sum(which_data)>0)
           {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
           }
-          else
+
+          if (sum(which_proposed_parameters)>0)
           {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
           }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "Parameters"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          #args_for_typedef = "const Parameters&"
+          R_args = "parameters"
+
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
+
+        }
+        else if (block_name=="unadjusted_inverse_transform")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "Parameters"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          #args_for_typedef = "const Parameters&"
+          R_args = "parameters"
+
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
+
+        }
+        else if (block_name=="unadjusted_transform_jacobian_matrix")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "arma::mat"
+          arguments = c()
+          arguments[1] = "const Parameters &parameters"
+          #args_for_typedef = "const Parameters&"
+          R_args = "parameters"
+
+          function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="independent_mh_transform")
@@ -3022,24 +3003,13 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
-          if (output_variable=="")
-          {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
-          }
-
           return_type = "Parameters"
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
-          }
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="independent_mh_inverse_transform")
@@ -3059,24 +3029,13 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
-          if (output_variable=="")
-          {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no output variables specified, need output_variable=some_function(...).",sep=""))
-          }
-
           return_type = "Parameters"
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { output=list(); output[["',output_variable,'"]] = ',R_function_name,'(',R_function_arguments_string,'); return(output)}',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
-          }
+          function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else if (block_name=="independent_mh_transform_jacobian_matrix")
@@ -3100,15 +3059,9 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments = c()
           arguments[1] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
+          R_args = "parameters"
 
-          if (R_functions==TRUE)
-          {
-            function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
-          }
-          else
-          {
-            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
-          }
+          function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
         else
@@ -3437,6 +3390,38 @@ check_types = function(blocks)
 
   }
 
+  for (i in 1:length(blocks[["unadjusted_proposal"]]))
+  {
+    current_unadjusted_proposal = blocks[["unadjusted_proposal"]][[i]]
+
+    if ("simulate_unadjusted_proposal" %in% names(current_unadjusted_proposal))
+    {
+      if (inherits(current_unadjusted_proposal[["simulate_unadjusted_proposal"]],"XPtr"))
+      {
+        proposal_type = c(TRUE,TRUE,TRUE,TRUE)
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_unadjusted_proposal[["simulate_unadjusted_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
+                  , error = function(e) {proposal_type[1] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_unadjusted_proposal[["simulate_unadjusted_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&")) }
+                  , error = function(e) {proposal_type[2] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_unadjusted_proposal[["simulate_unadjusted_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
+                  , error = function(e) {proposal_type[3] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_unadjusted_proposal[["simulate_unadjusted_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&","const Data&")) }
+                  , error = function(e) {proposal_type[4] <<- FALSE})
+
+        if (length(which(proposal_type==TRUE))==0)
+        {
+          stop("No valid unadjusted proposal specified.")
+        }
+
+      }
+    }
+
+  }
+
   for (i in 1:length(blocks[["independent_mh_proposal"]]))
   {
     current_independent_mh_proposal = blocks[["independent_mh_proposal"]][[i]]
@@ -3680,12 +3665,12 @@ check_types = function(blocks)
 #' @param julia_required_libraries (optional) Vector of strings, each of which is a Julia packge that will be installed and loaded.
 #' @return A list containing the model details.
 #' @export
-parse_ilike_model <- function(filename,
-                              parameter_list = list(),
-                              R_functions = FALSE,
-                              external_packages = c(),
-                              julia_bin_dir="",
-                              julia_required_libraries=c())
+compile <- function(filename,
+                    parameter_list = list(),
+                    R_functions = FALSE,
+                    external_packages = c(),
+                    julia_bin_dir="",
+                    julia_required_libraries=c())
 {
   basename = tools::file_path_sans_ext(filename)
 
@@ -3737,6 +3722,7 @@ parse_ilike_model <- function(filename,
   potential_function_number = 0
   importance_proposal_number = 0
   mh_proposal_number = 0
+  unadjusted_proposal_number = 0
   independent_mh_proposal_number = 0
   m_proposal_number = 0
   enk_transform_number = 0
@@ -3795,7 +3781,7 @@ parse_ilike_model <- function(filename,
             stop(paste("Invalid file: line ",line_counter,", new section of file needs a name: use /***name***/.",sep=""))
           }
           split_block_name = split_string_at_comma_ignoring_parentheses(unparsed_block_name)
-          new_block_info = determine_block_type(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,potential_function_number,importance_proposal_number,mh_proposal_number,independent_mh_proposal_number,m_proposal_number,enk_transform_number,transition_proposal_number,data_number,method_number)
+          new_block_info = determine_block_type(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,potential_function_number,importance_proposal_number,mh_proposal_number,unadjusted_proposal_number,independent_mh_proposal_number,m_proposal_number,enk_transform_number,transition_proposal_number,data_number,method_number)
 
           # expect input for each block in one of the following forms:
           # (a) /***evaluate_log_prior***/, followed by a C++ function
@@ -3819,13 +3805,14 @@ parse_ilike_model <- function(filename,
           potential_function_number = new_block_info[[8]]
           importance_proposal_number = new_block_info[[9]]
           mh_proposal_number = new_block_info[[10]]
-          independent_mh_proposal_number = new_block_info[[11]]
-          m_proposal_number = new_block_info[[12]]
-          enk_transform_number = new_block_info[[13]]
-          transition_proposal_number = new_block_info[[14]]
-          data_number = new_block_info[[15]]
+          unadjusted_proposal_number = new_block_info[[11]]
+          independent_mh_proposal_number = new_block_info[[12]]
+          m_proposal_number = new_block_info[[13]]
+          enk_transform_number = new_block_info[[14]]
+          transition_proposal_number = new_block_info[[15]]
+          data_number = new_block_info[[16]]
           #reinforce_gradient_number = new_block_info[[17]]
-          method_number = new_block_info[[16]]
+          method_number = new_block_info[[17]]
 
         }
       }
@@ -3848,7 +3835,6 @@ parse_ilike_model <- function(filename,
     # ignore block if block number is not positive
     if (number_to_pass_to_extract_block>0)
     {
-      browser
       blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries)
       if ( (factor_number!=0) && (factor_number==length(blocks[["factor"]])) )
       {
@@ -3869,6 +3855,10 @@ parse_ilike_model <- function(filename,
       if ( (mh_proposal_number!=0) && mh_proposal_number==length(blocks[["mh_proposal"]]))
       {
         print_mh_proposal_info(length(blocks[["mh_proposal"]]),blocks,line_counter)
+      }
+      if ( (unadjusted_proposal_number!=0) && unadjusted_proposal_number==length(blocks[["unadjusted_proposal"]]))
+      {
+        print_unadjusted_proposal_info(length(blocks[["unadjusted_proposal"]]),blocks,line_counter)
       }
       if ( (independent_mh_proposal_number!=0) && independent_mh_proposal_number==length(blocks[["independent_mh_proposal"]]))
       {
@@ -3903,8 +3893,6 @@ parse_ilike_model <- function(filename,
   }
 
   close(the_file)
-
-  #browser()
 
   blocks = check_types(blocks)
 

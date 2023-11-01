@@ -13,6 +13,7 @@ using namespace Rcpp;
 #include "parameters.h"
 //#include <RcppCommon.h>
 
+using boost::any_cast;
 
 
 // // From SymbolixAU at https://stackoverflow.com/questions/59055902/find-index-of-all-max-min-values-in-vector-in-rcpp
@@ -354,5 +355,69 @@ SEXP store_gaussian_uniform_evaluate_log_abc_kernel();
 // {
 //
 // }
+
+// [[Rcpp::export]]
+inline Rcpp::List parameters_to_list(const Parameters &parameters)
+{
+  Rcpp::List output;
+  
+  for (auto it=parameters.vector_begin();it!=parameters.vector_end();++it)
+  {
+    output[it->first] = *it->second.first;
+  }
+  
+  for (auto it2=parameters.any_begin();it2!=parameters.any_end();++it2)
+  {
+    output[it2->first] = boost::any_cast<SEXP>(*it2->second.first);
+  }
+  
+  return output;
+}
+
+// [[Rcpp::export]]
+inline Parameters list_to_parameters(const Rcpp::List &list)
+{
+  //Rcpp::Rcout << list << std::endl;
+  
+  Parameters output;
+  Rcpp::CharacterVector names = list.names();
+  
+  for (size_t i=0; i<names.size(); ++i)
+  {
+    for (size_t i=0; i<names.size(); ++i)
+    {
+      if (Rf_isVector(list[i]))
+      {
+        output[Rcpp::as<std::string>(names[i])] = arma::mat(Rcpp::as<arma::vec>(list[i]));
+      }
+      else if (Rf_isMatrix(list[i]))
+      {
+        output[Rcpp::as<std::string>(names[i])] = Rcpp::as<arma::mat>(list[i]);
+      }
+      else
+      {
+        output(Rcpp::as<std::string>(names[i]))= list[i];
+      }
+      
+      /*
+      catch (const std::runtime_error& re)
+      {
+        output(Rcpp::as<std::string>(names[i])) = list[i];
+      }
+      catch(const std::exception& ex)
+      {
+        
+      }
+      catch(...)
+      {
+        std::cerr << "list_to_parameters - cannot read this element into Parameters." << std::endl;
+      }
+      */
+      
+    }
+  }
+  
+  return output;
+}
 
 #endif

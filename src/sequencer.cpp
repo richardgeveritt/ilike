@@ -327,7 +327,12 @@ void Sequencer::find_next_target_bisection(SMCOutput* current_state,
                                                             current_state->back());
     current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
+    //Rcout << this->the_worker->get_unnormalised_log_incremental_weights() << std::endl;
+    
     this->current_score = (*this->criterion)(current_state->back());
+    
+    //Rcout << this->current_score << std::endl;
+    
     if (this->current_score>=0.0)
     {
       this->schedule_difference = this->schedules.back()[this->mileometer.back()]-this->current_bisect_value;//-this->schedules.back()[this->mileometer.back()-1];
@@ -344,7 +349,7 @@ void Sequencer::find_next_target_bisection(SMCOutput* current_state,
     // if there is only one value in the schedule, but we did not get to the end in one go, then we need to determine the start point in order to do the bisection.
     
     // first identify if there is only one value in the schedule
-    if (this->previous_bisect_value==arma::datum::inf) // change to checking for infinity
+    if (this->previous_bisect_value==arma::datum::inf)
     {
       // we will assume that we need to find an upper bound
       // perform a doubling routine, which we keep doing until we obtain an upper bound (max 300 iterations)
@@ -446,12 +451,18 @@ void Sequencer::find_next_target_bisection(SMCOutput* current_state,
     
     this->current_bisect_value = new_bisect_value;
     
+    //Rcout << this->current_score << std::endl;
+    //Rcout << this->current_bisect_value << std::endl;
+    
     if (this->current_score==0.0)
     {
       break;
     }
     
   }
+  
+  //Rcout << this->current_score << std::endl;
+  //Rcout << this->current_bisect_value << std::endl;
   
   this->schedule_difference = this->current_bisect_value - starting_value;
   this->previous_bisect_value = this->current_bisect_value;
