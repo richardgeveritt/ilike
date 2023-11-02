@@ -1286,7 +1286,7 @@ get_parameters_output_function_body <- function(output_variable,R_functions,R_ar
 
     if (R_functions==TRUE)
     {
-      function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,'))',sep="")
+      function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,'))}',sep="")
     }
     else
     {
@@ -3066,7 +3066,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
         }
         else
         {
-          stop(paste("Block ",block_name,", line number ",line_counter,": block is of unknown type.",sep=""))
+          stop(paste('Block ',block_name,', line number ',line_counter,': block is of unknown type. Did you specify an ilike function? If so, include "ilike::" before the function name.',sep=""))
         }
 
         if (R_functions)
