@@ -3721,6 +3721,7 @@ compile <- function(filename,
   blocks = list(order_of_mcmc=c())
   block_code = ""
   starting_block_flag = FALSE
+  pre_blocks = TRUE
   is_custom = FALSE
   line_counter = 0
   add_to_block_code = TRUE
@@ -3768,8 +3769,17 @@ compile <- function(filename,
     {
       if (substr(line, 1, 4)=="/***")
       {
+
         if (substr(line, nchar(line) - 4 + 1, nchar(line))=="***/")
         {
+          # Write initial lines to file.
+          if (pre_blocks==TRUE)
+          {
+            writeLines(block_code,fileConn)
+            pre_blocks = FALSE
+            block_code = ""
+          }
+
           # legitimate new section
           starting_block_flag = TRUE
 
@@ -3828,7 +3838,7 @@ compile <- function(filename,
       }
     }
 
-    if ( (in_block==TRUE) && (starting_block_flag==FALSE) && (is_custom==TRUE) )
+    if ( (pre_blocks) || ( (in_block==TRUE) && (starting_block_flag==FALSE) && (is_custom==TRUE) ) )
     {
       block_code = paste(block_code,line,sep="\n")
     }
