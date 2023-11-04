@@ -1336,7 +1336,7 @@ get_matrix_output_function_body <- function(R_functions,R_args,R_function_name,R
   return(function_body)
 }
 
-extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries)
+extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn)
 {
   # Get information about the order in which MCMC moves are included.
   if ( (block_type=="mh_proposal") || (block_type=="unadjusted_proposal") || (block_type=="independent_mh_proposal") || (block_type=="m_proposal") )
@@ -1505,7 +1505,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
 
           my_list = list(list(type=ilike_type,
-                              model=ilike::compile(filename,parameter_list,external_packages,julia_bin_dir,julia_required_libraries),
+                              model=ilike::compile(filename,parameter_list,external_packages,julia_bin_dir,julia_required_libraries,verify_cpp_function_types,keep_temporary_model_code,nesting_level+1),
                               parameters=parameters))
           names(my_list) = c(block_name)
 
@@ -1632,7 +1632,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
         cpp_function_name = paste(block_name,factor_number,sep="")
         R_function_name = paste(cpp_function_name,'_R',sep="")
 
-        temp_filename = paste(cpp_function_name,".cpp",sep="")
+        #temp_filename = paste(cpp_function_name,".cpp",sep="")
         xptr_name = paste(cpp_function_name,"getXPtr",sep="_")
 
         proposal_type = 0
@@ -3073,6 +3073,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
         {
           eval(parse(text=paste(R_function_name,function_info[[1]],sep="")))
           my_list = list(eval(parse(text=function_body)))
+          names(my_list) = c(block_name)
         }
         else
         {
@@ -3092,8 +3093,6 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
           code = paste(code,') {',function_body,' }',sep="")
 
-          fileConn<-file(temp_filename)
-
           writeLines(c(
             '#include <RcppArmadillo.h>',
             '// [[Rcpp::depends(RcppArmadillo)]]',
@@ -3101,34 +3100,36 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             '// [[Rcpp::depends(BH)]]',
             '// [[Rcpp::depends(dqrng)]]',
             '// [[Rcpp::depends(sitmo)]]',
+            '\n',
             '/*** R',
             paste(R_function_name,function_info[[1]],sep=""),
             '*/',
+            '\n',
             'using namespace Rcpp;',
             '#include <ilike.h>',
+            '\n',
             paste("SEXP ",xptr_name,"();",sep=""),
+            '\n',
             code,
+            '\n',
             "// [[Rcpp::export]]",
             paste("SEXP ",xptr_name,"() {",sep=""),
             paste("  typedef", return_type, "(*funcPtr)(", args_for_typedef, ");"),
             paste("  return XPtr<funcPtr>(new funcPtr(&", cpp_function_name, "));"),
-            "}"), fileConn)
+            "}",
+            '\n'),
+            fileConn)
 
           # writeLines(c(
           #   '/*** R',
           #   paste(R_function_name,function_info[[1]],sep=""),
           #   '*/'), fileConn)
 
-          close(fileConn)
-
-          Rcpp::sourceCpp(temp_filename)
-          file.remove(temp_filename)
-
-          my_list = list(get(xptr_name)())
+          #my_list = list(get(xptr_name)())
+          my_list = list(xptr_name,0)
+          names(my_list) = c(xptr_name,block_name)
         }
         #my_list = list(RcppXPtrUtils::cppXPtr(code,plugins=c("cpp11"),depends = c("ilike","RcppArmadillo","BH","dqrng","sitmo")))
-
-        names(my_list) = c(block_name)
 
         if (proposal_type!=0)
         {
@@ -3151,7 +3152,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
         }
         else
         {
-          blocks[[block_type]][[factor_number]] = append(blocks[[block_type]] [[factor_number]],my_list)
+          blocks[[block_type]][[factor_number]] = append(blocks[[block_type]][[factor_number]],my_list)
         }
       }
 
@@ -3663,6 +3664,9 @@ check_types = function(blocks)
 #' @param external_packages (optional) A vector of names of other R packages the functions rely on.
 #' @param julia_bin_dir (optional) The directory containing the Julia bin file - only needed if Julia functions are used.
 #' @param julia_required_libraries (optional) Vector of strings, each of which is a Julia packge that will be installed and loaded.
+#' @param verify_cpp_function_types (optional) If TRUE, check the types of the parameters of user-defined .cpp functions. If FALSE (default), types are not checked.
+#' @param keep_temporary_model_code (optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE, this file is left in the working directory.
+#' @param nesting_level (optional) The level of nesting of the current call to compile. A user should always use the default of 1.
 #' @return A list containing the model details.
 #' @export
 compile <- function(filename,
@@ -3670,7 +3674,10 @@ compile <- function(filename,
                     R_functions = FALSE,
                     external_packages = c(),
                     julia_bin_dir="",
-                    julia_required_libraries=c())
+                    julia_required_libraries=c(),
+                    verify_cpp_function_types=FALSE,
+                    keep_temporary_model_code=FALSE,
+                    nesting_level=1)
 {
   basename = tools::file_path_sans_ext(filename)
 
@@ -3704,6 +3711,9 @@ compile <- function(filename,
   {
     source(paste(basename,".R",sep=""))
   }
+
+  model_for_compilation_name = paste("model_for_compilation",nesting_level,".cpp",sep="")
+  fileConn<-file(model_for_compilation_name,open="w")
 
   the_file = file(filename,open="r")
 
@@ -3748,7 +3758,7 @@ compile <- function(filename,
 
     if ( (nchar(line)>=3) && (substr(line, 1, 3)=="//#") )
     {
-      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries)
+      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn)
       in_block = FALSE
       starting_block_flag = TRUE
       is_custom = FALSE
@@ -3769,7 +3779,7 @@ compile <- function(filename,
           }
           else # end current block
           {
-            blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries)
+            blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn)
             is_custom = FALSE
             block_code = ""
           }
@@ -3835,7 +3845,7 @@ compile <- function(filename,
     # ignore block if block number is not positive
     if (number_to_pass_to_extract_block>0)
     {
-      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries)
+      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn)
       if ( (factor_number!=0) && (factor_number==length(blocks[["factor"]])) )
       {
         print_factor_info(length(blocks[["factor"]]),blocks,line_counter)
@@ -3894,7 +3904,39 @@ compile <- function(filename,
 
   close(the_file)
 
-  blocks = check_types(blocks)
+  if (verify_cpp_function_types)
+  {
+    blocks = check_types(blocks)
+  }
+
+  close(fileConn)
+
+  if (file.exists(model_for_compilation_name))
+  {
+    Rcpp::sourceCpp(model_for_compilation_name)
+  }
+
+  if (keep_temporary_model_code==FALSE)
+  {
+    file.remove(model_for_compilation_name)
+  }
+
+  for (i in 1:length(blocks))
+  {
+    for (j in 1:length(blocks[[i]]))
+    {
+      if (length(blocks[[i]][[j]])>0)
+      {
+        for (k in 1:length(blocks[[i]][[j]]))
+        {
+          if ( is.character(blocks[[i]][[j]][[k]]) && grepl("XPtr",blocks[[i]][[j]][[k]]) )
+          {
+            blocks[[i]][[j]][[k+1]] = get(blocks[[i]][[j]][[k]])()
+          }
+        }
+      }
+    }
+  }
 
   return(blocks)
 }
