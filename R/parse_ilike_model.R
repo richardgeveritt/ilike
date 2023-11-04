@@ -1336,8 +1336,1371 @@ get_matrix_output_function_body <- function(R_functions,R_args,R_function_name,R
   return(function_body)
 }
 
-extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn)
+parameter_types_for_cpp <- function(block_code)
 {
+  arguments = regmatches(block_code, gregexpr("\\([^)]+\\)", block_code))[[1]][1]
+  arguments = gsub("\\(|\\)", "", arguments)
+  argument_vector = unlist(strsplit(arguments, ","))
+
+  if (!is.null(argument_vector))
+  {
+    for (i in 1:length(argument_vector))
+    {
+      which_proposed_parameters = matrix(0,length(argument_vector))
+      which_parameters = matrix(0,length(argument_vector))
+      which_proposal_parameters = matrix(0,length(argument_vector))
+      which_data = matrix(0,length(argument_vector))
+
+      if (grepl("&", argument_vector[i]))
+      {
+        after_ampersand = unlist(strsplit(arguments, "&"))
+        parameter_name = trimws(after_ampersand[length(after_ampersand)])
+
+        if (parameter_name=="proposed_parameters")
+        {
+          which_proposed_parameters[i] = 1
+        }
+
+        if (parameter_name=="parameters")
+        {
+          which_parameters[i] = 1
+        }
+
+        if (parameter_name=="proposal_parameters")
+        {
+          which_proposal_parameters[i] = 1
+        }
+
+        if (parameter_name=="data")
+        {
+          which_data[i] = 1
+        }
+      }
+    }
+  }
+  else
+  {
+    which_proposed_parameters = NULL
+    which_parameters = NULL
+    which_proposal_parameters = NULL
+    which_data = NULL
+  }
+
+  return(list(which_proposed_parameters,which_parameters,which_proposal_parameters,which_data))
+}
+
+return_types_for_cpp <- function(block_name,line_counter,which_proposed_parameters,which_parameters,which_proposal_parameters,which_data)
+{
+  proposal_type = 0
+  if (block_name=="data")
+  {
+    if (sum(which_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in a data function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in a data function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in a data function.",sep=""))
+    }
+
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a data function.",sep=""))
+    }
+
+    return_type = "Data"
+    arguments = c()
+    #args_for_typedef = ""
+    R_args = ""
+  }
+  else if (block_name=="evaluate_log_prior")
+  {
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a prior.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "double"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters"
+  }
+  else if (block_name=="evaluate_gradient_log_prior")
+  {
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "arma::mat"
+    arguments = c()
+    arguments[1] = "const std::string &variable"
+    arguments[2] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+    R_args = "variable,parameters"
+  }
+  else if (block_name=="evaluate_second_gradient_log_prior")
+  {
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "arma::mat"
+    arguments = c()
+    arguments[1] = "const std::string &variable1"
+    arguments[2] = "const std::string &variable2"
+    arguments[3] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+
+    R_args = "variable1,variable2,parameters"
+  }
+  else if (block_name=="evaluate_log_likelihood")
+  {
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "double"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    arguments[2] = "const Data &data"
+    #args_for_typedef = "const Parameters&"
+
+    R_args = "parameters,data"
+  }
+  else if (block_name=="evaluate_gradient_log_likelihood")
+  {
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "arma::mat"
+    arguments = c()
+    arguments[1] = "const std::string &variable"
+    arguments[2] = "const Parameters &parameters"
+    arguments[3] = "const Data &data"
+    #args_for_typedef = "const Parameters&"
+
+    R_args = "variable,parameters,data"
+  }
+  else if (block_name=="evaluate_second_gradient_log_likelihood")
+  {
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "arma::mat"
+    arguments = c()
+    arguments[1] = "const std::string &variable1"
+    arguments[2] = "const std::string &variable2"
+    arguments[3] = "const Parameters &parameters"
+    arguments[4] = "const Data &data"
+    #args_for_typedef = "const Parameters&"
+
+    R_args = "variable1,variable2,parameters,data"
+  }
+  else if (block_name=="simulate_prior")
+  {
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a prior.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Parameters"
+    arguments = c()
+    arguments[1] = "RandomNumberGenerator &rng"
+    #args_for_typedef = "RandomNumberGenerator&"
+
+    R_args = ""
+
+  }
+  else if (block_name=="evaluate_log_importance_proposal")
+  {
+
+    if ( (sum(which_data)>0) && (sum(which_proposal_parameters)>0)  )
+    {
+      return_type = "double"
+      arguments = c()
+      arguments[1] = "const Parameters &proposed_parameters"
+      arguments[2] = "const Parameters &proposal_parameters"
+      arguments[3] = "const Data &data"
+      #args_for_typedef = "const Parameters&"
+      R_args = "proposed_parameters,proposal_parameters,data"
+      proposal_type = 4
+    }
+    else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
+    {
+      return_type = "double"
+      arguments = c()
+      arguments[1] = "const Parameters &proposed_parameters"
+      arguments[2] = "const Data &data"
+      #args_for_typedef = "const Parameters&"
+      R_args = "proposed_parameters,data"
+      proposal_type = 3
+    }
+    else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
+    {
+      return_type = "double"
+      arguments = c()
+      arguments[1] = "const Parameters &proposed_parameters"
+      arguments[2] = "const Parameters &proposal_parameters"
+      #args_for_typedef = "const Parameters&"
+      R_args = "proposed_parameters,proposal_parameters"
+      proposal_type = 2
+    }
+    else
+    {
+      return_type = "double"
+      arguments = c()
+      arguments[1] = "const Parameters &proposed_parameters"
+      #args_for_typedef = "const Parameters&"
+      R_args = "proposed_parameters"
+      proposal_type = 1
+    }
+  }
+  else if (block_name=="simulate_importance_proposal")
+  {
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Parameters"
+    arguments = c()
+
+    if ( (sum(which_data)>0) && (sum(which_proposal_parameters)>0) )
+    {
+      arguments = c()
+      arguments[1] = "RandomNumberGenerator &rng"
+      arguments[2] = "const Parameters &proposal_parameters"
+      arguments[3] = "const Data &data"
+      #args_for_typedef = "const Parameters&"
+      R_args = "proposal_parameters,data"
+
+      proposal_type = 4
+    }
+    else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
+    {
+      arguments = c()
+      arguments[1] = "RandomNumberGenerator &rng"
+      arguments[2] = "const Data &data"
+      #args_for_typedef = "const Parameters&"
+      R_args = "data"
+
+      proposal_type = 3
+    }
+    else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
+    {
+      arguments = c()
+      arguments[1] = "RandomNumberGenerator &rng"
+      arguments[2] = "const Parameters &proposal_parameters"
+      #args_for_typedef = "const Parameters&"
+      R_args = "proposal_parameters,data"
+      proposal_type = 2
+    }
+    else
+    {
+      arguments = c()
+      arguments[1] = "RandomNumberGenerator &rng"
+      #args_for_typedef = "const Parameters&"
+      R_args = ""
+      proposal_type = 1
+    }
+  }
+  else if (block_name=="evaluate_log_mh_proposal")
+  {
+    if ( (sum(which_data)>0) && (sum(which_proposal_parameters)>0) )
+    {
+      return_type = "double"
+      arguments = c()
+      arguments[1] = "const Parameters &proposed_parameters"
+      arguments[2] = "const Parameters &parameters"
+      arguments[3] = "const Parameters &proposal_parameters"
+      arguments[4] = "const Data &data"
+      #args_for_typedef = "const Parameters&"
+      R_args = "proposed_parameters,parameters,proposal_parameters,data"
+
+      proposal_type = 4
+    }
+    else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
+    {
+      return_type = "double"
+      arguments = c()
+      arguments[1] = "const Parameters &proposed_parameters"
+      arguments[2] = "const Parameters &parameters"
+      arguments[3] = "const Data &data"
+      #args_for_typedef = "const Parameters&"
+      R_args = "proposed_parameters,parameters,data"
+      proposal_type = 3
+    }
+    else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
+    {
+      return_type = "double"
+      arguments = c()
+      arguments[1] = "const Parameters &proposed_parameters"
+      arguments[2] = "const Parameters &parameters"
+      arguments[3] = "const Parameters &proposal_parameters"
+      #args_for_typedef = "const Parameters&"
+      R_args = "proposed_parameters,parameters,proposal_parameters"
+      proposal_type = 2
+    }
+    else
+    {
+      return_type = "double"
+      arguments = c()
+      arguments[1] = "const Parameters &proposed_parameters"
+      arguments[2] = "const Parameters &parameters"
+      #args_for_typedef = "const Parameters&"
+      R_args = "proposed_parameters,parameters"
+      proposal_type = 1
+    }
+  }
+  else if (block_name=="simulate_mh_proposal")
+  {
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+
+    return_type = "Parameters"
+    arguments = c()
+
+    if (sum(which_parameters)>0)
+    {
+      if ( (sum(which_data)>0) && (sum(which_proposal_parameters)>0) )
+      {
+        arguments = c()
+        arguments[1] = "RandomNumberGenerator &rng"
+        arguments[2] = "const Parameters &parameters"
+        arguments[3] = "const Parameters &proposal_parameters"
+        arguments[4] = "const Data &data"
+        #args_for_typedef = "const Parameters&"
+        R_args = "parameters,proposal_parameters,data"
+        proposal_type = 4
+      }
+      else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
+      {
+        arguments = c()
+        arguments[1] = "RandomNumberGenerator &rng"
+        arguments[2] = "const Parameters &parameters"
+        arguments[3] = "const Data &data"
+        #args_for_typedef = "const Parameters&"
+        R_args = "parameters,data"
+        proposal_type = 3
+      }
+      else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
+      {
+        arguments = c()
+        arguments[1] = "RandomNumberGenerator &rng"
+        arguments[2] = "const Parameters &parameters"
+        arguments[3] = "const Parameters &proposal_parameters"
+        #args_for_typedef = "const Parameters&"
+        R_args = "parameters,proposal_parameters"
+        proposal_type = 2
+      }
+      else
+      {
+        arguments = c()
+        arguments[1] = "RandomNumberGenerator &rng"
+        arguments[2] = "const Parameters &parameters"
+        #args_for_typedef = "const Parameters&"
+        R_args = "parameters"
+        proposal_type = 1
+      }
+    }
+    else
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": no parameters used, should this have been specified as simulate_independent_mh_proposal?",sep=""))
+    }
+  }
+  else if (block_name=="simulate_unadjusted_proposal")
+  {
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Parameters"
+    arguments = c()
+
+    if (sum(which_parameters)>0)
+    {
+      if ( (sum(which_data)>0) && (sum(which_proposal_parameters)>0) )
+      {
+        arguments = c()
+        arguments[1] = "RandomNumberGenerator &rng"
+        arguments[2] = "const Parameters &parameters"
+        arguments[3] = "const Parameters &proposal_parameters"
+        arguments[4] = "const Data &data"
+        #args_for_typedef = "const Parameters&"
+        R_args = "parameters,proposal_parameters,data"
+        proposal_type = 4
+      }
+      else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
+      {
+        arguments = c()
+        arguments[1] = "RandomNumberGenerator &rng"
+        arguments[2] = "const Parameters &parameters"
+        arguments[3] = "const Data &data"
+        #args_for_typedef = "const Parameters&"
+        R_args = "parameters,data"
+        proposal_type = 3
+      }
+      else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
+      {
+        arguments = c()
+        arguments[1] = "RandomNumberGenerator &rng"
+        arguments[2] = "const Parameters &parameters"
+        arguments[3] = "const Parameters &proposal_parameters"
+        #args_for_typedef = "const Parameters&"
+        R_args = "parameters,proposal_parameters"
+        proposal_type = 2
+      }
+      else
+      {
+        arguments = c()
+        arguments[1] = "RandomNumberGenerator &rng"
+        arguments[2] = "const Parameters &parameters"
+        #args_for_typedef = "const Parameters&"
+        R_args = "parameters"
+        proposal_type = 1
+      }
+    }
+    else
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": no parameters used, should this have been specified as simulate_independent_mh_proposal?",sep=""))
+    }
+  }
+  else if (block_name=="evaluate_log_independent_mh_proposal")
+  {
+    if (sum(which_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in this function.",sep=""))
+    }
+
+    if ( (sum(which_data)>0) && (sum(which_proposal_parameters)>0) )
+    {
+      return_type = "double"
+      arguments = c()
+      arguments[1] = "const Parameters &proposed_parameters"
+      arguments[2] = "const Parameters &proposal_parameters"
+      arguments[3] = "const Data &data"
+      #args_for_typedef = "const Parameters&"
+      R_args = "proposed_parameters,proposal_parameters,data"
+      proposal_type = 4
+    }
+    else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
+    {
+      return_type = "double"
+      arguments = c()
+      arguments[1] = "const Parameters &proposed_parameters"
+      arguments[2] = "const Data &data"
+      #args_for_typedef = "const Parameters&"
+      R_args = "proposed_parameters,data"
+      proposal_type = 3
+    }
+    else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
+    {
+      return_type = "double"
+      arguments = c()
+      arguments[1] = "const Parameters &proposed_parameters"
+      arguments[2] = "const Parameters &proposal_parameters"
+      #args_for_typedef = "const Parameters&"
+      R_args = "proposed_parameters,proposal_parameters"
+      proposal_type = 2
+    }
+    else
+    {
+      return_type = "double"
+      arguments = c()
+      arguments[1] = "const Parameters &proposed_parameters"
+      #args_for_typedef = "const Parameters&"
+      R_args = "parameters"
+      proposal_type = 1
+    }
+  }
+  else if (block_name=="simulate_independent_mh_proposal")
+  {
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Parameters"
+    arguments = c()
+
+    if (sum(which_parameters)==0)
+    {
+      if ( (sum(which_data)>0) && (sum(which_proposal_parameters)>0) )
+      {
+        arguments = c()
+        arguments[1] = "RandomNumberGenerator &rng"
+        arguments[2] = "const Parameters &proposal_parameters"
+        arguments[3] = "const Data &data"
+        #args_for_typedef = "const Parameters&"
+        R_args = "proposal_parameters,data"
+        proposal_type = 4
+      }
+      else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
+      {
+        arguments = c()
+        arguments[1] = "RandomNumberGenerator &rng"
+        arguments[2] = "const Data &data"
+        #args_for_typedef = "const Parameters&"
+        R_args = "data"
+        proposal_type = 3
+      }
+      else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
+      {
+        arguments = c()
+        arguments[1] = "RandomNumberGenerator &rng"
+        arguments[2] = "const Parameters &proposal_parameters"
+        #args_for_typedef = "const Parameters&"
+        R_args = "proposal_parameters"
+        proposal_type = 2
+      }
+      else
+      {
+        arguments = c()
+        arguments[1] = "RandomNumberGenerator &rng"
+        #args_for_typedef = "const Parameters&"
+        R_args = ""
+        proposal_type = 1
+      }
+    }
+    else
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": parameters used, should this have been specified as simulate_mh_proposal?",sep=""))
+    }
+  }
+  else if (block_name=="simulate_m_proposal")
+  {
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Parameters"
+    arguments = c()
+
+    if (sum(which_parameters)>0)
+    {
+      if ( (sum(which_data)>0) && (sum(which_proposal_parameters)>0) )
+      {
+        arguments = c()
+        arguments[1] = "RandomNumberGenerator &rng"
+        arguments[2] = "const Parameters &parameters"
+        arguments[3] = "const Parameters &proposal_parameters"
+        arguments[4] = "const Data &data"
+        #args_for_typedef = "const Parameters&"
+        R_args = "parameters,proposal_parameters,data"
+        proposal_type = 4
+      }
+      else if ( (sum(which_data)>0) && (sum(which_proposal_parameters)==0) )
+      {
+        arguments = c()
+        arguments[1] = "RandomNumberGenerator &rng"
+        arguments[2] = "const Parameters &parameters"
+        arguments[3] = "const Data &data"
+        #args_for_typedef = "const Parameters&"
+        R_args = "parameters,data"
+        proposal_type = 3
+      }
+      else if ( (sum(which_data)==0) && (sum(which_proposal_parameters)>0) )
+      {
+        arguments = c()
+        arguments[1] = "RandomNumberGenerator &rng"
+        arguments[2] = "const Parameters &parameters"
+        arguments[3] = "const Parameters &proposal_parameters"
+        #args_for_typedef = "const Parameters&"
+        R_args = "parameters,proposal_parameters"
+        proposal_type = 2
+      }
+      else
+      {
+        arguments = c()
+        arguments[1] = "RandomNumberGenerator &rng"
+        arguments[2] = "const Parameters &parameters"
+        #args_for_typedef = "const Parameters&"
+        R_args = "parameters"
+        proposal_type = 1
+      }
+    }
+    else
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": no parameters used, invalid proposal type?",sep=""))
+    }
+
+  }
+  else if (block_name=="mcmc_weights")
+  {
+    if (sum(which_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in a mcmc_weights function.",sep=""))
+    }
+
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a mcmc_weights function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "NumericVector"
+    arguments = c()
+  }
+  else if (block_name=="simulate_data_model")
+  {
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a data_model.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Data"
+    arguments = c()
+    arguments[1] = "RandomNumberGenerator &rng"
+    arguments[2] = "const Parameters &parameters"
+    #args_for_typedef = "RandomNumberGenerator&"
+    R_args = "parameters"
+  }
+  else if (block_name=="summary_statistics")
+  {
+
+    if (sum(which_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Data"
+    arguments = c()
+    arguments[1] = "const Data &data"
+    #args_for_typedef = "const Parameters&"
+    R_args = "data"
+
+  }
+  else if (block_name=="nonlinear_gaussian_data_function")
+  {
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Data"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters"
+
+  }
+  else if (block_name=="simulate_transition_model")
+  {
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Parameters"
+    arguments = c()
+    arguments[1] = "RandomNumberGenerator &rng"
+    arguments[2] = "const Parameters &parameters"
+    arguments[3] = "const Data &data"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters,data"
+
+  }
+  else if (block_name=="nonlinear_gaussian_transition_function")
+  {
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Parameters"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    arguments[2] = "const Data &data"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters,data"
+
+  }
+  else if (block_name=="simulate_transition_proposal")
+  {
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Parameters"
+    arguments = c()
+    arguments[1] = "RandomNumberGenerator &rng"
+    arguments[2] = "const Parameters &parameters"
+    arguments[3] = "const Data &data"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters,data"
+
+  }
+  else if (block_name=="enk_transform")
+  {
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Parameters"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters"
+
+  }
+  else if (block_name=="enk_inverse_transform")
+  {
+
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Parameters"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters"
+  }
+  else if (block_name=="linear_gaussian_data_matrix")
+  {
+
+    return_type = "arma::mat"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters"
+
+  }
+  else if (block_name=="linear_gaussian_data_covariance")
+  {
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "arma::mat"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters"
+  }
+  else if (block_name=="nonlinear_gaussian_data_covariance")
+  {
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "arma::mat"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters"
+  }
+  else if (block_name=="linear_gaussian_transition_matrix")
+  {
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "arma::mat"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    arguments[2] = "const Data &data"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters,data"
+  }
+  else if (block_name=="linear_gaussian_transition_covariance")
+  {
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "arma::mat"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    arguments[2] = "const Data &data"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters,data"
+
+  }
+  else if (block_name=="nonlinear_gaussian_transition_covariance")
+  {
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "arma::mat"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    arguments[2] = "const Data &data"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters,data"
+  }
+  else if (block_name=="evaluate_log_transition_model")
+  {
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "double"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    arguments[2] = "const Data &data"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters,data"
+  }
+  else if (block_name=="evaluate_log_potential_function")
+  {
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "double"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    arguments[2] = "const Data &data"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters,data"
+  }
+  else if (block_name=="evaluate_log_transition_proposal")
+  {
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "double"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    arguments[2] = "const Data &data"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters,data"
+
+  }
+  else if (block_name=="m_transform")
+  {
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Parameters"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters"
+  }
+  else if (block_name=="m_inverse_transform")
+  {
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Parameters"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters"
+  }
+  else if (block_name=="m_transform_jacobian_matrix")
+  {
+
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "arma::mat"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters"
+  }
+  else if (block_name=="mh_transform")
+  {
+
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Parameters"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters"
+  }
+  else if (block_name=="mh_inverse_transform")
+  {
+
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Parameters"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters"
+
+  }
+  else if (block_name=="mh_transform_jacobian_matrix")
+  {
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "arma::mat"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters"
+
+  }
+  else if (block_name=="unadjusted_transform")
+  {
+
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Parameters"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters"
+  }
+  else if (block_name=="unadjusted_inverse_transform")
+  {
+
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Parameters"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters"
+  }
+  else if (block_name=="unadjusted_transform_jacobian_matrix")
+  {
+
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "arma::mat"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters"
+
+  }
+  else if (block_name=="independent_mh_transform")
+  {
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Parameters"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters"
+
+  }
+  else if (block_name=="independent_mh_inverse_transform")
+  {
+
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "Parameters"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters"
+
+  }
+  else if (block_name=="independent_mh_transform_jacobian_matrix")
+  {
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "arma::mat"
+    arguments = c()
+    arguments[1] = "const Parameters &parameters"
+    #args_for_typedef = "const Parameters&"
+    R_args = "parameters"
+
+  }
+  else
+  {
+    stop(paste('Block ',block_name,', line number ',line_counter,': block is of unknown type. Did you specify an ilike function? If so, include "ilike::" before the function name.',sep=""))
+  }
+
+  args_for_typedef = paste(arguments,collapse=",")
+
+  return(list(return_type,args_for_typedef,R_args,proposal_type))
+}
+
+function_name_for_cpp <- function(block_code)
+{
+  extracted_text = sub("\\(.*", "", block_code)
+  split_at_space = strsplit(extracted_text," ")[[1]]
+  return(split_at_space[length(split_at_space)])
+}
+
+extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types)
+{
+
   # Get information about the order in which MCMC moves are included.
   if ( (block_type=="mh_proposal") || (block_type=="unadjusted_proposal") || (block_type=="independent_mh_proposal") || (block_type=="m_proposal") )
   {
@@ -1366,13 +2729,53 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
     }
   }
 
+  cpp_function_name = paste(block_name,factor_number,sep="")
+  R_function_name = paste(cpp_function_name,'_R',sep="")
+
+  #temp_filename = paste(cpp_function_name,".cpp",sep="")
+  xptr_name = paste(cpp_function_name,"getXPtr",sep="_")
+
   # ignore block if block number is not positive
   if (factor_number>0)
   {
     if (is_custom==TRUE)
     {
-      my_list = list(RcppXPtrUtils::cppXPtr(block_code,plugins=c("cpp11"),depends = paste(c("ilike","RcppArmadillo","BH","dqrng","sitmo"),external_packages) ))
-      names(my_list) = c(block_name)
+      pt = parameter_types_for_cpp(block_code)
+      which_proposed_parameters = pt[[1]]
+      which_parameters = pt[[2]]
+      which_proposal_parameters = pt[[3]]
+      which_data = pt[[4]]
+
+      actual_cpp_function_name = function_name_for_cpp(block_code)
+
+      rt = return_types_for_cpp(block_name,line_counter,which_proposed_parameters,which_parameters,which_proposal_parameters,which_data)
+      return_type = rt[[1]]
+      args_for_typedef = rt[[2]]
+      R_args = rt[[3]]
+      proposal_type = rt[[4]]
+
+      writeLines(c(paste("SEXP ",xptr_name,"();",sep=""),
+                   '\n',
+                   block_code,
+                   '\n',
+                   "// [[Rcpp::export]]",
+                   paste("SEXP ",xptr_name,"() {",sep=""),
+                   paste("  typedef", return_type, "(*funcPtr)(", args_for_typedef, ");"),
+                   paste("  return XPtr<funcPtr>(new funcPtr(&", actual_cpp_function_name, "));"),
+                   "}",
+                   '\n'),
+                 fileConn)
+
+      if (verify_cpp_function_types)
+      {
+        my_list = list(xptr_name,0,RcppXPtrUtils::cppXPtr(block_code,plugins=c("cpp11"),depends = paste(c("ilike","RcppArmadillo","BH","dqrng","sitmo"),external_packages) ))
+        names(my_list) = c(xptr_name,block_name,paste("verify_",xptr_name,sep=""))
+      }
+      else
+      {
+        my_list = list(xptr_name,0)
+        names(my_list) = c(xptr_name,block_name)
+      }
 
       if (length((blocks[[block_type]]))==0)
       {
@@ -1385,6 +2788,11 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
       else
       {
         blocks[[block_type]][[factor_number]] = append(blocks[[block_type]][[factor_number]],my_list)
+      }
+
+      if (proposal_type!=0)
+      {
+        blocks[[block_type]][[factor_number]][["type"]] = proposal_type
       }
 
     }
@@ -1629,12 +3037,6 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
         # source
         # delete file
 
-        cpp_function_name = paste(block_name,factor_number,sep="")
-        R_function_name = paste(cpp_function_name,'_R',sep="")
-
-        #temp_filename = paste(cpp_function_name,".cpp",sep="")
-        xptr_name = paste(cpp_function_name,"getXPtr",sep="_")
-
         proposal_type = 0
 
         # if (R_functions)
@@ -1665,7 +3067,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           if (sum(which_data)>0)
           {
-            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a prior.",sep=""))
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a data function.",sep=""))
           }
 
           return_type = "Data"
@@ -3093,16 +4495,8 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
           code = paste(code,') {',function_body,' }',sep="")
 
-          writeLines(c(
-            '#include <RcppArmadillo.h>',
-            '// [[Rcpp::depends(RcppArmadillo)]]',
-            '// [[Rcpp::depends(ilike)]]',
-            '// [[Rcpp::depends(BH)]]',
-            '// [[Rcpp::depends(dqrng)]]',
-            '// [[Rcpp::depends(sitmo)]]',
-            '\n',
-            '/*** R',
-            paste(R_function_name,function_info[[1]],sep=""),
+          writeLines(c('/*** R',
+                       paste(R_function_name,function_info[[1]],sep=""),
             '*/',
             '\n',
             'using namespace Rcpp;',
@@ -3169,8 +4563,13 @@ check_types = function(blocks)
   {
     for (i in 1:length(blocks[["data"]]))
     {
-      if (inherits(blocks[["data"]][[i]][["data"]],"XPtr"))
-        RcppXPtrUtils::checkXPtr(blocks[["data"]][[i]][["data"]], "Data")
+      current_factor = blocks[["data"]][[i]]
+      if ("data" %in% names(current_factor))
+      {
+        which_index = which(names(current_factor) == "data")
+        if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
+          RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Data")
+      }
     }
   }
 
@@ -3180,73 +4579,82 @@ check_types = function(blocks)
 
     if ("evaluate_log_prior" %in% names(current_factor))
     {
-      if (inherits(current_factor[["evaluate_log_prior"]],"XPtr"))
+      which_index = which(names(current_factor) == "evaluate_log_prior")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[["evaluate_log_prior"]], "double", c("const Parameters&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "double", c("const Parameters&"))
       }
     }
 
     if ("simulate_prior" %in% names(current_factor))
     {
-      if (inherits(current_factor[["simulate_prior"]],"XPtr"))
+      which_index = which(names(current_factor) == "simulate_prior")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[["simulate_prior"]], "Parameters", c("RandomNumberGenerator&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&"))
       }
     }
 
     if ("evaluate_log_likelihood" %in% names(current_factor))
     {
-      if (inherits(current_factor[["evaluate_log_likelihood"]],"XPtr"))
+      which_index = which(names(current_factor) == "evaluate_log_likelihood")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[["evaluate_log_likelihood"]],  "double", c("const Parameters&","const Data&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Data&"))
       }
     }
 
     if ("simulate_data_model" %in% names(current_factor))
     {
-      if (inherits(current_factor[["simulate_data_model"]],"XPtr"))
+      which_index = which(names(current_factor) == "simulate_data_model")
+      if (inherits(ccurrent_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[["simulate_data_model"]],  "Data", c("RandomNumberGenerator&","const Parameters&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "Data", c("RandomNumberGenerator&","const Parameters&"))
       }
     }
 
     if ("summary_statistics" %in% names(current_factor))
     {
-      if (inherits(current_factor[["summary_statistics"]],"XPtr"))
+      which_index = which(names(current_factor) == "summary_statistics")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[["summary_statistics"]],  "Data", c("const Data&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "Data", c("const Data&"))
       }
     }
 
     if ("nonlinear_gaussian_data_function" %in% names(current_factor))
     {
-      if (inherits(current_factor[["nonlinear_gaussian_data_function"]],"XPtr"))
+      which_index = which(names(current_factor) == "nonlinear_gaussian_data_function")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[["nonlinear_gaussian_data_function"]],  "Data", c("const Parameters&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "Data", c("const Parameters&"))
       }
     }
 
     if ("linear_gaussian_data_matrix" %in% names(current_factor))
     {
-      if (inherits(current_factor[["linear_gaussian_data_matrix"]],"XPtr"))
+      which_index = which(names(current_factor) == "linear_gaussian_data_matrix")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[["linear_gaussian_data_matrix"]],  "arma::mat", c("const Parameters&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "arma::mat", c("const Parameters&"))
       }
     }
 
     if ("linear_gaussian_data_covariance" %in% names(current_factor))
     {
-      if (inherits(current_factor[["linear_gaussian_data_covariance"]],"XPtr"))
+      which_index = which(names(current_factor) == "linear_gaussian_data_covariance")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[["linear_gaussian_data_covariance"]],  "arma::mat", c("const Parameters&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "arma::mat", c("const Parameters&"))
       }
     }
 
     if ("nonlinear_gaussian_data_covariance" %in% names(current_factor))
     {
-      if (inherits(current_factor[["nonlinear_gaussian_data_covariance"]],"XPtr"))
+      which_index = which(names(current_factor) == "nonlinear_gaussian_data_covariance")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[["nonlinear_gaussian_data_covariance"]],  "arma::mat", c("const Parameters&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "arma::mat", c("const Parameters&"))
       }
     }
 
@@ -3254,28 +4662,30 @@ check_types = function(blocks)
 
   for (i in 1:length(blocks[["importance_proposal"]]))
   {
-    current_importance_proposal = blocks[["importance_proposal"]][[i]]
+    current_factor = blocks[["importance_proposal"]][[i]]
 
-    if ("evaluate_log_importance_proposal" %in% names(current_importance_proposal))
+    if ("evaluate_log_importance_proposal" %in% names(current_factor))
     {
-      if (inherits(current_importance_proposal[["evaluate_log_importance_proposal"]],"XPtr"))
+      which_index = which(names(current_factor) == "evaluate_log_importance_proposal")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
         proposal_type = c(TRUE,TRUE,TRUE,TRUE)
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["evaluate_log_importance_proposal"]],  "double", c("const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&")) }
                   , error = function(e) {proposal_type[1] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["evaluate_log_importance_proposal"]],  "double", c("const Parameters&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&")) }
                   , error = function(e) {proposal_type[2] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["evaluate_log_importance_proposal"]],  "double", c("const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[3] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["evaluate_log_importance_proposal"]],  "double", c("const Parameters&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[4] <<- FALSE})
 
         if (length(which(proposal_type==TRUE))==0)
         {
+          browser()
           stop("No valid importance proposal specified.")
         }
 
@@ -3283,26 +4693,28 @@ check_types = function(blocks)
       }
     }
 
-    if ("simulate_importance_proposal" %in% names(current_importance_proposal))
+    if ("simulate_importance_proposal" %in% names(current_factor))
     {
-      if (inherits(current_importance_proposal[["simulate_importance_proposal"]],"XPtr"))
+      which_index = which(names(current_factor) == "simulate_importance_proposal")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
         proposal_type = c(TRUE,TRUE,TRUE,TRUE)
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["simulate_importance_proposal"]], "Parameters", c("RandomNumberGenerator&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&")) }
                   , error = function(e) {proposal_type[1] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["simulate_importance_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
                   , error = function(e) {proposal_type[2] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["simulate_importance_proposal"]], "Parameters", c("RandomNumberGenerator&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Data&")) }
                   , error = function(e) {proposal_type[3] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_importance_proposal[["simulate_importance_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[4] <<- FALSE})
 
         if (length(which(proposal_type==TRUE))==0)
         {
+          browser()
           stop("No valid importance proposal specified.")
         }
 
@@ -3323,51 +4735,53 @@ check_types = function(blocks)
 
   for (i in 1:length(blocks[["mh_proposal"]]))
   {
-    current_mh_proposal = blocks[["mh_proposal"]][[i]]
+    current_factor = blocks[["mh_proposal"]][[i]]
 
-    if ("evaluate_log_mh_proposal" %in% names(current_mh_proposal))
+    if ("evaluate_log_mh_proposal" %in% names(current_factor))
     {
-      if (inherits(current_mh_proposal[["evaluate_log_mh_proposal"]],"XPtr"))
+      which_index = which(names(current_factor) == "evaluate_log_mh_proposal")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
         proposal_type = c(TRUE,TRUE,TRUE,TRUE)
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_mh_proposal[["evaluate_log_mh_proposal"]],  "double", c("const Parameters&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&")) }
                   , error = function(e) {proposal_type[1] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_mh_proposal[["evaluate_log_mh_proposal"]],  "double", c("const Parameters&","const Parameters&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&","const Parameters&")) }
                   , error = function(e) {proposal_type[2] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_mh_proposal[["evaluate_log_mh_proposal"]],  "double", c("const Parameters&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[3] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_mh_proposal[["evaluate_log_mh_proposal"]],  "double", c("const Parameters&","const Parameters&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[4] <<- FALSE})
 
         if (length(which(proposal_type==TRUE))==0)
         {
-          stop("No valid importance proposal specified.")
+          stop("No valid mh proposal specified.")
         }
 
         blocks[["mh_proposal"]][[i]][["type"]] = which(proposal_type)[1]
       }
     }
 
-    if ("simulate_mh_proposal" %in% names(current_mh_proposal))
+    if ("simulate_mh_proposal" %in% names(current_factor))
     {
-      if (inherits(current_mh_proposal[["simulate_mh_proposal"]],"XPtr"))
+      which_index = which(names(current_factor) == "simulate_mh_proposal")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
         proposal_type = c(TRUE,TRUE,TRUE,TRUE)
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_mh_proposal[["simulate_mh_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
                   , error = function(e) {proposal_type[1] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_mh_proposal[["simulate_mh_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&")) }
                   , error = function(e) {proposal_type[2] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_mh_proposal[["simulate_mh_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[3] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_mh_proposal[["simulate_mh_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[4] <<- FALSE})
 
         if (length(which(proposal_type==TRUE))==0)
@@ -3393,24 +4807,25 @@ check_types = function(blocks)
 
   for (i in 1:length(blocks[["unadjusted_proposal"]]))
   {
-    current_unadjusted_proposal = blocks[["unadjusted_proposal"]][[i]]
+    current_factor = blocks[["unadjusted_proposal"]][[i]]
 
-    if ("simulate_unadjusted_proposal" %in% names(current_unadjusted_proposal))
+    if ("simulate_unadjusted_proposal" %in% names(current_factor))
     {
-      if (inherits(current_unadjusted_proposal[["simulate_unadjusted_proposal"]],"XPtr"))
+      which_index = which(names(current_factor) == "simulate_unadjusted_proposal")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
         proposal_type = c(TRUE,TRUE,TRUE,TRUE)
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_unadjusted_proposal[["simulate_unadjusted_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
                   , error = function(e) {proposal_type[1] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_unadjusted_proposal[["simulate_unadjusted_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&")) }
                   , error = function(e) {proposal_type[2] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_unadjusted_proposal[["simulate_unadjusted_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[3] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_unadjusted_proposal[["simulate_unadjusted_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[4] <<- FALSE})
 
         if (length(which(proposal_type==TRUE))==0)
@@ -3425,51 +4840,53 @@ check_types = function(blocks)
 
   for (i in 1:length(blocks[["independent_mh_proposal"]]))
   {
-    current_independent_mh_proposal = blocks[["independent_mh_proposal"]][[i]]
+    current_factor = blocks[["independent_mh_proposal"]][[i]]
 
-    if ("evaluate_log_independent_mh_proposal" %in% names(current_independent_mh_proposal))
+    if ("evaluate_log_independent_mh_proposal" %in% names(current_factor))
     {
-      if (inherits(current_independent_mh_proposal[["evaluate_log_independent_mh_proposal"]],"XPtr"))
+      which_index = which(names(current_factor) == "evaluate_log_independent_mh_proposal")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
         proposal_type = c(TRUE,TRUE,TRUE,TRUE)
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_independent_mh_proposal[["evaluate_log_independent_mh_proposal"]],  "double", c("const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&")) }
                   , error = function(e) {proposal_type[1] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_independent_mh_proposal[["evaluate_log_independent_mh_proposal"]],  "double", c("const Parameters&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&")) }
                   , error = function(e) {proposal_type[2] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_independent_mh_proposal[["evaluate_log_independent_mh_proposal"]],  "double", c("const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[3] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_independent_mh_proposal[["evaluate_log_independent_mh_proposal"]],  "double", c("const Parameters&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[4] <<- FALSE})
 
         if (length(which(proposal_type==TRUE))==0)
         {
-          stop("No valid importance proposal specified.")
+          stop("No valid independent_mh proposal specified.")
         }
 
         blocks[["independent_mh_proposal"]][[i]][["type"]] = which(proposal_type)[1]
       }
     }
 
-    if ("simulate_independent_mh_proposal" %in% names(current_independent_mh_proposal))
+    if ("simulate_independent_mh_proposal" %in% names(current_factor))
     {
-      if (inherits(current_independent_mh_proposal[["simulate_independent_mh_proposal"]],"XPtr"))
+      which_index = which(names(current_factor) == "simulate_independent_mh_proposal")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
         proposal_type = c(TRUE,TRUE,TRUE,TRUE)
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_independent_mh_proposal[["simulate_independent_mh_proposal"]], "Parameters", c("RandomNumberGenerator&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&")) }
                   , error = function(e) {proposal_type[1] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_independent_mh_proposal[["simulate_independent_mh_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
                   , error = function(e) {proposal_type[2] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_independent_mh_proposal[["simulate_independent_mh_proposal"]], "Parameters", c("RandomNumberGenerator&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Data&")) }
                   , error = function(e) {proposal_type[3] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_independent_mh_proposal[["simulate_independent_mh_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[4] <<- FALSE})
 
         if (length(which(proposal_type==TRUE))==0)
@@ -3495,24 +4912,25 @@ check_types = function(blocks)
 
   for (i in 1:length(blocks[["m_proposal"]]))
   {
-    current_m_proposal = blocks[["m_proposal"]][[i]]
+    current_factor = blocks[["m_proposal"]][[i]]
 
-    if ("simulate_m_proposal" %in% names(current_m_proposal))
+    if ("simulate_m_proposal" %in% names(current_factor))
     {
-      if (inherits(current_m_proposal[["simulate_m_proposal"]],"XPtr"))
+      which_index = which(names(current_factor) == "simulate_m_proposal")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
         proposal_type = c(TRUE,TRUE,TRUE,TRUE)
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_m_proposal[["simulate_m_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
                   , error = function(e) {proposal_type[1] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_m_proposal[["simulate_m_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&")) }
                   , error = function(e) {proposal_type[2] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_m_proposal[["simulate_m_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[3] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_m_proposal[["simulate_m_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[4] <<- FALSE})
 
         if (length(which(proposal_type==TRUE))==0)
@@ -3528,53 +4946,59 @@ check_types = function(blocks)
 
   for (i in 1:length(blocks[["transition_model"]]))
   {
-    current_transition_model = blocks[["transition_model"]][[i]]
+    current_factor = blocks[["transition_model"]][[i]]
 
-    if ("evaluate_log_transition_model" %in% names(current_transition_model))
+    if ("evaluate_log_transition_model" %in% names(current_factor))
     {
-      if (inherits(current_transition_model[["evaluate_log_transition_model"]],"XPtr"))
+      which_index = which(names(current_factor) == "evaluate_log_transition_model")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_transition_model[["evaluate_log_transition_model"]],  "double", c("const Parameters&","const Parameters&","const Data&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&","const Data&"))
       }
     }
 
-    if ("simulate_transition_model" %in% names(current_transition_model))
+    if ("simulate_transition_model" %in% names(current_factor))
     {
-      if (inherits(current_transition_model[["simulate_transition_model"]],"XPtr"))
+      which_index = which(names(current_factor) == "simulate_transition_model")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_transition_model[["simulate_transition_model"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&"))
       }
     }
 
-    if ("nonlinear_gaussian_transition_function" %in% names(current_transition_model))
+    if ("nonlinear_gaussian_transition_function" %in% names(current_factor))
     {
-      if (inherits(current_transition_model[["nonlinear_gaussian_transition_function"]],"XPtr"))
+      which_index = which(names(current_factor) == "nonlinear_gaussian_transition_function")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_transition_model[["nonlinear_gaussian_transition_function"]],  "Data", c("const Parameters&","const Data&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "Data", c("const Parameters&","const Data&"))
       }
     }
 
-    if ("linear_gaussian_transition_matrix" %in% names(current_transition_model))
+    if ("linear_gaussian_transition_matrix" %in% names(current_factor))
     {
-      if (inherits(current_transition_model[["linear_gaussian_transition_matrix"]],"XPtr"))
+      which_index = which(names(current_factor) == "linear_gaussian_transition_matrix")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_transition_model[["linear_gaussian_transition_matrix"]],  "arma::mat", c("const Parameters&","const Data&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "arma::mat", c("const Parameters&","const Data&"))
       }
     }
 
-    if ("linear_gaussian_transition_covariance" %in% names(current_transition_model))
+    if ("linear_gaussian_transition_covariance" %in% names(current_factor))
     {
-      if (inherits(current_transition_model[["linear_gaussian_transition_covariance"]],"XPtr"))
+      which_index = which(names(current_factor) == "linear_gaussian_transition_covariance")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_transition_model[["linear_gaussian_transition_covariance"]],  "arma::mat", c("const Parameters&","const Data&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "arma::mat", c("const Parameters&","const Data&"))
       }
     }
 
-    if ("nonlinear_gaussian_transition_covariance" %in% names(current_transition_model))
+    if ("nonlinear_gaussian_transition_covariance" %in% names(current_factor))
     {
-      if (inherits(current_transition_model[["nonlinear_gaussian_transition_covariance"]],"XPtr"))
+      which_index = which(names(current_factor) == "nonlinear_gaussian_transition_covariance")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_transition_model[["nonlinear_gaussian_transition_covariance"]],  "arma::mat", c("const Parameters&","const Data&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "arma::mat", c("const Parameters&","const Data&"))
       }
     }
 
@@ -3582,21 +5006,23 @@ check_types = function(blocks)
 
   for (i in 1:length(blocks[["transition_proposal"]]))
   {
-    current_transition_proposal = blocks[["transition_proposal"]][[i]]
+    current_factor = blocks[["transition_proposal"]][[i]]
 
-    if ("evaluate_log_transition_proposal" %in% names(current_transition_proposal))
+    if ("evaluate_log_transition_proposal" %in% names(current_factor))
     {
-      if (inherits(current_transition_proposal[["evaluate_log_transition_proposal"]],"XPtr"))
+      which_index = which(names(current_factor) == "evaluate_log_transition_proposal")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_transition_proposal[["evaluate_log_transition_proposal"]],  "double", c("const Parameters&","const Parameters&","const Data&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&","const Data&"))
       }
     }
 
-    if ("simulate_transition_proposal" %in% names(current_transition_proposal))
+    if ("simulate_transition_proposal" %in% names(current_factor))
     {
-      if (inherits(current_transition_proposal[["simulate_transition_proposal"]],"XPtr"))
+      which_index = which(names(current_factor) == "simulate_transition_proposal")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_transition_proposal[["simulate_transition_proposal"]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&"))
       }
     }
 
@@ -3604,21 +5030,23 @@ check_types = function(blocks)
 
   for (i in 1:length(blocks[["enk_transform"]]))
   {
-    current_enk_transform = blocks[["enk_transform"]][[i]]
+    current_factor = blocks[["enk_transform"]][[i]]
 
-    if ("enk_transform" %in% names(current_enk_transform))
+    if ("enk_transform" %in% names(current_factor))
     {
-      if (inherits(current_enk_transform[["enk_transform"]],"XPtr"))
+      which_index = which(names(current_factor) == "enk_transform")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_enk_transform[["enk_transform"]],  "Parameters", c("const Parameters&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "Parameters", c("const Parameters&"))
       }
     }
 
-    if ("enk_inverse_transform" %in% names(current_enk_transform))
+    if ("enk_inverse_transform" %in% names(current_factor))
     {
-      if (inherits(current_enk_transform[["enk_inverse_transform"]],"XPtr"))
+      which_index = which(names(current_factor) == "enk_inverse_transform")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_enk_transform[["enk_inverse_transform"]],  "Parameters", c("const Parameters&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "Parameters", c("const Parameters&"))
       }
     }
 
@@ -3626,13 +5054,14 @@ check_types = function(blocks)
 
   for (i in 1:length(blocks[["potential_function"]]))
   {
-    current_potential_function = blocks[["potential_function"]][[i]]
+    current_factor = blocks[["potential_function"]][[i]]
 
-    if ("evaluate_log_potential_function" %in% names(current_potential_function))
+    if ("evaluate_log_potential_function" %in% names(current_factor))
     {
-      if (inherits(current_potential_function[["evaluate_log_potential_function"]],"XPtr"))
+      which_index = which(names(current_factor) == "evaluate_log_potential_function")
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_potential_function[["evaluate_log_potential_function"]],  "double", c("const Parameters&","const Parameters&","const Data&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&","const Data&"))
       }
     }
 
@@ -3642,11 +5071,14 @@ check_types = function(blocks)
   {
     for (i in 1:length(blocks[["method"]]))
     {
+      current_factor = blocks[["method"]][[i]]
+
       if ("mcmc_weights" %in% names(blocks[["method"]][[i]]))
       {
-        if (inherits(blocks[["method"]][[i]][["mcmc_weights"]],"XPtr"))
+        which_index = which(names(current_factor) == "mcmc_weights")
+        if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
         {
-          RcppXPtrUtils::checkXPtr(blocks[["method"]][[i]][["mcmc_weights"]], "NumericVector")
+          RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "NumericVector")
         }
       }
     }
@@ -3759,7 +5191,7 @@ compile <- function(filename,
 
     if ( (nchar(line)>=3) && (substr(line, 1, 3)=="//#") )
     {
-      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn)
+      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types)
       in_block = FALSE
       starting_block_flag = TRUE
       is_custom = FALSE
@@ -3776,6 +5208,19 @@ compile <- function(filename,
           if (pre_blocks==TRUE)
           {
             writeLines(block_code,fileConn)
+
+            writeLines(c('#include <RcppArmadillo.h>',
+              '// [[Rcpp::depends(RcppArmadillo)]]',
+              '// [[Rcpp::depends(ilike)]]',
+              '// [[Rcpp::depends(BH)]]',
+              '// [[Rcpp::depends(dqrng)]]',
+              '// [[Rcpp::depends(sitmo)]]',
+              '\n',
+              'using namespace Rcpp;',
+              '#include <ilike.h>',
+              '\n'),
+              fileConn)
+
             pre_blocks = FALSE
             block_code = ""
           }
@@ -3789,7 +5234,7 @@ compile <- function(filename,
           }
           else # end current block
           {
-            blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn)
+            blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types)
             is_custom = FALSE
             block_code = ""
           }
@@ -3855,7 +5300,7 @@ compile <- function(filename,
     # ignore block if block number is not positive
     if (number_to_pass_to_extract_block>0)
     {
-      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn)
+      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types)
       if ( (factor_number!=0) && (factor_number==length(blocks[["factor"]])) )
       {
         print_factor_info(length(blocks[["factor"]]),blocks,line_counter)

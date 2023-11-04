@@ -10,7 +10,10 @@ compile(
   R_functions = FALSE,
   external_packages = c(),
   julia_bin_dir = "",
-  julia_required_libraries = c()
+  julia_required_libraries = c(),
+  verify_cpp_function_types = FALSE,
+  keep_temporary_model_code = FALSE,
+  nesting_level = 1
 )
 }
 \arguments{
@@ -25,6 +28,12 @@ compile(
 \item{julia_bin_dir}{(optional) The directory containing the Julia bin file - only needed if Julia functions are used.}
 
 \item{julia_required_libraries}{(optional) Vector of strings, each of which is a Julia packge that will be installed and loaded.}
+
+\item{verify_cpp_function_types}{(optional) If TRUE, check the types of the parameters of user-defined .cpp functions. If FALSE (default), types are not checked.}
+
+\item{keep_temporary_model_code}{(optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE, this file is left in the working directory.}
+
+\item{nesting_level}{(optional) The level of nesting of the current call to compile. A user should always use the default of 1.}
 }
 \value{
 A list containing the model details.
