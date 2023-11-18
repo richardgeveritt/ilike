@@ -23,7 +23,7 @@ class EnsembleFactors;
 class EnsembleShifter;
 class MoveOutput;
 class EnsembleSequencer;
-class Tranform;
+class Transform;
 
 #include "ensemble.h"
 

@@ -313,7 +313,7 @@ std::vector<arma::mat> HMMEnsembleFactors::get_adjustments(const arma::mat &Zf,
 
 double HMMEnsembleFactors::get_incremental_likelihood(Ensemble* ensemble)
 {
-  double inverse_incremental_temperature = 1.0/(this->temperature - this->previous_temperature);
+  double inverse_incremental_temperature = 1.0;///(this->temperature - this->previous_temperature);
   
   double llhd = 0.0;
   ensemble->kalman_gains.clear();
@@ -334,9 +334,10 @@ double HMMEnsembleFactors::get_incremental_likelihood(Ensemble* ensemble)
   return llhd;
 }
 
-double HMMEnsembleFactors::get_inversion_incremental_likelihood(Ensemble* ensemble)
+double HMMEnsembleFactors::get_inversion_incremental_likelihood(Ensemble* ensemble,
+                                                                double inverse_incremental_temperature)
 {
-  double inverse_incremental_temperature = 1.0/(this->temperature - this->previous_temperature);
+  //double inverse_incremental_temperature = 1.0/(this->temperature - this->previous_temperature);
   
   double llhd = 0.0;
   ensemble->kalman_gains.clear();

@@ -167,6 +167,7 @@ arma::mat GaussianIndependentProposalKernel::get_covariance(const std::vector<st
        ++i)
   {
     covariance( arma::span(current_dimension,current_dimension+(*i).n_rows-1), arma::span(current_dimension,current_dimension+(*i).n_rows-1) ) = *i;
+    current_dimension = current_dimension + (*i).n_rows;
   }
   
   return covariance;

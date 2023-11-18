@@ -23,7 +23,8 @@
 #include "ensemble_sequencer.h"
 #include "positive_smc_criterion.h"
 #include "ess_smc_criterion.h"
-#include "direct_gaussian_measurement_covariance_estimator.h"
+#include "direct_nonlinear_gaussian_measurement_covariance_estimator.h"
+#include "direct_abc_gaussian_measurement_covariance_estimator.h"
 #include "transform.h"
 #include "gaussian_noise_proposal_kernel.h"
 //#include "standard_mcmc_output.h"
@@ -60,6 +61,9 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
                 true,
                 results_name_in)
 {
+  this->proposal = prior_in;
+  this->proposal->set_proposal_parameters(&this->algorithm_parameters);
+  
   //IndependentProposalKernel* proposal = new CustomDistributionProposalKernel(simulate_prior_in);
   //Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
   
@@ -78,7 +82,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
   
   this->ensemble_factors = new VectorEnsembleFactors(measurement_covariance_estimators);
   
-  this->proposal = prior_in;
+  
   
   /*
   for (auto i=measurement_covariance_estimators.begin();
@@ -153,6 +157,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
   //Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
   
   this->proposal = prior_in;
+  this->proposal->set_proposal_parameters(&this->algorithm_parameters);
   
   std::vector<MeasurementCovarianceEstimator*> measurement_covariance_estimators;
   std::vector<size_t> indices;
@@ -225,7 +230,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
                                                  IndependentProposalKernel* prior_in,
                                                  std::shared_ptr<Transform> measurement_transform_function_in,
                                                  const std::vector<std::string> &measurement_variables,
-                                                 const std::vector<GetMeasurementMatrixPtr> &measurement_noise_functions_in,
+                                                 const std::vector<GetMatrixPtr> &measurement_noise_functions_in,
                                                  std::shared_ptr<Transform> summary_statistics_in,
                                                  std::shared_ptr<Transform> transform_in,
                                                  bool parallel_in,
@@ -247,19 +252,20 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
   //Data candidate_measurement = measurement_transform_function_in(candidate_parameters);
   
   this->proposal = prior_in;
+  this->proposal->set_proposal_parameters(&this->algorithm_parameters);
   
   std::vector<MeasurementCovarianceEstimator*> measurement_covariance_estimators;
   std::vector<size_t> indices;
   measurement_covariance_estimators.reserve(1);
-  measurement_covariance_estimators.push_back(new DirectGaussianMeasurementCovarianceEstimator(rng_in,
-                                                                                               seed_in,
-                                                                                               data_in,
-                                                                                               transform_in,
-                                                                                               summary_statistics_in,
-                                                                                               measurement_transform_function_in,
-                                                                                               measurement_variables,
-                                                                                               measurement_noise_functions_in));
-  measurement_covariance_estimators.back()->change_data();
+  measurement_covariance_estimators.push_back(new DirectNonLinearGaussianMeasurementCovarianceEstimator(rng_in,
+                                                                                                        seed_in,
+                                                                                                        data_in,
+                                                                                                        transform_in,
+                                                                                                        summary_statistics_in,
+                                                                                                        measurement_transform_function_in,
+                                                                                                        measurement_noise_functions_in,
+                                                                                                        measurement_variables));
+            measurement_covariance_estimators.back()->change_data();
   indices.push_back(0);
   this->index = new VectorSingleIndex(indices);
   
@@ -299,6 +305,212 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
                                       sequence_variable_in,
                                       number_of_bisections_in,
                                       smc_criterion);
+  //this->sequencer_parameters = &this->sequencer.schedule_parameters;
+  this->mcmc = NULL;
+  
+  //this->mcmc = mcmc_in;
+  //this->mcmc->set_index(new VectorSingleIndex(indices));
+  //this->mcmc_at_last_step = mcmc_at_last_step_in;
+}
+
+EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
+                                                 size_t* seed_in,
+                                                 Data* data_in,
+                                                 size_t number_of_ensemble_members_in,
+                                                 size_t lag_in,
+                                                 EnsembleShifter* shifter_in,
+                                                 double annealing_desired_cess_in,
+                                                 size_t number_of_bisections_in,
+                                                 const std::string &sequence_variable_in,
+                                                 const std::vector<double> &schedule_in,
+                                                 IndependentProposalKernel* prior_in,
+                                                 const std::vector<std::string> &measurement_variables_in,
+                                                 double min_epsilon_in,
+                                                 const std::string &scale_variable_in,
+                                                 std::shared_ptr<Transform> summary_statistics_in,
+                                                 std::shared_ptr<Transform> transform_in,
+                                                 bool parallel_in,
+                                                 size_t grain_size_in,
+                                                 const std::string &results_name_in)
+:EnsembleKalman(rng_in,
+                seed_in,
+                data_in,
+                number_of_ensemble_members_in,
+                lag_in,
+                shifter_in,
+                transform_in,
+                true,
+                true,
+                results_name_in)
+{
+  //IndependentProposalKernel* proposal = new CustomDistributionProposalKernel(simulate_prior_in);
+  //Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
+  //Data candidate_measurement = measurement_transform_function_in(candidate_parameters);
+  
+  this->proposal = prior_in;
+  this->proposal->set_proposal_parameters(&this->algorithm_parameters);
+  
+  std::vector<MeasurementCovarianceEstimator*> measurement_covariance_estimators;
+  std::vector<size_t> indices;
+  measurement_covariance_estimators.reserve(1);
+  measurement_covariance_estimators.push_back(new DirectABCGaussianMeasurementCovarianceEstimator(rng_in,
+                                                                                                  seed_in,
+                                                                                                  data_in,
+                                                                                                  transform_in,
+                                                                                                  summary_statistics_in,
+                                                                                                  min_epsilon_in,
+                                                                                                  //sequence_variable_in,
+                                                                                                  scale_variable_in,
+                                                                                                  measurement_variables_in));
+  measurement_covariance_estimators.back()->change_data();
+  indices.push_back(0);
+  this->index = new VectorSingleIndex(indices);
+  
+  this->ensemble_factors = new VectorEnsembleFactors(measurement_covariance_estimators);
+  
+  /*
+   for (auto i=measurement_covariance_estimators.begin();
+   i!=measurement_covariance_estimators.end();
+   ++i)
+   {
+   
+   (*i)->setup(candidate_parameters);
+   }
+   */
+  
+  // Need to construct LikelihoodEstimator to read in to this constructor.
+  //this->particle_simulator = new ParameterParticleSimulator(proposal,
+  //                                                          likelihood_estimators);
+  
+  if (parallel_in==TRUE)
+  {
+    //this->the_worker = new RcppParallelSMCWorker(this,
+    //this->model_and_algorithm.particle_simulator,
+    //grain_size_in);
+  }
+  else
+  {
+    this->the_worker = new SequentialEnsembleKalmanWorker(this);
+  }
+  
+  //std::vector<double> schedule_in;
+  //schedule_in.push_back(0.0);
+  // schedule_in.push_back(1.0);
+  SMCCriterion* smc_criterion = new ESSSMCCriterion(annealing_desired_cess_in);
+  this->sequencer = EnsembleSequencer(this->the_worker,
+                                      schedule_in,
+                                      sequence_variable_in,
+                                      number_of_bisections_in,
+                                      smc_criterion);
+  //this->sequencer_parameters = &this->sequencer.schedule_parameters;
+  this->mcmc = NULL;
+  
+  //this->mcmc = mcmc_in;
+  //this->mcmc->set_index(new VectorSingleIndex(indices));
+  //this->mcmc_at_last_step = mcmc_at_last_step_in;
+}
+
+EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
+                                                 size_t* seed_in,
+                                                 Data* data_in,
+                                                 size_t number_of_ensemble_members_in,
+                                                 size_t lag_in,
+                                                 EnsembleShifter* shifter_in,
+                                                 SMCCriterion* adaptive_target_criterion_in,
+                                                 size_t number_of_bisections_in,
+                                                 SMCTermination* termination_in,
+                                                 const std::string &sequence_variable_in,
+                                                 const std::vector<double> &schedule_in,
+                                                 IndependentProposalKernel* prior_in,
+                                                 const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
+                                                 const std::vector<MeasurementCovarianceEstimator*> &estimators_in,
+                                                 std::shared_ptr<Transform> transform_in,
+                                                 bool parallel_in,
+                                                 size_t grain_size_in,
+                                                 const std::string &results_name_in)
+:EnsembleKalman(rng_in,
+                seed_in,
+                data_in,
+                number_of_ensemble_members_in,
+                lag_in,
+                shifter_in,
+                transform_in,
+                true,
+                true,
+                results_name_in)
+{
+  //IndependentProposalKernel* proposal = new CustomDistributionProposalKernel(simulate_prior_in);
+  //Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
+  //Data candidate_measurement = measurement_transform_function_in(candidate_parameters);
+  
+  this->proposal = prior_in;
+  this->proposal->set_proposal_parameters(&this->algorithm_parameters);
+  
+  std::vector<MeasurementCovarianceEstimator*> measurement_covariance_estimators = estimators_in;
+  /*
+  std::vector<size_t> indices;
+  measurement_covariance_estimators.reserve(1);
+  measurement_covariance_estimators.push_back(new DirectGaussianMeasurementCovarianceEstimator(rng_in,
+                                                                                               seed_in,
+                                                                                               data_in,
+                                                                                               transform_in,
+                                                                                               summary_statistics_in,
+                                                                                               measurement_transform_function_in,
+                                                                                               measurement_variables,
+                                                                                               measurement_noise_functions_in));
+  measurement_covariance_estimators.back()->change_data();
+  indices.push_back(0);
+  */
+  
+  std::vector<size_t> indices;
+  
+  for (size_t i=0;
+       i<measurement_covariance_estimators.size();
+       ++i)
+  {
+    measurement_covariance_estimators[i]->change_data();
+    indices.push_back(i);
+  }
+  
+  this->index = new VectorSingleIndex(indices);
+  
+  this->ensemble_factors = new VectorEnsembleFactors(measurement_covariance_estimators);
+  
+  /*
+   for (auto i=measurement_covariance_estimators.begin();
+   i!=measurement_covariance_estimators.end();
+   ++i)
+   {
+   
+   (*i)->setup(candidate_parameters);
+   }
+   */
+  
+  // Need to construct LikelihoodEstimator to read in to this constructor.
+  //this->particle_simulator = new ParameterParticleSimulator(proposal,
+  //                                                          likelihood_estimators);
+  
+  if (parallel_in==TRUE)
+  {
+    //this->the_worker = new RcppParallelSMCWorker(this,
+    //this->model_and_algorithm.particle_simulator,
+    //grain_size_in);
+  }
+  else
+  {
+    this->the_worker = new SequentialEnsembleKalmanWorker(this);
+  }
+  
+  //std::vector<double> schedule_in;
+  //schedule_in.push_back(0.0);
+  // schedule_in.push_back(1.0);
+  //SMCCriterion* smc_criterion = new ESSSMCCriterion(annealing_desired_cess_in);
+  this->sequencer = EnsembleSequencer(this->the_worker,
+                                      schedule_in,
+                                      sequence_variable_in,
+                                      number_of_bisections_in,
+                                      adaptive_target_criterion_in,
+                                      termination_in);
   //this->sequencer_parameters = &this->sequencer.schedule_parameters;
   this->mcmc = NULL;
   
@@ -437,8 +649,9 @@ void EnsembleKalmanInversion::ensemble_kalman_evaluate_smcadaptive_part_given_sm
     // (involves evaluating adaptive weights, using Sequencer)
     this->sequencer.find_next_target_bisection(current_state,
                                                this->index);
-    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_inversion_latest_log_normalising_constant_ratio();
-    this->the_worker->shift(&current_state->back());
+    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_inversion_latest_log_normalising_constant_ratio(1.0/this->sequencer.schedule_difference);
+    this->the_worker->shift(&current_state->back(),
+                            1.0/this->sequencer.schedule_difference);
     this->the_worker->unpack(&current_state->back());
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
@@ -615,7 +828,7 @@ void EnsembleKalmanInversion::ensemble_kalman_evaluate_smcadaptive_part_given_sm
     this->sequencer.find_next_target_bisection(current_state,
                                                this->index);
     
-    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_inversion_latest_log_normalising_constant_ratio();
+    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_inversion_latest_log_normalising_constant_ratio(1.0/this->sequencer.schedule_difference);
     
     /*
     this->sequencer.find_desired_criterion(current_state,
@@ -627,7 +840,8 @@ void EnsembleKalmanInversion::ensemble_kalman_evaluate_smcadaptive_part_given_sm
                                                conditioned_on_parameters);
     */
     
-    this->the_worker->shift(&current_state->back());
+    this->the_worker->shift(&current_state->back(),
+                            1.0/this->sequencer.schedule_difference);
     this->the_worker->unpack(&current_state->back());
     
     //if (this->sequencer_parameters!=NULL)
@@ -771,9 +985,10 @@ void EnsembleKalmanInversion::ensemble_kalman_subsample_evaluate_smcadaptive_par
                                                          conditioned_on_parameters);
     */
     
-    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_inversion_latest_log_normalising_constant_ratio();
+    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_inversion_latest_log_normalising_constant_ratio(1.0/this->sequencer.schedule_difference);
     
-    this->the_worker->shift(&current_state->back());
+    this->the_worker->shift(&current_state->back(),
+                            1.0/this->sequencer.schedule_difference);
     this->the_worker->unpack(&current_state->back());
     
     //if (this->sequencer_parameters!=NULL)

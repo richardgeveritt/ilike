@@ -483,6 +483,7 @@ void ImportanceSampler::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* 
   
   //if (this->sequencer_parameters!=NULL)
   //  current_state->back().schedule_parameters = *this->sequencer_parameters;
+
   current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
 }
 

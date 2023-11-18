@@ -24,7 +24,7 @@ mcmc = function(model,
   results_directory = paste(results_directory,"/ilike",sep="")
 
   if ((is.character(model)) && (length(model) == 1))
-    model = parse_ilike_model(model,model_parameter_list)
+    model = compile(model,model_parameter_list)
 
   if (is.null(seed))
   {
@@ -53,11 +53,20 @@ mcmc = function(model,
     }
   }
 
+  # MCMC weights method.
+  mcmc_weights_method = get_method(model,"mcmc_weights")
+
+  if (is.null(mcmc_weights_method))
+  {
+    mcmc_weights_method = list()
+  }
+
   do_mcmc(model,
           model_parameter_list,
           algorithm_parameter_list,
           initial_values,
           mcmc_termination_method,
+          mcmc_weights_method,
           number_of_chains,
           parallel,
           grain_size,

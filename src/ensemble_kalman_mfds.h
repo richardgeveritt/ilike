@@ -44,7 +44,7 @@ public:
                      size_t number_of_iterations_in,
                      std::shared_ptr<Transform> measurement_transform_function_in,
                      const std::vector<std::string> &measurement_variables,
-                     const std::vector<GetMeasurementMatrixPtr> &measurement_noise_functions,
+                     const std::vector<GetMatrixPtr> &measurement_noise_functions,
                      std::shared_ptr<Transform> summary_statistics_in,
                      std::shared_ptr<Transform> transform_in,
                      bool parallel_in,

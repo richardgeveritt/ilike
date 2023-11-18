@@ -65,7 +65,8 @@ public:
   //std::vector<arma::colvec> pack_measurements() const;
   
   double get_incremental_likelihood(Ensemble* ensemble);
-  double get_inversion_incremental_likelihood(Ensemble* ensemble);
+  double get_inversion_incremental_likelihood(Ensemble* ensemble,
+                                              double inverse_incremental_temperature);
   
   const EnsembleFactors* get_ensemble_factors() const;
   

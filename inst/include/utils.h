@@ -77,7 +77,6 @@ inline std::vector<size_t> stratified_resample(const arma::colvec &log_weights,
   arma::colvec norm_log_weights = log_weights - log_sum_exp(log_weights);
   arma::colvec W = exp(norm_log_weights);
   arma::colvec cw = cumsum(W / sum(W));
-  //std::cout << cw.t() << std::endl;
   arma::colvec resampling_variables_over_n = resampling_variables/double(n);
   
   arma::colvec seq(n);
@@ -87,10 +86,6 @@ inline std::vector<size_t> stratified_resample(const arma::colvec &log_weights,
   }
   
   arma::colvec v = resampling_variables_over_n + seq/double(n);
-  
-  //std::cout << v.t() << std::endl;
-  
-  //std::cout << resampling_variables_over_n.t() << std::endl;
 
   size_t j = 0;
   for (size_t i=0; i<n; ++i)
@@ -377,42 +372,45 @@ inline Rcpp::List parameters_to_list(const Parameters &parameters)
 // [[Rcpp::export]]
 inline Parameters list_to_parameters(const Rcpp::List &list)
 {
-  //Rcpp::Rcout << list << std::endl;
-  
   Parameters output;
-  Rcpp::CharacterVector names = list.names();
   
-  for (size_t i=0; i<names.size(); ++i)
+  if (list.length()!=0)
   {
+    Rcpp::CharacterVector names = list.names();
+  
     for (size_t i=0; i<names.size(); ++i)
     {
       if (Rf_isVector(list[i]))
       {
-        output[Rcpp::as<std::string>(names[i])] = arma::mat(Rcpp::as<arma::vec>(list[i]));
+        output[Rcpp::as<std::string>(names[i])] = arma::mat(Rcpp::as<arma::vec>(Rcpp::as<NumericVector>(list[i])));
       }
       else if (Rf_isMatrix(list[i]))
       {
         output[Rcpp::as<std::string>(names[i])] = Rcpp::as<arma::mat>(list[i]);
       }
+      //else if (Rf_isNumeric(list[i]))
+      //{
+      //  output[Rcpp::as<std::string>(names[i])] = Rcpp::as<NumericVector>(list[i])[0];
+      //}
       else
       {
         output(Rcpp::as<std::string>(names[i]))= list[i];
       }
       
       /*
-      catch (const std::runtime_error& re)
-      {
-        output(Rcpp::as<std::string>(names[i])) = list[i];
-      }
-      catch(const std::exception& ex)
-      {
-        
-      }
-      catch(...)
-      {
-        std::cerr << "list_to_parameters - cannot read this element into Parameters." << std::endl;
-      }
-      */
+       catch (const std::runtime_error& re)
+       {
+       output(Rcpp::as<std::string>(names[i])) = list[i];
+       }
+       catch(const std::exception& ex)
+       {
+       
+       }
+       catch(...)
+       {
+       std::cerr << "list_to_parameters - cannot read this element into Parameters." << std::endl;
+       }
+       */
       
     }
   }

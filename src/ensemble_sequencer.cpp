@@ -247,7 +247,7 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
   
   this->schedule_parameters[this->variable_name] = this->current_bisect_value;
   
-  double small_value = (this->schedule[this->mileometer.back()] - this->schedule[this->mileometer.back()-1])*pow(0.5,30.0);
+  double small_value = std::min(abs((this->schedule[this->mileometer.back()] - this->schedule[this->mileometer.back()-1])),1.0)*pow(0.5,30.0);
   // if we have not just found a value for the parameter that is at one of the points in the schedule
   if (this->direction * this->current_bisect_value>= this->direction * this->schedule[this->mileometer.back()] - small_value)
   {
@@ -269,7 +269,9 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
       this->schedule_difference = this->schedule[this->mileometer.back()]-this->schedule[this->mileometer.back()-1];
       
       //this->mileometer.increment();
-      current_state->back().set_temperature(this->current_bisect_value);
+      
+      //current_state->back().set_temperature(this->current_bisect_value);
+      
       this->set_schedule_parameters();
       //this->schedule_parameters[this->variable_names.back()] = target_values.back();
       
@@ -320,12 +322,12 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
     
   }
   
-  current_state->back().set_temperature(this->current_bisect_value);
+  //current_state->back().set_temperature(this->current_bisect_value);
   
   this->schedule_difference = this->current_bisect_value - starting_value;
   this->previous_bisect_value = this->current_bisect_value;
   
-  if ((this->direction * this->current_bisect_value >= this->direction * this->schedule[this->mileometer.back()]))
+  if ((this->direction * this->current_bisect_value >= this->direction * this->schedule[this->mileometer.back()]-small_value))
   {
     this->mileometer.increment();
   }
@@ -443,7 +445,8 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
   {
     this->schedule_difference = this->schedule[this->mileometer.back()]-this->schedule[this->mileometer.back()-1];
     //this->mileometer.increment();
-    current_state->back().set_temperature(this->current_bisect_value);
+    
+    //current_state->back().set_temperature(this->current_bisect_value);
     this->set_schedule_parameters();
     
     return;
@@ -451,7 +454,7 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
   
   this->schedule_parameters[this->variable_name] = this->current_bisect_value;
   
-  double small_value = (this->schedule[this->mileometer.back()] - this->schedule[this->mileometer.back()-1])*pow(0.5,30.0);
+  double small_value = std::min(abs((this->schedule[this->mileometer.back()] - this->schedule[this->mileometer.back()-1])),1.0)*pow(0.5,30.0);
   // if we have not just found a value for the parameter that is at one of the points in the schedule
   if (this->direction * this->current_bisect_value>= this->direction * this->schedule[this->mileometer.back()] - small_value)
   {
@@ -473,7 +476,11 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
       this->schedule_difference = this->schedule[this->mileometer.back()]-this->schedule[this->mileometer.back()-1];
       
       //this->mileometer.increment();
-      current_state->back().set_temperature(this->current_bisect_value);
+      
+      
+      //current_state->back().set_temperature(this->current_bisect_value);
+      
+      
       this->set_schedule_parameters();
       //this->schedule_parameters[this->variable_names.back()] = target_values.back();
       
@@ -524,12 +531,12 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
     
   }
   
-  current_state->back().set_temperature(this->current_bisect_value);
+  //current_state->back().set_temperature(this->current_bisect_value);
   
   this->schedule_difference = this->current_bisect_value - starting_value;
   this->previous_bisect_value = this->current_bisect_value;
   
-  if ((this->direction * this->current_bisect_value >= this->direction * this->schedule[this->mileometer.back()]))
+  if ((this->direction * this->current_bisect_value >= this->direction * this->schedule[this->mileometer.back()]-small_value))
   {
     this->mileometer.increment();
   }

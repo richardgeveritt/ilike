@@ -1,5 +1,5 @@
-#ifndef LINEARGAUSSIANNOISEPROPOSALKERNEL_H
-#define LINEARGAUSSIANNOISEPROPOSALKERNEL_H
+#ifndef LINEARGAUSSIANNOISEFUNCTIONPROPOSALKERNEL_H
+#define LINEARGAUSSIANNOISEFUNCTIONPROPOSALKERNEL_H
 
 #include <RcppArmadillo.h>
 using namespace Rcpp;
@@ -11,49 +11,36 @@ using namespace Rcpp;
 #include "particle.h"
 #include "distributions.h"
 #include "ilike_header.h"
-#include "gaussian_proposal_info.h"
+#include "gaussian_proposal_functions_info.h"
 
-class LinearGaussianNoiseProposalKernel : public GaussianNoiseProposalKernel
+class LinearGaussianNoiseFunctionProposalKernel : public GaussianNoiseProposalKernel
 {
   
 public:
   
-  LinearGaussianNoiseProposalKernel();
-  virtual ~LinearGaussianNoiseProposalKernel();
-  
-  // make cov_names from var_names and find cov adaptively
-  LinearGaussianNoiseProposalKernel(const std::vector<std::string> &variable_names_in,
-                                    const std::vector<std::string> &conditioned_on_variable_names_in,
-                                    const std::vector<arma::mat> &As_in);
+  LinearGaussianNoiseFunctionProposalKernel();
+  virtual ~LinearGaussianNoiseFunctionProposalKernel();
   
   // make cov_names from var_names
-  LinearGaussianNoiseProposalKernel(const std::vector<std::string> &variable_names_in,
-                                    const std::vector<std::string> &conditioned_on_variable_names_in,
-                                    const std::vector<arma::mat> &As_in,
-                                    const std::vector<arma::mat> &covariances_in);
+  LinearGaussianNoiseFunctionProposalKernel(const std::string &variable_name_in,
+                                            const std::string &conditioned_on_variable_name_in,
+                                            const GetMatrixPtr &A_in,
+                                            const GetMatrixPtr &covariance_in);
   
-  // make cov_names from var_names
-  LinearGaussianNoiseProposalKernel(const std::string &variable_name_in,
-                                    const std::string &conditioned_on_variable_name_in,
-                                    const arma::mat &A_in,
-                                    const arma::mat &covariance_in);
+  LinearGaussianNoiseFunctionProposalKernel(const LinearGaussianNoiseFunctionProposalKernel &another);
   
-  LinearGaussianNoiseProposalKernel(const std::string &variable_name_in,
-                                    const std::vector<std::string> &conditioned_on_variable_names_in,
-                                    const double &sd_in);
-  
-  LinearGaussianNoiseProposalKernel(const LinearGaussianNoiseProposalKernel &another);
-  
-  void operator=(const LinearGaussianNoiseProposalKernel &another);
+  void operator=(const LinearGaussianNoiseFunctionProposalKernel &another);
   Kernel* duplicate() const;
   ProposalKernel* proposal_kernel_duplicate() const;
   GaussianNoiseProposalKernel* gaussian_noise_proposal_kernel_duplicate() const;
   
+  /*
   void set_covariance(const std::string &variable,
                       const arma::mat &covariance_in);
   
   arma::mat get_inverse_covariance(const std::string &variable);
   arma::mat get_covariance(const std::string &variable);
+  */
   
   void set_proposal_parameters(Parameters* proposal_parameters_in);
   
@@ -143,9 +130,9 @@ protected:
    const Parameters &conditioned_on_parameters);
    */
   
-  void make_copy(const LinearGaussianNoiseProposalKernel &another);
+  void make_copy(const LinearGaussianNoiseFunctionProposalKernel &another);
   
-  boost::unordered_map< std::string, GaussianProposalInfo> proposal_info;
+  boost::unordered_map< std::string, GaussianProposalFunctionsInfo> proposal_info;
   std::vector<std::string> conditioned_on_variable_names;
 };
 

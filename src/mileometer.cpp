@@ -205,5 +205,8 @@ void Mileometer::reset_final_dimension(size_t new_number_of_states)
 
 void Mileometer::reset()
 {
-  
+  for (size_t i=0; i<this->current_index.size(); ++i)
+  {
+    current_index[i] = 0;
+  }
 }

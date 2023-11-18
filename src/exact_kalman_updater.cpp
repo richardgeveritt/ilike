@@ -15,8 +15,8 @@ ExactKalmanUpdater::ExactKalmanUpdater(const arma::mat &measurement_matrix_in,
   this->set_using_parameters = false;
 }
 
-ExactKalmanUpdater::ExactKalmanUpdater(GetMeasurementMatrixPtr measurement_matrix_function_in,
-                                       GetMeasurementMatrixPtr measurement_noise_function_in)
+ExactKalmanUpdater::ExactKalmanUpdater(GetMatrixPtr measurement_matrix_function_in,
+                                       GetMatrixPtr measurement_noise_function_in)
 {
   this->measurement_matrix_function = measurement_matrix_function_in;
   this->measurement_noise_function = measurement_noise_function_in;

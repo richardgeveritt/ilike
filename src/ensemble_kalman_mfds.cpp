@@ -12,7 +12,7 @@
 #include "single_point_move_output.h"
 #include "ensemble_factor_variables.h"
 #include "generic_measurement_covariance_estimator.h"
-#include "direct_gaussian_measurement_covariance_estimator.h"
+#include "direct_nonlinear_gaussian_measurement_covariance_estimator.h"
 #include "mixed_generic_direct_gaussian_measurement_covariance_estimator.h"
 #include "vector_single_index.h"
 #include "custom_distribution_proposal_kernel.h"
@@ -84,14 +84,14 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
                                                                                           summary_statistics_in,
                                                                                           simulate_model_in));
     measurement_covariance_estimators.back()->change_data();
-    measurement_covariance_estimators.push_back(new DirectGaussianMeasurementCovarianceEstimator(rng_in,
-                                                                                                 seed_in,
-                                                                                                 &this->state_mean_as_data,
-                                                                                                 NULL,
-                                                                                                 NULL,
-                                                                                                 NULL,
-                                                                                                 this->packing_instructions.states_names,
-                                                                                                 prior_covariances.get_matrices(this->packing_instructions.states_names)));
+    measurement_covariance_estimators.push_back(new DirectNonLinearGaussianMeasurementCovarianceEstimator(rng_in,
+                                                                                                          seed_in,
+                                                                                                          &this->state_mean_as_data,
+                                                                                                          NULL,
+                                                                                                          NULL,
+                                                                                                          NULL,
+                                                                                                          prior_covariances.get_matrices(this->packing_instructions.states_names),
+                                                                                                          this->packing_instructions.states_names));
     measurement_covariance_estimators.back()->change_data();
     
     indices.push_back(0);
@@ -101,14 +101,14 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
   {
     // sequential update, with prior first, then likelihood
     measurement_covariance_estimators.reserve(2);
-    measurement_covariance_estimators.push_back(new DirectGaussianMeasurementCovarianceEstimator(rng_in,
-                                                                                                 seed_in,
-                                                                                                 &this->state_mean_as_data,
-                                                                                                 NULL,
-                                                                                                 NULL,
-                                                                                                 NULL,
-                                                                                                 this->packing_instructions.states_names,
-                                                                                                 prior_covariances.get_matrices(this->packing_instructions.states_names)));
+    measurement_covariance_estimators.push_back(new DirectNonLinearGaussianMeasurementCovarianceEstimator(rng_in,
+                                                                                                          seed_in,
+                                                                                                          &this->state_mean_as_data,
+                                                                                                          NULL,
+                                                                                                          NULL,
+                                                                                                          NULL,
+                                                                                                          prior_covariances.get_matrices(this->packing_instructions.states_names),
+                                                                                                          this->packing_instructions.states_names));
     measurement_covariance_estimators.back()->change_data();
     
     measurement_covariance_estimators.push_back(new GenericMeasurementCovarianceEstimator(rng_in,
@@ -156,7 +156,9 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
   */
   
   this->ensemble_factors = new VectorEnsembleFactors(measurement_covariance_estimators);
-  this->ensemble_factors->set_temperature(this->delta_t);
+  
+  Rcpp::stop("EMFDS - need alternative to set temperature.");
+  //this->ensemble_factors->set_temperature(this->delta_t);
   
   // Need to construct LikelihoodEstimator to read in to this constructor.
   //this->particle_simulator = new ParameterParticleSimulator(proposal,
@@ -196,7 +198,7 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
                                        size_t number_of_iterations_in,
                                        std::shared_ptr<Transform> measurement_transform_function_in,
                                        const std::vector<std::string> &measurement_variables,
-                                       const std::vector<GetMeasurementMatrixPtr> &measurement_noise_functions,
+                                       const std::vector<GetMatrixPtr> &measurement_noise_functions,
                                        std::shared_ptr<Transform> summary_statistics_in,
                                        std::shared_ptr<Transform> transform_in,
                                        bool parallel_in,
@@ -232,14 +234,14 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
   std::vector<MeasurementCovarianceEstimator*> measurement_covariance_estimators;
   std::vector<size_t> indices;
   
-  measurement_covariance_estimators.push_back(new DirectGaussianMeasurementCovarianceEstimator(rng_in,
-                                                                                               seed_in,
-                                                                                               data_in,
-                                                                                               transform_in,
-                                                                                               summary_statistics_in,
-                                                                                               measurement_transform_function_in,
-                                                                                               measurement_variables,
-                                                                                               measurement_noise_functions));
+  measurement_covariance_estimators.push_back(new DirectNonLinearGaussianMeasurementCovarianceEstimator(rng_in,
+                                                                                                        seed_in,
+                                                                                                        data_in,
+                                                                                                        transform_in,
+                                                                                                        summary_statistics_in,
+                                                                                                        measurement_transform_function_in,
+                                                                                                        measurement_noise_functions,
+                                                                                                        measurement_variables));
   measurement_covariance_estimators.back()->change_data();
     
   indices.push_back(0);
@@ -256,7 +258,9 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
   */
   
   this->ensemble_factors = new VectorEnsembleFactors(measurement_covariance_estimators);
-  this->ensemble_factors->set_temperature(this->delta_t);
+  
+  Rcpp::stop("EMFDS - need alternative to set temperature.");
+  //this->ensemble_factors->set_temperature(this->delta_t);
   
   // Need to construct LikelihoodEstimator to read in to this constructor.
   //this->particle_simulator = new ParameterParticleSimulator(proposal,
@@ -352,7 +356,9 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
   */
 
   this->ensemble_factors = new VectorEnsembleFactors(measurement_covariance_estimators);
-  this->ensemble_factors->set_temperature(this->delta_t);
+  
+  Rcpp::stop("EMFDS - need alternative to set temperature.");
+  //this->ensemble_factors->set_temperature(this->delta_t);
 
   if (parallel_in==TRUE)
   {
@@ -511,15 +517,16 @@ void EnsembleKalmanMFDS::ensemble_kalman_evaluate_smcadaptive_part_given_smcfixe
   bool terminate = FALSE;
   while (terminate==FALSE)
   {
-    //std::cout << current_state->back().members[0]->back().parameters << std::endl;
     this->the_worker->pack(&current_state->back());
     this->find_measurement_covariances(current_state);
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
-    this->the_worker->shift(&current_state->back());
-    this->ensemble_factors->set_temperature(this->ensemble_factors->get_temperature() + this->delta_t);
+    this->the_worker->shift(&current_state->back(),
+                            1.0/this->delta_t);
+    
+    Rcpp::stop("EMFDS - need alternative to set temperature.");
+    //this->ensemble_factors->set_temperature(this->ensemble_factors->get_temperature() + this->delta_t);
     this->predict(current_state);
     this->the_worker->unpack_with_predicted(&current_state->back());
-    //std::cout << current_state->back().members[0]->back().parameters << std::endl;
     
     current_state->llhds.push_back(current_state->log_likelihood);
     current_state->set_time();
@@ -697,7 +704,8 @@ void EnsembleKalmanMFDS::ensemble_kalman_evaluate_smcadaptive_part_given_smcfixe
     this->the_worker->pack(&current_state->back());
     this->find_measurement_covariances(current_state);
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
-    this->the_worker->shift(&current_state->back());
+    this->the_worker->shift(&current_state->back(),
+                            1.0/this->delta_t);
     this->predict(current_state);
     this->the_worker->unpack_with_predicted(&current_state->back());
     
@@ -818,7 +826,8 @@ void EnsembleKalmanMFDS::ensemble_kalman_subsample_evaluate_smcadaptive_part_giv
     this->the_worker->pack(&current_state->back());
     this->find_measurement_covariances(current_state);
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
-    this->the_worker->shift(&current_state->back());
+    this->the_worker->shift(&current_state->back(),
+                            1.0/this->delta_t);
     this->predict(current_state);
     this->the_worker->unpack_with_predicted(&current_state->back());
     

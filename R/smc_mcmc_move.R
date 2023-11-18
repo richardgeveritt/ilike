@@ -26,7 +26,7 @@ smc_mcmc_move = function(model,
   results_directory = paste(results_directory,"/ilike",sep="")
 
   if ((is.character(model)) && (length(model) == 1))
-    model = parse_ilike_model(model,model_parameter_list)
+    model = compile(model,model_parameter_list)
 
   if (is.null(seed))
   {
@@ -77,11 +77,20 @@ smc_mcmc_move = function(model,
     smc_termination_method = list()
   }
 
+  # MCMC weights method.
+  mcmc_weights_method = get_method(model,"mcmc_weights")
+
+  if (is.null(mcmc_weights_method))
+  {
+    mcmc_weights_method = list()
+  }
+
   return(do_smc_mcmc_move(model,
                           model_parameter_list,
                           algorithm_parameter_list,
                           number_of_particles,
                           mcmc_termination_method,
+                          mcmc_weights_method,
                           adaptive_resampling_method,
                           smc_sequencer_method,
                           adaptive_target_method,

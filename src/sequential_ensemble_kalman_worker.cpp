@@ -72,9 +72,10 @@ void SequentialEnsembleKalmanWorker::make_copy(const SequentialEnsembleKalmanWor
   this->log_unnormalised_incremental_weights = another.log_unnormalised_incremental_weights;
 }
 
-void SequentialEnsembleKalmanWorker::shift(Ensemble* ensemble)
+void SequentialEnsembleKalmanWorker::shift(Ensemble* ensemble,
+                                           double inverse_incremental_temperature)
 {
-  double inverse_incremental_temperature = ensemble->get_inverse_incremental_temperature();
+  //double inverse_incremental_temperature = ensemble->get_inverse_incremental_temperature();
   
   this->the_enk->ensemble_shifter->setup(ensemble,
                                          inverse_incremental_temperature);

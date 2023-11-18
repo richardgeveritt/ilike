@@ -112,7 +112,7 @@ protected:
   
   //SimulateMeasurementKernelPtr measurement_kernel;
   TransformToDataPtr transform_function;
-  std::vector<GetMeasurementMatrixPtr> prior_measurement_noise_functions;
+  std::vector<GetMatrixPtr> prior_measurement_noise_functions;
   
   // in this class, this->measurement_variables (in base) always refers to the "true" measurement variables, for the likelihood term - not those for the prior, which we store in this derived class (same goes for the prior "Data")
   std::vector<std::string> prior_measurement_variables;

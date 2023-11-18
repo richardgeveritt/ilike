@@ -58,7 +58,8 @@ public:
                       const Parameters &conditioned_on_parameters);
   */
   
-  virtual void shift(Ensemble* ensemble)=0;
+  virtual void shift(Ensemble* ensemble,
+                     double inverse_incremental_temperature)=0;
   
   virtual void pack(Ensemble* ensemble)=0;
   virtual void unpack(Ensemble* ensemble)=0;

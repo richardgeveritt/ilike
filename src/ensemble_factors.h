@@ -69,11 +69,12 @@ public:
                                                  double inverse_incremental_temperature) const=0;
   
   virtual double get_incremental_likelihood(Ensemble* ensemble)=0;
-  virtual double get_inversion_incremental_likelihood(Ensemble* ensemble)=0;
+  virtual double get_inversion_incremental_likelihood(Ensemble* ensemble,
+                                                      double inverse_incremental_temperature)=0;
   
-  void set_temperature(double temperature_in);
-  double get_temperature() const;
-  double get_inverse_incremental_temperature() const;
+  //void set_temperature(double temperature_in);
+  //double get_temperature() const;
+  //double get_inverse_incremental_temperature() const;
   
   virtual void setup()=0;
   virtual void setup(const Parameters &conditioned_on_parameters)=0;
@@ -85,8 +86,8 @@ protected:
   std::vector<std::string> measurement_names;
   
   // quite hacky...
-  double temperature;
-  double previous_temperature;
+  //double temperature;
+  //double previous_temperature;
   
   void make_copy(const EnsembleFactors &another);
 

@@ -18,7 +18,7 @@ public:
   UnscentedKalmanUpdater();
   
   UnscentedKalmanUpdater(GetMatrixSimulateMeasurementKernelPtr measurement_kernel_function_in,
-                         GetMeasurementMatrixPtr measurement_noise_function_in,
+                         GetMatrixPtr measurement_noise_function_in,
                          double w0_in = 1.0/3.0);
   
   UnscentedKalmanUpdater(MatrixSimulateMeasurementKernelPtr measurement_kernel_in,
@@ -47,7 +47,7 @@ protected:
   
   // use either these
   GetMatrixSimulateMeasurementKernelPtr measurement_kernel_function;
-  GetMeasurementMatrixPtr measurement_noise_function;
+  GetMatrixPtr measurement_noise_function;
   
   // or these
   MatrixSimulateMeasurementKernelPtr measurement_kernel;

@@ -109,7 +109,13 @@ typedef arma::colvec (*SimulateTransitionKernelFromTimeParametersPtr)(const arma
                                                                       double time_step,
                                                                       const Parameters &conditioned_on_parameters);
 
-typedef arma::mat (*GetMeasurementMatrixPtr)(const Parameters &conditioned_on_parameters);
+typedef arma::colvec (*GetNoParamsVectorPtr)();
+
+typedef arma::mat (*GetNoParamsMatrixPtr)();
+
+typedef arma::colvec (*GetVectorPtr)(const Parameters &conditioned_on_parameters);
+
+typedef arma::mat (*GetMatrixPtr)(const Parameters &conditioned_on_parameters);
 
 typedef arma::colvec (*MatrixSimulateMeasurementKernelPtr)(const arma::colvec &current_state);
 
@@ -144,7 +150,9 @@ typedef List (*GetDataFromSimulationPtr)(const List &simulation);
 
 typedef Data (*DataPtr)();
 
-typedef NumericVector (*MCMCWeightsPtr)();
+typedef NumericVector (*NumericVectorPtr)();
+
+typedef std::string (*StringPtr)();
 
 
 /*
@@ -380,10 +388,40 @@ inline SummaryStatisticsPtr load_summary_statistics(const SEXP &summary_statisti
   return *summary_statistics_XPtr;
 }
 
+inline TransformPtr load_transform(const SEXP &transform_SEXP)
+{
+  XPtr<TransformPtr> transform_XPtr(transform_SEXP);
+  return *transform_XPtr;
+}
+
 inline GetDataFromSimulationPtr load_get_data_from_simulation(const SEXP &get_data_from_simulation_SEXP)
 {
   XPtr<GetDataFromSimulationPtr> get_data_from_simulation_XPtr(get_data_from_simulation_SEXP);
   return *get_data_from_simulation_XPtr;
+}
+
+inline arma::colvec load_vector(const SEXP &get_vector_SEXP)
+{
+  XPtr<GetNoParamsVectorPtr> get_vector_XPtr(get_vector_SEXP);
+  return (*get_vector_XPtr)();
+}
+
+inline arma::mat load_matrix(const SEXP &get_matrix_SEXP)
+{
+  XPtr<GetNoParamsMatrixPtr> get_matrix_XPtr(get_matrix_SEXP);
+  return (*get_matrix_XPtr)();
+}
+
+inline GetVectorPtr load_vector_function(const SEXP &get_vector_SEXP)
+{
+  XPtr<GetVectorPtr> get_vector_XPtr(get_vector_SEXP);
+  return *get_vector_XPtr;
+}
+
+inline GetMatrixPtr load_matrix_function(const SEXP &get_matrix_SEXP)
+{
+  XPtr<GetMatrixPtr> get_matrix_XPtr(get_matrix_SEXP);
+  return *get_matrix_XPtr;
 }
 
 // inline Data load_observed_data(const SEXP &observed_data_SEXP)
@@ -392,11 +430,11 @@ inline GetDataFromSimulationPtr load_get_data_from_simulation(const SEXP &get_da
 //   return *observed_data_XPtr;
 // }
 
-inline NumericVector load_mcmc_weights(const SEXP &mcmc_weights_SEXP)
+inline NumericVector load_numeric_vector(const SEXP &numeric_vector_SEXP)
 {
-  XPtr<MCMCWeightsPtr> mcmc_weights_XPtr(mcmc_weights_SEXP);
+  XPtr<NumericVectorPtr> numeric_vector_XPtr(numeric_vector_SEXP);
   //return Parameters();
-  return (*mcmc_weights_XPtr)();
+  return (*numeric_vector_XPtr)();
 }
 
 inline Data load_data(const SEXP &data_SEXP)
@@ -411,6 +449,13 @@ inline DataPtr load_data_function(const SEXP &data_SEXP)
   XPtr<DataPtr> data_XPtr(data_SEXP);
   //return Parameters();
   return *data_XPtr;
+}
+
+inline std::string load_string(const SEXP &string_SEXP)
+{
+  XPtr<StringPtr> string_XPtr(string_SEXP);
+  //return Parameters();
+  return (*string_XPtr)();
 }
 
 // // [[Rcpp::export]]

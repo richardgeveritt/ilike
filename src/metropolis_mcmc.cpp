@@ -241,17 +241,27 @@ void MetropolisMCMC::set_index_if_null(Index* index_in)
 {
   if (this->index==NULL)
     this->index = index_in;
-  this->proposal->set_index_if_null(index_in);
+  if (this->proposal!=NULL)
+  {
+    this->proposal->set_index_if_null(index_in);
+  }
 }
 
 void MetropolisMCMC::set_proposal_parameters(Parameters* proposal_parameters_in)
 {
-  this->proposal->set_proposal_parameters(proposal_parameters_in);
+  if (this->proposal!=NULL)
+  {
+    this->proposal->set_proposal_parameters(proposal_parameters_in);
+  }
 }
 
 std::vector<const ProposalKernel*> MetropolisMCMC::get_proposals() const
 {
-  std::vector<const ProposalKernel*> proposals = this->proposal->get_proposals();
+  std::vector<const ProposalKernel*> proposals;
+  if (this->proposal!=NULL)
+  {
+    proposals = this->proposal->get_proposals();
+  }
   //proposals.push_back(this->proposal);
   return proposals;
 }

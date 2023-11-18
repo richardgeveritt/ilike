@@ -58,7 +58,7 @@ LinearGaussianNoiseProposalKernel::LinearGaussianNoiseProposalKernel(const std::
 }
 
 LinearGaussianNoiseProposalKernel::LinearGaussianNoiseProposalKernel(const std::string &variable_name_in,
-                                                                     const std::vector<std::string> &conditioned_on_variable_names_in,
+                                                                     const std::string &conditioned_on_variable_name_in,
                                                                      const arma::mat &A_in,
                                                                      const arma::mat &covariance_in)
 :GaussianNoiseProposalKernel()
@@ -66,7 +66,7 @@ LinearGaussianNoiseProposalKernel::LinearGaussianNoiseProposalKernel(const std::
   //this->unused_variables_kept = true;
   this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in);
   this->proposal_info[variable_name_in].set_A(A_in);
-  this->conditioned_on_variable_names = conditioned_on_variable_names_in;
+  this->conditioned_on_variable_names.push_back(conditioned_on_variable_name_in);
 }
 
 LinearGaussianNoiseProposalKernel::LinearGaussianNoiseProposalKernel(const LinearGaussianNoiseProposalKernel &another)
@@ -152,7 +152,7 @@ double LinearGaussianNoiseProposalKernel::specific_subsample_evaluate_kernel(con
  */
 
 void LinearGaussianNoiseProposalKernel::set_covariance(const std::string &variable,
-                                                      const arma::mat &covariance_in)
+                                                       const arma::mat &covariance_in)
 {
   this->proposal_info[variable].set_covariance(covariance_in);
 }

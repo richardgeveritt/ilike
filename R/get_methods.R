@@ -52,9 +52,19 @@ get_method = function(model,method_name)
     methods = model[["method"]]
     for (i in 1:length(methods))
     {
-      if (method_name %in% names(methods[[i]]) && ("type" %in% names(methods[[i]][[method_name]])) && ("parameters" %in% names(methods[[i]][[method_name]])) )
+      if ( (method_name=="mcmc_weights") || (method_name=="enk_likelihood_index") )
       {
-        output_method = list(method=methods[[i]][[method_name]][["type"]],values=methods[[i]][[method_name]][["parameters"]])
+        if (method_name %in% names(methods[[i]]))
+        {
+          output_method = list(func=methods[[i]][[method_name]])
+        }
+      }
+      else
+      {
+        if (method_name %in% names(methods[[i]]) && ("type" %in% names(methods[[i]][[method_name]])) && ("parameters" %in% names(methods[[i]][[method_name]])) )
+        {
+          output_method = list(method=methods[[i]][[method_name]][["type"]],values=methods[[i]][[method_name]][["parameters"]])
+        }
       }
     }
   }
@@ -69,6 +79,56 @@ get_method = function(model,method_name)
 get_smc_sequences = function(model,model_parameters)
 {
   method_name = "smc_sequence"
+
+  output_method = NULL
+
+  counter = 0
+
+  if ("method" %in% names(model))
+  {
+    methods = model[["method"]]
+    for (i in 1:length(methods))
+    {
+      if (method_name %in% names(methods[[i]]) && ("type" %in% names(methods[[i]][[method_name]])) && ("variables" %in% names(methods[[i]][[method_name]])) && ("parameters" %in% names(methods[[i]][[method_name]])) )
+      {
+        sequence = methods[[i]][[method_name]][["parameters"]]
+
+        f_info = method_parse(sequence,model_parameters)
+
+        if (length(f_info[[2]])>0)
+        {
+          stop('SMC sequence must not have any variables (except for parameters "p1", "p2", etc.')
+        }
+
+        if (counter==0)
+        {
+          schedule_list = list()
+          schedule_list[[1]] = f_info[[1]]()
+          output_method = list(types=methods[[i]][[method_name]][["type"]],variables=methods[[i]][[method_name]][["variables"]],schedules=schedule_list)
+        }
+        else
+        {
+          output_method[["types"]] = c(output_method[["types"]],methods[[i]][[method_name]][["type"]])
+          output_method[["variables"]] = c(output_method[["variables"]],methods[[i]][[method_name]][["variables"]])
+          output_method[["schedules"]] = append(output_method[["schedules"]],f_info[[1]]())
+        }
+
+        counter = counter + 1
+
+      }
+    }
+  }
+  else
+  {
+    stop(paste("Model file needs to specify a valid method for ",method_name,".",sep=""))
+  }
+
+  return(output_method)
+}
+
+get_enk_sequences = function(model,model_parameters)
+{
+  method_name = "enk_sequence"
 
   output_method = NULL
 

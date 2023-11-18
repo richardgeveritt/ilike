@@ -211,7 +211,7 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcadaptive_part_given_smcfi
     
     // will need to change sequencer to have temperature within t - at the moment temperature will not be set correctly
     
-    this->the_worker->shift(&current_state->back());
+    this->the_worker->shift(&current_state->back(),1.0);
     this->the_worker->unpack(&current_state->back());
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
@@ -408,7 +408,8 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcadaptive_part_given_smcfi
   {
     this->the_worker->pack(&current_state->back());
     this->find_measurement_covariances(current_state);
-    this->the_worker->shift(&current_state->back());
+    this->the_worker->shift(&current_state->back(),
+                            1.0);
     this->the_worker->unpack(&current_state->back());
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);

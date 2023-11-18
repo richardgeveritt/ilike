@@ -351,9 +351,10 @@ double Ensemble::calculate_log_normalising_constant()
   return this->log_normalising_constant_ratio;
 }
 
-double Ensemble::calculate_inversion_log_normalising_constant()
+double Ensemble::calculate_inversion_log_normalising_constant(double inverse_incremental_temperature)
 {
-  this->log_normalising_constant_ratio = this->ensemble_factors->get_inversion_incremental_likelihood(this);
+  this->log_normalising_constant_ratio = this->ensemble_factors->get_inversion_incremental_likelihood(this,
+                                                                                                      inverse_incremental_temperature);
   this->ess = exp(2.0*log_sum_exp(this->unnormalised_log_weights) - log_sum_exp(2.0*this->unnormalised_log_weights));
   return this->log_normalising_constant_ratio;
 }
@@ -437,12 +438,14 @@ void Ensemble::pack_measurements()
 
 void Ensemble::set_temperature(double temperature_in)
 {
-  this->ensemble_factors->set_temperature(temperature_in);
+  Rcpp::stop("Ensemble::set_temperature - should no longer be used.");
+  //this->ensemble_factors->set_temperature(temperature_in);
 }
 
 double Ensemble::get_inverse_incremental_temperature() const
 {
-  return this->ensemble_factors->get_inverse_incremental_temperature();
+  Rcpp::stop("Ensemble::get_inverse_incremental_temperature - should no longer be used.");
+  //return this->ensemble_factors->get_inverse_incremental_temperature();
 }
 
 void Ensemble::precompute_gaussian_covariance(double inverse_incremental_temperature)

@@ -11,7 +11,7 @@ UnscentedKalmanUpdater::UnscentedKalmanUpdater()
 }
 
 UnscentedKalmanUpdater::UnscentedKalmanUpdater(GetMatrixSimulateMeasurementKernelPtr measurement_kernel_function_in,
-                                               GetMeasurementMatrixPtr measurement_noise_function_in,
+                                               GetMatrixPtr measurement_noise_function_in,
                                                double w0_in)
 {
   this->measurement_kernel_function = measurement_kernel_function_in;

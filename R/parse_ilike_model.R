@@ -305,6 +305,16 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
         print_factor_info(factor_number,blocks,line_counter-1)
         factor_number = factor_number + 1
       }
+      else if ( ("linear_gaussian_data_variable" %in% names(current_factor_info)) && (block_name=="linear_gaussian_data_variable") )
+      {
+        print_factor_info(factor_number,blocks,line_counter-1)
+        factor_number = factor_number + 1
+      }
+      else if ( ("linear_gaussian_data_state_variable" %in% names(current_factor_info)) && (block_name=="linear_gaussian_data_state_variable") )
+      {
+        print_factor_info(factor_number,blocks,line_counter-1)
+        factor_number = factor_number + 1
+      }
 
       # If any of the existing parts of the factor are of a completely different type to the block_name then make a new factor.
       all_other_names = setdiff(all_names,linear_gaussian_data_model_types)
@@ -332,6 +342,11 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
         factor_number = factor_number + 1
       }
       else if ( ("nonlinear_gaussian_data_covariance" %in% names(current_factor_info)) && (block_name=="nonlinear_gaussian_data_covariance") )
+      {
+        print_factor_info(factor_number,blocks,line_counter-1)
+        factor_number = factor_number + 1
+      }
+      else if ( ("nonlinear_gaussian_data_variable" %in% names(current_factor_info)) && (block_name=="nonlinear_gaussian_data_variable") )
       {
         print_factor_info(factor_number,blocks,line_counter-1)
         factor_number = factor_number + 1
@@ -445,6 +460,11 @@ transition_model_processing = function(transition_model_number,blocks,block_name
         print_transition_model_info(transition_model_number,blocks,line_counter-1)
         transition_model_number = transition_model_number + 1
       }
+      else if ( ("linear_gaussian_transition_variable" %in% names(current_transition_model_info)) && (block_name=="linear_gaussian_transition_variable") )
+      {
+        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        transition_model_number = transition_model_number + 1
+      }
 
       # If any of the existing parts of the transition_model are of a completely different type to the block_name then make a new transition_model.
       all_other_names = setdiff(all_names,linear_gaussian_transition_model_types)
@@ -467,6 +487,11 @@ transition_model_processing = function(transition_model_number,blocks,block_name
         transition_model_number = transition_model_number + 1
       }
       else if ( ("nonlinear_gaussian_transition_function" %in% names(current_transition_model_info)) && (block_name=="nonlinear_gaussian_transition_function") )
+      {
+        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        transition_model_number = transition_model_number + 1
+      }
+      else if ( ("nonlinear_gaussian_transition_variable" %in% names(current_transition_model_info)) && (block_name=="nonlinear_gaussian_transition_variable") )
       {
         print_transition_model_info(transition_model_number,blocks,line_counter-1)
         transition_model_number = transition_model_number + 1
@@ -1152,13 +1177,13 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
   custom_likelihood_function_types = c("evaluate_log_likelihood","evaluate_gradient_log_likelihood","evaluate_second_gradient_log_likelihood")
   #file_likelihood_types = c("importance_sample","smc_mcmc_move")
   sbi_likelihood_function_types = c("simulate_data_model","sbi_likelihood","summary_statistics")
-  linear_gaussian_data_model_types = c("linear_gaussian_data_model","linear_gaussian_data_matrix","linear_gaussian_data_covariance")
-  nonlinear_gaussian_data_model_types = c("nonlinear_gaussian_data_model","nonlinear_gaussian_data_function","nonlinear_gaussian_data_covariance")
+  linear_gaussian_data_model_types = c("linear_gaussian_data_model","linear_gaussian_data_matrix","linear_gaussian_data_covariance","linear_gaussian_data_variable","linear_gaussian_data_state_variable")
+  nonlinear_gaussian_data_model_types = c("nonlinear_gaussian_data_model","nonlinear_gaussian_data_function","nonlinear_gaussian_data_covariance","nonlinear_gaussian_data_variable")
   other_likelihood_function_types = c("likelihood")
   factor_function_types = c(prior_function_types,custom_likelihood_function_types,sbi_likelihood_function_types,linear_gaussian_data_model_types,nonlinear_gaussian_data_model_types,other_likelihood_function_types)
   ilike_transition_model_types = c("transition_model")
-  linear_gaussian_transition_model_types = c("linear_gaussian_transition_model","linear_gaussian_transition_matrix","linear_gaussian_transition_covariance")
-  nonlinear_gaussian_transition_model_types = c("nonlinear_gaussian_transition_model","nonlinear_gaussian_transition_function","nonlinear_gaussian_transition_covariance")
+  linear_gaussian_transition_model_types = c("linear_gaussian_transition_model","linear_gaussian_transition_matrix","linear_gaussian_transition_covariance","linear_gaussian_transition_variable")
+  nonlinear_gaussian_transition_model_types = c("nonlinear_gaussian_transition_model","nonlinear_gaussian_transition_function","nonlinear_gaussian_transition_covariance","nonlinear_gaussian_transition_variable")
   custom_transition_model_types = c("simulate_transition_model","evaluate_log_transition_model")
   transition_model_types = c(ilike_transition_model_types,linear_gaussian_transition_model_types,nonlinear_gaussian_transition_model_types,custom_transition_model_types)
   custom_potential_function_types = c("evaluate_log_potential_function")
@@ -1166,14 +1191,14 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
   potential_function_types = c(custom_potential_function_types,ilike_potential_function_types)
   data_function_types = c("data")
   importance_proposal_types = c("simulate_importance_proposal","evaluate_log_importance_proposal")
-  mh_proposal_types = c("simulate_mh_proposal","evaluate_log_mh_proposal","mh_proposal","mh_transform","mh_inverse_transform","mh_transform_jacobian_matrix")
-  unadjusted_proposal_types = c("simulate_unadjusted_proposal","unadjusted_proposal","unadjusted_transform","unadjusted_inverse_transform","unadjusted_transform_jacobian_matrix")
-  independent_mh_proposal_types = c("simulate_independent_mh_proposal","evaluate_log_independent_mh_proposal","independent_mh_proposal","independent_mh_transform","independent_mh_inverse_transform","independent_mh_transform_jacobian_matrix")
-  m_proposal_types = c("simulate_m_proposal","m_proposal","m_transform","m_inverse_transform","m_transform_jacobian_matrix")
+  mh_proposal_types = c("simulate_mh_proposal","evaluate_log_mh_proposal","mh_proposal","mh_transform","mh_inverse_transform","mh_transform_jacobian_matrix","mh_factor_index")
+  unadjusted_proposal_types = c("simulate_unadjusted_proposal","unadjusted_proposal","unadjusted_transform","unadjusted_inverse_transform","unadjusted_transform_jacobian_matrix","unadjusted_factor_index")
+  independent_mh_proposal_types = c("simulate_independent_mh_proposal","evaluate_log_independent_mh_proposal","independent_mh_proposal","independent_mh_transform","independent_mh_inverse_transform","independent_mh_transform_jacobian_matrix","independent_mh_factor_index")
+  m_proposal_types = c("simulate_m_proposal","m_proposal","m_transform","m_inverse_transform","m_transform_jacobian_matrix","m_factor_index")
   transition_proposal_types = c("simulate_transition_proposal","evaluate_log_transition_proposal")
   enk_transform_types = c("enk_transform","enk_inverse_transform")
   #reinforce_gradient = c("reinforce_gradient")
-  method_function_types = c("mcmc_weights","mcmc_termination","adaptive_resampling","adaptive_target","smc_termination","smc_sequence","reinforce_gradient")
+  method_function_types = c("mcmc_weights","mcmc_termination","adaptive_resampling","adaptive_target","smc_termination","smc_sequence","reinforce_gradient","enk_likelihood_index","enk_shifter")
 
   # distinguish between factor, data, etc
   if (block_name %in% factor_function_types)
@@ -1331,6 +1356,34 @@ get_matrix_output_function_body <- function(R_functions,R_args,R_function_name,R
   else
   {
     function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
+  }
+
+  return(function_body)
+}
+
+get_list_output_function_body <- function(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
+{
+  if (R_functions==TRUE)
+  {
+    function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
+  }
+  else
+  {
+    function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','List list = List(f(',cpp_function_arguments_string,')); return list;',sep="")
+  }
+
+  return(function_body)
+}
+
+get_string_output_function_body <- function(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
+{
+  if (R_functions==TRUE)
+  {
+    function_body = paste('function(',R_args,') { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
+  }
+  else
+  {
+    function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','return Rcpp::as<std::string>(f(',cpp_function_arguments_string,'));',sep="")
   }
 
   return(function_body)
@@ -2031,6 +2084,56 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
     return_type = "NumericVector"
     arguments = c()
   }
+  else if (block_name=="enk_likelihood_index")
+  {
+    if (sum(which_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in a enk_likelihood_index function.",sep=""))
+    }
+
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a enk_likelihood_index function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "NumericVector"
+    arguments = c()
+  }
+  else if ( (block_name=="m_factor_index") || (block_name=="mh_factor_index") || (block_name=="independent_mh_factor_index") || (block_name=="unadjusted_factor_index") )
+  {
+    if (sum(which_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in a factor_index function.",sep=""))
+    }
+
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a factor_index function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    return_type = "NumericVector"
+    arguments = c()
+  }
   else if (block_name=="simulate_data_model")
   {
     if (sum(which_data)>0)
@@ -2218,11 +2321,37 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
   else if (block_name=="linear_gaussian_data_matrix")
   {
 
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_parameters)>0)
+    {
+      arguments = c()
+      arguments[1] = "const Parameters &parameters"
+      #args_for_typedef = "const Parameters&"
+      R_args = "parameters"
+      proposal_type = 2
+    }
+    else
+    {
+      arguments = c()
+      R_args = ""
+      proposal_type = 1
+    }
+
     return_type = "arma::mat"
-    arguments = c()
-    arguments[1] = "const Parameters &parameters"
-    #args_for_typedef = "const Parameters&"
-    R_args = "parameters"
 
   }
   else if (block_name=="linear_gaussian_data_covariance")
@@ -2242,11 +2371,51 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
       stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
     }
 
+    if (sum(which_parameters)>0)
+    {
+      arguments = c()
+      arguments[1] = "const Parameters &parameters"
+      #args_for_typedef = "const Parameters&"
+      R_args = "parameters"
+      proposal_type = 2
+    }
+    else
+    {
+      arguments = c()
+      R_args = ""
+      proposal_type = 1
+    }
+
     return_type = "arma::mat"
+  }
+  else if ( (block_name=="linear_gaussian_data_variable") || (block_name=="linear_gaussian_data_state_variable") )
+  {
+
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in this function.",sep=""))
+    }
+
     arguments = c()
-    arguments[1] = "const Parameters &parameters"
-    #args_for_typedef = "const Parameters&"
-    R_args = "parameters"
+    R_args = ""
+
+    return_type = "std::string"
+
   }
   else if (block_name=="nonlinear_gaussian_data_covariance")
   {
@@ -2265,11 +2434,51 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
       stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
     }
 
+    if (sum(which_parameters)>0)
+    {
+      arguments = c()
+      arguments[1] = "const Parameters &parameters"
+      #args_for_typedef = "const Parameters&"
+      R_args = "parameters"
+      proposal_type = 2
+    }
+    else
+    {
+      arguments = c()
+      R_args = ""
+      proposal_type = 1
+    }
+
     return_type = "arma::mat"
+  }
+  else if (block_name=="nonlinear_gaussian_data_variable")
+  {
+
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in this function.",sep=""))
+    }
+
     arguments = c()
-    arguments[1] = "const Parameters &parameters"
-    #args_for_typedef = "const Parameters&"
-    R_args = "parameters"
+    R_args = ""
+
+    return_type = "std::string"
+
   }
   else if (block_name=="linear_gaussian_transition_matrix")
   {
@@ -2284,12 +2493,24 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
       stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
     }
 
+    if (sum(which_parameters)>0)
+    {
+      arguments = c()
+      arguments[1] = "const Parameters &parameters"
+      arguments[2] = "const Data &data"
+      #args_for_typedef = "const Parameters&"
+      R_args = "parameters,data"
+      proposal_type = 2
+    }
+    else
+    {
+      arguments = c()
+      arguments[1] = "const Data &data"
+      R_args = "data"
+      proposal_type = 1
+    }
+
     return_type = "arma::mat"
-    arguments = c()
-    arguments[1] = "const Parameters &parameters"
-    arguments[2] = "const Data &data"
-    #args_for_typedef = "const Parameters&"
-    R_args = "parameters,data"
   }
   else if (block_name=="linear_gaussian_transition_covariance")
   {
@@ -2304,12 +2525,53 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
       stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
     }
 
+    if (sum(which_parameters)>0)
+    {
+      arguments = c()
+      arguments[1] = "const Parameters &parameters"
+      arguments[2] = "const Data &data"
+      #args_for_typedef = "const Parameters&"
+      R_args = "parameters,data"
+      proposal_type = 2
+    }
+    else
+    {
+      arguments = c()
+      arguments[1] = "const Data &data"
+      R_args = "data"
+      proposal_type = 1
+    }
+
     return_type = "arma::mat"
+
+  }
+  else if (block_name=="linear_gaussian_transition_variable")
+  {
+
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in this function.",sep=""))
+    }
+
     arguments = c()
-    arguments[1] = "const Parameters &parameters"
-    arguments[2] = "const Data &data"
-    #args_for_typedef = "const Parameters&"
-    R_args = "parameters,data"
+    R_args = ""
+
+    return_type = "std::string"
 
   }
   else if (block_name=="nonlinear_gaussian_transition_covariance")
@@ -2325,12 +2587,53 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
       stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
     }
 
+    if (sum(which_parameters)>0)
+    {
+      arguments = c()
+      arguments[1] = "const Parameters &parameters"
+      arguments[2] = "const Data &data"
+      #args_for_typedef = "const Parameters&"
+      R_args = "parameters,data"
+      proposal_type = 2
+    }
+    else
+    {
+      arguments = c()
+      arguments[1] = "const Data &data"
+      R_args = "data"
+      proposal_type = 1
+    }
+
     return_type = "arma::mat"
+  }
+  else if (block_name=="nonlinear_gaussian_transition_variable")
+  {
+
+    if (sum(which_data)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposed_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_proposal_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+    }
+
+    if (sum(which_parameters)>0)
+    {
+      stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in this function.",sep=""))
+    }
+
     arguments = c()
-    arguments[1] = "const Parameters &parameters"
-    arguments[2] = "const Data &data"
-    #args_for_typedef = "const Parameters&"
-    R_args = "parameters,data"
+    R_args = ""
+
+    return_type = "std::string"
+
   }
   else if (block_name=="evaluate_log_transition_model")
   {
@@ -2866,7 +3169,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
 
         }
-        else if ( (block_name=="mcmc_termination") || (block_name=="adaptive_resampling") || (block_name=="adaptive_target") || (block_name=="smc_termination") || (block_name=="reinforce_gradient") )
+        else if ( (block_name=="mcmc_termination") || (block_name=="adaptive_resampling") || (block_name=="adaptive_target") || (block_name=="smc_termination") || (block_name=="reinforce_gradient") || (block_name=="enk_likelihood_index") || (block_name=="enk_shifter") )
         {
           split_arg_string = split_string_at_comma_ignoring_parentheses(arg_string)
 
@@ -3753,6 +4056,76 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
 
         }
+        else if (block_name=="enk_likelihood_index")
+        {
+          if (sum(which_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in a enk_likelihood_index function.",sep=""))
+          }
+
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a enk_likelihood_index function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "NumericVector"
+          arguments = c()
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function() { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericVector output = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
+        }
+        else if ( (block_name=="m_factor_index") || (block_name=="mh_factor_index") || (block_name=="independent_mh_factor_index") || (block_name=="unadjusted_factor_index") )
+        {
+          if (sum(which_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in a factor_index function.",sep=""))
+          }
+
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in a factor_index function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          return_type = "NumericVector"
+          arguments = c()
+
+          if (R_functions==TRUE)
+          {
+            function_body = paste('function() { return(',R_function_name,'(',R_function_arguments_string,')) }',sep="")
+          }
+          else
+          {
+            function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); NumericVector output = NumericVector(f(',cpp_function_arguments_string,')); return output;',sep="")
+          }
+
+        }
         else if (block_name=="simulate_data_model")
         {
           if (sum(which_data)>0)
@@ -3972,11 +4345,22 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
+          if (sum(which_parameters)>0)
+          {
+            arguments = c()
+            arguments[1] = "const Parameters &parameters"
+            #args_for_typedef = "const Parameters&"
+            R_args = "parameters"
+            proposal_type = 2
+          }
+          else
+          {
+            arguments = c()
+            R_args = ""
+            proposal_type = 1
+          }
+
           return_type = "arma::mat"
-          arguments = c()
-          arguments[1] = "const Parameters &parameters"
-          #args_for_typedef = "const Parameters&"
-          R_args = "parameters"
 
           function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
         }
@@ -3997,14 +4381,54 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
+          if (sum(which_parameters)>0)
+          {
+            arguments = c()
+            arguments[1] = "const Parameters &parameters"
+            #args_for_typedef = "const Parameters&"
+            R_args = "parameters"
+            proposal_type = 2
+          }
+          else
+          {
+            arguments = c()
+            R_args = ""
+            proposal_type = 1
+          }
+
           return_type = "arma::mat"
-          arguments = c()
-          arguments[1] = "const Parameters &parameters"
-          #args_for_typedef = "const Parameters&"
-          R_args = "parameters"
 
           function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
+        }
+        else if ( (block_name=="linear_gaussian_data_variable") || (block_name=="linear_gaussian_data_state_variable") )
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in this function.",sep=""))
+          }
+
+          arguments = c()
+          R_args = ""
+
+          return_type = "std::string"
+
+          function_body = get_string_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
         }
         else if (block_name=="nonlinear_gaussian_data_covariance")
         {
@@ -4032,6 +4456,35 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
+        else if (block_name=="nonlinear_gaussian_data_variable")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in this function.",sep=""))
+          }
+
+          arguments = c()
+          R_args = ""
+
+          return_type = "std::string"
+
+          function_body = get_string_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
+        }
         else if (block_name=="linear_gaussian_transition_matrix")
         {
 
@@ -4045,12 +4498,24 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
+          if (sum(which_parameters)>0)
+          {
+            arguments = c()
+            arguments[1] = "const Parameters &parameters"
+            arguments[2] = "const Data &data"
+            #args_for_typedef = "const Parameters&"
+            R_args = "parameters,data"
+            proposal_type = 2
+          }
+          else
+          {
+            arguments = c()
+            arguments[1] = "const Data &data"
+            R_args = "data"
+            proposal_type = 1
+          }
+
           return_type = "arma::mat"
-          arguments = c()
-          arguments[1] = "const Parameters &parameters"
-          arguments[2] = "const Data &data"
-          #args_for_typedef = "const Parameters&"
-          R_args = "parameters,data"
 
           function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
@@ -4068,15 +4533,56 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
+          if (sum(which_parameters)>0)
+          {
+            arguments = c()
+            arguments[1] = "const Parameters &parameters"
+            arguments[2] = "const Data &data"
+            #args_for_typedef = "const Parameters&"
+            R_args = "parameters,data"
+            proposal_type = 2
+          }
+          else
+          {
+            arguments = c()
+            arguments[1] = "const Data &data"
+            R_args = "data"
+            proposal_type = 1
+          }
+
           return_type = "arma::mat"
-          arguments = c()
-          arguments[1] = "const Parameters &parameters"
-          arguments[2] = "const Data &data"
-          #args_for_typedef = "const Parameters&"
-          R_args = "parameters,data"
 
           function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
+        }
+        else if (block_name=="linear_gaussian_transition_variable")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in this function.",sep=""))
+          }
+
+          arguments = c()
+          R_args = ""
+
+          return_type = "std::string"
+
+          function_body = get_string_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
         }
         else if (block_name=="nonlinear_gaussian_transition_covariance")
         {
@@ -4091,15 +4597,56 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
+          if (sum(which_parameters)>0)
+          {
+            arguments = c()
+            arguments[1] = "const Parameters &parameters"
+            arguments[2] = "const Data &data"
+            #args_for_typedef = "const Parameters&"
+            R_args = "parameters,data"
+            proposal_type = 2
+          }
+          else
+          {
+            arguments = c()
+            arguments[1] = "const Data &data"
+            R_args = "data"
+            proposal_type = 1
+          }
+
           return_type = "arma::mat"
-          arguments = c()
-          arguments[1] = "const Parameters &parameters"
-          arguments[2] = "const Data &data"
-          #args_for_typedef = "const Parameters&"
-          R_args = "parameters,data"
 
           function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
+        }
+        else if (block_name=="nonlinear_gaussian_transition_variable")
+        {
+          if (sum(which_data)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from data not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposed_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposed parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_proposal_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
+          }
+
+          if (sum(which_parameters)>0)
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": using variables from parameters not possible in this function.",sep=""))
+          }
+
+          arguments = c()
+          R_args = ""
+
+          return_type = "std::string"
+
+          function_body = get_string_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
         }
         else if (block_name=="evaluate_log_transition_model")
         {
@@ -4525,17 +5072,6 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
         }
         #my_list = list(RcppXPtrUtils::cppXPtr(code,plugins=c("cpp11"),depends = c("ilike","RcppArmadillo","BH","dqrng","sitmo")))
 
-        if (proposal_type!=0)
-        {
-          my_list[["type"]] = proposal_type
-
-          if ("type" %in% names(blocks[[block_type]][[factor_number]]))
-          {
-            if (blocks[[block_type]][[factor_number]][["type"]]!=proposal_type)
-              stop(paste("Block ",block_name,", line number ",line_counter,": different parts of the proposal are of different types (maybe one relies on additional parameters and/or data, and the other does not?)",sep=""))
-          }
-        }
-
         if (length((blocks[[block_type]]))==0)
         {
           blocks[[block_type]][[factor_number]] = my_list
@@ -4548,6 +5084,18 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
         {
           blocks[[block_type]][[factor_number]] = append(blocks[[block_type]][[factor_number]],my_list)
         }
+
+        if (proposal_type!=0)
+        {
+          my_list[["type"]] = proposal_type
+
+          if ("type" %in% names(blocks[[block_type]][[factor_number]]))
+          {
+            if (blocks[[block_type]][[factor_number]][["type"]]!=proposal_type)
+              stop(paste("Block ",block_name,", line number ",line_counter,": different parts of the proposal/transition model/measurement model are of different types (maybe one relies on additional parameters and/or data, and the other does not?)",sep=""))
+          }
+        }
+
       }
 
     }
@@ -4567,8 +5115,11 @@ check_types = function(blocks)
       if ("data" %in% names(current_factor))
       {
         which_index = which(names(current_factor) == "data")
-        if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
-          RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Data")
+        for (j in 1:length(which_index))
+        {
+          if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
+            RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Data")
+        }
       }
     }
   }
@@ -4580,81 +5131,206 @@ check_types = function(blocks)
     if ("evaluate_log_prior" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "evaluate_log_prior")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "double", c("const Parameters&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "double", c("const Parameters&"))
+      }
       }
     }
 
     if ("simulate_prior" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "simulate_prior")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&"))
+      }
       }
     }
 
     if ("evaluate_log_likelihood" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "evaluate_log_likelihood")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Data&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "double", c("const Parameters&","const Data&"))
+      }
       }
     }
 
     if ("simulate_data_model" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "simulate_data_model")
+      for (j in 1:length(which_index))
+      {
       if (inherits(ccurrent_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "Data", c("RandomNumberGenerator&","const Parameters&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "Data", c("RandomNumberGenerator&","const Parameters&"))
+      }
       }
     }
 
     if ("summary_statistics" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "summary_statistics")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "Data", c("const Data&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "Data", c("const Data&"))
+      }
       }
     }
 
     if ("nonlinear_gaussian_data_function" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "nonlinear_gaussian_data_function")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "Data", c("const Parameters&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "Data", c("const Parameters&"))
+      }
       }
     }
 
     if ("linear_gaussian_data_matrix" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "linear_gaussian_data_matrix")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "arma::mat", c("const Parameters&"))
+        proposal_type = c(TRUE,TRUE)
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "arma::mat", c()) }
+                  , error = function(e) {proposal_type[1] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "arma::mat", c("const Parameters&")) }
+                  , error = function(e) {proposal_type[2] <<- FALSE})
+
+        if (length(which(proposal_type==TRUE))==0)
+        {
+          stop("No valid linear_gaussian_data_matrix specified.")
+        }
+
+        if ("type" %in% names(blocks[["factor"]][[i]]))
+        {
+          if (blocks[["factor"]][[i]][["type"]]!=which(proposal_type)[1])
+          {
+            stop("linear_gaussian_data_matrix and linear_gaussian_data_covariance functions are incompatible.")
+          }
+        }
+        else
+        {
+          stop("Need to specify both linear_gaussian_data_matrix and linear_gaussian_data_covariance.")
+        }
+        #blocks[["linear_gaussian_data_matrix"]][[i]][["type"]] = which(proposal_type)[1]
+      }
       }
     }
 
     if ("linear_gaussian_data_covariance" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "linear_gaussian_data_covariance")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "arma::mat", c("const Parameters&"))
+        proposal_type = c(TRUE,TRUE)
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "arma::mat", c()) }
+                  , error = function(e) {proposal_type[1] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "arma::mat", c("const Parameters&")) }
+                  , error = function(e) {proposal_type[2] <<- FALSE})
+
+        if (length(which(proposal_type==TRUE))==0)
+        {
+          stop("No valid linear_gaussian_data_covariance specified.")
+        }
+
+        if ("type" %in% names(blocks[["factor"]][[i]]))
+        {
+          if (blocks[["factor"]][[i]][["type"]]!=which(proposal_type)[1])
+          {
+            stop("linear_gaussian_data_matrix and linear_gaussian_data_covariance functions are incompatible.")
+          }
+        }
+        else
+        {
+          stop("Need to specify both linear_gaussian_data_matrix and linear_gaussian_data_covariance.")
+        }
+
+        #blocks[["linear_gaussian_data_covariance"]][[i]][["type"]] = which(proposal_type)[1]
+      }
+      }
+    }
+
+    if ("linear_gaussian_data_variable" %in% names(current_factor))
+    {
+      which_index = which(names(current_factor) == "linear_gaussian_data_variable")
+      for (j in 1:length(which_index))
+      {
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "std::string", c(""))
+      }
+      }
+    }
+
+    if ("linear_gaussian_data_state_variable" %in% names(current_factor))
+    {
+      which_index = which(names(current_factor) == "linear_gaussian_data_variable")
+      for (j in 1:length(which_index))
+      {
+        if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
+        {
+          RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "std::string", c(""))
+        }
       }
     }
 
     if ("nonlinear_gaussian_data_covariance" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "nonlinear_gaussian_data_covariance")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "arma::mat", c("const Parameters&"))
+        proposal_type = c(TRUE,TRUE)
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "arma::mat", c()) }
+                  , error = function(e) {proposal_type[1] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "arma::mat", c("const Parameters&")) }
+                  , error = function(e) {proposal_type[2] <<- FALSE})
+
+        if (length(which(proposal_type==TRUE))==0)
+        {
+          stop("No valid nonlinear_gaussian_data_covariance specified.")
+        }
+
+        #blocks[["nonlinear_gaussian_data_covariance"]][[i]][["type"]] = which(proposal_type)[1]
+      }
+      }
+    }
+
+    if ("nonlinear_gaussian_data_variable" %in% names(current_factor))
+    {
+      which_index = which(names(current_factor) == "nonlinear_gaussian_data_variable")
+      for (j in 1:length(which_index))
+      {
+        if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
+        {
+          RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "std::string", c(""))
+        }
       }
     }
 
@@ -4667,54 +5343,57 @@ check_types = function(blocks)
     if ("evaluate_log_importance_proposal" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "evaluate_log_importance_proposal")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
         proposal_type = c(TRUE,TRUE,TRUE,TRUE)
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "double", c("const Parameters&")) }
                   , error = function(e) {proposal_type[1] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "double", c("const Parameters&","const Parameters&")) }
                   , error = function(e) {proposal_type[2] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "double", c("const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[3] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "double", c("const Parameters&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[4] <<- FALSE})
 
         if (length(which(proposal_type==TRUE))==0)
         {
-          browser()
           stop("No valid importance proposal specified.")
         }
 
-        blocks[["importance_proposal"]][[i]][["type"]] = which(proposal_type)[1]
+        #blocks[["importance_proposal"]][[i]][["type"]] = which(proposal_type)[1]
+      }
       }
     }
 
     if ("simulate_importance_proposal" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "simulate_importance_proposal")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
         proposal_type = c(TRUE,TRUE,TRUE,TRUE)
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&")) }
                   , error = function(e) {proposal_type[1] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
                   , error = function(e) {proposal_type[2] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&","const Data&")) }
                   , error = function(e) {proposal_type[3] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[4] <<- FALSE})
 
         if (length(which(proposal_type==TRUE))==0)
         {
-          browser()
           stop("No valid importance proposal specified.")
         }
 
@@ -4730,6 +5409,7 @@ check_types = function(blocks)
           stop("Need to specify both evaluate_log_importance_proposal and simulate_importance_proposal.")
         }
       }
+      }
     }
   }
 
@@ -4740,20 +5420,22 @@ check_types = function(blocks)
     if ("evaluate_log_mh_proposal" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "evaluate_log_mh_proposal")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
         proposal_type = c(TRUE,TRUE,TRUE,TRUE)
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "double", c("const Parameters&","const Parameters&")) }
                   , error = function(e) {proposal_type[1] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "double", c("const Parameters&","const Parameters&","const Parameters&")) }
                   , error = function(e) {proposal_type[2] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "double", c("const Parameters&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[3] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "double", c("const Parameters&","const Parameters&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[4] <<- FALSE})
 
         if (length(which(proposal_type==TRUE))==0)
@@ -4763,25 +5445,28 @@ check_types = function(blocks)
 
         blocks[["mh_proposal"]][[i]][["type"]] = which(proposal_type)[1]
       }
+      }
     }
 
     if ("simulate_mh_proposal" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "simulate_mh_proposal")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
         proposal_type = c(TRUE,TRUE,TRUE,TRUE)
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
                   , error = function(e) {proposal_type[1] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&")) }
                   , error = function(e) {proposal_type[2] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[3] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[4] <<- FALSE})
 
         if (length(which(proposal_type==TRUE))==0)
@@ -4801,6 +5486,7 @@ check_types = function(blocks)
           stop("Need to specify both evaluate_log_mh_proposal and simulate_mh_proposal.")
         }
       }
+      }
     }
 
   }
@@ -4812,20 +5498,22 @@ check_types = function(blocks)
     if ("simulate_unadjusted_proposal" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "simulate_unadjusted_proposal")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
         proposal_type = c(TRUE,TRUE,TRUE,TRUE)
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
                   , error = function(e) {proposal_type[1] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&")) }
                   , error = function(e) {proposal_type[2] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[3] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[4] <<- FALSE})
 
         if (length(which(proposal_type==TRUE))==0)
@@ -4833,6 +5521,7 @@ check_types = function(blocks)
           stop("No valid unadjusted proposal specified.")
         }
 
+      }
       }
     }
 
@@ -4845,20 +5534,22 @@ check_types = function(blocks)
     if ("evaluate_log_independent_mh_proposal" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "evaluate_log_independent_mh_proposal")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
         proposal_type = c(TRUE,TRUE,TRUE,TRUE)
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "double", c("const Parameters&")) }
                   , error = function(e) {proposal_type[1] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "double", c("const Parameters&","const Parameters&")) }
                   , error = function(e) {proposal_type[2] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "double", c("const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[3] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "double", c("const Parameters&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[4] <<- FALSE})
 
         if (length(which(proposal_type==TRUE))==0)
@@ -4868,25 +5559,28 @@ check_types = function(blocks)
 
         blocks[["independent_mh_proposal"]][[i]][["type"]] = which(proposal_type)[1]
       }
+      }
     }
 
     if ("simulate_independent_mh_proposal" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "simulate_independent_mh_proposal")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
         proposal_type = c(TRUE,TRUE,TRUE,TRUE)
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&")) }
                   , error = function(e) {proposal_type[1] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
                   , error = function(e) {proposal_type[2] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&","const Data&")) }
                   , error = function(e) {proposal_type[3] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[4] <<- FALSE})
 
         if (length(which(proposal_type==TRUE))==0)
@@ -4906,6 +5600,7 @@ check_types = function(blocks)
           stop("Need to specify both evaluate_log_independent_mh_proposal and simulate_independent_mh_proposal.")
         }
       }
+      }
     }
 
   }
@@ -4917,20 +5612,22 @@ check_types = function(blocks)
     if ("simulate_m_proposal" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "simulate_m_proposal")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
         proposal_type = c(TRUE,TRUE,TRUE,TRUE)
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&")) }
                   , error = function(e) {proposal_type[1] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&")) }
                   , error = function(e) {proposal_type[2] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[3] <<- FALSE})
 
-        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&","const Data&")) }
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Parameters&","const Data&")) }
                   , error = function(e) {proposal_type[4] <<- FALSE})
 
         if (length(which(proposal_type==TRUE))==0)
@@ -4940,6 +5637,7 @@ check_types = function(blocks)
 
         blocks[["m_proposal"]][[i]][["type"]] = which(proposal_type)[1]
       }
+      }
     }
 
   }
@@ -4948,57 +5646,113 @@ check_types = function(blocks)
   {
     current_factor = blocks[["transition_model"]][[i]]
 
-    if ("evaluate_log_transition_model" %in% names(current_factor))
-    {
-      which_index = which(names(current_factor) == "evaluate_log_transition_model")
-      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
-      {
-        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&","const Data&"))
-      }
-    }
-
-    if ("simulate_transition_model" %in% names(current_factor))
-    {
-      which_index = which(names(current_factor) == "simulate_transition_model")
-      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
-      {
-        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&"))
-      }
-    }
-
-    if ("nonlinear_gaussian_transition_function" %in% names(current_factor))
-    {
-      which_index = which(names(current_factor) == "nonlinear_gaussian_transition_function")
-      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
-      {
-        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "Data", c("const Parameters&","const Data&"))
-      }
-    }
-
     if ("linear_gaussian_transition_matrix" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "linear_gaussian_transition_matrix")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "arma::mat", c("const Parameters&","const Data&"))
+        proposal_type = c(TRUE,TRUE)
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "arma::mat", c("const Data&")) }
+                  , error = function(e) {proposal_type[1] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "arma::mat", c("const Parameters&","const Data&")) }
+                  , error = function(e) {proposal_type[2] <<- FALSE})
+
+        if (length(which(proposal_type==TRUE))==0)
+        {
+          stop("No valid linear_gaussian_transition_matrix specified.")
+        }
+
+        if ("type" %in% names(blocks[["transition_model"]][[i]]))
+        {
+          if (blocks[["transition_model"]][[i]][["type"]]!=which(proposal_type)[1])
+          {
+            stop("linear_gaussian_transition_matrix and linear_gaussian_transtion_covariance functions are incompatible.")
+          }
+        }
+        else
+        {
+          stop("Need to specify both linear_gaussian_transition_matrix and linear_gaussian_transtion_covariance.")
+        }
+
+        #blocks[["linear_gaussian_transition_matrix"]][[i]][["type"]] = which(proposal_type)[1]
+      }
       }
     }
 
     if ("linear_gaussian_transition_covariance" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "linear_gaussian_transition_covariance")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "arma::mat", c("const Parameters&","const Data&"))
+        proposal_type = c(TRUE,TRUE)
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "arma::mat", c("const Data&")) }
+                  , error = function(e) {proposal_type[1] <<- FALSE})
+
+        tryCatch( { RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "arma::mat", c("const Parameters&","const Data&")) }
+                  , error = function(e) {proposal_type[2] <<- FALSE})
+
+        if (length(which(proposal_type==TRUE))==0)
+        {
+          stop("No valid linear_gaussian_transition_covariance specified.")
+        }
+
+        if ("type" %in% names(blocks[["transition_model"]][[i]]))
+        {
+          if (blocks[["transition_model"]][[i]][["type"]]!=which(proposal_type)[1])
+          {
+            stop("linear_gaussian_transition_matrix and linear_gaussian_transtion_covariance functions are incompatible.")
+          }
+        }
+        else
+        {
+          stop("Need to specify both linear_gaussian_transition_matrix and linear_gaussian_transtion_covariance.")
+        }
+
+        #blocks[["linear_gaussian_transition_covariance"]][[i]][["type"]] = which(proposal_type)[1]
+      }
+      }
+    }
+
+    if ("linear_gaussian_transition_variable" %in% names(current_factor))
+    {
+      which_index = which(names(current_factor) == "linear_gaussian_transition_variable")
+      for (j in 1:length(which_index))
+      {
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "std::string", c(""))
+      }
       }
     }
 
     if ("nonlinear_gaussian_transition_covariance" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "nonlinear_gaussian_transition_covariance")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "arma::mat", c("const Parameters&","const Data&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "arma::mat", c("const Parameters&","const Data&"))
+      }
+      }
+    }
+
+    if ("nonlinear_gaussian_transition_variable" %in% names(current_factor))
+    {
+      which_index = which(names(current_factor) == "nonlinear_gaussian_transition_variable")
+      for (j in 1:length(which_index))
+      {
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
+      {
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "std::string", c(""))
+      }
       }
     }
 
@@ -5011,18 +5765,24 @@ check_types = function(blocks)
     if ("evaluate_log_transition_proposal" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "evaluate_log_transition_proposal")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&","const Data&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "double", c("const Parameters&","const Parameters&","const Data&"))
+      }
       }
     }
 
     if ("simulate_transition_proposal" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "simulate_transition_proposal")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "Parameters", c("RandomNumberGenerator&","const Parameters&","const Data&"))
+      }
       }
     }
 
@@ -5035,18 +5795,24 @@ check_types = function(blocks)
     if ("enk_transform" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "enk_transform")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "Parameters", c("const Parameters&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "Parameters", c("const Parameters&"))
+      }
       }
     }
 
     if ("enk_inverse_transform" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "enk_inverse_transform")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "Parameters", c("const Parameters&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "Parameters", c("const Parameters&"))
+      }
       }
     }
 
@@ -5059,9 +5825,12 @@ check_types = function(blocks)
     if ("evaluate_log_potential_function" %in% names(current_factor))
     {
       which_index = which(names(current_factor) == "evaluate_log_potential_function")
+      for (j in 1:length(which_index))
+      {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
-        RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]],  "double", c("const Parameters&","const Parameters&","const Data&"))
+        RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "double", c("const Parameters&","const Parameters&","const Data&"))
+      }
       }
     }
 
@@ -5076,9 +5845,12 @@ check_types = function(blocks)
       if ("mcmc_weights" %in% names(blocks[["method"]][[i]]))
       {
         which_index = which(names(current_factor) == "mcmc_weights")
+        for (j in 1:length(which_index))
+        {
         if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
         {
-          RcppXPtrUtils::checkXPtr(current_factor[[which_index+1]], "NumericVector")
+          RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]], "NumericVector")
+        }
         }
       }
     }
@@ -5087,6 +5859,36 @@ check_types = function(blocks)
   return(blocks)
 }
 
+strip_out_xptr_stuff <- function(blocks)
+{
+  if (length(blocks)>0)
+  {
+    for (i in 1:length(blocks))
+    {
+      if (length(blocks[[i]])>0)
+      {
+        for (j in 1:length(blocks[[i]]))
+        {
+          which_xptr = c()
+          current_names = names(blocks[[i]][[j]])
+          for (k in 1:length(current_names))
+          {
+            if ( grepl("XPtr", current_names[k]) )
+            {
+              which_xptr = c(which_xptr,k)
+            }
+          }
+          if (length(which_xptr)>0)
+          {
+            blocks[[i]][[j]] = blocks[[i]][[j]][-which_xptr]
+          }
+        }
+      }
+    }
+  }
+
+  return(blocks)
+}
 
 #' Parse .ilike file to give ilike model.
 #'
@@ -5392,6 +6194,8 @@ compile <- function(filename,
       }
     }
   }
+
+  blocks = strip_out_xptr_stuff(blocks)
 
   return(blocks)
 }

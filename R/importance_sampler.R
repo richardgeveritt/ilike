@@ -22,7 +22,7 @@ importance_sample = function(model,
   results_directory = paste(results_directory,"/ilike",sep="")
 
   if ((is.character(model)) && (length(model) == 1))
-    model = parse_ilike_model(model,model_parameter_list)
+    model = compile(model,model_parameter_list)
 
   if (is.null(seed))
   {

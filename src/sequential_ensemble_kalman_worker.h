@@ -20,7 +20,8 @@ public:
   void operator=(const SequentialEnsembleKalmanWorker &another);
   EnsembleKalmanWorker* duplicate() const;
   
-  void shift(Ensemble* ensemble);
+  void shift(Ensemble* ensemble,
+             double inverse_incremental_temperature);
   
   void pack(Ensemble* ensemble);
   void unpack(Ensemble* ensemble);

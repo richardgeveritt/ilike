@@ -325,7 +325,7 @@ std::vector<arma::mat> VectorEnsembleFactors::get_adjustments(const arma::mat &Z
 
 double VectorEnsembleFactors::get_incremental_likelihood(Ensemble* ensemble)
 {
-  double inverse_incremental_temperature = 1.0/(this->temperature - this->previous_temperature);
+  double inverse_incremental_temperature = 1.0;///(this->temperature - this->previous_temperature);
   
   double llhd = 0.0;
   ensemble->kalman_gains.clear();
@@ -346,9 +346,10 @@ double VectorEnsembleFactors::get_incremental_likelihood(Ensemble* ensemble)
   return llhd;
 }
 
-double VectorEnsembleFactors::get_inversion_incremental_likelihood(Ensemble* ensemble)
+double VectorEnsembleFactors::get_inversion_incremental_likelihood(Ensemble* ensemble,
+                                                                   double inverse_incremental_temperature)
 {
-  double inverse_incremental_temperature = 1.0/(this->temperature - this->previous_temperature);
+  //double inverse_incremental_temperature = 1.0/(this->temperature - this->previous_temperature);
   
   double llhd = 0.0;
   ensemble->kalman_gains.clear();
@@ -365,8 +366,6 @@ double VectorEnsembleFactors::get_inversion_incremental_likelihood(Ensemble* ens
     double d = Cygivenx.n_rows;
     //arma::mat non_tempered_unconditional_measurement_covariance = this->measurement_covariance_estimators[i]->get_unconditional_measurement_covariance(ensemble->Cyys[i],1.0);
     ensemble->kalman_gains.push_back(ensemble->Cxys[i]*unconditional_measurement_covariance.i());
-    
-    std::cout << Cygivenx << std::endl;
     
     llhd = llhd + (d/2.0)*log(inverse_incremental_temperature) + (d/2.0)*(1.0-(1.0/inverse_incremental_temperature))*log(2.0*M_PI) + (1/2.0)*(1.0-(1.0/inverse_incremental_temperature))*arma::log_det_sympd(Cygivenx) + dmvnorm(*this->measurement_covariance_estimators[i]->get_measurement_pointer(),ensemble->myys[i],unconditional_measurement_covariance);
   }

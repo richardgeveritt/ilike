@@ -318,7 +318,7 @@ void Sequencer::find_next_target_bisection(SMCOutput* current_state,
   // if we want to make this generic, need to hide the next two lines in a function that can have different choices
   
   // if we have not just found a value for the parameter that is at one of the points in the schedule
-  double small_value = (this->schedules.back()[this->mileometer.back()] - this->schedules.back()[this->mileometer.back()-1])*pow(0.5,30.0);
+  double small_value = std::min(abs((this->schedules.back()[this->mileometer.back()] - this->schedules.back()[this->mileometer.back()-1])),1.0)*pow(0.5,30.0);
   if (this->direction * this->current_bisect_value >= this->direction * this->schedules.back()[this->mileometer.back()] - small_value)
   {
     // check to see if we already reached the next point in the schedule
@@ -467,7 +467,7 @@ void Sequencer::find_next_target_bisection(SMCOutput* current_state,
   this->schedule_difference = this->current_bisect_value - starting_value;
   this->previous_bisect_value = this->current_bisect_value;
   
-  if ((this->direction * this->current_bisect_value >= this->direction * this->schedules.back()[this->mileometer.back()]))
+  if ((this->direction * this->current_bisect_value >= this->direction * this->schedules.back()[this->mileometer.back()] - small_value))
   {
     this->mileometer.increment();
   }
@@ -765,7 +765,7 @@ void Sequencer::subsample_find_next_target_bisection(SMCOutput* current_state,
   
   // if we want to make this generic, need to hide the next two lines in a function that can have different choices
   
-  double small_value = (this->schedules.back()[this->mileometer.back()] - this->schedules.back()[this->mileometer.back()-1])*pow(0.5,30.0);
+  double small_value = std::min(abs((this->schedules.back()[this->mileometer.back()] - this->schedules.back()[this->mileometer.back()-1])),1.0)*pow(0.5,30.0);
   // if we have not just found a value for the parameter that is at one of the points in the schedule
   if (this->direction * this->current_bisect_value >= this->direction * this->schedules.back()[this->mileometer.back()] - small_value)
   {
@@ -904,7 +904,7 @@ void Sequencer::subsample_find_next_target_bisection(SMCOutput* current_state,
   this->schedule_difference = this->current_bisect_value - starting_value;
   this->previous_bisect_value = this->current_bisect_value;
   
-  if ((this->direction * this->current_bisect_value >= this->direction * this->schedules.back()[this->mileometer.back()]))
+  if ((this->direction * this->current_bisect_value >= this->direction * this->schedules.back()[this->mileometer.back()]-small_value))
   {
     this->mileometer.increment();
   }

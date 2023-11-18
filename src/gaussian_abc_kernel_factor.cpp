@@ -77,17 +77,22 @@ void GaussianABCKernelFactor::make_copy(const GaussianABCKernelFactor &another)
 double GaussianABCKernelFactor::likelihood_evaluate(const Parameters &input) const
 {
   double epsilon = input[this->epsilon_variable][0];
-  arma::colvec scale;
-  if (this->scale_variable!="")
-    scale = input[this->scale_variable];
+  if (epsilon==0.0)
+    return -arma::datum::inf;
   else
   {
-    scale = arma::colvec(this->data_colvec.n_elem);
-    scale.fill(1.0);
+    arma::colvec scale;
+    if (this->scale_variable!="")
+      scale = input[this->scale_variable];
+    else
+    {
+      scale = arma::colvec(this->data_colvec.n_elem);
+      scale.fill(1.0);
+    }
+    
+    double distance = arma::sum(arma::pow((input.get_colvec(this->data_variables)-this->data_colvec)/scale,2.0));
+    return this->constant - 0.5*(1.0/pow(epsilon,2.0))*distance - 0.5*scale.n_elem*log(epsilon) - 0.5*arma::sum(log(scale));
   }
-  
-  double distance = arma::sum(arma::pow((input.get_colvec(this->data_variables)-this->data_colvec)/scale,2.0));
-  return this->constant + 0.5*(1.0/pow(epsilon,2.0))*distance - 0.5*scale.n_elem*log(epsilon) - 0.5*arma::sum(log(scale));
 }
 
 void GaussianABCKernelFactor::find_distance(const Parameters &input,
@@ -114,7 +119,7 @@ double GaussianABCKernelFactor::evaluate_kernel_given_distance(const Parameters 
                                                                double scale_constant) const
 {
   double epsilon = input[this->epsilon_variable][0];
-  if (distance>epsilon)
+  if (epsilon==0.0)
     return -arma::datum::inf;
   else
   {

@@ -2,6 +2,7 @@
 #include "exact_likelihood_estimator.h"
 #include "abc_likelihood_estimator.h"
 #include "lp_uniform_abc_kernel_factor.h"
+#include "gaussian_abc_kernel_factor.h"
 #include "custom_distribution_proposal_kernel.h"
 #include "custom_independent_proposal_kernel.h"
 #include "transformed_independent_proposal_kernel.h"
@@ -14,12 +15,15 @@
 #include "utils.h"
 #include "stable_smc_termination.h"
 #include "vector_single_index.h"
+#include "ensemble_kalman_inversion.h"
+#include "metropolis_mcmc.h"
 
 ABCLikelihoodEstimator* make_lp_uniform_abc_kernel(RandomNumberGenerator* rng_in,
                                                    size_t* seed_in,
                                                    Data* data_in,
                                                    double p_in,
                                                    const std::vector<std::string> &data_variables_in,
+                                                   const std::string &scale_variable_in,
                                                    const std::string &epsilon_variable_in,
                                                    bool fixed_epsilon_in)
 {
@@ -29,7 +33,26 @@ ABCLikelihoodEstimator* make_lp_uniform_abc_kernel(RandomNumberGenerator* rng_in
                                     new LpUniformABCKernelFactor(p_in,
                                                                  data_variables_in,
                                                                  epsilon_variable_in,
+                                                                 scale_variable_in,
                                                                  data_in),
+                                    fixed_epsilon_in);
+}
+
+ABCLikelihoodEstimator* make_gaussian_abc_kernel(RandomNumberGenerator* rng_in,
+                                                 size_t* seed_in,
+                                                 Data* data_in,
+                                                 const std::vector<std::string> &data_variables_in,
+                                                 const std::string &scale_variable_in,
+                                                 const std::string &epsilon_variable_in,
+                                                 bool fixed_epsilon_in)
+{
+  return new ABCLikelihoodEstimator(rng_in,
+                                    seed_in,
+                                    data_in,
+                                    new GaussianABCKernelFactor(data_variables_in,
+                                                                epsilon_variable_in,
+                                                                scale_variable_in,
+                                                                data_in),
                                     fixed_epsilon_in);
 }
 
@@ -38,6 +61,7 @@ ImportanceSampler* make_fixed_epsilon_lp_uniform_abc_likelihood(RandomNumberGene
                                                                 Data* data_in,
                                                                 double p_in,
                                                                 const std::vector<std::string> &data_variables_in,
+                                                                const std::string &scale_variable_in,
                                                                 const std::string &epsilon_variable_in,
                                                                 double epsilon_in,
                                                                 SimulateModelPtr simulate_model_in,
@@ -51,6 +75,7 @@ ImportanceSampler* make_fixed_epsilon_lp_uniform_abc_likelihood(RandomNumberGene
                                                   data_in,
                                                   p_in,
                                                   data_variables_in,
+                                                  scale_variable_in,
                                                   epsilon_variable_in,
                                                   true));
   
@@ -79,6 +104,7 @@ ImportanceSampler* make_fixed_epsilon_lp_uniform_abc_likelihood(RandomNumberGene
                                                                 Data* summary_data_in,
                                                                 double p_in,
                                                                 const std::vector<std::string> &summary_data_variables_in,
+                                                                const std::string &scale_variable_in,
                                                                 const std::string &epsilon_variable_in,
                                                                 double epsilon_in,
                                                                 SimulateModelPtr simulate_model_in,
@@ -93,6 +119,7 @@ ImportanceSampler* make_fixed_epsilon_lp_uniform_abc_likelihood(RandomNumberGene
                                                   summary_data_in,
                                                   p_in,
                                                   summary_data_variables_in,
+                                                  scale_variable_in,
                                                   epsilon_variable_in,
                                                   true));
   
@@ -124,6 +151,7 @@ ImportanceSampler* make_varying_epsilon_lp_uniform_abc_likelihood(RandomNumberGe
                                                                   Data* data_in,
                                                                   double p_in,
                                                                   const std::vector<std::string> &data_variables_in,
+                                                                  const std::string &scale_variable_in,
                                                                   const std::string &epsilon_variable_in,
                                                                   SimulateModelPtr simulate_model_in,
                                                                   size_t number_of_abc_simulations_in,
@@ -136,6 +164,7 @@ ImportanceSampler* make_varying_epsilon_lp_uniform_abc_likelihood(RandomNumberGe
                                                   data_in,
                                                   p_in,
                                                   data_variables_in,
+                                                  scale_variable_in,
                                                   epsilon_variable_in,
                                                   false));
   
@@ -163,6 +192,7 @@ ImportanceSampler* make_varying_epsilon_lp_uniform_abc_likelihood(RandomNumberGe
                                                                   Data* summary_data_in,
                                                                   double p_in,
                                                                   const std::vector<std::string> &summary_data_variables_in,
+                                                                  const std::string &scale_variable_in,
                                                                   const std::string &epsilon_variable_in,
                                                                   SimulateModelPtr simulate_model_in,
                                                                   std::shared_ptr<Transform> summary_statistics_in,
@@ -176,6 +206,7 @@ ImportanceSampler* make_varying_epsilon_lp_uniform_abc_likelihood(RandomNumberGe
                                                   summary_data_in,
                                                   p_in,
                                                   summary_data_variables_in,
+                                                  scale_variable_in,
                                                   epsilon_variable_in,
                                                   false));
   
@@ -200,6 +231,389 @@ ImportanceSampler* make_varying_epsilon_lp_uniform_abc_likelihood(RandomNumberGe
                                grain_size_in,
                                "");
 }
+
+
+
+ImportanceSampler* make_fixed_epsilon_gaussian_abc_likelihood(RandomNumberGenerator* rng_in,
+                                                              size_t* seed_in,
+                                                              Data* data_in,
+                                                              const std::vector<std::string> &data_variables_in,
+                                                              const std::string &scale_variable_in,
+                                                              const std::string &epsilon_variable_in,
+                                                              double epsilon_in,
+                                                              SimulateModelPtr simulate_model_in,
+                                                              size_t number_of_abc_simulations_in,
+                                                              bool parallel_in,
+                                                              size_t grain_size_in)
+{
+  std::vector<LikelihoodEstimator*> abc_kernel;
+  abc_kernel.push_back(make_gaussian_abc_kernel(rng_in,
+                                                seed_in,
+                                                data_in,
+                                                data_variables_in,
+                                                scale_variable_in,
+                                                epsilon_variable_in,
+                                                true));
+  
+  IndependentProposalKernel* model_simulator = new CustomIndependentProposalKernel(simulate_model_in);
+  
+  return new ImportanceSampler(rng_in,
+                               seed_in,
+                               data_in,
+                               Parameters(),
+                               number_of_abc_simulations_in,
+                               epsilon_variable_in,
+                               epsilon_in,
+                               abc_kernel,
+                               model_simulator,
+                               false,
+                               true,
+                               true,
+                               false,
+                               parallel_in,
+                               grain_size_in,
+                               "");
+}
+
+EnsembleKalmanInversion* make_fixed_epsilon_enki_abc_likelihood(RandomNumberGenerator* rng_in,
+                                                                size_t* seed_in,
+                                                                Data* data_in,
+                                                                size_t lag_in,
+                                                                EnsembleShifter* shifter_in,
+                                                                double annealing_desired_cess_in,
+                                                                size_t number_of_bisections_in,
+                                                                const std::string &scale_variable_in,
+                                                                const std::string &sequence_variable_in,
+                                                                const std::vector<double> &schedule_in,
+                                                                const std::vector<std::string> &data_variables_in,
+                                                                SimulateModelPtr simulate_model_in,
+                                                                size_t number_of_abc_simulations_in,
+                                                                bool parallel_in,
+                                                                size_t grain_size_in)
+{
+  IndependentProposalKernel* model_simulator = new CustomIndependentProposalKernel(simulate_model_in);
+
+  if (schedule_in.size()<2)
+  {
+    stop("make_fixed_epsilon_enki_abc_likelihood - schedule needs to be of length at least 2.");
+  }
+  double min_epsilon = schedule_in[0];
+  for (size_t i=1; i<schedule_in.size(); ++i)
+  {
+    if (schedule_in[i]<schedule_in[i-1])
+    {
+      min_epsilon = schedule_in[i];
+    }
+    else
+    {
+      stop("make_fixed_epsilon_enki_abc_likelihood - schedule needs to be strictly decreasing.");
+    }
+  }
+  
+  if (min_epsilon<=0.0)
+  {
+    stop("make_fixed_epsilon_enki_abc_likelihood - tolerance must be positive.");
+  }
+  
+  std::vector<double> temperature_schedule;
+  temperature_schedule.reserve(schedule_in.size());
+  for (size_t i=0; i<schedule_in.size(); ++i)
+  {
+    if (schedule_in[i]==arma::datum::inf)
+    {
+      temperature_schedule.push_back(0.0);
+    }
+    else
+    {
+      temperature_schedule.push_back(min_epsilon/schedule_in[i]);
+    }
+  }
+  
+  return new EnsembleKalmanInversion(rng_in,
+                                     seed_in,
+                                     data_in,
+                                     number_of_abc_simulations_in,
+                                     lag_in,
+                                     shifter_in,
+                                     annealing_desired_cess_in,
+                                     number_of_bisections_in,
+                                     sequence_variable_in,
+                                     temperature_schedule,
+                                     model_simulator,
+                                     data_variables_in,
+                                     min_epsilon,
+                                     scale_variable_in,
+                                     NULL,
+                                     NULL,
+                                     parallel_in,
+                                     grain_size_in,
+                                     "");
+}
+
+/*
+SMCMCMCMove* make_fixed_epsilon_smc_gaussian_abc_likelihood(RandomNumberGenerator* rng_in,
+                                                            size_t* seed_in,
+                                                            Data* data_in,
+                                                            size_t lag_in,
+                                                            MCMC* mcmc_in,
+                                                            SMCCriterion* adaptive_resampling_in,
+                                                            SMCCriterion* adaptive_target_in,
+                                                            size_t number_of_bisections_in,
+                                                   const std::string &scale_variable_in,
+                                                   const std::string &sequence_variable_in,
+                                                   const std::vector<double> &schedule_in,
+                                                   const std::vector<std::string> &data_variables_in,
+                                                   SimulateModelPtr simulate_model_in,
+                                                   size_t number_of_abc_simulations_in,
+                                                   bool parallel_in,
+                                                   size_t grain_size_in)
+{
+  std::vector<LikelihoodEstimator*> abc_kernel;
+  abc_kernel.push_back(make_gaussian_abc_kernel(rng_in,
+                                                seed_in,
+                                                data_in,
+                                                data_variables_in,
+                                                scale_variable_in,
+                                                epsilon_variable_in,
+                                                true));
+  
+  std::vector<std::string> sequence_variables_in;
+  sequence_variables_in.push_back(sequence_variable_in);
+  
+  std::vector<std::vector<double>> schedules_in
+  
+  return new SMCMCMCMove(rng_in,
+                         seed_in,
+                         data_in,
+                         Parameters(),
+                         number_of_abc_simulations_in,
+                         lag_in,
+                         lag_in,
+                         mcmc_in,
+                         adaptive_resampling_in,
+                         adaptive_target_in,
+                         number_of_bisections_in,
+                         NULL,
+                         sequence_variables_in,
+                         schedules_in,
+              const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
+              IndependentProposalKernel* proposal_in,
+              Index* without_cancelled_index,
+              Index* full_index,
+              bool proposal_is_evaluated_in,
+              bool smcfixed_flag_in,
+              bool sequencer_limit_is_fixed_in,
+              bool mcmc_at_last_step_in,
+              bool transform_proposed_particles,
+              bool parallel_in,
+              size_t grain_size_in,
+              const std::string &results_name_in);
+}
+*/
+
+ImportanceSampler* make_fixed_epsilon_gaussian_abc_likelihood(RandomNumberGenerator* rng_in,
+                                                              size_t* seed_in,
+                                                              Data* summary_data_in,
+                                                              const std::vector<std::string> &summary_data_variables_in,
+                                                              const std::string &scale_variable_in,
+                                                              const std::string &epsilon_variable_in,
+                                                              double epsilon_in,
+                                                              SimulateModelPtr simulate_model_in,
+                                                              std::shared_ptr<Transform> summary_statistics_in,
+                                                              size_t number_of_abc_simulations_in,
+                                                              bool parallel_in,
+                                                              size_t grain_size_in)
+{
+  std::vector<LikelihoodEstimator*> abc_kernel;
+  abc_kernel.push_back(make_gaussian_abc_kernel(rng_in,
+                                                seed_in,
+                                                summary_data_in,
+                                                summary_data_variables_in,
+                                                scale_variable_in,
+                                                epsilon_variable_in,
+                                                true));
+  
+  IndependentProposalKernel* model_simulator = new CustomIndependentProposalKernel(simulate_model_in);
+  IndependentProposalKernel* summary_model_simulator = new TransformedIndependentProposalKernel(model_simulator,
+                                                                                                summary_statistics_in,
+                                                                                                true);
+  
+  return new ImportanceSampler(rng_in,
+                               seed_in,
+                               summary_data_in,
+                               Parameters(),
+                               number_of_abc_simulations_in,
+                               epsilon_variable_in,
+                               epsilon_in,
+                               abc_kernel,
+                               summary_model_simulator,
+                               false,
+                               true,
+                               true,
+                               false,
+                               parallel_in,
+                               grain_size_in,
+                               "");
+}
+
+EnsembleKalmanInversion* make_fixed_epsilon_enki_abc_likelihood(RandomNumberGenerator* rng_in,
+                                                                size_t* seed_in,
+                                                                Data* summary_data_in,
+                                                                size_t lag_in,
+                                                                EnsembleShifter* shifter_in,
+                                                                double annealing_desired_cess_in,
+                                                                size_t number_of_bisections_in,
+                                                                const std::string &scale_variable_in,
+                                                                const std::string &sequence_variable_in,
+                                                                const std::vector<double> &schedule_in,
+                                                                const std::vector<std::string> &summary_data_variables_in,
+                                                                SimulateModelPtr simulate_model_in,
+                                                                std::shared_ptr<Transform> summary_statistics_in,
+                                                                size_t number_of_abc_simulations_in,
+                                                                bool parallel_in,
+                                                                size_t grain_size_in)
+{
+  IndependentProposalKernel* model_simulator = new CustomIndependentProposalKernel(simulate_model_in);
+  
+  if (schedule_in.size()<2)
+  {
+    stop("make_fixed_epsilon_enki_abc_likelihood - schedule needs to be of length at least 2.");
+  }
+  double min_epsilon = schedule_in[0];
+  for (size_t i=1; i<schedule_in.size(); ++i)
+  {
+    if (schedule_in[i]<schedule_in[i-1])
+    {
+      min_epsilon = schedule_in[i];
+    }
+    else
+    {
+      stop("make_fixed_epsilon_enki_abc_likelihood - schedule needs to be strictly decreasing.");
+    }
+  }
+  
+  if (min_epsilon<=0.0)
+  {
+    stop("make_fixed_epsilon_enki_abc_likelihood - tolerance must be positive.");
+  }
+  
+  std::vector<double> temperature_schedule;
+  temperature_schedule.reserve(schedule_in.size());
+  for (size_t i=0; i<schedule_in.size(); ++i)
+  {
+    if (schedule_in[i]==arma::datum::inf)
+    {
+      temperature_schedule.push_back(0.0);
+    }
+    else
+    {
+      temperature_schedule.push_back(min_epsilon/schedule_in[i]);
+    }
+  }
+  
+  return new EnsembleKalmanInversion(rng_in,
+                                     seed_in,
+                                     summary_data_in,
+                                     number_of_abc_simulations_in,
+                                     lag_in,
+                                     shifter_in,
+                                     annealing_desired_cess_in,
+                                     number_of_bisections_in,
+                                     sequence_variable_in,
+                                     temperature_schedule,
+                                     model_simulator,
+                                     summary_data_variables_in,
+                                     min_epsilon,
+                                     scale_variable_in,
+                                     summary_statistics_in,
+                                     NULL,
+                                     parallel_in,
+                                     grain_size_in,
+                                     "");
+}
+
+ImportanceSampler* make_varying_epsilon_gaussian_abc_likelihood(RandomNumberGenerator* rng_in,
+                                                                size_t* seed_in,
+                                                                Data* data_in,
+                                                                const std::vector<std::string> &data_variables_in,
+                                                                const std::string &scale_variable_in,
+                                                                const std::string &epsilon_variable_in,
+                                                                SimulateModelPtr simulate_model_in,
+                                                                size_t number_of_abc_simulations_in,
+                                                                bool parallel_in,
+                                                                size_t grain_size_in)
+{
+  std::vector<LikelihoodEstimator*> abc_kernel;
+  abc_kernel.push_back(make_gaussian_abc_kernel(rng_in,
+                                                seed_in,
+                                                data_in,
+                                                data_variables_in,
+                                                scale_variable_in,
+                                                epsilon_variable_in,
+                                                false));
+  
+  IndependentProposalKernel* model_simulator = new CustomIndependentProposalKernel(simulate_model_in);
+  
+  return new ImportanceSampler(rng_in,
+                               seed_in,
+                               data_in,
+                               Parameters(),
+                               number_of_abc_simulations_in,
+                               epsilon_variable_in,
+                               abc_kernel,
+                               model_simulator,
+                               false,
+                               false,
+                               true,
+                               false,
+                               parallel_in,
+                               grain_size_in,
+                               "");
+}
+
+ImportanceSampler* make_varying_epsilon_gaussian_abc_likelihood(RandomNumberGenerator* rng_in,
+                                                                size_t* seed_in,
+                                                                Data* summary_data_in,
+                                                                const std::vector<std::string> &summary_data_variables_in,
+                                                                const std::string &scale_variable_in,
+                                                                const std::string &epsilon_variable_in,
+                                                                SimulateModelPtr simulate_model_in,
+                                                                std::shared_ptr<Transform> summary_statistics_in,
+                                                                size_t number_of_abc_simulations_in,
+                                                                bool parallel_in,
+                                                                size_t grain_size_in)
+{
+  std::vector<LikelihoodEstimator*> abc_kernel;
+  abc_kernel.push_back(make_gaussian_abc_kernel(rng_in,
+                                                seed_in,
+                                                summary_data_in,
+                                                summary_data_variables_in,
+                                                scale_variable_in,
+                                                epsilon_variable_in,
+                                                false));
+  
+  IndependentProposalKernel* model_simulator = new CustomIndependentProposalKernel(simulate_model_in);
+  IndependentProposalKernel* summary_model_simulator = new TransformedIndependentProposalKernel(model_simulator,
+                                                                                                summary_statistics_in,
+                                                                                                false);
+  
+  return new ImportanceSampler(rng_in,
+                               seed_in,
+                               summary_data_in,
+                               Parameters(),
+                               number_of_abc_simulations_in,
+                               epsilon_variable_in,
+                               abc_kernel,
+                               summary_model_simulator,
+                               false,
+                               false,
+                               false,
+                               false,
+                               parallel_in,
+                               grain_size_in,
+                               "");
+}
+
 
 
 DensityLikelihoodEstimator* make_sl_likelihood(RandomNumberGenerator* rng_in,
@@ -268,6 +682,7 @@ ImportanceSampler* make_fixed_epsilon_lp_uniform_abc_is(RandomNumberGenerator* r
                                                         IndependentProposalKernel* prior_in,
                                                         double p_in,
                                                         const std::vector<std::string> &data_variables_in,
+                                                        const std::string &scale_variable_in,
                                                         const std::string &epsilon_variable_in,
                                                         double epsilon_in,
                                                         SimulateModelPtr simulate_model_in,
@@ -284,6 +699,7 @@ ImportanceSampler* make_fixed_epsilon_lp_uniform_abc_is(RandomNumberGenerator* r
                                                                         data_in,
                                                                         p_in,
                                                                         data_variables_in,
+                                                                        scale_variable_in,
                                                                         epsilon_variable_in,
                                                                         epsilon_in,
                                                                         simulate_model_in,
@@ -297,6 +713,7 @@ ImportanceSampler* make_fixed_epsilon_lp_uniform_abc_is(RandomNumberGenerator* r
                                Parameters(),
                                number_of_particles_in,
                                epsilon_variable_in,
+                               epsilon_in,
                                abc_likelihood,
                                prior_in,
                                false,
@@ -315,6 +732,7 @@ ImportanceSampler* make_fixed_epsilon_lp_uniform_abc_is(RandomNumberGenerator* r
                                                         IndependentProposalKernel* prior_in,
                                                         double p_in,
                                                         const std::vector<std::string> &summary_data_variables_in,
+                                                        const std::string &scale_variable_in,
                                                         const std::string &epsilon_variable_in,
                                                         double epsilon_in,
                                                         SimulateModelPtr simulate_model_in,
@@ -332,6 +750,7 @@ ImportanceSampler* make_fixed_epsilon_lp_uniform_abc_is(RandomNumberGenerator* r
                                                                         summary_data_in,
                                                                         p_in,
                                                                         summary_data_variables_in,
+                                                                        scale_variable_in,
                                                                         epsilon_variable_in,
                                                                         epsilon_in,
                                                                         simulate_model_in,
@@ -346,6 +765,227 @@ ImportanceSampler* make_fixed_epsilon_lp_uniform_abc_is(RandomNumberGenerator* r
                                Parameters(),
                                number_of_particles_in,
                                epsilon_variable_in,
+                               epsilon_in,
+                               abc_likelihood,
+                               prior_in,
+                               false,
+                               true,
+                               true,
+                               false,
+                               is_parallel_in,
+                               is_grain_size_in,
+                               results_name_in);
+}
+
+ImportanceSampler* make_fixed_epsilon_gaussian_abc_is(RandomNumberGenerator* rng_in,
+                                                       size_t* seed_in,
+                                                       Data* data_in,
+                                                       size_t number_of_particles_in,
+                                                       IndependentProposalKernel* prior_in,
+                                                       const std::vector<std::string> &data_variables_in,
+                                                       const std::string &scale_variable_in,
+                                                       const std::string &epsilon_variable_in,
+                                                       double epsilon_in,
+                                                       SimulateModelPtr simulate_model_in,
+                                                       size_t number_of_abc_simulations_in,
+                                                       bool abc_parallel_in,
+                                                       size_t abc_grain_size_in,
+                                                       bool is_parallel_in,
+                                                       size_t is_grain_size_in,
+                                                       const std::string &results_name_in)
+{
+  std::vector<LikelihoodEstimator*> abc_likelihood;
+  abc_likelihood.push_back(make_fixed_epsilon_gaussian_abc_likelihood(rng_in,
+                                                                        seed_in,
+                                                                        data_in,
+                                                                        data_variables_in,
+                                                                        scale_variable_in,
+                                                                        epsilon_variable_in,
+                                                                        epsilon_in,
+                                                                        simulate_model_in,
+                                                                        number_of_abc_simulations_in,
+                                                                        abc_parallel_in,
+                                                                        abc_grain_size_in));
+  
+  return new ImportanceSampler(rng_in,
+                               seed_in,
+                               data_in,
+                               Parameters(),
+                               number_of_particles_in,
+                               epsilon_variable_in,
+                               epsilon_in,
+                               abc_likelihood,
+                               prior_in,
+                               false,
+                               true,
+                               true,
+                               false,
+                               is_parallel_in,
+                               is_grain_size_in,
+                               results_name_in);
+}
+
+ImportanceSampler* make_fixed_epsilon_enki_abc_is(RandomNumberGenerator* rng_in,
+                                                  size_t* seed_in,
+                                                  Data* data_in,
+                                                  size_t number_of_particles_in,
+                                                  IndependentProposalKernel* prior_in,
+                                                  const std::vector<std::string> &data_variables_in,
+                                                  const std::string &scale_variable_in,
+                                                  const std::string &epsilon_variable_in,
+                                                  double epsilon_in,
+                                                  size_t enki_lag_in,
+                                                  EnsembleShifter* shifter_in,
+                                                  double enki_annealing_desired_cess_in,
+                                                  size_t enki_number_of_bisections_in,
+                                                  SimulateModelPtr simulate_model_in,
+                                                  size_t number_of_abc_simulations_in,
+                                                  bool abc_parallel_in,
+                                                  size_t abc_grain_size_in,
+                                                  bool is_parallel_in,
+                                                  size_t is_grain_size_in,
+                                                  const std::string &results_name_in)
+{
+  std::vector<double> enki_schedule;
+  enki_schedule.push_back(arma::datum::inf);
+  enki_schedule.push_back(epsilon_in);
+  
+  std::vector<LikelihoodEstimator*> abc_likelihood;
+  abc_likelihood.push_back(make_fixed_epsilon_enki_abc_likelihood(rng_in,
+                                                                  seed_in,
+                                                                  data_in,
+                                                                  enki_lag_in,
+                                                                  shifter_in,
+                                                                  enki_annealing_desired_cess_in,
+                                                                  enki_number_of_bisections_in,
+                                                                  scale_variable_in,
+                                                                  epsilon_variable_in,
+                                                                  enki_schedule,
+                                                                  data_variables_in,
+                                                                  simulate_model_in,
+                                                                  number_of_abc_simulations_in,
+                                                                  abc_parallel_in,
+                                                                  abc_grain_size_in));
+  
+  return new ImportanceSampler(rng_in,
+                               seed_in,
+                               data_in,
+                               Parameters(),
+                               number_of_particles_in,
+                               epsilon_variable_in,
+                               epsilon_in,
+                               abc_likelihood,
+                               prior_in,
+                               false,
+                               true,
+                               true,
+                               false,
+                               is_parallel_in,
+                               is_grain_size_in,
+                               results_name_in);
+}
+
+ImportanceSampler* make_fixed_epsilon_enki_abc_is(RandomNumberGenerator* rng_in,
+                                                  size_t* seed_in,
+                                                  Data* summary_data_in,
+                                                  size_t number_of_particles_in,
+                                                  IndependentProposalKernel* prior_in,
+                                                  const std::vector<std::string> &summary_data_variables_in,
+                                                  const std::string &scale_variable_in,
+                                                  const std::string &epsilon_variable_in,
+                                                  double epsilon_in,
+                                                  size_t enki_lag_in,
+                                                  EnsembleShifter* shifter_in,
+                                                  double enki_annealing_desired_cess_in,
+                                                  size_t enki_number_of_bisections_in,
+                                                  SimulateModelPtr simulate_model_in,
+                                                  std::shared_ptr<Transform> summary_statistics_in,
+                                                  size_t number_of_abc_simulations_in,
+                                                  bool abc_parallel_in,
+                                                  size_t abc_grain_size_in,
+                                                  bool is_parallel_in,
+                                                  size_t is_grain_size_in,
+                                                  const std::string &results_name_in)
+{
+  std::vector<double> enki_schedule;
+  enki_schedule.push_back(arma::datum::inf);
+  enki_schedule.push_back(epsilon_in);
+  
+  std::vector<LikelihoodEstimator*> abc_likelihood;
+  abc_likelihood.push_back(make_fixed_epsilon_enki_abc_likelihood(rng_in,
+                                                                  seed_in,
+                                                                  summary_data_in,
+                                                                  enki_lag_in,
+                                                                  shifter_in,
+                                                                  enki_annealing_desired_cess_in,
+                                                                  enki_number_of_bisections_in,
+                                                                  scale_variable_in,
+                                                                  epsilon_variable_in,
+                                                                  enki_schedule,
+                                                                  summary_data_variables_in,
+                                                                  simulate_model_in,
+                                                                  summary_statistics_in,
+                                                                  number_of_abc_simulations_in,
+                                                                  abc_parallel_in,
+                                                                  abc_grain_size_in));
+  
+  return new ImportanceSampler(rng_in,
+                               seed_in,
+                               summary_data_in,
+                               Parameters(),
+                               number_of_particles_in,
+                               epsilon_variable_in,
+                               epsilon_in,
+                               abc_likelihood,
+                               prior_in,
+                               false,
+                               true,
+                               true,
+                               false,
+                               is_parallel_in,
+                               is_grain_size_in,
+                               results_name_in);
+}
+
+ImportanceSampler* make_fixed_epsilon_gaussian_abc_is(RandomNumberGenerator* rng_in,
+                                                      size_t* seed_in,
+                                                      Data* summary_data_in,
+                                                      size_t number_of_particles_in,
+                                                      IndependentProposalKernel* prior_in,
+                                                      const std::vector<std::string> &summary_data_variables_in,
+                                                      const std::string &scale_variable_in,
+                                                      const std::string &epsilon_variable_in,
+                                                      double epsilon_in,
+                                                      SimulateModelPtr simulate_model_in,
+                                                      std::shared_ptr<Transform> summary_statistics_in,
+                                                      size_t number_of_abc_simulations_in,
+                                                      bool abc_parallel_in,
+                                                      size_t abc_grain_size_in,
+                                                      bool is_parallel_in,
+                                                      size_t is_grain_size_in,
+                                                      const std::string &results_name_in)
+{
+  std::vector<LikelihoodEstimator*> abc_likelihood;
+  abc_likelihood.push_back(make_fixed_epsilon_gaussian_abc_likelihood(rng_in,
+                                                                      seed_in,
+                                                                      summary_data_in,
+                                                                      summary_data_variables_in,
+                                                                      scale_variable_in,
+                                                                      epsilon_variable_in,
+                                                                      epsilon_in,
+                                                                      simulate_model_in,
+                                                                      summary_statistics_in,
+                                                                      number_of_abc_simulations_in,
+                                                                      abc_parallel_in,
+                                                                      abc_grain_size_in));
+  
+  return new ImportanceSampler(rng_in,
+                               seed_in,
+                               summary_data_in,
+                               Parameters(),
+                               number_of_particles_in,
+                               epsilon_variable_in,
+                               epsilon_in,
                                abc_likelihood,
                                prior_in,
                                false,
@@ -365,6 +1005,7 @@ SMCMCMCMove* make_fixed_epsilon_lp_uniform_abc_mcmc(RandomNumberGenerator* rng_i
                                                     DistributionFactor* prior_in,
                                                     double p_in,
                                                     const std::vector<std::string> &summary_data_variables_in,
+                                                    const std::string &scale_variable_in,
                                                     const std::string &epsilon_variable_in,
                                                     double epsilon_in,
                                                     SimulateModelPtr simulate_model_in,
@@ -388,6 +1029,7 @@ SMCMCMCMove* make_fixed_epsilon_lp_uniform_abc_mcmc(RandomNumberGenerator* rng_i
                                                                                   summary_data_in,
                                                                                   p_in,
                                                                                   summary_data_variables_in,
+                                                                                  scale_variable_in,
                                                                                   epsilon_variable_in,
                                                                                   epsilon_in,
                                                                                   simulate_model_in,
@@ -429,6 +1071,7 @@ SMCMCMCMove* make_ess_epsilon_lp_uniform_abc_is(RandomNumberGenerator* rng_in,
                                                  IndependentProposalKernel* prior_in,
                                                  double p_in,
                                                  const std::vector<std::string> &data_variables_in,
+                                                const std::string &scale_variable_in,
                                                  const std::string &epsilon_variable_in,
                                                  double target_ess_in,
                                                  size_t number_of_bisections_in,
@@ -454,6 +1097,7 @@ SMCMCMCMove* make_ess_epsilon_lp_uniform_abc_is(RandomNumberGenerator* rng_in,
                                                                           data_in,
                                                                           p_in,
                                                                           data_variables_in,
+                                                                          scale_variable_in,
                                                                           epsilon_variable_in,
                                                                           simulate_model_in,
                                                                           number_of_abc_simulations_in,
@@ -461,6 +1105,7 @@ SMCMCMCMove* make_ess_epsilon_lp_uniform_abc_is(RandomNumberGenerator* rng_in,
                                                                           abc_grain_size_in));
   
   std::vector<double> sequence_values;
+  sequence_values.push_back(arma::datum::inf);
   sequence_values.push_back(0.0);
   
   return new SMCMCMCMove(rng_in,
@@ -470,7 +1115,7 @@ SMCMCMCMove* make_ess_epsilon_lp_uniform_abc_is(RandomNumberGenerator* rng_in,
                          number_of_particles_in,
                          0,
                          0,
-                         NULL,
+                         new MetropolisMCMC(),
                          0,
                          target_ess_in,
                          number_of_bisections_in,
@@ -496,6 +1141,7 @@ SMCMCMCMove* make_ess_epsilon_lp_uniform_abc_is(RandomNumberGenerator* rng_in,
                                                 IndependentProposalKernel* prior_in,
                                                 double p_in,
                                                 const std::vector<std::string> &summary_data_variables_in,
+                                                const std::string &scale_variable_in,
                                                 const std::string &epsilon_variable_in,
                                                 double target_ess_in,
                                                 size_t number_of_bisections_in,
@@ -522,6 +1168,7 @@ SMCMCMCMove* make_ess_epsilon_lp_uniform_abc_is(RandomNumberGenerator* rng_in,
                                                                           summary_data_in,
                                                                           p_in,
                                                                           summary_data_variables_in,
+                                                                          scale_variable_in,
                                                                           epsilon_variable_in,
                                                                           simulate_model_in,
                                                                           summary_statistics_in,
@@ -530,6 +1177,7 @@ SMCMCMCMove* make_ess_epsilon_lp_uniform_abc_is(RandomNumberGenerator* rng_in,
                                                                           abc_grain_size_in));
   
   std::vector<double> sequence_values;
+  sequence_values.push_back(arma::datum::inf);
   sequence_values.push_back(0.0);
   
   return new SMCMCMCMove(rng_in,
@@ -539,7 +1187,145 @@ SMCMCMCMove* make_ess_epsilon_lp_uniform_abc_is(RandomNumberGenerator* rng_in,
                          number_of_particles_in,
                          0,
                          0,
-                         NULL,
+                         new MetropolisMCMC(),
+                         0,
+                         target_ess_in,
+                         number_of_bisections_in,
+                         new AlwaysSMCTermination(),
+                         epsilon_variable_in,
+                         sequence_values,
+                         abc_likelihood,
+                         prior_in,
+                         false,
+                         true,
+                         true,
+                         false,
+                         transform_proposed_particles,
+                         is_parallel_in,
+                         is_grain_size_in,
+                         results_name_in);
+}
+
+SMCMCMCMove* make_ess_epsilon_gaussian_abc_is(RandomNumberGenerator* rng_in,
+                                                size_t* seed_in,
+                                                Data* data_in,
+                                                size_t number_of_particles_in,
+                                                IndependentProposalKernel* prior_in,
+                                                const std::vector<std::string> &data_variables_in,
+                                                const std::string &scale_variable_in,
+                                                const std::string &epsilon_variable_in,
+                                                double target_ess_in,
+                                                size_t number_of_bisections_in,
+                                                SimulateModelPtr simulate_model_in,
+                                                size_t number_of_abc_simulations_in,
+                                                bool transform_proposed_particles,
+                                                bool abc_parallel_in,
+                                                size_t abc_grain_size_in,
+                                                bool is_parallel_in,
+                                                size_t is_grain_size_in,
+                                                const std::string &results_name_in)
+{
+  std::vector<LikelihoodEstimator*> abc_likelihood;
+  /*
+   abc_likelihood_and_prior.push_back(new ExactLikelihoodEstimator(rng_in,
+   seed_in,
+   data_in,
+   prior_in,
+   true));
+   */
+  abc_likelihood.push_back(make_varying_epsilon_gaussian_abc_likelihood(rng_in,
+                                                                          seed_in,
+                                                                          data_in,
+                                                                          data_variables_in,
+                                                                          scale_variable_in,
+                                                                          epsilon_variable_in,
+                                                                          simulate_model_in,
+                                                                          number_of_abc_simulations_in,
+                                                                          abc_parallel_in,
+                                                                          abc_grain_size_in));
+  
+  std::vector<double> sequence_values;
+  sequence_values.push_back(arma::datum::inf);
+  sequence_values.push_back(0.0);
+  
+  return new SMCMCMCMove(rng_in,
+                         seed_in,
+                         data_in,
+                         Parameters(),
+                         number_of_particles_in,
+                         0,
+                         0,
+                         new MetropolisMCMC(),
+                         0,
+                         target_ess_in,
+                         number_of_bisections_in,
+                         new AlwaysSMCTermination(),
+                         epsilon_variable_in,
+                         sequence_values,
+                         abc_likelihood,
+                         prior_in,
+                         false,
+                         true,
+                         true,
+                         false,
+                         transform_proposed_particles,
+                         is_parallel_in,
+                         is_grain_size_in,
+                         results_name_in);
+}
+
+SMCMCMCMove* make_ess_epsilon_gaussian_abc_is(RandomNumberGenerator* rng_in,
+                                                size_t* seed_in,
+                                                Data* summary_data_in,
+                                                size_t number_of_particles_in,
+                                                IndependentProposalKernel* prior_in,
+                                                const std::vector<std::string> &summary_data_variables_in,
+                                                const std::string &scale_variable_in,
+                                                const std::string &epsilon_variable_in,
+                                                double target_ess_in,
+                                                size_t number_of_bisections_in,
+                                                SimulateModelPtr simulate_model_in,
+                                                std::shared_ptr<Transform> summary_statistics_in,
+                                                size_t number_of_abc_simulations_in,
+                                                bool transform_proposed_particles,
+                                                bool abc_parallel_in,
+                                                size_t abc_grain_size_in,
+                                                bool is_parallel_in,
+                                                size_t is_grain_size_in,
+                                                const std::string &results_name_in)
+{
+  std::vector<LikelihoodEstimator*> abc_likelihood;
+  /*
+   abc_likelihood_and_prior.push_back(new ExactLikelihoodEstimator(rng_in,
+   seed_in,
+   summary_data_in,
+   prior_in,
+   true));
+   */
+  abc_likelihood.push_back(make_varying_epsilon_gaussian_abc_likelihood(rng_in,
+                                                                          seed_in,
+                                                                          summary_data_in,
+                                                                          summary_data_variables_in,
+                                                                          scale_variable_in,
+                                                                          epsilon_variable_in,
+                                                                          simulate_model_in,
+                                                                          summary_statistics_in,
+                                                                          number_of_abc_simulations_in,
+                                                                          abc_parallel_in,
+                                                                          abc_grain_size_in));
+  
+  std::vector<double> sequence_values;
+  sequence_values.push_back(arma::datum::inf);
+  sequence_values.push_back(0.0);
+  
+  return new SMCMCMCMove(rng_in,
+                         seed_in,
+                         summary_data_in,
+                         Parameters(),
+                         number_of_particles_in,
+                         0,
+                         0,
+                         new MetropolisMCMC(),
                          0,
                          target_ess_in,
                          number_of_bisections_in,
@@ -567,6 +1353,7 @@ SMCMCMCMove* make_cess_epsilon_lp_uniform_abc_smc(RandomNumberGenerator* rng_in,
                                                   IndependentProposalKernel* prior_in,
                                                   double p_in,
                                                   const std::vector<std::string> &summary_data_variables_in,
+                                                  const std::string &scale_variable_in,
                                                   const std::string &epsilon_variable_in,
                                                   const std::vector<double> &schedule_in,
                                                   double target_cess_in,
@@ -594,6 +1381,7 @@ SMCMCMCMove* make_cess_epsilon_lp_uniform_abc_smc(RandomNumberGenerator* rng_in,
                                                                                     summary_data_in,
                                                                                     p_in,
                                                                                     summary_data_variables_in,
+                                                                                    scale_variable_in,
                                                                                     epsilon_variable_in,
                                                                                     simulate_model_in,
                                                                                     summary_statistics_in,

@@ -15,6 +15,7 @@ class EnsembleKalmanWorker;
 class EnsembleKalmanOutput;
 class EnsembleKalmanInversion;
 class EnsembleKalmanMFDS;
+class EnsembleKalmanFilter;
 class EnsembleKalman;
 
 class EnsembleSequencer
@@ -86,6 +87,7 @@ protected:
   
   friend EnsembleKalmanInversion;
   friend EnsembleKalmanMFDS;
+  friend EnsembleKalmanFilter;
   friend EnsembleKalman;
   
   void setup(EnsembleKalmanWorker* the_worker_in,

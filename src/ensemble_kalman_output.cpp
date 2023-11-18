@@ -115,9 +115,9 @@ double EnsembleKalmanOutput::calculate_latest_log_normalising_constant_ratio()
   return this->all_ensembles.back().calculate_log_normalising_constant();
 }
 
-double EnsembleKalmanOutput::calculate_inversion_latest_log_normalising_constant_ratio()
+double EnsembleKalmanOutput::calculate_inversion_latest_log_normalising_constant_ratio(double inverse_incremental_temperature)
 {
-  return this->all_ensembles.back().calculate_inversion_log_normalising_constant();
+  return this->all_ensembles.back().calculate_inversion_log_normalising_constant(inverse_incremental_temperature);
 }
 
 void EnsembleKalmanOutput::simulate()

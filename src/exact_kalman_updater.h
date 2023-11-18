@@ -18,8 +18,8 @@ public:
   ExactKalmanUpdater(const arma::mat &measurement_matrix_in,
                      const arma::mat &measurement_noise_in);
   
-  ExactKalmanUpdater(GetMeasurementMatrixPtr measurement_matrix_function,
-                     GetMeasurementMatrixPtr measurement_noise_function);
+  ExactKalmanUpdater(GetMatrixPtr measurement_matrix_function,
+                     GetMatrixPtr measurement_noise_function);
 
   virtual ~ExactKalmanUpdater();
 
@@ -37,8 +37,8 @@ protected:
   
   void make_copy(const ExactKalmanUpdater &another);
   
-  GetMeasurementMatrixPtr measurement_matrix_function;
-  GetMeasurementMatrixPtr measurement_noise_function;
+  GetMatrixPtr measurement_matrix_function;
+  GetMatrixPtr measurement_noise_function;
   
   arma::mat measurement_matrix;
   arma::mat measurement_noise;

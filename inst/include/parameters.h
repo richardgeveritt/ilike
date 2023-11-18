@@ -128,6 +128,7 @@ protected:
 };
 
 typedef Parameters Data;
+typedef Parameters MatrixList;
 
 //RCPP_EXPOSED_WRAP(Parameters);
 
