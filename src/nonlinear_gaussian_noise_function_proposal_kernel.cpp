@@ -16,7 +16,7 @@ NonLinearGaussianNoiseFunctionProposalKernel::~NonLinearGaussianNoiseFunctionPro
 
 NonLinearGaussianNoiseFunctionProposalKernel::NonLinearGaussianNoiseFunctionProposalKernel(const std::string &variable_name_in,
                                                                                            std::shared_ptr<Transform> transform_in,
-                                                                                           const const GetMatrixPtr &covariance_in)
+                                                                                           const GetMatrixPtr &covariance_in)
 :GaussianNoiseProposalKernel()
 {
   //this->unused_variables_kept = true;
