@@ -2,7 +2,7 @@
 #'
 #' @param model A file containing the model, or a pre-compiled model list.
 #' @param number_of_ensemble_members (optional) The number of ensemble members (defaults to 10).
-#' @param delta_t (optional) The Delta_t parameters (defaults to 0.5)
+#' @param Delta_t (optional) The Delta_t parameters (defaults to 0.5)
 #' @param initial_values (optional) A list of lists containing the initial values for the chains.
 #' @param parallel (optional) Set to true to perform the importance sampling in parallel, false for serial.
 #' @param results_directory The name of the directory to which results will be written.
@@ -92,7 +92,7 @@ enkmfds = function(model,
              model_parameter_list,
              algorithm_parameter_list,
              number_of_ensemble_members,
-             delta_t,
+             Delta_t,
              mcmc_termination_method,
              mcmc_weights_method,
              enk_termination_method,

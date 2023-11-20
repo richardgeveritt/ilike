@@ -24,6 +24,8 @@ enkmfds(
 
 \item{number_of_ensemble_members}{(optional) The number of ensemble members (defaults to 10).}
 
+\item{Delta_t}{(optional) The Delta_t parameters (defaults to 0.5)}
+
 \item{initial_values}{(optional) A list of lists containing the initial values for the chains.}
 
 \item{parallel}{(optional) Set to true to perform the importance sampling in parallel, false for serial.}
@@ -41,8 +43,6 @@ enkmfds(
 \item{seed}{(optional) The seed for the random number generator.}
 
 \item{grain_size}{(optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).}
-
-\item{delta_t}{(optional) The Delta_t parameters (defaults to 0.5)}
 }
 \value{
 Nothing: output can be found in the output_directory.
