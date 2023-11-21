@@ -71,6 +71,7 @@ using namespace Rcpp;
 #include "direct_nonlinear_gaussian_measurement_covariance_estimator.h"
 #include "mixed_generic_direct_gaussian_measurement_covariance_estimator.h"
 #include "stochastic_ensemble_shifter.h"
+//#include "adjustment_ensemble_shifter.h"
 
 // from https://stackoverflow.com/questions/2165921/converting-from-a-stdstring-to-bool
 bool stob(const std::string &s)
@@ -706,6 +707,103 @@ List get_abc_lp_uniform_parameter_info(const List &model_parameters,
   return List::create(variable_names[0],number_of_points,tolerance_variable,tolerance,p,parallel,grain_size);
 }
 
+List get_abc_enki_parameter_info(const List &model_parameters,
+                                 const List &current_sbi,
+                                 const std::string &sbi_name)
+{
+  std::string augmented_variable_names = current_sbi["variables"];
+  
+  // split string in ;
+  std::vector<std::string> variable_names = split(augmented_variable_names,';');
+  
+  // throw error if more than one variable
+  if (variable_names.size()!=1)
+    Rcpp::stop("Only one variable allowed for " + sbi_name + ".");
+  
+  if (!current_sbi.containsElementNamed("parameters"))
+    Rcpp::stop("Missing parameters for " + sbi_name + " (7-9 parameters required).");
+  
+  List parameters = current_sbi["parameters"];
+  
+  if (! ( (parameters.size()==7) || (parameters.size()==8) || (parameters.size()==9) ) )
+    Rcpp::stop("7-9 parameters required for " + sbi_name + ".");
+  
+  int number_of_points = extract_int_parameter(parameters,
+                                               model_parameters,
+                                               0);
+  
+  std::string tolerance_variable = extract_string_parameter(parameters,
+                                                            model_parameters,
+                                                            1);
+  
+  arma::colvec schedule_colvec = extract_vector_parameter(parameters,
+                                                          model_parameters,
+                                                          2);
+  
+  std::vector<double> schedule;
+  if (schedule_colvec.n_elem==0)
+  {
+    stop("Error getting EnKI-ABC schedule: need at least one tolerance value.");
+  }
+  else if (schedule_colvec.n_elem==1)
+  {
+    schedule.push_back(arma::datum::inf);
+    schedule.push_back(schedule_colvec[0]);
+  }
+  else
+  {
+    for (size_t k=0; k<schedule_colvec.n_elem; ++k)
+    {
+      schedule.push_back(schedule_colvec[k]);
+    }
+  }
+  
+  int enki_lag = extract_int_parameter(parameters,
+                                       model_parameters,
+                                       3);
+  
+  std::string shifter_name = extract_string_parameter(parameters,
+                                                      model_parameters,
+                                                      4);
+  
+  double enki_annealing_desired_cess = extract_double_parameter(parameters,
+                                                                model_parameters,
+                                                                5);
+  
+  int enki_number_of_bisections = extract_int_parameter(parameters,
+                                                        model_parameters,
+                                                        6);
+    
+  bool parallel = false;
+  if (parameters.size()>7)
+  {
+    parallel = extract_bool_parameter(parameters,
+                                      model_parameters,
+                                      7);
+  }
+  
+  int grain_size = 100000;
+  if (parameters.size()>8)
+  {
+    grain_size = extract_int_parameter(parameters,
+                                       model_parameters,
+                                       8);
+  }
+  
+  return List::create(variable_names[0],
+                      number_of_points,
+                      tolerance_variable,
+                      schedule,
+                      enki_lag,
+                      shifter_name,
+                      enki_annealing_desired_cess,
+                      enki_number_of_bisections,
+                      parallel,
+                      grain_size);
+}
+
+
+
 std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerator* rng_in,
                                                             size_t* seed_in,
                                                             Data* data_in,
@@ -1009,7 +1107,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
           {
             std::string type = current_sbi["type"];
             
-            if ( (type=="abc_euclidean_uniform") || (type=="abc_lp_uniform") )
+            if ( (type=="euclidean_uniform_abc") || (type=="lp_uniform_abc") )
             {
               std::string data_variable;
               size_t number_of_points;
@@ -1019,7 +1117,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
               bool parallel;
               size_t grain_size;
               
-              if (type=="abc_euclidean_uniform")
+              if (type=="euclidean_uniform_abc")
               {
                 List info = get_abc_euclidean_uniform_parameter_info(model_parameters,
                                                                      current_sbi,
@@ -1135,6 +1233,218 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                             number_of_points,
                                                                                             parallel,
                                                                                             grain_size);
+                }
+              }
+              
+            }
+            else if (type=="gaussian_abc")
+            {
+              std::string data_variable;
+              size_t number_of_points;
+              std::string tolerance_variable;
+              double tolerance;
+              bool parallel;
+              size_t grain_size;
+              
+              // same function as getting a Gaussian
+              List info = get_abc_euclidean_uniform_parameter_info(model_parameters,
+                                                                   current_sbi,
+                                                                   type);
+              
+              std::string temp_data_variable = info[0];
+              data_variable = temp_data_variable;
+              number_of_points = info[1];
+              std::string temp_tolerance_variable = info[2];
+              tolerance_variable = temp_tolerance_variable;
+              tolerance = info[3];
+              parallel = info[4];
+              grain_size = info[5];
+              
+              bool adaptive = false;
+              for (auto k=sequencer_variables.begin();
+                   k!=sequencer_variables.end();
+                   ++k)
+              {
+                if (*k==tolerance_variable)
+                {
+                  adaptive = true;
+                }
+              }
+              
+              std::vector<std::string> data_variables_in;
+              data_variables_in.push_back(data_variable);
+              
+              if (current_factor.containsElementNamed("summary_statistics"))
+              {
+                SEXP summary_statistics_SEXP = current_factor["summary_statistics"];
+                SummaryStatisticsPtr summary_stats = load_summary_statistics(summary_statistics_SEXP);
+                
+                data_created_in_get_likelihood_estimators.push_back(summary_stats(*data_in));
+                
+                if (adaptive==false)
+                {
+                  new_likelihood_estimator = make_fixed_epsilon_gaussian_abc_likelihood(rng_in,
+                                                                                        seed_in,
+                                                                                        &data_created_in_get_likelihood_estimators.back(),
+                                                                                        data_variables_in,
+                                                                                        "",
+                                                                                        tolerance_variable,
+                                                                                        tolerance,
+                                                                                        simulate_data_model_in,
+                                                                                        std::make_shared<Transform>(summary_stats),
+                                                                                        number_of_points,
+                                                                                        parallel,
+                                                                                        grain_size);
+                }
+                else
+                {
+                  new_likelihood_estimator = make_varying_epsilon_gaussian_abc_likelihood(rng_in,
+                                                                                          seed_in,
+                                                                                          &data_created_in_get_likelihood_estimators.back(),
+                                                                                          data_variables_in,
+                                                                                          "",
+                                                                                          tolerance_variable,
+                                                                                          simulate_data_model_in,
+                                                                                          std::make_shared<Transform>(summary_stats),
+                                                                                          number_of_points,
+                                                                                          parallel,
+                                                                                          grain_size);
+                }
+              }
+              else
+              {
+                if (adaptive==false)
+                {
+                  new_likelihood_estimator = make_fixed_epsilon_gaussian_abc_likelihood(rng_in,
+                                                                                        seed_in,
+                                                                                        data_in,
+                                                                                        data_variables_in,
+                                                                                        "",
+                                                                                        tolerance_variable,
+                                                                                        tolerance,
+                                                                                        simulate_data_model_in,
+                                                                                        number_of_points,
+                                                                                        parallel,
+                                                                                        grain_size);
+                }
+                else
+                {
+                  new_likelihood_estimator = make_varying_epsilon_gaussian_abc_likelihood(rng_in,
+                                                                                          seed_in,
+                                                                                          data_in,
+                                                                                          data_variables_in,
+                                                                                          "",
+                                                                                          tolerance_variable,
+                                                                                          simulate_data_model_in,
+                                                                                          number_of_points,
+                                                                                          parallel,
+                                                                                          grain_size);
+                }
+              }
+              
+            }
+            else if (type=="enki_abc")
+            {
+              std::string data_variable;
+              size_t number_of_points;
+              std::string tolerance_variable;
+              std::vector<double> schedule;
+              size_t enki_lag;
+              std::string shifter_name;
+              double enki_annealing_desired_cess;
+              size_t enki_number_of_bisections;
+              bool parallel;
+              size_t grain_size;
+              
+              List info = get_abc_enki_parameter_info(model_parameters,
+                                                      current_sbi,
+                                                      type);
+              
+              std::string temp_data_variable = info[0];
+              data_variable = temp_data_variable;
+              number_of_points = info[1];
+              std::string temp_tolerance_variable = info[2];
+              tolerance_variable = temp_tolerance_variable;
+              std::vector<double> temp_schedule = info[3];
+              schedule = temp_schedule;
+              enki_lag = info[4];
+              std::string temp_shifter_name = info[5];
+              shifter_name = temp_shifter_name;
+              enki_annealing_desired_cess = info[6];
+              enki_number_of_bisections = info[7];
+              parallel = info[8];
+              grain_size = info[9];
+              
+              EnsembleShifter* shifter = new StochasticEnsembleShifter();
+              
+              bool adaptive = false;
+              for (auto k=sequencer_variables.begin();
+                   k!=sequencer_variables.end();
+                   ++k)
+              {
+                if (*k==tolerance_variable)
+                {
+                  adaptive = true;
+                }
+              }
+              
+              std::vector<std::string> data_variables_in;
+              data_variables_in.push_back(data_variable);
+              
+              if (current_factor.containsElementNamed("summary_statistics"))
+              {
+                SEXP summary_statistics_SEXP = current_factor["summary_statistics"];
+                SummaryStatisticsPtr summary_stats = load_summary_statistics(summary_statistics_SEXP);
+                
+                data_created_in_get_likelihood_estimators.push_back(summary_stats(*data_in));
+                
+                if (adaptive==false)
+                {
+                  new_likelihood_estimator = make_fixed_epsilon_enki_abc_likelihood(rng_in,
+                                                                                    seed_in,
+                                                                                    &data_created_in_get_likelihood_estimators.back(),
+                                                                                    enki_lag,
+                                                                                    shifter,
+                                                                                    enki_annealing_desired_cess,
+                                                                                    enki_number_of_bisections,
+                                                                                    "",
+                                                                                    tolerance_variable,
+                                                                                    schedule,
+                                                                                    data_variables_in,
+                                                                                    simulate_data_model_in,
+                                                                                    std::make_shared<Transform>(summary_stats),
+                                                                                    number_of_points,
+                                                                                    parallel,
+                                                                                    grain_size);
+                }
+                else
+                {
+                  stop("Adaptive approach to choosing epsilon not yet implemented in EnKI-ABC.");
+                }
+              }
+              else
+              {
+                if (adaptive==false)
+                {
+                  new_likelihood_estimator = make_fixed_epsilon_enki_abc_likelihood(rng_in,
+                                                                                    seed_in,
+                                                                                    data_in,
+                                                                                    enki_lag,
+                                                                                    shifter,
+                                                                                    enki_annealing_desired_cess,
+                                                                                    enki_number_of_bisections,
+                                                                                    "",
+                                                                                    tolerance_variable,
+                                                                                    schedule,
+                                                                                    data_variables_in,
+                                                                                    simulate_data_model_in,
+                                                                                    number_of_points,
+                                                                                    parallel,
+                                                                                    grain_size);
+                }
+                else
+                {
+                  stop("Adaptive approach to choosing epsilon not yet implemented in EnKI-ABC.");
                 }
               }
               

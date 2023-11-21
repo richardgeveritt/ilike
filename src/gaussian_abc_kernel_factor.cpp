@@ -1,5 +1,6 @@
 #include "gaussian_abc_kernel_factor.h"
 #include "utils.h"
+#include "distributions.h"
 
 namespace ilike
 {
@@ -32,7 +33,7 @@ GaussianABCKernelFactor::GaussianABCKernelFactor(const std::vector<std::string> 
                  data_in)
 {
   double n = double(this->data_colvec.n_elem);
-  this->constant = -n/2.0*log(2*M_PI);
+  this->constant = -(n/2.0)*log(2.0*M_PI);
 }
 
 GaussianABCKernelFactor::~GaussianABCKernelFactor()
@@ -76,8 +77,8 @@ void GaussianABCKernelFactor::make_copy(const GaussianABCKernelFactor &another)
 
 double GaussianABCKernelFactor::likelihood_evaluate(const Parameters &input) const
 {
-  double epsilon = input[this->epsilon_variable][0];
-  if (epsilon==0.0)
+  double epsilon2 = pow(input[this->epsilon_variable][0],2.0);
+  if (epsilon2==0.0)
     return -arma::datum::inf;
   else
   {
@@ -91,7 +92,8 @@ double GaussianABCKernelFactor::likelihood_evaluate(const Parameters &input) con
     }
     
     double distance = arma::sum(arma::pow((input.get_colvec(this->data_variables)-this->data_colvec)/scale,2.0));
-    return this->constant - 0.5*(1.0/pow(epsilon,2.0))*distance - 0.5*scale.n_elem*log(epsilon) - 0.5*arma::sum(log(scale));
+    return this->constant - 0.5*(1.0/epsilon2)*distance - 0.5*scale.n_elem*log(epsilon2) - 0.5*arma::sum(log(scale));
+    //double test_result = dmvnorm(this->data_colvec,input.get_colvec(this->data_variables),epsilon2*arma::mat(this->data_colvec.n_elem,this->data_colvec.n_elem,arma::fill::eye));
   }
 }
 
@@ -118,12 +120,12 @@ double GaussianABCKernelFactor::evaluate_kernel_given_distance(const Parameters 
                                                                double distance,
                                                                double scale_constant) const
 {
-  double epsilon = input[this->epsilon_variable][0];
-  if (epsilon==0.0)
+  double epsilon2 = pow(input[this->epsilon_variable][0],2.0);
+  if (epsilon2==0.0)
     return -arma::datum::inf;
   else
   {
-    return this->constant - 0.5*(1.0/(epsilon*epsilon))*distance - 0.5*this->data_colvec.n_elem*log(epsilon) - scale_constant;
+    return this->constant - 0.5*(1.0/(epsilon2))*distance - 0.5*this->data_colvec.n_elem*log(epsilon2) - scale_constant;
   }
 }
 

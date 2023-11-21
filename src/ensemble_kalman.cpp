@@ -23,6 +23,7 @@ EnsembleKalman::EnsembleKalman()
   //this->inverse_transform = NULL;
   
   this->initialised = false;
+  this->reciprocal_schedule_scale = 0.0;
   //this->measurement_covariance_estimators.resize(0);
   //this->measurements_names.resize(0);
   //this->states_names.resize(0);
@@ -57,6 +58,7 @@ EnsembleKalman::EnsembleKalman(RandomNumberGenerator* rng_in,
   //this->inverse_transform = inverse_transform_in;
   
   this->initialised = false;
+  this->reciprocal_schedule_scale = 0.0;
   //this->measurement_covariance_estimators.resize(0);
   //this->measurements_names.resize(0);
   //this->states_names.resize(0);
@@ -134,6 +136,8 @@ void EnsembleKalman::make_copy(const EnsembleKalman &another)
   this->number_of_ensemble_members = another.number_of_ensemble_members;
   this->lag = another.lag;
   this->sequencer_limit_is_fixed = another.sequencer_limit_is_fixed;
+  
+  this->reciprocal_schedule_scale = another.reciprocal_schedule_scale;
   
   /*
   this->measurement_covariance_estimators.resize(0);
@@ -423,6 +427,11 @@ void EnsembleKalman::simulate_ensemble_member(RandomNumberGenerator &rng,
 void EnsembleKalman::find_measurement_covariances(EnsembleKalmanOutput* simulation)
 {
   simulation->back().find_measurement_covariances();
+}
+
+void EnsembleKalman::set_reciprocal_schedule_scale(double reciprocal_schedule_scale_in)
+{
+  this->reciprocal_schedule_scale = reciprocal_schedule_scale_in;
 }
 
 /*

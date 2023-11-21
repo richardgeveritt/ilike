@@ -405,6 +405,8 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
   //this->sequencer_parameters = &this->sequencer.schedule_parameters;
   this->mcmc = NULL;
   
+  this->set_reciprocal_schedule_scale(schedule_in.back());
+  
   //this->mcmc = mcmc_in;
   //this->mcmc->set_index(new VectorSingleIndex(indices));
   //this->mcmc_at_last_step = mcmc_at_last_step_in;

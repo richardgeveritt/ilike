@@ -430,7 +430,14 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
       }
       if (this->estimator->schedule_parameters_file_stream.is_open())
       {
-        this->estimator->schedule_parameters_file_stream << this->all_ensembles[deque_index].schedule_parameters << std::endl;
+        if (this->estimator->reciprocal_schedule_scale==0.0)
+        {
+          this->estimator->schedule_parameters_file_stream << this->all_ensembles[deque_index].schedule_parameters << std::endl;
+        }
+        else
+        {
+          this->estimator->schedule_parameters_file_stream << this->estimator->reciprocal_schedule_scale / this->all_ensembles[deque_index].schedule_parameters << std::endl;
+        }
         //schedule_parameters_file_stream.close();
       }
       else

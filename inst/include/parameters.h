@@ -980,6 +980,17 @@ inline Rcpp::List Parameters::as_list() const
 }
 */
 
+inline Parameters operator/(double scale, const Parameters &p)
+{
+  Parameters output;
+  for (auto it=p.vector_begin();it!=p.vector_end();++it)
+  {
+    output[it->first] = 1.0/p[it->first];
+  }
+  
+  return output;
+}
+
 inline std::ostream& operator<<(std::ostream& os, const Parameters &p)
 {
   for (auto it=p.vector_parameters.begin();it!=p.vector_parameters.end();++it)

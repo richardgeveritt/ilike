@@ -157,6 +157,8 @@ protected:
   
   void find_measurement_covariances(EnsembleKalmanOutput* simulation);
   
+  void set_reciprocal_schedule_scale(double reciprocal_schedule_scale_in);
+  
   // not stored here
   //Parameters* sequencer_parameters;
   
@@ -202,6 +204,8 @@ protected:
   //TransformPtr inverse_transform;
   
   bool initialised;
+  
+  double reciprocal_schedule_scale;
 
   // Stored here.
   //EnsembleKalmanOutput* output;
