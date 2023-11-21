@@ -954,6 +954,10 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
           }
           
         }
+        else if ( current_factor.containsElementNamed("simulate_prior") )
+        {
+          
+        }
         else if ( current_factor.containsElementNamed("evaluate_log_likelihood") )
         {
           

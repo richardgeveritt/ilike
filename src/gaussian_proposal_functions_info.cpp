@@ -43,7 +43,7 @@ void GaussianProposalFunctionsInfo::make_copy(const GaussianProposalFunctionsInf
 
 //Move constructor for the GaussianProposalFunctionsInfo class.
 GaussianProposalFunctionsInfo::GaussianProposalFunctionsInfo(GaussianProposalFunctionsInfo &&another)
-: mean(NULL), covariance(NULL), scale(NULL)
+: mean(NULL), covariance(NULL), scale()
 {
   this->make_copy(std::move(another));
 }
