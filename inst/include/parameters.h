@@ -980,14 +980,24 @@ inline Rcpp::List Parameters::as_list() const
 }
 */
 
-inline Parameters operator/(double scale, const Parameters &p)
+inline Parameters pow(const Parameters &p, double power)
 {
   Parameters output;
   for (auto it=p.vector_begin();it!=p.vector_end();++it)
   {
-    output[it->first] = 1.0/p[it->first];
+    output[it->first] = arma::pow(p[it->first],power);
   }
   
+  return output;
+}
+
+inline Parameters operator*(double scale, const Parameters &p)
+{
+  Parameters output = p;
+  for (auto it=p.vector_begin();it!=p.vector_end();++it)
+  {
+    output[it->first] = scale*p[it->first];
+  }
   return output;
 }
 

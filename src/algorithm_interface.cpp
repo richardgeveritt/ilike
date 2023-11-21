@@ -766,9 +766,11 @@ List get_abc_enki_parameter_info(const List &model_parameters,
                                                       model_parameters,
                                                       4);
   
-  double enki_annealing_desired_cess = extract_double_parameter(parameters,
-                                                                model_parameters,
-                                                                5);
+  double proportion = extract_double_parameter(parameters,
+                                               model_parameters,
+                                               5);
+  
+  double enki_annealing_desired_cess = proportion*double(number_of_points);
   
   int enki_number_of_bisections = extract_int_parameter(parameters,
                                                         model_parameters,

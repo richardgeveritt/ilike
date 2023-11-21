@@ -436,7 +436,7 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
         }
         else
         {
-          this->estimator->schedule_parameters_file_stream << this->estimator->reciprocal_schedule_scale / this->all_ensembles[deque_index].schedule_parameters << std::endl;
+          this->estimator->schedule_parameters_file_stream << this->estimator->reciprocal_schedule_scale * pow(this->all_ensembles[deque_index].schedule_parameters,-0.5) << std::endl;
         }
         //schedule_parameters_file_stream.close();
       }

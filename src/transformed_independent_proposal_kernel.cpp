@@ -119,8 +119,10 @@ Parameters TransformedIndependentProposalKernel::independent_simulate(RandomNumb
                                                                       const Parameters &conditioned_on_parameters) const
 {
   if (this->distribution_on_transformed_space==true)
+  {
     return this->transform->transform(this->proposal->independent_simulate(rng,
-                                                                          conditioned_on_parameters));
+                                                                           conditioned_on_parameters));
+  }
   else
   {
     Parameters output(this->proposal->independent_simulate(rng,

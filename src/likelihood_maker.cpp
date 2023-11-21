@@ -325,7 +325,7 @@ EnsembleKalmanInversion* make_fixed_epsilon_enki_abc_likelihood(RandomNumberGene
     }
     else
     {
-      temperature_schedule.push_back(min_epsilon/schedule_in[i]);
+      temperature_schedule.push_back(pow(min_epsilon/schedule_in[i],2.0));
     }
   }
   
@@ -474,6 +474,8 @@ EnsembleKalmanInversion* make_fixed_epsilon_enki_abc_likelihood(RandomNumberGene
                                                                 size_t grain_size_in)
 {
   IndependentProposalKernel* model_simulator = new CustomIndependentProposalKernel(simulate_model_in);
+  IndependentProposalKernel* summary_model_simulator = new TransformedIndependentProposalKernel(model_simulator,
+                                                                                                summary_statistics_in);
   
   if (schedule_in.size()<2)
   {
@@ -511,6 +513,8 @@ EnsembleKalmanInversion* make_fixed_epsilon_enki_abc_likelihood(RandomNumberGene
     }
   }
   
+  //Rcout << min_epsilon << std::endl;
+  
   return new EnsembleKalmanInversion(rng_in,
                                      seed_in,
                                      summary_data_in,
@@ -521,11 +525,11 @@ EnsembleKalmanInversion* make_fixed_epsilon_enki_abc_likelihood(RandomNumberGene
                                      number_of_bisections_in,
                                      sequence_variable_in,
                                      temperature_schedule,
-                                     model_simulator,
+                                     summary_model_simulator,
                                      summary_data_variables_in,
                                      min_epsilon,
                                      scale_variable_in,
-                                     summary_statistics_in,
+                                     NULL,
                                      NULL,
                                      parallel_in,
                                      grain_size_in,
