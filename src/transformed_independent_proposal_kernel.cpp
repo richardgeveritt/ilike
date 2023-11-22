@@ -25,6 +25,11 @@ TransformedIndependentProposalKernel::TransformedIndependentProposalKernel(Indep
   :IndependentProposalKernel(), transform(transform_in), distribution_on_transformed_space(distribution_on_transformed_space_in)
 {
   this->proposal = proposal_in;
+  
+  if (this->transform==NULL)
+  {
+    Rcpp::stop("TransformedIndependentProposalKernel::TransformedIndependentProposalKernel - transform is NULL.");
+  }
 }
 
 TransformedIndependentProposalKernel::TransformedIndependentProposalKernel(const TransformedIndependentProposalKernel &another)

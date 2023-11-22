@@ -71,7 +71,6 @@ using namespace Rcpp;
 #include "direct_nonlinear_gaussian_measurement_covariance_estimator.h"
 #include "mixed_generic_direct_gaussian_measurement_covariance_estimator.h"
 #include "stochastic_ensemble_shifter.h"
-//#include "adjustment_ensemble_shifter.h"
 
 // from https://stackoverflow.com/questions/2165921/converting-from-a-stdstring-to-bool
 bool stob(const std::string &s)
