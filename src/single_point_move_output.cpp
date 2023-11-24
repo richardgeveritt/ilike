@@ -106,7 +106,6 @@ void SinglePointMoveOutput::write_vector_points(const std::vector<std::string> &
 {
   if (file_stream.is_open())
   {
-    //std::cout << output << std::endl;
     if (transform==NULL)
     {
       //for (size_t i=0; i<variables.size(); ++i)

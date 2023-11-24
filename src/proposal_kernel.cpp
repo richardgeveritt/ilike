@@ -97,8 +97,6 @@ Particle ProposalKernel::move(RandomNumberGenerator &rng,
   
   if (this->transform==NULL)
   {
-    //Parameters thing = ;
-    //std::cout << thing << std::endl;
     proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->simulate(rng,particle));
   }
   else

@@ -473,9 +473,7 @@ void SMC::simulate_proposal(SMCOutput* current_state)
   else
   {
     //arma::mat tau = this->initial_particles[0]["tau"];
-    
-    //std::cout << this->initial_particles[0];
-    
+
     next_particles->setup(this->initial_particles,
                           this->log_probabilities_of_initial_values,
                           this->factors,

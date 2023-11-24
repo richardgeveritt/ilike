@@ -91,26 +91,63 @@ get_smc_sequences = function(model,model_parameters)
     {
       if (method_name %in% names(methods[[i]]) && ("type" %in% names(methods[[i]][[method_name]])) && ("variables" %in% names(methods[[i]][[method_name]])) && ("parameters" %in% names(methods[[i]][[method_name]])) )
       {
-        sequence = methods[[i]][[method_name]][["parameters"]]
-
-        f_info = method_parse(sequence,model_parameters)
-
-        if (length(f_info[[2]])>0)
+        if (methods[[i]][[method_name]][["type"]]=="parameter")
         {
-          stop('SMC sequence must not have any variables (except for parameters "p1", "p2", etc.')
-        }
+          sequence = methods[[i]][[method_name]][["parameters"]][[1]]
 
-        if (counter==0)
-        {
-          schedule_list = list()
-          schedule_list[[1]] = f_info[[1]]()
-          output_method = list(types=methods[[i]][[method_name]][["type"]],variables=methods[[i]][[method_name]][["variables"]],schedules=schedule_list)
+          f_info = method_parse(sequence,model_parameters)
+
+          if (length(f_info[[2]])>0)
+          {
+            stop('SMC sequence must not have any variables (except for parameters "p1", "p2", etc.)')
+          }
+
+          if (length(methods[[i]][[method_name]][["parameters"]])<2)
+          {
+            stop('If SMC sequence is "parameter", we must also specify the factors affected by this parameter changing.')
+          }
+          else
+          {
+            factors_affected = method_parse(methods[[i]][[method_name]][["parameters"]][[2]],model_parameters)
+          }
+
+          if (counter==0)
+          {
+            schedule_list = list()
+            schedule_list[[1]] = f_info[[1]]()
+            output_method = list(types=methods[[i]][[method_name]][["type"]],variables=methods[[i]][[method_name]][["variables"]],schedules=schedule_list,factors_affected=factors_affected[[1]]())
+          }
+          else
+          {
+            output_method[["types"]] = c(output_method[["types"]],methods[[i]][[method_name]][["type"]])
+            output_method[["variables"]] = c(output_method[["variables"]],methods[[i]][[method_name]][["variables"]])
+            output_method[["schedules"]] = append(output_method[["schedules"]],f_info[[1]]())
+            output_method[["factors_affected"]] = append(output_method[["factors_affected"]],factors_affected[[1]]())
+          }
         }
         else
         {
-          output_method[["types"]] = c(output_method[["types"]],methods[[i]][[method_name]][["type"]])
-          output_method[["variables"]] = c(output_method[["variables"]],methods[[i]][[method_name]][["variables"]])
-          output_method[["schedules"]] = append(output_method[["schedules"]],f_info[[1]]())
+          sequence = methods[[i]][[method_name]][["parameters"]]
+
+          f_info = method_parse(sequence,model_parameters)
+
+          if (length(f_info[[2]])>0)
+          {
+            stop('SMC sequence must not have any variables (except for parameters "p1", "p2", etc.)')
+          }
+
+          if (counter==0)
+          {
+            schedule_list = list()
+            schedule_list[[1]] = f_info[[1]]()
+            output_method = list(types=methods[[i]][[method_name]][["type"]],variables=methods[[i]][[method_name]][["variables"]],schedules=schedule_list)
+          }
+          else
+          {
+            output_method[["types"]] = c(output_method[["types"]],methods[[i]][[method_name]][["type"]])
+            output_method[["variables"]] = c(output_method[["variables"]],methods[[i]][[method_name]][["variables"]])
+            output_method[["schedules"]] = append(output_method[["schedules"]],f_info[[1]]())
+          }
         }
 
         counter = counter + 1

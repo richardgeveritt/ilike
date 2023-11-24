@@ -55,8 +55,6 @@ void StochasticEnsembleShifter::shift(const EnsembleFactorVariables* ensemble_fa
   
   //std::vector<arma::colvec*> measurements = ensemble_factor_variables->get_measurements();
   
-  //std::cout << shift_terms[0] << std::endl;
-  
   for (size_t j=0;
        j<kalman_gains.size();
        ++j)

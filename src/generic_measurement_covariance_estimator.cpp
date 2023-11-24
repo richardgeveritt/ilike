@@ -143,10 +143,6 @@ arma::mat GenericMeasurementCovarianceEstimator::get_adjustment(const arma::mat 
   arma::mat I;
   I.eye(Vtranspose.n_cols,Vtranspose.n_cols);
   
-  std::cout << (inverse_incremental_temperature-1.0)*this->get_Cygivenx() << std::endl;
-  
-  std::cout << I + Yhat*arma::inv_sympd((inverse_incremental_temperature-1.0)*this->get_Cygivenx())*Yhat.t() << std::endl;
-  
   arma::mat for_eig = Vtranspose*(arma::inv_sympd(I + Yhat*arma::inv_sympd((inverse_incremental_temperature-1.0)*this->get_Cygivenx())*Yhat.t()))*Vtranspose.t();
   
   arma::mat U;

@@ -228,9 +228,6 @@ void DirectABCGaussianMeasurementCovarianceEstimator::set_parameters(const Param
       arma::vec for_diag = arma::pow(this->min_epsilon*scale,2.0);
       cov.diag() = for_diag;
       
-      //std::cout << scale << std::endl;
-      //std::cout << for_diag << std::endl;
-      
       this->kernel.set_covariance(this->measurement_variables[i],
                                   cov);
 

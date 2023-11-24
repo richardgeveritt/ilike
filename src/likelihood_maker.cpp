@@ -469,13 +469,17 @@ EnsembleKalmanInversion* make_fixed_epsilon_enki_abc_likelihood(RandomNumberGene
                                                                 const std::vector<std::string> &summary_data_variables_in,
                                                                 SimulateModelPtr simulate_model_in,
                                                                 std::shared_ptr<Transform> summary_statistics_in,
+                                                                bool enki_on_summary,
                                                                 size_t number_of_abc_simulations_in,
                                                                 bool parallel_in,
                                                                 size_t grain_size_in)
 {
   IndependentProposalKernel* model_simulator = new CustomIndependentProposalKernel(simulate_model_in);
-  IndependentProposalKernel* summary_model_simulator = new TransformedIndependentProposalKernel(model_simulator,
-                                                                                                summary_statistics_in);
+  if (enki_on_summary)
+  {
+    model_simulator = new TransformedIndependentProposalKernel(model_simulator,
+                                                               summary_statistics_in);
+  }
   
   if (schedule_in.size()<2)
   {
@@ -515,25 +519,50 @@ EnsembleKalmanInversion* make_fixed_epsilon_enki_abc_likelihood(RandomNumberGene
   
   //Rcout << min_epsilon << std::endl;
   
-  return new EnsembleKalmanInversion(rng_in,
-                                     seed_in,
-                                     summary_data_in,
-                                     number_of_abc_simulations_in,
-                                     lag_in,
-                                     shifter_in,
-                                     annealing_desired_cess_in,
-                                     number_of_bisections_in,
-                                     sequence_variable_in,
-                                     temperature_schedule,
-                                     summary_model_simulator,
-                                     summary_data_variables_in,
-                                     min_epsilon,
-                                     scale_variable_in,
-                                     NULL,
-                                     NULL,
-                                     parallel_in,
-                                     grain_size_in,
-                                     "");
+  if (enki_on_summary)
+  {
+    return new EnsembleKalmanInversion(rng_in,
+                                       seed_in,
+                                       summary_data_in,
+                                       number_of_abc_simulations_in,
+                                       lag_in,
+                                       shifter_in,
+                                       annealing_desired_cess_in,
+                                       number_of_bisections_in,
+                                       sequence_variable_in,
+                                       temperature_schedule,
+                                       model_simulator,
+                                       summary_data_variables_in,
+                                       min_epsilon,
+                                       scale_variable_in,
+                                       NULL,
+                                       NULL,
+                                       parallel_in,
+                                       grain_size_in,
+                                       "");
+  }
+  else
+  {
+    return new EnsembleKalmanInversion(rng_in,
+                                       seed_in,
+                                       summary_data_in,
+                                       number_of_abc_simulations_in,
+                                       lag_in,
+                                       shifter_in,
+                                       annealing_desired_cess_in,
+                                       number_of_bisections_in,
+                                       sequence_variable_in,
+                                       temperature_schedule,
+                                       model_simulator,
+                                       summary_data_variables_in,
+                                       min_epsilon,
+                                       scale_variable_in,
+                                       summary_statistics_in,
+                                       NULL,
+                                       parallel_in,
+                                       grain_size_in,
+                                       "");
+  }
 }
 
 ImportanceSampler* make_varying_epsilon_gaussian_abc_likelihood(RandomNumberGenerator* rng_in,
@@ -904,6 +933,7 @@ ImportanceSampler* make_fixed_epsilon_enki_abc_is(RandomNumberGenerator* rng_in,
                                                   size_t enki_number_of_bisections_in,
                                                   SimulateModelPtr simulate_model_in,
                                                   std::shared_ptr<Transform> summary_statistics_in,
+                                                  bool enki_on_summary,
                                                   size_t number_of_abc_simulations_in,
                                                   bool abc_parallel_in,
                                                   size_t abc_grain_size_in,
@@ -929,6 +959,7 @@ ImportanceSampler* make_fixed_epsilon_enki_abc_is(RandomNumberGenerator* rng_in,
                                                                   summary_data_variables_in,
                                                                   simulate_model_in,
                                                                   summary_statistics_in,
+                                                                  enki_on_summary,
                                                                   number_of_abc_simulations_in,
                                                                   abc_parallel_in,
                                                                   abc_grain_size_in));

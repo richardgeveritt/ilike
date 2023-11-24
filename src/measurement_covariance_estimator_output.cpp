@@ -33,7 +33,6 @@ void MeasurementCovarianceEstimatorOutput::make_copy(const MeasurementCovariance
 
 void MeasurementCovarianceEstimatorOutput::simulate(const Parameters &parameters)
 {
-  //std::cout << parameters;
   std::shared_ptr<Transform> transform = this->get_estimator()->transform;
   if (transform==NULL)
     this->specific_simulate(parameters);

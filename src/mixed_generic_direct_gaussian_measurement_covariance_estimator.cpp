@@ -177,31 +177,13 @@ arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_adjustme
   
   arma::mat for_eig = Vtranspose*(arma::inv_sympd(I + Yhat*arma::inv_sympd((inverse_incremental_temperature-1.0)*this->get_Cygivenx() + inverse_incremental_temperature*this->get_prior_measurement_covariance_embedded_in_full_space())*Yhat.t()))*Vtranspose.t();
   
-  //std::cout << for_eig << std::endl;
-  
   arma::mat U;
   arma::vec diagD;
   //arma::mat Utrans;
   arma::eig_sym(diagD,U,for_eig);
   
-  //std::cout << U << std::endl;
-  
   arma::mat Dsqrt(diagD.n_elem,diagD.n_elem);
   Dsqrt.diag() = arma::sqrt(diagD);
-
-  /*
-  std::cout << P.t() << std::endl;
-  std::cout << arma::pinv(Dhathalf) << std::endl;
-  std::cout << arma::pinv(Dhathalf)*P.t() << std::endl;
-  std::cout << Dsqrt << std::endl;
-  std::cout << Dsqrt*arma::pinv(Dhathalf)*P.t() << std::endl;
-  std::cout << U << std::endl;
-  std::cout << U*Dsqrt*arma::pinv(Dhathalf)*P.t() << std::endl;
-  std::cout << Dhathalf << std::endl;
-  std::cout << Dhathalf*U*Dsqrt*arma::pinv(Dhathalf)*P.t() << std::endl;
-  std::cout << P << std::endl;
-  std::cout << P*Dhathalf*U*Dsqrt*arma::pinv(Dhathalf)*P.t() << std::endl;
-  */
   
   return P*Dhathalf*U*Dsqrt*arma::pinv(Dhathalf)*P.t();
 }

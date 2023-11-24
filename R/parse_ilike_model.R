@@ -97,7 +97,7 @@ my_julia_source = function(filename,
 }
 
 ilike_parse <- function(input,
-                        parameter_list = list())
+                        model_parameter_list = list())
 {
   required_args <- formula.tools::get.vars(parse(text=input))
 
@@ -120,14 +120,14 @@ ilike_parse <- function(input,
       if ( (nchar(h)>1) && (substr(h,1,1)=="p") && (!grepl("\\D",substr(h,2,nchar(h)))) )
       {
         parameter_number = as.numeric(substr(h,2,nchar(h)))
-        if (parameter_number<=length(parameter_list))
+        if (parameter_number<=length(model_parameter_list))
         {
           parameter_arguments = c(parameter_arguments,h)
-          do.call("<-",list(h, parameter_list[[parameter_number]]))
+          do.call("<-",list(h, model_parameter_list[[parameter_number]]))
         }
         else
         {
-          stop(paste("In call ",input,", parameter ",as.numeric(substr(h,2,nchar(h)))," not found in parameter_list (parameter_list has length ",length(parameter_list),").",sep=""))
+          stop(paste("In call ",input,", parameter ",as.numeric(substr(h,2,nchar(h)))," not found in model_parameter_list (model_parameter_list has length ",length(model_parameter_list),").",sep=""))
         }
       }
     }
@@ -3001,7 +3001,7 @@ function_name_for_cpp <- function(block_code)
   return(split_at_space[length(split_at_space)])
 }
 
-extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types)
+extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types)
 {
 
   # Get information about the order in which MCMC moves are included.
@@ -3216,7 +3216,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
 
           my_list = list(list(type=ilike_type,
-                              model=ilike::compile(filename,parameter_list,external_packages,julia_bin_dir,julia_required_libraries,verify_cpp_function_types,keep_temporary_model_code,nesting_level+1),
+                              model=ilike::compile(filename,model_parameter_list,external_packages,julia_bin_dir,julia_required_libraries,verify_cpp_function_types,keep_temporary_model_code,nesting_level+1),
                               parameters=parameters))
           names(my_list) = c(block_name)
 
@@ -3261,7 +3261,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
         }
 
         function_info = ilike_parse(function_to_use,
-                                    parameter_list)
+                                    model_parameter_list)
 
         R_function_arguments = function_info[[2]]
 
@@ -5873,9 +5873,12 @@ strip_out_xptr_stuff <- function(blocks)
           current_names = names(blocks[[i]][[j]])
           for (k in 1:length(current_names))
           {
-            if ( grepl("XPtr", current_names[k]) )
+            if (!is.null(current_names))
             {
-              which_xptr = c(which_xptr,k)
+              if ( grepl("XPtr", current_names[k]) )
+              {
+                which_xptr = c(which_xptr,k)
+              }
             }
           }
           if (length(which_xptr)>0)
@@ -5893,7 +5896,7 @@ strip_out_xptr_stuff <- function(blocks)
 #' Parse .ilike file to give ilike model.
 #'
 #' @param filename The name (and path) of the .ilike file containing the model.
-#' @param parameter_list (optional) A list containing parameters for the model.
+#' @param model_parameter_list (optional) A list containing parameters for the model.
 #' @param R_functions (optional) If TRUE, returns R functions. If FALSE, returns C++ functions.
 #' @param external_packages (optional) A vector of names of other R packages the functions rely on.
 #' @param julia_bin_dir (optional) The directory containing the Julia bin file - only needed if Julia functions are used.
@@ -5904,7 +5907,7 @@ strip_out_xptr_stuff <- function(blocks)
 #' @return A list containing the model details.
 #' @export
 compile <- function(filename,
-                    parameter_list = list(),
+                    model_parameter_list = list(),
                     R_functions = FALSE,
                     external_packages = c(),
                     julia_bin_dir="",
@@ -5993,7 +5996,7 @@ compile <- function(filename,
 
     if ( (nchar(line)>=3) && (substr(line, 1, 3)=="//#") )
     {
-      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types)
+      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types)
       in_block = FALSE
       starting_block_flag = TRUE
       is_custom = FALSE
@@ -6036,7 +6039,7 @@ compile <- function(filename,
           }
           else # end current block
           {
-            blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types)
+            blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types)
             is_custom = FALSE
             block_code = ""
           }
@@ -6102,7 +6105,7 @@ compile <- function(filename,
     # ignore block if block number is not positive
     if (number_to_pass_to_extract_block>0)
     {
-      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types)
+      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types)
       if ( (factor_number!=0) && (factor_number==length(blocks[["factor"]])) )
       {
         print_factor_info(length(blocks[["factor"]]),blocks,line_counter)

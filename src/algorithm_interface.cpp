@@ -720,12 +720,12 @@ List get_abc_enki_parameter_info(const List &model_parameters,
     Rcpp::stop("Only one variable allowed for " + sbi_name + ".");
   
   if (!current_sbi.containsElementNamed("parameters"))
-    Rcpp::stop("Missing parameters for " + sbi_name + " (7-9 parameters required).");
+    Rcpp::stop("Missing parameters for " + sbi_name + " (8-10 parameters required).");
   
   List parameters = current_sbi["parameters"];
   
-  if (! ( (parameters.size()==7) || (parameters.size()==8) || (parameters.size()==9) ) )
-    Rcpp::stop("7-9 parameters required for " + sbi_name + ".");
+  if (! ( (parameters.size()==8) || (parameters.size()==9) || (parameters.size()==10) ) )
+    Rcpp::stop("8-10 parameters required for " + sbi_name + ".");
   
   int number_of_points = extract_int_parameter(parameters,
                                                model_parameters,
@@ -774,21 +774,25 @@ List get_abc_enki_parameter_info(const List &model_parameters,
   int enki_number_of_bisections = extract_int_parameter(parameters,
                                                         model_parameters,
                                                         6);
+  
+  bool enki_on_summary = extract_bool_parameter(parameters,
+                                                model_parameters,
+                                                7);
     
   bool parallel = false;
-  if (parameters.size()>7)
+  if (parameters.size()>8)
   {
     parallel = extract_bool_parameter(parameters,
                                       model_parameters,
-                                      7);
+                                      8);
   }
   
   int grain_size = 100000;
-  if (parameters.size()>8)
+  if (parameters.size()>9)
   {
     grain_size = extract_int_parameter(parameters,
                                        model_parameters,
-                                       8);
+                                       9);
   }
   
   return List::create(variable_names[0],
@@ -799,6 +803,7 @@ List get_abc_enki_parameter_info(const List &model_parameters,
                       shifter_name,
                       enki_annealing_desired_cess,
                       enki_number_of_bisections,
+                      enki_on_summary,
                       parallel,
                       grain_size);
 }
@@ -818,6 +823,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                             Index* &without_cancelled_index,
                                                             Index* &full_index,
                                                             bool &any_annealing,
+                                                            const std::vector<int> &factors_affected_by_smc_sequence,
                                                             std::vector<Data> &data_created_in_get_likelihood_estimators)
 {
   data_created_in_get_likelihood_estimators.clear();
@@ -867,6 +873,13 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
 
     for (size_t i=0; i<factors.size(); ++i)
     {
+      
+      bool factor_is_fixed_in_smc = true;
+      for (size_t j=0; j<factors_affected_by_smc_sequence.size(); ++j)
+      {
+        if (i+1==factors_affected_by_smc_sequence[j])
+          factor_is_fixed_in_smc = false;
+      }
 
       if (Rf_isNewList(factors[i]))
       {
@@ -1019,7 +1032,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                        seed_in,
                                                                                        data_in,
                                                                                        new_factor,
-                                                                                       true);
+                                                                                       factor_is_fixed_in_smc);
           full_index_vector.push_back(likelihood_estimators.size());
                              
           //Rcout << "loading evaluate_log_prior" << std::endl;
@@ -1067,7 +1080,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                        seed_in,
                                                                                        data_in,
                                                                                        new_factor,
-                                                                                       true);
+                                                                                       factor_is_fixed_in_smc);
           
           full_index_vector.push_back(likelihood_estimators.size());
           without_cancelled_index_vector.push_back(likelihood_estimators.size());
@@ -1354,6 +1367,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
               std::string shifter_name;
               double enki_annealing_desired_cess;
               size_t enki_number_of_bisections;
+              bool enki_on_summary;
               bool parallel;
               size_t grain_size;
               
@@ -1373,8 +1387,9 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
               shifter_name = temp_shifter_name;
               enki_annealing_desired_cess = info[6];
               enki_number_of_bisections = info[7];
-              parallel = info[8];
-              grain_size = info[9];
+              enki_on_summary = info[8];
+              parallel = info[9];
+              grain_size = info[10];
               
               EnsembleShifter* shifter = new StochasticEnsembleShifter();
               
@@ -1414,6 +1429,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                     data_variables_in,
                                                                                     simulate_data_model_in,
                                                                                     std::make_shared<Transform>(summary_stats),
+                                                                                    enki_on_summary,
                                                                                     number_of_points,
                                                                                     parallel,
                                                                                     grain_size);
@@ -1532,7 +1548,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                        seed_in,
                                                                                        data_in,
                                                                                        proposal,
-                                                                                       true);
+                                                                                       factor_is_fixed_in_smc);
           
           full_index_vector.push_back(likelihood_estimators.size());
           without_cancelled_index_vector.push_back(likelihood_estimators.size());
@@ -1595,7 +1611,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                        seed_in,
                                                                                        data_in,
                                                                                        proposal,
-                                                                                       true);
+                                                                                       factor_is_fixed_in_smc);
           
           full_index_vector.push_back(likelihood_estimators.size());
           without_cancelled_index_vector.push_back(likelihood_estimators.size());
@@ -3925,6 +3941,13 @@ List get_smc_sequencer_info(const List &model,
       {
         std::vector<double> schedule_for_output;
         
+        /*
+        arma::colvec schedule = extract_vector_parameter(schedules,
+        model_parameters,
+        i);
+        schedule_for_output = arma::conv_to<std::vector<double>>::from(schedule);
+        */
+        
         if (isNumericVectorInList(schedules,i+1))
         {
           NumericVector schedule = schedules[i];
@@ -3938,7 +3961,24 @@ List get_smc_sequencer_info(const List &model,
         schedules_for_output.push_back(schedule_for_output);
       }
       
-      return List::create(types_for_output,variables_for_output,schedules_for_output,number_of_bisections);
+      if (smc_sequencer_method.containsElementNamed("factors_affected"))
+      {
+        if (isNumericVectorInList(smc_sequencer_method,"factors_affected"))
+        {
+          NumericVector factors_affected = smc_sequencer_method["factors_affected"];
+          //std::vector<int> factors_affected_for_output = as<std::vector<int>>(factors_affected);
+          
+          return List::create(types_for_output,variables_for_output,schedules_for_output,number_of_bisections,factors_affected);
+        }
+        else
+        {
+          stop("Factors affected invalid: needs to be a numeric vector.");
+        }
+      }
+      else
+      {
+        return List::create(types_for_output,variables_for_output,schedules_for_output,number_of_bisections);
+      }
     }
     else
     {
@@ -4064,6 +4104,13 @@ double do_importance_sampler(const List &model,
   std::vector<std::string> sequencer_variables = sequencer_info[1];
   std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
   
+  std::vector<int> factors_affected_by_smc_sequence;
+  if (sequencer_info.length()==5)
+  {
+    NumericVector factors_affected_by_smc_sequence_temp = sequencer_info[4];
+    factors_affected_by_smc_sequence = as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
+  }
+  
   Index* without_cancelled_index = NULL;
   Index* full_index = NULL;
   bool any_annealing = false;
@@ -4089,6 +4136,7 @@ double do_importance_sampler(const List &model,
                                                       without_cancelled_index,
                                                       full_index,
                                                       any_annealing,
+                                                      factors_affected_by_smc_sequence,
                                                       data_created_in_get_likelihood_estimators);
     
     proposal_is_evaluated_in = true;
@@ -4114,6 +4162,7 @@ double do_importance_sampler(const List &model,
                                                       without_cancelled_index,
                                                       full_index,
                                                       any_annealing,
+                                                      factors_affected_by_smc_sequence,
                                                       data_created_in_get_likelihood_estimators);
     
     proposal_is_evaluated_in = false;
@@ -4188,6 +4237,13 @@ void do_mcmc(const List &model,
   std::vector<std::string> sequencer_variables = sequencer_info[1];
   std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
   
+  std::vector<int> factors_affected_by_smc_sequence;
+  if (sequencer_info.length()==5)
+  {
+    NumericVector factors_affected_by_smc_sequence_temp = sequencer_info[4];
+    factors_affected_by_smc_sequence = as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
+  }
+  
   Index* without_cancelled_index = NULL;
   Index* full_index = NULL;
   bool any_annealing = false;
@@ -4206,6 +4262,7 @@ void do_mcmc(const List &model,
                                                     without_cancelled_index,
                                                     full_index,
                                                     any_annealing,
+                                                    factors_affected_by_smc_sequence,
                                                     data_created_in_get_likelihood_estimators);
   
   Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list);
@@ -4335,6 +4392,13 @@ double do_smc_mcmc_move(const List &model,
   std::vector<std::string> sequencer_variables = sequencer_info[1];
   std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
   
+  std::vector<int> factors_affected_by_smc_sequence;
+  if (sequencer_info.length()==5)
+  {
+    NumericVector factors_affected_by_smc_sequence_temp = sequencer_info[4];
+    factors_affected_by_smc_sequence = as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
+  }
+  
   Index* without_cancelled_index = NULL;
   Index* full_index = NULL;
   
@@ -4359,6 +4423,7 @@ double do_smc_mcmc_move(const List &model,
                                                       without_cancelled_index,
                                                       full_index,
                                                       any_annealing,
+                                                      factors_affected_by_smc_sequence,
                                                       data_created_in_get_likelihood_estimators);
     
     proposal_is_evaluated_in = true;
@@ -4384,6 +4449,7 @@ double do_smc_mcmc_move(const List &model,
                                                       without_cancelled_index,
                                                       full_index,
                                                       any_annealing,
+                                                      factors_affected_by_smc_sequence,
                                                       data_created_in_get_likelihood_estimators);
     
     proposal_is_evaluated_in = false;
@@ -4576,6 +4642,13 @@ double do_enki(const List &model,
   std::vector<std::string> sequencer_variables = sequencer_info[1];
   std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
   
+  std::vector<int> factors_affected_by_smc_sequence;
+  if (sequencer_info.length()==5)
+  {
+    NumericVector factors_affected_by_smc_sequence_temp = sequencer_info[4];
+    factors_affected_by_smc_sequence = as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
+  }
+  
   Index* without_cancelled_index = NULL;
   Index* full_index = NULL;
   
@@ -4599,6 +4672,7 @@ double do_enki(const List &model,
                                                     without_cancelled_index,
                                                     full_index,
                                                     any_annealing,
+                                                    factors_affected_by_smc_sequence,
                                                     data_created_in_get_likelihood_estimators);
   
   estimators = get_measurement_covariance_estimators(&rng,
@@ -4782,6 +4856,13 @@ double do_enkmfds(const List &model,
   std::vector<std::string> sequencer_variables = sequencer_info[1];
   std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
   
+  std::vector<int> factors_affected_by_smc_sequence;
+  if (sequencer_info.length()==5)
+  {
+    NumericVector factors_affected_by_smc_sequence_temp = sequencer_info[4];
+    factors_affected_by_smc_sequence = as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
+  }
+  
   Index* without_cancelled_index = NULL;
   Index* full_index = NULL;
   
@@ -4806,6 +4887,7 @@ double do_enkmfds(const List &model,
                                                       without_cancelled_index,
                                                       full_index,
                                                       any_annealing,
+                                                      factors_affected_by_smc_sequence,
                                                       data_created_in_get_likelihood_estimators);
     
     proposal_is_evaluated_in = true;
@@ -4831,6 +4913,7 @@ double do_enkmfds(const List &model,
                                                       without_cancelled_index,
                                                       full_index,
                                                       any_annealing,
+                                                      factors_affected_by_smc_sequence,
                                                       data_created_in_get_likelihood_estimators);
     
     proposal_is_evaluated_in = false;
