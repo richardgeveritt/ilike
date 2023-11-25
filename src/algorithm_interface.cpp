@@ -172,16 +172,41 @@ bool isNumericVectorInList(const Rcpp::List &list, int index_from_one)
   }
 }
 
+bool isNumericMatrixInList(const Rcpp::List &list, int index_from_one)
+{
+  if (index_from_one<=list.size())
+  {
+    SEXP var = list[index_from_one-1];
+    return Rf_isMatrix(var) && Rf_isNumeric(var);
+  }
+  else
+  {
+    return false;
+  }
+}
+
 bool isStringVectorInList(const Rcpp::List &list, const std::string &name)
 {
   SEXP var = list[name];
   return Rf_isVector(var) && Rf_isString(var);
 }
 
+bool isDoubleInList(const Rcpp::List &list, const std::string &name)
+{
+  SEXP var = list[name];
+  return Rf_isReal(var) && Rf_length(var)==1;
+}
+
 bool isNumericVectorInList(const Rcpp::List &list, const std::string &name)
 {
   SEXP var = list[name];
   return Rf_isVector(var) && Rf_isNumeric(var);
+}
+
+bool isNumericMatrixInList(const Rcpp::List &list, const std::string &name)
+{
+  SEXP var = list[name];
+  return Rf_isMatrix(var) && Rf_isNumeric(var);
 }
 
 /*
@@ -3592,23 +3617,47 @@ std::vector<Parameters> make_initial_points(const List &initial_values)
   for (size_t i=0; i<initial_values.size(); ++i)
   {
     Parameters current_parameters;
-    List list_params = initial_values[i];
-    if (list_params.size()>0)
+    if (Rf_isNewList(initial_values[i]))
     {
-      CharacterVector names = list_params.names();
-      
-      for (size_t i=0; i<names.size(); ++i)
+      List list_params = initial_values[i];
+      if (list_params.size()>0)
       {
-        arma::mat param = list_params[Rcpp::as<std::string>(names[i])];
-        current_parameters[Rcpp::as<std::string>(names[i])] = param;
+        CharacterVector names = list_params.names();
+        
+        for (size_t i=0; i<names.size(); ++i)
+        {
+          if (isDoubleInList(list_params,Rcpp::as<std::string>(names[i])))
+          {
+            double param = list_params[Rcpp::as<std::string>(names[i])];
+            current_parameters[Rcpp::as<std::string>(names[i])] = param;
+          }
+          else if (isNumericVectorInList(list_params,Rcpp::as<std::string>(names[i])))
+          {
+            NumericVector param = list_params[Rcpp::as<std::string>(names[i])];
+            current_parameters[Rcpp::as<std::string>(names[i])] = as<arma::colvec>(param);
+          }
+          else if (isNumericMatrixInList(list_params,Rcpp::as<std::string>(names[i])))
+          {
+            arma::mat param = list_params[Rcpp::as<std::string>(names[i])];
+            current_parameters[Rcpp::as<std::string>(names[i])] = param;
+          }
+          else
+          {
+            stop("Initial value must be a float/double, vector or matrix.");
+          }
+        }
       }
+      else
+      {
+        Rcpp::stop("List of initial values has empty entries.");
+      }
+      
+      output.push_back(current_parameters);
     }
     else
     {
-      Rcpp::stop("List of initial values has empty entries.");
+      Rcpp::stop("List of initial values must be a list (over chains) of lists, each of which contain the initial parameters.");
     }
-    
-    output.push_back(current_parameters);
   }
 
   return output;
@@ -4276,6 +4325,7 @@ void do_mcmc(const List &model,
   
   SMCMCMCMove* alg;
   
+  
   if (initial_values.size()==0)
   {
     
@@ -4303,6 +4353,7 @@ void do_mcmc(const List &model,
   {
     std::vector<Parameters> initial_points = make_initial_points(initial_values);
     
+    
     arma::colvec log_probabilities_of_initial_values(initial_points.size());
     
     alg = new SMCMCMCMove(&rng,
@@ -4324,30 +4375,16 @@ void do_mcmc(const List &model,
     
   }
   
-  //std::chrono::high_resolution_clock::time_point start_time, end_time;
-  //start_time = std::chrono::high_resolution_clock::now();
-  
-  //std::ofstream test_file_stream;
-  //test_file_stream.open("/Users/richard/Dropbox/code/ilike/experiments/test.txt",std::ios::out | std::ios::app);
-  //Rcout << 1.0 << std::endl;
   
   SMCOutput* output = alg->run();
-  
-  //Rcout << 2.0 << std::endl;
-  
-  //end_time = std::chrono::high_resolution_clock::now();
-  //std::chrono::duration<double> elapsed_time = end_time - start_time;
-  //output->set_time(elapsed_time.count());
-  
+
   if (strcmp(results_name_in.get_cstring(),"") != 0)
     output->write(results_name_in.get_cstring());
   delete output;
   
-  //Rcout << 3.0 << std::endl;
-  
   delete alg;
   
-  //Rcout << 4.0 << std::endl;
+
 }
 
 

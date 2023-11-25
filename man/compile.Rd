@@ -6,7 +6,7 @@
 \usage{
 compile(
   filename,
-  parameter_list = list(),
+  model_parameter_list = list(),
   R_functions = FALSE,
   external_packages = c(),
   julia_bin_dir = "",
@@ -19,7 +19,7 @@ compile(
 \arguments{
 \item{filename}{The name (and path) of the .ilike file containing the model.}
 
-\item{parameter_list}{(optional) A list containing parameters for the model.}
+\item{model_parameter_list}{(optional) A list containing parameters for the model.}
 
 \item{R_functions}{(optional) If TRUE, returns R functions. If FALSE, returns C++ functions.}
 
