@@ -4332,6 +4332,25 @@ void do_mcmc(const List &model,
     IndependentProposalKernel* proposal_in = get_prior_as_proposal(model,
                                                                    parameters);
     
+    /*
+    alg = new SMCMCMCMove(&rng,
+                          &seed,
+                          &the_data,
+                          algorithm_parameters,
+                          number_of_chains,
+                          2,
+                          2,
+                          the_mcmc,
+                          likelihood_estimators,
+                          proposal_in,
+                          without_cancelled_index,
+                          full_index,
+                          true,
+                          parallel_in,
+                          grain_size_in,
+                          "");
+    */
+    
     alg = new SMCMCMCMove(&rng,
                           &seed,
                           &the_data,
@@ -4378,12 +4397,15 @@ void do_mcmc(const List &model,
   
   SMCOutput* output = alg->run();
 
+  
   if (strcmp(results_name_in.get_cstring(),"") != 0)
     output->write(results_name_in.get_cstring());
+  
+  /*
   delete output;
   
   delete alg;
-  
+  */
 
 }
 

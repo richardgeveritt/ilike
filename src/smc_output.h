@@ -83,6 +83,7 @@ public:
   size_t number_of_smc_iterations() const;
   
   void increment_smc_iteration();
+  void decrement_smc_iteration();
   
   void set_time();
 

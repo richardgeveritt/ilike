@@ -258,7 +258,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   this->sequencer = Sequencer(this->the_worker,
                               schedule_in,
                               variable_in,
-                              25,
+                              100,
                               smc_criterion);
   
   this->mcmc = mcmc_in;
@@ -1006,6 +1006,7 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
       if (this->mcmc_at_last_step)
       {
         this->simulate_smc(current_state);
+        current_state->decrement_smc_iteration();
       }
       break;
     }
@@ -1158,6 +1159,7 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
       if (this->mcmc_at_last_step)
       {
         this->simulate_smc(current_state,conditioned_on_parameters);
+        current_state->decrement_smc_iteration();
       }
       break;
     }
@@ -1322,6 +1324,7 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
       if (this->mcmc_at_last_step)
       {
         this->simulate_smc(current_state);
+        current_state->decrement_smc_iteration();
       }
       break;
     }
@@ -1373,6 +1376,7 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
       if (this->mcmc_at_last_step)
       {
         this->simulate_smc(current_state,conditioned_on_parameters);
+        current_state->decrement_smc_iteration();
       }
       break;
     }
