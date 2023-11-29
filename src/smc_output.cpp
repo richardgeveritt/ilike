@@ -388,6 +388,8 @@ void SMCOutput::write_to_file(const std::string &dir_name,
    
     size_t llhd_index = this->llhds.size()-1-distance_from_end;
     
+    //if (int(this->llhds.size())-1-int(distance_from_end)>=0)
+    //{
     if (!this->estimator->log_likelihood_file_stream.is_open())
     {
       this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
@@ -400,7 +402,8 @@ void SMCOutput::write_to_file(const std::string &dir_name,
     else
     {
       Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + " cannot be opened.");
-    }
+      }
+    //}
     
     if (!this->estimator->time_file_stream.is_open())
     {

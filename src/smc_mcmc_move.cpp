@@ -1006,7 +1006,8 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
       if (this->mcmc_at_last_step)
       {
         this->simulate_smc(current_state);
-        current_state->decrement_smc_iteration();
+        current_state->llhds.push_back(current_state->log_likelihood);
+        //current_state->decrement_smc_iteration();
       }
       break;
     }
@@ -1159,7 +1160,8 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
       if (this->mcmc_at_last_step)
       {
         this->simulate_smc(current_state,conditioned_on_parameters);
-        current_state->decrement_smc_iteration();
+        current_state->llhds.push_back(current_state->log_likelihood);
+        //current_state->decrement_smc_iteration();
       }
       break;
     }
@@ -1324,7 +1326,8 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
       if (this->mcmc_at_last_step)
       {
         this->simulate_smc(current_state);
-        current_state->decrement_smc_iteration();
+        current_state->llhds.push_back(current_state->log_likelihood);
+        //current_state->decrement_smc_iteration();
       }
       break;
     }
@@ -1376,7 +1379,8 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
       if (this->mcmc_at_last_step)
       {
         this->simulate_smc(current_state,conditioned_on_parameters);
-        current_state->decrement_smc_iteration();
+        current_state->llhds.push_back(current_state->log_likelihood);
+        //current_state->decrement_smc_iteration();
       }
       break;
     }

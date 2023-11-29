@@ -3,6 +3,7 @@
 #' @param results_directory The folder in which the results are stored.
 #' @param ggmcmc (optional) Output in tidy format for plotting in ggmcmc package.
 #' @param ggsmc (optional) Output in tidy format for plotting in ggsmc package.
+#' @param ilike,output (optional) Output can be processed by ilike,output package (default is TRUE). Choosing TRUE for this argument is incompatiable with ggmcmc=TRUE, since the two packages require different formatting of the output.
 #' @param as.mcmc (optional) Output treats particles as different MCMC chains.
 #' @param as.enk (optional) Output treats particles as an ensemble.
 #' @param which.targets (optional) The indices of the targets to output (defaults to all).
@@ -18,6 +19,7 @@ load_smc_output = function(results_directory,
                            ggsmc = TRUE,
                            as.mcmc = FALSE,
                            as.enk = FALSE,
+                           ilike.output = TRUE,
                            which.targets = NULL,
                            directory_prefix = "ilike",
                            external_log_weights = c(0),
@@ -105,6 +107,11 @@ load_smc_output = function(results_directory,
   if ( (ggsmc==TRUE) && (as.mcmc==TRUE))
   {
     stop('as.mcmc must be set to FALSE if correct input for the ggsmc package is to be produced.')
+  }
+
+  if ( (ilike.output == TRUE) && (ggmcmc == TRUE) )
+  {
+    stop("ilike.output and ggmcmc cannot both be TRUE, since the output formats are incompatible.")
   }
 
   # Make the output names.
@@ -523,7 +530,7 @@ load_smc_output = function(results_directory,
     return(output)
   }
 
-  if (ggsmc==FALSE)
+  if ( (ggsmc==FALSE) && (ilike.output==FALSE) )
   {
     new_variable_names = mapply(FUN = function(a,b) { paste(a,"_",b,sep="") },all_output$ParameterName,all_output$Dimension)
     all_output = subset(all_output,select = -c(ParameterName,Dimension))
@@ -538,13 +545,42 @@ load_smc_output = function(results_directory,
 #' Loading MCMC output into R memory.
 #'
 #' @param results_directory The folder in which the results are stored.
-#' @param ggmcmc (optional) Output in tidy format for plotting in ggmcmc package.
+#' @param ggmcmc (optional) Output in tidy format for plotting in ggmcmc package (default is TRUE).
+#' @param ilike,output (optional) Output can be processed by ilike,output package (default is FALSE). Choosing TRUE for this argument is incompatiable with ggmcmc=TRUE, since the two packages require different formatting of the output.
 #' @return A list containing the MCMC chains.
 #' @export
 load_mcmc_output = function(results_directory,
-                            ggmcmc = TRUE)
+                            ggmcmc = NULL,
+                            ilike.output = NULL)
 {
-  return(load_smc_output(results_directory = results_directory,ggmcmc = ggmcmc,ggsmc = FALSE,as.mcmc=TRUE))
+  if (is.null(ggmcmc) && is.null(ilike.output))
+  {
+    ggmcmc = TRUE
+    ilike.output = FALSE
+  }
+  else if (!is.null(ggmcmc) && is.null(ilike.output))
+  {
+    if (ggmcmc == TRUE)
+      ilike.output = FALSE
+    else
+      ilike.output = TRUE
+  }
+  else if (is.null(ggmcmc) && !is.null(ilike.output))
+  {
+    if (ilike.output == TRUE)
+      ggmcmc = FALSE
+    else
+      ggmcmc = TRUE
+  }
+  else
+  {
+    if ( (ilike.output == TRUE) && (ggmcmc == TRUE) )
+    {
+      stop("ilike.output and ggmcmc cannot both be TRUE, since the output formats are incompatible.")
+    }
+  }
+
+  return(load_smc_output(results_directory = results_directory,ggmcmc = ggmcmc,ggsmc = FALSE, ilike.output = ilike.output,as.mcmc=TRUE))
 }
 
 #' Loading ensemble Kalman output into R memory.
@@ -554,7 +590,7 @@ load_mcmc_output = function(results_directory,
 #' @return A list containing the ensemble members (called particles).
 #' @export
 load_enk_output = function(results_directory,
-                            ggsmc = TRUE)
+                           ggsmc = TRUE)
 {
   return(load_smc_output(results_directory = results_directory,ggsmc = ggsmc,as.enk=TRUE))
 }

@@ -10,6 +10,7 @@ load_smc_output(
   ggsmc = TRUE,
   as.mcmc = FALSE,
   as.enk = FALSE,
+  ilike.output = TRUE,
   which.targets = NULL,
   directory_prefix = "ilike",
   external_log_weights = c(0),
@@ -40,6 +41,8 @@ load_smc_output(
 \item{nesting_level}{(optional; for nested output only) The level of nesting at which to extract points. (default is 0, representing the top level of nested output)}
 
 \item{factor}{(optional; for nested output only) The factor from which to extract points. (default is 0)}
+
+\item{ilike, output}{(optional) Output can be processed by ilike,output package (default is TRUE). Choosing TRUE for this argument is incompatiable with ggmcmc=TRUE, since the two packages require different formatting of the output.}
 }
 \value{
 A list containing the SMC output.
