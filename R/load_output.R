@@ -546,7 +546,7 @@ load_smc_output = function(results_directory,
 #'
 #' @param results_directory The folder in which the results are stored.
 #' @param ggmcmc (optional) Output in tidy format for plotting in ggmcmc package (default is TRUE).
-#' @param ilike,output (optional) Output can be processed by ilike,output package (default is FALSE). Choosing TRUE for this argument is incompatiable with ggmcmc=TRUE, since the two packages require different formatting of the output.
+#' @param ilike.output (optional) Output can be processed by ilike,output package (default is FALSE). Choosing TRUE for this argument is incompatiable with ggmcmc=TRUE, since the two packages require different formatting of the output.
 #' @return A list containing the MCMC chains.
 #' @export
 load_mcmc_output = function(results_directory,
