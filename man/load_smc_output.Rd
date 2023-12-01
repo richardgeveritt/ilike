@@ -26,6 +26,8 @@ load_smc_output(
 
 \item{ggsmc}{(optional) Output in tidy format for plotting in ggsmc package.}
 
+\item{ilike.output}{(optional) Output can be processed by ilike,output package (default is TRUE). Choosing TRUE for this argument is incompatiable with ggmcmc=TRUE, since the two packages require different formatting of the output.}
+
 \item{as.mcmc}{(optional) Output treats particles as different MCMC chains.}
 
 \item{as.enk}{(optional) Output treats particles as an ensemble.}
@@ -41,8 +43,6 @@ load_smc_output(
 \item{nesting_level}{(optional; for nested output only) The level of nesting at which to extract points. (default is 0, representing the top level of nested output)}
 
 \item{factor}{(optional; for nested output only) The factor from which to extract points. (default is 0)}
-
-\item{ilike, output}{(optional) Output can be processed by ilike,output package (default is TRUE). Choosing TRUE for this argument is incompatiable with ggmcmc=TRUE, since the two packages require different formatting of the output.}
 }
 \value{
 A list containing the SMC output.

@@ -3,7 +3,7 @@
 #' @param results_directory The folder in which the results are stored.
 #' @param ggmcmc (optional) Output in tidy format for plotting in ggmcmc package.
 #' @param ggsmc (optional) Output in tidy format for plotting in ggsmc package.
-#' @param ilike,output (optional) Output can be processed by ilike,output package (default is TRUE). Choosing TRUE for this argument is incompatiable with ggmcmc=TRUE, since the two packages require different formatting of the output.
+#' @param ilike.output (optional) Output can be processed by ilike,output package (default is TRUE). Choosing TRUE for this argument is incompatiable with ggmcmc=TRUE, since the two packages require different formatting of the output.
 #' @param as.mcmc (optional) Output treats particles as different MCMC chains.
 #' @param as.enk (optional) Output treats particles as an ensemble.
 #' @param which.targets (optional) The indices of the targets to output (defaults to all).
