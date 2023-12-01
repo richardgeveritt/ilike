@@ -1,3 +1,13 @@
+#' Gets a seed for random number generation by using the processor time stamp (calling rdtsc in C).
+#'
+#' @return An integer.
+#' @export
+rdtsc_seed <- function()
+{
+  return(ilike_rdtsc())
+}
+
+
 log_sum_exp <- function(x){
   xmax = which.max(x)
   if (sum(xmax)==0)

@@ -11,6 +11,11 @@ importance_sample(
   results_directory = getwd(),
   model_parameter_list = list(),
   algorithm_parameter_list = list(),
+  external_packages = c(),
+  julia_bin_dir = "",
+  julia_required_libraries = c(),
+  verify_cpp_function_types = FALSE,
+  keep_temporary_model_code = FALSE,
   seed = NULL,
   grain_size = 1e+05
 )
@@ -27,6 +32,16 @@ importance_sample(
 \item{model_parameter_list}{(optional) A list containing parameters for the model.}
 
 \item{algorithm_parameter_list}{(optional) A list containing named parameters for the algorithm.}
+
+\item{external_packages}{(optional) A vector of names of other R packages the functions rely on.}
+
+\item{julia_bin_dir}{(optional) The directory containing the Julia bin file - only needed if Julia functions are used.}
+
+\item{julia_required_libraries}{(optional) Vector of strings, each of which is a Julia packge that will be installed and loaded.}
+
+\item{verify_cpp_function_types}{(optional) If TRUE, check the types of the parameters of user-defined .cpp functions. If FALSE (default), types are not checked.}
+
+\item{keep_temporary_model_code}{(optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE,}
 
 \item{seed}{(optional) The seed for the random number generator.}
 

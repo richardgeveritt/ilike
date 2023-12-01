@@ -965,7 +965,8 @@ print_factor_info = function(factor_index,blocks,line_counter)
   last_factor_names = names(blocks[["factor"]][[factor_index]])
   for (j in 1:length(last_factor_names))
   {
-    factor_info_string = paste(factor_info_string,last_factor_names[j],sep=", ")
+    if (!grepl("XPtr",last_factor_names[j]))
+      factor_info_string = paste(factor_info_string,last_factor_names[j],sep=", ")
   }
   if (nchar(factor_info_string)>2)
   {
@@ -980,7 +981,8 @@ print_transition_model_info = function(transition_model_index,blocks,line_counte
   last_transition_model_names = names(blocks[["transition_model"]][[transition_model_index]])
   for (j in 1:length(last_transition_model_names))
   {
-    transition_model_info_string = paste(transition_model_info_string,last_transition_model_names[j],sep=", ")
+    if (!grepl("XPtr",last_transition_model_names[j]))
+      transition_model_info_string = paste(transition_model_info_string,last_transition_model_names[j],sep=", ")
   }
   if (nchar(transition_model_info_string)>2)
   {
@@ -995,7 +997,8 @@ print_potential_function_info = function(potential_function_index,blocks,line_co
   last_potential_function_names = names(blocks[["potential_function"]][[potential_function_index]])
   for (j in 1:length(last_potential_function_names))
   {
-    potential_function_info_string = paste(potential_function_info_string,last_potential_function_names[j],sep=", ")
+    if (!grepl("XPtr",last_potential_function_names[j]))
+      potential_function_info_string = paste(potential_function_info_string,last_potential_function_names[j],sep=", ")
   }
   if (nchar(potential_function_info_string)>2)
   {
@@ -1010,7 +1013,8 @@ print_importance_proposal_info = function(importance_proposal_index,blocks,line_
   last_importance_proposal_names = names(blocks[["importance_proposal"]][[importance_proposal_index]])
   for (j in 1:length(last_importance_proposal_names))
   {
-    importance_proposal_info_string = paste(importance_proposal_info_string,last_importance_proposal_names[j],sep=", ")
+    if (!grepl("XPtr",last_importance_proposal_names[j]))
+      importance_proposal_info_string = paste(importance_proposal_info_string,last_importance_proposal_names[j],sep=", ")
   }
   if (nchar(importance_proposal_info_string)>2)
   {
@@ -1025,7 +1029,8 @@ print_mh_proposal_info = function(mh_proposal_index,blocks,line_counter)
   last_mh_proposal_names = names(blocks[["mh_proposal"]][[mh_proposal_index]])
   for (j in 1:length(last_mh_proposal_names))
   {
-    mh_proposal_info_string = paste(mh_proposal_info_string,last_mh_proposal_names[j],sep=", ")
+    if (!grepl("XPtr",last_mh_proposal_names[j]))
+      mh_proposal_info_string = paste(mh_proposal_info_string,last_mh_proposal_names[j],sep=", ")
   }
   if (nchar(mh_proposal_info_string)>2)
   {
@@ -1040,7 +1045,8 @@ print_unadjusted_proposal_info = function(unadjusted_proposal_index,blocks,line_
   last_unadjusted_proposal_names = names(blocks[["unadjusted_proposal"]][[unadjusted_proposal_index]])
   for (j in 1:length(last_unadjusted_proposal_names))
   {
-    unadjusted_proposal_info_string = paste(unadjusted_proposal_info_string,last_unadjusted_proposal_names[j],sep=", ")
+    if (!grepl("XPtr",last_unadjusted_proposal_names[j]))
+      unadjusted_proposal_info_string = paste(unadjusted_proposal_info_string,last_unadjusted_proposal_names[j],sep=", ")
   }
   if (nchar(unadjusted_proposal_info_string)>2)
   {
@@ -1055,7 +1061,8 @@ print_independent_mh_proposal_info = function(independent_mh_proposal_index,bloc
   last_independent_mh_proposal_names = names(blocks[["independent_mh_proposal"]][[independent_mh_proposal_index]])
   for (j in 1:length(last_independent_mh_proposal_names))
   {
-    independent_mh_proposal_info_string = paste(independent_mh_proposal_info_string,last_independent_mh_proposal_names[j],sep=", ")
+    if (!grepl("XPtr",last_independent_mh_proposal_names[j]))
+      independent_mh_proposal_info_string = paste(independent_mh_proposal_info_string,last_independent_mh_proposal_names[j],sep=", ")
   }
   if (nchar(independent_mh_proposal_info_string)>2)
   {
@@ -1070,7 +1077,8 @@ print_m_proposal_info = function(m_proposal_index,blocks,line_counter)
   last_m_proposal_names = names(blocks[["m_proposal"]][[m_proposal_index]])
   for (j in 1:length(last_m_proposal_names))
   {
-    m_proposal_info_string = paste(m_proposal_info_string,last_m_proposal_names[j],sep=", ")
+    if (!grepl("XPtr",last_m_proposal_names[j]))
+      m_proposal_info_string = paste(m_proposal_info_string,last_m_proposal_names[j],sep=", ")
   }
   if (nchar(m_proposal_info_string)>2)
   {
@@ -1085,7 +1093,8 @@ print_transition_proposal_info = function(transition_proposal_index,blocks,line_
   last_transition_proposal_names = names(blocks[["transition_proposal"]][[transition_proposal_index]])
   for (j in 1:length(last_transition_proposal_names))
   {
-    transition_proposal_info_string = paste(transition_proposal_info_string,last_transition_proposal_names[j],sep=", ")
+    if (!grepl("XPtr",last_transition_proposal_names[j]))
+      transition_proposal_info_string = paste(transition_proposal_info_string,last_transition_proposal_names[j],sep=", ")
   }
   if (nchar(transition_proposal_info_string)>2)
   {
@@ -1100,7 +1109,8 @@ print_enk_transform_info = function(enk_transform_index,blocks,line_counter)
   last_enk_transform_names = names(blocks[["enk_transform"]][[enk_transform_index]])
   for (j in 1:length(last_enk_transform_names))
   {
-    enk_transform_info_string = paste(enk_transform_info_string,last_enk_transform_names[j],sep=", ")
+    if (!grepl("XPtr",last_enk_transform_names[j]))
+      enk_transform_info_string = paste(enk_transform_info_string,last_enk_transform_names[j],sep=", ")
   }
   if (nchar(enk_transform_info_string)>2)
   {
@@ -1115,7 +1125,8 @@ print_reinforce_gradient_info = function(reinforce_gradient_index,blocks,line_co
   last_reinforce_gradient_names = names(blocks[["reinforce_gradient"]][[reinforce_gradient_index]])
   for (j in 1:length(last_reinforce_gradient_names))
   {
-    reinforce_gradient_info_string = paste(reinforce_gradient_info_string,last_reinforce_gradient_names[j],sep=", ")
+    if (!grepl("XPtr",last_reinforce_gradient_names[j]))
+      reinforce_gradient_info_string = paste(reinforce_gradient_info_string,last_reinforce_gradient_names[j],sep=", ")
   }
   if (nchar(reinforce_gradient_info_string)>2)
   {
@@ -1130,7 +1141,8 @@ print_method_info = function(method_index,blocks,line_counter)
   last_method_names = names(blocks[["method"]][[method_index]])
   for (j in 1:length(last_method_names))
   {
-    method_info_string = paste(method_info_string,last_method_names[j],sep=", ")
+    if (!grepl("XPtr",last_method_names[j]))
+      method_info_string = paste(method_info_string,last_method_names[j],sep=", ")
   }
   if (nchar(method_info_string)>2)
   {
@@ -1145,7 +1157,8 @@ print_data_info = function(data_index,blocks,line_counter)
   last_data_names = names(blocks[["data"]][[data_index]])
   for (j in 1:length(last_data_names))
   {
-    data_info_string = paste(data_info_string,last_data_names[j],sep=", ")
+    if (!grepl("XPtr",last_data_names[j]))
+      data_info_string = paste(data_info_string,last_data_names[j],sep=", ")
   }
   if (nchar(data_info_string)>2)
   {
