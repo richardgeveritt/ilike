@@ -11,7 +11,7 @@ load_mcmc_output(results_directory, ggmcmc = NULL, ilike.output = NULL)
 
 \item{ggmcmc}{(optional) Output in tidy format for plotting in ggmcmc package (default is TRUE).}
 
-\item{ilike, output}{(optional) Output can be processed by ilike,output package (default is FALSE). Choosing TRUE for this argument is incompatiable with ggmcmc=TRUE, since the two packages require different formatting of the output.}
+\item{ilike.output}{(optional) Output can be processed by ilike,output package (default is FALSE). Choosing TRUE for this argument is incompatiable with ggmcmc=TRUE, since the two packages require different formatting of the output.}
 }
 \value{
 A list containing the MCMC chains.
