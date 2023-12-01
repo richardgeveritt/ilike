@@ -36,7 +36,7 @@ enki = function(model,
   results_directory = paste(results_directory,"/ilike",sep="")
 
   if ((is.character(model)) && (length(model) == 1))
-    model = compile(model = model,
+    model = compile(filename = model,
                     model_parameter_list = model_parameter_list,
                     external_packages = external_packages,
                     julia_bin_dir = julia_bin_dir,
