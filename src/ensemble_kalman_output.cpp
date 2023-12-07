@@ -64,6 +64,9 @@ LikelihoodEstimatorOutput* EnsembleKalmanOutput::duplicate() const
 void EnsembleKalmanOutput::make_copy(const EnsembleKalmanOutput &another)
 {
   this->estimator = another.estimator;
+  this->enk_iteration = another.enk_iteration;
+  this->iteration_written_to_file = another.iteration_written_to_file;
+  this->transform = another.transform;
   this->log_likelihood_smcfixed_part = another.log_likelihood_smcfixed_part;
   this->subsample_log_likelihood_smcfixed_part = another.subsample_log_likelihood_smcfixed_part;
   this->all_ensembles = another.all_ensembles;

@@ -720,13 +720,11 @@ void SMCOutput::close_ofstreams(size_t deque_index)
 void SMCOutput::increment_smc_iteration()
 {
   this->smc_iteration = this->smc_iteration + 1;
-  //std::cout << this->smc_iteration << std::endl;
 }
 
 void SMCOutput::decrement_smc_iteration()
 {
   this->smc_iteration = this->smc_iteration - 1;
-  //std::cout << this->smc_iteration << std::endl;
 }
 
 void SMCOutput::print(std::ostream &os) const

@@ -53,7 +53,7 @@ enkmfds = function(model,
     seed = ilike_rdtsc()
   }
 
-  set.seed(seed)
+  set.seed(as.numeric(substr(as.character(seed),1,9)))
 
   # Sort MCMC termination method.
   if (is.null(mcmc_termination_method))

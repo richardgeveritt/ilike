@@ -45,7 +45,7 @@ importance_sample = function(model,
     seed = ilike_rdtsc()
   }
 
-  set.seed(seed)
+  set.seed(as.numeric(substr(as.character(seed),1,9)))
 
   return(do_importance_sampler(model,
                                model_parameter_list,

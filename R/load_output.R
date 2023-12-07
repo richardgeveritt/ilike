@@ -374,8 +374,8 @@ load_smc_output = function(results_directory,
 
     if (as.mcmc)
     {
-      output = cbind(external_column,iterations_column,chains_column,output_names_column,output_index_column,output$Value)
-      colnames(output) = c('ExternalIndex','Iteration','Chain','ParameterName','Dimension',"Value")
+      output = cbind(external_column,time_column,iterations_column,chains_column,output_names_column,output_index_column,output$Value)
+      colnames(output) = c('ExternalIndex','Time','Iteration','Chain','ParameterName','Dimension',"Value")
     }
     else
     {

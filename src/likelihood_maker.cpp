@@ -982,6 +982,82 @@ ImportanceSampler* make_fixed_epsilon_enki_abc_is(RandomNumberGenerator* rng_in,
                                results_name_in);
 }
 
+SMCMCMCMove* make_fixed_epsilon_enki_abc_mcmc(RandomNumberGenerator* rng_in,
+                                              size_t* seed_in,
+                                              Data* data_in,
+                                              MCMC* mcmc_in,
+                                              const std::vector<Parameters> &initial_points_in,
+                                              IndependentProposalKernel* prior_in,
+                                              const std::vector<std::string> &data_variables_in,
+                                              const std::string &scale_variable_in,
+                                              const std::string &epsilon_variable_in,
+                                              double epsilon_in,
+                                              size_t enki_lag_in,
+                                              EnsembleShifter* shifter_in,
+                                              double enki_annealing_desired_cess_in,
+                                              size_t enki_number_of_bisections_in,
+                                              SimulateModelPtr simulate_model_in,
+                                              size_t number_of_abc_simulations_in,
+                                              bool transform_proposed_particles,
+                                              bool abc_parallel_in,
+                                              size_t abc_grain_size_in,
+                                              bool mcmc_parallel_in,
+                                              size_t mcmc_grain_size_in,
+                                              const std::string &results_name_in)
+{
+  std::vector<double> enki_schedule;
+  enki_schedule.push_back(arma::datum::inf);
+  enki_schedule.push_back(epsilon_in);
+  
+  std::vector<LikelihoodEstimator*> abc_likelihood_and_prior;
+  abc_likelihood_and_prior.push_back(new ExactLikelihoodEstimator(rng_in,
+                                                                  seed_in,
+                                                                  data_in,
+                                                                  prior_in,
+                                                                  true));
+  abc_likelihood_and_prior.push_back(make_fixed_epsilon_enki_abc_likelihood(rng_in,
+                                                                            seed_in,
+                                                                            data_in,
+                                                                            enki_lag_in,
+                                                                            shifter_in,
+                                                                            enki_annealing_desired_cess_in,
+                                                                            enki_number_of_bisections_in,
+                                                                            scale_variable_in,
+                                                                            epsilon_variable_in,
+                                                                            enki_schedule,
+                                                                            data_variables_in,
+                                                                            simulate_model_in,
+                                                                            number_of_abc_simulations_in,
+                                                                            abc_parallel_in,
+                                                                            abc_grain_size_in));
+  
+  
+  arma::colvec log_probabilities_of_initial_values(initial_points_in.size(),arma::fill::zeros);
+  
+  std::vector<size_t> indices;
+  indices.reserve(abc_likelihood_and_prior.size());
+  for (size_t i=0; i<abc_likelihood_and_prior.size(); ++i)
+    indices.push_back(i);
+  Index* an_index = new VectorSingleIndex(indices);
+  
+  return new SMCMCMCMove(rng_in,
+                         seed_in,
+                         data_in,
+                         Parameters(),
+                         0,
+                         0,
+                         mcmc_in,
+                         abc_likelihood_and_prior,
+                         initial_points_in,
+                         log_probabilities_of_initial_values,
+                         an_index,
+                         an_index->duplicate(),
+                         transform_proposed_particles,
+                         mcmc_parallel_in,
+                         mcmc_grain_size_in,
+                         results_name_in);
+}
+
 ImportanceSampler* make_fixed_epsilon_gaussian_abc_is(RandomNumberGenerator* rng_in,
                                                       size_t* seed_in,
                                                       Data* summary_data_in,
@@ -1084,6 +1160,69 @@ SMCMCMCMove* make_fixed_epsilon_lp_uniform_abc_mcmc(RandomNumberGenerator* rng_i
   return new SMCMCMCMove(rng_in,
                          seed_in,
                          summary_data_in,
+                         Parameters(),
+                         0,
+                         0,
+                         mcmc_in,
+                         abc_likelihood_and_prior,
+                         initial_points_in,
+                         log_probabilities_of_initial_values,
+                         an_index,
+                         an_index->duplicate(),
+                         transform_proposed_particles,
+                         mcmc_parallel_in,
+                         mcmc_grain_size_in,
+                         results_name_in);
+}
+
+SMCMCMCMove* make_fixed_epsilon_gaussian_abc_mcmc(RandomNumberGenerator* rng_in,
+                                                    size_t* seed_in,
+                                                    Data* data_in,
+                                                    MCMC* mcmc_in,
+                                                    const std::vector<Parameters> &initial_points_in,
+                                                    IndependentProposalKernel* prior_in,
+                                                    const std::vector<std::string> &data_variables_in,
+                                                    const std::string &scale_variable_in,
+                                                    const std::string &epsilon_variable_in,
+                                                    double epsilon_in,
+                                                    SimulateModelPtr simulate_model_in,
+                                                    size_t number_of_abc_simulations_in,
+                                                    bool transform_proposed_particles,
+                                                    bool abc_parallel_in,
+                                                    size_t abc_grain_size_in,
+                                                    bool mcmc_parallel_in,
+                                                    size_t mcmc_grain_size_in,
+                                                    const std::string &results_name_in)
+{
+  std::vector<LikelihoodEstimator*> abc_likelihood_and_prior;
+  abc_likelihood_and_prior.push_back(new ExactLikelihoodEstimator(rng_in,
+                                                                  seed_in,
+                                                                  data_in,
+                                                                  prior_in,
+                                                                  true));
+  abc_likelihood_and_prior.push_back(make_fixed_epsilon_gaussian_abc_likelihood(rng_in,
+                                                                                  seed_in,
+                                                                                  data_in,
+                                                                                  data_variables_in,
+                                                                                  scale_variable_in,
+                                                                                  epsilon_variable_in,
+                                                                                  epsilon_in,
+                                                                                  simulate_model_in,
+                                                                                  number_of_abc_simulations_in,
+                                                                                  abc_parallel_in,
+                                                                                  abc_grain_size_in));
+  
+  arma::colvec log_probabilities_of_initial_values(initial_points_in.size(),arma::fill::zeros);
+  
+  std::vector<size_t> indices;
+  indices.reserve(abc_likelihood_and_prior.size());
+  for (size_t i=0; i<abc_likelihood_and_prior.size(); ++i)
+    indices.push_back(i);
+  Index* an_index = new VectorSingleIndex(indices);
+  
+  return new SMCMCMCMove(rng_in,
+                         seed_in,
+                         data_in,
                          Parameters(),
                          0,
                          0,

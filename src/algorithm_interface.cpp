@@ -4401,11 +4401,11 @@ void do_mcmc(const List &model,
   if (strcmp(results_name_in.get_cstring(),"") != 0)
     output->write(results_name_in.get_cstring());
   
-  /*
+  
   delete output;
   
   delete alg;
-  */
+  
 
 }
 
