@@ -28,12 +28,21 @@ load_smc_output = function(results_directory,
                            factor = 0)
 {
   description = results_directory
-  if (as.enk==TRUE)
+
+  if (nesting_level==0)
   {
-    results_directory = paste(results_directory,"/",directory_prefix,"_enk",sep="")
+    if (as.enk==TRUE)
+    {
+      results_directory = paste(results_directory,"/",directory_prefix,"_enk",sep="")
+    }
+    else
+    {
+      results_directory = paste(results_directory,"/",directory_prefix,"_smc",sep="")
+    }
   }
   else
   {
+    # Can't yet cope with enk nested.
     results_directory = paste(results_directory,"/",directory_prefix,"_smc",sep="")
   }
 
@@ -587,10 +596,24 @@ load_mcmc_output = function(results_directory,
 #'
 #' @param results_directory The folder in which the results are stored.
 #' @param ggsmc (optional) Output in tidy format for plotting in ggsmc package.
+#' @param external_log_weights (optional; for nested output only) The weights of the importance points external to the current folder. (default is 1, to be used at the top level of nested output)
+#' @param external_target_parameters (optional; for nested output only) The parameters of the target external to the current folder. (default is "", corresponding to no parameters)
+#' @param nesting_level (optional; for nested output only) The level of nesting at which to extract points. (default is 0, representing the top level of nested output)
+#' @param factor (optional; for nested output only) The factor from which to extract points. (default is 0)
 #' @return A list containing the ensemble members (called particles).
 #' @export
 load_enk_output = function(results_directory,
-                           ggsmc = TRUE)
+                           ggsmc = TRUE,
+                           external_log_weights = c(0),
+                           external_target_parameters = "",
+                           nesting_level = 0,
+                           factor = 0)
 {
-  return(load_smc_output(results_directory = results_directory,ggsmc = ggsmc,as.enk=TRUE))
+  return(load_smc_output(results_directory = results_directory,
+                         ggsmc = ggsmc,
+                         as.enk=TRUE,
+                         external_log_weights = external_log_weights,
+                         external_target_parameters = external_target_parameters,
+                         nesting_level = nesting_level,
+                         factor = factor))
 }
