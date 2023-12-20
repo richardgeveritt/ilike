@@ -47,6 +47,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
                                                  SimulateModelPtr simulate_model_in,
                                                  std::shared_ptr<Transform> summary_statistics_in,
                                                  std::shared_ptr<Transform> transform_in,
+                                                 double significance_level_in,
                                                  bool parallel_in,
                                                  size_t grain_size_in,
                                                  const std::string &results_name_in)
@@ -61,6 +62,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
                 true,
                 results_name_in)
 {
+  this->significance_level = significance_level_in;
   this->proposal = prior_in;
   this->proposal->set_proposal_parameters(&this->algorithm_parameters);
   
@@ -139,6 +141,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
                                                  SimulateModelPtr simulate_model_in,
                                                  std::shared_ptr<Transform> summary_statistics_in,
                                                  std::shared_ptr<Transform> transform_in,
+                                                 double significance_level_in,
                                                  bool parallel_in,
                                                  size_t grain_size_in,
                                                  const std::string &results_name_in)
@@ -153,6 +156,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
                 true,
                 results_name_in)
 {
+  this->significance_level = significance_level_in;
   //IndependentProposalKernel* proposal = new CustomDistributionProposalKernel(simulate_prior_in);
   //Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
   
@@ -233,6 +237,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
                                                  const std::vector<GetMatrixPtr> &measurement_noise_functions_in,
                                                  std::shared_ptr<Transform> summary_statistics_in,
                                                  std::shared_ptr<Transform> transform_in,
+                                                 double significance_level_in,
                                                  bool parallel_in,
                                                  size_t grain_size_in,
                                                  const std::string &results_name_in)
@@ -247,6 +252,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
                 true,
                 results_name_in)
 {
+  this->significance_level = significance_level_in;
   //IndependentProposalKernel* proposal = new CustomDistributionProposalKernel(simulate_prior_in);
   //Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
   //Data candidate_measurement = measurement_transform_function_in(candidate_parameters);
@@ -329,6 +335,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
                                                  const std::string &scale_variable_in,
                                                  std::shared_ptr<Transform> summary_statistics_in,
                                                  std::shared_ptr<Transform> transform_in,
+                                                 double significance_level_in,
                                                  bool parallel_in,
                                                  size_t grain_size_in,
                                                  const std::string &results_name_in)
@@ -343,6 +350,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
                 true,
                 results_name_in)
 {
+  this->significance_level = significance_level_in;
   //IndependentProposalKernel* proposal = new CustomDistributionProposalKernel(simulate_prior_in);
   //Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
   //Data candidate_measurement = measurement_transform_function_in(candidate_parameters);
@@ -427,6 +435,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
                                                  const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
                                                  const std::vector<MeasurementCovarianceEstimator*> &estimators_in,
                                                  std::shared_ptr<Transform> transform_in,
+                                                 double significance_level_in,
                                                  bool parallel_in,
                                                  size_t grain_size_in,
                                                  const std::string &results_name_in)
@@ -441,6 +450,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
                 true,
                 results_name_in)
 {
+  this->significance_level = significance_level_in;
   //IndependentProposalKernel* proposal = new CustomDistributionProposalKernel(simulate_prior_in);
   //Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
   //Data candidate_measurement = measurement_transform_function_in(candidate_parameters);
@@ -575,6 +585,8 @@ void EnsembleKalmanInversion::make_copy(const EnsembleKalmanInversion &another)
     this->index = another.index->duplicate();
   else
     this->index = NULL;
+  
+  this->significance_level = another.significance_level;
   //this->sequencer = another.sequencer;
   //this->sequencer_limit_is_fixed = another.sequencer_limit_is_fixed;
 }
@@ -646,6 +658,12 @@ void EnsembleKalmanInversion::ensemble_kalman_evaluate_smcadaptive_part_given_sm
   while (terminate==FALSE)
   {
     this->the_worker->pack(&current_state->back());
+    
+    if (this->significance_level<1.0)
+    {
+      current_state->skip_to_end_of_sequence_if_points_are_gaussian(this->significance_level);
+    }
+    
     this->find_measurement_covariances(current_state);
     this->sequencer.find_desired_criterion(current_state);
     // (involves evaluating adaptive weights, using Sequencer)
@@ -822,6 +840,12 @@ void EnsembleKalmanInversion::ensemble_kalman_evaluate_smcadaptive_part_given_sm
   while (terminate==FALSE)
   {
     this->the_worker->pack(&current_state->back());
+    
+    if (this->significance_level<1.0)
+    {
+      current_state->skip_to_end_of_sequence_if_points_are_gaussian(this->significance_level);
+    }
+    
     this->find_measurement_covariances(current_state);
     
     this->sequencer.find_desired_criterion(current_state);
@@ -969,6 +993,12 @@ void EnsembleKalmanInversion::ensemble_kalman_subsample_evaluate_smcadaptive_par
   while (terminate==FALSE)
   {
     this->the_worker->pack(&current_state->back());
+    
+    if (this->significance_level<1.0)
+    {
+      current_state->skip_to_end_of_sequence_if_points_are_gaussian(this->significance_level);
+    }
+    
     this->find_measurement_covariances(current_state);
     
     this->sequencer.find_desired_criterion(current_state);

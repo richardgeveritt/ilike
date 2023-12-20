@@ -453,6 +453,11 @@ void Ensemble::precompute_gaussian_covariance(double inverse_incremental_tempera
   ensemble_factors->precompute_gaussian_covariance(inverse_incremental_temperature);
 }
 
+arma::mat Ensemble::get_packed_members() const
+{
+  return this->packed_members;
+}
+
 void Ensemble::close_ofstreams()
 {
   for (size_t i=0; i<this->members.size(); ++i)

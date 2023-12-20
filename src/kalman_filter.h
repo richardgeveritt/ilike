@@ -22,13 +22,25 @@ public:
 
   KalmanFilter();
 
-  KalmanFilter(RandomNumberGenerator* rng_in,
-               size_t* seed_in,
-               Data* data_in,
+  KalmanFilter(Data* data_in,
                size_t lag_in,
-               EvaluateLogLikelihoodPtr llhd_in,
-               double current_time_in=0.0,
-               bool smcfixed_flag_in = TRUE);
+               const std::string &state_name,
+               const arma::colvec &prior_mean_in,
+               const arma::mat &prior_covariance_in,
+               const std::string &index_name_in,
+               const std::string &time_name_in,
+               const std::string &time_diff_name_in,
+               const std::vector<std::string> &measurements_names_in,
+               size_t first_index_in,
+               size_t last_index_in,
+               size_t predictions_per_update_in,
+               double update_time_step_in,
+               double initial_time_in,
+               bool last_index_is_fixed_in,
+               KalmanPredictor* predictor_in,
+               KalmanUpdater* updater_in,
+               bool smcfixed_flag_in,
+               const std::string &results_name_in);
 
   virtual ~KalmanFilter();
 
@@ -39,6 +51,11 @@ public:
 
   // double estimate_log_likelihood(const List &inputs,
   //                                const List &auxiliary_variables) const;
+  
+  LikelihoodEstimator* duplicate() const;
+  
+  void setup();
+  void setup(const Parameters &parameters);
   
   LikelihoodEstimatorOutput* initialise();
   KalmanFilterOutput* kalman_filter_initialise();
@@ -75,8 +92,11 @@ protected:
   arma::colvec prior_mean;
   arma::mat prior_covariance;
   
+  std::string state_name;
+  size_t state_dimension;
   std::string index_name;
-  //std::string time_name;
+  std::string time_name;
+  std::string time_diff_name;
   std::vector<std::string> measurements_names;
   size_t first_index;
   size_t last_index;
@@ -90,9 +110,25 @@ protected:
   // stored here
   KalmanUpdater* updater;
   KalmanPredictor* predictor;
+  
+  Parameters schedule_parameters;
+  
+  std::string results_name;
 
   void make_copy(const KalmanFilter &another);
 
+  std::ofstream log_likelihood_file_stream;
+  std::ofstream time_file_stream;
+  std::ofstream vector_variables_file_stream;
+  std::ofstream vector_variable_sizes_file_stream;
+  std::ofstream output_lengths_file_stream;
+  std::ofstream incremental_log_likelihood_file_stream;
+  std::ofstream schedule_parameters_file_stream;
+  std::ofstream posterior_means_file_stream;
+  std::ofstream posterior_covariances_file_stream;
+  std::ofstream predicted_means_file_stream;
+  std::ofstream predicted_covariances_file_stream;
+  
 };
 
 #endif

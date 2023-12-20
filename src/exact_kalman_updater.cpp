@@ -60,6 +60,12 @@ void ExactKalmanUpdater::make_copy(const ExactKalmanUpdater &another)
 void ExactKalmanUpdater::update(KalmanFilterOutput* current_state,
                                 const arma::colvec &current_measurement)
 {
+  if (this->set_using_parameters)
+  {
+    this->measurement_matrix = this->measurement_matrix_function(this->conditioned_on_parameters);
+    this->measurement_noise = this->measurement_noise_function(this->conditioned_on_parameters);
+  }
+  
   arma::colvec predicted_mean = current_state->predicted_mean_back();
   arma::mat predicted_covariance = current_state->predicted_covariance_back();
   arma::colvec predicted_measurement = this->measurement_matrix*predicted_mean;
@@ -71,13 +77,17 @@ void ExactKalmanUpdater::update(KalmanFilterOutput* current_state,
   eye_mat.eye(arma::size(predicted_covariance));
   arma::mat updated_covariance = (eye_mat - kalman_gain*this->measurement_matrix)*predicted_covariance;
   current_state->set_current_posterior_statistics(updated_mean, updated_covariance);
-  current_state->log_likelihood = current_state->log_likelihood + dmvnorm(current_measurement,predicted_measurement,innovation_covariance);
+  
+  double incremental_log_llhd = dmvnorm(current_measurement,predicted_measurement,innovation_covariance);
+  current_state->add_log_normalising_constant_ratio(incremental_log_llhd);
+  current_state->log_likelihood = current_state->log_likelihood + incremental_log_llhd;
 }
 
 void ExactKalmanUpdater::set_parameters(const Parameters &conditioned_on_parameters_in)
 {
   if (this->set_using_parameters)
   {
+    this->conditioned_on_parameters = conditioned_on_parameters_in;
     this->measurement_matrix = this->measurement_matrix_function(conditioned_on_parameters_in);
     this->measurement_noise = this->measurement_noise_function(conditioned_on_parameters_in);
   }

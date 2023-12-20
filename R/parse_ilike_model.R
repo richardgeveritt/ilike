@@ -1211,7 +1211,7 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
   transition_proposal_types = c("simulate_transition_proposal","evaluate_log_transition_proposal")
   enk_transform_types = c("enk_transform","enk_inverse_transform")
   #reinforce_gradient = c("reinforce_gradient")
-  method_function_types = c("mcmc_weights","mcmc_termination","adaptive_resampling","adaptive_target","smc_termination","smc_sequence","reinforce_gradient","enk_likelihood_index","enk_shifter")
+  method_function_types = c("mcmc_weights","mcmc_termination","adaptive_resampling","adaptive_target","smc_termination","smc_sequence","reinforce_gradient","enk_likelihood_index","enk_shifter","filter")
 
   # distinguish between factor, data, etc
   if (block_name %in% factor_function_types)
@@ -3182,7 +3182,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
 
         }
-        else if ( (block_name=="mcmc_termination") || (block_name=="adaptive_resampling") || (block_name=="adaptive_target") || (block_name=="smc_termination") || (block_name=="reinforce_gradient") || (block_name=="enk_likelihood_index") || (block_name=="enk_shifter") )
+        else if ( (block_name=="mcmc_termination") || (block_name=="adaptive_resampling") || (block_name=="adaptive_target") || (block_name=="smc_termination") || (block_name=="reinforce_gradient") || (block_name=="enk_likelihood_index") || (block_name=="enk_shifter") || (block_name=="filter") )
         {
           split_arg_string = split_string_at_comma_ignoring_parentheses(arg_string)
 
@@ -5962,7 +5962,7 @@ compile <- function(filename,
     source(paste(basename,".R",sep=""))
   }
 
-  model_for_compilation_name = paste("model_for_compilation",nesting_level,".cpp",sep="")
+  model_for_compilation_name = paste("model_for_compilation",nesting_level,"_",ceiling(runif(1, 0, 10^7)),".cpp",sep="")
   fileConn<-file(model_for_compilation_name,open="w")
 
   the_file = file(filename,open="r")

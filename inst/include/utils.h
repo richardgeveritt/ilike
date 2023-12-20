@@ -11,6 +11,7 @@ using namespace Rcpp;
 #include <functional>
 //#include "ilike_header.h"
 #include "parameters.h"
+#include "distributions.h"
 //#include <RcppCommon.h>
 
 using boost::any_cast;
@@ -416,6 +417,88 @@ inline Parameters list_to_parameters(const Rcpp::List &list)
   }
   
   return output;
+}
+
+// Performs a hypothesis test for multivariate normality.
+inline double hz(const arma::mat &data_in)
+{
+  // A C++ translation of the hz function in the MVN package in R.
+  // See https://journal.r-project.org/archive/2014-2/korkmaz-goksuluk-zararsiz.pdf
+  
+  double tol = 1e-25;
+    
+  //dataframe=as.data.frame(data)
+  //dname <- deparse(substitute(data))
+  //data <- data[complete.cases(data),]
+  //data <- as.matrix(data)
+  
+  // Something I added...
+  // Remove dimensions where there is no variance.
+  std::vector<int> col_indices;
+  for (size_t j=0; j<data_in.n_cols; ++j)
+  {
+    if (arma::var(data_in.col(j))>=tol)
+      col_indices.push_back(j);
+  }
+  
+  std::vector<int> row_indices;
+  row_indices.reserve(data_in.n_rows);
+  for (size_t i=0; i<data_in.n_rows; ++i)
+  {
+    row_indices.push_back(i);
+  }
+  
+  arma::uvec col_ind = arma::conv_to<arma::uvec>::from(col_indices);
+  arma::uvec row_ind = arma::conv_to<arma::uvec>::from(row_indices);
+  
+  arma::mat data = data_in.submat(row_ind,col_ind);
+  
+  // Now back to the function from MVN.
+  
+  size_t n = data.n_rows;
+  size_t p = data.n_cols;
+  //data.org <- data
+    
+  arma::mat S = arma::cov(data,1);
+  arma::rowvec column_means = arma::mean(data,0);
+  arma::mat esch_row_is_column_mean(n,p);
+  arma::mat dif = data;
+  for (size_t j=0; j<p; ++j)
+  {
+    arma::vec all_col_mean_of_col_j(n);
+    all_col_mean_of_col_j.fill(column_means[j]);
+    dif.col(j) = data.col(j) - all_col_mean_of_col_j;
+  }
+    
+  arma::vec Dj = arma::diagvec(dif*(arma::inv(S,arma::inv_opts::allow_approx))*dif.t()); // squared-Mahalanobis' distances
+  arma::mat Y = data*arma::inv(S)*data.t();
+  arma::mat Djk = - 2.0*Y.t() + arma::diagvec(Y.t())*arma::mat(1,n,arma::fill::ones) + arma::mat(n,1,arma::fill::ones)*(arma::diagvec(Y.t()).t());
+    
+  double b = 1.0/(sqrt(2.0)) * pow(((2.0*double(p) + 1.0)/4.0),(1.0/(double(p) + 4.0))) * (pow(double(n),(1.0/(double(p) + 4.0)))); // smoothing parameter
+  
+  double HZ;
+  if (arma::rank(S) == p)
+  {
+    HZ = double(n) * (1.0/(pow(double(n),2.0)) * arma::accu(exp( - (pow(b,2.0))/2.0 * Djk)) - 2.0 *
+              ( pow((1.0 + (pow(b,2))),( - double(p)/2.0) ) ) * (1.0/double(n)) * (arma::sum(exp( - ((pow(b,2.0))/(2.0 * (1.0 + (pow(b,2.0))))) * Dj))) + ( pow((1.0 + (2.0 * (pow(b,2.0)))),( - double(p)/2.0) ) ));
+  }
+  else
+  {
+    HZ = double(n)*4.0;
+  }
+
+  double wb = (1.0 + pow(b,2.0))*(1.0 + 3.0*pow(b,2.0));
+    
+  double a = 1.0 + 2.0*pow(b,2.0);
+    
+  double mu = 1.0 - pow(a,(- double(p)/2.0))*(1.0 + double(p)*pow(b,2.0)/a + (double(p)*(double(p) + 2.0)*(pow(b,4.0)))/(2.0*pow(a,2.0))); // HZ mean
+    
+  double si2 = 2.0*pow((1.0 + 4.0*pow(b,2.0)),(- double(p)/2.0)) + 2.0*pow(a,( - double(p))) * (1.0 + (2.0*double(p)*pow(b,4.0))/pow(a,2.0) + (3.0*double(p)*(double(p) + 2.0)*pow(b,8.0))/(4.0*pow(a,4.0))) - 4.0*pow(wb,( - double(p)/2.0))*(1.0 + (3.0*double(p)*pow(b,4.0))/(2.0*wb) + (double(p)*(double(p) + 2.0)*pow(b,8.0))/(2.0*pow(wb,2.0))); //HZ variance
+    
+  double pmu = log(sqrt(pow(mu,4.0)/(si2 + pow(mu,2.0)))); // lognormal HZ mean
+  double psi = sqrt(log((si2 + pow(mu,2.0))/pow(mu,2.0))); // lognormal HZ variance
+    
+  return 1.0 - plnorm(HZ,pmu,psi); // P-value associated to the HZ statistic
 }
 
 #endif

@@ -71,6 +71,8 @@ public:
   
   void precompute_gaussian_covariance(double inverse_incremental_temperature);
   
+  arma::mat get_packed_members() const;
+  
   double log_normalising_constant_ratio;
   
   // stored here

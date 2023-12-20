@@ -140,6 +140,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// do_kalman_filter
+double do_kalman_filter(const List& model, const List& parameters, const List& algorithm_parameter_list, const List& filtering_options_list, size_t kf_iterations_to_store, bool write_to_file_at_each_iteration, const String& results_name_in);
+RcppExport SEXP _ilike_do_kalman_filter(SEXP modelSEXP, SEXP parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP filtering_options_listSEXP, SEXP kf_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP results_name_inSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
+    Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
+    Rcpp::traits::input_parameter< const List& >::type algorithm_parameter_list(algorithm_parameter_listSEXP);
+    Rcpp::traits::input_parameter< const List& >::type filtering_options_list(filtering_options_listSEXP);
+    Rcpp::traits::input_parameter< size_t >::type kf_iterations_to_store(kf_iterations_to_storeSEXP);
+    Rcpp::traits::input_parameter< bool >::type write_to_file_at_each_iteration(write_to_file_at_each_iterationSEXP);
+    Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
+    rcpp_result_gen = Rcpp::wrap(do_kalman_filter(model, parameters, algorithm_parameter_list, filtering_options_list, kf_iterations_to_store, write_to_file_at_each_iteration, results_name_in));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_ilike_ilike_rdtsc", (DL_FUNC) &_ilike_ilike_rdtsc, 0},
@@ -148,6 +165,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ilike_do_smc_mcmc_move", (DL_FUNC) &_ilike_do_smc_mcmc_move, 16},
     {"_ilike_do_enki", (DL_FUNC) &_ilike_do_enki, 17},
     {"_ilike_do_enkmfds", (DL_FUNC) &_ilike_do_enkmfds, 17},
+    {"_ilike_do_kalman_filter", (DL_FUNC) &_ilike_do_kalman_filter, 7},
     {NULL, NULL, 0}
 };
 

@@ -105,6 +105,8 @@ typedef arma::mat (*GetProcessMatrixFromTimeParametersPtr)(double time_step,
 typedef arma::colvec (*SimulateTransitionKernelPtr)(const arma::colvec &current_state);
 typedef arma::colvec (*SimulateTransitionKernelFromTimePtr)(const arma::colvec &current_state,
                                                             double time_step);
+typedef arma::colvec (*SimulateTransitionKernelFromParametersPtr)(const arma::colvec &current_state,
+                                                                  const Parameters &conditioned_on_parameters);
 typedef arma::colvec (*SimulateTransitionKernelFromTimeParametersPtr)(const arma::colvec &current_state,
                                                                       double time_step,
                                                                       const Parameters &conditioned_on_parameters);

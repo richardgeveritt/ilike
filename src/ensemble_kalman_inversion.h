@@ -26,6 +26,7 @@ public:
                           SimulateModelPtr simulate_model_in,
                           std::shared_ptr<Transform> summary_statistics_in,
                           std::shared_ptr<Transform> transform_in,
+                          double significance_level_in,
                           bool parallel_in,
                           size_t grain_size_in,
                           const std::string &results_name_in);
@@ -45,6 +46,7 @@ public:
                           SimulateModelPtr simulator_model_in,
                           std::shared_ptr<Transform> summary_statistics_in,
                           std::shared_ptr<Transform> transform_in,
+                          double significance_level_in,
                           bool parallel_in,
                           size_t grain_size_in,
                           const std::string &results_name_in);
@@ -66,6 +68,7 @@ public:
                           const std::vector<GetMatrixPtr> &measurement_noise_functions,
                           std::shared_ptr<Transform> summary_statistics_in,
                           std::shared_ptr<Transform> transform_in,
+                          double significance_level_in,
                           bool parallel_in,
                           size_t grain_size_in,
                           const std::string &results_name_in);
@@ -87,6 +90,7 @@ public:
                           const std::string &scale_variable_in,
                           std::shared_ptr<Transform> summary_statistics_in,
                           std::shared_ptr<Transform> transform_in,
+                          double significance_level_in,
                           bool parallel_in,
                           size_t grain_size_in,
                           const std::string &results_name_in);
@@ -106,6 +110,7 @@ public:
                           const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
                           const std::vector<MeasurementCovarianceEstimator*> &estimators_in,
                           std::shared_ptr<Transform> transform_in,
+                          double significance_level_in,
                           bool parallel_in,
                           size_t grain_size_in,
                           const std::string &results_name_in);
@@ -193,6 +198,9 @@ protected:
   
   // stored here
   Index* index;
+  
+  // If this is not 1.0, then check to see if we think the current ensemble is Gaussian, then skip to the end of the sequence if it is.
+  double significance_level;
 
   //void smc_step();
 

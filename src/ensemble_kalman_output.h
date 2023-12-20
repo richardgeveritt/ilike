@@ -114,6 +114,8 @@ public:
   
   void forget_you_were_already_written_to_file();
   
+  void skip_to_end_of_sequence_if_points_are_gaussian(double significance_level);
+  
   void close_ofstreams();
 
 protected:
@@ -134,6 +136,8 @@ protected:
   
   double log_likelihood_smcfixed_part;
   double subsample_log_likelihood_smcfixed_part;
+  
+  bool skip_to_end_of_sequence;
   
   std::shared_ptr<Transform> transform;
   

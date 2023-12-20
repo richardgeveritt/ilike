@@ -19,7 +19,8 @@ public:
 
   KalmanFilterOutput();
   KalmanFilterOutput(KalmanFilter* estimator_in,
-                     size_t lag_in);
+                     size_t lag_in,
+                     const std::string &results_name_in);
   virtual ~KalmanFilterOutput();
 
   KalmanFilterOutput(const KalmanFilterOutput &another);
@@ -45,7 +46,13 @@ public:
                                         const arma::mat &latest_covariance);
   void add_posterior_statistics();
   
+  void add_schedule_parameters(const Parameters &current_schedule_parameters);
+  
+  void add_log_normalising_constant_ratio(double log_normalising_constant_ratio);
+  
   LikelihoodEstimator* get_likelihood_estimator() const;
+  
+  void set_time();
   
   arma::colvec predicted_mean_back() const;
   arma::colvec posterior_mean_back() const;
@@ -63,9 +70,19 @@ public:
 
   void forget_you_were_already_written_to_file();
   
+  void increment_kf_iteration();
+  
   void close_ofstreams();
   
   void print(std::ostream &os) const;
+  
+  std::deque<double> times;
+  
+  std::deque<double> llhds;
+  
+  std::string results_name;
+  
+  std::chrono::high_resolution_clock::time_point start_time;
 
 protected:
 
@@ -85,12 +102,20 @@ protected:
   std::deque<arma::colvec> posterior_means;
   std::deque<arma::mat> posterior_covariances;
   
+  std::deque<Parameters> schedule_parameters;
+  
+  std::deque<double> log_normalising_constant_ratios;
+  
   arma::colvec current_predicted_mean;
   arma::mat current_predicted_covariance;
   arma::colvec current_posterior_mean;
   arma::mat current_posterior_covariance;
   
   size_t lag;
+  
+  size_t kf_iteration;
+  
+  int iteration_written_to_file;
 
 };
 

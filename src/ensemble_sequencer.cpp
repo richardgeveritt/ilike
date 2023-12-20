@@ -234,6 +234,22 @@ void EnsembleSequencer::find_desired_criterion(EnsembleKalmanOutput* current_sta
 void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current_state,
                                                    const Index* index)
 {
+  if (current_state->skip_to_end_of_sequence)
+  {
+    if (this->current_bisect_value!=this->schedule.back())
+      this->schedule_difference = this->schedule.back()-this->current_bisect_value;
+    else
+      this->schedule_difference = 0.0;
+    //this->mileometer.increment();
+    
+    this->current_bisect_value = this->schedule.back();
+    //current_state->back().set_temperature(this->current_bisect_value);
+    this->schedule_parameters[this->variable_name] = this->current_bisect_value;
+    this->mileometer.reset();
+    
+    return;
+  }
+  
   // used here since if we are not doing things adaptively, we never need to calculate a weight
   if (this->criterion->always_positive())
   {
@@ -440,6 +456,22 @@ arma::colvec EnsembleSequencer::find_next_target_quantile(EnsembleKalmanOutput* 
 void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutput* current_state,
                                                              const Index* index)
 {
+  if (current_state->skip_to_end_of_sequence)
+  {
+    if (this->current_bisect_value!=this->schedule.back())
+      this->schedule_difference = this->schedule.back()-this->schedule[this->mileometer.back()-1];
+    else
+      this->schedule_difference = 0.0;
+    //this->mileometer.increment();
+    
+    this->current_bisect_value = this->schedule.back();
+    current_state->back().set_temperature(this->current_bisect_value);
+    this->schedule_parameters[this->variable_name] = this->current_bisect_value;
+    this->mileometer.reset();
+    
+    return;
+  }
+  
   // used here since if we are not doing things adaptively, we never need to calculate a weight
   if (this->criterion->always_positive())
   {

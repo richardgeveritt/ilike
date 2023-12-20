@@ -31,6 +31,7 @@ protected:
   
   friend KalmanFilter;
   bool set_using_parameters;
+  Parameters conditioned_on_parameters;
   
   void make_copy(const KalmanUpdater &another);
 

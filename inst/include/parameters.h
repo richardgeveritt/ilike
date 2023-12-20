@@ -75,6 +75,9 @@ public:
   
   std::vector<arma::mat> get_matrices(const std::vector<std::string> &variables) const;
   
+  Parameters row(size_t index) const;
+  Parameters col(size_t index) const;
+  
   Parameters merge(const Parameters &another) const;
   //void add_parameters(const Parameters &another);
   //void add_parameters_overwrite(const Parameters &another);
@@ -330,6 +333,26 @@ inline std::vector<arma::mat> Parameters::get_matrices(const std::vector<std::st
        ++i)
   {
     output.push_back((*this)[*i]);
+  }
+  return output;
+}
+
+inline Parameters Parameters::row(size_t index) const
+{
+  Parameters output;
+  for (auto i=this->vector_begin(); i!=this->vector_end(); ++i)
+  {
+    output.vector_parameters.insert({i->first,std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(i->second.first->row(index)),i->second.second)});
+  }
+  return output;
+}
+
+inline Parameters Parameters::col(size_t index) const
+{
+  Parameters output;
+  for (auto i=this->vector_begin(); i!=this->vector_end(); ++i)
+  {
+    output.vector_parameters.insert({i->first,std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(i->second.first->col(index)),i->second.second)});
   }
   return output;
 }
@@ -1015,7 +1038,7 @@ inline std::ostream& operator<<(std::ostream& os, const Parameters &p)
         else
           os << ", " << *i;
       }
-      //os << std::endl;
+      os << ";";
     }
   }
 

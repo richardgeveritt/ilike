@@ -27,4 +27,5 @@ void KalmanUpdater::operator=(const KalmanUpdater &another)
 void KalmanUpdater::make_copy(const KalmanUpdater &another)
 {
   this->set_using_parameters = another.set_using_parameters;
+  this->conditioned_on_parameters = another.conditioned_on_parameters;
 }

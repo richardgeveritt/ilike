@@ -114,7 +114,10 @@ void UnscentedKalmanUpdater::update(KalmanFilterOutput* current_state,
   arma::colvec updated_mean = predicted_mean + kalman_gain*innovation;
   arma::mat updated_covariance = predicted_covariance - kalman_gain*innovation_covariance*kalman_gain.t();
   current_state->set_current_posterior_statistics(updated_mean, updated_covariance);
-  current_state->log_likelihood = current_state->log_likelihood + dmvnorm(current_measurement,predicted_measurement,innovation_covariance);
+  
+  double incremental_log_llhd = dmvnorm(current_measurement,predicted_measurement,innovation_covariance);
+  current_state->add_log_normalising_constant_ratio(incremental_log_llhd);
+  current_state->log_likelihood = current_state->log_likelihood + incremental_log_llhd;
 }
 
 void UnscentedKalmanUpdater::set_parameters(const Parameters &conditioned_on_parameters_in)

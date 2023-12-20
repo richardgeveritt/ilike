@@ -288,6 +288,7 @@ EnsembleKalmanInversion* make_fixed_epsilon_enki_abc_likelihood(RandomNumberGene
                                                                 const std::vector<std::string> &data_variables_in,
                                                                 SimulateModelPtr simulate_model_in,
                                                                 size_t number_of_abc_simulations_in,
+                                                                double significance_level_in,
                                                                 bool parallel_in,
                                                                 size_t grain_size_in)
 {
@@ -345,6 +346,7 @@ EnsembleKalmanInversion* make_fixed_epsilon_enki_abc_likelihood(RandomNumberGene
                                      scale_variable_in,
                                      NULL,
                                      NULL,
+                                     significance_level_in,
                                      parallel_in,
                                      grain_size_in,
                                      "");
@@ -471,6 +473,7 @@ EnsembleKalmanInversion* make_fixed_epsilon_enki_abc_likelihood(RandomNumberGene
                                                                 std::shared_ptr<Transform> summary_statistics_in,
                                                                 bool enki_on_summary,
                                                                 size_t number_of_abc_simulations_in,
+                                                                double significance_level_in,
                                                                 bool parallel_in,
                                                                 size_t grain_size_in)
 {
@@ -537,6 +540,7 @@ EnsembleKalmanInversion* make_fixed_epsilon_enki_abc_likelihood(RandomNumberGene
                                        scale_variable_in,
                                        NULL,
                                        NULL,
+                                       significance_level_in,
                                        parallel_in,
                                        grain_size_in,
                                        "");
@@ -559,6 +563,7 @@ EnsembleKalmanInversion* make_fixed_epsilon_enki_abc_likelihood(RandomNumberGene
                                        scale_variable_in,
                                        summary_statistics_in,
                                        NULL,
+                                       significance_level_in,
                                        parallel_in,
                                        grain_size_in,
                                        "");
@@ -873,6 +878,7 @@ ImportanceSampler* make_fixed_epsilon_enki_abc_is(RandomNumberGenerator* rng_in,
                                                   size_t enki_number_of_bisections_in,
                                                   SimulateModelPtr simulate_model_in,
                                                   size_t number_of_abc_simulations_in,
+                                                  double significance_level_in,
                                                   bool abc_parallel_in,
                                                   size_t abc_grain_size_in,
                                                   bool is_parallel_in,
@@ -897,6 +903,7 @@ ImportanceSampler* make_fixed_epsilon_enki_abc_is(RandomNumberGenerator* rng_in,
                                                                   data_variables_in,
                                                                   simulate_model_in,
                                                                   number_of_abc_simulations_in,
+                                                                  significance_level_in,
                                                                   abc_parallel_in,
                                                                   abc_grain_size_in));
   
@@ -935,6 +942,7 @@ ImportanceSampler* make_fixed_epsilon_enki_abc_is(RandomNumberGenerator* rng_in,
                                                   std::shared_ptr<Transform> summary_statistics_in,
                                                   bool enki_on_summary,
                                                   size_t number_of_abc_simulations_in,
+                                                  double significance_level_in,
                                                   bool abc_parallel_in,
                                                   size_t abc_grain_size_in,
                                                   bool is_parallel_in,
@@ -961,6 +969,7 @@ ImportanceSampler* make_fixed_epsilon_enki_abc_is(RandomNumberGenerator* rng_in,
                                                                   summary_statistics_in,
                                                                   enki_on_summary,
                                                                   number_of_abc_simulations_in,
+                                                                  significance_level_in,
                                                                   abc_parallel_in,
                                                                   abc_grain_size_in));
   
@@ -999,6 +1008,7 @@ SMCMCMCMove* make_fixed_epsilon_enki_abc_mcmc(RandomNumberGenerator* rng_in,
                                               SimulateModelPtr simulate_model_in,
                                               size_t number_of_abc_simulations_in,
                                               bool transform_proposed_particles,
+                                              double significance_level_in,
                                               bool abc_parallel_in,
                                               size_t abc_grain_size_in,
                                               bool mcmc_parallel_in,
@@ -1028,6 +1038,7 @@ SMCMCMCMove* make_fixed_epsilon_enki_abc_mcmc(RandomNumberGenerator* rng_in,
                                                                             data_variables_in,
                                                                             simulate_model_in,
                                                                             number_of_abc_simulations_in,
+                                                                            significance_level_in,
                                                                             abc_parallel_in,
                                                                             abc_grain_size_in));
   

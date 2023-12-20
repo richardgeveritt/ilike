@@ -25,3 +25,7 @@ do_enkmfds <- function(model, parameters, algorithm_parameter_list, number_of_pa
     .Call(`_ilike_do_enkmfds`, model, parameters, algorithm_parameter_list, number_of_particles, Delta_t, mcmc_termination_method, mcmc_weights_method, adaptive_resampling_method, smc_sequencer_method, adaptive_target_method, smc_termination_method, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed)
 }
 
+do_kalman_filter <- function(model, parameters, algorithm_parameter_list, filtering_options_list, kf_iterations_to_store, write_to_file_at_each_iteration, results_name_in) {
+    .Call(`_ilike_do_kalman_filter`, model, parameters, algorithm_parameter_list, filtering_options_list, kf_iterations_to_store, write_to_file_at_each_iteration, results_name_in)
+}
+

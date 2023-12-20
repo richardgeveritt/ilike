@@ -18,14 +18,14 @@ public:
   ExactKalmanPredictor(const arma::mat &transition_matrix,
                        const arma::mat &process_noise);
   
-  ExactKalmanPredictor(GetProcessMatrixFromTimePtr transition_matrix_time_function,
-                       GetProcessMatrixFromTimePtr process_noise_time_function);
+  ExactKalmanPredictor(GetMatrixPtr transition_matrix_function,
+                       GetMatrixPtr process_noise_function);
   
   //ExactKalmanPredictor(GetProcessMatrixFromParametersPtr transition_matrix_parameters_function,
   //                     GetProcessMatrixFromParametersPtr process_noise_parameters_function);
   
-  ExactKalmanPredictor(GetProcessMatrixFromTimeParametersPtr transition_matrix_time_parameters_function,
-                       GetProcessMatrixFromTimeParametersPtr process_noise_time_parameters_function);
+  //ExactKalmanPredictor(GetProcessMatrixFromTimeParametersPtr transition_matrix_time_parameters_function,
+  //                     GetProcessMatrixFromTimeParametersPtr process_noise_time_parameters_function);
 
   virtual ~ExactKalmanPredictor();
 
@@ -34,9 +34,7 @@ public:
   void operator=(const ExactKalmanPredictor &another);
   KalmanPredictor* duplicate() const;
 
-  void predict(KalmanFilterOutput* current_state,
-               double current_time,
-               double next_time);
+  void predict(KalmanFilterOutput* current_state);
   
   void set_parameters(const Parameters &conditioned_on_parameters_in);
   
@@ -52,14 +50,17 @@ protected:
   arma::mat transition_matrix;
   arma::mat process_noise;
   
-  GetProcessMatrixFromTimePtr transition_matrix_time_function;
-  GetProcessMatrixFromTimePtr process_noise_time_function;
+  GetMatrixPtr transition_matrix_function;
+  GetMatrixPtr process_noise_function;
+  
+  //GetProcessMatrixFromTimePtr transition_matrix_time_function;
+  //GetProcessMatrixFromTimePtr process_noise_time_function;
   
   //GetProcessMatrixFromParametersPtr transition_matrix_parameters_function;
   //GetProcessMatrixFromParametersPtr process_noise_parameters_function;
   
-  GetProcessMatrixFromTimeParametersPtr transition_matrix_time_parameters_function;
-  GetProcessMatrixFromTimeParametersPtr process_noise_time_parameters_function;
+  //GetProcessMatrixFromTimeParametersPtr transition_matrix_time_parameters_function;
+  //GetProcessMatrixFromTimeParametersPtr process_noise_time_parameters_function;
 
 };
 

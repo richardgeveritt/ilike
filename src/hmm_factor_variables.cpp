@@ -748,7 +748,7 @@ void HMMFactorVariables::write_to_file(const std::string &directory_name,
        i<this->likelihood_estimator_outputs.size();
        ++i)
   {
-    std::string factor_directory_name = directory_name + "/factor" + toString(i);
+    std::string factor_directory_name = directory_name + "/factor" + toString(i+1);
     this->likelihood_estimator_outputs[i]->write_to_file(factor_directory_name,index);
   }
 }

@@ -21,16 +21,16 @@ public:
                            const arma::mat &process_noise_in,
                            double w0_in = 1.0/3.0);
   
-  UnscentedKalmanPredictor(SimulateTransitionKernelFromTimePtr transition_kernel_time_function_in,
-                           GetProcessMatrixFromTimePtr process_noise_time_function_in,
+  UnscentedKalmanPredictor(SimulateTransitionKernelFromParametersPtr transition_kernel_function_in,
+                           GetMatrixPtr process_noise_function_in,
                            double w0_in = 1.0/3.0);
   
   //GetProcessMatrixFromParametersPtr transition_matrix_parameters_function;
   //GetProcessMatrixFromParametersPtr process_noise_parameters_function;
   
-  UnscentedKalmanPredictor(SimulateTransitionKernelFromTimeParametersPtr transition_kernel_time_parameters_function_in,
-                           GetProcessMatrixFromTimeParametersPtr process_noise_time_parameters_function_in,
-                           double w0_in = 1.0/3.0);
+  //UnscentedKalmanPredictor(SimulateTransitionKernelFromTimeParametersPtr transition_kernel_time_parameters_function_in,
+  //                         GetProcessMatrixFromTimeParametersPtr process_noise_time_parameters_function_in,
+  //                         double w0_in = 1.0/3.0);
 
   virtual ~UnscentedKalmanPredictor();
 
@@ -39,9 +39,7 @@ public:
   void operator=(const UnscentedKalmanPredictor &another);
   KalmanPredictor* duplicate() const;
 
-  void predict(KalmanFilterOutput* current_state,
-               double current_time,
-               double next_time);
+  void predict(KalmanFilterOutput* current_state);
   
   void set_parameters(const Parameters &conditioned_on_parameters_in);
   
@@ -59,14 +57,14 @@ protected:
   SimulateTransitionKernelPtr transition_kernel;
   arma::mat process_noise;
   
-  SimulateTransitionKernelFromTimePtr transition_kernel_time_function;
-  GetProcessMatrixFromTimePtr process_noise_time_function;
+  SimulateTransitionKernelFromParametersPtr transition_kernel_function;
+  GetMatrixPtr process_noise_function;
   
   //GetProcessMatrixFromParametersPtr transition_matrix_parameters_function;
   //GetProcessMatrixFromParametersPtr process_noise_parameters_function;
   
-  SimulateTransitionKernelFromTimeParametersPtr transition_kernel_time_parameters_function;
-  GetProcessMatrixFromTimeParametersPtr process_noise_time_parameters_function;
+  //SimulateTransitionKernelFromTimeParametersPtr transition_kernel_time_parameters_function;
+  //GetProcessMatrixFromTimeParametersPtr process_noise_time_parameters_function;
 
 };
 

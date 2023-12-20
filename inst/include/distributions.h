@@ -344,6 +344,11 @@ inline arma::colvec dnorm(const arma::colvec &x, double mean, double sd)
 
 }
 
+inline double pnorm(double x, double mean, double sd)
+{
+  return 0.5*(1.0 + erf((x-mean)/(sd*sqrt(2.0))));
+}
+
 inline double rtnorm(RandomNumberGenerator &rng,
                      double min,
                      double max)
@@ -926,9 +931,14 @@ inline double dlnorm(double x, double meanlog, double sdlog)
   return - log(x) - log(sdlog) - 0.5*log(2.0*M_PI) - 0.5*pow((log(x)-meanlog)/sdlog,2.0);
 }
 
+inline double plnorm(double x, double meanlog, double sdlog)
+{
+  return 0.5*(1.0 + erf((log(x)-meanlog)/(sdlog*sqrt(2.0))));
+}
+
 inline arma::colvec rmvlnorm_using_chol(RandomNumberGenerator &rng,
-                             const arma::colvec &mulog,
-                             const arma::mat &chollog)
+                                        const arma::colvec &mulog,
+                                        const arma::mat &chollog)
 {
   //size_t n = 1;
   //int ncols = sigma.n_cols;

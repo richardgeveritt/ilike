@@ -2,6 +2,7 @@
 #include "ensemble_kalman.h"
 #include "move_output.h"
 #include "filesystem.h"
+#include "utils.h"
 
 EnsembleKalmanOutput::EnsembleKalmanOutput()
   :LikelihoodEstimatorOutput()
@@ -12,6 +13,7 @@ EnsembleKalmanOutput::EnsembleKalmanOutput()
   this->iteration_written_to_file = -1;
   this->transform = NULL;
   this->enk_iteration = 0;
+  this->skip_to_end_of_sequence = false;
   
   this->start_time = std::chrono::high_resolution_clock::now();
 }
@@ -30,6 +32,7 @@ EnsembleKalmanOutput::EnsembleKalmanOutput(EnsembleKalman* estimator_in,
   this->results_name = results_name_in;
   this->transform = transform_in;
   this->enk_iteration = 0;
+  this->skip_to_end_of_sequence = false;
   
   this->start_time = std::chrono::high_resolution_clock::now();
 }
@@ -74,6 +77,7 @@ void EnsembleKalmanOutput::make_copy(const EnsembleKalmanOutput &another)
   this->start_time = another.start_time;
   this->times = another.times;
   this->llhds = another.llhds;
+  this->skip_to_end_of_sequence = another.skip_to_end_of_sequence;
   this->results_name = another.results_name;
 }
 
@@ -282,13 +286,21 @@ void EnsembleKalmanOutput::forget_you_were_already_written_to_file()
   this->iteration_written_to_file = -1;
 }
 
+void EnsembleKalmanOutput::skip_to_end_of_sequence_if_points_are_gaussian(double significance_level)
+{
+  if (hz(this->back().get_packed_members())>significance_level)
+  {
+    this->skip_to_end_of_sequence = true;
+  }
+}
+
 void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
                                          const std::string &index)
 {
   std::string directory_name = dir_name + "_enk";
   
-  if (index!="")
-    directory_name = directory_name + "_" + index;
+  //if (index!="")
+  //  directory_name = directory_name + "_" + index;
   
   if (!directory_exists(directory_name))
   {
@@ -306,7 +318,7 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
     
     if (!this->estimator->log_likelihood_file_stream.is_open())
     {
-      this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt");
+      this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
     }
     if (this->estimator->log_likelihood_file_stream.is_open())
     {
@@ -530,6 +542,10 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
 
 void EnsembleKalmanOutput::close_ofstreams()
 {
+  this->estimator->log_likelihood_file_stream.close();
+  this->estimator->time_file_stream.close();
+  this->estimator->vector_variables_file_stream.close();
+  this->estimator->vector_variable_sizes_file_stream.close();
   this->estimator->incremental_log_likelihood_file_stream.close();
   this->estimator->output_lengths_file_stream.close();
   this->estimator->ess_file_stream.close();
@@ -548,6 +564,10 @@ void EnsembleKalmanOutput::close_ofstreams()
 
 void EnsembleKalmanOutput::close_ofstreams(size_t deque_index)
 {
+  this->estimator->log_likelihood_file_stream.close();
+  this->estimator->time_file_stream.close();
+  this->estimator->vector_variables_file_stream.close();
+  this->estimator->vector_variable_sizes_file_stream.close();
   this->estimator->incremental_log_likelihood_file_stream.close();
   this->estimator->output_lengths_file_stream.close();
   this->estimator->ess_file_stream.close();

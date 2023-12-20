@@ -1,3 +1,37 @@
+extract_numbers <- function(inputString)
+{
+  # Use regular expression to find all numbers in the string
+  matches <- gregexpr("\\d+", inputString, perl = TRUE)
+
+  # Extract the matched numbers
+  numbers <- regmatches(inputString, matches)[[1]]
+
+  # Convert the character vector to numeric
+  numbers <- as.numeric(numbers)
+
+  return(numbers)
+}
+
+#' Take output from the functions load_smc_output or load_enk_output and convert it to a standard (non-tidy format with one column per dimension).
+#'
+#' @param output Output from the functions load_smc_output or load_enk_output.
+#' @param variables (optional) Variables to include in the output (default is all).
+#' @export
+pivot_wider_smc_or_enk_output <- function(output,
+                                          variables=NULL)
+{
+  if (!is.null(variables))
+  {
+    output = poorman::filter(output,ParameterName %in% variables)
+  }
+
+  new_variable_names = mapply(FUN = function(a,b) { paste(a,"_",b,sep="") },output$ParameterName,output$Dimension)
+  output = subset(output,select = -c(ParameterName,Dimension))
+  output$Parameter = new_variable_names
+  output = poorman::distinct(output)
+  return(poorman::pivot_wider(output, names_from = "Parameter", values_from = "Value"))
+}
+
 #' Loading SMC output into R memory.
 #'
 #' @param results_directory The folder in which the results are stored.
@@ -76,13 +110,14 @@ load_smc_output = function(results_directory,
                                    as.enk = as.enk,
                                    which.targets = which.targets,
                                    directory_prefix=factor_name,
-                                   external_log_weights = external_log_weights,#dplyr::filter(dplyr::filter(theta_output,Target==i),Dimension==1)$LogWeight,
+                                   external_log_weights = external_log_weights,#poorman::filter(poorman::filter(theta_output,Target==i),Dimension==1)$LogWeight,
                                    nesting_level = nesting_level-1)
 
-      numbers = stringr::str_extract_all(all_dirs[i], "\\d+")
-      target_id = as.integer(numbers[[1]][length(numbers[[1]])])
+      numbers = extract_numbers(all_dirs[i])
+      target_id = numbers[length(numbers)]
+
       sub_output$ExternalTarget = rep(target_id,nrow(sub_output))
-      sub_output$ExternalTargetParameters = rep(external_target_parameters,nrow(sub_output))#rep(dplyr::filter(theta_output,Target==target_id)$TargetParameters[1],nrow(sub_output))
+      sub_output$ExternalTargetParameters = rep(external_target_parameters,nrow(sub_output))#rep(poorman::filter(theta_output,Target==target_id)$TargetParameters[1],nrow(sub_output))
 
       if (i==1)
       {
@@ -358,7 +393,7 @@ load_smc_output = function(results_directory,
     ess_fn = function(j) {matrix(sapply(1:length(ess_list[[j]]),FUN=function(i) { rep(ess_list[[j]][i],sum(variable_sizes)) }),sum(variable_sizes)*length(ess_list[[j]]))}
     ess_column = matrix(sapply(1:number_of_external_points,FUN=function(i) { ess_fn(i) }),length(iterations_column))
 
-    output = tidyr::pivot_longer(output,cols = dplyr::everything(), values_to="Value")
+    output = poorman::pivot_longer(output,cols = poorman::everything(), values_to="Value")
 
     #external_column = matrix(0,nrow(output))
     #iterations_column = matrix(0,nrow(output),1)
@@ -541,11 +576,7 @@ load_smc_output = function(results_directory,
 
   if ( (ggsmc==FALSE) && (ilike.output==FALSE) )
   {
-    new_variable_names = mapply(FUN = function(a,b) { paste(a,"_",b,sep="") },all_output$ParameterName,all_output$Dimension)
-    all_output = subset(all_output,select = -c(ParameterName,Dimension))
-    all_output$Parameter = new_variable_names
-    output = dplyr::distinct(output)
-    all_output = tidyr::pivot_wider(all_output, names_from = "Parameter", values_from = "Value")
+    all_output = pivot_wider_smc_or_enk_output(output)
   }
 
   return(all_output)
@@ -589,7 +620,10 @@ load_mcmc_output = function(results_directory,
     }
   }
 
-  return(load_smc_output(results_directory = results_directory,ggmcmc = ggmcmc,ggsmc = FALSE, ilike.output = ilike.output,as.mcmc=TRUE))
+  output = load_smc_output(results_directory = results_directory,ggmcmc = ggmcmc,ggsmc = FALSE, ilike.output = ilike.output,as.mcmc=TRUE)
+  if (ggmcmc==TRUE)
+    names(output)[names(output) == 'Value'] = "value"
+  return(output)
 }
 
 #' Loading ensemble Kalman output into R memory.
