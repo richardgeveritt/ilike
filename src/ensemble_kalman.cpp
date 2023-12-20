@@ -42,6 +42,9 @@ EnsembleKalman::EnsembleKalman(RandomNumberGenerator* rng_in,
 :LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
 {
   this->number_of_ensemble_members = number_of_ensemble_members_in;
+  if (this->number_of_ensemble_members<=1)
+    Rcpp::stop("EnsembleKalman::EnsembleKalman - number of ensemble members must be more than 1.");
+  
   this->lag = lag_in;
   this->sequencer_limit_is_fixed = sequencer_limit_is_fixed_in;
   

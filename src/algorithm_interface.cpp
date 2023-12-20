@@ -753,16 +753,16 @@ List get_abc_enki_parameter_info(const List &model_parameters,
   int number_of_points = extract_int_parameter(parameters,
                                                model_parameters,
                                                0);
-  Rcout << number_of_points << std::endl;
+  //Rcout << number_of_points << std::endl;
   
   std::string tolerance_variable = extract_string_parameter(parameters,
                                                             model_parameters,
                                                             1);
-  Rcout << number_of_points << std::endl;
+  //Rcout << number_of_points << std::endl;
   arma::colvec schedule_colvec = extract_vector_parameter(parameters,
                                                           model_parameters,
                                                           2);
-  Rcout << number_of_points << std::endl;
+  //Rcout << number_of_points << std::endl;
   
   std::vector<double> schedule;
   if (schedule_colvec.n_elem==0)
@@ -785,33 +785,33 @@ List get_abc_enki_parameter_info(const List &model_parameters,
   int enki_lag = extract_int_parameter(parameters,
                                        model_parameters,
                                        3);
-  Rcout << number_of_points << std::endl;
+  //Rcout << number_of_points << std::endl;
   std::string shifter_name = extract_string_parameter(parameters,
                                                       model_parameters,
                                                       4);
-  Rcout << number_of_points << std::endl;
+  //Rcout << number_of_points << std::endl;
   
   double proportion = extract_double_parameter(parameters,
                                                model_parameters,
                                                5);
-  Rcout << number_of_points << std::endl;
+  //Rcout << number_of_points << std::endl;
   
   double enki_annealing_desired_cess = proportion*double(number_of_points);
   
   int enki_number_of_bisections = extract_int_parameter(parameters,
                                                         model_parameters,
                                                         6);
-  Rcout << number_of_points << std::endl;
+  //Rcout << number_of_points << std::endl;
   
   bool enki_on_summary = extract_bool_parameter(parameters,
                                                 model_parameters,
                                                 7);
-  Rcout << number_of_points << std::endl;
+  //Rcout << number_of_points << std::endl;
   
   double significance_level = extract_double_parameter(parameters,
                                                        model_parameters,
                                                        8);
-  Rcout << number_of_points << std::endl;
+  //Rcout << number_of_points << std::endl;
     
   bool parallel = false;
   if (parameters.size()>9)
@@ -829,7 +829,7 @@ List get_abc_enki_parameter_info(const List &model_parameters,
                                        10);
   }
   
-  Rcout << number_of_points << std::endl;
+  //Rcout << number_of_points << std::endl;
   return List::create(variable_names,
                       number_of_points,
                       tolerance_variable,

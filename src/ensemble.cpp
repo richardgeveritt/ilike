@@ -385,6 +385,7 @@ void Ensemble::find_measurement_covariances()
   {
     this->Cxys.push_back(arma::cov(this->packed_members,this->packed_measurement_states[i]));
     //this->Cyys.push_back(arma::cov(this->packed_measurement_states[i] + inverse_incremental_temperature*measurement_covariances[i]));
+    
     this->Cyys.push_back(arma::cov(this->packed_measurement_states[i]));
     this->myys.push_back(arma::conv_to<arma::colvec>::from(arma::mean(this->packed_measurement_states[i],0)));
   }
