@@ -76,7 +76,7 @@ using namespace Rcpp;
 #include "exact_kalman_predictor.h"
 #include "exact_kalman_updater.h"
 
-#include "linear_gaussian_state_space_model.h"
+//#include "linear_gaussian_state_space_model.h"
 
 // from https://stackoverflow.com/questions/2165921/converting-from-a-stdstring-to-bool
 bool stob(const std::string &s)
@@ -5607,6 +5607,15 @@ double do_kalman_filter(const List &model,
   size_t predictions_per_update_in = filtering_info[7];
   std::string state_name_in = filtering_info[8];
   std::string measurement_name_in = filtering_info[9];
+  
+  if (first_index_in>last_index_in)
+    stop("Cannot construct a filter where the first index is bigger than the last.");
+  
+  if ( (measurement_name_in=="") && (last_index_in>=the_data.min_n_rows()) )
+    stop("Last index goes past the end of the data.");
+  
+  if ( (measurement_name_in!="") && (last_index_in>=the_data[measurement_name_in].n_rows) )
+    stop("Last index goes past the end of the data.");
   
   //KalmanPredictor* predictor_in = new ExactKalmanPredictor(transition_model_A,
   //                                                         transition_model_Q);

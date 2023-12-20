@@ -78,6 +78,9 @@ public:
   Parameters row(size_t index) const;
   Parameters col(size_t index) const;
   
+  size_t min_n_rows() const;
+  size_t min_n_cols() const;
+  
   Parameters merge(const Parameters &another) const;
   //void add_parameters(const Parameters &another);
   //void add_parameters_overwrite(const Parameters &another);
@@ -355,6 +358,28 @@ inline Parameters Parameters::col(size_t index) const
     output.vector_parameters.insert({i->first,std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(i->second.first->col(index)),i->second.second)});
   }
   return output;
+}
+
+inline size_t Parameters::min_n_rows() const
+{
+  size_t min = arma::datum::inf;
+  for (auto i=this->vector_begin(); i!=this->vector_end(); ++i)
+  {
+    if (i->second.first->n_rows<min)
+      min = i->second.first->n_rows;
+  }
+  return min;
+}
+
+inline size_t Parameters::min_n_cols() const
+{
+  size_t min = arma::datum::inf;
+  for (auto i=this->vector_begin(); i!=this->vector_end(); ++i)
+  {
+    if (i->second.first->n_rows<min)
+      min = i->second.first->n_cols;
+  }
+  return min;
 }
 
 inline void Parameters::make_copy(const Parameters &another)
