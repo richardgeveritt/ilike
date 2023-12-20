@@ -1,3 +1,22 @@
+get_text_between_first_pair_of_matching_parentheses <- function(my_string)
+{
+  # Find the positions of open and closed brackets
+  bracket_positions = c(0,0)
+  bracket_positions[1] = regexpr("\\(", my_string)[1]
+  bracket_positions[2] = regexpr("\\)", my_string)[1]
+
+  # Check if there is at least one pair of brackets
+  if (any(bracket_positions > 0))
+  {
+    text_between_parentheses = substr(my_string, bracket_positions[1], bracket_positions[2])
+    return(text_between_parentheses)#return(gsub("\\(|\\)", "", text_between_parentheses))
+  }
+  else
+  {
+    return("")
+  }
+}
+
 split_string_at_comma_ignoring_parentheses <- function(input_string)
 {
   result <- vector()
@@ -386,7 +405,7 @@ transition_model_processing = function(transition_model_number,blocks,block_name
 {
   # Is this a continuation of the current transition_model, or a new one?
 
-  all_names = c(ilike_transition_model_types,linear_gaussian_transition_model_types,nonlinear_gaussian_transition_model_types,custom_transition_model_typess)
+  all_names = c(ilike_transition_model_types,linear_gaussian_transition_model_types,nonlinear_gaussian_transition_model_types,custom_transition_model_types)
 
   # Get the current transition_model info.
   if ("transition_model" %in% names(blocks))
@@ -395,7 +414,7 @@ transition_model_processing = function(transition_model_number,blocks,block_name
 
     current_transition_model_names = names(current_transition_model_info)
 
-    if (block_name %in% ilike_transition_model_function_types)
+    if (block_name %in% ilike_transition_model_types)
     {
       # transition_model is complete
       if ( ("transition_model" %in% names(current_transition_model_info)) && (block_name=="transition_model") )
@@ -416,7 +435,7 @@ transition_model_processing = function(transition_model_number,blocks,block_name
         }
       }
     }
-    else if (block_name %in% custom_transition_model_function_types)
+    else if (block_name %in% custom_transition_model_types)
     {
       # transition_model is complete
       if ( ("evaluate_log_transition_model" %in% names(current_transition_model_info)) && (block_name=="evaluate_log_transition_model") )
@@ -1404,23 +1423,26 @@ get_string_output_function_body <- function(R_functions,R_args,R_function_name,R
 
 parameter_types_for_cpp <- function(block_code)
 {
-  arguments = regmatches(block_code, gregexpr("\\([^)]+\\)", block_code))[[1]][1]
-  arguments = gsub("\\(|\\)", "", arguments)
+  #arguments = regmatches(block_code, gregexpr("\\([^)]+\\)", block_code))[[1]][1]
+  #arguments = gsub("\\(|\\)", "", arguments)
+  arguments = get_text_between_first_pair_of_matching_parentheses(block_code)
   argument_vector = unlist(strsplit(arguments, ","))
 
   if (!is.null(argument_vector))
   {
+    which_proposed_parameters = matrix(0,length(argument_vector))
+    which_parameters = matrix(0,length(argument_vector))
+    which_proposal_parameters = matrix(0,length(argument_vector))
+    which_data = matrix(0,length(argument_vector))
+
     for (i in 1:length(argument_vector))
     {
-      which_proposed_parameters = matrix(0,length(argument_vector))
-      which_parameters = matrix(0,length(argument_vector))
-      which_proposal_parameters = matrix(0,length(argument_vector))
-      which_data = matrix(0,length(argument_vector))
 
       if (grepl("&", argument_vector[i]))
       {
-        after_ampersand = unlist(strsplit(arguments, "&"))
+        after_ampersand = unlist(strsplit(argument_vector[i], "&"))
         parameter_name = trimws(after_ampersand[length(after_ampersand)])
+        parameter_name = gsub("\\(|\\)", "", parameter_name)
 
         if (parameter_name=="proposed_parameters")
         {
@@ -4510,6 +4532,8 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           {
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
+
+          browser()
 
           if (sum(which_parameters)>0)
           {

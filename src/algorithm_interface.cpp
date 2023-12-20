@@ -1821,6 +1821,345 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
   //return std::vector<LikelihoodEstimator*>();
 }
 
+
+KalmanUpdater* get_kalman_updater(const List &model,
+                                  const List &model_parameters)
+{
+  
+  if ( model.containsElementNamed("factor") )
+  {
+    List factors = model["factor"];
+    
+    for (size_t i=0; i<factors.size(); ++i)
+    {
+      
+      if (Rf_isNewList(factors[i]))
+      {
+        List current_factor = factors[i];
+        
+        if ( current_factor.containsElementNamed("linear_gaussian_data_covariance") )
+        {
+          if (!current_factor.containsElementNamed("linear_gaussian_data_matrix"))
+          {
+            stop("linear_gaussian must contain both matrix and covariance.");
+          }
+          
+          if (!current_factor.containsElementNamed("type"))
+          {
+            stop("linear_gaussian must contain a type.");
+          }
+          
+          //if (!current_factor.containsElementNamed("linear_gaussian_data_variable"))
+          //{
+          //  stop("linear_gaussian_data must contain linear_gaussian_data_variable.");
+          //}
+          
+          //if (!current_factor.containsElementNamed("linear_gaussian_data_state_variable"))
+          //{
+          //  stop("linear_gaussian_data must contain linear_gaussian_data_state_variable.");
+          //}
+          
+          SEXP linear_gaussian_data_matrix_SEXP = current_factor["linear_gaussian_data_matrix"];
+          SEXP linear_gaussian_data_covariance_SEXP = current_factor["linear_gaussian_data_covariance"];
+          //SEXP linear_gaussian_data_variable_SEXP = current_factor["linear_gaussian_data_variable"];
+          //SEXP linear_gaussian_data_state_variable_SEXP = current_factor["linear_gaussian_data_state_variable"];
+          size_t type = current_factor["type"];
+
+          if (type==1)
+          {
+            return new ExactKalmanUpdater(load_matrix(linear_gaussian_data_matrix_SEXP),
+                                          load_matrix(linear_gaussian_data_covariance_SEXP));
+          }
+          else if (type==2)
+          {
+            return new ExactKalmanUpdater(load_matrix_function(linear_gaussian_data_matrix_SEXP),
+                                          load_matrix_function(linear_gaussian_data_covariance_SEXP));
+          }
+          else
+          {
+            stop("linear_gaussian specificiation is invalid.");
+          }
+          
+        }
+        else if ( current_factor.containsElementNamed("nonlinear_gaussian_data_covariance") )
+        {
+          stop("Unscented Kalman filter not yet supported.");
+          
+          /*
+           if (!current_factor.containsElementNamed("nonlinear_gaussian_data_function"))
+           {
+           stop("nonlinear_gaussian_data must contain both function and covariance.");
+           }
+           
+           if (!current_factor.containsElementNamed("type"))
+           {
+           stop("nonlinear_gaussian_data must contain a type.");
+           }
+           
+           if (!current_factor.containsElementNamed("nonlinear_gaussian_data_variable"))
+           {
+           stop("nonlinear_gaussian_data must contain nonlinear_gaussian_data_variable.");
+           }
+           
+           SEXP nonlinear_gaussian_data_function_SEXP = current_factor["nonlinear_gaussian_data_function"];
+           SEXP nonlinear_gaussian_data_covariance_SEXP = current_factor["nonlinear_gaussian_data_covariance"];
+           SEXP nonlinear_gaussian_data_variable_SEXP = current_factor["nonlinear_gaussian_data_variable"];
+           size_t type = current_factor["type"];
+           ProposalKernel* proposal;
+           if (type==1)
+           {
+           proposal = new NonLinearGaussianNoiseProposalKernel(load_string(nonlinear_gaussian_data_variable_SEXP),
+           std::make_shared<Transform>(load_transform(nonlinear_gaussian_data_function_SEXP)),
+           load_matrix(nonlinear_gaussian_data_covariance_SEXP));
+           }
+           else if (type==2)
+           {
+           proposal = new NonLinearGaussianNoiseFunctionProposalKernel(load_string(nonlinear_gaussian_data_variable_SEXP),
+           std::make_shared<Transform>(load_transform(nonlinear_gaussian_data_function_SEXP)),
+           load_matrix_function(nonlinear_gaussian_data_covariance_SEXP));
+           }
+           else
+           {
+           stop("nonlinear_gaussian_data specificiation is invalid.");
+           }
+           */
+        }
+        
+      }
+      else
+      {
+        stop("Error in factors section of model file.");
+      }
+      
+    }
+    
+  }
+  else
+  {
+    stop("No factors found in model file.");
+  }
+
+  stop("Valid Kalman updater not found.");
+}
+
+KalmanPredictor* get_kalman_predictor(const List &model,
+                                      const List &model_parameters)
+{
+  
+  if ( model.containsElementNamed("transition_model") )
+  {
+    List factors = model["transition_model"];
+    
+    for (size_t i=0; i<factors.size(); ++i)
+    {
+      
+      if (Rf_isNewList(factors[i]))
+      {
+        List current_factor = factors[i];
+        
+        if ( current_factor.containsElementNamed("linear_gaussian_transition_covariance") )
+        {
+          if (!current_factor.containsElementNamed("linear_gaussian_transition_matrix"))
+          {
+            stop("linear_gaussian must contain both matrix and covariance.");
+          }
+          
+          if (!current_factor.containsElementNamed("type"))
+          {
+            stop("linear_gaussian must contain a type.");
+          }
+          
+          //if (!current_factor.containsElementNamed("linear_gaussian_data_variable"))
+          //{
+          //  stop("linear_gaussian_data must contain linear_gaussian_data_variable.");
+          //}
+          
+          //if (!current_factor.containsElementNamed("linear_gaussian_data_state_variable"))
+          //{
+          //  stop("linear_gaussian_data must contain linear_gaussian_data_state_variable.");
+          //}
+          
+          SEXP linear_gaussian_transition_matrix_SEXP = current_factor["linear_gaussian_transition_matrix"];
+          SEXP linear_gaussian_transition_covariance_SEXP = current_factor["linear_gaussian_transition_covariance"];
+          //SEXP linear_gaussian_data_variable_SEXP = current_factor["linear_gaussian_data_variable"];
+          //SEXP linear_gaussian_data_state_variable_SEXP = current_factor["linear_gaussian_data_state_variable"];
+          size_t type = current_factor["type"];
+          
+          if (type==1)
+          {
+            return new ExactKalmanPredictor(load_matrix(linear_gaussian_transition_matrix_SEXP),
+                                            load_matrix(linear_gaussian_transition_covariance_SEXP));
+          }
+          else if (type==2)
+          {
+            return new ExactKalmanPredictor(load_matrix_function(linear_gaussian_transition_matrix_SEXP),
+                                            load_matrix_function(linear_gaussian_transition_covariance_SEXP));
+          }
+          else
+          {
+            stop("linear_gaussian specificiation is invalid.");
+          }
+          
+        }
+        else if ( current_factor.containsElementNamed("nonlinear_gaussian_transition_covariance") )
+        {
+          stop("Unscented Kalman filter not yet supported.");
+          
+          /*
+           if (!current_factor.containsElementNamed("nonlinear_gaussian_data_function"))
+           {
+           stop("nonlinear_gaussian_data must contain both function and covariance.");
+           }
+           
+           if (!current_factor.containsElementNamed("type"))
+           {
+           stop("nonlinear_gaussian_data must contain a type.");
+           }
+           
+           if (!current_factor.containsElementNamed("nonlinear_gaussian_data_variable"))
+           {
+           stop("nonlinear_gaussian_data must contain nonlinear_gaussian_data_variable.");
+           }
+           
+           SEXP nonlinear_gaussian_data_function_SEXP = current_factor["nonlinear_gaussian_data_function"];
+           SEXP nonlinear_gaussian_data_covariance_SEXP = current_factor["nonlinear_gaussian_data_covariance"];
+           SEXP nonlinear_gaussian_data_variable_SEXP = current_factor["nonlinear_gaussian_data_variable"];
+           size_t type = current_factor["type"];
+           ProposalKernel* proposal;
+           if (type==1)
+           {
+           proposal = new NonLinearGaussianNoiseProposalKernel(load_string(nonlinear_gaussian_data_variable_SEXP),
+           std::make_shared<Transform>(load_transform(nonlinear_gaussian_data_function_SEXP)),
+           load_matrix(nonlinear_gaussian_data_covariance_SEXP));
+           }
+           else if (type==2)
+           {
+           proposal = new NonLinearGaussianNoiseFunctionProposalKernel(load_string(nonlinear_gaussian_data_variable_SEXP),
+           std::make_shared<Transform>(load_transform(nonlinear_gaussian_data_function_SEXP)),
+           load_matrix_function(nonlinear_gaussian_data_covariance_SEXP));
+           }
+           else
+           {
+           stop("nonlinear_gaussian_data specificiation is invalid.");
+           }
+           */
+        }
+        
+      }
+      else
+      {
+        stop("Error in transition_models section of model file.");
+      }
+      
+    }
+    
+  }
+  else
+  {
+    stop("No transition_models found in model file.");
+  }
+  
+  stop("Valid Kalman predictor not found.");
+}
+
+List get_prior_mean_and_covariance(const List &model,
+                                   const List &model_parameters)
+{
+  if ( model.containsElementNamed("factor") )
+  {
+    
+    List factors = model["factor"];
+    
+    for (size_t i=0; i<factors.size(); ++i)
+    {
+      
+      if (Rf_isNewList(factors[i]))
+      {
+        
+        List current_factor = factors[i];
+        if ( current_factor.containsElementNamed("prior") )
+        {
+          DistributionFactor* new_factor;
+          
+          if (Rf_isNewList(current_factor["prior"]))
+          {
+            
+            List current_prior = current_factor["prior"];
+            if ( current_prior.containsElementNamed("type") && current_prior.containsElementNamed("variables") )
+            {
+              std::string type = current_prior["type"];
+              
+              if (type=="norm")
+              {
+                List info = get_single_variable_two_double_parameter_info(model_parameters,
+                                                                          current_prior,
+                                                                          type);
+                
+                std::string variable = info[0];
+                double mean = info[1];
+                double sd = info[2];
+                
+                arma::colvec mean_vec(1);
+                mean_vec[0] = mean;
+                
+                arma::colvec cov(1,1);
+                cov(0,0) = sd*sd;
+                
+                return List::create(mean_vec,cov);
+
+                
+              }
+              else if (type=="mvnorm")
+              {
+                List info = get_single_variable_vector_and_matrix_parameter_info(model_parameters,
+                                                                                 current_prior,
+                                                                                 type);
+                
+                std::string variable = info[0];
+                arma::colvec mean = info[1];
+                arma::mat cov = info[2];
+                
+                return List::create(mean,cov);
+                
+              }
+              
+            }
+            else
+            {
+              stop("Missing information for prior in model file.");
+            }
+            
+          }
+          else
+          {
+            stop("Error in factors section of model file.");
+          }
+          
+        }
+        else
+        {
+          stop("Invalid factor.");
+        }
+        
+      }
+      else
+      {
+        stop("Error in factors section of model file.");
+      }
+      
+    }
+    
+  }
+  else
+  {
+    stop("No factors found in model.");
+  }
+  
+  stop("Valid prior mean and covariance not found.");
+}
+
+
+
 std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimators(RandomNumberGenerator* rng_in,
                                                                                    size_t* seed_in,
                                                                                    Data* data_in,
@@ -5239,29 +5578,24 @@ double do_kalman_filter(const List &model,
                         const String &results_name_in)
 {
 
-  Data the_data = data();
-  
-  /*
-   
+  //Data the_data = data();
   Data the_data = get_data(model);
+  
   List prior_mean_and_covariance = get_prior_mean_and_covariance(model,
                                                                  parameters);
   
   arma::colvec prior_mean_in = prior_mean_and_covariance[0];
   arma::mat prior_covariance_in = prior_mean_and_covariance[1];
   
+  KalmanPredictor* predictor_in = get_kalman_predictor(model,
+                                                       parameters);
   
-  KalmanPredictor* predictor_in = get_predictor(model,
-                                                parameters,
-                                                predictor_options_list);
-
-  KalmanUpdater* updater_in = get_updater(model,
-                                          parameters,
-                                          updater_options_list);
-  */
+  KalmanUpdater* updater_in = get_kalman_updater(model,
+                                                 parameters);
   
   List filtering_info = get_filtering_info(parameters,
                                            filtering_options_list);
+  
   
   std::string index_name_in = filtering_info[0];
   size_t first_index_in = filtering_info[1];
@@ -5274,26 +5608,13 @@ double do_kalman_filter(const List &model,
   std::string state_name_in = filtering_info[8];
   std::string measurement_name_in = filtering_info[9];
   
-  /*
-  std::string index_name_in = "i";
-  size_t first_index_in = 0;
-  size_t last_index_in = 2;
-  std::string time_name_in = "t";
-  double initial_time_in = 0.0;
-  std::string time_diff_name_in = "dt";
-  double update_time_step_in = 1.0;
-  size_t predictions_per_update_in = 1;
-  std::string state_name_in = "x";
-  std::string measurement_name_in = "y";
-  */
+  //KalmanPredictor* predictor_in = new ExactKalmanPredictor(transition_model_A,
+  //                                                         transition_model_Q);
+  //KalmanUpdater* updater_in = new ExactKalmanUpdater(measurement_model_H,
+  //                                                   measurement_model_R);
   
-  KalmanPredictor* predictor_in = new ExactKalmanPredictor(transition_model_A,
-                                                           transition_model_Q);
-  KalmanUpdater* updater_in = new ExactKalmanUpdater(measurement_model_H,
-                                                     measurement_model_R);
-  
-  arma::colvec prior_mean_in = initial_mean();
-  arma::mat prior_covariance_in = initial_covariance();
+  //arma::colvec prior_mean_in = initial_mean();
+  //arma::mat prior_covariance_in = initial_covariance();
   
   std::vector<std::string> measurement_names_in;
   measurement_names_in.push_back(measurement_name_in);
