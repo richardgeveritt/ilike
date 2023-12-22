@@ -102,6 +102,9 @@ enki = function(model,
     mcmc_weights_method = list()
   }
 
+  # EnK shifter method.
+  enk_shifter_method = get_method(model,"enki_shifter")
+
   # Method for shifting the ensemble.
   if (is.null(enk_shifter_method))
   {

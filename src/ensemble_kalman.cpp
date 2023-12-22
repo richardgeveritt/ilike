@@ -344,6 +344,7 @@ void EnsembleKalman::simulate_proposal(EnsembleKalmanOutput* current_state,
   
   if (!this->proposed_particles_inputted)
   {
+    
     this->the_worker->simulate(next_ensemble,
                                index);
     //Particles particles(this->the_worker->get_particles());
@@ -352,7 +353,9 @@ void EnsembleKalman::simulate_proposal(EnsembleKalmanOutput* current_state,
   }
   else
   {
-    next_ensemble->setup(this->initial_ensemble,this->ensemble_factors);
+    next_ensemble->setup(this->initial_ensemble,
+                         this->ensemble_factors,
+                         this->sequencer.schedule_parameters);
   }
 
   current_state->back().log_normalising_constant_ratio = 0.0;
@@ -373,23 +376,29 @@ void EnsembleKalman::simulate_proposal(EnsembleKalmanOutput* current_state,
   }
   else
   {
-    next_ensemble->setup(this->initial_ensemble, this->ensemble_factors);
+    next_ensemble->setup(this->initial_ensemble,
+                         this->ensemble_factors,
+                         conditioned_on_parameters,
+                         this->sequencer.schedule_parameters);
   }
   current_state->back().log_normalising_constant_ratio = 0.0;
 }
 
 void EnsembleKalman::simulate_ensemble_member(RandomNumberGenerator &rng,
-                                              Particle* new_particle) const
+                                              Particle* new_particle,
+                                              const Parameters &sequencer_parameters) const
 {
   if (this->transform==NULL)
   {
     new_particle->setup(this->proposal->independent_simulate(rng),
-                        this->ensemble_factors);
+                        this->ensemble_factors,
+                        sequencer_parameters);
   }
   else
   {
     new_particle->setup(this->transform->transform(this->proposal->independent_simulate(rng)),
-                        this->ensemble_factors);
+                        this->ensemble_factors,
+                        sequencer_parameters);
   }
   //Parameters simulated_parameters = this->proposal->independent_simulate(rng);
   
@@ -401,6 +410,7 @@ void EnsembleKalman::simulate_ensemble_member(RandomNumberGenerator &rng,
 
 void EnsembleKalman::simulate_ensemble_member(RandomNumberGenerator &rng,
                                               Particle* new_particle,
+                                              const Parameters &sequencer_parameters,
                                               const Parameters &conditioned_on_parameters) const
 {
   if (this->transform==NULL)
@@ -408,14 +418,16 @@ void EnsembleKalman::simulate_ensemble_member(RandomNumberGenerator &rng,
     new_particle->setup(this->proposal->independent_simulate(rng,
                                                              conditioned_on_parameters),
                         this->ensemble_factors,
-                        conditioned_on_parameters);
+                        conditioned_on_parameters,
+                        sequencer_parameters);
   }
   else
   {
     new_particle->setup(this->transform->transform(this->proposal->independent_simulate(rng,
                                                                                         conditioned_on_parameters)),
                         this->ensemble_factors,
-                        conditioned_on_parameters);
+                        conditioned_on_parameters,
+                        sequencer_parameters);
   }
   
   //Parameters simulated_parameters = this->proposal->independent_simulate(rng,

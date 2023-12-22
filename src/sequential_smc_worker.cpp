@@ -719,10 +719,7 @@ void SequentialSMCWorker::smcadaptive_given_smcfixed_weight(const Index* index,
     //double prev = current_particles[i]->back().previous_target_evaluated;
     double a = current_particles[i]->back().evaluate_smcadaptive_part_given_smcfixed_likelihoods(index);
     double b = current_particles[i]->back().previous_target_evaluated;
-    
-    //Rcout << "a:" << a << std::endl;
-    //Rcout << "b:" << b << std::endl;
-    
+
     if (a==-arma::datum::inf)
     {
       this->log_unnormalised_incremental_weights[i] = -arma::datum::inf;

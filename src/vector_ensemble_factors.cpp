@@ -30,6 +30,7 @@ VectorEnsembleFactors::~VectorEnsembleFactors()
       delete *i;
   }
   
+  /*
   for (std::vector<Data*>::iterator i=this->measurement_covariance_estimator_temp_data.begin();
        i!=this->measurement_covariance_estimator_temp_data.end();
        ++i)
@@ -37,6 +38,7 @@ VectorEnsembleFactors::~VectorEnsembleFactors()
     if (*i!=NULL)
       delete *i;
   }
+  */
 }
 
 //Copy constructor for the VectorEnsembleFactors class.
@@ -61,6 +63,7 @@ void VectorEnsembleFactors::operator=(const VectorEnsembleFactors &another)
   }
   this->measurement_covariance_estimators.clear();
   
+  /*
   for (std::vector<Data*>::iterator i=this->measurement_covariance_estimator_temp_data.begin();
        i!=this->measurement_covariance_estimator_temp_data.end();
        ++i)
@@ -69,6 +72,7 @@ void VectorEnsembleFactors::operator=(const VectorEnsembleFactors &another)
       delete *i;
   }
   this->measurement_covariance_estimator_temp_data.clear();
+  */
   
   EnsembleFactors::operator=(another);
   this->make_copy(another);
@@ -93,6 +97,7 @@ void VectorEnsembleFactors::make_copy(const VectorEnsembleFactors &another)
       this->measurement_covariance_estimators.push_back(NULL);
   }
   
+  /*
   this->measurement_covariance_estimator_temp_data.resize(0);
   for (std::vector<Data*>::const_iterator i=another.measurement_covariance_estimator_temp_data.begin();
        i!=another.measurement_covariance_estimator_temp_data.end();
@@ -103,6 +108,8 @@ void VectorEnsembleFactors::make_copy(const VectorEnsembleFactors &another)
     else
       this->measurement_covariance_estimator_temp_data.push_back(NULL);
   }
+  */
+  this->measurement_covariance_estimator_temp_data = another.measurement_covariance_estimator_temp_data;
 }
 
 void VectorEnsembleFactors::set_data(const Index* index)
@@ -111,25 +118,24 @@ void VectorEnsembleFactors::set_data(const Index* index)
     return;
   
   arma::uvec indices = index->get_uvec();
-  Data* subsetted_data = new Data();
   
-  // assumption that all cov_estimators point to the same data
+  // assumption that all llhd_estimators point to the same data
   Data* all_data = this->measurement_covariance_estimators[0]->get_data();
   
-  for (auto i=this->measurement_names.begin();
-       i!=this->measurement_names.end();
-       ++i)
+  if (this->measurement_covariance_estimator_temp_data.size()==0)
   {
-    (*subsetted_data)[*i] = (*all_data)[*i].rows(indices);
+    this->measurement_covariance_estimator_temp_data.push_back(std::make_shared<Data>(all_data->rows(indices)));
   }
-  if (this->measurement_covariance_estimator_temp_data[0]!=NULL)
-    delete this->measurement_covariance_estimator_temp_data[0];
-  this->measurement_covariance_estimator_temp_data[0] = subsetted_data;
+  else
+  {
+    this->measurement_covariance_estimator_temp_data[0] = std::make_shared<Data>(all_data->rows(indices));
+  }
+  
   for (auto i=this->measurement_covariance_estimators.begin();
        i!=this->measurement_covariance_estimators.end();
        ++i)
   {
-    (*i)->change_data(subsetted_data);
+    (*i)->change_data(this->measurement_covariance_estimator_temp_data[0]);
   }
 }
 

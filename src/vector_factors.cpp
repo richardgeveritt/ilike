@@ -27,6 +27,7 @@ VectorFactors::~VectorFactors()
       delete *i;
   }
   
+  /*
   for (std::vector<Data*>::iterator i=this->likelihood_estimator_temp_data.begin();
        i!=this->likelihood_estimator_temp_data.end();
        ++i)
@@ -34,6 +35,7 @@ VectorFactors::~VectorFactors()
     if (*i!=NULL)
       delete *i;
   }
+  */
 }
 
 //Copy constructor for the VectorFactors class.
@@ -58,6 +60,7 @@ void VectorFactors::operator=(const VectorFactors &another)
   }
   this->likelihood_estimators.clear();
   
+  /*
   for (std::vector<Data*>::iterator i=this->likelihood_estimator_temp_data.begin();
        i!=this->likelihood_estimator_temp_data.end();
        ++i)
@@ -66,6 +69,7 @@ void VectorFactors::operator=(const VectorFactors &another)
       delete *i;
   }
   this->likelihood_estimator_temp_data.clear();
+  */
   
   Factors::operator=(another);
   this->make_copy(another);
@@ -90,6 +94,7 @@ void VectorFactors::make_copy(const VectorFactors &another)
       this->likelihood_estimators.push_back(NULL);
   }
   
+  /*
   this->likelihood_estimator_temp_data.resize(0);
   for (std::vector<Data*>::const_iterator i=another.likelihood_estimator_temp_data.begin();
        i!=another.likelihood_estimator_temp_data.end();
@@ -100,6 +105,8 @@ void VectorFactors::make_copy(const VectorFactors &another)
     else
       this->likelihood_estimator_temp_data.push_back(NULL);
   }
+  */
+  this->likelihood_estimator_temp_data = another.likelihood_estimator_temp_data;
 }
 
 void VectorFactors::set_data(const Index* index)
@@ -108,25 +115,24 @@ void VectorFactors::set_data(const Index* index)
     return;
   
   arma::uvec indices = index->get_uvec();
-  Data* subsetted_data = new Data();
   
   // assumption that all llhd_estimators point to the same data
   Data* all_data = this->likelihood_estimators[0]->get_data();
   
-  for (auto i=all_data->vector_begin();
-       i!=all_data->vector_end();
-       ++i)
+  if (this->likelihood_estimator_temp_data.size()==0)
   {
-    (*subsetted_data)[i->first] = (*all_data)[i->first].rows(indices);
+    this->likelihood_estimator_temp_data.push_back(std::make_shared<Data>(all_data->rows(indices)));
   }
-  if (this->likelihood_estimator_temp_data[0]!=NULL)
-    delete this->likelihood_estimator_temp_data[0];
-  this->likelihood_estimator_temp_data[0] = subsetted_data;
+  else
+  {
+    this->likelihood_estimator_temp_data[0] = std::make_shared<Data>(all_data->rows(indices));
+  }
+  
   for (auto i=this->likelihood_estimators.begin();
        i!=this->likelihood_estimators.end();
        ++i)
   {
-    (*i)->change_data(subsetted_data);
+    (*i)->change_data(this->likelihood_estimator_temp_data[0]);
   }
 }
 

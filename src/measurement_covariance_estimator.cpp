@@ -18,7 +18,7 @@ MeasurementCovarianceEstimator::MeasurementCovarianceEstimator(RandomNumberGener
   this->current_data = this->data;
   this->rng = rng_in;
   this->seed = seed_in;
-  this->measurement_variables = this->data->get_vector_variables();
+  this->measurement_variables = this->data->get_vector_variables(); // automatically get measurement variables - might want to remove this
   this->set_using_parameters = false;
   this->transform = transform_in;
   this->summary_statistics = summary_statistics_in;

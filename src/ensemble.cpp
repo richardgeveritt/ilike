@@ -52,13 +52,15 @@ Ensemble::Ensemble(EnsembleFactors* ensemble_factors_in)
 }
 
 Ensemble::Ensemble(std::vector<Parameters> &initial_values_in,
-                   EnsembleFactors* factors_in)
+                   EnsembleFactors* factors_in,
+                   const Parameters &conditioned_on_parameters)
 {
-  this->setup(initial_values_in,factors_in);
+  this->setup(initial_values_in,factors_in,conditioned_on_parameters);
 }
 
 void Ensemble::setup(std::vector<Parameters> &initial_values_in,
-                     EnsembleFactors* factors_in)
+                     EnsembleFactors* factors_in,
+                     const Parameters &conditioned_on_parameters)
 {
   size_t number_of_particles_in = initial_values_in.size();
   this->members.reserve(number_of_particles_in);
@@ -70,6 +72,38 @@ void Ensemble::setup(std::vector<Parameters> &initial_values_in,
        i!=initial_values_in.end();
        ++i, ++counter)
   {
+    i->merge_with_fixed(conditioned_on_parameters);
+    this->push_back(std::move(*i),factors_in);
+  }
+  
+  this->ensemble_factors = factors_in;
+}
+
+Ensemble::Ensemble(std::vector<Parameters> &initial_values_in,
+                   EnsembleFactors* factors_in,
+                   const Parameters &conditioned_on_parameters,
+                   const Parameters &sequencer_parameters)
+{
+  this->setup(initial_values_in,factors_in,conditioned_on_parameters,sequencer_parameters);
+}
+
+void Ensemble::setup(std::vector<Parameters> &initial_values_in,
+                     EnsembleFactors* factors_in,
+                     const Parameters &conditioned_on_parameters,
+                     const Parameters &sequencer_parameters)
+{
+  size_t number_of_particles_in = initial_values_in.size();
+  this->members.reserve(number_of_particles_in);
+  this->unnormalised_log_weights = arma::colvec(number_of_particles_in);
+  this->log_normalising_constant_ratio = 0.0;
+  
+  size_t counter = 0;
+  for (std::vector<Parameters>::iterator i=initial_values_in.begin();
+       i!=initial_values_in.end();
+       ++i, ++counter)
+  {
+    i->merge_with_fixed(conditioned_on_parameters);
+    i->merge_with_fixed(sequencer_parameters);
     this->push_back(std::move(*i),factors_in);
   }
   

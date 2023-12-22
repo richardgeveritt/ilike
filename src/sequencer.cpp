@@ -315,18 +315,6 @@ void Sequencer::find_next_target_bisection(SMCOutput* current_state,
   
   this->schedule_parameters[this->variable_names.back()] = this->current_bisect_value;
   
-  /*
-  Rcout << "schedule:" << std::endl;
-  for (size_t i=0; i<this->schedules.back().size(); ++i)
-  {
-    Rcout << this->schedules.back()[i] << std::endl;
-  }
-  
-  Rcout << "current:" << std::endl;
-  
-  Rcout << this->current_bisect_value << std::endl;
-  */
-  
   // if we want to make this generic, need to hide the next two lines in a function that can have different choices
   
   // if we have not just found a value for the parameter that is at one of the points in the schedule
@@ -339,27 +327,15 @@ void Sequencer::find_next_target_bisection(SMCOutput* current_state,
                                                             current_state->back());
     current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
-    //Rcout << this->the_worker->get_unnormalised_log_incremental_weights() << std::endl;
-    
+
     this->current_score = (*this->criterion)(current_state->back());
-    
-    //Rcout << "Current score:" << std::endl;
-    //Rcout << this->current_score << std::endl;
     
     if (this->current_score>=0.0)
     {
       this->schedule_difference = this->schedules.back()[this->mileometer.back()]-this->previous_bisect_value;//this->current_bisect_value;//-this->schedules.back()[this->mileometer.back()-1];
       //this->mileometer.increment();
       
-      /*
-      Rcout << "Reached increment." << std::endl;
-      
-      Rcout << "Mileometer index:" << std::endl;
-      for (size_t i=0; i<this->mileometer.current_index.size(); ++i)
-      {
-        Rcout << this->mileometer.current_index[i] << std::endl;
-      }
-      */
+
       
       this->set_schedule_parameters();
       //this->schedule_parameters[this->variable_names.back()] = target_values.back();
@@ -369,9 +345,7 @@ void Sequencer::find_next_target_bisection(SMCOutput* current_state,
       
       return;
     }
-    
-    //Rcout << "Reached bit after increment." << std::endl;
-    
+
     // if there is only one value in the schedule, but we did not get to the end in one go, then we need to determine the start point in order to do the bisection.
     
     // first identify if there is only one value in the schedule
@@ -477,18 +451,12 @@ void Sequencer::find_next_target_bisection(SMCOutput* current_state,
     
     this->current_bisect_value = new_bisect_value;
     
-    //Rcout << this->current_score << std::endl;
-    //Rcout << this->current_bisect_value << std::endl;
-    
     if (this->current_score==0.0)
     {
       break;
     }
     
   }
-  
-  //Rcout << this->current_score << std::endl;
-  //Rcout << this->current_bisect_value << std::endl;
   
   this->schedule_difference = this->current_bisect_value - starting_value;
   this->previous_bisect_value = this->current_bisect_value;

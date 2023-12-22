@@ -28,7 +28,7 @@ public:
                const arma::colvec &prior_mean_in,
                const arma::mat &prior_covariance_in,
                const std::string &index_name_in,
-               const std::string &time_name_in,
+               //const std::string &time_name_in,
                const std::string &time_diff_name_in,
                const std::vector<std::string> &measurements_names_in,
                size_t first_index_in,
@@ -95,7 +95,7 @@ protected:
   std::string state_name;
   size_t state_dimension;
   std::string index_name;
-  std::string time_name;
+  //std::string time_name;
   std::string time_diff_name;
   std::vector<std::string> measurements_names;
   size_t first_index;

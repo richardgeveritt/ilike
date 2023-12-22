@@ -519,9 +519,7 @@ EnsembleKalmanInversion* make_fixed_epsilon_enki_abc_likelihood(RandomNumberGene
       temperature_schedule.push_back(min_epsilon/schedule_in[i]);
     }
   }
-  
-  //Rcout << min_epsilon << std::endl;
-  
+
   if (enki_on_summary)
   {
     return new EnsembleKalmanInversion(rng_in,

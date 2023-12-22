@@ -70,9 +70,11 @@ public:
   void set_packing_instructions();
   
   void simulate_ensemble_member(RandomNumberGenerator &rng,
-                                Particle* new_particle) const;
+                                Particle* new_particle,
+                                const Parameters &sequencer_parameters) const;
   void simulate_ensemble_member(RandomNumberGenerator &rng,
                                 Particle* new_particle,
+                                const Parameters &sequencer_parameters,
                                 const Parameters &conditioned_on_parameters) const;
   
   virtual MoveOutput* move(RandomNumberGenerator &rng,

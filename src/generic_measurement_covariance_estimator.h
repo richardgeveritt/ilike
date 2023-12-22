@@ -62,7 +62,7 @@ public:
   arma::colvec gaussian_simulate();
   
   void change_data();
-  void change_data(Data* new_data);
+  void change_data(std::shared_ptr<Data> new_data);
   
   void precompute_gaussian_covariance(double inverse_incremental_temperature);
 

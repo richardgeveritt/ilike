@@ -23,7 +23,13 @@ public:
   
   Ensemble(EnsembleFactors* ensemble_factors_in);
   Ensemble(std::vector<Parameters> &initial_values_in,
-           EnsembleFactors* factors_in);
+           EnsembleFactors* factors_in,
+           const Parameters &conditioned_on_parameters);
+  
+  Ensemble(std::vector<Parameters> &initial_values_in,
+           EnsembleFactors* factors_in,
+           const Parameters &conditioned_on_parameters,
+           const Parameters &sequencer_parameters);
 
 	// Everything you need to copy the class.
 	Ensemble(const Ensemble &another);
@@ -35,7 +41,13 @@ public:
 	Ensemble* duplicate() const;
 	
   void setup(std::vector<Parameters> &initial_values_in,
-             EnsembleFactors* factors_in);
+             EnsembleFactors* factors_in,
+             const Parameters &conditioned_on_parameters);
+  
+  void setup(std::vector<Parameters> &initial_values_in,
+             EnsembleFactors* factors_in,
+             const Parameters &conditioned_on_parameters,
+             const Parameters &sequencer_parameters);
   
   void reserve(size_t number_of_ensemble_members_in);
   //void push_back(const Parameters &parameters_in);
@@ -79,6 +91,7 @@ public:
   std::vector<MoveOutput*> members;
   std::vector<MoveOutput*> predicted_members;
   
+  // only here for output
   Parameters schedule_parameters;
   
   double ess;

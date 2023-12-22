@@ -22,13 +22,22 @@ public:
                  size_t number_of_particles_in,
                  size_t lag_in,
                  size_t lag_proposed_in,
+                 const std::string &index_name_in,
+                 const std::string &time_diff_name_in,
+                 size_t first_index_in,
+                 size_t last_index_in,
+                 size_t predictions_per_update_in,
+                 double update_time_step_in,
+                 double initial_time_in,
                  SMCCriterion* adaptive_resampling_in,
-                 size_t min_time_index,
-                 size_t max_time_index,
-                 const std::vector<LikelihoodEstimator*> &measurement_models,
+                 const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
                  IndependentProposalKernel* proposal_in,
-                 ProposalKernel* transition_model,
+                 ProposalKernel* transition_model_in,
+                 ProposalKernel* transition_proposal_in,
+                 Index* without_cancelled_index,
+                 Index* full_index,
                  bool proposal_is_evaluated_in,
+                 bool transition_proposal_is_evaluated_in,
                  bool smcfixed_flag_in,
                  bool sequencer_limit_is_fixed_in,
                  bool transform_proposed_particles,
@@ -131,17 +140,23 @@ protected:
   // stored here
   ProposalKernel* proposal_kernel;
   
+  
   std::string index_name;
   //std::string time_name;
-  std::vector<std::string> measurements_names;
+  std::string time_diff_name;
+  //std::vector<std::string> measurements_names;
   size_t first_index;
   size_t last_index;
   size_t predictions_per_update;
   double update_time_step;
   double current_time;
   size_t current_index;
-  bool last_index_is_fixed;
-  size_t lag;
+  
+  //std::vector<std::string> measurements_names;
+  //size_t lag;
+  
+  // stored here
+  Index* index;
   
   bool dynamic_proposal_is_evaluated;
   

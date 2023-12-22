@@ -58,7 +58,7 @@ void LikelihoodEstimatorOutput::change_data()
   this->get_likelihood_estimator()->change_data();
 }
 
-void LikelihoodEstimatorOutput::change_data(Data* new_data)
+void LikelihoodEstimatorOutput::change_data(std::shared_ptr<Data> new_data)
 {
   this->get_likelihood_estimator()->change_data(new_data);
 }

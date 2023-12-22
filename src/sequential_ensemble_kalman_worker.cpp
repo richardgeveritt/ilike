@@ -281,7 +281,8 @@ void SequentialEnsembleKalmanWorker::specific_simulate(Ensemble* next_ensemble,
   {
     Particle* new_particle = next_ensemble->add_ensemble_member();
     this->the_enk->simulate_ensemble_member(local_rng,
-                                            new_particle);
+                                            new_particle,
+                                            this->the_enk->sequencer.schedule_parameters);
     //next_ensemble->push_back();
     
     //if (this->the_enk->likelihood_is_evaluated==true)
@@ -303,6 +304,7 @@ void SequentialEnsembleKalmanWorker::specific_simulate(Ensemble* next_ensemble,
     Particle* new_particle = next_ensemble->add_ensemble_member();
     this->the_enk->simulate_ensemble_member(local_rng,
                                             new_particle,
+                                            this->the_enk->sequencer.schedule_parameters,
                                             conditioned_on_parameters);
     
     //next_ensemble->push_back(this->the_enk->simulate_ensemble_member(local_rng,

@@ -17,10 +17,20 @@
 #include "hmm_factors.h"
 #include "vector_single_index.h"
 
+/*
+std::vector<const ProposalKernel*> augment_proposal_vectors(const std::vector<const ProposalKernel*> &some_proposals,
+                                                            const std::vector<const ProposalKernel*> &more_proposals)
+{
+  std::vector<const ProposalKernel*> output;
+  output.reserve(some_proposals.size()+more_proposals.size());
+  for 
+}
+*/
+
 ParticleFilter::ParticleFilter()
    :SMC()
 {
-
+  this->index = NULL;
 }
 
 ParticleFilter::ParticleFilter(RandomNumberGenerator* rng_in,
@@ -30,23 +40,83 @@ ParticleFilter::ParticleFilter(RandomNumberGenerator* rng_in,
                                size_t number_of_particles_in,
                                size_t lag_in,
                                size_t lag_proposed_in,
+                               const std::string &index_name_in,
+                               const std::string &time_diff_name_in,
+                               size_t first_index_in,
+                               size_t last_index_in,
+                               size_t predictions_per_update_in,
+                               double update_time_step_in,
+                               double initial_time_in,
                                SMCCriterion* adaptive_resampling_in,
-                               size_t min_time_index,
-                               size_t max_time_index,
-                               const std::vector<LikelihoodEstimator*> &measurement_models,
+                               const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
                                IndependentProposalKernel* proposal_in,
                                ProposalKernel* transition_model_in,
+                               ProposalKernel* transition_proposal_in,
+                               Index* without_cancelled_index,
+                               Index* full_index,
                                bool proposal_is_evaluated_in,
+                               bool transition_proposal_is_evaluated_in,
                                bool smcfixed_flag_in,
                                bool sequencer_limit_is_fixed_in,
                                bool transform_proposed_particles,
                                bool parallel_in,
                                size_t grain_size_in,
                                const std::string &results_name_in)
-  :SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, transition_model_in->get_proposals(), adaptive_resampling_in, proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, transform_proposed_particles, results_name_in)
+  :SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, transition_proposal_in->get_proposals(), adaptive_resampling_in, proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, transform_proposed_particles, results_name_in)
 {
   
   proposal_in->set_proposal_parameters(&this->algorithm_parameters);
+  transition_proposal_in->set_proposal_parameters(&this->algorithm_parameters);
+  
+  this->index_name = index_name_in;
+  //this->time_name = time_name_in;
+  this->time_diff_name = time_diff_name_in;
+  this->first_index = first_index_in;
+  this->last_index = last_index_in;
+  this->predictions_per_update = predictions_per_update_in;
+  this->update_time_step = update_time_step_in;
+  this->current_time = initial_time_in;
+  this->current_index = this->first_index;
+  
+  this->index = without_cancelled_index;
+  
+  this->factors = new HMMFactors(transition_model_in,
+                                 likelihood_estimators_in);
+  
+  this->particle_simulator = new ParameterParticleSimulator(proposal_in,
+                                                            likelihood_estimators_in);
+  
+  if (parallel_in==true)
+  {
+    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
+    Rcpp::stop("Parallel worker not set up.");
+  }
+  else
+  {
+    this->the_worker = new SequentialSMCWorker(this);
+  }
+  
+  
+  SMCCriterion* smc_criterion = new PositiveSMCCriterion();
+  
+  std::vector<double> schedule;
+  schedule.reserve(this->last_index-this->first_index+1);
+  for (size_t i=0; i<this->last_index-this->first_index+1; ++i)
+  {
+    schedule.push_back(this->first_index+i);
+  }
+  
+  std::vector<std::vector<double>> schedules_in;
+  schedules_in.push_back(schedule);
+  
+  std::vector<std::string> sequence_variables_in;
+  sequence_variables_in.push_back(this->index_name);
+
+  this->sequencer = Sequencer(this->the_worker,
+                              schedules_in,
+                              sequence_variables_in,
+                              100,
+                              smc_criterion);
   
   // also need to set up first proposal
   
@@ -138,6 +208,9 @@ ParticleFilter::~ParticleFilter(void)
 {
   if (this->proposal_kernel!=NULL)
     delete this->proposal_kernel;
+  
+  if (this->index!=NULL)
+    delete this->index;
 }
 
 void ParticleFilter::operator=(const ParticleFilter &another)
@@ -148,6 +221,9 @@ void ParticleFilter::operator=(const ParticleFilter &another)
   
   if (this->proposal_kernel!=NULL)
     delete this->proposal_kernel;
+  
+  if (this->index!=NULL)
+    delete this->index;
 
   SMC::operator=(another);
   this->make_copy(another);
@@ -170,15 +246,21 @@ void ParticleFilter::make_copy(const ParticleFilter &another)
   else
     this->proposal_kernel = another.proposal_kernel;
   
+  if (another.index!=NULL)
+    this->index = another.index->duplicate();
+  else
+    this->index = NULL;
+  
   this->index_name = another.index_name;
-  this->measurements_names = another.measurements_names;
+  this->time_diff_name = another.time_diff_name;
+  //this->measurements_names = another.measurements_names;
   this->first_index = another.first_index;
   this->last_index = another.last_index;
   this->predictions_per_update = another.predictions_per_update;
   this->update_time_step = another.update_time_step;
   this->current_time = another.current_time;
   this->current_index = another.current_index;
-  this->last_index_is_fixed = another.last_index_is_fixed;
+  //this->last_index_is_fixed = another.last_index_is_fixed;
   this->lag = another.lag;
   this->dynamic_proposal_is_evaluated = another.dynamic_proposal_is_evaluated;
 }
@@ -209,6 +291,7 @@ SMCOutput* ParticleFilter::specific_initialise_smc()
   this->first_index = 0;
   this->current_index = this->first_index;
   this->factors->set_data(this->current_index);
+  this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
   return output;
 }
 
@@ -246,7 +329,7 @@ void ParticleFilter::simulate_smc(SMCOutput* current_state)
 
 void ParticleFilter::evaluate_smc(SMCOutput* current_state)
 {
-  if (!this->last_index_is_fixed)
+  if (!this->sequencer_limit_is_fixed)
   {
     Rcpp::stop("ParticleFilter::evaluate - need to read in a parameter to determine last measurement index.");
   }
@@ -399,6 +482,7 @@ SMCOutput* ParticleFilter::specific_initialise_smc(const Parameters &conditioned
   this->first_index = 0;
   this->current_index = this->first_index;
   this->factors->set_data(this->current_index);
+  this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
   return output;
 }
 

@@ -11,11 +11,12 @@ HMMFactors::HMMFactors()
   this->likelihood_estimator_temp_data.resize(0);
 }
 
-HMMFactors::HMMFactors(ProposalKernel* transition_kernel_in)
+HMMFactors::HMMFactors(ProposalKernel* transition_kernel_in,
+                       const std::vector<LikelihoodEstimator*> &likelihood_estimators_in)
 :Factors()
 {
   this->transition_kernel = transition_kernel_in;
-  this->likelihood_estimators.resize(0);
+  this->likelihood_estimators = likelihood_estimators_in;
   this->likelihood_estimator_temp_data.resize(0);
 }
 
@@ -32,6 +33,7 @@ HMMFactors::~HMMFactors()
       delete *i;
   }
   
+  /*
   for (std::vector<Data*>::iterator i=this->likelihood_estimator_temp_data.begin();
        i!=this->likelihood_estimator_temp_data.end();
        ++i)
@@ -39,6 +41,7 @@ HMMFactors::~HMMFactors()
     if (*i!=NULL)
       delete *i;
   }
+  */
 }
 
 //Copy constructor for the HMMFactors class.
@@ -66,6 +69,7 @@ void HMMFactors::operator=(const HMMFactors &another)
   }
   this->likelihood_estimators.clear();
   
+   /*
   for (std::vector<Data*>::iterator i=this->likelihood_estimator_temp_data.begin();
        i!=this->likelihood_estimator_temp_data.end();
        ++i)
@@ -74,7 +78,8 @@ void HMMFactors::operator=(const HMMFactors &another)
       delete *i;
   }
   this->likelihood_estimator_temp_data.clear();
-  
+  */
+   
   Factors::operator=(another);
   this->make_copy(another);
 }
@@ -107,6 +112,8 @@ void HMMFactors::make_copy(const HMMFactors &another)
       this->likelihood_estimators.push_back(NULL);
   }
   
+  this->likelihood_estimator_temp_data = another.likelihood_estimator_temp_data;
+  /*
   this->likelihood_estimator_temp_data.resize(0);
   for (std::vector<Data*>::const_iterator i=another.likelihood_estimator_temp_data.begin();
        i!=another.likelihood_estimator_temp_data.end();
@@ -117,10 +124,12 @@ void HMMFactors::make_copy(const HMMFactors &another)
     else
       this->likelihood_estimator_temp_data.push_back(NULL);
   }
+  */
 }
 
 void HMMFactors::set_data(const Index* index)
 {
+  /*
   if (index->size()==1)
   {
     for (auto i=this->likelihood_estimators.begin();
@@ -130,33 +139,33 @@ void HMMFactors::set_data(const Index* index)
       (*i)->change_data(&this->data_time_slices[*index->begin()]);
     }
   }
+  */
+  //else
+  //{
+  if (this->likelihood_estimators.size()==0)
+    return;
+  
+  arma::uvec indices = index->get_uvec();
+  
+  // assumption that all llhd_estimators point to the same data
+  Data* all_data = this->likelihood_estimators[0]->get_data();
+  
+  if (this->likelihood_estimator_temp_data.size()==0)
+  {
+    this->likelihood_estimator_temp_data.push_back(std::make_shared<Data>(all_data->rows(indices)));
+  }
   else
   {
-    if (this->likelihood_estimators.size()==0)
-      return;
-    
-    arma::uvec indices = index->get_uvec();
-    Data* subsetted_data = new Data();
-    
-    // assumption that all llhd_estimators point to the same data
-    Data* all_data = this->likelihood_estimators[0]->get_data();
-    
-    for (auto i=all_data->vector_begin();
-         i!=all_data->vector_end();
-         ++i)
-    {
-      (*subsetted_data)[i->first] = (*all_data)[i->first].rows(indices);
-    }
-    if (this->likelihood_estimator_temp_data[0]!=NULL)
-      delete this->likelihood_estimator_temp_data[0];
-    this->likelihood_estimator_temp_data[0] = subsetted_data;
-    for (auto i=this->likelihood_estimators.begin();
-         i!=this->likelihood_estimators.end();
-         ++i)
-    {
-      (*i)->change_data(subsetted_data);
-    }
+    this->likelihood_estimator_temp_data[0] = std::make_shared<Data>(all_data->rows(indices));
   }
+  
+  for (auto i=this->likelihood_estimators.begin();
+       i!=this->likelihood_estimators.end();
+       ++i)
+  {
+    (*i)->change_data(this->likelihood_estimator_temp_data[0]);
+  }
+  //}
 }
 
 FactorVariables* HMMFactors::simulate_factor_variables(const Parameters &simulated_parameters) const

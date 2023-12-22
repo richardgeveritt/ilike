@@ -13,6 +13,15 @@ HMMEnsembleFactors::HMMEnsembleFactors()
   this->transition_kernel = NULL;
 }
 
+HMMEnsembleFactors::HMMEnsembleFactors(ProposalKernel* transition_kernel_in,
+                                       const std::vector<MeasurementCovarianceEstimator*> &measurement_covariance_estimators_in)
+:EnsembleFactors()
+{
+  this->transition_kernel = transition_kernel_in;
+  this->measurement_covariance_estimators = measurement_covariance_estimators_in;
+  this->measurement_covariance_estimator_temp_data.resize(0);
+}
+
 HMMEnsembleFactors::~HMMEnsembleFactors()
 {
   for (std::vector<MeasurementCovarianceEstimator*>::iterator i=this->measurement_covariance_estimators.begin();
@@ -23,13 +32,15 @@ HMMEnsembleFactors::~HMMEnsembleFactors()
       delete *i;
   }
   
-  for (std::vector<Data*>::iterator i=this->measurement_covariance_estimator_temp_data.begin();
+  /*
+  for (auto i=this->measurement_covariance_estimator_temp_data.begin();
        i!=this->measurement_covariance_estimator_temp_data.end();
        ++i)
   {
     if (*i!=NULL)
       delete *i;
   }
+  */
   
   if (this->transition_kernel!=NULL)
     delete this->transition_kernel;
@@ -50,7 +61,7 @@ void HMMEnsembleFactors::operator=(const HMMEnsembleFactors &another)
   
   if (this->transition_kernel!=NULL)
     delete this->transition_kernel;
-  
+
   for (std::vector<MeasurementCovarianceEstimator*>::iterator i=this->measurement_covariance_estimators.begin();
        i!=this->measurement_covariance_estimators.end();
        ++i)
@@ -60,7 +71,8 @@ void HMMEnsembleFactors::operator=(const HMMEnsembleFactors &another)
   }
   this->measurement_covariance_estimators.clear();
   
-  for (std::vector<Data*>::iterator i=this->measurement_covariance_estimator_temp_data.begin();
+  /*
+  for (auto i=this->measurement_covariance_estimator_temp_data.begin();
        i!=this->measurement_covariance_estimator_temp_data.end();
        ++i)
   {
@@ -68,6 +80,7 @@ void HMMEnsembleFactors::operator=(const HMMEnsembleFactors &another)
       delete *i;
   }
   this->measurement_covariance_estimator_temp_data.clear();
+  */
   
   EnsembleFactors::operator=(another);
   this->make_copy(another);
@@ -97,8 +110,10 @@ void HMMEnsembleFactors::make_copy(const HMMEnsembleFactors &another)
       this->measurement_covariance_estimators.push_back(NULL);
   }
   
+  this->measurement_covariance_estimator_temp_data = another.measurement_covariance_estimator_temp_data;
+  /*
   this->measurement_covariance_estimator_temp_data.resize(0);
-  for (std::vector<Data*>::const_iterator i=another.measurement_covariance_estimator_temp_data.begin();
+  for (auto i=another.measurement_covariance_estimator_temp_data.begin();
        i!=another.measurement_covariance_estimator_temp_data.end();
        ++i)
   {
@@ -107,6 +122,7 @@ void HMMEnsembleFactors::make_copy(const HMMEnsembleFactors &another)
     else
       this->measurement_covariance_estimator_temp_data.push_back(NULL);
   }
+  */
 }
 
 void HMMEnsembleFactors::set_data(const Index* index)
@@ -115,6 +131,8 @@ void HMMEnsembleFactors::set_data(const Index* index)
     return;
   
   arma::uvec indices = index->get_uvec();
+  
+  /*
   Data* subsetted_data = new Data();
   
   // assumption that all llhd_estimators point to the same data
@@ -126,14 +144,30 @@ void HMMEnsembleFactors::set_data(const Index* index)
   {
     (*subsetted_data)[i->first] = (*all_data)[i->first].rows(indices);
   }
+   
   if (this->measurement_covariance_estimator_temp_data[0]!=NULL)
     delete this->measurement_covariance_estimator_temp_data[0];
+   
   this->measurement_covariance_estimator_temp_data[0] = subsetted_data;
+  */
+  
+  // assumption that all llhd_estimators point to the same data
+  Data* all_data = this->measurement_covariance_estimators[0]->get_data();
+  
+  if (this->measurement_covariance_estimator_temp_data.size()==0)
+  {
+    this->measurement_covariance_estimator_temp_data.push_back(std::make_shared<Data>(all_data->rows(indices)));
+  }
+  else
+  {
+    this->measurement_covariance_estimator_temp_data[0] = std::make_shared<Data>(all_data->rows(indices));
+  }
+    
   for (auto i=this->measurement_covariance_estimators.begin();
        i!=this->measurement_covariance_estimators.end();
        ++i)
   {
-    (*i)->change_data(subsetted_data);
+    (*i)->change_data(this->measurement_covariance_estimator_temp_data[0]);
   }
 }
 

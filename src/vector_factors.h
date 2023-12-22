@@ -55,7 +55,7 @@ protected:
   // stored here
   // data temporarily used in a likelihood estimator
   // set up to be a vector of Data* - to allow one for each llhd_estimator, but not using this funtionality at the moment - will always be one element - the same for all llhd_estimators
-  std::vector<Data*> likelihood_estimator_temp_data;
+  std::vector< std::shared_ptr<Data> > likelihood_estimator_temp_data;
 
 };
 

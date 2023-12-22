@@ -1009,77 +1009,83 @@ void Particle::simulate_proposal_variables(const std::vector<const ProposalKerne
   this->proposals_to_find_gradient_for_pointer = proposals_to_find_gradient_for_in;
   this->proposals_to_transform_for_pointer = proposals_to_transform_for_in;
   
-  for (auto i=this->proposals_to_find_gradient_for_pointer->begin();
-       i!=this->proposals_to_find_gradient_for_pointer->end();
-       ++i)
+  if (this->proposals_to_find_gradient_for_pointer!=NULL)
   {
-    GradientEstimatorOutput* simulated = (*i)->simulate_gradient_estimator_output();
-    if (simulated!=NULL)
+    for (auto i=this->proposals_to_find_gradient_for_pointer->begin();
+         i!=this->proposals_to_find_gradient_for_pointer->end();
+         ++i)
     {
-      this->current_proposal_store[(*i)->get_instance_index()] = ProposalStore(simulated);
+      GradientEstimatorOutput* simulated = (*i)->simulate_gradient_estimator_output();
+      if (simulated!=NULL)
+      {
+        this->current_proposal_store[(*i)->get_instance_index()] = ProposalStore(simulated);
+      }
     }
   }
   
-  for (auto i=this->proposals_to_transform_for_pointer->begin();
-       i!=proposals_to_transform_for_pointer->end();
-       ++i)
+  if (this->proposals_to_transform_for_pointer!=NULL)
   {
-    
-    boost::unordered_map< int, ProposalStore>::iterator current_transform_stored_at_proposal = this->current_proposal_store.end();
-    
-    /*
-    for (auto j=this->current_proposal_store.begin();
-         j!=this->current_proposal_store.end();
-         ++j)
+    for (auto i=this->proposals_to_transform_for_pointer->begin();
+         i!=proposals_to_transform_for_pointer->end();
+         ++i)
     {
-      if ((*i)->get_instance_index()==j->first)
-      {
-        current_transform_stored_at_proposal = j;
-      }
-    }
-    */
-    
-    auto found = this->current_proposal_store.find((*i)->get_instance_index());
-    
-    if (found != this->current_proposal_store.end()) // if proposal is found in current_proposal_store
-    {
-      //if (current_transform_stored_at_proposal==this->current_proposal_store.end())
-      //{
       
-      if ((*i)->get_transform()==NULL)
+      boost::unordered_map< int, ProposalStore>::iterator current_transform_stored_at_proposal = this->current_proposal_store.end();
+      
+      /*
+       for (auto j=this->current_proposal_store.begin();
+       j!=this->current_proposal_store.end();
+       ++j)
+       {
+       if ((*i)->get_instance_index()==j->first)
+       {
+       current_transform_stored_at_proposal = j;
+       }
+       }
+       */
+      
+      auto found = this->current_proposal_store.find((*i)->get_instance_index());
+      
+      if (found != this->current_proposal_store.end()) // if proposal is found in current_proposal_store
       {
-        found->second.set_transformed_parameters(this->parameters);
+        //if (current_transform_stored_at_proposal==this->current_proposal_store.end())
+        //{
+        
+        if ((*i)->get_transform()==NULL)
+        {
+          found->second.set_transformed_parameters(this->parameters);
+        }
+        else
+        {
+          found->second.set_transformed_parameters((*i)->get_transform()->transform(this->parameters));
+        }
+        
+        //}
+        //else
+        //{
+        //  found->second.set_transformed_parameters(current_transform_stored_at_proposal->second.get_transformed_parameters());
+        //}
       }
       else
       {
-        found->second.set_transformed_parameters((*i)->get_transform()->transform(this->parameters));
+        //if (current_transform_stored_at_proposal==this->current_proposal_store.end())
+        //{
+        
+        if ((*i)->get_transform()==NULL)
+        {
+          this->current_proposal_store[(*i)->get_instance_index()] = this->parameters;
+        }
+        else
+        {
+          this->current_proposal_store[(*i)->get_instance_index()] = (*i)->get_transform()->transform(this->parameters);
+        }
+        
+        //}
+        //else
+        //{
+        //  this->current_proposal_store[*i] = current_transform_stored_at_proposal->second.get_transformed_parameters();
+        //}
       }
-      
-      //}
-      //else
-      //{
-      //  found->second.set_transformed_parameters(current_transform_stored_at_proposal->second.get_transformed_parameters());
-      //}
-    }
-    else
-    {
-      //if (current_transform_stored_at_proposal==this->current_proposal_store.end())
-      //{
-      
-      if ((*i)->get_transform()==NULL)
-      {
-        this->current_proposal_store[(*i)->get_instance_index()] = this->parameters;
-      }
-      else
-      {
-        this->current_proposal_store[(*i)->get_instance_index()] = (*i)->get_transform()->transform(this->parameters);
-      }
-      
-      //}
-      //else
-      //{
-      //  this->current_proposal_store[*i] = current_transform_stored_at_proposal->second.get_transformed_parameters();
-      //}
     }
     
   }

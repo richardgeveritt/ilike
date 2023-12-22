@@ -30,6 +30,7 @@ Particles::Particles(const std::vector< MoveOutput* > &particles_in)
   this->resampled_flag = false;
 }
 
+/*
 Particles::Particles(std::vector<Parameters> &initial_values_in,
                      const arma::colvec &log_probabilities_of_initial_values_in,
                      Factors* factors_in,
@@ -75,12 +76,14 @@ void Particles::setup(std::vector<Parameters> &initial_values_in,
        i!=initial_values_in.end();
        ++i, ++counter)
   {
+    
     //arma::mat tau = (*i)["tau"];
     this->push_back(std::move(*i),factors_in,proposals_to_transform_for_in,proposals_to_find_gradient_for_in);
     //this->push_back(*i,factors_in,proposals_to_transform_for_in,proposals_to_find_gradient_for_in);
     this->particles.back()->back().previous_target_evaluated = log_probabilities_of_initial_values_in[counter];
   }
 }
+*/
 
 Particles::Particles(std::vector<Parameters> &initial_values_in,
                      const arma::colvec &log_probabilities_of_initial_values_in,

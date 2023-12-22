@@ -25,7 +25,7 @@ public:
                                                      std::shared_ptr<Transform> summary_statistics_in,
                                                      const arma::mat &measurement_matrix_in,
                                                      const arma::mat &measurement_covariance_in,
-                                                     const std::string &measurement_variable_in,
+                                                     //const std::string &measurement_variable_in,
                                                      const std::string &state_variable_in);
   
   DirectLinearGaussianMeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
@@ -35,7 +35,7 @@ public:
                                                      std::shared_ptr<Transform> summary_statistics_in,
                                                      GetMatrixPtr measurement_matrix_in,
                                                      GetMatrixPtr measurement_covariance_in,
-                                                     const std::string &measurement_variable_in,
+                                                     //const std::string &measurement_variable_in,
                                                      const std::string &state_variable_in);
 
   virtual ~DirectLinearGaussianMeasurementCovarianceEstimator();

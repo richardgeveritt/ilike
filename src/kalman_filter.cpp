@@ -14,7 +14,7 @@ KalmanFilter::KalmanFilter(Data* data_in,
                            const arma::colvec &prior_mean_in,
                            const arma::mat &prior_covariance_in,
                            const std::string &index_name_in,
-                           const std::string &time_name_in,
+                           //const std::string &time_name_in,
                            const std::string &time_diff_name_in,
                            const std::vector<std::string> &measurements_names_in,
                            size_t first_index_in,
@@ -36,7 +36,7 @@ KalmanFilter::KalmanFilter(Data* data_in,
   
   this->state_name = state_name_in;
   this->index_name = index_name_in;
-  this->time_name = time_name_in;
+  //this->time_name = time_name_in;
   this->time_diff_name = time_diff_name_in;
   this->measurements_names = measurements_names_in;
   this->first_index = first_index_in;
@@ -95,7 +95,7 @@ void KalmanFilter::make_copy(const KalmanFilter &another)
   this->state_name = another.state_name;
   this->state_dimension = another.state_dimension;
   this->index_name = another.index_name;
-  this->time_name = another.time_name;
+  //this->time_name = another.time_name;
   this->time_diff_name = another.time_diff_name;
   this->measurements_names = another.measurements_names;
   this->first_index = another.first_index;
@@ -176,9 +176,10 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state)
     Rcpp::stop("KalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
   }
   
-  this->schedule_parameters = Parameters(this->time_name,this->current_time);
+  this->schedule_parameters = Parameters();//this->time_name,this->current_time);
   this->schedule_parameters[this->index_name] = this->current_index;
-  this->schedule_parameters[this->time_diff_name] = 0.0;
+  double predict_time_step = this->update_time_step/double(this->predictions_per_update);
+  this->schedule_parameters[this->time_diff_name] = predict_time_step;
   
   Parameters all_parameters;
   all_parameters.merge_with_fixed(this->schedule_parameters);
@@ -217,8 +218,6 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state)
     current_state->increment_kf_iteration();
   }
   
-  double predict_time_step = this->update_time_step/double(this->predictions_per_update);
-  
   while (!this->check_termination())
   {
     current_state->set_current_predicted_to_be_current_posterior();
@@ -226,8 +225,8 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state)
     {
       this->current_time = this->current_time + predict_time_step;
       
-      this->schedule_parameters[this->time_name] = this->current_time;
-      this->schedule_parameters[this->time_diff_name] = predict_time_step;
+      //this->schedule_parameters[this->time_name] = this->current_time;
+      //this->schedule_parameters[this->time_diff_name] = predict_time_step;
       
       //this->predictor->predict(current_state,
       //                         previous_time,
@@ -412,7 +411,7 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state,
       Rcpp::stop("KalmanFilter::evaluate - last index from parameters is before the current state of the filter.");
   }
   
-  this->schedule_parameters = Parameters(this->time_name,this->current_time);
+  this->schedule_parameters = Parameters();//this->time_name,this->current_time);
   this->schedule_parameters[this->index_name] = this->current_index;
   this->schedule_parameters[this->time_diff_name] = 0.0;
   
@@ -462,7 +461,7 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state,
       //double previous_time = this->current_time;
       this->current_time = this->current_time + predict_time_step;
       
-      this->schedule_parameters[this->time_name] = this->current_time;
+      //this->schedule_parameters[this->time_name] = this->current_time;
       this->schedule_parameters[this->time_diff_name] = predict_time_step;
       
       //this->predictor->predict(current_state,

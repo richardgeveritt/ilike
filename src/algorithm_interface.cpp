@@ -75,8 +75,10 @@ using namespace Rcpp;
 #include "kalman_filter_output.h"
 #include "exact_kalman_predictor.h"
 #include "exact_kalman_updater.h"
+#include "ensemble_kalman_filter.h"
 
 //#include "linear_gaussian_state_space_model.h"
+//#include "enk_linear_gaussian_state_space_model.h"
 
 // from https://stackoverflow.com/questions/2165921/converting-from-a-stdstring-to-bool
 bool stob(const std::string &s)
@@ -254,7 +256,7 @@ Data get_data(const List &model)
   }
   else
   {
-    Rcpp::stop("do_importance_sampler: data not found in model specification.");
+    Rcpp::stop("data not found in model specification.");
   }
 }
 
@@ -753,16 +755,12 @@ List get_abc_enki_parameter_info(const List &model_parameters,
   int number_of_points = extract_int_parameter(parameters,
                                                model_parameters,
                                                0);
-  //Rcout << number_of_points << std::endl;
-  
   std::string tolerance_variable = extract_string_parameter(parameters,
                                                             model_parameters,
                                                             1);
-  //Rcout << number_of_points << std::endl;
   arma::colvec schedule_colvec = extract_vector_parameter(parameters,
                                                           model_parameters,
                                                           2);
-  //Rcout << number_of_points << std::endl;
   
   std::vector<double> schedule;
   if (schedule_colvec.n_elem==0)
@@ -785,33 +783,33 @@ List get_abc_enki_parameter_info(const List &model_parameters,
   int enki_lag = extract_int_parameter(parameters,
                                        model_parameters,
                                        3);
-  //Rcout << number_of_points << std::endl;
+
   std::string shifter_name = extract_string_parameter(parameters,
                                                       model_parameters,
                                                       4);
-  //Rcout << number_of_points << std::endl;
+
   
   double proportion = extract_double_parameter(parameters,
                                                model_parameters,
                                                5);
-  //Rcout << number_of_points << std::endl;
+
   
   double enki_annealing_desired_cess = proportion*double(number_of_points);
   
   int enki_number_of_bisections = extract_int_parameter(parameters,
                                                         model_parameters,
                                                         6);
-  //Rcout << number_of_points << std::endl;
+
   
   bool enki_on_summary = extract_bool_parameter(parameters,
                                                 model_parameters,
                                                 7);
-  //Rcout << number_of_points << std::endl;
+
   
   double significance_level = extract_double_parameter(parameters,
                                                        model_parameters,
                                                        8);
-  //Rcout << number_of_points << std::endl;
+
     
   bool parallel = false;
   if (parameters.size()>9)
@@ -829,7 +827,6 @@ List get_abc_enki_parameter_info(const List &model_parameters,
                                        10);
   }
   
-  //Rcout << number_of_points << std::endl;
   return List::create(variable_names,
                       number_of_points,
                       tolerance_variable,
@@ -867,57 +864,57 @@ List get_filtering_info(const List &model_parameters,
                                                            model_parameters,
                                                            0);
       //output[0] = index_name_in;
-      //Rcout << index_name_in << std::endl;
+
       size_t first_index_in = extract_int_parameter(values,
                                                     model_parameters,
                                                     1);
-      //Rcout << first_index_in << std::endl;
+
       //output[1] = first_index_in;
       size_t last_index_in = extract_int_parameter(values,
                                                    model_parameters,
                                                    2);
-      //Rcout << last_index_in << std::endl;
+
       //output[2] = last_index_in;
-      std::string time_name_in = extract_string_parameter(values,
-                                                          model_parameters,
-                                                          3);
-      //Rcout << time_name_in << std::endl;
+      //std::string time_name_in = extract_string_parameter(values,
+      //                                                    model_parameters,
+      //                                                    3);
+
       //output[3] = time_name_in;
       double initial_time_in = extract_double_parameter(values,
                                                         model_parameters,
-                                                        4);
-      //Rcout << initial_time_in << std::endl;
+                                                        3);
+
       //output[4] = initial_time_in;
       std::string time_diff_name_in = extract_string_parameter(values,
                                                                model_parameters,
-                                                               5);
-      //Rcout << time_diff_name_in << std::endl;
+                                                               4);
+
       //output[5] = time_diff_name_in;
       double update_time_step_in = extract_double_parameter(values,
                                                             model_parameters,
-                                                            6);
-      //Rcout << update_time_step_in << std::endl;
+                                                            5);
+      
       //output[6] = update_time_step_in;
       size_t predictions_per_update_in = extract_int_parameter(values,
                                                                model_parameters,
-                                                               7);
-      //Rcout << predictions_per_update_in << std::endl;
+                                                               6);
+
       //output[7] = predictions_per_update_in;
       std::string state_name_in = extract_string_parameter(values,
                                                            model_parameters,
-                                                           8);
-      //Rcout << state_name_in << std::endl;
+                                                           7);
+
       //output[8] = state_name_in;
       std::string measurement_name_in = extract_string_parameter(values,
                                                                  model_parameters,
-                                                                 9);
-      //Rcout << measurement_name_in << std::endl;
+                                                                 8);
+
       //output[9] = measurement_name_in;
       
       return List::create(index_name_in,
                           first_index_in,
                           last_index_in,
-                          time_name_in,
+                          //time_name_in,
                           initial_time_in,
                           time_diff_name_in,
                           update_time_step_in,
@@ -961,9 +958,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
   std::string annealing_variable;
   for (size_t i=0; i<sequencer_types.size(); ++i)
   {
-    //Rcout << sequencer_types[i] << std::endl;
-    //Rcout << sequencer_schedules[i][0] << std::endl;
-    //Rcout << sequencer_schedules[i][1] << std::endl;
+
     //if ( ( (sequencer_types[i]=="annealing") || (sequencer_types[i]=="tempering") ) && (!( (sequencer_schedules[i].size()==2) && (sequencer_schedules[i][0]==0.0) && (sequencer_schedules[i][1]==1.0)) ) )
     if ( (sequencer_types[i]=="annealing") || (sequencer_types[i]=="tempering") )
     {
@@ -1160,17 +1155,16 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                        new_factor,
                                                                                        factor_is_fixed_in_smc);
           full_index_vector.push_back(likelihood_estimators.size());
-                             
-          //Rcout << "loading evaluate_log_prior" << std::endl;
+
           if (include_priors)
           {
-            //Rcout << "include priors" << std::endl;
+
             
             without_cancelled_index_vector.push_back(likelihood_estimators.size());
             
             if (any_annealing)
             {
-              //Rcout << "any annealing" << std::endl;
+
               likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(rng_in,
                                                                               seed_in,
                                                                               data_in,
@@ -1181,13 +1175,13 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
             }
             else
             {
-              //Rcout << "no annealing" << std::endl;
+
               likelihood_estimators.push_back(new_likelihood_estimator);
             }
           }
           else
           {
-            //Rcout << "not including priors" << std::endl;
+
             likelihood_estimators.push_back(new_likelihood_estimator);
           }
           
@@ -1810,12 +1804,6 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
   full_index = new VectorSingleIndex(full_index_vector);
   without_cancelled_index = new VectorSingleIndex(without_cancelled_index_vector);
   
-  /*
-  Rcout << full_index_vector.size() << std::endl;
-  Rcout << without_cancelled_index_vector.size() << std::endl;
-  Rcout << likelihood_estimators.size() << std::endl;
-  */
-  
   return likelihood_estimators;
   
   //return std::vector<LikelihoodEstimator*>();
@@ -2062,6 +2050,448 @@ KalmanPredictor* get_kalman_predictor(const List &model,
   stop("Valid Kalman predictor not found.");
 }
 
+ProposalKernel* get_transition_proposal(const List &model,
+                                        const List &model_parameters)
+{
+  
+  if ( model.containsElementNamed("transition_proposal") )
+  {
+    List factors = model["transition_proposal"];
+    
+    for (size_t i=0; i<factors.size(); ++i)
+    {
+      
+      if (Rf_isNewList(factors[i]))
+      {
+        List current_factor = factors[i];
+        
+        if ( current_factor.containsElementNamed("linear_gaussian_transition_covariance") )
+        {
+          if (!current_factor.containsElementNamed("linear_gaussian_transition_matrix"))
+          {
+            stop("linear_gaussian must contain both matrix and covariance.");
+          }
+          
+          if (!current_factor.containsElementNamed("type"))
+          {
+            stop("linear_gaussian must contain a type.");
+          }
+          
+          if (!current_factor.containsElementNamed("linear_gaussian_transition_variable"))
+          {
+            stop("linear_gaussian must contain linear_gaussian_transition_variable.");
+          }
+          
+          SEXP linear_gaussian_transition_matrix_SEXP = current_factor["linear_gaussian_transition_matrix"];
+          SEXP linear_gaussian_transition_covariance_SEXP = current_factor["linear_gaussian_transition_covariance"];
+          SEXP linear_gaussian_transition_variable_SEXP = current_factor["linear_gaussian_transition_variable"];
+
+          size_t type = current_factor["type"];
+          ProposalKernel* proposal;
+          if (type==1)
+          {
+            proposal = new LinearGaussianNoiseProposalKernel(load_string(linear_gaussian_transition_variable_SEXP),
+                                                             load_string(linear_gaussian_transition_variable_SEXP),
+                                                             load_matrix(linear_gaussian_transition_matrix_SEXP),
+                                                             load_matrix(linear_gaussian_transition_covariance_SEXP));
+          }
+          else if (type==2)
+          {
+            proposal = new LinearGaussianNoiseFunctionProposalKernel(load_string(linear_gaussian_transition_variable_SEXP),
+                                                                     load_string(linear_gaussian_transition_variable_SEXP),
+                                                                     load_matrix_function(linear_gaussian_transition_matrix_SEXP),
+                                                                     load_matrix_function(linear_gaussian_transition_covariance_SEXP));
+          }
+          else
+          {
+            stop("linear_gaussian_transition specificiation is invalid.");
+          }
+          
+          return proposal;
+          
+        }
+        else if ( current_factor.containsElementNamed("nonlinear_gaussian_transition_covariance") )
+        {
+          
+          if (!current_factor.containsElementNamed("nonlinear_gaussian_transition_function"))
+          {
+            stop("nonlinear_gaussian_transition must contain both function and covariance.");
+          }
+         
+          if (!current_factor.containsElementNamed("type"))
+          {
+            stop("nonlinear_gaussian_transition must contain a type.");
+          }
+         
+          if (!current_factor.containsElementNamed("nonlinear_gaussian_transition_variable"))
+          {
+            stop("nonlinear_gaussian_transition must contain nonlinear_gaussian_transition_variable.");
+          }
+         
+          SEXP nonlinear_gaussian_transition_function_SEXP = current_factor["nonlinear_gaussian_transition_function"];
+          SEXP nonlinear_gaussian_transition_covariance_SEXP = current_factor["nonlinear_gaussian_transition_covariance"];
+          SEXP nonlinear_gaussian_transition_variable_SEXP = current_factor["nonlinear_gaussian_transition_variable"];
+          size_t type = current_factor["type"];
+          ProposalKernel* proposal;
+          if (type==1)
+          {
+            proposal = new NonLinearGaussianNoiseProposalKernel(load_string(nonlinear_gaussian_transition_variable_SEXP),
+                                                                std::make_shared<Transform>(load_transform(nonlinear_gaussian_transition_function_SEXP)),
+                                                                load_matrix(nonlinear_gaussian_transition_covariance_SEXP));
+          }
+          else if (type==2)
+          {
+            proposal = new NonLinearGaussianNoiseFunctionProposalKernel(load_string(nonlinear_gaussian_transition_variable_SEXP),
+                                                                        std::make_shared<Transform>(load_transform(nonlinear_gaussian_transition_function_SEXP)),
+                                                                        load_matrix_function(nonlinear_gaussian_transition_covariance_SEXP));
+          }
+          else
+          {
+            stop("nonlinear_gaussian_transition specificiation is invalid.");
+          }
+          
+          return proposal;
+          
+        }
+        else if ( current_factor.containsElementNamed("transition_proposal") )
+        {
+          DistributionFactor* new_factor;
+          
+          if (Rf_isNewList(current_factor["transition_proposal"]))
+          {
+            
+            List current_transition_proposal = current_factor["transition_proposal"];
+            if ( current_transition_proposal.containsElementNamed("type") && current_transition_proposal.containsElementNamed("variables") )
+            {
+              std::string type = current_transition_proposal["type"];
+              
+              
+              if (type=="norm_rw")
+              {
+                List info = get_single_variable_one_double_parameter_info(model_parameters,
+                                                                          current_transition_proposal,
+                                                                          type);
+                
+                std::string variable = info[0];
+                double sd = info[1];
+                
+                return new GaussianRandomWalkProposalKernel(variable,
+                                                            sd);
+                
+              }
+              else if (type=="mvnorm_rw")
+              {
+                List info = get_single_variable_matrix_parameter_info(model_parameters,
+                                                                      current_transition_proposal,
+                                                                      type);
+                
+                std::string variable = info[0];
+                arma::mat cov = info[1];
+                
+                return new GaussianRandomWalkProposalKernel(variable,
+                                                            cov);
+                
+              }
+              if (type=="unif_rw")
+              {
+                List info = get_single_variable_one_double_parameter_info(model_parameters,
+                                                                          current_transition_proposal,
+                                                                          type);
+                
+                std::string variable = info[0];
+                double sd = info[1];
+                
+                return new UniformRandomWalkProposalKernel(variable,
+                                                           sd);
+                
+              }
+              if (type=="mvunif_rw")
+              {
+                List info = get_single_variable_vector_parameter_info(model_parameters,
+                                                                      current_transition_proposal,
+                                                                      type);
+                
+                std::string variable = info[0];
+                arma::colvec halfwidth = info[1];
+                
+                return new UniformRandomWalkProposalKernel(variable,
+                                                           halfwidth);
+                
+              }
+              else
+              {
+                Rcout << "Transition model type " << type;
+                stop("Transition model type unknown.");
+              }
+              
+            }
+            else
+            {
+              stop("Missing information in transition model section of model file.");
+            }
+            
+          }
+          else
+          {
+            stop("Error in factors section of model file.");
+          }
+          
+        }
+        else if (current_factor.containsElementNamed("simulate_transition_proposal"))
+        {
+          SEXP simulate_transition_proposal_SEXP = current_factor["simulate_transition_proposal"];
+          
+          if (current_factor.containsElementNamed("evaluate_log_transition_proposal"))
+          {
+            SEXP evaluate_log_transition_proposal_SEXP = current_factor["evaluate_log_transition_proposal"];
+            return new CustomNoParamsProposalKernel(load_simulate_no_params_mcmc_proposal(simulate_transition_proposal_SEXP),
+                                                        load_evaluate_log_no_params_mcmc_proposal(evaluate_log_transition_proposal_SEXP));
+          }
+          else
+          {
+            return new CustomNoParamsProposalKernel(load_simulate_no_params_mcmc_proposal(simulate_transition_proposal_SEXP));
+          }
+          
+        }
+        
+      }
+      else
+      {
+        stop("Error in transition_proposals section of model file.");
+      }
+      
+    }
+    
+  }
+  else
+  {
+    stop("No transition_proposals found in model file.");
+  }
+  
+  stop("No valid transition proposal found.");
+}
+
+ProposalKernel* get_transition_model(const List &model,
+                                     const List &model_parameters)
+{
+  
+  if ( model.containsElementNamed("transition_model") )
+  {
+    List factors = model["transition_model"];
+    
+    for (size_t i=0; i<factors.size(); ++i)
+    {
+      
+      if (Rf_isNewList(factors[i]))
+      {
+        List current_factor = factors[i];
+        
+        if ( current_factor.containsElementNamed("linear_gaussian_transition_covariance") )
+        {
+          if (!current_factor.containsElementNamed("linear_gaussian_transition_matrix"))
+          {
+            stop("linear_gaussian must contain both matrix and covariance.");
+          }
+          
+          if (!current_factor.containsElementNamed("type"))
+          {
+            stop("linear_gaussian must contain a type.");
+          }
+          
+          if (!current_factor.containsElementNamed("linear_gaussian_transition_variable"))
+          {
+            stop("linear_gaussian must contain linear_gaussian_transition_variable.");
+          }
+          
+          SEXP linear_gaussian_transition_matrix_SEXP = current_factor["linear_gaussian_transition_matrix"];
+          SEXP linear_gaussian_transition_covariance_SEXP = current_factor["linear_gaussian_transition_covariance"];
+          SEXP linear_gaussian_transition_variable_SEXP = current_factor["linear_gaussian_transition_variable"];
+          
+          size_t type = current_factor["type"];
+          ProposalKernel* proposal;
+          if (type==1)
+          {
+            proposal = new LinearGaussianNoiseProposalKernel(load_string(linear_gaussian_transition_variable_SEXP),
+                                                             load_string(linear_gaussian_transition_variable_SEXP),
+                                                             load_matrix(linear_gaussian_transition_matrix_SEXP),
+                                                             load_matrix(linear_gaussian_transition_covariance_SEXP));
+          }
+          else if (type==2)
+          {
+            proposal = new LinearGaussianNoiseFunctionProposalKernel(load_string(linear_gaussian_transition_variable_SEXP),
+                                                                     load_string(linear_gaussian_transition_variable_SEXP),
+                                                                     load_matrix_function(linear_gaussian_transition_matrix_SEXP),
+                                                                     load_matrix_function(linear_gaussian_transition_covariance_SEXP));
+          }
+          else
+          {
+            stop("linear_gaussian_transition specificiation is invalid.");
+          }
+          
+          return proposal;
+          
+        }
+        else if ( current_factor.containsElementNamed("nonlinear_gaussian_transition_covariance") )
+        {
+          
+          if (!current_factor.containsElementNamed("nonlinear_gaussian_transition_function"))
+          {
+            stop("nonlinear_gaussian_transition must contain both function and covariance.");
+          }
+          
+          if (!current_factor.containsElementNamed("type"))
+          {
+            stop("nonlinear_gaussian_transition must contain a type.");
+          }
+          
+          if (!current_factor.containsElementNamed("nonlinear_gaussian_transition_variable"))
+          {
+            stop("nonlinear_gaussian_transition must contain nonlinear_gaussian_transition_variable.");
+          }
+          
+          SEXP nonlinear_gaussian_transition_function_SEXP = current_factor["nonlinear_gaussian_transition_function"];
+          SEXP nonlinear_gaussian_transition_covariance_SEXP = current_factor["nonlinear_gaussian_transition_covariance"];
+          SEXP nonlinear_gaussian_transition_variable_SEXP = current_factor["nonlinear_gaussian_transition_variable"];
+          size_t type = current_factor["type"];
+          ProposalKernel* proposal;
+          if (type==1)
+          {
+            proposal = new NonLinearGaussianNoiseProposalKernel(load_string(nonlinear_gaussian_transition_variable_SEXP),
+                                                                std::make_shared<Transform>(load_transform(nonlinear_gaussian_transition_function_SEXP)),
+                                                                load_matrix(nonlinear_gaussian_transition_covariance_SEXP));
+          }
+          else if (type==2)
+          {
+            proposal = new NonLinearGaussianNoiseFunctionProposalKernel(load_string(nonlinear_gaussian_transition_variable_SEXP),
+                                                                        std::make_shared<Transform>(load_transform(nonlinear_gaussian_transition_function_SEXP)),
+                                                                        load_matrix_function(nonlinear_gaussian_transition_covariance_SEXP));
+          }
+          else
+          {
+            stop("nonlinear_gaussian_transition specificiation is invalid.");
+          }
+          
+          return proposal;
+          
+        }
+        else if ( current_factor.containsElementNamed("transition_model") )
+        {
+          DistributionFactor* new_factor;
+          
+          if (Rf_isNewList(current_factor["transition_model"]))
+          {
+            
+            List current_transition_model = current_factor["transition_model"];
+            if ( current_transition_model.containsElementNamed("type") && current_transition_model.containsElementNamed("variables") )
+            {
+              std::string type = current_transition_model["type"];
+              
+              
+              if (type=="norm_rw")
+              {
+                List info = get_single_variable_one_double_parameter_info(model_parameters,
+                                                                          current_transition_model,
+                                                                          type);
+                
+                std::string variable = info[0];
+                double sd = info[1];
+                
+                return new GaussianRandomWalkProposalKernel(variable,
+                                                            sd);
+                
+              }
+              else if (type=="mvnorm_rw")
+              {
+                List info = get_single_variable_matrix_parameter_info(model_parameters,
+                                                                      current_transition_model,
+                                                                      type);
+                
+                std::string variable = info[0];
+                arma::mat cov = info[1];
+                
+                return new GaussianRandomWalkProposalKernel(variable,
+                                                            cov);
+                
+              }
+              if (type=="unif_rw")
+              {
+                List info = get_single_variable_one_double_parameter_info(model_parameters,
+                                                                          current_transition_model,
+                                                                          type);
+                
+                std::string variable = info[0];
+                double sd = info[1];
+                
+                return new UniformRandomWalkProposalKernel(variable,
+                                                           sd);
+                
+              }
+              if (type=="mvunif_rw")
+              {
+                List info = get_single_variable_vector_parameter_info(model_parameters,
+                                                                      current_transition_model,
+                                                                      type);
+                
+                std::string variable = info[0];
+                arma::colvec halfwidth = info[1];
+                
+                return new UniformRandomWalkProposalKernel(variable,
+                                                           halfwidth);
+                
+              }
+              else
+              {
+                Rcout << "Transition model type " << type;
+                stop("Transition model type unknown.");
+              }
+              
+            }
+            else
+            {
+              stop("Missing information in transition model section of model file.");
+            }
+            
+          }
+          else
+          {
+            stop("Error in factors section of model file.");
+          }
+          
+        }
+        else if (current_factor.containsElementNamed("simulate_transition_model"))
+        {
+          SEXP simulate_transition_model_SEXP = current_factor["simulate_transition_model"];
+          
+          if (current_factor.containsElementNamed("evaluate_log_transition_model"))
+          {
+            SEXP evaluate_log_transition_model_SEXP = current_factor["evaluate_log_transition_model"];
+            return new CustomNoParamsProposalKernel(load_simulate_no_params_mcmc_proposal(simulate_transition_model_SEXP),
+                                                    load_evaluate_log_no_params_mcmc_proposal(evaluate_log_transition_model_SEXP));
+          }
+          else
+          {
+            return new CustomNoParamsProposalKernel(load_simulate_no_params_mcmc_proposal(simulate_transition_model_SEXP));
+          }
+          
+        }
+        
+      }
+      else
+      {
+        stop("Error in transition_models section of model file.");
+      }
+      
+    }
+    
+  }
+  else
+  {
+    stop("No transition_models found in model file.");
+  }
+  
+  stop("Valid transition model found.");
+}
+
 List get_prior_mean_and_covariance(const List &model,
                                    const List &model_parameters)
 {
@@ -2165,9 +2595,6 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
                                                                                    Data* data_in,
                                                                                    const List &model,
                                                                                    const List &model_parameters,
-                                                                                   const std::vector<std::string> &sequencer_types,
-                                                                                   const std::vector<std::string> &sequencer_variables,
-                                                                                   const std::vector<std::vector<double>>  &sequencer_schedules,
                                                                                    const List &enk_likelihood_index_method,
                                                                                    std::shared_ptr<Transform> transform,
                                                                                    std::vector<Data> &data_created_in_get_measurement_covariance_estimators)
@@ -2272,10 +2699,12 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
             stop("linear_gaussian_data must contain a type.");
           }
           
+          /*
           if (!current_factor.containsElementNamed("linear_gaussian_data_variable"))
           {
             stop("linear_gaussian_data must contain linear_gaussian_data_variable.");
           }
+          */
           
           if (!current_factor.containsElementNamed("linear_gaussian_data_state_variable"))
           {
@@ -2284,7 +2713,7 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
           
           SEXP linear_gaussian_data_matrix_SEXP = current_factor["linear_gaussian_data_matrix"];
           SEXP linear_gaussian_data_covariance_SEXP = current_factor["linear_gaussian_data_covariance"];
-          SEXP linear_gaussian_data_variable_SEXP = current_factor["linear_gaussian_data_variable"];
+          //SEXP linear_gaussian_data_variable_SEXP = current_factor["linear_gaussian_data_variable"];
           SEXP linear_gaussian_data_state_variable_SEXP = current_factor["linear_gaussian_data_state_variable"];
           size_t type = current_factor["type"];
           
@@ -2306,7 +2735,7 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
                                                                                                             std::make_shared<Transform>(summary_stats),
                                                                                                             load_matrix(linear_gaussian_data_matrix_SEXP),
                                                                                                             load_matrix(linear_gaussian_data_covariance_SEXP),
-                                                                                                            load_string(linear_gaussian_data_variable_SEXP),
+                                                                                                            //load_string(linear_gaussian_data_variable_SEXP),
                                                                                                             load_string(linear_gaussian_data_state_variable_SEXP));
             }
             else if (type==2)
@@ -2318,7 +2747,7 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
                                                                                                             std::make_shared<Transform>(summary_stats),
                                                                                                             load_matrix_function(linear_gaussian_data_matrix_SEXP),
                                                                                                             load_matrix_function(linear_gaussian_data_covariance_SEXP),
-                                                                                                            load_string(linear_gaussian_data_variable_SEXP),
+                                                                                                            //load_string(linear_gaussian_data_variable_SEXP),
                                                                                                             load_string(linear_gaussian_data_state_variable_SEXP));
             }
             else
@@ -2339,7 +2768,7 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
                                                                                                             NULL,
                                                                                                             load_matrix(linear_gaussian_data_matrix_SEXP),
                                                                                                             load_matrix(linear_gaussian_data_covariance_SEXP),
-                                                                                                            load_string(linear_gaussian_data_variable_SEXP),
+                                                                                                            //load_string(linear_gaussian_data_variable_SEXP),
                                                                                                             load_string(linear_gaussian_data_state_variable_SEXP));
             }
             else if (type==2)
@@ -2351,7 +2780,7 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
                                                                                                             NULL,
                                                                                                             load_matrix_function(linear_gaussian_data_matrix_SEXP),
                                                                                                             load_matrix_function(linear_gaussian_data_covariance_SEXP),
-                                                                                                            load_string(linear_gaussian_data_variable_SEXP),
+                                                                                                            //load_string(linear_gaussian_data_variable_SEXP),
                                                                                                             load_string(linear_gaussian_data_state_variable_SEXP));
             }
             else
@@ -2376,14 +2805,16 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
             stop("nonlinear_gaussian_data must contain a type.");
           }
           
+          /*
           if (!current_factor.containsElementNamed("nonlinear_gaussian_data_variable"))
           {
             stop("nonlinear_gaussian_data must contain nonlinear_gaussian_data_variable.");
           }
+          */
           
           SEXP nonlinear_gaussian_data_function_SEXP = current_factor["nonlinear_gaussian_data_function"];
           SEXP nonlinear_gaussian_data_covariance_SEXP = current_factor["nonlinear_gaussian_data_covariance"];
-          SEXP nonlinear_gaussian_data_variable_SEXP = current_factor["nonlinear_gaussian_data_variable"];
+          //SEXP nonlinear_gaussian_data_variable_SEXP = current_factor["nonlinear_gaussian_data_variable"];
           size_t type = current_factor["type"];
           
           TransformPtr nonlinear_gaussian_data_function = load_transform(nonlinear_gaussian_data_function_SEXP);
@@ -2405,8 +2836,8 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
                                                                                                                transform,
                                                                                                               std::make_shared<Transform>(summary_stats),
                                                                                                                std::make_shared<Transform>(nonlinear_gaussian_data_function),
-                                                                                                               load_matrix(nonlinear_gaussian_data_covariance_SEXP),
-                                                                                                               load_string(nonlinear_gaussian_data_variable_SEXP));
+                                                                                                               load_matrix(nonlinear_gaussian_data_covariance_SEXP));
+                                                                                                               //load_string(nonlinear_gaussian_data_variable_SEXP));
             }
             else if (type==2)
             {
@@ -2416,8 +2847,8 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
                                                                                                                transform,
                                                                                                                std::make_shared<Transform>(summary_stats),
                                                                                                                std::make_shared<Transform>(nonlinear_gaussian_data_function),
-                                                                                                               load_matrix_function(nonlinear_gaussian_data_covariance_SEXP),
-                                                                                                               load_string(nonlinear_gaussian_data_variable_SEXP));
+                                                                                                               load_matrix_function(nonlinear_gaussian_data_covariance_SEXP));
+                                                                                                               //load_string(nonlinear_gaussian_data_variable_SEXP));
             }
             else
             {
@@ -2436,8 +2867,8 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
                                                                                                                transform,
                                                                                                                NULL,
                                                                                                                std::make_shared<Transform>(nonlinear_gaussian_data_function),
-                                                                                                               load_matrix(nonlinear_gaussian_data_covariance_SEXP),
-                                                                                                               load_string(nonlinear_gaussian_data_variable_SEXP));
+                                                                                                               load_matrix(nonlinear_gaussian_data_covariance_SEXP));
+                                                                                                               //load_string(nonlinear_gaussian_data_variable_SEXP));
             }
             else if (type==2)
             {
@@ -2447,8 +2878,8 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
                                                                                                                transform,
                                                                                                                NULL,
                                                                                                                std::make_shared<Transform>(nonlinear_gaussian_data_function),
-                                                                                                               load_matrix_function(nonlinear_gaussian_data_covariance_SEXP),
-                                                                                                               load_string(nonlinear_gaussian_data_variable_SEXP));
+                                                                                                               load_matrix_function(nonlinear_gaussian_data_covariance_SEXP));
+                                                                                                               //load_string(nonlinear_gaussian_data_variable_SEXP));
             }
             else
             {
@@ -2480,11 +2911,6 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
    true));
    */
   
-   /*
-   Rcout << full_index_vector.size() << std::endl;
-   Rcout << without_cancelled_index_vector.size() << std::endl;
-   Rcout << likelihood_estimators.size() << std::endl;
-   */
   
   return measurement_covariance_estimators;
   
@@ -4231,8 +4657,7 @@ SMCCriterion* get_adaptive_target_method(const List &model,
             double proportion = extract_double_parameter(values,
                                                          model_parameters,
                                                          0);
-            //Rcout << proportion << std::endl;
-            //Rcout << proportion*double(number_of_particles) << std::endl;
+   
             smc_method = new CESSSMCCriterion(proportion*double(number_of_particles));
           }
           else
@@ -4994,17 +5419,6 @@ double do_smc_mcmc_move(const List &model,
                                                                parameters,
                                                                smc_termination_method);
   
-  /*
-  if (without_cancelled_index==NULL)
-  {
-    Rcout << "Without cancelled index is NULL." << std::endl;
-  }
-  
-  if (full_index==NULL)
-  {
-    Rcout << "Full index is NULL." << std::endl;
-  }
-  */
   
   if (write_to_file_at_each_iteration)
   {
@@ -5035,7 +5449,6 @@ double do_smc_mcmc_move(const List &model,
                                        grain_size_in,
                                        results_name_in.get_cstring());
     
-    //Rcout << "Hi" << std::endl;
     
     SMCOutput* output = alg->run();
 
@@ -5075,18 +5488,9 @@ double do_smc_mcmc_move(const List &model,
                                        parallel_in,
                                        grain_size_in,
                                        "");
-    
-    //std::chrono::high_resolution_clock::time_point start_time, end_time;
-    //start_time = std::chrono::high_resolution_clock::now();
+
     
     SMCOutput* output = alg->run();
-    
-    //end_time = std::chrono::high_resolution_clock::now();
-    
-    //std::chrono::duration<double> elapsed_time = end_time - start_time;
-    
-    //Rcout << elapsed_time.count() << std::endl;
-    //output->set_time(elapsed_time.count());
     
     if (strcmp(results_name_in.get_cstring(),"") != 0)
       output->write(results_name_in.get_cstring());
@@ -5183,9 +5587,6 @@ double do_enki(const List &model,
                                                      &the_data,
                                                      model,
                                                      parameters,
-                                                     sequencer_types,
-                                                     sequencer_variables,
-                                                     sequencer_schedules,
                                                      enk_likelihood_index_method,
                                                      transform,
                                                      data_created_in_get_measurement_covariance_estimators);
@@ -5224,18 +5625,7 @@ double do_enki(const List &model,
   EnsembleShifter* shifter = get_enk_shifter_method(model,
                                                     parameters,
                                                     enk_shifter_method);
-  
-  /*
-   if (without_cancelled_index==NULL)
-   {
-   Rcout << "Without cancelled index is NULL." << std::endl;
-   }
-   
-   if (full_index==NULL)
-   {
-   Rcout << "Full index is NULL." << std::endl;
-   }
-   */
+
   
   if (write_to_file_at_each_iteration)
   {
@@ -5259,7 +5649,6 @@ double do_enki(const List &model,
                                                                grain_size_in,
                                                                results_name_in.get_cstring());
     
-    //Rcout << "Hi" << std::endl;
     
     EnsembleKalmanOutput* output = alg->run();
     
@@ -5293,18 +5682,8 @@ double do_enki(const List &model,
                                                                grain_size_in,
                                                                "");
     
-    //std::chrono::high_resolution_clock::time_point start_time, end_time;
-    //start_time = std::chrono::high_resolution_clock::now();
-    
     EnsembleKalmanOutput* output = alg->run();
-    
-    //end_time = std::chrono::high_resolution_clock::now();
-    
-    //std::chrono::duration<double> elapsed_time = end_time - start_time;
-    
-    //Rcout << elapsed_time.count() << std::endl;
-    //output->set_time(elapsed_time.count());
-    
+
     if (strcmp(results_name_in.get_cstring(),"") != 0)
       output->write(results_name_in.get_cstring());
     
@@ -5460,18 +5839,7 @@ double do_enkmfds(const List &model,
                                                                parameters,
                                                                smc_termination_method);
   
-  /*
-   if (without_cancelled_index==NULL)
-   {
-   Rcout << "Without cancelled index is NULL." << std::endl;
-   }
-   
-   if (full_index==NULL)
-   {
-   Rcout << "Full index is NULL." << std::endl;
-   }
-   */
-  
+
   if (write_to_file_at_each_iteration)
   {
     SMCMCMCMove* alg = new SMCMCMCMove(&rng,
@@ -5500,8 +5868,6 @@ double do_enkmfds(const List &model,
                                        parallel_in,
                                        grain_size_in,
                                        results_name_in.get_cstring());
-    
-    //Rcout << "Hi" << std::endl;
     
     SMCOutput* output = alg->run();
     
@@ -5542,18 +5908,8 @@ double do_enkmfds(const List &model,
                                        grain_size_in,
                                        "");
     
-    //std::chrono::high_resolution_clock::time_point start_time, end_time;
-    //start_time = std::chrono::high_resolution_clock::now();
-    
     SMCOutput* output = alg->run();
-    
-    //end_time = std::chrono::high_resolution_clock::now();
-    
-    //std::chrono::duration<double> elapsed_time = end_time - start_time;
-    
-    //Rcout << elapsed_time.count() << std::endl;
-    //output->set_time(elapsed_time.count());
-    
+
     if (strcmp(results_name_in.get_cstring(),"") != 0)
       output->write(results_name_in.get_cstring());
     
@@ -5600,13 +5956,13 @@ double do_kalman_filter(const List &model,
   std::string index_name_in = filtering_info[0];
   size_t first_index_in = filtering_info[1];
   size_t last_index_in = filtering_info[2];
-  std::string time_name_in = filtering_info[3];
-  double initial_time_in = filtering_info[4];
-  std::string time_diff_name_in = filtering_info[5];
-  double update_time_step_in = filtering_info[6];
-  size_t predictions_per_update_in = filtering_info[7];
-  std::string state_name_in = filtering_info[8];
-  std::string measurement_name_in = filtering_info[9];
+  //std::string time_name_in = filtering_info[3];
+  double initial_time_in = filtering_info[3];
+  std::string time_diff_name_in = filtering_info[4];
+  double update_time_step_in = filtering_info[5];
+  size_t predictions_per_update_in = filtering_info[6];
+  std::string state_name_in = filtering_info[7];
+  std::string measurement_name_in = filtering_info[8];
   
   if (first_index_in>last_index_in)
     stop("Cannot construct a filter where the first index is bigger than the last.");
@@ -5638,7 +5994,7 @@ double do_kalman_filter(const List &model,
                                          prior_mean_in,
                                          prior_covariance_in,
                                          index_name_in,
-                                         time_name_in,
+                                         //time_name_in,
                                          time_diff_name_in,
                                          measurement_names_in,
                                          first_index_in,
@@ -5670,7 +6026,7 @@ double do_kalman_filter(const List &model,
                                          prior_mean_in,
                                          prior_covariance_in,
                                          index_name_in,
-                                         time_name_in,
+                                         //time_name_in,
                                          time_diff_name_in,
                                          measurement_names_in,
                                          first_index_in,
@@ -5685,6 +6041,162 @@ double do_kalman_filter(const List &model,
                                          "");
     
     KalmanFilterOutput* output = alg->run();
+    
+    if (strcmp(results_name_in.get_cstring(),"") != 0)
+      output->write(results_name_in.get_cstring());
+    
+    double log_likelihood = output->log_likelihood;
+    
+    delete output;
+    delete alg;
+    
+    return log_likelihood;
+    
+  }
+  
+}
+
+// [[Rcpp::export]]
+double do_ensemble_kalman_filter(const List &model,
+                                 const List &parameters,
+                                 const List &algorithm_parameter_list,
+                                 size_t number_of_ensemble_members,
+                                 const List &filtering_options_list,
+                                 const List &enk_likelihood_index_method,
+                                 const List &enk_shifter_method,
+                                 size_t enk_iterations_to_store,
+                                 bool write_to_file_at_each_iteration,
+                                 bool parallel_in,
+                                 size_t grain_size_in,
+                                 const String &results_name_in,
+                                 size_t seed)
+{
+  
+  RandomNumberGenerator rng;
+  
+  Data the_data = get_data(model);
+  Data* data_pointer = &the_data;
+
+  std::vector<Data> data_created_in_get_measurement_covariance_estimators;
+  
+  std::vector<MeasurementCovarianceEstimator*> estimators;
+  
+  IndependentProposalKernel* proposal_in;
+  proposal_in = get_prior_as_simulate_only_proposal(model,
+                                                    parameters);
+  
+  
+  EnsembleShifter* shifter = get_enk_shifter_method(model,
+                                                    parameters,
+                                                    enk_shifter_method);
+  
+  bool smcfixed_flag = true;
+  
+  List filtering_info = get_filtering_info(parameters,
+                                           filtering_options_list);
+  
+  
+  std::string index_name_in = filtering_info[0];
+  size_t first_index_in = filtering_info[1];
+  size_t last_index_in = filtering_info[2];
+  double initial_time_in = filtering_info[3];
+  std::string time_diff_name_in = filtering_info[4];
+  double update_time_step_in = filtering_info[5];
+  size_t predictions_per_update_in = filtering_info[6];
+  std::string state_name_in = filtering_info[7];
+  std::string measurement_name_in = filtering_info[8];
+  
+  if (first_index_in>last_index_in)
+    stop("Cannot construct a filter where the first index is bigger than the last.");
+  
+  if ( (measurement_name_in=="") && (last_index_in>=the_data.min_n_rows()) )
+    stop("Last index goes past the end of the data.");
+  
+  if ( (measurement_name_in!="") && (last_index_in>=the_data[measurement_name_in].n_rows) )
+    stop("Last index goes past the end of the data.");
+  
+  Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list);
+  
+  ProposalKernel* transition = get_transition_model(model,
+                                                    parameters);
+  
+  //transition = new CustomNoParamsProposalKernel(simulate_transition_kernel);
+  
+  std::vector<MeasurementCovarianceEstimator*> measurement_covariance_estimators_in;
+  
+  std::shared_ptr<Transform> transform = NULL;
+
+  measurement_covariance_estimators_in = get_measurement_covariance_estimators(&rng,
+                                                                               &seed,
+                                                                               data_pointer,
+                                                                               model,
+                                                                               parameters,
+                                                                               enk_likelihood_index_method,
+                                                                               transform,
+                                                                               data_created_in_get_measurement_covariance_estimators);
+  
+  
+  if (write_to_file_at_each_iteration)
+  {
+    EnsembleKalmanFilter* alg = new EnsembleKalmanFilter(&rng,
+                                                         &seed,
+                                                         data_pointer,
+                                                         enk_iterations_to_store,
+                                                         index_name_in,
+                                                         time_diff_name_in,
+                                                         first_index_in,
+                                                         last_index_in,
+                                                         predictions_per_update_in,
+                                                         update_time_step_in,
+                                                         initial_time_in,
+                                                         number_of_ensemble_members,
+                                                         shifter,
+                                                         NULL,
+                                                         proposal_in,
+                                                         transition,
+                                                         measurement_covariance_estimators_in,
+                                                         smcfixed_flag,
+                                                         true,
+                                                         parallel_in,
+                                                         grain_size_in,
+                                                         results_name_in.get_cstring());
+    
+    EnsembleKalmanOutput* output = alg->run();
+    
+    double log_likelihood = output->log_likelihood;
+    
+    delete output;
+    delete alg;
+    
+    return log_likelihood;
+    
+  }
+  else
+  {
+    EnsembleKalmanFilter* alg = new EnsembleKalmanFilter(&rng,
+                                                         &seed,
+                                                         data_pointer,
+                                                         enk_iterations_to_store,
+                                                         index_name_in,
+                                                         time_diff_name_in,
+                                                         first_index_in,
+                                                         last_index_in,
+                                                         predictions_per_update_in,
+                                                         update_time_step_in,
+                                                         initial_time_in,
+                                                         number_of_ensemble_members,
+                                                         shifter,
+                                                         NULL,
+                                                         proposal_in,
+                                                         transition,
+                                                         measurement_covariance_estimators_in,
+                                                         smcfixed_flag,
+                                                         true,
+                                                         parallel_in,
+                                                         grain_size_in,
+                                                         "");
+    
+    EnsembleKalmanOutput* output = alg->run();
     
     if (strcmp(results_name_in.get_cstring(),"") != 0)
       output->write(results_name_in.get_cstring());

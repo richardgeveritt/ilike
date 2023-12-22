@@ -78,6 +78,9 @@ public:
   Parameters row(size_t index) const;
   Parameters col(size_t index) const;
   
+  Parameters rows(const arma::uvec &indices) const;
+  Parameters cols(const arma::uvec &indices) const;
+  
   size_t min_n_rows() const;
   size_t min_n_cols() const;
   
@@ -356,6 +359,26 @@ inline Parameters Parameters::col(size_t index) const
   for (auto i=this->vector_begin(); i!=this->vector_end(); ++i)
   {
     output.vector_parameters.insert({i->first,std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(i->second.first->col(index)),i->second.second)});
+  }
+  return output;
+}
+
+inline Parameters Parameters::rows(const arma::uvec &indices) const
+{
+  Parameters output;
+  for (auto i=this->vector_begin(); i!=this->vector_end(); ++i)
+  {
+    output.vector_parameters.insert({i->first,std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(i->second.first->rows(indices)),i->second.second)});
+  }
+  return output;
+}
+
+inline Parameters Parameters::cols(const arma::uvec &indices) const
+{
+  Parameters output;
+  for (auto i=this->vector_begin(); i!=this->vector_end(); ++i)
+  {
+    output.vector_parameters.insert({i->first,std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(i->second.first->cols(indices)),i->second.second)});
   }
   return output;
 }

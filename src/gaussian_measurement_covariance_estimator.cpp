@@ -116,9 +116,9 @@ void GaussianMeasurementCovarianceEstimator::change_data()
   }
 }
 
-void GaussianMeasurementCovarianceEstimator::change_data(Data* new_data)
+void GaussianMeasurementCovarianceEstimator::change_data(std::shared_ptr<Data> new_data)
 {
-  this->current_data = new_data;
+  this->current_data = new_data.get();
   if (this->measurement_variables.size()>0)
   {
     this->measurement = (*this->current_data)[this->measurement_variables[0]].as_col();

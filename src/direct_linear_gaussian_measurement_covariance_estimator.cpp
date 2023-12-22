@@ -14,7 +14,7 @@ DirectLinearGaussianMeasurementCovarianceEstimator::DirectLinearGaussianMeasurem
                                                                                                        std::shared_ptr<Transform> summary_statistics_in,
                                                                                                        const arma::mat &measurement_matrix_in,
                                                                                                        const arma::mat &measurement_covariance_in,
-                                                                                                       const std::string &measurement_variable_in,
+                                                                                                       //const std::string &measurement_variable_in,
                                                                                                        const std::string &state_variable_in)
 : DirectGaussianMeasurementCovarianceEstimator(rng_in,
                                                seed_in,
@@ -23,10 +23,14 @@ DirectLinearGaussianMeasurementCovarianceEstimator::DirectLinearGaussianMeasurem
                                                summary_statistics_in)
 {
   this->set_using_parameters = false;
-  this->measurement_variables.push_back(measurement_variable_in);
-  this->kernel.set_mean(measurement_variable_in,
+  //this->measurement_variables.push_back(measurement_variable_in); // reinstate if we don't automatically get from data
+  
+  if (this->measurement_variables.size()!=1)
+    Rcpp::stop("DirectGaussianMeasurementCovarianceEstimator - For this EnK likelihood we can only have one variable present in the data.");
+  
+  this->kernel.set_mean(this->measurement_variables[0],
                         arma::colvec(measurement_covariance_in.n_rows));
-  this->kernel.set_covariance(measurement_variable_in,
+  this->kernel.set_covariance(this->measurement_variables[0],
                               measurement_covariance_in);
   this->As.push_back(measurement_matrix_in);
   this->state_variable = state_variable_in;
@@ -39,7 +43,7 @@ DirectLinearGaussianMeasurementCovarianceEstimator::DirectLinearGaussianMeasurem
                                                                                                        std::shared_ptr<Transform> summary_statistics_in,
                                                                                                        GetMatrixPtr measurement_matrix_in,
                                                                                                        GetMatrixPtr measurement_covariance_in,
-                                                                                                       const std::string &measurement_variable_in,
+                                                                                                       //const std::string &measurement_variable_in,
                                                                                                        const std::string &state_variable_in)
 : DirectGaussianMeasurementCovarianceEstimator(rng_in,
                                                seed_in,
@@ -48,7 +52,7 @@ DirectLinearGaussianMeasurementCovarianceEstimator::DirectLinearGaussianMeasurem
                                                summary_statistics_in)
 {
   this->set_using_parameters = true;
-  this->measurement_variables.push_back(measurement_variable_in);
+  //this->measurement_variables.push_back(measurement_variable_in);
   this->measurement_noise_functions.push_back(measurement_covariance_in);
   this->A_functions.push_back(measurement_matrix_in);
   this->state_variable = state_variable_in;
@@ -128,6 +132,7 @@ void DirectLinearGaussianMeasurementCovarianceEstimator::setup_measurement_varia
   //this->measurement_variables = dummy_data.get_vector_variables();
   //Data dummy_data = this->transform_function->transform(Parameters());
   
+  /*
   bool set_A = false;
   
   if (As.size()!=this->measurement_variables.size())
@@ -149,30 +154,60 @@ void DirectLinearGaussianMeasurementCovarianceEstimator::setup_measurement_varia
       this->As.push_back(this->A_functions[i](Parameters()));
     }
   }
+  */
 }
 
 void DirectLinearGaussianMeasurementCovarianceEstimator::setup_measurement_variables(const Parameters &conditioned_on_parameters)
 {
-  bool set_A = false;
-  
-  if (As.size()!=this->measurement_variables.size())
+  if (this->set_using_parameters==true)
   {
-    set_A = true;
-    this->As.reserve(this->measurement_variables.size());
-  }
-  for (size_t i=0;
-       i<this->measurement_variables.size();
-       ++i)
-  {
-    arma::mat dummy_data = this->A_functions[i](conditioned_on_parameters)*conditioned_on_parameters[state_variable];
-    this->kernel.set_mean(this->measurement_variables[i],
-                          arma::colvec(dummy_data.n_elem));
-    this->kernel.set_covariance(this->measurement_variables[i],
-                                this->measurement_noise_functions[i](conditioned_on_parameters));
-    if (set_A)
+    bool set_A = false;
+    
+    if (As.size()!=this->measurement_variables.size())
     {
-      this->As.push_back(this->A_functions[i](conditioned_on_parameters));
+      set_A = true;
+      this->As.reserve(this->measurement_variables.size());
     }
+    for (size_t i=0;
+         i<this->measurement_variables.size();
+         ++i)
+    {
+      arma::mat dummy_data = this->A_functions[i](conditioned_on_parameters)*conditioned_on_parameters[this->state_variable];
+      this->kernel.set_mean(this->measurement_variables[i],
+                            arma::colvec(dummy_data.n_elem));
+      this->kernel.set_covariance(this->measurement_variables[i],
+                                  this->measurement_noise_functions[i](conditioned_on_parameters));
+      if (set_A)
+      {
+        this->As.push_back(this->A_functions[i](conditioned_on_parameters));
+      }
+    }
+  }
+  else
+  {
+    /*
+    bool set_A = false;
+    
+    if (As.size()!=this->measurement_variables.size())
+    {
+      set_A = true;
+      this->As.reserve(this->measurement_variables.size());
+    }
+    for (size_t i=0;
+         i<this->measurement_variables.size();
+         ++i)
+    {
+      arma::mat cov = this->measurement_noise_functions[i](Parameters());
+      this->kernel.set_mean(this->measurement_variables[i],
+                            arma::colvec(cov.n_rows));
+      this->kernel.set_covariance(this->measurement_variables[i],
+                                  cov);
+      if (set_A)
+      {
+        this->As.push_back(this->A_functions[i](Parameters()));
+      }
+    }
+    */
   }
   
   /*

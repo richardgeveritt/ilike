@@ -20,7 +20,8 @@ class HMMFactors : public Factors
 public:
 
   HMMFactors();
-  HMMFactors(ProposalKernel* transition_kernel_in);
+  HMMFactors(ProposalKernel* transition_kernel_in,
+             const std::vector<LikelihoodEstimator*> &likelihood_estimators_in);
 
   virtual ~HMMFactors();
 
@@ -63,7 +64,7 @@ protected:
   
   // stored here
   // data temporarily used in a likelihood estimator
-  std::vector<Data*> likelihood_estimator_temp_data;
+  std::vector< std::shared_ptr<Data> > likelihood_estimator_temp_data;
 
   void make_copy(const HMMFactors &another);
 

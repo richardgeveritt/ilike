@@ -298,7 +298,7 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
                                          const std::string &index)
 {
   std::string directory_name = dir_name + "_enk";
-  
+   
   //if (index!="")
   //  directory_name = directory_name + "_" + index;
   
@@ -322,7 +322,6 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
     }
     if (this->estimator->log_likelihood_file_stream.is_open())
     {
-      //log_likelihood_file_stream << this->all_ensembles[deque_index].log_normalising_constant << std::endl;
       this->estimator->log_likelihood_file_stream << this->llhds[llhd_index] << std::endl;
       //log_likelihood_file_stream.close();
     }

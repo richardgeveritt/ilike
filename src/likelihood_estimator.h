@@ -45,7 +45,7 @@ public:
   double estimate(const Parameters &parameters);
   
   void change_data();
-  void change_data(Data* new_data);
+  void change_data(std::shared_ptr<Data> new_data);
   
   Data* get_data() const;
   

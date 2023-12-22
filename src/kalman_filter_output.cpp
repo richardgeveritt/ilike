@@ -384,24 +384,6 @@ void KalmanFilterOutput::write_to_file(const std::string &dir_name,
         Rcpp::stop("File " + directory_name + "/output_lengths.txt" + " cannot be opened.");
       }
       
-      /*
-       std::ofstream any_variables_file_stream;
-       any_variables_file_stream.open(directory_name + "/any_variables.txt",std::ios::out | std::ios::app);
-       if (any_variables_file_stream.is_open())
-       {
-       for (size_t i=0; i<this->estimator->any_variables.size(); ++i)
-       {
-       any_variables_file_stream << this->estimator->any_variables[i] << ";";
-       }
-       any_variables_file_stream << std::endl;
-       any_variables_file_stream.close();
-       }
-       else
-       {
-       Rcpp::stop("File " + directory_name + "/any_variables.txt" + " cannot be opened.");
-       }
-       */
-      
       std::string kf_iteration_directory = directory_name + "/iteration" + std::to_string(iteration+1);
       
       if (!directory_exists(kf_iteration_directory))

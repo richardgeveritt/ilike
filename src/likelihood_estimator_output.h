@@ -60,7 +60,7 @@ public:
   virtual LikelihoodEstimator* get_likelihood_estimator() const=0;
   
   void change_data();
-  void change_data(Data* new_data);
+  void change_data(std::shared_ptr<Data> new_data);
   
   // This will end up a little bit more complicated than we have at the moment, since there is an interaction with
   // calling Simulate.

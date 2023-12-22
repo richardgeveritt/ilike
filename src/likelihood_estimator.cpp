@@ -91,9 +91,9 @@ void LikelihoodEstimator::change_data()
   this->current_data = this->data;
 }
 
-void LikelihoodEstimator::change_data(Data* new_data)
+void LikelihoodEstimator::change_data(std::shared_ptr<Data> new_data)
 {
-  this->current_data = new_data;
+  this->current_data = new_data.get();
 }
 
 Data* LikelihoodEstimator::get_data() const

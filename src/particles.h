@@ -23,11 +23,13 @@ public:
   Particles();
   Particles(size_t number_of_particles_in);
   Particles(const std::vector< MoveOutput* > &particles_in);
+  /*
   Particles(std::vector<Parameters> &initial_values_in,
             const arma::colvec &log_probabilities_of_initial_values_in,
             Factors* factors_in,
             const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
             const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
+  */
   Particles(std::vector<Parameters> &initial_values_in,
             const arma::colvec &log_probabilities_of_initial_values_in,
             Factors* factors_in,
@@ -42,11 +44,13 @@ public:
             const Parameters &conditioned_on_parameters,
             const Parameters &sequencer_parameters);
   
+  /*
   void setup(std::vector<Parameters> &initial_values_in,
              const arma::colvec &log_probabilities_of_initial_values_in,
              Factors* factors_in,
              const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
              const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
+  */
   
   void setup(std::vector<Parameters> &initial_values_in,
              const arma::colvec &log_probabilities_of_initial_values_in,
@@ -143,6 +147,7 @@ public:
   
   bool resampled_flag;
   
+  // only here for output
   Parameters schedule_parameters;
   
   double ess;

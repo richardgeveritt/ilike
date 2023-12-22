@@ -67,7 +67,7 @@ public:
   virtual arma::mat get_Cygivenx() const=0;
   
   virtual void change_data()=0;
-  virtual void change_data(Data* new_data)=0;
+  virtual void change_data(std::shared_ptr<Data> new_data)=0;
   
   Data* get_data() const;
   

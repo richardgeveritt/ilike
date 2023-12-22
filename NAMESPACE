@@ -2,7 +2,7 @@
 
 export(compile)
 export(enki)
-export(enkmfds)
+export(ensemble_kalman_filter)
 export(importance_sample)
 export(kalman_filter)
 export(load_enk_output)

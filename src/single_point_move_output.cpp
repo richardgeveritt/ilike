@@ -126,10 +126,7 @@ void SinglePointMoveOutput::write_vector_points(const std::vector<std::string> &
 void SinglePointMoveOutput::write_any_points(const std::vector<std::string> &variables,
                                              std::ofstream &file_stream) const
 {
-  //if(file_stream.is_open())
-  //{
-  //  file_stream << output.get_vector().t() << std::endl;
-  //}
+
 }
 
 void SinglePointMoveOutput::write_factors(const std::string &directory_name,
