@@ -1,4 +1,4 @@
-#' Kalman filter
+#' Ensemble Kalman filter
 #'
 #' @param model A file containing the model, or a pre-compiled model list.
 #' @param number_of_ensemble_members The number of ensemble members.
@@ -27,7 +27,7 @@ ensemble_kalman_filter = function(model,
                                   algorithm_parameter_list = list(),
                                   external_packages = c(),
                                   julia_bin_dir="",
-                                   julia_required_libraries=c(),
+                                  julia_required_libraries=c(),
                                   verify_cpp_function_types=FALSE,
                                   keep_temporary_model_code=FALSE,
                                   seed = NULL,

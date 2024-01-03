@@ -15,7 +15,7 @@
 #include "vector_factors.h"
 #include "custom_distribution_proposal_kernel.h"
 #include "positive_smc_criterion.h"
-#include "vector_single_index.h"
+#include "vector_index.h"
 
 SMCMarginal::SMCMarginal()
    :SMC()
@@ -89,7 +89,7 @@ SMCMarginal::SMCMarginal(RandomNumberGenerator* rng_in,
                                                                   variable_in,
                                                                   true));
   indices.push_back(1);
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
   
   /*
   for (auto i=likelihood_estimators.begin();

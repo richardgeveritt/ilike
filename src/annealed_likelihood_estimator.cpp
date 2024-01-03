@@ -118,3 +118,8 @@ void AnnealedLikelihoodEstimator::setup(const Parameters &parameters)
 // {
 //
 // }
+
+void AnnealedLikelihoodEstimator::specific_change_data(Data* new_data)
+{
+  this->estimator->change_data_with_raw_pointer(new_data);
+}

@@ -1,5 +1,5 @@
 #include "ensemble_factors.h"
-#include "vector_single_index.h"
+#include "vector_index.h"
 
 EnsembleFactors::EnsembleFactors()
 {
@@ -33,8 +33,8 @@ void EnsembleFactors::make_copy(const EnsembleFactors &another)
 
 void EnsembleFactors::set_data(size_t index)
 {
-  VectorSingleIndex vector_single_index(index);
-  this->set_data(&vector_single_index);
+  VectorIndex vector_index(index);
+  this->set_data(&vector_index);
 }
 
 /*

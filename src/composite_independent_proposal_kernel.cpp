@@ -251,3 +251,15 @@ void CompositeIndependentProposalKernel::set_index_if_null(Index* index_in)
     (*i)->set_index_if_null(index_in);
   }
 }
+
+bool CompositeIndependentProposalKernel::can_be_evaluated() const
+{
+  for (auto i=this->all_kernels.begin();
+       i!=this->all_kernels.end();
+       ++i)
+  {
+    if ((*i)->can_be_evaluated()==false)
+      return false;
+  }
+  return true;
+}

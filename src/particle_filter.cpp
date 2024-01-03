@@ -15,7 +15,8 @@
 //#include "custom_independent_proposal_kernel.h"
 #include "custom_distribution_proposal_kernel.h"
 #include "hmm_factors.h"
-#include "vector_single_index.h"
+#include "hmm_index.h"
+#include "vector_index.h"
 
 /*
 std::vector<const ProposalKernel*> augment_proposal_vectors(const std::vector<const ProposalKernel*> &some_proposals,
@@ -52,8 +53,8 @@ ParticleFilter::ParticleFilter(RandomNumberGenerator* rng_in,
                                IndependentProposalKernel* proposal_in,
                                ProposalKernel* transition_model_in,
                                ProposalKernel* transition_proposal_in,
-                               Index* without_cancelled_index,
-                               Index* full_index,
+                               VectorIndex* evaluated_in_initial_weight_update,
+                               VectorIndex* evaluated_in_pf_weight_update,
                                bool proposal_is_evaluated_in,
                                bool transition_proposal_is_evaluated_in,
                                bool smcfixed_flag_in,
@@ -78,13 +79,18 @@ ParticleFilter::ParticleFilter(RandomNumberGenerator* rng_in,
   this->current_time = initial_time_in;
   this->current_index = this->first_index;
   
-  this->index = without_cancelled_index;
+  this->index = new HMMIndex(evaluated_in_initial_weight_update->get_indices(),
+                             evaluated_in_pf_weight_update->get_indices(),
+                             transition_proposal_is_evaluated_in,
+                             this->first_index);
   
   this->factors = new HMMFactors(transition_model_in,
                                  likelihood_estimators_in);
   
   this->particle_simulator = new ParameterParticleSimulator(proposal_in,
                                                             likelihood_estimators_in);
+  
+  this->transition_proposal = transition_proposal_in;
   
   if (parallel_in==true)
   {
@@ -96,7 +102,9 @@ ParticleFilter::ParticleFilter(RandomNumberGenerator* rng_in,
     this->the_worker = new SequentialSMCWorker(this);
   }
   
+  this->transition_proposal_is_evaluated = transition_proposal_is_evaluated_in;
   
+  /*
   SMCCriterion* smc_criterion = new PositiveSMCCriterion();
   
   std::vector<double> schedule;
@@ -111,11 +119,24 @@ ParticleFilter::ParticleFilter(RandomNumberGenerator* rng_in,
   
   std::vector<std::string> sequence_variables_in;
   sequence_variables_in.push_back(this->index_name);
+  */
 
+  /*
   this->sequencer = Sequencer(this->the_worker,
                               schedules_in,
                               sequence_variables_in,
                               100,
+                              smc_criterion);
+  */
+  
+  std::vector<double> schedule_in;
+  schedule_in.push_back(0.0);
+  schedule_in.push_back(1.0);
+  SMCCriterion* smc_criterion = new PositiveSMCCriterion();
+  this->sequencer = Sequencer(this->the_worker,
+                              schedule_in,
+                              "",
+                              25,
                               smc_criterion);
   
   // also need to set up first proposal
@@ -204,10 +225,10 @@ ParticleFilter::ParticleFilter(const ParticleFilter &another)
 }
 
 //Destructor for the ParticleFilter class.
-ParticleFilter::~ParticleFilter(void)
+ParticleFilter::~ParticleFilter()
 {
-  if (this->proposal_kernel!=NULL)
-    delete this->proposal_kernel;
+  if (this->transition_proposal!=NULL)
+    delete this->transition_proposal;
   
   if (this->index!=NULL)
     delete this->index;
@@ -219,8 +240,8 @@ void ParticleFilter::operator=(const ParticleFilter &another)
     return;
   }
   
-  if (this->proposal_kernel!=NULL)
-    delete this->proposal_kernel;
+  if (this->transition_proposal!=NULL)
+    delete this->transition_proposal;
   
   if (this->index!=NULL)
     delete this->index;
@@ -241,13 +262,13 @@ LikelihoodEstimator* ParticleFilter::duplicate() const
 
 void ParticleFilter::make_copy(const ParticleFilter &another)
 {
-  if (another.proposal_kernel!=NULL)
-    this->proposal_kernel = another.proposal_kernel;
+  if (another.transition_proposal!=NULL)
+    this->transition_proposal = another.transition_proposal;
   else
-    this->proposal_kernel = another.proposal_kernel;
+    this->transition_proposal = another.transition_proposal;
   
   if (another.index!=NULL)
-    this->index = another.index->duplicate();
+    this->index = another.index->hmm_index_duplicate();
   else
     this->index = NULL;
   
@@ -262,7 +283,7 @@ void ParticleFilter::make_copy(const ParticleFilter &another)
   this->current_index = another.current_index;
   //this->last_index_is_fixed = another.last_index_is_fixed;
   this->lag = another.lag;
-  this->dynamic_proposal_is_evaluated = another.dynamic_proposal_is_evaluated;
+  this->transition_proposal_is_evaluated = another.transition_proposal_is_evaluated;
 }
 
 SMCOutput* ParticleFilter::specific_run()
@@ -292,6 +313,8 @@ SMCOutput* ParticleFilter::specific_initialise_smc()
   this->current_index = this->first_index;
   this->factors->set_data(this->current_index);
   this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+  this->sequencer.schedule_parameters[this->index_name] = this->current_index;
+  this->index->set_time_index(this->current_index);
   return output;
 }
 
@@ -305,7 +328,7 @@ void ParticleFilter::simulate_smc(SMCOutput* current_state)
   else
   {
     // update proposals
-    this->proposal_kernel->smc_adapt(current_state);
+    this->transition_proposal->smc_adapt(current_state);
     
     current_state->normalise_and_resample_weights();
     //current_state->resample();
@@ -317,9 +340,12 @@ void ParticleFilter::simulate_smc(SMCOutput* current_state)
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Particles* current_particles = &current_state->back();
     Particles* next_particles = current_state->add_particles(current_particles);
+    
+    this->increment_time_index();
+    
     this->the_worker->move(next_particles,
                            current_particles);
-    this->evaluate_smcfixed_part_smc(current_state);
+    //this->evaluate_smcfixed_part_smc(current_state);
     
     current_state->increment_smc_iteration();
     // involves complete evaluation of weights using current adaptive param
@@ -340,9 +366,9 @@ void ParticleFilter::evaluate_smc(SMCOutput* current_state)
 
 void ParticleFilter::evaluate_smcfixed_part_smc(SMCOutput* current_state)
 {
-  VectorSingleIndex index(this->current_index);
+  //VectorIndex index(this->current_index);
   
-  this->the_worker->smcfixed_weight(&index,
+  this->the_worker->smcfixed_weight(this->index,
                                     current_state->back());
   
   /*
@@ -364,20 +390,22 @@ void ParticleFilter::evaluate_smcfixed_part_smc(SMCOutput* current_state)
 MoveOutput* ParticleFilter::move(RandomNumberGenerator &rng,
                                  const Particle &particle) const
 {
+  //double predict_time_step = this->update_time_step/double(this->predictions_per_update);
+  
   Particle moved_particle;
   for (size_t i=0; i<this->predictions_per_update; ++i)
   {
     if (i==0)
     {
-      //VectorSingleIndex index(0);
-      moved_particle = this->proposal_kernel->move(rng,
-                                                   particle);
+      //VectorIndex index(0);
+      moved_particle = this->transition_proposal->move(rng,
+                                                       particle);
     }
     else
     {
-      //VectorSingleIndex index(this->current_index);
-      moved_particle = this->proposal_kernel->move(rng,
-                                                   moved_particle);
+      //VectorIndex index(this->current_index);
+      moved_particle = this->transition_proposal->move(rng,
+                                                       moved_particle);
     }
       
   }
@@ -399,22 +427,23 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
     
     if (current_state->number_of_smc_iterations()==1)
     {
-      this->the_worker->pf_initial_weight(current_state->back());
+      this->the_worker->weight(this->index,
+                               current_state->back());
     }
     else
     {
-      VectorSingleIndex index(this->current_index);
+      //VectorIndex index(this->current_index);
       
-      if (this->dynamic_proposal_is_evaluated)
+      if (this->transition_proposal_is_evaluated)
       {
-        this->the_worker->pf_weight(&index,
+        this->the_worker->pf_weight(this->index,
                                     current_state->back(),
                                     *(current_state->end()-2),
-                                    this->proposal_kernel);
+                                    this->transition_proposal);
       }
       else
       {
-        this->the_worker->pf_weight(&index,
+        this->the_worker->pf_weight(this->index,
                                     current_state->back(),
                                     *(current_state->end()-2),
                                     NULL);
@@ -422,6 +451,9 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
     }
     
     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
+    
+    // need to add Sequencer here when we add MCMC moves
+    
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
     current_state->llhds.push_back(current_state->log_likelihood);
     
@@ -440,9 +472,6 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
       //terminate = TRUE;
       break;
     }
-    
-    this->current_index = this->current_index+1;
-    this->factors->set_data(this->current_index);
     
     this->simulate_smc(current_state);
     
@@ -483,6 +512,8 @@ SMCOutput* ParticleFilter::specific_initialise_smc(const Parameters &conditioned
   this->current_index = this->first_index;
   this->factors->set_data(this->current_index);
   this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+  this->sequencer.schedule_parameters[this->index_name] = this->current_index;
+  this->index->set_time_index(this->current_index);
   return output;
 }
 
@@ -497,7 +528,7 @@ void ParticleFilter::simulate_smc(SMCOutput* current_state,
   else
   {
     // update proposals
-    this->proposal_kernel->smc_adapt(current_state);
+    this->transition_proposal->smc_adapt(current_state);
     
     current_state->normalise_and_resample_weights();
     //current_state->resample();
@@ -513,10 +544,13 @@ void ParticleFilter::simulate_smc(SMCOutput* current_state,
     //this->the_worker->move(next_particles,
     //                       current_particles,
     //                       conditioned_on_parameters);
+    
+    this->increment_time_index();
+
     this->the_worker->move(next_particles,
                            current_particles);
-    this->evaluate_smcfixed_part_smc(current_state,
-                                     conditioned_on_parameters);
+    //this->evaluate_smcfixed_part_smc(current_state,
+    //                                 conditioned_on_parameters);
     
     current_state->increment_smc_iteration();
     // involves complete evaluation of weights using current adaptive param
@@ -536,8 +570,8 @@ void ParticleFilter::evaluate_smc(SMCOutput* current_state,
 void ParticleFilter::evaluate_smcfixed_part_smc(SMCOutput* current_state,
                                                 const Parameters &conditioned_on_parameters)
 {
-  VectorSingleIndex index(this->current_index);
-  this->the_worker->smcfixed_weight(&index,
+  //VectorIndex index(this->current_index);
+  this->the_worker->smcfixed_weight(this->index,
                                     current_state->back());
   
   /*
@@ -576,30 +610,32 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
    
     if (current_state->number_of_smc_iterations()==1)
     {
-      this->the_worker->pf_initial_weight(current_state->back());
+      //this->the_worker->pf_initial_weight(current_state->back());
+      this->the_worker->weight(this->index,
+                               current_state->back());
     }
     else
     {
-      VectorSingleIndex index(this->current_index);
+      //VectorIndex index(this->current_index);
       
-      if (this->dynamic_proposal_is_evaluated)
+      if (this->transition_proposal_is_evaluated)
       {
-        this->the_worker->pf_weight(&index,
+        this->the_worker->pf_weight(this->index,
                                     current_state->back(),
                                     *(current_state->end()-2),
-                                    this->proposal_kernel);
+                                    this->transition_proposal);
         
         /*
         this->the_worker->pf_weight(&index,
                                     current_state->back(),
                                     *(current_state->end()-2),
-                                    this->proposal_kernel,
+                                    this->transition_proposal,
                                     conditioned_on_parameters);
         */
       }
       else
       {
-        this->the_worker->pf_weight(&index,
+        this->the_worker->pf_weight(this->index,
                                     current_state->back(),
                                     *(current_state->end()-2),
                                     NULL);
@@ -633,9 +669,6 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
       break;
     }
     
-    this->current_index = this->current_index+1;
-    this->factors->set_data(this->current_index);
-    
     this->simulate_smc(current_state, conditioned_on_parameters);
     
   }
@@ -652,7 +685,7 @@ void ParticleFilter::subsample_simulate_smc(SMCOutput* current_state,
   else
   {
     // update proposals
-    this->proposal_kernel->smc_adapt(current_state);
+    this->transition_proposal->smc_adapt(current_state);
     
     current_state->normalise_and_resample_weights();
     //current_state->resample();
@@ -665,6 +698,9 @@ void ParticleFilter::subsample_simulate_smc(SMCOutput* current_state,
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Particles* current_particles = &current_state->back();
     Particles* next_particles = current_state->add_particles(current_particles);
+    
+    this->increment_time_index();
+
     this->the_worker->subsample_move(next_particles,
                                      current_particles);
     /*
@@ -672,8 +708,8 @@ void ParticleFilter::subsample_simulate_smc(SMCOutput* current_state,
      current_particles,
      conditioned_on_parameters);
      */
-    this->subsample_evaluate_smcfixed_part_smc(current_state,
-                                               conditioned_on_parameters);
+    //this->subsample_evaluate_smcfixed_part_smc(current_state,
+    //                                           conditioned_on_parameters);
     
     current_state->increment_smc_iteration();
     // involves complete evaluation of weights using current adaptive param
@@ -689,7 +725,7 @@ void ParticleFilter::subsample_evaluate_smc(SMCOutput* current_state)
 
 void ParticleFilter::subsample_evaluate_smcfixed_part_smc(SMCOutput* current_state)
 {
-  VectorSingleIndex index(this->current_index);
+  //VectorIndex index(this->current_index);
   /*
    if (this->sequencer_parameters!=NULL)
    {
@@ -705,7 +741,7 @@ void ParticleFilter::subsample_evaluate_smcfixed_part_smc(SMCOutput* current_sta
    conditioned_on_parameters);
    }
    */
-  this->the_worker->subsample_smcfixed_weight(&index,
+  this->the_worker->subsample_smcfixed_weight(this->index,
                                               current_state->back());
   //current_state->initialise_next_step();
 }
@@ -722,7 +758,9 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
     
     if (current_state->number_of_smc_iterations()==1)
     {
-      this->the_worker->subsample_pf_initial_weight(current_state->back());
+      this->the_worker->subsample_weight(this->index,
+                                         current_state->back());
+      //this->the_worker->subsample_pf_initial_weight(current_state->back());
       /*
        this->the_worker->subsample_pf_initial_weight(current_state->back(),
        conditioned_on_parameters);
@@ -731,24 +769,24 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
     }
     else
     {
-      VectorSingleIndex index(this->current_index);
-      if (this->dynamic_proposal_is_evaluated)
+      //VectorIndex index(this->current_index);
+      if (this->transition_proposal_is_evaluated)
       {
-        this->the_worker->subsample_pf_weight(&index,
+        this->the_worker->subsample_pf_weight(this->index,
                                               current_state->back(),
                                               *(current_state->end()-2),
-                                              this->proposal_kernel);
+                                              this->transition_proposal);
         /*
          this->the_worker->subsample_pf_weight(&index,
          current_state->back(),
          *(current_state->end()-2),
-         this->proposal_kernel,
+         this->transition_proposal,
          conditioned_on_parameters);
          */
       }
       else
       {
-        this->the_worker->subsample_pf_weight(&index,
+        this->the_worker->subsample_pf_weight(this->index,
                                               current_state->back(),
                                               *(current_state->end()-2),
                                               NULL);
@@ -781,9 +819,6 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
       break;
     }
     
-    this->current_index = this->current_index+1;
-    this->factors->set_data(this->current_index);
-    
     this->subsample_simulate_smc(current_state);
     
   }
@@ -799,7 +834,7 @@ void ParticleFilter::subsample_simulate_smc(SMCOutput* current_state)
   else
   {
     // update proposals
-    this->proposal_kernel->smc_adapt(current_state);
+    this->transition_proposal->smc_adapt(current_state);
     
     current_state->normalise_and_resample_weights();
     //current_state->resample();
@@ -812,6 +847,9 @@ void ParticleFilter::subsample_simulate_smc(SMCOutput* current_state)
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Particles* current_particles = &current_state->back();
     Particles* next_particles = current_state->add_particles(current_particles);
+    
+    this->increment_time_index();
+    
     this->the_worker->subsample_move(next_particles,
                                      current_particles);
     /*
@@ -839,7 +877,7 @@ void ParticleFilter::subsample_evaluate_smc(SMCOutput* current_state,
 void ParticleFilter::subsample_evaluate_smcfixed_part_smc(SMCOutput* current_state,
                                                           const Parameters &conditioned_on_parameters)
 {
-  VectorSingleIndex index(this->current_index);
+  //VectorIndex index(this->current_index);
   /*
   if (this->sequencer_parameters!=NULL)
   {
@@ -855,7 +893,7 @@ void ParticleFilter::subsample_evaluate_smcfixed_part_smc(SMCOutput* current_sta
                                                 conditioned_on_parameters);
   }
   */
-  this->the_worker->subsample_smcfixed_weight(&index,
+  this->the_worker->subsample_smcfixed_weight(this->index,
                                               current_state->back());
   //current_state->initialise_next_step();
 }
@@ -878,7 +916,11 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
     
     if (current_state->number_of_smc_iterations()==1)
     {
-      this->the_worker->subsample_pf_initial_weight(current_state->back());
+      //this->the_worker->subsample_pf_initial_weight(current_state->back());
+      
+      this->the_worker->subsample_weight(this->index,
+                                         current_state->back());
+      
       /*
       this->the_worker->subsample_pf_initial_weight(current_state->back(),
                                                     conditioned_on_parameters);
@@ -887,24 +929,24 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
     }
     else
     {
-      VectorSingleIndex index(this->current_index);
-      if (this->dynamic_proposal_is_evaluated)
+      //VectorIndex index(this->current_index);
+      if (this->transition_proposal_is_evaluated)
       {
-        this->the_worker->subsample_pf_weight(&index,
+        this->the_worker->subsample_pf_weight(this->index,
                                               current_state->back(),
                                               *(current_state->end()-2),
-                                              this->proposal_kernel);
+                                              this->transition_proposal);
         /*
         this->the_worker->subsample_pf_weight(&index,
                                               current_state->back(),
                                               *(current_state->end()-2),
-                                              this->proposal_kernel,
+                                              this->transition_proposal,
                                               conditioned_on_parameters);
         */
       }
       else
       {
-        this->the_worker->subsample_pf_weight(&index,
+        this->the_worker->subsample_pf_weight(this->index,
                                               current_state->back(),
                                               *(current_state->end()-2),
                                               NULL);
@@ -937,9 +979,6 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
       break;
     }
     
-    this->current_index = this->current_index+1;
-    this->factors->set_data(this->current_index);
-    
     this->subsample_simulate_smc(current_state, conditioned_on_parameters);
     
   }
@@ -966,19 +1005,21 @@ void ParticleFilter::weight_for_adapting_sequence(const Index* index,
 MoveOutput* ParticleFilter::subsample_move(RandomNumberGenerator &rng,
                                            const Particle &particle) const
 {
+  //double predict_time_step = this->update_time_step/double(this->predictions_per_update);
+  
   Particle moved_particle;
   for (size_t i=0; i<this->predictions_per_update; ++i)
   {
     if (i==0)
     {
-      //VectorSingleIndex index(0);
-      moved_particle = this->proposal_kernel->subsample_move(rng,
+      //VectorIndex index(0);
+      moved_particle = this->transition_proposal->subsample_move(rng,
                                                              particle);
     }
     else
     {
-      //VectorSingleIndex index(this->current_index);
-      moved_particle = this->proposal_kernel->subsample_move(rng,
+      //VectorIndex index(this->current_index);
+      moved_particle = this->transition_proposal->subsample_move(rng,
                                                              moved_particle);
     }
   }
@@ -1006,6 +1047,18 @@ void ParticleFilter::subsample_weight_for_adapting_sequence(const Index* index,
 bool ParticleFilter::check_termination() const
 {
   return(this->current_index==this->last_index);
+}
+
+void ParticleFilter::increment_time_index()
+{
+  // should move to sequencer
+  this->current_index = this->current_index+1;
+  // should move to sequencer
+  this->sequencer.schedule_parameters[this->index_name] = this->current_index;
+  
+  this->factors->set_data(this->current_index);
+  this->index->set_time_index(this->current_index);
+  this->current_time = this->current_time + this->update_time_step;
 }
 
 // void ParticleFilter::smc_step(void)

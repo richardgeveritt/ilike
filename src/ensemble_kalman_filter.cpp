@@ -8,7 +8,7 @@
 #include "ensemble_kalman_filter.h"
 #include "ensemble_kalman_worker.h"
 #include "ensemble_factors.h"
-#include "vector_single_index.h"
+#include "vector_index.h"
 #include "single_point_move_output.h"
 #include "independent_proposal_kernel.h"
 #include "measurement_covariance_estimator.h"
@@ -90,7 +90,7 @@ EnsembleKalmanFilter::EnsembleKalmanFilter(RandomNumberGenerator* rng_in,
     indices.push_back(i);
   }
   
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
   
   this->transition_model_kernel = transition_model_in;
   
@@ -228,7 +228,7 @@ void EnsembleKalmanFilter::ensemble_kalman_simulate(EnsembleKalmanOutput* curren
 {
   if (current_state->all_ensembles.size()==0)
   {
-    VectorSingleIndex index(this->current_index);
+    VectorIndex index(this->current_index);
     // Simulate from the proposal.
     this->simulate_proposal(current_state,
                             &index);
@@ -269,22 +269,20 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcfixed_part(EnsembleKalman
 MoveOutput* EnsembleKalmanFilter::move(RandomNumberGenerator &rng,
                                        Particle &ensemble_member)
 {
-  double predict_time_step = this->update_time_step/double(this->predictions_per_update);
+  //double predict_time_step = this->update_time_step/double(this->predictions_per_update);
   Particle moved_ensemble_member;
   for (size_t i=0; i<this->predictions_per_update; ++i)
   {
-    this->current_time = this->current_time + predict_time_step;
-    
-    VectorSingleIndex index(this->current_index);
+    //VectorIndex index(this->current_index);
     if (i==0)
     {
       moved_ensemble_member = this->transition_model_kernel->move(rng,
-                                                                     ensemble_member);
+                                                                  ensemble_member);
     }
     else
     {
       moved_ensemble_member = this->transition_model_kernel->move(rng,
-                                                                     moved_ensemble_member);
+                                                                  moved_ensemble_member);
     }
   }
   
@@ -342,6 +340,7 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcadaptive_part_given_smcfi
     this->current_index = this->current_index+1;
     this->sequencer.schedule_parameters[this->index_name] = this->current_index;
     this->ensemble_factors->set_data(this->current_index);
+    this->current_time = this->current_time + this->update_time_step;
     
     this->ensemble_kalman_simulate(current_state);
     
@@ -382,7 +381,7 @@ void EnsembleKalmanFilter::ensemble_kalman_simulate(EnsembleKalmanOutput* curren
 {
   if (current_state->all_ensembles.size()==0)
   {
-    VectorSingleIndex index(this->current_index);
+    VectorIndex index(this->current_index);
     // Simulate from the proposal.
     this->simulate_proposal(current_state,
                             &index,
@@ -417,7 +416,7 @@ MoveOutput* EnsembleKalmanFilter::move(RandomNumberGenerator &rng,
   Particle moved_ensemble_member;
   for (size_t i=0; i<this->predictions_per_update; ++i)
   {
-    VectorSingleIndex index(this->current_index);
+    VectorIndex index(this->current_index);
     if (i==0)
     {
       moved_ensemble_member = this->proposal_kernel->move(rng,
@@ -443,23 +442,23 @@ MoveOutput* EnsembleKalmanFilter::move(RandomNumberGenerator &rng,
 MoveOutput* EnsembleKalmanFilter::subsample_move(RandomNumberGenerator &rng,
                                                  Particle &ensemble_member)
 {
-  double predict_time_step = this->update_time_step/double(this->predictions_per_update);
+  //double predict_time_step = this->update_time_step/double(this->predictions_per_update);
   
   Particle moved_ensemble_member;
   for (size_t i=0; i<this->predictions_per_update; ++i)
   {
-    this->current_time = this->current_time + predict_time_step;
+    //this->current_time = this->current_time + predict_time_step;
     
-    VectorSingleIndex index(this->current_index);
+    //VectorIndex index(this->current_index);
     if (i==0)
     {
       moved_ensemble_member = this->transition_model_kernel->subsample_move(rng,
-                                                                               ensemble_member);
+                                                                            ensemble_member);
     }
     else
     {
       moved_ensemble_member = this->transition_model_kernel->subsample_move(rng,
-                                                                               moved_ensemble_member);
+                                                                            moved_ensemble_member);
     }
   }
   
@@ -478,7 +477,7 @@ MoveOutput* EnsembleKalmanFilter::subsample_move(RandomNumberGenerator &rng,
   Particle moved_ensemble_member;
   for (size_t i=0; i<this->predictions_per_update; ++i)
   {
-    VectorSingleIndex index(this->current_index);
+    VectorIndex index(this->current_index);
     if (i==0)
     {
       moved_ensemble_member = this->proposal_kernel->subsample_move(rng,
@@ -582,6 +581,7 @@ void EnsembleKalmanFilter::ensemble_kalman_subsample_evaluate_smcadaptive_part_g
     this->current_index = this->current_index+1;
     this->sequencer.schedule_parameters[this->index_name] = this->current_index;
     this->ensemble_factors->set_data(this->current_index);
+    this->current_time = this->current_time + this->update_time_step;
     
     this->ensemble_kalman_subsample_simulate(current_state,
                                              conditioned_on_parameters);
@@ -644,6 +644,7 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcadaptive_part_given_smcfi
     this->current_index = this->current_index+1;
     this->sequencer.schedule_parameters[this->index_name] = this->current_index;
     this->ensemble_factors->set_data(this->current_index);
+    this->current_time = this->current_time + this->update_time_step;
     
     this->ensemble_kalman_simulate(current_state,
                                    conditioned_on_parameters);
@@ -656,7 +657,7 @@ void EnsembleKalmanFilter::ensemble_kalman_subsample_simulate(EnsembleKalmanOutp
 {
   if (current_state->all_ensembles.size()==0)
   {
-    VectorSingleIndex index(this->current_index);
+    VectorIndex index(this->current_index);
     // Simulate from the proposal.
     this->simulate_proposal(current_state,
                             &index);
@@ -666,6 +667,7 @@ void EnsembleKalmanFilter::ensemble_kalman_subsample_simulate(EnsembleKalmanOutp
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Ensemble* current_ensemble = &current_state->back();
     Ensemble* next_ensemble = current_state->add_ensemble(this->ensemble_factors);
+    
     this->the_worker->subsample_move(next_ensemble,
                                      current_ensemble);
     
@@ -680,7 +682,7 @@ void EnsembleKalmanFilter::ensemble_kalman_subsample_simulate(EnsembleKalmanOutp
 {
   if (current_state->all_ensembles.size()==0)
   {
-    VectorSingleIndex index(this->current_index);
+    VectorIndex index(this->current_index);
     // Simulate from the proposal.
     this->simulate_proposal(current_state,
                             &index,
@@ -694,6 +696,7 @@ void EnsembleKalmanFilter::ensemble_kalman_subsample_simulate(EnsembleKalmanOutp
     //this->the_worker->subsample_move(next_ensemble,
     //                                 current_ensemble,
     //                                 conditioned_on_parameters);
+    
     this->the_worker->subsample_move(next_ensemble,
                                      current_ensemble);
     

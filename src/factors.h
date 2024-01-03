@@ -26,6 +26,8 @@ public:
   void set_data(size_t index);
   virtual void set_data(const Index* index)=0;
   
+  void change_data(Data* new_data);
+  
   virtual FactorVariables* simulate_factor_variables(const Parameters &simulated_parameters) const=0;
   
   /*
@@ -45,6 +47,8 @@ public:
   virtual void setup(const Parameters &conditioned_on_parameters)=0;
 
 protected:
+  
+  virtual void specific_change_data(Data* new_data)=0;
 
   void make_copy(const Factors &another);
 

@@ -14,7 +14,7 @@
 #include "single_point_move_output.h"
 #include "vector_factors.h"
 #include "custom_distribution_proposal_kernel.h"
-#include "vector_single_index.h"
+#include "vector_index.h"
 
 SMCGeneric::SMCGeneric()
    :SMC()
@@ -94,7 +94,7 @@ SMCGeneric::SMCGeneric(RandomNumberGenerator* rng_in,
                                                                   variable_in,
                                                                   true));
   indices.push_back(1);
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
   
   /*
   for (auto i=likelihood_estimators.begin();

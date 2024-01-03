@@ -5,7 +5,7 @@
 #include "utils.h"
 #include "move_output.h"
 #include "index.h"
-#include "vector_single_index.h"
+#include "vector_index.h"
 #include "factors.h"
 #include "factor_variables.h"
 
@@ -523,7 +523,7 @@ void SequentialSMCWorker::weight(const Index* index,
 
 void SequentialSMCWorker::pf_initial_weight(Particles &current_particles)
 {
-  VectorSingleIndex index(0);
+  VectorIndex index(0);
   for (size_t i = 0; i < this->get_number_of_particles(); ++i)
   {
     this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods(&index) - current_particles[i]->back().previous_target_evaluated;
@@ -581,7 +581,7 @@ void SequentialSMCWorker::pf_initial_weight(Particles &current_particles,
 {
   for (size_t i = 0; i < this->get_number_of_particles(); ++i)
   {
-    VectorSingleIndex index(0);
+    VectorIndex index(0);
     this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods(&index,
                                                                                                       conditioned_on_parameters) - current_particles[i]->back().previous_target_evaluated;
   }
@@ -683,7 +683,7 @@ void SequentialSMCWorker::subsample_pf_initial_weight(Particles &current_particl
 {
   for (size_t i = 0; i < this->get_number_of_particles(); ++i)
   {
-    VectorSingleIndex index(0);
+    VectorIndex index(0);
     this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().subsample_evaluate_likelihoods(&index) - current_particles[i]->back().previous_target_evaluated;
   }
 }
@@ -694,7 +694,7 @@ void SequentialSMCWorker::subsample_pf_initial_weight(Particles &current_particl
 {
   for (size_t i = 0; i < this->get_number_of_particles(); ++i)
   {
-    VectorSingleIndex index(0);
+    VectorIndex index(0);
     this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().subsample_evaluate_likelihoods(&index,
                                                                                                                 conditioned_on_parameters) - current_particles[i]->back().previous_target_evaluated;
   }

@@ -177,6 +177,8 @@ public:
   
   int get_instance_index() const;
   
+  virtual bool can_be_evaluated() const=0;
+  
 // Mh has its own parameters.
   // Stochastic has some weights.
   // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.

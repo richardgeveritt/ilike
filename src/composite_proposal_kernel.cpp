@@ -302,6 +302,18 @@ void CompositeProposalKernel::set_index_if_null(Index* index_in)
   }
 }
 
+bool CompositeProposalKernel::can_be_evaluated() const
+{
+  for (auto i=this->all_kernels.begin();
+       i!=this->all_kernels.end();
+       ++i)
+  {
+    if ((*i)->can_be_evaluated()==false)
+      return false;
+  }
+  return true;
+}
+
 /*
 arma::mat CompositeProposalKernel::specific_gradient_of_log(const std::string &variable,
                                            Particle &proposed_particle,
@@ -325,3 +337,4 @@ arma::mat CompositeProposalKernel::specific_subsample_gradient_of_log(const std:
   Rcpp::stop("CompositeProposalKernel::specific_gradient_of_log - not written yet.");
 }
 */
+

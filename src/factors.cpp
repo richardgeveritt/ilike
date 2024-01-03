@@ -1,5 +1,5 @@
 #include "factors.h"
-#include "vector_single_index.h"
+#include "vector_index.h"
 
 Factors::Factors()
 {
@@ -28,6 +28,11 @@ void Factors::make_copy(const Factors &another)
 
 void Factors::set_data(size_t index)
 {
-  VectorSingleIndex vector_single_index(index);
-  this->set_data(&vector_single_index);
+  VectorIndex vector_index(index);
+  this->set_data(&vector_index);
+}
+
+void Factors::change_data(Data* new_data)
+{
+  this->specific_change_data(new_data);
 }

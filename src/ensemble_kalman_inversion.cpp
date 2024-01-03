@@ -17,7 +17,7 @@
 #include "single_point_move_output.h"
 #include "generic_measurement_covariance_estimator.h"
 #include "vector_ensemble_factors.h"
-#include "vector_single_index.h"
+#include "vector_index.h"
 #include "custom_distribution_proposal_kernel.h"
 #include "sequential_ensemble_kalman_worker.h"
 #include "ensemble_sequencer.h"
@@ -80,7 +80,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
                                                                                         simulate_model_in));
   measurement_covariance_estimators.back()->change_data();
   indices.push_back(0);
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
   
   this->ensemble_factors = new VectorEnsembleFactors(measurement_covariance_estimators);
   
@@ -123,7 +123,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
   this->mcmc = NULL;
   
   //this->mcmc = mcmc_in;
-  //this->mcmc->set_index(new VectorSingleIndex(indices));
+  //this->mcmc->set_index(new VectorIndex(indices));
   //this->mcmc_at_last_step = mcmc_at_last_step_in;
 }
 
@@ -174,7 +174,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
                                                                                         simulate_model_in));
   measurement_covariance_estimators.back()->change_data();
   indices.push_back(0);
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
   
   this->ensemble_factors = new VectorEnsembleFactors(measurement_covariance_estimators);
   
@@ -217,7 +217,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
   this->mcmc = NULL;
   
   //this->mcmc = mcmc_in;
-  //this->mcmc->set_index(new VectorSingleIndex(indices));
+  //this->mcmc->set_index(new VectorIndex(indices));
   //this->mcmc_at_last_step = mcmc_at_last_step_in;
 }
 
@@ -273,7 +273,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
                                                                                                         measurement_variables));
             measurement_covariance_estimators.back()->change_data();
   indices.push_back(0);
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
   
   this->ensemble_factors = new VectorEnsembleFactors(measurement_covariance_estimators);
   
@@ -315,7 +315,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
   this->mcmc = NULL;
   
   //this->mcmc = mcmc_in;
-  //this->mcmc->set_index(new VectorSingleIndex(indices));
+  //this->mcmc->set_index(new VectorIndex(indices));
   //this->mcmc_at_last_step = mcmc_at_last_step_in;
 }
 
@@ -372,7 +372,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
                                                                                                   measurement_variables_in));
   measurement_covariance_estimators.back()->change_data();
   indices.push_back(0);
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
   
   this->ensemble_factors = new VectorEnsembleFactors(measurement_covariance_estimators);
   
@@ -416,7 +416,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
   this->set_reciprocal_schedule_scale(min_epsilon_in);
   
   //this->mcmc = mcmc_in;
-  //this->mcmc->set_index(new VectorSingleIndex(indices));
+  //this->mcmc->set_index(new VectorIndex(indices));
   //this->mcmc_at_last_step = mcmc_at_last_step_in;
 }
 
@@ -484,7 +484,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
     indices.push_back(i);
   }
   
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
   
   this->ensemble_factors = new VectorEnsembleFactors(measurement_covariance_estimators);
   
@@ -527,7 +527,7 @@ EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
   this->mcmc = NULL;
   
   //this->mcmc = mcmc_in;
-  //this->mcmc->set_index(new VectorSingleIndex(indices));
+  //this->mcmc->set_index(new VectorIndex(indices));
   //this->mcmc_at_last_step = mcmc_at_last_step_in;
 }
 

@@ -5,6 +5,7 @@
 CustomProposalKernel::CustomProposalKernel()
   :ProposalKernel()
 {
+  this->proposal_evaluate = NULL;
 }
 
 CustomProposalKernel::~CustomProposalKernel()
@@ -135,4 +136,12 @@ void CustomProposalKernel::set_index(Index* index_in)
 
 void CustomProposalKernel::set_index_if_null(Index* index_in)
 {
+}
+
+bool CustomProposalKernel::can_be_evaluated() const
+{
+  if (this->proposal_evaluate==NULL)
+    return false;
+  else
+    return true;
 }

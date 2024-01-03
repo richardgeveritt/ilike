@@ -110,7 +110,7 @@ protected:
   void make_copy(const HMMFactorVariables &another);
   
   // stored here
-  LikelihoodEstimatorOutput* initial_prior;
+  //LikelihoodEstimatorOutput* initial_prior;
   
   // stored here
   // these are the likelihood terms for each measurement

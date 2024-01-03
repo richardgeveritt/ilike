@@ -85,6 +85,8 @@ public:
 
 protected:
   
+  void specific_change_data(Data* new_data);
+  
   bool check_termination() const;
 
   friend KalmanFilterOutput;

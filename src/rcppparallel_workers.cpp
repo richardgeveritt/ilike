@@ -3,7 +3,7 @@
 #include "smc.h"
 #include "single_point_move_output.h"
 #include "rcppparallel_smc_worker.h"
-#include "vector_single_index.h"
+#include "vector_index.h"
 #include "utils.h"
 
 SimulateWorker::SimulateWorker()
@@ -409,7 +409,7 @@ void PFInitialWeightWorker::operator=(const PFInitialWeightWorker &another)
 
 void PFInitialWeightWorker::operator()(std::size_t begin, std::size_t end)
 {
-  VectorSingleIndex index(0);
+  VectorIndex index(0);
 
   for (std::size_t i = begin; i < end; ++i)
   {
@@ -829,7 +829,7 @@ void SubsamplePFInitialWeightWorker::operator=(const SubsamplePFInitialWeightWor
 
 void SubsamplePFInitialWeightWorker::operator()(std::size_t begin, std::size_t end)
 {
-  VectorSingleIndex index(0);
+  VectorIndex index(0);
 
   for (std::size_t i = begin; i < end; ++i)
   {

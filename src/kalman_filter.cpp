@@ -507,3 +507,8 @@ bool KalmanFilter::check_termination() const
 // {
 //
 // }
+
+void KalmanFilter::specific_change_data(Data* new_data)
+{
+  
+}

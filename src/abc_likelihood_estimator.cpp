@@ -80,3 +80,8 @@ void ABCLikelihoodEstimator::setup(const Parameters &parameters)
 {
   
 }
+
+void ABCLikelihoodEstimator::specific_change_data(Data* new_data)
+{
+  this->abc_kernel->set_data(new_data);
+}

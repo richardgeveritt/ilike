@@ -239,7 +239,7 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
     if (this->current_bisect_value!=this->schedule.back())
       this->schedule_difference = this->schedule.back()-this->current_bisect_value;
     else
-      this->schedule_difference = 0.0;
+      this->schedule_difference = 1.0;
     //this->mileometer.increment();
     
     this->current_bisect_value = this->schedule.back();

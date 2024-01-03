@@ -180,6 +180,28 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// do_particle_filter
+double do_particle_filter(const List& model, const List& parameters, const List& algorithm_parameter_list, size_t number_of_particles, const List& filtering_options_list, const List& adaptive_resampling_method, size_t smc_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const String& results_name_in, size_t seed);
+RcppExport SEXP _ilike_do_particle_filter(SEXP modelSEXP, SEXP parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP number_of_particlesSEXP, SEXP filtering_options_listSEXP, SEXP adaptive_resampling_methodSEXP, SEXP smc_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
+    Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
+    Rcpp::traits::input_parameter< const List& >::type algorithm_parameter_list(algorithm_parameter_listSEXP);
+    Rcpp::traits::input_parameter< size_t >::type number_of_particles(number_of_particlesSEXP);
+    Rcpp::traits::input_parameter< const List& >::type filtering_options_list(filtering_options_listSEXP);
+    Rcpp::traits::input_parameter< const List& >::type adaptive_resampling_method(adaptive_resampling_methodSEXP);
+    Rcpp::traits::input_parameter< size_t >::type smc_iterations_to_store(smc_iterations_to_storeSEXP);
+    Rcpp::traits::input_parameter< bool >::type write_to_file_at_each_iteration(write_to_file_at_each_iterationSEXP);
+    Rcpp::traits::input_parameter< bool >::type parallel_in(parallel_inSEXP);
+    Rcpp::traits::input_parameter< size_t >::type grain_size_in(grain_size_inSEXP);
+    Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
+    Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
+    rcpp_result_gen = Rcpp::wrap(do_particle_filter(model, parameters, algorithm_parameter_list, number_of_particles, filtering_options_list, adaptive_resampling_method, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_ilike_ilike_rdtsc", (DL_FUNC) &_ilike_ilike_rdtsc, 0},
@@ -190,6 +212,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ilike_do_enkmfds", (DL_FUNC) &_ilike_do_enkmfds, 17},
     {"_ilike_do_kalman_filter", (DL_FUNC) &_ilike_do_kalman_filter, 7},
     {"_ilike_do_ensemble_kalman_filter", (DL_FUNC) &_ilike_do_ensemble_kalman_filter, 13},
+    {"_ilike_do_particle_filter", (DL_FUNC) &_ilike_do_particle_filter, 12},
     {NULL, NULL, 0}
 };
 

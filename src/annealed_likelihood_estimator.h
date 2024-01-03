@@ -116,6 +116,8 @@ public:
   //                                    const std::vector<List> &all_auxiliary_variables);
 
 protected:
+  
+  void specific_change_data(Data* new_data);
 
   friend AnnealedLikelihoodEstimatorOutput;
 

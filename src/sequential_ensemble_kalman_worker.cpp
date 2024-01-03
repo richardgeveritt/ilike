@@ -5,7 +5,7 @@
 #include "utils.h"
 #include "move_output.h"
 #include "index.h"
-#include "vector_single_index.h"
+#include "vector_index.h"
 #include "ensemble_factor_variables.h"
 #include "ensemble_factors.h"
 #include "ensemble_shifter.h"
@@ -389,7 +389,7 @@ void SequentialEnsembleKalmanWorker::pf_initial_weight(EnsembleKalman &current_p
 {
   for (size_t i = 0; i < this->get_number_of_particles(); ++i)
   {
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods(&VectorSingleIndex(0)) - current_particles[i]->back().previous_target_evaluated;
+    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods(&VectorIndex(0)) - current_particles[i]->back().previous_target_evaluated;
   }
 }
 

@@ -46,6 +46,8 @@ public:
   void setup(const Parameters &conditioned_on_parameters);
   
 protected:
+  
+  void specific_change_data(Data* new_data);
 
   void make_copy(const VectorFactors &another);
   

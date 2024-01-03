@@ -5,6 +5,7 @@
 CustomNoParamsSymmetricProposalKernel::CustomNoParamsSymmetricProposalKernel()
   :SymmetricProposalKernel()
 {
+  this->proposal_evaluate = NULL;
 }
 
 CustomNoParamsSymmetricProposalKernel::~CustomNoParamsSymmetricProposalKernel()
@@ -14,7 +15,7 @@ CustomNoParamsSymmetricProposalKernel::~CustomNoParamsSymmetricProposalKernel()
 CustomNoParamsSymmetricProposalKernel::CustomNoParamsSymmetricProposalKernel(SimulateNoParamsMCMCProposalPtr proposal_simulate_in)
   :SymmetricProposalKernel()
 {
-  //this->proposal_evaluate = proposal_evaluate_in;
+  this->proposal_evaluate = NULL;
   this->proposal_simulate = proposal_simulate_in;
 }
 
@@ -190,4 +191,12 @@ void CustomNoParamsSymmetricProposalKernel::set_index(Index* index_in)
 
 void CustomNoParamsSymmetricProposalKernel::set_index_if_null(Index* index_in)
 {
+}
+
+bool CustomNoParamsSymmetricProposalKernel::can_be_evaluated() const
+{
+  if (this->proposal_evaluate==NULL)
+    return false;
+  else
+    return true;
 }

@@ -5,6 +5,7 @@
 CustomGuidedSymmetricProposalKernel::CustomGuidedSymmetricProposalKernel()
   :SymmetricProposalKernel()
 {
+  this->proposal_evaluate = NULL;
 }
 
 CustomGuidedSymmetricProposalKernel::~CustomGuidedSymmetricProposalKernel()
@@ -15,7 +16,7 @@ CustomGuidedSymmetricProposalKernel::CustomGuidedSymmetricProposalKernel(Simulat
                                                        const Data* data_in)
   :SymmetricProposalKernel()
 {
-  //this->proposal_evaluate = proposal_evaluate_in;
+  this->proposal_evaluate = NULL;
   this->proposal_simulate = proposal_simulate_in;
   this->data = data_in;
 }
@@ -137,4 +138,12 @@ void CustomGuidedSymmetricProposalKernel::set_index(Index* index_in)
 
 void CustomGuidedSymmetricProposalKernel::set_index_if_null(Index* index_in)
 {
+}
+
+bool CustomGuidedSymmetricProposalKernel::can_be_evaluated() const
+{
+  if (this->proposal_evaluate==NULL)
+    return false;
+  else
+    return true;
 }

@@ -48,6 +48,8 @@ public:
   
 protected:
   
+  void specific_change_data(Data* new_data);
+  
   friend HMMFactorVariables;
   // stored here
   ProposalKernel* transition_kernel;

@@ -98,6 +98,8 @@ public:
   void set_index(Index* index_in);
   void set_index_if_null(Index* index_in);
   
+  bool can_be_evaluated() const;
+  
   //arma::mat subsample_independent_gradient_of_log(const std::string &variable,
   //                                                Variables* proposed_particle,
   //                                                const Parameters &conditioned_on_parameters);

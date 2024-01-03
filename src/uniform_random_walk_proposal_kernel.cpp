@@ -273,3 +273,8 @@ void UniformRandomWalkProposalKernel::set_index(Index* index_in)
 void UniformRandomWalkProposalKernel::set_index_if_null(Index* index_in)
 {
 }
+
+bool UniformRandomWalkProposalKernel::can_be_evaluated() const
+{
+  return true;
+}

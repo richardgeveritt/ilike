@@ -487,3 +487,8 @@ void LangevinProposalKernel::set_index_if_null(Index* index_in)
   if (this->index==NULL)
     this->index = index_in;
 }
+
+bool LangevinProposalKernel::can_be_evaluated() const
+{
+  return true;
+}

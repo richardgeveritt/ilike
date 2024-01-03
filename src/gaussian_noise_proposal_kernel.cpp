@@ -31,3 +31,8 @@ void GaussianNoiseProposalKernel::operator=(const GaussianNoiseProposalKernel &a
 void GaussianNoiseProposalKernel::make_copy(const GaussianNoiseProposalKernel &another)
 {
 }
+
+bool GaussianNoiseProposalKernel::can_be_evaluated() const
+{
+  return true;
+}

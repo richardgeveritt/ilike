@@ -5,6 +5,7 @@
 CustomGuidedNoParamsProposalKernel::CustomGuidedNoParamsProposalKernel()
   :ProposalKernel()
 {
+  this->proposal_evaluate = NULL;
 }
 
 CustomGuidedNoParamsProposalKernel::~CustomGuidedNoParamsProposalKernel()
@@ -200,4 +201,12 @@ void CustomGuidedNoParamsProposalKernel::set_index(Index* index_in)
 
 void CustomGuidedNoParamsProposalKernel::set_index_if_null(Index* index_in)
 {
+}
+
+bool CustomGuidedNoParamsProposalKernel::can_be_evaluated() const
+{
+  if (this->proposal_evaluate==NULL)
+    return false;
+  else
+    return true;
 }

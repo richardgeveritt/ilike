@@ -148,6 +148,8 @@ public:
   
 protected:
   
+  void specific_change_data(Data* new_data);
+  
   friend SequentialSMCWorker;
   friend class SimulateWorker;
   friend class ConditionalSimulateWorker;

@@ -41,6 +41,8 @@ public:
   void set_index(Index* index_in);
   void set_index_if_null(Index* index_in);
   
+  bool can_be_evaluated() const;
+  
 // Mh has its own parameters.
   // Stochastic has some weights.
   // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.

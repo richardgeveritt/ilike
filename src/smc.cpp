@@ -568,3 +568,8 @@ void SMC::setup_default_ancestor_variables()
     this->default_ancestor_variables.push_back(i);
   }
 }
+
+void SMC::specific_change_data(Data* new_data)
+{
+  
+}

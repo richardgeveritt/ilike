@@ -132,6 +132,8 @@ public:
   
 protected:
   
+  void specific_change_data(Data* new_data);
+  
   friend ExactLikelihoodEstimatorOutput;
   double evaluate(const Parameters &parameters) const;
   arma::mat evaluate_gradient(const std::string &variable,

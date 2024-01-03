@@ -457,3 +457,8 @@ void EnsembleKalman::setup_variables_using_candidate_parameters(const Parameters
   this->any_variables = candidate_parameters.get_any_variables();
 }
 */
+
+void EnsembleKalman::specific_change_data(Data* new_data)
+{
+  
+}

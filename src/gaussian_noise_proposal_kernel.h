@@ -24,6 +24,8 @@ public:
   void operator=(const GaussianNoiseProposalKernel &another);
   //Kernel* duplicate() const;
   virtual GaussianNoiseProposalKernel* gaussian_noise_proposal_kernel_duplicate() const=0;
+  
+  bool can_be_evaluated() const;
 
 protected:
 

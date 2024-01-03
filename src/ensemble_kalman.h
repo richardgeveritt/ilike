@@ -97,6 +97,8 @@ public:
 
 protected:
   
+  void specific_change_data(Data* new_data);
+  
   friend EnsembleKalmanOutput;
   friend EnsembleKalmanWorker;
   friend SequentialEnsembleKalmanWorker;

@@ -6,6 +6,8 @@
 class SMCOutput;
 class MoveOutput;
 class IndependentProposalKernel;
+class HMMIndex;
+class VectorIndex;
 
 class ParticleFilter : public SMC
 {
@@ -34,8 +36,8 @@ public:
                  IndependentProposalKernel* proposal_in,
                  ProposalKernel* transition_model_in,
                  ProposalKernel* transition_proposal_in,
-                 Index* without_cancelled_index,
-                 Index* full_index,
+                 VectorIndex* evaluated_in_initial_weight_update,
+                 VectorIndex* evaluated_in_pf_weight_update,
                  bool proposal_is_evaluated_in,
                  bool transition_proposal_is_evaluated_in,
                  bool smcfixed_flag_in,
@@ -91,6 +93,8 @@ public:
 
 protected:
   
+  void increment_time_index();
+  
   SMCOutput* specific_run();
   //SMCOutput* specific_run(const std::string &directory_name);
   
@@ -138,7 +142,7 @@ protected:
   void make_copy(const ParticleFilter &another);
   
   // stored here
-  ProposalKernel* proposal_kernel;
+  ProposalKernel* transition_proposal;
   
   
   std::string index_name;
@@ -156,9 +160,9 @@ protected:
   //size_t lag;
   
   // stored here
-  Index* index;
+  HMMIndex* index;
   
-  bool dynamic_proposal_is_evaluated;
+  bool transition_proposal_is_evaluated;
   
   bool check_termination() const;
 

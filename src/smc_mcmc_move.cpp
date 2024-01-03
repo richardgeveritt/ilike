@@ -13,7 +13,7 @@
 #include "standard_mcmc_output.h"
 #include "custom_distribution_proposal_kernel.h"
 #include "vector_factors.h"
-#include "vector_single_index.h"
+#include "vector_index.h"
 
 SMCMCMCMove::SMCMCMCMove()
    :SMC()
@@ -65,7 +65,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                                                                evaluate_log_likelihood_in,
                                                                true));
   indices.push_back(0);
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
 
   this->factors = new VectorFactors(likelihood_estimators);
   
@@ -101,7 +101,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                               smc_criterion);
   
   this->mcmc = mcmc_in;
-  this->mcmc->set_index(new VectorSingleIndex(indices));
+  this->mcmc->set_index(new VectorIndex(indices));
   this->mcmc_at_last_step = true;
 }
 
@@ -144,7 +144,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   //indices.reserve(likelihood_estimators_in.size());
   //for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
   //  indices.push_back(i);
-  //this->index = new VectorSingleIndex(indices);
+  //this->index = new VectorIndex(indices);
   this->index = without_cancelled_index;
   
   this->factors = new VectorFactors(likelihood_estimators_in);
@@ -221,7 +221,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   //indices.reserve(likelihood_estimators_in.size());
   //for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
   //  indices.push_back(i);
-  //this->index = new VectorSingleIndex(indices);
+  //this->index = new VectorIndex(indices);
   this->index = without_cancelled_index;
   
   this->factors = new VectorFactors(likelihood_estimators_in);
@@ -303,7 +303,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                                                                evaluate_log_likelihood_in,
                                                                true));
   indices.push_back(0);
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
   
   this->factors = new VectorFactors(likelihood_estimators);
   
@@ -340,7 +340,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                               smc_criterion);
   
   this->mcmc = mcmc_in;
-  this->mcmc->set_index(new VectorSingleIndex(indices));
+  this->mcmc->set_index(new VectorIndex(indices));
   this->mcmc_at_last_step = mcmc_at_last_step_in;
 }
 
@@ -466,7 +466,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                                                                   false));
   
   indices.push_back(1);
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
   
   /*
   for (auto i=likelihood_estimators.begin();
@@ -504,7 +504,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   //this->sequencer_parameters = &this->sequencer.schedule_parameters;
   
   this->mcmc = mcmc_in;
-  this->mcmc->set_index(new VectorSingleIndex(indices));
+  this->mcmc->set_index(new VectorIndex(indices));
   this->mcmc_at_last_step = mcmc_at_last_step_in;
 }
 
@@ -580,7 +580,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                                                                   false));
   
   indices.push_back(1);
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
   
   this->factors = new VectorFactors(likelihood_estimators);
   
@@ -623,7 +623,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   //this->sequencer_parameters = &this->sequencer.schedule_parameters;
   
   this->mcmc = mcmc_in;
-  this->mcmc->set_index(new VectorSingleIndex(indices));
+  this->mcmc->set_index(new VectorIndex(indices));
   this->mcmc_at_last_step = mcmc_at_last_step_in;
 }
 
@@ -662,7 +662,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   indices.reserve(likelihood_estimators_in.size());
   for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
     indices.push_back(i);
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
   
   this->factors = new VectorFactors(likelihood_estimators_in);
   
@@ -701,7 +701,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   
   this->mcmc = mcmc_in;
   if (this->mcmc!=NULL)
-    this->mcmc->set_index_if_null(new VectorSingleIndex(indices));
+    this->mcmc->set_index_if_null(new VectorIndex(indices));
   this->mcmc_at_last_step = mcmc_at_last_step_in;
 }
 
@@ -742,7 +742,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   //indices.reserve(likelihood_estimators_in.size());
   //for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
   //  indices.push_back(i);
-  //this->index = new VectorSingleIndex(indices);
+  //this->index = new VectorIndex(indices);
   this->index = without_cancelled_index;
   
   this->factors = new VectorFactors(likelihood_estimators_in);

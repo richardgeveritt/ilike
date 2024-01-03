@@ -303,3 +303,11 @@ void CustomDistributionProposalKernel::set_index(Index* index_in)
 void CustomDistributionProposalKernel::set_index_if_null(Index* index_in)
 {
 }
+
+bool CustomDistributionProposalKernel::can_be_evaluated() const
+{
+  if (this->proposal_evaluate==NULL)
+    return false;
+  else
+    return true;
+}

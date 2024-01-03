@@ -42,6 +42,8 @@ public:
   void setup(const Parameters &parameters);
 
 private:
+  
+  void specific_change_data(Data* new_data);
 
   friend ABCLikelihoodEstimatorOutput;
 

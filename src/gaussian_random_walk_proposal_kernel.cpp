@@ -296,3 +296,8 @@ void GaussianRandomWalkProposalKernel::set_index(Index* index_in)
 void GaussianRandomWalkProposalKernel::set_index_if_null(Index* index_in)
 {
 }
+
+bool GaussianRandomWalkProposalKernel::can_be_evaluated() const
+{
+  return true;
+}

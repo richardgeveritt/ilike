@@ -14,7 +14,7 @@
 #include "annealed_likelihood_estimator.h"
 #include "utils.h"
 #include "stable_smc_termination.h"
-#include "vector_single_index.h"
+#include "vector_index.h"
 #include "ensemble_kalman_inversion.h"
 #include "metropolis_mcmc.h"
 
@@ -1047,7 +1047,7 @@ SMCMCMCMove* make_fixed_epsilon_enki_abc_mcmc(RandomNumberGenerator* rng_in,
   indices.reserve(abc_likelihood_and_prior.size());
   for (size_t i=0; i<abc_likelihood_and_prior.size(); ++i)
     indices.push_back(i);
-  Index* an_index = new VectorSingleIndex(indices);
+  Index* an_index = new VectorIndex(indices);
   
   return new SMCMCMCMove(rng_in,
                          seed_in,
@@ -1164,7 +1164,7 @@ SMCMCMCMove* make_fixed_epsilon_lp_uniform_abc_mcmc(RandomNumberGenerator* rng_i
   indices.reserve(abc_likelihood_and_prior.size());
   for (size_t i=0; i<abc_likelihood_and_prior.size(); ++i)
     indices.push_back(i);
-  Index* an_index = new VectorSingleIndex(indices);
+  Index* an_index = new VectorIndex(indices);
 
   return new SMCMCMCMove(rng_in,
                          seed_in,
@@ -1227,7 +1227,7 @@ SMCMCMCMove* make_fixed_epsilon_gaussian_abc_mcmc(RandomNumberGenerator* rng_in,
   indices.reserve(abc_likelihood_and_prior.size());
   for (size_t i=0; i<abc_likelihood_and_prior.size(); ++i)
     indices.push_back(i);
-  Index* an_index = new VectorSingleIndex(indices);
+  Index* an_index = new VectorIndex(indices);
   
   return new SMCMCMCMove(rng_in,
                          seed_in,
@@ -1687,7 +1687,7 @@ SMCMCMCMove* make_sl_mcmc(RandomNumberGenerator* rng_in,
   indices.reserve(sl_likelihood_and_prior.size());
   for (size_t i=0; i<sl_likelihood_and_prior.size(); ++i)
     indices.push_back(i);
-  Index* an_index = new VectorSingleIndex(indices);
+  Index* an_index = new VectorIndex(indices);
   
   return new SMCMCMCMove(rng_in,
                          seed_in,

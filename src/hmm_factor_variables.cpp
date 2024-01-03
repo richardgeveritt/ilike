@@ -9,7 +9,7 @@ HMMFactorVariables::HMMFactorVariables()
   :FactorVariables()
 {
   this->likelihood_estimator_outputs.resize(0);
-  this->initial_prior = NULL;
+  //this->initial_prior = NULL;
   this->dynamic_smcfixed_part = 0.0;
   this->hmm_factors = NULL;
 }
@@ -41,8 +41,8 @@ HMMFactorVariables::~HMMFactorVariables()
       delete *i;
   }
   
-  if (this->initial_prior!=NULL)
-    delete this->initial_prior;
+  //if (this->initial_prior!=NULL)
+  //  delete this->initial_prior;
 }
 
 //Copy constructor for the HMMFactorVariables class.
@@ -67,8 +67,8 @@ void HMMFactorVariables::operator=(const HMMFactorVariables &another)
   }
   this->likelihood_estimator_outputs.clear();
   
-  if (this->initial_prior!=NULL)
-    delete this->initial_prior;
+  //if (this->initial_prior!=NULL)
+  //  delete this->initial_prior;
   
   FactorVariables::operator=(another);
   this->make_copy(another);
@@ -95,17 +95,20 @@ void HMMFactorVariables::make_copy(const HMMFactorVariables &another)
       this->likelihood_estimator_outputs.push_back(NULL);
   }
   
+  /*
   if (another.initial_prior!=NULL)
     this->initial_prior = another.initial_prior->duplicate();
   else
     this->initial_prior = NULL;
+  */
 }
 
 void HMMFactorVariables::evaluate_smcfixed_part_of_likelihoods(const Index* index)
 {
-  if (index->size()>1)
-    Rcpp::stop("HMMFactorVariables::evaluate_smcfixed_part_of_likelihoods - cannot break down likelihood estimation into two stages when using more than one measurement.");
+  //if (index->size()>1)
+  //  Rcpp::stop("HMMFactorVariables::evaluate_smcfixed_part_of_likelihoods - cannot break down likelihood estimation into two stages when using more than one measurement.");
   
+  /*
   if (*index->begin()==0)
   {
     if (this->initial_prior!=NULL)
@@ -117,12 +120,17 @@ void HMMFactorVariables::evaluate_smcfixed_part_of_likelihoods(const Index* inde
       this->dynamic_smcfixed_part = this->hmm_factors->transition_kernel->evaluate_kernel(*this->particle,
                                                                                           *this->particle->previous_self);
   }
+  */
   
-  for (auto i=this->likelihood_estimator_outputs.begin();
-       i!=this->likelihood_estimator_outputs.end();
+  if (this->hmm_factors->smcfixed_flag && (this->hmm_factors->transition_kernel!=NULL) && (index->get_transition_model()))
+    this->dynamic_smcfixed_part = this->hmm_factors->transition_kernel->evaluate_kernel(*this->particle,
+                                                                                        *this->particle->previous_self);
+  
+  for (auto i=index->begin();
+       i!=index->end();
        ++i)
   {
-    (*i)->evaluate_smcfixed_part(this->particle->parameters);
+    this->likelihood_estimator_outputs[*i]->evaluate_smcfixed_part(this->particle->parameters);
   }
   
   //if (this->likelihood_estimator_outputs[*index.begin()]!=NULL)
@@ -166,6 +174,7 @@ void HMMFactorVariables::evaluate_smcfixed_part_of_likelihoods(const Index* inde
 void HMMFactorVariables::subsample_evaluate_smcfixed_part_of_likelihoods(const Index* index)
 {
   
+  /*
   if (index->size()>1)
     Rcpp::stop("HMMFactorVariables::subsample_evaluate_smcfixed_part_of_likelihoods - cannot break down likelihood estimation into two stages when using more than one measurement.");
   
@@ -186,6 +195,18 @@ void HMMFactorVariables::subsample_evaluate_smcfixed_part_of_likelihoods(const I
        ++i)
   {
     (*i)->subsample_evaluate_smcfixed_part(this->particle->parameters);
+  }
+  */
+  
+  if (this->hmm_factors->smcfixed_flag && (this->hmm_factors->transition_kernel!=NULL) && (index->get_transition_model()))
+    this->dynamic_smcfixed_part = this->hmm_factors->transition_kernel->subsample_evaluate_kernel(*this->particle,
+                                                                                                  *this->particle->previous_self);
+  
+  for (auto i=index->begin();
+       i!=index->end();
+       ++i)
+  {
+    this->likelihood_estimator_outputs[*i]->subsample_evaluate_smcfixed_part(this->particle->parameters);
   }
 }
 
@@ -222,11 +243,12 @@ void HMMFactorVariables::subsample_evaluate_smcfixed_part_of_likelihoods(const I
 
 double HMMFactorVariables::evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index)
 {
-  if (index->size()>1)
-    Rcpp::stop("HMMFactorVariables::evaluate_smcfixed_part_of_likelihoods - cannot break down likelihood estimation into two stages when using more than one measurement.");
+  //if (index->size()>1)
+  //  Rcpp::stop("HMMFactorVariables::evaluate_smcfixed_part_of_likelihoods - cannot break down likelihood estimation into two stages when using more than one measurement.");
   
   double result = 0.0;
   
+  /*
   if (*index->begin()==0)
   {
     if (this->initial_prior!=NULL)
@@ -237,22 +259,25 @@ double HMMFactorVariables::evaluate_smcadaptive_part_given_smcfixed_likelihoods(
   }
   else
   {
-    if (this->hmm_factors->smcfixed_flag)
-      result = result + this->dynamic_smcfixed_part;
-    else
-    {
-      if (this->hmm_factors->transition_kernel!=NULL)
-        result = result + this->hmm_factors->transition_kernel->evaluate_kernel(*this->particle,
-                                                                                *this->particle->previous_self);
-    }
+    
+  }
+  */
+  
+  if (this->hmm_factors->smcfixed_flag)
+    result = result + this->dynamic_smcfixed_part;
+  else
+  {
+    if ( (this->hmm_factors->transition_kernel!=NULL) && (index->get_transition_model()))
+      result = result + this->hmm_factors->transition_kernel->evaluate_kernel(*this->particle,
+                                                                              *this->particle->previous_self);
   }
   
-  for (auto i=this->likelihood_estimator_outputs.begin();
-       i!=this->likelihood_estimator_outputs.end();
+  for (auto i=index->begin();
+       i!=index->end();
        ++i)
   {
-    (*i)->evaluate_smcadaptive_part_given_smcfixed(this->particle->parameters);
-    result = result + (*i)->log_likelihood;
+    this->likelihood_estimator_outputs[*i]->evaluate_smcadaptive_part_given_smcfixed(this->particle->parameters);
+    result = result + this->likelihood_estimator_outputs[*i]->log_likelihood;
   }
   
   return result;
@@ -349,6 +374,7 @@ double HMMFactorVariables::subsample_evaluate_smcadaptive_part_given_smcfixed_li
 double HMMFactorVariables::subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index)
 {
   
+  /*
   if (index->size()>1)
     Rcpp::stop("HMMFactorVariables::subsample_evaluate_smcfixed_part_of_likelihoods - cannot break down likelihood estimation into two stages when using more than one measurement.");
   
@@ -381,12 +407,33 @@ double HMMFactorVariables::subsample_evaluate_smcadaptive_part_given_smcfixed_li
     (*i)->subsample_evaluate_smcadaptive_part_given_smcfixed(this->particle->parameters);
     result = result + (*i)->subsample_log_likelihood;
   }
+  */
+  
+  double result = 0.0;
+  
+  if (this->hmm_factors->smcfixed_flag)
+    result = result + this->dynamic_smcfixed_part;
+  else
+  {
+    if ( (this->hmm_factors->transition_kernel!=NULL) && (index->get_transition_model()))
+      result = result + this->hmm_factors->transition_kernel->subsample_evaluate_kernel(*this->particle,
+                                                                                        *this->particle->previous_self);
+  }
+  
+  for (auto i=index->begin();
+       i!=index->end();
+       ++i)
+  {
+    this->likelihood_estimator_outputs[*i]->subsample_evaluate_smcadaptive_part_given_smcfixed(this->particle->parameters);
+    result = result + this->likelihood_estimator_outputs[*i]->subsample_log_likelihood;
+  }
   
   return result;
 }
 
 double HMMFactorVariables::evaluate_likelihoods(const Index* index) const
 {
+  /*
   if (index->size()>1)
     Rcpp::stop("HMMFactorVariables::evaluate_likelihoods - only one index allowed.");
   
@@ -412,6 +459,22 @@ double HMMFactorVariables::evaluate_likelihoods(const Index* index) const
     result = result + (*i)->evaluate(this->particle->parameters);
   }
 
+  return result;
+  */
+  
+  double result = 0.0;
+  
+  if ( (this->hmm_factors->transition_kernel!=NULL) && (index->get_transition_model()))
+    result = result + this->hmm_factors->transition_kernel->evaluate_kernel(*this->particle,
+                                                                            *this->particle->previous_self);
+  
+  for (auto i=index->begin();
+       i!=index->end();
+       ++i)
+  {
+    result = result + this->likelihood_estimator_outputs[*i]->evaluate(this->particle->parameters);
+  }
+  
   return result;
 }
 
@@ -452,6 +515,7 @@ double HMMFactorVariables::evaluate_likelihoods(const Index* index,
 
 double HMMFactorVariables::subsample_evaluate_likelihoods(const Index* index) const
 {
+  /*
   if (index->size()>1)
     Rcpp::stop("HMMFactorVariables::subsample_evaluate_likelihoods - only one index allowed.");
   
@@ -475,6 +539,22 @@ double HMMFactorVariables::subsample_evaluate_likelihoods(const Index* index) co
        ++i)
   {
     result = result + (*i)->subsample_evaluate(this->particle->parameters);
+  }
+  
+  return result;
+  */
+  
+  double result = 0.0;
+  
+  if ( (this->hmm_factors->transition_kernel!=NULL) && (index->get_transition_model()))
+    result = result + this->hmm_factors->transition_kernel->subsample_evaluate_kernel(*this->particle,
+                                                                                      *this->particle->previous_self);
+  
+  for (auto i=index->begin();
+       i!=index->end();
+       ++i)
+  {
+    result = result + this->likelihood_estimator_outputs[*i]->subsample_evaluate(this->particle->parameters);
   }
   
   return result;

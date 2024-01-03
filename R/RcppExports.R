@@ -33,3 +33,7 @@ do_ensemble_kalman_filter <- function(model, parameters, algorithm_parameter_lis
     .Call(`_ilike_do_ensemble_kalman_filter`, model, parameters, algorithm_parameter_list, number_of_ensemble_members, filtering_options_list, enk_likelihood_index_method, enk_shifter_method, enk_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed)
 }
 
+do_particle_filter <- function(model, parameters, algorithm_parameter_list, number_of_particles, filtering_options_list, adaptive_resampling_method, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed) {
+    .Call(`_ilike_do_particle_filter`, model, parameters, algorithm_parameter_list, number_of_particles, filtering_options_list, adaptive_resampling_method, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed)
+}
+

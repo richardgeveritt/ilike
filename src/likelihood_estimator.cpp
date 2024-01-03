@@ -93,7 +93,15 @@ void LikelihoodEstimator::change_data()
 
 void LikelihoodEstimator::change_data(std::shared_ptr<Data> new_data)
 {
-  this->current_data = new_data.get();
+  this->change_data_with_raw_pointer(new_data.get());
+}
+
+void LikelihoodEstimator::change_data_with_raw_pointer(Data* new_data)
+{
+  this->current_data = new_data;
+  this->specific_change_data(new_data);
+  if (this->factors!=NULL)
+    this->factors->change_data(new_data);
 }
 
 Data* LikelihoodEstimator::get_data() const

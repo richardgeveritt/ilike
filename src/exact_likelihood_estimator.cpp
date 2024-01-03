@@ -338,7 +338,7 @@ double ExactLikelihoodEstimator::evaluate(const Parameters &parameters) const
   {
     if (result!=-arma::datum::inf)
     {
-      result = result + (*i)->evaluate_kernel(*this->data,
+      result = result + (*i)->evaluate_kernel(*this->current_data,
                                               parameters);
     }
   }
@@ -455,6 +455,16 @@ arma::mat ExactLikelihoodEstimator::subsample_evaluate_gradient(const std::strin
   }
   
   return result;
+}
+
+void ExactLikelihoodEstimator::specific_change_data(Data* new_data)
+{
+  for (auto i=this->numerator_likelihood_factors.begin();
+       i!=this->numerator_likelihood_factors.end();
+       ++i)
+  {
+    (*i)->set_data(new_data);
+  }
 }
 
 //double ExactLikelihoodEstimator::evaluate(const Parameters &parameters)

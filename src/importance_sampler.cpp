@@ -11,7 +11,7 @@
 //#include "custom_independent_proposal_kernel.h"
 #include "custom_distribution_proposal_kernel.h"
 #include "vector_factors.h"
-#include "vector_single_index.h"
+#include "vector_index.h"
 #include "positive_smc_criterion.h"
 //#include "rcppparallel_smc_worker.h"
 
@@ -48,7 +48,7 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                                                evaluate_log_likelihood_in,
                                                                true));
   indices.push_back(0);
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
   
   this->factors = new VectorFactors(likelihood_estimators);
   
@@ -107,7 +107,7 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                                                evaluate_log_likelihood_in,
                                                                true));
   indices.push_back(0);
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
   
   this->factors = new VectorFactors(likelihood_estimators);
   
@@ -175,7 +175,7 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                                                true));
   
   indices.push_back(0);
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
   
   this->factors = new VectorFactors(likelihood_estimators);
   
@@ -230,7 +230,7 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
   indices.reserve(likelihood_estimators_in.size());
   for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
     indices.push_back(i);
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
   
   this->factors = new VectorFactors(likelihood_estimators_in);
   
@@ -296,7 +296,7 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
   indices.reserve(likelihood_estimators_in.size());
   for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
     indices.push_back(i);
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
   
   this->factors = new VectorFactors(likelihood_estimators_in);
   

@@ -56,7 +56,7 @@ using namespace Rcpp;
 #include "stable_smc_termination.h"
 #include "always_smc_termination.h"
 #include "direct_gradient_estimator.h"
-#include "vector_single_index.h"
+#include "vector_index.h"
 #include "likelihood_maker.h"
 #include "transform.h"
 #include "measurement_covariance_estimator.h"
@@ -76,6 +76,7 @@ using namespace Rcpp;
 #include "exact_kalman_predictor.h"
 #include "exact_kalman_updater.h"
 #include "ensemble_kalman_filter.h"
+#include "particle_filter.h"
 
 //#include "linear_gaussian_state_space_model.h"
 //#include "enk_linear_gaussian_state_space_model.h"
@@ -943,8 +944,8 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                             const std::vector<std::string> &sequencer_variables,
                                                             const std::vector<std::vector<double>> &sequencer_schedules,
                                                             IndependentProposalKernel* proposal_in,
-                                                            Index* &without_cancelled_index,
-                                                            Index* &full_index,
+                                                            VectorIndex* &without_cancelled_index,
+                                                            VectorIndex* &full_index,
                                                             bool &any_annealing,
                                                             const std::vector<int> &factors_affected_by_smc_sequence,
                                                             std::vector<Data> &data_created_in_get_likelihood_estimators)
@@ -1633,10 +1634,12 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
             stop("linear_gaussian_data must contain a type.");
           }
           
+          /*
           if (!current_factor.containsElementNamed("linear_gaussian_data_variable"))
           {
             stop("linear_gaussian_data must contain linear_gaussian_data_variable.");
           }
+          */
           
           if (!current_factor.containsElementNamed("linear_gaussian_data_state_variable"))
           {
@@ -1645,20 +1648,25 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
           
           SEXP linear_gaussian_data_matrix_SEXP = current_factor["linear_gaussian_data_matrix"];
           SEXP linear_gaussian_data_covariance_SEXP = current_factor["linear_gaussian_data_covariance"];
-          SEXP linear_gaussian_data_variable_SEXP = current_factor["linear_gaussian_data_variable"];
+          //SEXP linear_gaussian_data_variable_SEXP = current_factor["linear_gaussian_data_variable"];
           SEXP linear_gaussian_data_state_variable_SEXP = current_factor["linear_gaussian_data_state_variable"];
+          
+          std::vector<std::string> variables = data_in->get_vector_variables();
+          if (variables.size()!=1)
+            stop("For this linear-Gaussian likelihood we can only have one variable present in the data.");
+          
           size_t type = current_factor["type"];
           ProposalKernel* proposal;
           if (type==1)
           {
-            proposal = new LinearGaussianNoiseProposalKernel(load_string(linear_gaussian_data_variable_SEXP),
+            proposal = new LinearGaussianNoiseProposalKernel(variables[0],
                                                              load_string(linear_gaussian_data_state_variable_SEXP),
                                                              load_matrix(linear_gaussian_data_matrix_SEXP),
                                                              load_matrix(linear_gaussian_data_covariance_SEXP));
           }
           else if (type==2)
           {
-            proposal = new LinearGaussianNoiseFunctionProposalKernel(load_string(linear_gaussian_data_variable_SEXP),
+            proposal = new LinearGaussianNoiseFunctionProposalKernel(variables[0],
                                                                      load_string(linear_gaussian_data_state_variable_SEXP),
                                                                      load_matrix_function(linear_gaussian_data_matrix_SEXP),
                                                                      load_matrix_function(linear_gaussian_data_covariance_SEXP));
@@ -1704,25 +1712,35 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
             stop("nonlinear_gaussian_data must contain a type.");
           }
           
+          /*
           if (!current_factor.containsElementNamed("nonlinear_gaussian_data_variable"))
           {
             stop("nonlinear_gaussian_data must contain nonlinear_gaussian_data_variable.");
           }
+          */
+          
+          std::vector<std::string> variables = data_in->get_vector_variables();
+          if (variables.size()!=1)
+            stop("For this linear-Gaussian likelihood we can only have one variable present in the data.");
           
           SEXP nonlinear_gaussian_data_function_SEXP = current_factor["nonlinear_gaussian_data_function"];
           SEXP nonlinear_gaussian_data_covariance_SEXP = current_factor["nonlinear_gaussian_data_covariance"];
-          SEXP nonlinear_gaussian_data_variable_SEXP = current_factor["nonlinear_gaussian_data_variable"];
+          
+          //SEXP nonlinear_gaussian_data_variable_SEXP = current_factor["nonlinear_gaussian_data_variable"];
+          
+          
+          
           size_t type = current_factor["type"];
           ProposalKernel* proposal;
           if (type==1)
           {
-            proposal = new NonLinearGaussianNoiseProposalKernel(load_string(nonlinear_gaussian_data_variable_SEXP),
+            proposal = new NonLinearGaussianNoiseProposalKernel(variables[0],
                                                                 std::make_shared<Transform>(load_transform(nonlinear_gaussian_data_function_SEXP)),
                                                                 load_matrix(nonlinear_gaussian_data_covariance_SEXP));
           }
           else if (type==2)
           {
-            proposal = new NonLinearGaussianNoiseFunctionProposalKernel(load_string(nonlinear_gaussian_data_variable_SEXP),
+            proposal = new NonLinearGaussianNoiseFunctionProposalKernel(variables[0],
                                                                         std::make_shared<Transform>(load_transform(nonlinear_gaussian_data_function_SEXP)),
                                                                         load_matrix_function(nonlinear_gaussian_data_covariance_SEXP));
           }
@@ -1801,8 +1819,8 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
   }
   
   
-  full_index = new VectorSingleIndex(full_index_vector);
-  without_cancelled_index = new VectorSingleIndex(without_cancelled_index_vector);
+  full_index = new VectorIndex(full_index_vector);
+  without_cancelled_index = new VectorIndex(without_cancelled_index_vector);
   
   return likelihood_estimators;
   
@@ -2265,7 +2283,7 @@ ProposalKernel* get_transition_proposal(const List &model,
   }
   else
   {
-    stop("No transition_proposals found in model file.");
+    return NULL;
   }
   
   stop("No valid transition proposal found.");
@@ -4266,7 +4284,7 @@ MCMC* make_mcmc(const List &model,
             {
               indices_in.push_back(size_t(index[k]));
             }
-            mcmc->set_index_if_null(new VectorSingleIndex(indices_in));
+            mcmc->set_index_if_null(new VectorIndex(indices_in));
           }
           
           simulate_mh_proposal_index = simulate_mh_proposal_index + 1;
@@ -4316,7 +4334,7 @@ MCMC* make_mcmc(const List &model,
             {
               indices_in.push_back(size_t(index[k]));
             }
-            mcmc->set_index_if_null(new VectorSingleIndex(indices_in));
+            mcmc->set_index_if_null(new VectorIndex(indices_in));
           }
           
           simulate_independent_mh_proposal_index = simulate_independent_mh_proposal_index + 1;
@@ -4366,7 +4384,7 @@ MCMC* make_mcmc(const List &model,
             {
               indices_in.push_back(size_t(index[k]));
             }
-            mcmc->set_index_if_null(new VectorSingleIndex(indices_in));
+            mcmc->set_index_if_null(new VectorIndex(indices_in));
           }
           
           simulate_m_proposal_index = simulate_m_proposal_index + 1;
@@ -4415,7 +4433,7 @@ MCMC* make_mcmc(const List &model,
             {
               indices_in.push_back(size_t(index[k]));
             }
-            mcmc->set_index_if_null(new VectorSingleIndex(indices_in));
+            mcmc->set_index_if_null(new VectorIndex(indices_in));
           }
           
           simulate_unadjusted_proposal_index = simulate_unadjusted_proposal_index + 1;
@@ -5029,8 +5047,8 @@ double do_importance_sampler(const List &model,
     factors_affected_by_smc_sequence = as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
   }
   
-  Index* without_cancelled_index = NULL;
-  Index* full_index = NULL;
+  VectorIndex* without_cancelled_index = NULL;
+  VectorIndex* full_index = NULL;
   bool any_annealing = false;
   
   
@@ -5162,8 +5180,8 @@ void do_mcmc(const List &model,
     factors_affected_by_smc_sequence = as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
   }
   
-  Index* without_cancelled_index = NULL;
-  Index* full_index = NULL;
+  VectorIndex* without_cancelled_index = NULL;
+  VectorIndex* full_index = NULL;
   bool any_annealing = false;
   
   std::vector<LikelihoodEstimator*> likelihood_estimators;
@@ -5327,8 +5345,8 @@ double do_smc_mcmc_move(const List &model,
     factors_affected_by_smc_sequence = as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
   }
   
-  Index* without_cancelled_index = NULL;
-  Index* full_index = NULL;
+  VectorIndex* without_cancelled_index = NULL;
+  VectorIndex* full_index = NULL;
   
   bool any_annealing = false;
   
@@ -5556,8 +5574,8 @@ double do_enki(const List &model,
     factors_affected_by_smc_sequence = as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
   }
   
-  Index* without_cancelled_index = NULL;
-  Index* full_index = NULL;
+  VectorIndex* without_cancelled_index = NULL;
+  VectorIndex* full_index = NULL;
   
   bool any_annealing = false;
   
@@ -5747,8 +5765,8 @@ double do_enkmfds(const List &model,
     factors_affected_by_smc_sequence = as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
   }
   
-  Index* without_cancelled_index = NULL;
-  Index* full_index = NULL;
+  VectorIndex* without_cancelled_index = NULL;
+  VectorIndex* full_index = NULL;
   
   bool any_annealing = false;
   
@@ -6197,6 +6215,244 @@ double do_ensemble_kalman_filter(const List &model,
                                                          "");
     
     EnsembleKalmanOutput* output = alg->run();
+    
+    if (strcmp(results_name_in.get_cstring(),"") != 0)
+      output->write(results_name_in.get_cstring());
+    
+    double log_likelihood = output->log_likelihood;
+    
+    delete output;
+    delete alg;
+    
+    return log_likelihood;
+    
+  }
+  
+}
+
+// [[Rcpp::export]]
+double do_particle_filter(const List &model,
+                          const List &parameters,
+                          const List &algorithm_parameter_list,
+                          size_t number_of_particles,
+                          const List &filtering_options_list,
+                          const List &adaptive_resampling_method,
+                          size_t smc_iterations_to_store,
+                          bool write_to_file_at_each_iteration,
+                          bool parallel_in,
+                          size_t grain_size_in,
+                          const String &results_name_in,
+                          size_t seed)
+{
+  
+  RandomNumberGenerator rng;
+  
+  Data the_data = get_data(model);
+  Data* data_pointer = &the_data;
+  
+  std::vector<Data> data_created_in_get_likelihood_estimators;
+  
+  std::vector<LikelihoodEstimator*> likelihood_estimators;
+  IndependentProposalKernel* proposal_in;
+  bool proposal_is_evaluated_in;
+  
+  VectorIndex* evaluated_in_initial_weight_update = NULL;
+  //Index* full_index = NULL;
+  VectorIndex* evaluated_in_pf_weight_update = NULL;
+  
+  std::vector<std::string> sequencer_types;
+  std::vector<std::string> sequencer_variables;
+  std::vector<std::vector<double>> sequencer_schedules;
+  
+  std::vector<int> factors_affected_by_smc_sequence;
+  
+  bool any_annealing;
+  
+  if ( model.containsElementNamed("importance_proposal") )
+  {
+    proposal_in = get_proposal(model,
+                               parameters,
+                               &the_data);
+    
+    likelihood_estimators = get_likelihood_estimators(&rng,
+                                                      &seed,
+                                                      &the_data,
+                                                      model,
+                                                      parameters,
+                                                      true,
+                                                      sequencer_types,
+                                                      sequencer_variables,
+                                                      sequencer_schedules,
+                                                      proposal_in,
+                                                      evaluated_in_initial_weight_update,
+                                                      evaluated_in_pf_weight_update,
+                                                      any_annealing,
+                                                      factors_affected_by_smc_sequence,
+                                                      data_created_in_get_likelihood_estimators);
+    
+    proposal_is_evaluated_in = true;
+    
+  }
+  else
+  {
+    Rcout << "No importance sampling proposal specified; using prior." << std::endl;
+    
+    proposal_in = get_prior_as_simulate_only_proposal(model,
+                                                      parameters);
+    
+    likelihood_estimators = get_likelihood_estimators(&rng,
+                                                      &seed,
+                                                      &the_data,
+                                                      model,
+                                                      parameters,
+                                                      false,
+                                                      sequencer_types,
+                                                      sequencer_variables,
+                                                      sequencer_schedules,
+                                                      proposal_in,
+                                                      evaluated_in_initial_weight_update,
+                                                      evaluated_in_pf_weight_update,
+                                                      any_annealing,
+                                                      factors_affected_by_smc_sequence,
+                                                      data_created_in_get_likelihood_estimators);
+    
+    proposal_is_evaluated_in = false;
+    
+  }
+  
+  bool smcfixed_flag = true;
+  
+  SMCCriterion* resampling_criterion = get_resampling_method(model,
+                                                             parameters,
+                                                             adaptive_resampling_method,
+                                                             number_of_particles);
+  
+  List filtering_info = get_filtering_info(parameters,
+                                           filtering_options_list);
+  
+  std::string index_name_in = filtering_info[0];
+  size_t first_index_in = filtering_info[1];
+  size_t last_index_in = filtering_info[2];
+  double initial_time_in = filtering_info[3];
+  std::string time_diff_name_in = filtering_info[4];
+  double update_time_step_in = filtering_info[5];
+  size_t predictions_per_update_in = filtering_info[6];
+  std::string state_name_in = filtering_info[7];
+  std::string measurement_name_in = filtering_info[8];
+  
+  if (first_index_in>last_index_in)
+    stop("Cannot construct a filter where the first index is bigger than the last.");
+  
+  if ( (measurement_name_in=="") && (last_index_in>=the_data.min_n_rows()) )
+    stop("Last index goes past the end of the data.");
+  
+  if ( (measurement_name_in!="") && (last_index_in>=the_data[measurement_name_in].n_rows) )
+    stop("Last index goes past the end of the data.");
+  
+  Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list);
+  
+  ProposalKernel* transition_model = get_transition_model(model,
+                                                          parameters);
+  
+  ProposalKernel* transition_proposal = get_transition_proposal(model,
+                                                                parameters);
+  
+  bool transition_proposal_is_evaluated_in;
+  if (transition_proposal==NULL)
+  {
+    Rcout << "No transition proposal specified; using transition model." << std::endl;
+    
+    transition_proposal_is_evaluated_in = false;
+    
+    transition_proposal = transition_model->proposal_kernel_duplicate();
+    
+  }
+  else
+  {
+    transition_proposal_is_evaluated_in = true;
+    
+    if (!transition_model->can_be_evaluated())
+    {
+      stop("No method supplied for the evaluation of the transition model.");
+    }
+  }
+  
+  
+  if (write_to_file_at_each_iteration)
+  {
+    ParticleFilter* alg = new ParticleFilter(&rng,
+                                             &seed,
+                                             data_pointer,
+                                             Parameters(),
+                                             number_of_particles,
+                                             smc_iterations_to_store,
+                                             smc_iterations_to_store,
+                                             index_name_in,
+                                             time_diff_name_in,
+                                             first_index_in,
+                                             last_index_in,
+                                             predictions_per_update_in,
+                                             update_time_step_in,
+                                             initial_time_in,
+                                             resampling_criterion,
+                                             likelihood_estimators,
+                                             proposal_in,
+                                             transition_model,
+                                             transition_proposal,
+                                             evaluated_in_initial_weight_update,
+                                             evaluated_in_pf_weight_update,
+                                             proposal_is_evaluated_in,
+                                             transition_proposal_is_evaluated_in,
+                                             smcfixed_flag,
+                                             true,
+                                             false,
+                                             parallel_in,
+                                             grain_size_in,
+                                             results_name_in.get_cstring());
+    
+    SMCOutput* output = alg->run();
+    
+    double log_likelihood = output->log_likelihood;
+    
+    delete output;
+    delete alg;
+    
+    return log_likelihood;
+    
+  }
+  else
+  {
+    ParticleFilter* alg = new ParticleFilter(&rng,
+                                             &seed,
+                                             data_pointer,
+                                             Parameters(),
+                                             number_of_particles,
+                                             smc_iterations_to_store,
+                                             smc_iterations_to_store,
+                                             index_name_in,
+                                             time_diff_name_in,
+                                             first_index_in,
+                                             last_index_in,
+                                             predictions_per_update_in,
+                                             update_time_step_in,
+                                             initial_time_in,
+                                             resampling_criterion,
+                                             likelihood_estimators,
+                                             proposal_in,
+                                             transition_model,
+                                             transition_proposal,
+                                             evaluated_in_initial_weight_update,
+                                             evaluated_in_pf_weight_update,
+                                             proposal_is_evaluated_in,
+                                             transition_proposal_is_evaluated_in,
+                                             smcfixed_flag,
+                                             true,
+                                             false,
+                                             parallel_in,
+                                             grain_size_in,
+                                             "");
+    
+    SMCOutput* output = alg->run();
     
     if (strcmp(results_name_in.get_cstring(),"") != 0)
       output->write(results_name_in.get_cstring());

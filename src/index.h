@@ -24,6 +24,8 @@ public:
   virtual size_t size() const=0;
   
   virtual arma::uvec get_uvec() const=0;
+  
+  virtual bool get_transition_model() const=0;
 
 protected:
   

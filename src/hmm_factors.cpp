@@ -269,3 +269,13 @@ void HMMFactors::setup(const Parameters &conditioned_on_parameters)
     (*i)->setup(conditioned_on_parameters);
   }
 }
+
+void HMMFactors::specific_change_data(Data* new_data)
+{
+  for (auto i=this->likelihood_estimators.begin();
+       i!=this->likelihood_estimators.end();
+       ++i)
+  {
+    (*i)->change_data_with_raw_pointer(new_data);
+  }
+}

@@ -206,3 +206,7 @@ void DensityLikelihoodEstimator::setup(const Parameters &parameters)
 // {
 //
 // }
+
+void DensityLikelihoodEstimator::specific_change_data(Data* new_data)
+{
+}

@@ -14,7 +14,7 @@
 #include "generic_measurement_covariance_estimator.h"
 #include "direct_nonlinear_gaussian_measurement_covariance_estimator.h"
 #include "mixed_generic_direct_gaussian_measurement_covariance_estimator.h"
-#include "vector_single_index.h"
+#include "vector_index.h"
 #include "custom_distribution_proposal_kernel.h"
 #include "vector_ensemble_factors.h"
 #include "positive_smc_criterion.h"
@@ -144,7 +144,7 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
     Rcpp::stop("EnsembleKalmanMFDS::EnsembleKalmanMFDS - invalid option for sequential_update; must be 0, 1 or 2.");
   }
   
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
   
   /*
   for (auto i=measurement_covariance_estimators.begin();
@@ -246,7 +246,7 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
     
   indices.push_back(0);
 
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
   
   /*
   for (auto i=measurement_covariance_estimators.begin();
@@ -344,7 +344,7 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
 
   indices.push_back(0);
 
-  this->index = new VectorSingleIndex(indices);
+  this->index = new VectorIndex(indices);
   
   /*
   for (auto i=measurement_covariance_estimators.begin();

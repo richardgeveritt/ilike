@@ -46,6 +46,7 @@ public:
   
   void change_data();
   void change_data(std::shared_ptr<Data> new_data);
+  void change_data_with_raw_pointer(Data* new_data);
   
   Data* get_data() const;
   
@@ -54,6 +55,8 @@ public:
   Parameters algorithm_parameters;
 
 protected:
+  
+  virtual void specific_change_data(Data* new_data)=0;
 
   friend SMCWorker;
 
