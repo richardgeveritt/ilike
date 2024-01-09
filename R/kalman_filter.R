@@ -51,7 +51,6 @@ kalman_filter = function(model,
   return(do_kalman_filter(model,
                           model_parameter_list,
                           algorithm_parameter_list,
-                          filter_method,
                           kf_iterations_to_store,
                           write_to_file_at_each_iteration,
                           results_directory))

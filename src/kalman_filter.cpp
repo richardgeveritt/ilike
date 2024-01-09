@@ -175,6 +175,10 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state)
   {
     Rcpp::stop("KalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
   }
+  else
+  {
+    this->current_index = this->first_index;
+  }
   
   this->schedule_parameters = Parameters();//this->time_name,this->current_time);
   this->schedule_parameters[this->index_name] = this->current_index;
@@ -400,6 +404,7 @@ KalmanFilterOutput* KalmanFilter::kalman_filter_initialise(const Parameters &par
 void KalmanFilter::evaluate(KalmanFilterOutput* current_state,
                             const Parameters &conditioned_on_parameters)
 {
+  //std::cout << "Evaluating KF." << std::endl;
   
   // use conditioned_on_parameters to set the next index to stop on
   if (!this->last_index_is_fixed)
@@ -409,6 +414,10 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state,
     this->last_index = size_t(conditioned_on_parameters[this->index_name][0]);
     if (this->first_index>this->last_index)
       Rcpp::stop("KalmanFilter::evaluate - last index from parameters is before the current state of the filter.");
+  }
+  else
+  {
+    this->current_index = this->first_index;
   }
   
   this->schedule_parameters = Parameters();//this->time_name,this->current_time);
@@ -455,6 +464,8 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state,
 
   while (!this->check_termination())
   {
+    //std::cout << "Another iteration." << std::endl;
+    
     current_state->set_current_predicted_to_be_current_posterior();
     for (size_t i=0; i<this->predictions_per_update; ++i)
     {

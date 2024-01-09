@@ -359,6 +359,14 @@ void ParticleFilter::evaluate_smc(SMCOutput* current_state)
   {
     Rcpp::stop("ParticleFilter::evaluate - need to read in a parameter to determine last measurement index.");
   }
+  else
+  {
+    this->current_index = this->first_index;
+    this->factors->set_data(this->current_index);
+    this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+    this->sequencer.schedule_parameters[this->index_name] = this->current_index;
+    this->index->set_time_index(this->current_index);
+  }
   
   this->evaluate_smcfixed_part_smc(current_state);
   this->evaluate_smcadaptive_part_given_smcfixed_smc(current_state);
@@ -561,6 +569,19 @@ void ParticleFilter::simulate_smc(SMCOutput* current_state,
 void ParticleFilter::evaluate_smc(SMCOutput* current_state,
                                   const Parameters &conditioned_on_parameters)
 {
+  if (!this->sequencer_limit_is_fixed)
+  {
+    Rcpp::stop("ParticleFilter::evaluate - need to read in a parameter to determine last measurement index.");
+  }
+  else
+  {
+    this->current_index = this->first_index;
+    this->factors->set_data(this->current_index);
+    this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+    this->sequencer.schedule_parameters[this->index_name] = this->current_index;
+    this->index->set_time_index(this->current_index);
+  }
+  
   this->evaluate_smcfixed_part_smc(current_state,
                                    conditioned_on_parameters);
   this->evaluate_smcadaptive_part_given_smcfixed_smc(current_state,
@@ -719,6 +740,19 @@ void ParticleFilter::subsample_simulate_smc(SMCOutput* current_state,
 
 void ParticleFilter::subsample_evaluate_smc(SMCOutput* current_state)
 {
+  if (!this->sequencer_limit_is_fixed)
+  {
+    Rcpp::stop("ParticleFilter::evaluate - need to read in a parameter to determine last measurement index.");
+  }
+  else
+  {
+    this->current_index = this->first_index;
+    this->factors->set_data(this->current_index);
+    this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+    this->sequencer.schedule_parameters[this->index_name] = this->current_index;
+    this->index->set_time_index(this->current_index);
+  }
+  
   this->subsample_evaluate_smcfixed_part_smc(current_state);
   this->subsample_evaluate_smcadaptive_part_given_smcfixed_smc(current_state);
 }
@@ -868,6 +902,19 @@ void ParticleFilter::subsample_simulate_smc(SMCOutput* current_state)
 void ParticleFilter::subsample_evaluate_smc(SMCOutput* current_state,
                                             const Parameters &conditioned_on_parameters)
 {
+  if (!this->sequencer_limit_is_fixed)
+  {
+    Rcpp::stop("ParticleFilter::evaluate - need to read in a parameter to determine last measurement index.");
+  }
+  else
+  {
+    this->current_index = this->first_index;
+    this->factors->set_data(this->current_index);
+    this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+    this->sequencer.schedule_parameters[this->index_name] = this->current_index;
+    this->index->set_time_index(this->current_index);
+  }
+  
   this->subsample_evaluate_smcfixed_part_smc(current_state,
                                              conditioned_on_parameters);
   this->subsample_evaluate_smcadaptive_part_given_smcfixed_smc(current_state,

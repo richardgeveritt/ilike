@@ -213,7 +213,7 @@ EnsembleKalmanOutput* EnsembleKalmanFilter::specific_ensemble_kalman_initialise(
                                                           this->lag,
                                                           this->transform,
                                                           this->results_name);
-  this->first_index = 0;
+  //this->first_index = 0;
   this->current_index = this->first_index;
   this->ensemble_factors->set_data(this->current_index);
   
@@ -254,6 +254,14 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate(EnsembleKalmanOutput* curren
   if (!this->sequencer_limit_is_fixed)
   {
     Rcpp::stop("EnsembleKalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
+  }
+  else
+  {
+    this->current_index = this->first_index;
+    this->ensemble_factors->set_data(this->current_index);
+    
+    this->sequencer.schedule_parameters = Parameters();//this->time_name,this->current_time);
+    this->sequencer.schedule_parameters[this->index_name] = this->current_index;
   }
   
   this->ensemble_kalman_evaluate_smcfixed_part(current_state);
@@ -365,9 +373,9 @@ EnsembleKalmanOutput* EnsembleKalmanFilter::specific_ensemble_kalman_initialise(
                                                           this->lag,
                                                           this->transform,
                                                           this->results_name);
-  this->first_index = 0;
+  //this->first_index = 0;
   this->current_index = this->first_index;
-  this->factors->set_data(this->current_index);
+  this->ensemble_factors->set_data(this->current_index);
   
   this->sequencer.schedule_parameters = Parameters();//this->time_name,this->current_time);
   this->sequencer.schedule_parameters[this->index_name] = this->current_index;
@@ -507,6 +515,14 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate(EnsembleKalmanOutput* curren
   {
     Rcpp::stop("EnsembleKalmanFilter::evaluate - setting limit with parameters not yet written.");
   }
+  else
+  {
+    this->current_index = this->first_index;
+    this->ensemble_factors->set_data(this->current_index);
+    
+    this->sequencer.schedule_parameters = Parameters();//this->time_name,this->current_time);
+    this->sequencer.schedule_parameters[this->index_name] = this->current_index;
+  }
   
   this->ensemble_kalman_evaluate_smcfixed_part(current_state,
                                                conditioned_on_parameters);
@@ -520,6 +536,14 @@ void EnsembleKalmanFilter::ensemble_kalman_subsample_evaluate(EnsembleKalmanOutp
   if (!this->sequencer_limit_is_fixed)
   {
     Rcpp::stop("EnsembleKalmanFilter::evaluate - setting limit with parameters not yet written.");
+  }
+  else
+  {
+    this->current_index = this->first_index;
+    this->ensemble_factors->set_data(this->current_index);
+    
+    this->sequencer.schedule_parameters = Parameters();//this->time_name,this->current_time);
+    this->sequencer.schedule_parameters[this->index_name] = this->current_index;
   }
   
   this->ensemble_kalman_subsample_evaluate_smcfixed_part(current_state,

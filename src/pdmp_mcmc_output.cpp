@@ -85,3 +85,8 @@ size_t PDMPMCMCOutput::length() const
 void PDMPMCMCOutput::close_ofstreams()
 {
 }
+
+Parameters PDMPMCMCOutput::get_current_algorithm_parameters() const
+{
+  return Parameters();
+}

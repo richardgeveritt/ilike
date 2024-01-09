@@ -653,7 +653,7 @@ void Particle::setup(const Parameters &parameters_in,
                      Factors* factors_in)
 {
   this->parameters = parameters_in;
-  this->factor_variables = factors_in->simulate_factor_variables(parameters_in);
+  this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
   //this->move_parameters = &this->parameters;
   this->factor_variables->set_particle(this);
 }
@@ -665,7 +665,7 @@ void Particle::setup(const Parameters &parameters_in,
   this->parameters = parameters_in;
   this->parameters.merge_with_fixed(conditioned_on_parameters);
   
-  this->factor_variables = factors_in->simulate_factor_variables(parameters_in);
+  this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
   //this->move_parameters = &this->parameters;
   this->factor_variables->set_particle(this);
 }
@@ -679,7 +679,7 @@ void Particle::setup(const Parameters &parameters_in,
   this->parameters.merge_with_fixed(conditioned_on_parameters);
   this->parameters.merge_with_fixed(sequencer_parameters);
   
-  this->factor_variables = factors_in->simulate_factor_variables(parameters_in);
+  this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
   //this->move_parameters = &this->parameters;
   this->factor_variables->set_particle(this);
 }
@@ -688,7 +688,7 @@ void Particle::setup(const Parameters &parameters_in,
                      EnsembleFactors* ensemble_factors_in)
 {
   this->parameters = parameters_in;
-  this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(parameters_in);
+  this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters);
   //this->move_parameters = &this->parameters;
   this->ensemble_factor_variables->set_particle(this);
 }
@@ -700,7 +700,7 @@ void Particle::setup(const Parameters &parameters_in,
   this->parameters = parameters_in;
   this->parameters.merge_with_fixed(conditioned_on_parameters);
   
-  this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(parameters_in);
+  this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters);
   //this->move_parameters = &this->parameters;
   this->ensemble_factor_variables->set_particle(this);
 }
@@ -714,7 +714,7 @@ void Particle::setup(const Parameters &parameters_in,
   this->parameters.merge_with_fixed(conditioned_on_parameters);
   this->parameters.merge_with_fixed(sequencer_parameters);
   
-  this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(parameters_in);
+  this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters);
   //this->move_parameters = &this->parameters;
   this->ensemble_factor_variables->set_particle(this);
 }

@@ -87,12 +87,12 @@ enki = function(model,
   }
 
   # The indices of the factors used as likelihoods in the EnK method.
-  enk_likelihood_index_method = get_method(model,"enk_likelihood_index")
-
-  if (is.null(enk_likelihood_index_method))
-  {
-    enk_likelihood_index_method = list()
-  }
+  # enk_likelihood_index_method = get_method(model,"enk_likelihood_index")
+  #
+  # if (is.null(enk_likelihood_index_method))
+  # {
+  #   enk_likelihood_index_method = list()
+  # }
 
   # MCMC weights method.
   mcmc_weights_method = get_method(model,"mcmc_weights")
@@ -103,14 +103,14 @@ enki = function(model,
   }
 
   # EnK shifter method.
-  enk_shifter_method = get_method(model,"enki_shifter")
-
-  # Method for shifting the ensemble.
-  if (is.null(enk_shifter_method))
-  {
-    print("No method set for shifting ensemble in EnK: defaulting to stochastic approach.")
-    enk_shifter_method = list(method='stochastic')
-  }
+  # enk_shifter_method = get_method(model,"enki_shifter")
+  #
+  # # Method for shifting the ensemble.
+  # if (is.null(enk_shifter_method))
+  # {
+  #   print("No method set for shifting ensemble in EnK: defaulting to stochastic approach.")
+  #   enk_shifter_method = list(method='stochastic')
+  # }
 
   return(do_enki(model,
                  model_parameter_list,
@@ -121,8 +121,6 @@ enki = function(model,
                  enk_sequencer_method,
                  adaptive_target_method,
                  enk_termination_method,
-                 enk_likelihood_index_method,
-                 enk_shifter_method,
                  enki_iterations_to_store,
                  write_to_file_at_each_iteration,
                  parallel,

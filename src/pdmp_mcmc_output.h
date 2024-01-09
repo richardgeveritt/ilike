@@ -41,6 +41,8 @@ public:
   
   void close_ofstreams();
   
+  Parameters get_current_algorithm_parameters() const;
+  
 protected:
   
   Particle dummy;

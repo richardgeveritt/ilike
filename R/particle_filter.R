@@ -59,21 +59,19 @@ particle_filter = function(model,
     stop("No filter method provided: Kalman filter failed.")
   }
 
-  # Adaptive resampling method.
-  adaptive_resampling_method = get_method(model,"adaptive_resampling")
-
-  if (is.null(adaptive_resampling_method))
-  {
-    print("No method set for adaptive resampling: defaulting to resampling whenever the ESS drops below the number of particles.")
-    adaptive_resampling_method = list(method='ess',values=as.list(paste(number_of_particles)))
-  }
+  # # Adaptive resampling method.
+  # adaptive_resampling_method = get_method(model,"adaptive_resampling")
+  #
+  # if (is.null(adaptive_resampling_method))
+  # {
+  #   print("No method set for adaptive resampling: defaulting to resampling whenever the ESS drops below the number of particles.")
+  #   adaptive_resampling_method = list(method='ess',values=as.list(paste(number_of_particles)))
+  # }
 
   return(do_particle_filter(model,
                             model_parameter_list,
                             algorithm_parameter_list,
                             number_of_particles,
-                            filter_method,
-                            adaptive_resampling_method,
                             smc_iterations_to_store,
                             write_to_file_at_each_iteration,
                             parallel,

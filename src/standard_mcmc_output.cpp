@@ -59,6 +59,7 @@ void StandardMCMCOutput::make_copy(const StandardMCMCOutput &another)
     this->termination = NULL;
   
   this->iteration_counter = another.iteration_counter;
+  this->algorithm_parameters = another.algorithm_parameters;
   this->output = another.output;
 }
 
@@ -209,4 +210,9 @@ Particle StandardMCMCOutput::subsample_move(RandomNumberGenerator &rng,
                                             const Particle &particle) const
 {
   return this->get_mcmc()->subsample_move(rng, particle);
+}
+
+Parameters StandardMCMCOutput::get_current_algorithm_parameters() const
+{
+  return this->algorithm_parameters.back();
 }

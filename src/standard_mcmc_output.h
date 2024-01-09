@@ -70,6 +70,8 @@ public:
   virtual MCMC* get_mcmc()=0;
   virtual const MCMC* get_mcmc() const=0;
   
+  Parameters get_current_algorithm_parameters() const;
+  
 protected:
   
   //virtual void specific_mcmc_adapt()=0;
@@ -82,6 +84,8 @@ protected:
   void make_copy(const StandardMCMCOutput &another);
   
   std::deque<Particle> output;
+  
+  std::deque<Parameters> algorithm_parameters;
 
 };
 

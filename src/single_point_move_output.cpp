@@ -80,6 +80,7 @@ MoveOutput* SinglePointMoveOutput::duplicate() const
 void SinglePointMoveOutput::make_copy(const SinglePointMoveOutput &another)
 {
   this->output = another.output;
+  this->algorithm_parameters = another.algorithm_parameters;
 }
 
 Particle& SinglePointMoveOutput::back()
@@ -165,4 +166,9 @@ void SinglePointMoveOutput::close_ofstreams()
   {
     output.ensemble_factor_variables->close_ofstreams();
   }
+}
+
+Parameters SinglePointMoveOutput::get_current_algorithm_parameters() const
+{
+  return this->algorithm_parameters;
 }

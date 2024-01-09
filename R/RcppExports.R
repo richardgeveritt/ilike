@@ -13,27 +13,27 @@ do_mcmc <- function(model, parameters, algorithm_parameter_list, initial_values,
     invisible(.Call(`_ilike_do_mcmc`, model, parameters, algorithm_parameter_list, initial_values, mcmc_termination_method, mcmc_weights_method, number_of_chains, parallel_in, grain_size_in, results_name_in, seed))
 }
 
-do_smc_mcmc_move <- function(model, parameters, algorithm_parameter_list, number_of_particles, mcmc_termination_method, mcmc_weights_method, adaptive_resampling_method, smc_sequencer_method, adaptive_target_method, smc_termination_method, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed) {
-    .Call(`_ilike_do_smc_mcmc_move`, model, parameters, algorithm_parameter_list, number_of_particles, mcmc_termination_method, mcmc_weights_method, adaptive_resampling_method, smc_sequencer_method, adaptive_target_method, smc_termination_method, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed)
+do_smc_mcmc_move <- function(model, parameters, algorithm_parameter_list, number_of_particles, mcmc_termination_method, mcmc_weights_method, smc_sequencer_method, adaptive_target_method, smc_termination_method, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed) {
+    .Call(`_ilike_do_smc_mcmc_move`, model, parameters, algorithm_parameter_list, number_of_particles, mcmc_termination_method, mcmc_weights_method, smc_sequencer_method, adaptive_target_method, smc_termination_method, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed)
 }
 
-do_enki <- function(model, parameters, algorithm_parameter_list, number_of_ensemble_members, mcmc_termination_method, mcmc_weights_method, enk_sequencer_method, adaptive_target_method, enk_termination_method, enk_likelihood_index_method, enk_shifter_method, enk_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed) {
-    .Call(`_ilike_do_enki`, model, parameters, algorithm_parameter_list, number_of_ensemble_members, mcmc_termination_method, mcmc_weights_method, enk_sequencer_method, adaptive_target_method, enk_termination_method, enk_likelihood_index_method, enk_shifter_method, enk_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed)
+do_enki <- function(model, parameters, algorithm_parameter_list, number_of_ensemble_members, mcmc_termination_method, mcmc_weights_method, enk_sequencer_method, adaptive_target_method, enk_termination_method, enk_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed) {
+    .Call(`_ilike_do_enki`, model, parameters, algorithm_parameter_list, number_of_ensemble_members, mcmc_termination_method, mcmc_weights_method, enk_sequencer_method, adaptive_target_method, enk_termination_method, enk_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed)
 }
 
-do_enkmfds <- function(model, parameters, algorithm_parameter_list, number_of_particles, Delta_t, mcmc_termination_method, mcmc_weights_method, adaptive_resampling_method, smc_sequencer_method, adaptive_target_method, smc_termination_method, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed) {
-    .Call(`_ilike_do_enkmfds`, model, parameters, algorithm_parameter_list, number_of_particles, Delta_t, mcmc_termination_method, mcmc_weights_method, adaptive_resampling_method, smc_sequencer_method, adaptive_target_method, smc_termination_method, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed)
+do_enkmfds <- function(model, parameters, algorithm_parameter_list, number_of_particles, Delta_t, mcmc_termination_method, mcmc_weights_method, smc_sequencer_method, adaptive_target_method, smc_termination_method, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed) {
+    .Call(`_ilike_do_enkmfds`, model, parameters, algorithm_parameter_list, number_of_particles, Delta_t, mcmc_termination_method, mcmc_weights_method, smc_sequencer_method, adaptive_target_method, smc_termination_method, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed)
 }
 
-do_kalman_filter <- function(model, parameters, algorithm_parameter_list, filtering_options_list, kf_iterations_to_store, write_to_file_at_each_iteration, results_name_in) {
-    .Call(`_ilike_do_kalman_filter`, model, parameters, algorithm_parameter_list, filtering_options_list, kf_iterations_to_store, write_to_file_at_each_iteration, results_name_in)
+do_kalman_filter <- function(model, parameters, algorithm_parameter_list, kf_iterations_to_store, write_to_file_at_each_iteration, results_name_in) {
+    .Call(`_ilike_do_kalman_filter`, model, parameters, algorithm_parameter_list, kf_iterations_to_store, write_to_file_at_each_iteration, results_name_in)
 }
 
-do_ensemble_kalman_filter <- function(model, parameters, algorithm_parameter_list, number_of_ensemble_members, filtering_options_list, enk_likelihood_index_method, enk_shifter_method, enk_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed) {
-    .Call(`_ilike_do_ensemble_kalman_filter`, model, parameters, algorithm_parameter_list, number_of_ensemble_members, filtering_options_list, enk_likelihood_index_method, enk_shifter_method, enk_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed)
+do_ensemble_kalman_filter <- function(model, parameters, algorithm_parameter_list, number_of_ensemble_members, enk_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed) {
+    .Call(`_ilike_do_ensemble_kalman_filter`, model, parameters, algorithm_parameter_list, number_of_ensemble_members, enk_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed)
 }
 
-do_particle_filter <- function(model, parameters, algorithm_parameter_list, number_of_particles, filtering_options_list, adaptive_resampling_method, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed) {
-    .Call(`_ilike_do_particle_filter`, model, parameters, algorithm_parameter_list, number_of_particles, filtering_options_list, adaptive_resampling_method, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed)
+do_particle_filter <- function(model, parameters, algorithm_parameter_list, number_of_particles, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed) {
+    .Call(`_ilike_do_particle_filter`, model, parameters, algorithm_parameter_list, number_of_particles, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed)
 }
 

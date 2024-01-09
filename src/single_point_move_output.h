@@ -62,11 +62,15 @@ public:
   
   void close_ofstreams();
   
+  Parameters get_current_algorithm_parameters() const;
+  
 protected:
 
   void make_copy(const SinglePointMoveOutput &another);
   
   Particle output;
+  
+  Parameters algorithm_parameters;
 
 };
 

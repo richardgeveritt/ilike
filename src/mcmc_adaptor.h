@@ -27,7 +27,7 @@ public:
   void mcmc_adapt(const Particle &latest_particle,
                   size_t iteration_counter);
   
-// Mh has its own parameters.
+  // MH has its own parameters.
   // Stochastic has some weights.
   // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.
   // Proposal needs to call simulate in all llhdoutputs

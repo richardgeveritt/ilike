@@ -44,6 +44,8 @@ public:
   virtual size_t length() const=0;
   
   virtual void close_ofstreams()=0;
+  
+  virtual Parameters get_current_algorithm_parameters() const=0;
 
 protected:
 

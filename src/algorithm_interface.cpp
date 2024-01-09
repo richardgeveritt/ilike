@@ -1,15 +1,13 @@
-#include <RcppArmadillo.h>
-using namespace Rcpp;
-
 #include <string>
 #include <sstream>
 #include <vector>
 #include <chrono>
 
+#include "algorithm_interface.h"
 #include "custom_no_params_proposal_kernel.h"
 #include "custom_proposal_kernel.h"
-#include "distributions.h"
-#include "parameters.h"
+//#include "distributions.h"
+//#include "parameters.h"
 #include "exact_likelihood_estimator.h"
 #include "importance_sampler.h"
 #include "smc_mcmc_move.h"
@@ -276,7 +274,7 @@ bool extract_bool_parameter(const List &parameters_from_file,
       parameter_index = std::stoi(parameter_string.substr(1));
     } catch (...)
     {
-      Rcpp::stop("Parameter index in model file not an integer.");
+      Rcpp::stop("Parameter index in model file not an integer (did you supply the appropriate number of model parameters?).");
     }
     
     if (isDoubleInList(model_parameters,parameter_index))
@@ -297,7 +295,7 @@ bool extract_bool_parameter(const List &parameters_from_file,
     }
     catch (...)
     {
-      Rcpp::stop("Parameter in model file is not a real number.");
+      Rcpp::stop("Parameter in model file is not a real number - something is wrong with a list of arguments you provided in the ilike file.");
     }
   }
   
@@ -319,7 +317,7 @@ int extract_int_parameter(const List &parameters_from_file,
       parameter_index = std::stoi(parameter_string.substr(1));
     } catch (...)
     {
-      Rcpp::stop("Parameter index in model file not an integer.");
+      Rcpp::stop("Parameter index in model file not an integer (did you supply the appropriate number of model parameters?).");
     }
     
     if (isDoubleInList(model_parameters,parameter_index))
@@ -340,7 +338,7 @@ int extract_int_parameter(const List &parameters_from_file,
     }
     catch (...)
     {
-      Rcpp::stop("Parameter in model file is not a real number.");
+      Rcpp::stop("Parameter in model file is not a real number - something is wrong with a list of arguments you provided in the ilike file.");
     }
   }
   
@@ -362,7 +360,7 @@ double extract_double_parameter(const List &parameters_from_file,
       parameter_index = std::stoi(parameter_string.substr(1));
     } catch (...)
     {
-      Rcpp::stop("Parameter index in model file not an integer.");
+      Rcpp::stop("Parameter index in model file not an integer (did you supply the appropriate number of model parameters?).");
     }
     
     if (isDoubleInList(model_parameters,parameter_index))
@@ -383,7 +381,7 @@ double extract_double_parameter(const List &parameters_from_file,
     }
     catch (...)
     {
-      Rcpp::stop("Parameter in model file is not a real number.");
+      Rcpp::stop("Parameter in model file is not a real number - something is wrong with a list of arguments you provided in the ilike file.");
     }
   }
   
@@ -413,7 +411,7 @@ arma::colvec extract_vector_parameter(const List &parameters_from_file,
       parameter_index = std::stoi(parameter_string.substr(1));
     } catch (...)
     {
-      Rcpp::stop("Parameter index in model file not an integer.");
+      Rcpp::stop("Parameter index in model file not an integer (did you supply the appropriate number of model parameters?).");
     }
     
     if (isVectorInList(model_parameters,parameter_index))
@@ -434,7 +432,7 @@ arma::colvec extract_vector_parameter(const List &parameters_from_file,
     }
     catch (...)
     {
-      Rcpp::stop("Parameter in model file is not a real number.");
+      Rcpp::stop("Parameter in model file is not a real number - something is wrong with a list of arguments you provided in the ilike file.");
     }
   }
   
@@ -456,7 +454,7 @@ arma::mat extract_matrix_parameter(const List &parameters_from_file,
       parameter_index = std::stoi(parameter_string.substr(1));
     } catch (...)
     {
-      Rcpp::stop("Parameter index in model file not an integer.");
+      Rcpp::stop("Parameter index in model file not an integer (did you supply the appropriate number of model parameters?).");
     }
     
     if (isMatrixInList(model_parameters,parameter_index))
@@ -477,7 +475,7 @@ arma::mat extract_matrix_parameter(const List &parameters_from_file,
     }
     catch (...)
     {
-      Rcpp::stop("Parameter in model file is not a real number.");
+      Rcpp::stop("Parameter in model file is not a real number - something is wrong with a list of arguments you provided in the ilike file.");
     }
   }
   
@@ -781,13 +779,13 @@ List get_abc_enki_parameter_info(const List &model_parameters,
     }
   }
   
-  int enki_lag = extract_int_parameter(parameters,
-                                       model_parameters,
-                                       3);
-
   std::string shifter_name = extract_string_parameter(parameters,
                                                       model_parameters,
-                                                      4);
+                                                      3);
+  
+  int enki_lag = extract_int_parameter(parameters,
+                                       model_parameters,
+                                       4);
 
   
   double proportion = extract_double_parameter(parameters,
@@ -832,8 +830,8 @@ List get_abc_enki_parameter_info(const List &model_parameters,
                       number_of_points,
                       tolerance_variable,
                       schedule,
-                      enki_lag,
                       shifter_name,
+                      enki_lag,
                       enki_annealing_desired_cess,
                       enki_number_of_bisections,
                       enki_on_summary,
@@ -842,9 +840,186 @@ List get_abc_enki_parameter_info(const List &model_parameters,
                       grain_size);
 }
 
+List get_kf_info(const List &model_parameters,
+                 const List &current_likelihood,
+                 const std::string &likelihood_name)
+{
+  if (!current_likelihood.containsElementNamed("parameters"))
+    Rcpp::stop("Missing parameters for " + likelihood_name + " (0-1 parameters required).");
+  
+  List parameters = current_likelihood["parameters"];
+  
+  if (! ( (parameters.size()==0) || (parameters.size()==1)) )
+    Rcpp::stop("0-1 parameters required for " + likelihood_name + ".");
+  
+  int iterations_to_store;
+  if (parameters.size()>0)
+  {
+    iterations_to_store = extract_int_parameter(parameters,
+                                                model_parameters,
+                                                0);
+  }
+  else
+  {
+    iterations_to_store = 0;
+  }
+  
+  return List::create(iterations_to_store);
+}
 
-List get_filtering_info(const List &model_parameters,
-                        const List &filtering_info)
+List get_enkf_info(const List &model_parameters,
+                   const List &current_likelihood,
+                   const std::string &likelihood_name)
+{
+  if (!current_likelihood.containsElementNamed("parameters"))
+    Rcpp::stop("Missing parameters for " + likelihood_name + " (1-4 parameters required).");
+  
+  List parameters = current_likelihood["parameters"];
+  
+  if (! ( (parameters.size()==1) || (parameters.size()==2) || (parameters.size()==3) || (parameters.size()==4)) )
+    Rcpp::stop("1-4 parameters required for " + likelihood_name + ".");
+  
+  size_t number_of_ensemble_members = extract_int_parameter(parameters,
+                                                            model_parameters,
+                                                            0);
+  
+  int iterations_to_store;
+  if (parameters.size()>1)
+  {
+    iterations_to_store = extract_int_parameter(parameters,
+                                                model_parameters,
+                                                1);
+  }
+  else
+  {
+    iterations_to_store = 0;
+  }
+  
+  bool parallel;
+  if (parameters.size()>2)
+  {
+    parallel = extract_bool_parameter(parameters,
+                                      model_parameters,
+                                      2);
+  }
+  else
+  {
+    parallel = false;
+  }
+  
+  size_t grain_size;
+  if (parameters.size()>3)
+  {
+    grain_size = extract_int_parameter(parameters,
+                                       model_parameters,
+                                       3);
+  }
+  else
+  {
+    grain_size = 100000;
+  }
+  
+  return List::create(number_of_ensemble_members,iterations_to_store,parallel,grain_size);
+
+}
+
+List get_pf_info(const List &model_parameters,
+                 const List &current_likelihood,
+                 const std::string &likelihood_name)
+{
+  if (!current_likelihood.containsElementNamed("parameters"))
+    Rcpp::stop("Missing parameters for " + likelihood_name + " (1-4 parameters required).");
+  
+  List parameters = current_likelihood["parameters"];
+  
+  if (! ( (parameters.size()==1) || (parameters.size()==2) || (parameters.size()==3) || (parameters.size()==4)) )
+    Rcpp::stop("1-4 parameters required for " + likelihood_name + ".");
+  
+  size_t number_of_particles = extract_int_parameter(parameters,
+                                                     model_parameters,
+                                                     0);
+  
+  int iterations_to_store;
+  if (parameters.size()>1)
+  {
+    iterations_to_store = extract_int_parameter(parameters,
+                                                model_parameters,
+                                                1);
+  }
+  else
+  {
+    iterations_to_store = 0;
+  }
+  
+  bool parallel;
+  if (parameters.size()>2)
+  {
+    parallel = extract_bool_parameter(parameters,
+                                      model_parameters,
+                                      2);
+  }
+  else
+  {
+    parallel = false;
+  }
+  
+  size_t grain_size;
+  if (parameters.size()>3)
+  {
+    grain_size = extract_int_parameter(parameters,
+                                       model_parameters,
+                                       3);
+  }
+  else
+  {
+    grain_size = 100000;
+  }
+  
+  return List::create(number_of_particles,iterations_to_store,parallel,grain_size);
+  
+}
+
+std::vector<size_t> get_enk_likelihood_indices(const List &model,
+                                               const List &model_parameters)
+{
+  std::vector<size_t> enk_likelihood_indices;
+  if (model.containsElementNamed("method"))
+  {
+    List method_info = model["method"];
+    
+    for (size_t i=0; i<method_info.size(); ++i)
+    {
+      List current_method = method_info[i];
+      if (current_method.containsElementNamed("enk_likelihood_index"))
+      {
+        NumericVector indices;
+        
+        SEXP index_info_SEXP = current_method["enk_likelihood_index"];
+        indices = load_numeric_vector(index_info_SEXP);
+        
+        enk_likelihood_indices.reserve(indices.size());
+        for (size_t j=0; j<indices.size(); ++j)
+        {
+          //std::cout << "addng index" << std::endl;
+          //std::cout << j << std::endl;
+          enk_likelihood_indices.push_back(j);
+        }
+        
+        return enk_likelihood_indices;
+      }
+      
+    }
+  }
+  else
+  {
+    return enk_likelihood_indices;
+  }
+  
+  return enk_likelihood_indices;
+}
+
+List get_filtering_info(const List &model,
+                        const List &model_parameters)
 {
   //std::string index_name_in = filtering_info["variables"];
   
@@ -855,83 +1030,103 @@ List get_filtering_info(const List &model_parameters,
   //if (index_names.size()!=1)
   //  Rcpp::stop("Only one index variable allowed for filter.");
   
-  if (filtering_info.containsElementNamed("values"))
+  if (model.containsElementNamed("method"))
   {
-    if (Rf_isNewList(filtering_info["values"]))
+    List method_info = model["method"];
+    
+    for (size_t i=0; i<method_info.size(); ++i)
     {
-      List values = filtering_info["values"];
-      
-      std::string index_name_in = extract_string_parameter(values,
-                                                           model_parameters,
-                                                           0);
-      //output[0] = index_name_in;
-
-      size_t first_index_in = extract_int_parameter(values,
-                                                    model_parameters,
-                                                    1);
-
-      //output[1] = first_index_in;
-      size_t last_index_in = extract_int_parameter(values,
-                                                   model_parameters,
-                                                   2);
-
-      //output[2] = last_index_in;
-      //std::string time_name_in = extract_string_parameter(values,
-      //                                                    model_parameters,
-      //                                                    3);
-
-      //output[3] = time_name_in;
-      double initial_time_in = extract_double_parameter(values,
-                                                        model_parameters,
-                                                        3);
-
-      //output[4] = initial_time_in;
-      std::string time_diff_name_in = extract_string_parameter(values,
-                                                               model_parameters,
-                                                               4);
-
-      //output[5] = time_diff_name_in;
-      double update_time_step_in = extract_double_parameter(values,
-                                                            model_parameters,
-                                                            5);
-      
-      //output[6] = update_time_step_in;
-      size_t predictions_per_update_in = extract_int_parameter(values,
-                                                               model_parameters,
-                                                               6);
-
-      //output[7] = predictions_per_update_in;
-      std::string state_name_in = extract_string_parameter(values,
-                                                           model_parameters,
-                                                           7);
-
-      //output[8] = state_name_in;
-      std::string measurement_name_in = extract_string_parameter(values,
+      List current_method = method_info[i];
+      if (current_method.containsElementNamed("filter"))
+      {
+        List filtering_info = current_method["filter"];
+        if (filtering_info.containsElementNamed("parameters"))
+        {
+          if (Rf_isNewList(filtering_info["parameters"]))
+          {
+            List values = filtering_info["parameters"];
+            
+            std::string index_name_in = extract_string_parameter(values,
                                                                  model_parameters,
-                                                                 8);
-
-      //output[9] = measurement_name_in;
-      
-      return List::create(index_name_in,
-                          first_index_in,
-                          last_index_in,
-                          //time_name_in,
-                          initial_time_in,
-                          time_diff_name_in,
-                          update_time_step_in,
-                          predictions_per_update_in,
-                          state_name_in,
-                          measurement_name_in);
-    }
-    else
-    {
-      stop("Error in filter method.");
+                                                                 0);
+            //output[0] = index_name_in;
+            
+            size_t first_index_in = extract_int_parameter(values,
+                                                          model_parameters,
+                                                          1);
+            
+            //output[1] = first_index_in;
+            size_t last_index_in = extract_int_parameter(values,
+                                                         model_parameters,
+                                                         2);
+            
+            //output[2] = last_index_in;
+            //std::string time_name_in = extract_string_parameter(values,
+            //                                                    model_parameters,
+            //                                                    3);
+            
+            //output[3] = time_name_in;
+            double initial_time_in = extract_double_parameter(values,
+                                                              model_parameters,
+                                                              3);
+            
+            //output[4] = initial_time_in;
+            std::string time_diff_name_in = extract_string_parameter(values,
+                                                                     model_parameters,
+                                                                     4);
+            
+            //output[5] = time_diff_name_in;
+            double update_time_step_in = extract_double_parameter(values,
+                                                                  model_parameters,
+                                                                  5);
+            
+            //output[6] = update_time_step_in;
+            size_t predictions_per_update_in = extract_int_parameter(values,
+                                                                     model_parameters,
+                                                                     6);
+            
+            //output[7] = predictions_per_update_in;
+            std::string state_name_in = extract_string_parameter(values,
+                                                                 model_parameters,
+                                                                 7);
+            
+            //output[8] = state_name_in;
+            std::string measurement_name_in = extract_string_parameter(values,
+                                                                       model_parameters,
+                                                                       8);
+            
+            //output[9] = measurement_name_in;
+            
+            return List::create(index_name_in,
+                                first_index_in,
+                                last_index_in,
+                                //time_name_in,
+                                initial_time_in,
+                                time_diff_name_in,
+                                update_time_step_in,
+                                predictions_per_update_in,
+                                state_name_in,
+                                measurement_name_in);
+          }
+          else
+          {
+            stop("Error in filter method.");
+          }
+        }
+        else
+        {
+          stop("Error in filter method.");
+        }
+      }
     }
   }
   else
   {
-    stop("Error in filter method.");
+    stop("Method not found in model.");
   }
+  
+  stop("Filter not found in model.");
+  
 }
 
 std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerator* rng_in,
@@ -939,6 +1134,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                             Data* data_in,
                                                             const List &model,
                                                             const List &model_parameters,
+                                                            const List &algorithm_parameter_list,
                                                             bool include_priors,
                                                             const std::vector<std::string> &sequencer_types,
                                                             const std::vector<std::string> &sequencer_variables,
@@ -948,9 +1144,10 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                             VectorIndex* &full_index,
                                                             bool &any_annealing,
                                                             const std::vector<int> &factors_affected_by_smc_sequence,
-                                                            std::vector<Data> &data_created_in_get_likelihood_estimators)
+                                                            std::vector<Data> &data_created_in_get_likelihood_estimators,
+                                                            std::vector<Data> &data_created_in_get_measurement_covariance_estimators)
 {
-  data_created_in_get_likelihood_estimators.clear();
+  //data_created_in_get_likelihood_estimators.clear();
   
   std::vector<size_t> without_cancelled_index_vector;
   std::vector<size_t> full_index_vector;
@@ -1503,10 +1700,11 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
               std::string temp_tolerance_variable = info[2];
               tolerance_variable = temp_tolerance_variable;
               std::vector<double> temp_schedule = info[3];
-              schedule = temp_schedule;
-              enki_lag = info[4];
-              std::string temp_shifter_name = info[5];
+              std::string temp_shifter_name = info[4];
               shifter_name = temp_shifter_name;
+              schedule = temp_schedule;
+              enki_lag = info[5];
+              
               enki_annealing_desired_cess = info[6];
               enki_number_of_bisections = info[7];
               enki_on_summary = info[8];
@@ -1773,6 +1971,131 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
             likelihood_estimators.push_back(new_likelihood_estimator);
           }
         }
+        else if ( current_factor.containsElementNamed("likelihood") )
+        {
+          if (Rf_isNewList(current_factor["likelihood"]))
+          {
+            List llhd_details = current_factor["likelihood"];
+            
+            if (!llhd_details.containsElementNamed("type"))
+            {
+              stop("likelihood must contain a type.");
+            }
+            
+            if (!llhd_details.containsElementNamed("model"))
+            {
+              stop("likelihood must contain a model.");
+            }
+            
+            if (!llhd_details.containsElementNamed("parameters"))
+            {
+              stop("likelihood must contain parameters.");
+            }
+            
+            std::string llhd_type = llhd_details["type"];
+            List llhd_model = llhd_details["model"];
+            
+            LikelihoodEstimator* new_likelihood_estimator;
+            if (llhd_type=="kalman_filter")
+            {
+              List kf_params = get_kf_info(model_parameters,
+                                           llhd_details,
+                                           llhd_type);
+              
+              size_t iterations_to_store = kf_params[0];
+              
+              new_likelihood_estimator = get_kalman_filter(data_in,
+                                                           llhd_model,
+                                                           model_parameters,
+                                                           algorithm_parameter_list,
+                                                           iterations_to_store,
+                                                           false,
+                                                           "");
+            }
+            else if (llhd_type=="ensemble_kalman_filter")
+            {
+              List enkf_params = get_enkf_info(model_parameters,
+                                               llhd_details,
+                                               llhd_type);
+              
+              size_t number_of_ensemble_members = enkf_params[0];
+              size_t iterations_to_store = enkf_params[1];
+              bool parallel = enkf_params[2];
+              size_t grain_size = enkf_params[3];
+              
+              new_likelihood_estimator = get_ensemble_kalman_filter(rng_in,
+                                                                    data_in,
+                                                                    llhd_model,
+                                                                    model_parameters,
+                                                                    algorithm_parameter_list,
+                                                                    number_of_ensemble_members,
+                                                                    iterations_to_store,
+                                                                    false,
+                                                                    parallel,
+                                                                    grain_size,
+                                                                    "",
+                                                                    seed_in,
+                                                                    data_created_in_get_measurement_covariance_estimators);
+            
+            }
+            else if (llhd_type=="particle_filter")
+            {
+              List pf_params = get_pf_info(model_parameters,
+                                           llhd_details,
+                                           llhd_type);
+              
+              size_t number_of_particles = pf_params[0];
+              size_t iterations_to_store = pf_params[1];
+              bool parallel = pf_params[2];
+              size_t grain_size = pf_params[3];
+              
+              new_likelihood_estimator = get_particle_filter(rng_in,
+                                                             data_in,
+                                                             llhd_model,
+                                                             model_parameters,
+                                                             algorithm_parameter_list,
+                                                             number_of_particles,
+                                                             iterations_to_store,
+                                                             false,
+                                                             parallel,
+                                                             grain_size,
+                                                             "",
+                                                             seed_in,
+                                                             data_created_in_get_likelihood_estimators,
+                                                             data_created_in_get_measurement_covariance_estimators);
+              
+            }
+            else
+            {
+              stop("Invalid type for 'likelihood'.");
+            }
+            
+            full_index_vector.push_back(likelihood_estimators.size());
+            without_cancelled_index_vector.push_back(likelihood_estimators.size());
+            
+            if (any_annealing)
+            {
+              likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(rng_in,
+                                                                              seed_in,
+                                                                              data_in,
+                                                                              new_likelihood_estimator,
+                                                                              power,
+                                                                              annealing_variable,
+                                                                              false));
+            }
+            else
+            {
+              likelihood_estimators.push_back(new_likelihood_estimator);
+            }
+            
+            
+          }
+          else
+          {
+            stop("likelihood factor not well specified.");
+          }
+          
+        }
         else
         {
           stop("Invalid factor.");
@@ -1821,6 +2144,13 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
   
   full_index = new VectorIndex(full_index_vector);
   without_cancelled_index = new VectorIndex(without_cancelled_index_vector);
+  
+  /*
+  std::cout << "Full index." << std::endl;
+  std::cout << full_index_vector.size() << std::endl;
+  std::cout << "Without cancelled index." << std::endl;
+  std::cout << without_cancelled_index_vector.size() << std::endl;
+  */
   
   return likelihood_estimators;
   
@@ -2606,32 +2936,18 @@ List get_prior_mean_and_covariance(const List &model,
   stop("Valid prior mean and covariance not found.");
 }
 
-
-
 std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimators(RandomNumberGenerator* rng_in,
                                                                                    size_t* seed_in,
                                                                                    Data* data_in,
                                                                                    const List &model,
                                                                                    const List &model_parameters,
-                                                                                   const List &enk_likelihood_index_method,
+                                                                                   const std::vector<size_t> &factor_indices,
                                                                                    std::shared_ptr<Transform> transform,
                                                                                    std::vector<Data> &data_created_in_get_measurement_covariance_estimators)
 {
-  std::vector<size_t> likelihood_indices;
-  if (enk_likelihood_index_method.containsElementNamed("func"))
-  {
-    NumericVector enk_likelihood_indices;
-    SEXP enk_likelihood_index_SEXP = enk_likelihood_index_method["func"];
-    enk_likelihood_indices = load_numeric_vector(enk_likelihood_index_SEXP);
-    
-    likelihood_indices.reserve(enk_likelihood_indices.length());
-    for (size_t i=0; i<enk_likelihood_indices.length(); ++i)
-    {
-      likelihood_indices.push_back(size_t(enk_likelihood_indices[i]));
-    }
-  }
+  
 
-  data_created_in_get_measurement_covariance_estimators.clear();
+  //data_created_in_get_measurement_covariance_estimators.clear();
   
   std::vector<MeasurementCovarianceEstimator*> measurement_covariance_estimators;
   //std::vector<DistributionFactor*> numerator_distribution_factors;
@@ -2647,7 +2963,7 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
     List factors = model["factor"];
     
     std::vector<size_t> indices_to_use;
-    if (likelihood_indices.size()==0)
+    if (factor_indices.size()==0)
     {
       indices_to_use.reserve(factors.length());
       for (size_t i=0; i<factors.length(); ++i)
@@ -2657,7 +2973,7 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
     }
     else
     {
-      indices_to_use = likelihood_indices;
+      indices_to_use = factor_indices;
     }
     
     for (size_t i=0; i<indices_to_use.size(); ++i)
@@ -4578,48 +4894,59 @@ Parameters make_algorithm_parameters(const List &algorithm_parameter_list)
 
 SMCCriterion* get_resampling_method(const List &model,
                                     const List &model_parameters,
-                                    const List &adaptive_resampling_method,
                                     size_t number_of_particles)
 {
   SMCCriterion* smc_method;
   
-  if (adaptive_resampling_method.containsElementNamed("method") && adaptive_resampling_method.containsElementNamed("values"))
+  if (model.containsElementNamed("method"))
   {
-    std::string method = adaptive_resampling_method["method"];
-    if (method=="ess")
+    List method_info = model["method"];
+    
+    for (size_t i=0; i<method_info.size(); ++i)
     {
-      if (Rf_isNewList(adaptive_resampling_method["values"]))
+      List current_method = method_info[i];
+      if (current_method.containsElementNamed("adaptive_resampling"))
       {
-        List values = adaptive_resampling_method["values"];
+        List adaptive_resampling_method = current_method["adaptive_resampling"];
         
-        if (values.length()==1)
+        if (adaptive_resampling_method.containsElementNamed("method") && adaptive_resampling_method.containsElementNamed("values"))
         {
-          double proportion = extract_double_parameter(values,
-                                                       model_parameters,
-                                                       0);
-          smc_method = new ESSSMCCriterion(proportion*double(number_of_particles));
-        }
-        else
-        {
-          stop("Adaptive resampling using ESS requires specification of the proportion of the total number of particles.");
+          std::string method = adaptive_resampling_method["method"];
+          if (method=="ess")
+          {
+            if (Rf_isNewList(adaptive_resampling_method["values"]))
+            {
+              List values = adaptive_resampling_method["values"];
+              
+              if (values.length()==1)
+              {
+                double proportion = extract_double_parameter(values,
+                                                             model_parameters,
+                                                             0);
+                smc_method = new ESSSMCCriterion(proportion*double(number_of_particles));
+                return smc_method;
+              }
+              else
+              {
+                stop("Adaptive resampling using ESS requires specification of the proportion of the total number of particles.");
+              }
+            }
+            else
+            {
+              stop("Adaptive resampling using ESS requires specification of the proportion of the total number of particles.");
+            }
+          }
+          else
+          {
+            stop("No valid method found for adaptive resampling.");
+          }
         }
       }
-      else
-      {
-        stop("Adaptive resampling using ESS requires specification of the proportion of the total number of particles.");
-      }
     }
-    else
-    {
-      stop("No valid method found for adaptive resampling.");
-    }
-  }
-  else
-  {
-    stop("No valid method found for adaptive resampling (need method and values).");
   }
   
-  return smc_method;
+  Rcout << "No method set for adaptive resampling: defaulting to resampling whenever the ESS drops below the number of particles." << std::endl;
+  return new ESSSMCCriterion(double(number_of_particles));
 }
 
 SMCCriterion* get_adaptive_target_method(const List &model,
@@ -4778,35 +5105,36 @@ SMCTermination* get_smc_termination_method(const List &model,
 }
 
 EnsembleShifter* get_enk_shifter_method(const List &model,
-                                    const List &model_parameters,
-                                    const List &enk_shifter_method)
+                                        const List &model_parameters)
 {
   EnsembleShifter* enk_shifter;
   
-  if (enk_shifter_method.length()==0)
+  if (model.containsElementNamed("method"))
   {
-    enk_shifter = NULL;
-    return enk_shifter;
-  }
-  
-  if (enk_shifter_method.containsElementNamed("method"))
-  {
-    std::string method = enk_shifter_method["method"];
-    if (method=="stochastic")
+    List method_info = model["method"];
+    
+    for (size_t i=0; i<method_info.size(); ++i)
     {
-      enk_shifter = new StochasticEnsembleShifter();
-    }
-    else
-    {
-      stop("No valid method found for EnK shifter.");
+      List current_method = method_info[i];
+      if (current_method.containsElementNamed("enki_shifter"))
+      {
+        std::string method = current_method["enki_shifter"];
+        
+        if (method=="stochastic")
+        {
+          enk_shifter = new StochasticEnsembleShifter();
+          return enk_shifter;
+        }
+        else
+        {
+          stop("No valid method found for EnK shifter.");
+        }
+      }
     }
   }
-  else
-  {
-    stop("No valid method found for EnK shifter (method needed).");
-  }
-  
-  return enk_shifter;
+
+  Rcout << "No method set for shifting ensemble in EnK: defaulting to stochastic approach." << std::endl;
+  return new StochasticEnsembleShifter();
 }
 
 List get_smc_sequencer_info(const List &model,
@@ -5009,20 +5337,19 @@ std::vector<LikelihoodEstimator*> convent_to_annealed_likelihoods_if_needed(Rand
 }
 */
 
-// [[Rcpp::export]]
-double do_importance_sampler(const List &model,
-                             const List &parameters,
-                             const List &algorithm_parameter_list,
-                             size_t number_of_importance_points,
-                             bool parallel_in,
-                             size_t grain_size_in,
-                             const String &results_name_in,
-                             size_t seed)
+ImportanceSampler* get_importance_sampler(RandomNumberGenerator* rng,
+                                          Data* the_data,
+                                          const List &model,
+                                          const List &parameters,
+                                          const List &algorithm_parameter_list,
+                                          size_t number_of_importance_points,
+                                          bool parallel_in,
+                                          size_t grain_size_in,
+                                          const String &results_name_in,
+                                          size_t* seed,
+                                          std::vector<Data> &data_created_in_get_likelihood_estimators,
+                                          std::vector<Data> &data_created_in_get_measurement_covariance_estimators)
 {
-  RandomNumberGenerator rng;
-  Data the_data = get_data(model);
-  std::vector<Data> data_created_in_get_likelihood_estimators;
-  
   //std::string results_name = "/Users/richard/Dropbox/code/ilike/experiments/test";
   
   // May need to alter for cases where the likelihood needs to be tuned automatically (e.g. in ABC).
@@ -5057,13 +5384,14 @@ double do_importance_sampler(const List &model,
     
     proposal_in = get_proposal(model,
                                parameters,
-                               &the_data);
+                               the_data);
     
-    likelihood_estimators = get_likelihood_estimators(&rng,
-                                                      &seed,
-                                                      &the_data,
+    likelihood_estimators = get_likelihood_estimators(rng,
+                                                      seed,
+                                                      the_data,
                                                       model,
                                                       parameters,
+                                                      algorithm_parameter_list,
                                                       true,
                                                       sequencer_types,
                                                       sequencer_variables,
@@ -5073,7 +5401,8 @@ double do_importance_sampler(const List &model,
                                                       full_index,
                                                       any_annealing,
                                                       factors_affected_by_smc_sequence,
-                                                      data_created_in_get_likelihood_estimators);
+                                                      data_created_in_get_likelihood_estimators,
+                                                      data_created_in_get_measurement_covariance_estimators);
     
     proposal_is_evaluated_in = true;
     
@@ -5085,11 +5414,12 @@ double do_importance_sampler(const List &model,
     proposal_in = get_prior_as_simulate_only_proposal(model,
                                                       parameters);
     
-    likelihood_estimators = get_likelihood_estimators(&rng,
-                                                      &seed,
-                                                      &the_data,
+    likelihood_estimators = get_likelihood_estimators(rng,
+                                                      seed,
+                                                      the_data,
                                                       model,
                                                       parameters,
+                                                      algorithm_parameter_list,
                                                       false,
                                                       sequencer_types,
                                                       sequencer_variables,
@@ -5099,33 +5429,60 @@ double do_importance_sampler(const List &model,
                                                       full_index,
                                                       any_annealing,
                                                       factors_affected_by_smc_sequence,
-                                                      data_created_in_get_likelihood_estimators);
+                                                      data_created_in_get_likelihood_estimators,
+                                                      data_created_in_get_measurement_covariance_estimators);
     
     proposal_is_evaluated_in = false;
   }
   
-  
   Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list);
   
-  ImportanceSampler alg(&rng,
-                        &seed,
-                        &the_data,
-                        algorithm_parameters,
-                        number_of_importance_points,
-                        "",
-                        likelihood_estimators,
-                        proposal_in,
-                        proposal_is_evaluated_in,
-                        true,
-                        true,
-                        false,
-                        parallel_in,
-                        grain_size_in,
-                        "");
+  return new ImportanceSampler(rng,
+                               seed,
+                               the_data,
+                               algorithm_parameters,
+                               number_of_importance_points,
+                               "",
+                               likelihood_estimators,
+                               proposal_in,
+                               proposal_is_evaluated_in,
+                               true,
+                               true,
+                               false,
+                               parallel_in,
+                               grain_size_in,
+                               "");
+}
+
+// [[Rcpp::export]]
+double do_importance_sampler(const List &model,
+                             const List &parameters,
+                             const List &algorithm_parameter_list,
+                             size_t number_of_importance_points,
+                             bool parallel_in,
+                             size_t grain_size_in,
+                             const String &results_name_in,
+                             size_t seed)
+{
+  RandomNumberGenerator rng;
+  Data the_data = get_data(model);
+  std::vector<Data> data_created_in_get_likelihood_estimators;
+  std::vector<Data> data_created_in_measurement_covariance_estimators;
   
+  ImportanceSampler* alg = get_importance_sampler(&rng,
+                                                  &the_data,
+                                                  model,
+                                                  parameters,
+                                                  algorithm_parameter_list,
+                                                  number_of_importance_points,
+                                                  parallel_in,
+                                                  grain_size_in,
+                                                  results_name_in,
+                                                  &seed,
+                                                  data_created_in_get_likelihood_estimators,
+                                                  data_created_in_measurement_covariance_estimators);
   
-  
-  SMCOutput* output = alg.run();
+  SMCOutput* output = alg->run();
   
   if (strcmp(results_name_in.get_cstring(),"") != 0)
     output->write(results_name_in.get_cstring());
@@ -5133,6 +5490,7 @@ double do_importance_sampler(const List &model,
   double log_likelihood = output->log_likelihood;
   
   delete output;
+  delete alg;
   
   return log_likelihood;
 }
@@ -5161,6 +5519,7 @@ void do_mcmc(const List &model,
   RandomNumberGenerator rng;
   Data the_data = get_data(model);
   std::vector<Data> data_created_in_get_likelihood_estimators;
+  std::vector<Data> data_created_in_get_measurement_covariance_estimators;
   
   // May need to alter for cases where the likelihood needs to be tuned automatically (e.g. in ABC).
   
@@ -5190,6 +5549,7 @@ void do_mcmc(const List &model,
                                                     &the_data,
                                                     model,
                                                     parameters,
+                                                    algorithm_parameter_list,
                                                     true,
                                                     sequencer_types,
                                                     sequencer_variables,
@@ -5199,7 +5559,8 @@ void do_mcmc(const List &model,
                                                     full_index,
                                                     any_annealing,
                                                     factors_affected_by_smc_sequence,
-                                                    data_created_in_get_likelihood_estimators);
+                                                    data_created_in_get_likelihood_estimators,
+                                                    data_created_in_get_measurement_covariance_estimators);
   
   Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list);
   
@@ -5282,6 +5643,7 @@ void do_mcmc(const List &model,
   }
   
   
+  
   SMCOutput* output = alg->run();
 
   
@@ -5296,37 +5658,26 @@ void do_mcmc(const List &model,
 
 }
 
-
-// [[Rcpp::export]]
-double do_smc_mcmc_move(const List &model,
-                        const List &parameters,
-                        const List &algorithm_parameter_list,
-                        size_t number_of_particles,
-                        const List &mcmc_termination_method,
-                        const List &mcmc_weights_method,
-                        const List &adaptive_resampling_method,
-                        const List &smc_sequencer_method,
-                        const List &adaptive_target_method,
-                        const List &smc_termination_method,
-                        size_t smc_iterations_to_store,
-                        bool write_to_file_at_each_iteration,
-                        bool parallel_in,
-                        size_t grain_size_in,
-                        const String &results_name_in,
-                        size_t seed)
+SMCMCMCMove* get_smc_mcmc_move(RandomNumberGenerator* rng,
+                               Data* the_data,
+                               const List &model,
+                               const List &parameters,
+                               const List &algorithm_parameter_list,
+                               size_t number_of_particles,
+                               const List &mcmc_termination_method,
+                               const List &mcmc_weights_method,
+                               const List &smc_sequencer_method,
+                               const List &adaptive_target_method,
+                               const List &smc_termination_method,
+                               size_t smc_iterations_to_store,
+                               bool write_to_file_at_each_iteration,
+                               bool parallel_in,
+                               size_t grain_size_in,
+                               const String &results_name_in,
+                               size_t* seed,
+                               std::vector<Data> &data_created_in_get_likelihood_estimators,
+                               std::vector<Data> &data_created_in_get_measurement_covariance_estimators)
 {
-  
-  RandomNumberGenerator rng;
-  
-  Data the_data = get_data(model);
-  std::vector<Data> data_created_in_get_likelihood_estimators;
-  
-  //std::string results_name = "/Users/richard/Dropbox/code/ilike/experiments/test";
-  
-  // May need to alter for cases where the likelihood needs to be tuned automatically (e.g. in ABC).
-  
-  // Check if the prior is the proposal: affects what llhd_estimators we include.
-  
   std::vector<LikelihoodEstimator*> likelihood_estimators;
   IndependentProposalKernel* proposal_in;
   bool proposal_is_evaluated_in;
@@ -5354,13 +5705,14 @@ double do_smc_mcmc_move(const List &model,
   {
     proposal_in = get_proposal(model,
                                parameters,
-                               &the_data);
+                               the_data);
     
-    likelihood_estimators = get_likelihood_estimators(&rng,
-                                                      &seed,
-                                                      &the_data,
+    likelihood_estimators = get_likelihood_estimators(rng,
+                                                      seed,
+                                                      the_data,
                                                       model,
                                                       parameters,
+                                                      algorithm_parameter_list,
                                                       true,
                                                       sequencer_types,
                                                       sequencer_variables,
@@ -5370,7 +5722,8 @@ double do_smc_mcmc_move(const List &model,
                                                       full_index,
                                                       any_annealing,
                                                       factors_affected_by_smc_sequence,
-                                                      data_created_in_get_likelihood_estimators);
+                                                      data_created_in_get_likelihood_estimators,
+                                                      data_created_in_get_measurement_covariance_estimators);
     
     proposal_is_evaluated_in = true;
     
@@ -5382,11 +5735,12 @@ double do_smc_mcmc_move(const List &model,
     proposal_in = get_prior_as_simulate_only_proposal(model,
                                                       parameters);
     
-    likelihood_estimators = get_likelihood_estimators(&rng,
-                                                      &seed,
-                                                      &the_data,
+    likelihood_estimators = get_likelihood_estimators(rng,
+                                                      seed,
+                                                      the_data,
                                                       model,
                                                       parameters,
+                                                      algorithm_parameter_list,
                                                       false,
                                                       sequencer_types,
                                                       sequencer_variables,
@@ -5396,7 +5750,8 @@ double do_smc_mcmc_move(const List &model,
                                                       full_index,
                                                       any_annealing,
                                                       factors_affected_by_smc_sequence,
-                                                      data_created_in_get_likelihood_estimators);
+                                                      data_created_in_get_likelihood_estimators,
+                                                      data_created_in_get_measurement_covariance_estimators);
     
     proposal_is_evaluated_in = false;
     
@@ -5404,28 +5759,27 @@ double do_smc_mcmc_move(const List &model,
   
   // note that this will always result in the temperature being adapted in the SMC algorithm (not smcfixed)
   /*
-  likelihood_estimators = convent_to_annealed_likelihoods_if_needed(&rng,
-                                                                    &seed,
-                                                                    &the_data,
-                                                                    sequencer_info[0],
-                                                                    sequencer_info[1],
-                                                                    likelihood_estimators,
-                                                                    proposal_in,
-                                                                    proposal_is_evaluated_in);
-  */
+   likelihood_estimators = convent_to_annealed_likelihoods_if_needed(&rng,
+   &seed,
+   &the_data,
+   sequencer_info[0],
+   sequencer_info[1],
+   likelihood_estimators,
+   proposal_in,
+   proposal_is_evaluated_in);
+   */
   
   Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list);
   
   MCMC* the_mcmc = make_mcmc(model,
                              parameters,
-                             &the_data,
+                             the_data,
                              mcmc_termination_method,
                              mcmc_weights_method,
                              full_index);
   
   SMCCriterion* resampling_criterion = get_resampling_method(model,
                                                              parameters,
-                                                             adaptive_resampling_method,
                                                              number_of_particles);
   
   SMCCriterion* adaptive_target_criterion = get_adaptive_target_method(model,
@@ -5440,125 +5794,152 @@ double do_smc_mcmc_move(const List &model,
   
   if (write_to_file_at_each_iteration)
   {
-    SMCMCMCMove* alg = new SMCMCMCMove(&rng,
-                                       &seed,
-                                       &the_data,
-                                       algorithm_parameters,
-                                       number_of_particles,
-                                       smc_iterations_to_store,
-                                       smc_iterations_to_store,
-                                       the_mcmc,
-                                       resampling_criterion,
-                                       adaptive_target_criterion,
-                                       sequencer_info[3],
-                                       smc_termination,
-                                       sequencer_variables,
-                                       sequencer_schedules,
-                                       likelihood_estimators,
-                                       proposal_in,
-                                       without_cancelled_index,
-                                       full_index,
-                                       proposal_is_evaluated_in,
-                                       true,
-                                       true,
-                                       false,
-                                       false,
-                                       parallel_in,
-                                       grain_size_in,
-                                       results_name_in.get_cstring());
-    
-    
-    SMCOutput* output = alg->run();
-
-    double log_likelihood = output->log_likelihood;
-    
-    delete output;
-    delete alg;
-    
-    return log_likelihood;
+    return new SMCMCMCMove(rng,
+                           seed,
+                           the_data,
+                           algorithm_parameters,
+                           number_of_particles,
+                           smc_iterations_to_store,
+                           smc_iterations_to_store,
+                           the_mcmc,
+                           resampling_criterion,
+                           adaptive_target_criterion,
+                           sequencer_info[3],
+                           smc_termination,
+                           sequencer_variables,
+                           sequencer_schedules,
+                           likelihood_estimators,
+                           proposal_in,
+                           without_cancelled_index,
+                           full_index,
+                           proposal_is_evaluated_in,
+                           true,
+                           true,
+                           false,
+                           false,
+                           parallel_in,
+                           grain_size_in,
+                           results_name_in.get_cstring());
     
   }
   else
   {
-    SMCMCMCMove* alg = new SMCMCMCMove(&rng,
-                                       &seed,
-                                       &the_data,
-                                       algorithm_parameters,
-                                       number_of_particles,
-                                       smc_iterations_to_store,
-                                       smc_iterations_to_store,
-                                       the_mcmc,
-                                       resampling_criterion,
-                                       adaptive_target_criterion,
-                                       sequencer_info[3],
-                                       smc_termination,
-                                       sequencer_variables,
-                                       sequencer_schedules,
-                                       likelihood_estimators,
-                                       proposal_in,
-                                       without_cancelled_index,
-                                       full_index,
-                                       proposal_is_evaluated_in,
-                                       true,
-                                       true,
-                                       false,
-                                       false,
-                                       parallel_in,
-                                       grain_size_in,
-                                       "");
-
-    
-    SMCOutput* output = alg->run();
-    
-    if (strcmp(results_name_in.get_cstring(),"") != 0)
-      output->write(results_name_in.get_cstring());
-    
-    double log_likelihood = output->log_likelihood;
-    
-    delete output;
-    delete alg;
-    
-    return log_likelihood;
+    return new SMCMCMCMove(rng,
+                           seed,
+                           the_data,
+                           algorithm_parameters,
+                           number_of_particles,
+                           smc_iterations_to_store,
+                           smc_iterations_to_store,
+                           the_mcmc,
+                           resampling_criterion,
+                           adaptive_target_criterion,
+                           sequencer_info[3],
+                           smc_termination,
+                           sequencer_variables,
+                           sequencer_schedules,
+                           likelihood_estimators,
+                           proposal_in,
+                           without_cancelled_index,
+                           full_index,
+                           proposal_is_evaluated_in,
+                           true,
+                           true,
+                           false,
+                           false,
+                           parallel_in,
+                           grain_size_in,
+                           "");
     
   }
-
+  
 }
 
 // [[Rcpp::export]]
-double do_enki(const List &model,
-               const List &parameters,
-               const List &algorithm_parameter_list,
-               size_t number_of_ensemble_members,
-               const List &mcmc_termination_method,
-               const List &mcmc_weights_method,
-               const List &enk_sequencer_method,
-               const List &adaptive_target_method,
-               const List &enk_termination_method,
-               const List &enk_likelihood_index_method,
-               const List &enk_shifter_method,
-               size_t enk_iterations_to_store,
-               bool write_to_file_at_each_iteration,
-               bool parallel_in,
-               size_t grain_size_in,
-               const String &results_name_in,
-               size_t seed)
+double do_smc_mcmc_move(const List &model,
+                        const List &parameters,
+                        const List &algorithm_parameter_list,
+                        size_t number_of_particles,
+                        const List &mcmc_termination_method,
+                        const List &mcmc_weights_method,
+                        const List &smc_sequencer_method,
+                        const List &adaptive_target_method,
+                        const List &smc_termination_method,
+                        size_t smc_iterations_to_store,
+                        bool write_to_file_at_each_iteration,
+                        bool parallel_in,
+                        size_t grain_size_in,
+                        const String &results_name_in,
+                        size_t seed)
 {
+  
   RandomNumberGenerator rng;
   
   Data the_data = get_data(model);
   std::vector<Data> data_created_in_get_likelihood_estimators;
   std::vector<Data> data_created_in_get_measurement_covariance_estimators;
   
-  //std::string results_name = "/Users/richard/Dropbox/code/ilike/experiments/test";
+  SMCMCMCMove* alg = get_smc_mcmc_move(&rng,
+                                       &the_data,
+                                       model,
+                                       parameters,
+                                       algorithm_parameter_list,
+                                       number_of_particles,
+                                       mcmc_termination_method,
+                                       mcmc_weights_method,
+                                       smc_sequencer_method,
+                                       adaptive_target_method,
+                                       smc_termination_method,
+                                       smc_iterations_to_store,
+                                       write_to_file_at_each_iteration,
+                                       parallel_in,
+                                       grain_size_in,
+                                       results_name_in,
+                                       &seed,
+                                       data_created_in_get_likelihood_estimators,
+                                       data_created_in_get_measurement_covariance_estimators);
   
-  // May need to alter for cases where the likelihood needs to be tuned automatically (e.g. in ABC).
+  SMCOutput* output = alg->run();
   
-  // Check if the prior is the proposal: affects what llhd_estimators we include.
+  if (!write_to_file_at_each_iteration)
+  {
+    if (strcmp(results_name_in.get_cstring(),"") != 0)
+      output->write(results_name_in.get_cstring());
+  }
   
+  double log_likelihood = output->log_likelihood;
+  
+  delete output;
+  delete alg;
+  
+  return log_likelihood;
+
+}
+
+EnsembleKalmanInversion* get_enki(RandomNumberGenerator* rng,
+                                  Data* the_data,
+                                  const List &model,
+                                  const List &parameters,
+                                  const List &algorithm_parameter_list,
+                                  size_t number_of_ensemble_members,
+                                  const List &mcmc_termination_method,
+                                  const List &mcmc_weights_method,
+                                  const List &enk_sequencer_method,
+                                  const List &adaptive_target_method,
+                                  const List &enk_termination_method,
+                                  size_t enk_iterations_to_store,
+                                  bool write_to_file_at_each_iteration,
+                                  bool parallel_in,
+                                  size_t grain_size_in,
+                                  const String &results_name_in,
+                                  size_t* seed,
+                                  std::vector<Data> &data_created_in_get_likelihood_estimators,
+                                  std::vector<Data> &data_created_in_get_measurement_covariance_estimators)
+{
   std::vector<LikelihoodEstimator*> likelihood_estimators;
   std::vector<MeasurementCovarianceEstimator*> estimators;
   IndependentProposalKernel* proposal_in;
-  bool proposal_is_evaluated_in;
+  //bool proposal_is_evaluated_in;
   
   List sequencer_info = get_smc_sequencer_info(model,
                                                parameters,
@@ -5584,11 +5965,14 @@ double do_enki(const List &model,
   
   std::shared_ptr<Transform> transform = NULL;
   
-  likelihood_estimators = get_likelihood_estimators(&rng,
-                                                    &seed,
-                                                    &the_data,
+  std::vector<size_t> enk_indices = get_enk_likelihood_indices(model,parameters);
+  
+  likelihood_estimators = get_likelihood_estimators(rng,
+                                                    seed,
+                                                    the_data,
                                                     model,
                                                     parameters,
+                                                    algorithm_parameter_list,
                                                     true,
                                                     sequencer_types,
                                                     sequencer_variables,
@@ -5598,14 +5982,15 @@ double do_enki(const List &model,
                                                     full_index,
                                                     any_annealing,
                                                     factors_affected_by_smc_sequence,
-                                                    data_created_in_get_likelihood_estimators);
+                                                    data_created_in_get_likelihood_estimators,
+                                                    data_created_in_get_measurement_covariance_estimators);
   
-  estimators = get_measurement_covariance_estimators(&rng,
-                                                     &seed,
-                                                     &the_data,
+  estimators = get_measurement_covariance_estimators(rng,
+                                                     seed,
+                                                     the_data,
                                                      model,
                                                      parameters,
-                                                     enk_likelihood_index_method,
+                                                     enk_indices,
                                                      transform,
                                                      data_created_in_get_measurement_covariance_estimators);
   
@@ -5625,7 +6010,7 @@ double do_enki(const List &model,
   
   MCMC* the_mcmc = make_mcmc(model,
                              parameters,
-                             &the_data,
+                             the_data,
                              mcmc_termination_method,
                              mcmc_weights_method,
                              full_index);
@@ -5641,78 +6026,115 @@ double do_enki(const List &model,
                                                                enk_termination_method);
   
   EnsembleShifter* shifter = get_enk_shifter_method(model,
-                                                    parameters,
-                                                    enk_shifter_method);
-
+                                                    parameters);
+  
   
   if (write_to_file_at_each_iteration)
   {
-    EnsembleKalmanInversion* alg = new EnsembleKalmanInversion(&rng,
-                                                               &seed,
-                                                               &the_data,
-                                                               number_of_ensemble_members,
-                                                               enk_iterations_to_store,
-                                                               shifter,
-                                                               adaptive_target_criterion,
-                                                               sequencer_info[3],
-                                                               enk_termination,
-                                                               sequencer_variables[sequencer_variables.size()-1],
-                                                               sequencer_schedules[sequencer_schedules.size()-1],
-                                                               proposal_in,
-                                                               likelihood_estimators,
-                                                               estimators,
-                                                               transform,
-                                                               1.0,
-                                                               parallel_in,
-                                                               grain_size_in,
-                                                               results_name_in.get_cstring());
-    
-    
-    EnsembleKalmanOutput* output = alg->run();
-    
-    double log_likelihood = output->log_likelihood;
-    
-    delete output;
-    delete alg;
-    
-    return log_likelihood;
+    return new EnsembleKalmanInversion(rng,
+                                       seed,
+                                       the_data,
+                                       number_of_ensemble_members,
+                                       enk_iterations_to_store,
+                                       shifter,
+                                       adaptive_target_criterion,
+                                       sequencer_info[3],
+                                       enk_termination,
+                                       sequencer_variables[sequencer_variables.size()-1],
+                                       sequencer_schedules[sequencer_schedules.size()-1],
+                                       proposal_in,
+                                       likelihood_estimators,
+                                       estimators,
+                                       transform,
+                                       1.0,
+                                       parallel_in,
+                                       grain_size_in,
+                                       results_name_in.get_cstring());
     
   }
   else
   {
-    EnsembleKalmanInversion* alg = new EnsembleKalmanInversion(&rng,
-                                                               &seed,
-                                                               &the_data,
-                                                               number_of_ensemble_members,
-                                                               enk_iterations_to_store,
-                                                               shifter,
-                                                               adaptive_target_criterion,
-                                                               sequencer_info[3],
-                                                               enk_termination,
-                                                               sequencer_variables[sequencer_variables.size()-1],
-                                                               sequencer_schedules[sequencer_schedules.size()-1],
-                                                               proposal_in,
-                                                               likelihood_estimators,
-                                                               estimators,
-                                                               transform,
-                                                               1.0,
-                                                               parallel_in,
-                                                               grain_size_in,
-                                                               "");
-    
-    EnsembleKalmanOutput* output = alg->run();
-
-    if (strcmp(results_name_in.get_cstring(),"") != 0)
-      output->write(results_name_in.get_cstring());
-    
-    double log_likelihood = output->log_likelihood;
-    
-    delete output;
-    delete alg;
-    
-    return log_likelihood;
+    return new EnsembleKalmanInversion(rng,
+                                       seed,
+                                       the_data,
+                                       number_of_ensemble_members,
+                                       enk_iterations_to_store,
+                                       shifter,
+                                       adaptive_target_criterion,
+                                       sequencer_info[3],
+                                       enk_termination,
+                                       sequencer_variables[sequencer_variables.size()-1],
+                                       sequencer_schedules[sequencer_schedules.size()-1],
+                                       proposal_in,
+                                       likelihood_estimators,
+                                       estimators,
+                                       transform,
+                                       1.0,
+                                       parallel_in,
+                                       grain_size_in,
+                                       "");
     
   }
+  
+}
+
+// [[Rcpp::export]]
+double do_enki(const List &model,
+               const List &parameters,
+               const List &algorithm_parameter_list,
+               size_t number_of_ensemble_members,
+               const List &mcmc_termination_method,
+               const List &mcmc_weights_method,
+               const List &enk_sequencer_method,
+               const List &adaptive_target_method,
+               const List &enk_termination_method,
+               size_t enk_iterations_to_store,
+               bool write_to_file_at_each_iteration,
+               bool parallel_in,
+               size_t grain_size_in,
+               const String &results_name_in,
+               size_t seed)
+{
+  RandomNumberGenerator rng;
+  
+  Data the_data = get_data(model);
+  std::vector<Data> data_created_in_get_likelihood_estimators;
+  std::vector<Data> data_created_in_get_measurement_covariance_estimators;
+
+  EnsembleKalmanInversion* alg = get_enki(&rng,
+                                          &the_data,
+                                          model,
+                                          parameters,
+                                          algorithm_parameter_list,
+                                          number_of_ensemble_members,
+                                          mcmc_termination_method,
+                                          mcmc_weights_method,
+                                          enk_sequencer_method,
+                                          adaptive_target_method,
+                                          enk_termination_method,
+                                          enk_iterations_to_store,
+                                          write_to_file_at_each_iteration,
+                                          parallel_in,
+                                          grain_size_in,
+                                          results_name_in,
+                                          &seed,
+                                          data_created_in_get_likelihood_estimators,
+                                          data_created_in_get_measurement_covariance_estimators);
+  
+  EnsembleKalmanOutput* output = alg->run();
+  
+  if (!write_to_file_at_each_iteration)
+  {
+    if (strcmp(results_name_in.get_cstring(),"") != 0)
+      output->write(results_name_in.get_cstring());
+  }
+  
+  double log_likelihood = output->log_likelihood;
+  
+  delete output;
+  delete alg;
+  
+  return log_likelihood;
   
 }
 
@@ -5724,7 +6146,6 @@ double do_enkmfds(const List &model,
                   double Delta_t,
                         const List &mcmc_termination_method,
                   const List &mcmc_weights_method,
-                        const List &adaptive_resampling_method,
                         const List &smc_sequencer_method,
                         const List &adaptive_target_method,
                         const List &smc_termination_method,
@@ -5740,6 +6161,7 @@ double do_enkmfds(const List &model,
   
   Data the_data = get_data(model);
   std::vector<Data> data_created_in_get_likelihood_estimators;
+  std::vector<Data> data_created_in_get_measurement_covariance_estimators;
   
   //std::string results_name = "/Users/richard/Dropbox/code/ilike/experiments/test";
   
@@ -5781,6 +6203,7 @@ double do_enkmfds(const List &model,
                                                       &the_data,
                                                       model,
                                                       parameters,
+                                                      algorithm_parameter_list,
                                                       true,
                                                       sequencer_types,
                                                       sequencer_variables,
@@ -5790,7 +6213,8 @@ double do_enkmfds(const List &model,
                                                       full_index,
                                                       any_annealing,
                                                       factors_affected_by_smc_sequence,
-                                                      data_created_in_get_likelihood_estimators);
+                                                      data_created_in_get_likelihood_estimators,
+                                                      data_created_in_get_measurement_covariance_estimators);
     
     proposal_is_evaluated_in = true;
     
@@ -5807,6 +6231,7 @@ double do_enkmfds(const List &model,
                                                       &the_data,
                                                       model,
                                                       parameters,
+                                                      algorithm_parameter_list,
                                                       false,
                                                       sequencer_types,
                                                       sequencer_variables,
@@ -5816,7 +6241,8 @@ double do_enkmfds(const List &model,
                                                       full_index,
                                                       any_annealing,
                                                       factors_affected_by_smc_sequence,
-                                                      data_created_in_get_likelihood_estimators);
+                                                      data_created_in_get_likelihood_estimators,
+                                                      data_created_in_get_measurement_covariance_estimators);
     
     proposal_is_evaluated_in = false;
     
@@ -5845,7 +6271,6 @@ double do_enkmfds(const List &model,
   
   SMCCriterion* resampling_criterion = get_resampling_method(model,
                                                              parameters,
-                                                             adaptive_resampling_method,
                                                              number_of_particles);
   
   SMCCriterion* adaptive_target_criterion = get_adaptive_target_method(model,
@@ -5942,19 +6367,14 @@ double do_enkmfds(const List &model,
   
 }
 
-// [[Rcpp::export]]
-double do_kalman_filter(const List &model,
-                        const List &parameters,
-                        const List &algorithm_parameter_list,
-                        const List &filtering_options_list,
-                        size_t kf_iterations_to_store,
-                        bool write_to_file_at_each_iteration,
-                        const String &results_name_in)
+KalmanFilter* get_kalman_filter(Data* the_data,
+                                const List &model,
+                                const List &parameters,
+                                const List &algorithm_parameter_list,
+                                size_t kf_iterations_to_store,
+                                bool write_to_file_at_each_iteration,
+                                const std::string &results_name_in)
 {
-
-  //Data the_data = data();
-  Data the_data = get_data(model);
-  
   List prior_mean_and_covariance = get_prior_mean_and_covariance(model,
                                                                  parameters);
   
@@ -5967,8 +6387,7 @@ double do_kalman_filter(const List &model,
   KalmanUpdater* updater_in = get_kalman_updater(model,
                                                  parameters);
   
-  List filtering_info = get_filtering_info(parameters,
-                                           filtering_options_list);
+  List filtering_info = get_filtering_info(model,parameters);
   
   
   std::string index_name_in = filtering_info[0];
@@ -5982,13 +6401,25 @@ double do_kalman_filter(const List &model,
   std::string state_name_in = filtering_info[7];
   std::string measurement_name_in = filtering_info[8];
   
+  /*
+  std::cout << index_name_in << std::endl;
+  std::cout << first_index_in << std::endl;
+  std::cout << last_index_in << std::endl;
+  std::cout << initial_time_in << std::endl;
+  std::cout << time_diff_name_in << std::endl;
+  std::cout << update_time_step_in << std::endl;
+  std::cout << predictions_per_update_in << std::endl;
+  std::cout << state_name_in << std::endl;
+  std::cout << measurement_name_in << std::endl;
+  */
+
   if (first_index_in>last_index_in)
     stop("Cannot construct a filter where the first index is bigger than the last.");
   
-  if ( (measurement_name_in=="") && (last_index_in>=the_data.min_n_rows()) )
+  if ( (measurement_name_in=="") && (last_index_in>=the_data->min_n_rows()) )
     stop("Last index goes past the end of the data.");
   
-  if ( (measurement_name_in!="") && (last_index_in>=the_data[measurement_name_in].n_rows) )
+  if ( (measurement_name_in!="") && (last_index_in>=(*the_data)[measurement_name_in].n_rows) )
     stop("Last index goes past the end of the data.");
   
   //KalmanPredictor* predictor_in = new ExactKalmanPredictor(transition_model_A,
@@ -6001,117 +6432,136 @@ double do_kalman_filter(const List &model,
   
   std::vector<std::string> measurement_names_in;
   measurement_names_in.push_back(measurement_name_in);
-
+  
   Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list);
   
   if (write_to_file_at_each_iteration)
   {
-    KalmanFilter* alg = new KalmanFilter(&the_data,
-                                         kf_iterations_to_store,
-                                         state_name_in,
-                                         prior_mean_in,
-                                         prior_covariance_in,
-                                         index_name_in,
-                                         //time_name_in,
-                                         time_diff_name_in,
-                                         measurement_names_in,
-                                         first_index_in,
-                                         last_index_in,
-                                         predictions_per_update_in,
-                                         update_time_step_in,
-                                         initial_time_in,
-                                         true,
-                                         predictor_in,
-                                         updater_in,
-                                         true,
-                                         results_name_in.get_cstring());
-    
-    KalmanFilterOutput* output = alg->run();
-    
-    double log_likelihood = output->log_likelihood;
-    
-    delete output;
-    delete alg;
-    
-    return log_likelihood;
+    return new KalmanFilter(the_data,
+                            kf_iterations_to_store,
+                            state_name_in,
+                            prior_mean_in,
+                            prior_covariance_in,
+                            index_name_in,
+                            //time_name_in,
+                            time_diff_name_in,
+                            measurement_names_in,
+                            first_index_in,
+                            last_index_in,
+                            predictions_per_update_in,
+                            update_time_step_in,
+                            initial_time_in,
+                            true,
+                            predictor_in,
+                            updater_in,
+                            true,
+                            results_name_in);
     
   }
   else
   {
-    KalmanFilter* alg = new KalmanFilter(&the_data,
-                                         kf_iterations_to_store,
-                                         state_name_in,
-                                         prior_mean_in,
-                                         prior_covariance_in,
-                                         index_name_in,
-                                         //time_name_in,
-                                         time_diff_name_in,
-                                         measurement_names_in,
-                                         first_index_in,
-                                         last_index_in,
-                                         predictions_per_update_in,
-                                         update_time_step_in,
-                                         initial_time_in,
-                                         true,
-                                         predictor_in,
-                                         updater_in,
-                                         true,
-                                         "");
-    
-    KalmanFilterOutput* output = alg->run();
-    
-    if (strcmp(results_name_in.get_cstring(),"") != 0)
-      output->write(results_name_in.get_cstring());
-    
-    double log_likelihood = output->log_likelihood;
-    
-    delete output;
-    delete alg;
-    
-    return log_likelihood;
+    return new KalmanFilter(the_data,
+                            kf_iterations_to_store,
+                            state_name_in,
+                            prior_mean_in,
+                            prior_covariance_in,
+                            index_name_in,
+                            //time_name_in,
+                            time_diff_name_in,
+                            measurement_names_in,
+                            first_index_in,
+                            last_index_in,
+                            predictions_per_update_in,
+                            update_time_step_in,
+                            initial_time_in,
+                            true,
+                            predictor_in,
+                            updater_in,
+                            true,
+                            "");
     
   }
   
 }
 
 // [[Rcpp::export]]
-double do_ensemble_kalman_filter(const List &model,
-                                 const List &parameters,
-                                 const List &algorithm_parameter_list,
-                                 size_t number_of_ensemble_members,
-                                 const List &filtering_options_list,
-                                 const List &enk_likelihood_index_method,
-                                 const List &enk_shifter_method,
-                                 size_t enk_iterations_to_store,
-                                 bool write_to_file_at_each_iteration,
-                                 bool parallel_in,
-                                 size_t grain_size_in,
-                                 const String &results_name_in,
-                                 size_t seed)
+double do_kalman_filter(const List &model,
+                        const List &parameters,
+                        const List &algorithm_parameter_list,
+                        size_t kf_iterations_to_store,
+                        bool write_to_file_at_each_iteration,
+                        const String &results_name_in)
 {
-  
-  RandomNumberGenerator rng;
-  
-  Data the_data = get_data(model);
-  Data* data_pointer = &the_data;
 
-  std::vector<Data> data_created_in_get_measurement_covariance_estimators;
+  //Data the_data = data();
+  Data the_data = get_data(model);
   
+  KalmanFilter* alg = get_kalman_filter(&the_data,
+                                        model,
+                                        parameters,
+                                        algorithm_parameter_list,
+                                        kf_iterations_to_store,
+                                        write_to_file_at_each_iteration,
+                                        results_name_in.get_cstring());
+  
+  KalmanFilterOutput* output = alg->run();
+  
+  if (!write_to_file_at_each_iteration)
+  {
+    if (strcmp(results_name_in.get_cstring(),"") != 0)
+      output->write(results_name_in.get_cstring());
+    
+  }
+  
+  double log_likelihood = output->log_likelihood;
+  
+  delete output;
+  delete alg;
+  
+  return log_likelihood;
+  
+}
+
+EnsembleKalmanFilter* get_ensemble_kalman_filter(RandomNumberGenerator* rng,
+                                                 Data* the_data,
+                                                 const List &model,
+                                                 const List &parameters,
+                                                 const List &algorithm_parameter_list,
+                                                 size_t number_of_ensemble_members,
+                                                 //const List &enk_likelihood_index_method,
+                                                 //const List &enk_shifter_method,
+                                                 size_t enk_iterations_to_store,
+                                                 bool write_to_file_at_each_iteration,
+                                                 bool parallel_in,
+                                                 size_t grain_size_in,
+                                                 const String &results_name_in,
+                                                 size_t* seed,
+                                                 std::vector<Data> &data_created_in_get_measurement_covariance_estimators)
+{
+
   std::vector<MeasurementCovarianceEstimator*> estimators;
   
   IndependentProposalKernel* proposal_in;
   proposal_in = get_prior_as_simulate_only_proposal(model,
                                                     parameters);
   
+  std::vector<size_t> enk_likelihood_indices = get_enk_likelihood_indices(model,parameters);
+  
+  /*
+  for (size_t i=0; i<enk_likelihood_indices.size(); ++i)
+  {
+    std::cout << enk_likelihood_indices[i] << std::endl;
+  }
+  */
   
   EnsembleShifter* shifter = get_enk_shifter_method(model,
-                                                    parameters,
-                                                    enk_shifter_method);
+                                                    parameters);
+  
+  //std::cout << shifter << std::endl;
   
   bool smcfixed_flag = true;
   
-  List filtering_info = get_filtering_info(parameters,
-                                           filtering_options_list);
+  List filtering_info = get_filtering_info(model,parameters);
   
   
   std::string index_name_in = filtering_info[0];
@@ -6127,10 +6577,10 @@ double do_ensemble_kalman_filter(const List &model,
   if (first_index_in>last_index_in)
     stop("Cannot construct a filter where the first index is bigger than the last.");
   
-  if ( (measurement_name_in=="") && (last_index_in>=the_data.min_n_rows()) )
+  if ( (measurement_name_in=="") && (last_index_in>=the_data->min_n_rows()) )
     stop("Last index goes past the end of the data.");
   
-  if ( (measurement_name_in!="") && (last_index_in>=the_data[measurement_name_in].n_rows) )
+  if ( (measurement_name_in!="") && (last_index_in>=(*the_data)[measurement_name_in].n_rows) )
     stop("Last index goes past the end of the data.");
   
   Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list);
@@ -6143,115 +6593,146 @@ double do_ensemble_kalman_filter(const List &model,
   std::vector<MeasurementCovarianceEstimator*> measurement_covariance_estimators_in;
   
   std::shared_ptr<Transform> transform = NULL;
-
-  measurement_covariance_estimators_in = get_measurement_covariance_estimators(&rng,
-                                                                               &seed,
-                                                                               data_pointer,
+  
+  std::vector<size_t> enk_indices = get_enk_likelihood_indices(model,parameters);
+  
+  measurement_covariance_estimators_in = get_measurement_covariance_estimators(rng,
+                                                                               seed,
+                                                                               the_data,
                                                                                model,
                                                                                parameters,
-                                                                               enk_likelihood_index_method,
+                                                                               enk_indices,
                                                                                transform,
                                                                                data_created_in_get_measurement_covariance_estimators);
   
+  /*
+  for (size_t i=0; i<measurement_covariance_estimators_in.size(); ++i)
+  {
+    std::cout << i << std::endl;
+  }
+  */
   
   if (write_to_file_at_each_iteration)
   {
-    EnsembleKalmanFilter* alg = new EnsembleKalmanFilter(&rng,
-                                                         &seed,
-                                                         data_pointer,
-                                                         enk_iterations_to_store,
-                                                         index_name_in,
-                                                         time_diff_name_in,
-                                                         first_index_in,
-                                                         last_index_in,
-                                                         predictions_per_update_in,
-                                                         update_time_step_in,
-                                                         initial_time_in,
-                                                         number_of_ensemble_members,
-                                                         shifter,
-                                                         NULL,
-                                                         proposal_in,
-                                                         transition,
-                                                         measurement_covariance_estimators_in,
-                                                         smcfixed_flag,
-                                                         true,
-                                                         parallel_in,
-                                                         grain_size_in,
-                                                         results_name_in.get_cstring());
-    
-    EnsembleKalmanOutput* output = alg->run();
-    
-    double log_likelihood = output->log_likelihood;
-    
-    delete output;
-    delete alg;
-    
-    return log_likelihood;
+    return new EnsembleKalmanFilter(rng,
+                                    seed,
+                                    the_data,
+                                    enk_iterations_to_store,
+                                    index_name_in,
+                                    time_diff_name_in,
+                                    first_index_in,
+                                    last_index_in,
+                                    predictions_per_update_in,
+                                    update_time_step_in,
+                                    initial_time_in,
+                                    number_of_ensemble_members,
+                                    shifter,
+                                    NULL,
+                                    proposal_in,
+                                    transition,
+                                    measurement_covariance_estimators_in,
+                                    smcfixed_flag,
+                                    true,
+                                    parallel_in,
+                                    grain_size_in,
+                                    results_name_in.get_cstring());
     
   }
   else
   {
-    EnsembleKalmanFilter* alg = new EnsembleKalmanFilter(&rng,
-                                                         &seed,
-                                                         data_pointer,
-                                                         enk_iterations_to_store,
-                                                         index_name_in,
-                                                         time_diff_name_in,
-                                                         first_index_in,
-                                                         last_index_in,
-                                                         predictions_per_update_in,
-                                                         update_time_step_in,
-                                                         initial_time_in,
-                                                         number_of_ensemble_members,
-                                                         shifter,
-                                                         NULL,
-                                                         proposal_in,
-                                                         transition,
-                                                         measurement_covariance_estimators_in,
-                                                         smcfixed_flag,
-                                                         true,
-                                                         parallel_in,
-                                                         grain_size_in,
-                                                         "");
-    
-    EnsembleKalmanOutput* output = alg->run();
-    
-    if (strcmp(results_name_in.get_cstring(),"") != 0)
-      output->write(results_name_in.get_cstring());
-    
-    double log_likelihood = output->log_likelihood;
-    
-    delete output;
-    delete alg;
-    
-    return log_likelihood;
+    return new EnsembleKalmanFilter(rng,
+                                    seed,
+                                    the_data,
+                                    enk_iterations_to_store,
+                                    index_name_in,
+                                    time_diff_name_in,
+                                     first_index_in,
+                                    last_index_in,
+                                    predictions_per_update_in,
+                                    update_time_step_in,
+                                    initial_time_in,
+                                    number_of_ensemble_members,
+                                    shifter,
+                                    NULL,
+                                    proposal_in,
+                                    transition,
+                                    measurement_covariance_estimators_in,
+                                    smcfixed_flag,
+                                    true,
+                                    parallel_in,
+                                    grain_size_in,
+                                    "");
     
   }
   
 }
 
 // [[Rcpp::export]]
-double do_particle_filter(const List &model,
-                          const List &parameters,
-                          const List &algorithm_parameter_list,
-                          size_t number_of_particles,
-                          const List &filtering_options_list,
-                          const List &adaptive_resampling_method,
-                          size_t smc_iterations_to_store,
-                          bool write_to_file_at_each_iteration,
-                          bool parallel_in,
-                          size_t grain_size_in,
-                          const String &results_name_in,
-                          size_t seed)
+double do_ensemble_kalman_filter(const List &model,
+                                 const List &parameters,
+                                 const List &algorithm_parameter_list,
+                                 size_t number_of_ensemble_members,
+                                 size_t enk_iterations_to_store,
+                                 bool write_to_file_at_each_iteration,
+                                 bool parallel_in,
+                                 size_t grain_size_in,
+                                 const String &results_name_in,
+                                 size_t seed)
 {
   
   RandomNumberGenerator rng;
   
   Data the_data = get_data(model);
-  Data* data_pointer = &the_data;
   
-  std::vector<Data> data_created_in_get_likelihood_estimators;
+  std::vector<Data> data_created_in_get_measurement_covariance_estimators;
   
+  EnsembleKalmanFilter* alg = get_ensemble_kalman_filter(&rng,
+                                                         &the_data,
+                                                         model,
+                                                         parameters,
+                                                         algorithm_parameter_list,
+                                                         number_of_ensemble_members,
+                                                         enk_iterations_to_store,
+                                                         write_to_file_at_each_iteration,
+                                                         parallel_in,
+                                                         grain_size_in,
+                                                         results_name_in,
+                                                         &seed,
+                                                         data_created_in_get_measurement_covariance_estimators);
+  
+  
+  EnsembleKalmanOutput* output = alg->run();
+  
+  if (!write_to_file_at_each_iteration)
+  {
+    if (strcmp(results_name_in.get_cstring(),"") != 0)
+      output->write(results_name_in.get_cstring());
+  }
+
+  double log_likelihood = output->log_likelihood;
+  
+  delete output;
+  delete alg;
+  
+  return log_likelihood;
+  
+}
+
+ParticleFilter* get_particle_filter(RandomNumberGenerator* rng,
+                                    Data* the_data,
+                                    const List &model,
+                                    const List &parameters,
+                                    const List &algorithm_parameter_list,
+                                    size_t number_of_particles,
+                                    size_t smc_iterations_to_store,
+                                    bool write_to_file_at_each_iteration,
+                                    bool parallel_in,
+                                    size_t grain_size_in,
+                                    const String &results_name_in,
+                                    size_t* seed,
+                                    std::vector<Data> &data_created_in_get_likelihood_estimators,
+                                    std::vector<Data> &data_created_in_get_measurement_covariance_estimators)
+{
   std::vector<LikelihoodEstimator*> likelihood_estimators;
   IndependentProposalKernel* proposal_in;
   bool proposal_is_evaluated_in;
@@ -6272,13 +6753,14 @@ double do_particle_filter(const List &model,
   {
     proposal_in = get_proposal(model,
                                parameters,
-                               &the_data);
+                               the_data);
     
-    likelihood_estimators = get_likelihood_estimators(&rng,
-                                                      &seed,
-                                                      &the_data,
+    likelihood_estimators = get_likelihood_estimators(rng,
+                                                      seed,
+                                                      the_data,
                                                       model,
                                                       parameters,
+                                                      algorithm_parameter_list,
                                                       true,
                                                       sequencer_types,
                                                       sequencer_variables,
@@ -6288,7 +6770,8 @@ double do_particle_filter(const List &model,
                                                       evaluated_in_pf_weight_update,
                                                       any_annealing,
                                                       factors_affected_by_smc_sequence,
-                                                      data_created_in_get_likelihood_estimators);
+                                                      data_created_in_get_likelihood_estimators,
+                                                      data_created_in_get_measurement_covariance_estimators);
     
     proposal_is_evaluated_in = true;
     
@@ -6300,11 +6783,12 @@ double do_particle_filter(const List &model,
     proposal_in = get_prior_as_simulate_only_proposal(model,
                                                       parameters);
     
-    likelihood_estimators = get_likelihood_estimators(&rng,
-                                                      &seed,
-                                                      &the_data,
+    likelihood_estimators = get_likelihood_estimators(rng,
+                                                      seed,
+                                                      the_data,
                                                       model,
                                                       parameters,
+                                                      algorithm_parameter_list,
                                                       false,
                                                       sequencer_types,
                                                       sequencer_variables,
@@ -6314,7 +6798,8 @@ double do_particle_filter(const List &model,
                                                       evaluated_in_pf_weight_update,
                                                       any_annealing,
                                                       factors_affected_by_smc_sequence,
-                                                      data_created_in_get_likelihood_estimators);
+                                                      data_created_in_get_likelihood_estimators,
+                                                      data_created_in_get_measurement_covariance_estimators);
     
     proposal_is_evaluated_in = false;
     
@@ -6324,11 +6809,9 @@ double do_particle_filter(const List &model,
   
   SMCCriterion* resampling_criterion = get_resampling_method(model,
                                                              parameters,
-                                                             adaptive_resampling_method,
                                                              number_of_particles);
   
-  List filtering_info = get_filtering_info(parameters,
-                                           filtering_options_list);
+  List filtering_info = get_filtering_info(model,parameters);
   
   std::string index_name_in = filtering_info[0];
   size_t first_index_in = filtering_info[1];
@@ -6343,10 +6826,10 @@ double do_particle_filter(const List &model,
   if (first_index_in>last_index_in)
     stop("Cannot construct a filter where the first index is bigger than the last.");
   
-  if ( (measurement_name_in=="") && (last_index_in>=the_data.min_n_rows()) )
+  if ( (measurement_name_in=="") && (last_index_in>=the_data->min_n_rows()) )
     stop("Last index goes past the end of the data.");
   
-  if ( (measurement_name_in!="") && (last_index_in>=the_data[measurement_name_in].n_rows) )
+  if ( (measurement_name_in!="") && (last_index_in>=(*the_data)[measurement_name_in].n_rows) )
     stop("Last index goes past the end of the data.");
   
   Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list);
@@ -6380,90 +6863,122 @@ double do_particle_filter(const List &model,
   
   if (write_to_file_at_each_iteration)
   {
-    ParticleFilter* alg = new ParticleFilter(&rng,
-                                             &seed,
-                                             data_pointer,
-                                             Parameters(),
-                                             number_of_particles,
-                                             smc_iterations_to_store,
-                                             smc_iterations_to_store,
-                                             index_name_in,
-                                             time_diff_name_in,
-                                             first_index_in,
-                                             last_index_in,
-                                             predictions_per_update_in,
-                                             update_time_step_in,
-                                             initial_time_in,
-                                             resampling_criterion,
-                                             likelihood_estimators,
-                                             proposal_in,
-                                             transition_model,
-                                             transition_proposal,
-                                             evaluated_in_initial_weight_update,
-                                             evaluated_in_pf_weight_update,
-                                             proposal_is_evaluated_in,
-                                             transition_proposal_is_evaluated_in,
-                                             smcfixed_flag,
-                                             true,
-                                             false,
-                                             parallel_in,
-                                             grain_size_in,
-                                             results_name_in.get_cstring());
-    
-    SMCOutput* output = alg->run();
-    
-    double log_likelihood = output->log_likelihood;
-    
-    delete output;
-    delete alg;
-    
-    return log_likelihood;
+    return new ParticleFilter(rng,
+                              seed,
+                              the_data,
+                              Parameters(),
+                              number_of_particles,
+                              smc_iterations_to_store,
+                              smc_iterations_to_store,
+                              index_name_in,
+                              time_diff_name_in,
+                              first_index_in,
+                              last_index_in,
+                              predictions_per_update_in,
+                              update_time_step_in,
+                              initial_time_in,
+                              resampling_criterion,
+                              likelihood_estimators,
+                              proposal_in,
+                              transition_model,
+                              transition_proposal,
+                              evaluated_in_initial_weight_update,
+                              evaluated_in_pf_weight_update,
+                              proposal_is_evaluated_in,
+                              transition_proposal_is_evaluated_in,
+                              smcfixed_flag,
+                              true,
+                              false,
+                              parallel_in,
+                              grain_size_in,
+                              results_name_in.get_cstring());
     
   }
   else
   {
-    ParticleFilter* alg = new ParticleFilter(&rng,
-                                             &seed,
-                                             data_pointer,
-                                             Parameters(),
-                                             number_of_particles,
-                                             smc_iterations_to_store,
-                                             smc_iterations_to_store,
-                                             index_name_in,
-                                             time_diff_name_in,
-                                             first_index_in,
-                                             last_index_in,
-                                             predictions_per_update_in,
-                                             update_time_step_in,
-                                             initial_time_in,
-                                             resampling_criterion,
-                                             likelihood_estimators,
-                                             proposal_in,
-                                             transition_model,
-                                             transition_proposal,
-                                             evaluated_in_initial_weight_update,
-                                             evaluated_in_pf_weight_update,
-                                             proposal_is_evaluated_in,
-                                             transition_proposal_is_evaluated_in,
-                                             smcfixed_flag,
-                                             true,
-                                             false,
-                                             parallel_in,
-                                             grain_size_in,
-                                             "");
-    
-    SMCOutput* output = alg->run();
-    
-    if (strcmp(results_name_in.get_cstring(),"") != 0)
-      output->write(results_name_in.get_cstring());
-    
-    double log_likelihood = output->log_likelihood;
-    
-    delete output;
-    delete alg;
-    
-    return log_likelihood;
+    return new ParticleFilter(rng,
+                              seed,
+                              the_data,
+                              Parameters(),
+                              number_of_particles,
+                              smc_iterations_to_store,
+                              smc_iterations_to_store,
+                              index_name_in,
+                              time_diff_name_in,
+                              first_index_in,
+                              last_index_in,
+                              predictions_per_update_in,
+                              update_time_step_in,
+                              initial_time_in,
+                              resampling_criterion,
+                              likelihood_estimators,
+                              proposal_in,
+                              transition_model,
+                              transition_proposal,
+                              evaluated_in_initial_weight_update,
+                              evaluated_in_pf_weight_update,
+                              proposal_is_evaluated_in,
+                              transition_proposal_is_evaluated_in,
+                              smcfixed_flag,
+                              true,
+                              false,
+                              parallel_in,
+                              grain_size_in,
+                              "");
     
   }
+  
+}
+
+
+// [[Rcpp::export]]
+double do_particle_filter(const List &model,
+                          const List &parameters,
+                          const List &algorithm_parameter_list,
+                          size_t number_of_particles,
+                          size_t smc_iterations_to_store,
+                          bool write_to_file_at_each_iteration,
+                          bool parallel_in,
+                          size_t grain_size_in,
+                          const String &results_name_in,
+                          size_t seed)
+{
+  
+  RandomNumberGenerator rng;
+  
+  Data the_data = get_data(model);
+  
+  std::vector<Data> data_created_in_get_likelihood_estimators;
+  std::vector<Data> data_created_in_get_measurement_covariance_estimators;
+  
+  ParticleFilter* alg = get_particle_filter(&rng,
+                                            &the_data,
+                                            model,
+                                            parameters,
+                                            algorithm_parameter_list,
+                                            number_of_particles,
+                                            smc_iterations_to_store,
+                                            write_to_file_at_each_iteration,
+                                            parallel_in,
+                                            grain_size_in,
+                                            results_name_in,
+                                            &seed,
+                                            data_created_in_get_likelihood_estimators,
+                                            data_created_in_get_measurement_covariance_estimators);
+  
+  SMCOutput* output = alg->run();
+  
+  if (write_to_file_at_each_iteration)
+  {
+    if (strcmp(results_name_in.get_cstring(),"") != 0)
+      output->write(results_name_in.get_cstring());
+  }
+  
+  double log_likelihood = output->log_likelihood;
+  
+  delete output;
+  delete alg;
+  
+  return log_likelihood;
   
 }

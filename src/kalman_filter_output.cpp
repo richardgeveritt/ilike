@@ -72,6 +72,7 @@ void KalmanFilterOutput::make_copy(const KalmanFilterOutput &another)
   this->current_predicted_covariance = another.current_predicted_covariance;
   this->current_posterior_mean = another.current_posterior_mean;
   this->current_posterior_covariance = another.current_posterior_covariance;
+  this->log_normalising_constant_ratios = another.log_normalising_constant_ratios;
   this->schedule_parameters = another.schedule_parameters;
   this->lag = another.lag;
   
@@ -300,12 +301,25 @@ void KalmanFilterOutput::write_to_file(const std::string &dir_name,
     
     size_t llhd_index = this->llhds.size()-1-distance_from_end;
     
+    /*
+    std::cout << llhd_index << std::endl;
+    std::cout << this->llhds.size() << std::endl;
+    std::cout << this->log_normalising_constant_ratios.size() << std::endl;
+    std::cout << this->schedule_parameters.size() << std::endl;
+    std::cout << this->posterior_means.size() << std::endl;
+    std::cout << this->posterior_covariances.size() << std::endl;
+    std::cout << this->predicted_means.size() << std::endl;
+    std::cout << this->predicted_covariances.size() << std::endl;
+    std::cout << *this->estimator->data << std::endl;
+    */
+    
     //if (int(this->llhds.size())-1-int(distance_from_end)>=0)
     //{
     if (!this->estimator->log_likelihood_file_stream.is_open())
     {
       this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
     }
+    
     if (this->estimator->log_likelihood_file_stream.is_open())
     {
       this->estimator->log_likelihood_file_stream << this->llhds[llhd_index] << std::endl;
@@ -315,6 +329,7 @@ void KalmanFilterOutput::write_to_file(const std::string &dir_name,
     {
       Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + " cannot be opened.");
     }
+    
     //}
     
     if (!this->estimator->time_file_stream.is_open())
@@ -339,6 +354,16 @@ void KalmanFilterOutput::write_to_file(const std::string &dir_name,
     if (this->posterior_means.size() > distance_from_end)
     {
       size_t deque_index = this->posterior_means.size()-1-distance_from_end;
+      
+      /*
+      std::cout << deque_index << std::endl;
+      std::cout << this->log_normalising_constant_ratios.size() << std::endl;
+      std::cout << this->schedule_parameters.size() << std::endl;
+      std::cout << this->posterior_means.size() << std::endl;
+      std::cout << this->posterior_covariances.size() << std::endl;
+      std::cout << this->predicted_means.size() << std::endl;
+      std::cout << this->predicted_covariances.size() << std::endl;
+      */
       
       if (!this->estimator->vector_variables_file_stream.is_open())
       {
@@ -390,6 +415,7 @@ void KalmanFilterOutput::write_to_file(const std::string &dir_name,
       {
         make_directory(kf_iteration_directory);
       }
+      
       
       if (!this->estimator->incremental_log_likelihood_file_stream.is_open())
       {
@@ -474,6 +500,7 @@ void KalmanFilterOutput::write_to_file(const std::string &dir_name,
       {
         Rcpp::stop("File " + kf_iteration_directory + "/predicted_covariances.txt" + " cannot be opened.");
       }
+      
       
       //this->close_ofstreams(deque_index);
       this->close_ofstreams();

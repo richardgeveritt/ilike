@@ -61,13 +61,13 @@ smc_mcmc_move = function(model,
   }
 
   # Adaptive resampling method.
-  adaptive_resampling_method = get_method(model,"adaptive_resampling")
-
-  if (is.null(adaptive_resampling_method))
-  {
-    print("No method set for adaptive resampling: defaulting to resampling whenever the ESS drops below the number of particles.")
-    adaptive_resampling_method = list(method='ess',values=as.list(paste(number_of_particles)))
-  }
+  # adaptive_resampling_method = get_method(model,"adaptive_resampling")
+  #
+  # if (is.null(adaptive_resampling_method))
+  # {
+  #   print("No method set for adaptive resampling: defaulting to resampling whenever the ESS drops below the number of particles.")
+  #   adaptive_resampling_method = list(method='ess',values=as.list(paste(number_of_particles)))
+  # }
 
   # Adaptive target method.
   adaptive_target_method = get_method(model,"adaptive_target")
@@ -109,7 +109,6 @@ smc_mcmc_move = function(model,
                           number_of_particles,
                           mcmc_termination_method,
                           mcmc_weights_method,
-                          adaptive_resampling_method,
                           smc_sequencer_method,
                           adaptive_target_method,
                           smc_termination_method,
