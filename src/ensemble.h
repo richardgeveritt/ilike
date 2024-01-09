@@ -7,6 +7,7 @@ class SequentialEnsembleKalmanWorker;
 class PackingInstructions;
 class EnsembleFactors;
 class AdjustmentEnsembleShifter;
+class SquareRootEnsembleShifter;
 class MoveOutput;
 class GaussianSMCAdaptor;
 class EnsembleKalmanMFDS;
@@ -105,6 +106,7 @@ protected: // Things that can be accessed in this class and subclasses.
   
   friend SequentialEnsembleKalmanWorker;
   friend AdjustmentEnsembleShifter;
+  friend SquareRootEnsembleShifter;
   //friend GaussianSMCAdaptor;
   friend EnsembleKalmanMFDS;
   friend VectorEnsembleFactors;

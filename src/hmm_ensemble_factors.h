@@ -62,6 +62,10 @@ public:
                                          const std::vector<arma::mat> &Yhats,
                                          double inverse_incremental_temperature) const;
   
+  std::vector<arma::mat> get_sqrt_adjustments(const arma::mat &Sigma,
+                                              const std::vector<arma::mat> &HSigmaHts,
+                                              double inverse_incremental_temperature) const;
+  
   double get_incremental_likelihood(Ensemble* ensemble);
   double get_inversion_incremental_likelihood(Ensemble* ensemble,
                                               double inverse_incremental_temperature);

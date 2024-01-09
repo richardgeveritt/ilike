@@ -61,6 +61,10 @@ public:
                                                  double inverse_incremental_temperature) const=0;
   */
   
+  virtual std::vector<arma::mat> get_sqrt_adjustments(const arma::mat &Sigma,
+                                                      const std::vector<arma::mat> &HSigmaHts,
+                                                      double inverse_incremental_temperature) const=0;
+  
   virtual std::vector<arma::mat> get_adjustments(const arma::mat &Zf,
                                                  const arma::mat &Dhathalf,
                                                  const arma::mat &P,

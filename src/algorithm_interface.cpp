@@ -75,6 +75,8 @@
 #include "exact_kalman_updater.h"
 #include "ensemble_kalman_filter.h"
 #include "particle_filter.h"
+#include "square_root_ensemble_shifter.h"
+#include "adjustment_ensemble_shifter.h"
 
 //#include "linear_gaussian_state_space_model.h"
 //#include "enk_linear_gaussian_state_space_model.h"
@@ -1712,7 +1714,23 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
               parallel = info[10];
               grain_size = info[11];
               
-              EnsembleShifter* shifter = new StochasticEnsembleShifter();
+              EnsembleShifter* shifter;
+              if (shifter_name=="stochastic")
+              {
+                shifter = new StochasticEnsembleShifter();
+              }
+              else if (shifter_name=="sqrt")
+              {
+                shifter = new SquareRootEnsembleShifter();
+              }
+              else if (shifter_name=="adjustment")
+              {
+                shifter = new AdjustmentEnsembleShifter();
+              }
+              else
+              {
+                Rcpp::stop("Invalid shifter type from EnKF");
+              }
               
               bool adaptive = false;
               for (auto k=sequencer_variables.begin();
@@ -5116,18 +5134,33 @@ EnsembleShifter* get_enk_shifter_method(const List &model,
     for (size_t i=0; i<method_info.size(); ++i)
     {
       List current_method = method_info[i];
-      if (current_method.containsElementNamed("enki_shifter"))
+      if (current_method.containsElementNamed("enk_shifter"))
       {
-        std::string method = current_method["enki_shifter"];
+        List method = current_method["enk_shifter"];
         
-        if (method=="stochastic")
+        if (method.containsElementNamed("type"))
         {
-          enk_shifter = new StochasticEnsembleShifter();
-          return enk_shifter;
-        }
-        else
-        {
-          stop("No valid method found for EnK shifter.");
+          std::string type = method["type"];
+          
+          if (type=="stochastic")
+          {
+            enk_shifter = new StochasticEnsembleShifter();
+            return enk_shifter;
+          }
+          else if (type=="sqrt")
+          {
+            enk_shifter = new SquareRootEnsembleShifter();
+            return enk_shifter;
+          }
+          else if (type=="adjustment")
+          {
+            enk_shifter = new AdjustmentEnsembleShifter();
+            return enk_shifter;
+          }
+          else
+          {
+            stop("No valid method found for EnK shifter.");
+          }
         }
       }
     }

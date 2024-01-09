@@ -137,7 +137,7 @@ arma::mat GenericMeasurementCovarianceEstimator::get_adjustment(const arma::mat 
                                                                 const arma::mat &P,
                                                                 const arma::mat &Vtranspose,
                                                                 const arma::mat &Yhat,
-                                                                double inverse_incremental_temperature)
+                                                                double inverse_incremental_temperature) const
 {
   // follows https://arxiv.org/abs/2006.02941
   arma::mat I;
@@ -152,6 +152,34 @@ arma::mat GenericMeasurementCovarianceEstimator::get_adjustment(const arma::mat 
   Dsqrt.diag() = arma::sqrt(diagD);
   
   return P*Dhathalf*U*Dsqrt*arma::pinv(Dhathalf)*P.t();
+}
+
+arma::mat GenericMeasurementCovarianceEstimator::get_sqrt_adjustment(const arma::mat &Sigma,
+                                                                     const arma::mat &HSigmaHt,
+                                                                     double inverse_incremental_temperature) const
+{
+  Rcpp::stop("GenericMeasurementCovarianceEstimator::get_sqrt_adjustment - not yet implemented.");
+  
+  /*
+   arma::mat sqrtV = arma::chol(inverse_incremental_temperature*this->get_measurement_covariance());
+   arma::mat sqrtS = arma::chol(HSigmaHt + inverse_incremental_temperature*this->get_measurement_covariance());
+   
+   arma::mat stacked_H = this->As[0];
+   if (this->As.size()>1)
+   {
+   for (size_t i=1; i<this->As.size(); ++i)
+   {
+   stacked_H = arma::join_cols(stacked_H, As[i]);
+   }
+   }
+   
+   arma::mat K = Sigma*stacked_H.t() * arma::inv_sympd(sqrtS) * arma::inv_sympd(sqrtS + sqrtV);
+   
+   arma::mat I;
+   I.eye(stacked_H.n_cols,stacked_H.n_cols);
+   
+   return I-K*stacked_H;
+   */
 }
 
 /*

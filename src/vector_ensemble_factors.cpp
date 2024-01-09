@@ -329,6 +329,23 @@ std::vector<arma::mat> VectorEnsembleFactors::get_adjustments(const arma::mat &Z
   return adjustments;
 }
 
+std::vector<arma::mat> VectorEnsembleFactors::get_sqrt_adjustments(const arma::mat &Sigma,
+                                                                   const std::vector<arma::mat> &HSigmaHts,
+                                                                   double inverse_incremental_temperature) const
+{
+  std::vector<arma::mat> adjustments;
+  adjustments.reserve(this->measurement_covariance_estimators.size());
+  for (size_t i=0;
+       i<this->measurement_covariance_estimators.size();
+       ++i)
+  {
+    adjustments.push_back(this->measurement_covariance_estimators[i]->get_sqrt_adjustment(Sigma,
+                                                                                          HSigmaHts[i],
+                                                                                          inverse_incremental_temperature));
+  }
+  return adjustments;
+}
+
 double VectorEnsembleFactors::get_incremental_likelihood(Ensemble* ensemble)
 {
   double inverse_incremental_temperature = 1.0;///(this->temperature - this->previous_temperature);

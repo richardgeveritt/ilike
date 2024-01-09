@@ -26,6 +26,17 @@ public:
   
   arma::mat get_measurement_covariance() const;
   
+  arma::mat get_adjustment(const arma::mat &Zf,
+                           const arma::mat &Dhathalf,
+                           const arma::mat &P,
+                           const arma::mat &Vtranspose,
+                           const arma::mat &Yhat,
+                           double inverse_incremental_temperature) const;
+  
+  arma::mat get_sqrt_adjustment(const arma::mat &Sigma,
+                                const arma::mat &HSigmaHt,
+                                double inverse_incremental_temperature) const;
+  
   void setup();
   void setup(const Parameters &parameters);
 
