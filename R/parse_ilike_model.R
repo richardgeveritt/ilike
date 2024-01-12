@@ -3176,6 +3176,11 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
         {
           is_like_function = TRUE
           ilike_type = paste(ilike_split_name[2:length(ilike_split_name)],collapse = "::")
+
+          if (grepl("=", ilike_split_name[1]))
+          {
+            stop("When specifying an ilike function, you should not have an output (e.g. don't use x=ilike::mvnorm(...)).")
+          }
         }
         else
         {

@@ -1,10 +1,11 @@
 #' MCMC
 #'
 #' @param model A file containing the model, or a pre-compiled model list.
+#' @param results_name The name of the directory to which results will be written.
+#' @param results_path (optional) The path in which the results folder will be created (current working directory is the default).
 #' @param number_of_chains (optional) The number of chains.
 #' @param initial_values (optional) A list of lists containing the initial values for the chains.
 #' @param parallel (optional) Set to true to perform the MCMC chains in parallel, false for serial.
-#' @param results_directory The name of the directory to which results will be written.
 #' @param model_parameter_list (optional) A list containing parameters for the model.
 #' @param algorithm_parameter_list (optional) A list containing named parameters for the algorithm.
 #' @param external_packages (optional) A vector of names of other R packages the functions rely on.
@@ -17,10 +18,11 @@
 #' @return Nothing: output can be found in the output_directory.
 #' @export
 mcmc = function(model,
+                results_name,
+                results_path = getwd(),
                 number_of_chains=1,
                 initial_values = list(),
                 parallel = FALSE,
-                results_directory = getwd(),
                 model_parameter_list = list(),
                 algorithm_parameter_list = list(),
                 external_packages = c(),
@@ -31,7 +33,6 @@ mcmc = function(model,
                 seed = NULL,
                 grain_size = 100000)
 {
-  results_directory = paste(results_directory,"/ilike",sep="")
 
   if ((is.character(model)) && (length(model) == 1))
     model = compile(filename = model,
@@ -41,6 +42,8 @@ mcmc = function(model,
                     julia_required_libraries = julia_required_libraries,
                     verify_cpp_function_types = verify_cpp_function_types,
                     keep_temporary_model_code = keep_temporary_model_code)
+
+  results_directory = make_results_directory(results_name,results_path)
 
   if (is.null(seed))
   {
@@ -60,7 +63,7 @@ mcmc = function(model,
 
   if (length(initial_values)==0)
   {
-    print("No initial values set: initial points drawn from the prior.")
+    stop("Initial values set using a list. Future versions will allow initial points drawn from the prior.")
   }
   else
   {

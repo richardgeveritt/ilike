@@ -70,7 +70,7 @@ get_method = function(model,method_name)
   }
   else
   {
-    stop(paste("Model file needs to specify a valid method for ",method_name,".",sep=""))
+    return(output_method)
   }
 
   return(output_method)

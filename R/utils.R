@@ -93,3 +93,41 @@ cess <- function(normalised_log_weights, log_incremental_weights)
     return(exp(log(length(log_incremental_weights)) + 2*(log_sum_exp(normalised_log_weights + log_incremental_weights)) - log_sum_exp(normalised_log_weights + 2*log_incremental_weights)))
   }
 }
+
+
+make_results_directory <- function(results_name,results_path)
+{
+  if (!dir.exists(results_path))
+  {
+    stop(paste("Directory ",results_path," does not exist.",sep=""))
+  }
+
+  # Check if path/name exists: if not, create it; if yes, check if we want to replace it.
+  results_directory = paste(results_path,"/",results_name,sep="")
+  if (dir.exists(results_directory))
+  {
+    if (interactive())
+    {
+      if (utils::askYesNo(paste("Results directory ",results_directory," already exists.\nDo you want to delete this directory just for the sake of getting some new results?\nCAUTION: this operation is not reversible!",sep="")))
+      {
+        unlink(results_directory, recursive=TRUE)
+        dir.create(results_directory)
+      }
+      else
+      {
+        stop("Exiting.")
+      }
+    }
+    else
+    {
+      stop(paste("Results directory ",results_directory," already exists - cannot overwrite.",sep=""))
+    }
+  }
+  else
+  {
+    dir.create(results_directory)
+  }
+
+  results_directory = paste(results_directory,"/ilike",sep="")
+  return(results_directory)
+}

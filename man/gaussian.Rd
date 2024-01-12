@@ -3,7 +3,7 @@
 \docType{data}
 \name{gaussian}
 \alias{gaussian}
-\title{One hundred points simulated from a Gaussian distribution.}
+\title{100 points simulated from a Gaussian distribution.}
 \format{
 A vector of 100 variables
 }

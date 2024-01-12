@@ -344,6 +344,39 @@ inline arma::colvec dnorm(const arma::colvec &x, double mean, double sd)
 
 }
 
+inline arma::colvec dnorm(const arma::colvec &x, const arma::colvec &mean, double sd)
+{
+  size_t n = x.size();
+  arma::colvec result(n);
+  
+  if (sd<0)
+  {
+    for (size_t i = 0; i<n; ++i)
+      result[i] = NAN;
+    return result;
+  }
+  if (sd==0)
+  {
+    for (size_t i = 0; i<n; ++i)
+    {
+      if (x[i]==mean[i])
+      {
+        result[i] = arma::datum::inf;
+      }
+      else
+      {
+        result[i] = -arma::datum::inf;
+      }
+    }
+    return result;
+  }
+  
+  for (size_t i = 0; i<n; ++i)
+    result[i] = -log(sd) - 0.5*log(2.0*M_PI) - 0.5*pow((x[i]-mean[i])/sd,2.0);
+  return result;
+  
+}
+
 inline double pnorm(double x, double mean, double sd)
 {
   return 0.5*(1.0 + erf((x-mean)/(sd*sqrt(2.0))));

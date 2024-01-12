@@ -1,9 +1,10 @@
 #' SMC with an MCMC move
 #'
 #' @param model A file containing the model, or a pre-compiled model list.
+#' @param results_name The name of the directory to which results will be written.
+#' @param results_path (optional) The path in which the results folder will be created (current working directory is the default).
 #' @param number_of_particles The number of particles.
 #' @param parallel (optional) Set to true to perform the importance sampling in parallel, false for serial.
-#' @param results_directory (optional) The name of the directory to which results will be written.
 #' @param smc_iterations_to_store (optional) The number of iterations of SMC output stored in memory as the algorithm is running (cannot be fewer than 2).
 #' @param write_to_file_at_each_iteration (optional) Do we write the algorithm output to file at each SMC step (TRUE/FALSE)?
 #' @param model_parameter_list (optional) A list containing parameters for the model.
@@ -18,9 +19,10 @@
 #' @return Estimate of the marginal likelihood.
 #' @export
 smc_mcmc_move = function(model,
+                         results_name,
+                         results_path = getwd(),
                          number_of_particles,
                          parallel = FALSE,
-                         results_directory = getwd(),
                          smc_iterations_to_store = 2,
                          write_to_file_at_each_iteration = TRUE,
                          model_parameter_list = list(),
@@ -33,7 +35,6 @@ smc_mcmc_move = function(model,
                          seed = NULL,
                          grain_size = 100000)
 {
-  results_directory = paste(results_directory,"/ilike",sep="")
 
   if ((is.character(model)) && (length(model) == 1))
     model = compile(filename = model,
@@ -43,6 +44,8 @@ smc_mcmc_move = function(model,
                     julia_required_libraries = julia_required_libraries,
                     verify_cpp_function_types = verify_cpp_function_types,
                     keep_temporary_model_code = keep_temporary_model_code)
+
+  results_directory = make_results_directory(results_name,results_path)
 
   if (is.null(seed))
   {

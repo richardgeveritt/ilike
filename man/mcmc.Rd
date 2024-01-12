@@ -6,10 +6,11 @@
 \usage{
 mcmc(
   model,
+  results_name,
+  results_path = getwd(),
   number_of_chains = 1,
   initial_values = list(),
   parallel = FALSE,
-  results_directory = getwd(),
   model_parameter_list = list(),
   algorithm_parameter_list = list(),
   external_packages = c(),
@@ -24,13 +25,15 @@ mcmc(
 \arguments{
 \item{model}{A file containing the model, or a pre-compiled model list.}
 
+\item{results_name}{The name of the directory to which results will be written.}
+
+\item{results_path}{(optional) The path in which the results folder will be created (current working directory is the default).}
+
 \item{number_of_chains}{(optional) The number of chains.}
 
 \item{initial_values}{(optional) A list of lists containing the initial values for the chains.}
 
 \item{parallel}{(optional) Set to true to perform the MCMC chains in parallel, false for serial.}
-
-\item{results_directory}{The name of the directory to which results will be written.}
 
 \item{model_parameter_list}{(optional) A list containing parameters for the model.}
 

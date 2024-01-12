@@ -1,9 +1,10 @@
 #' Importance sampler.
 #'
 #' @param model A file containing the model, or a pre-compiled model list.
+#' @param results_name The name of the directory to which results will be written.
+#' @param results_path (optional) The path in which the results folder will be created (current working directory is the default).
 #' @param number_of_importance_points The number of importance points.
 #' @param parallel (optional) Set to true to perform the importance sampling in parallel, false for serial.
-#' @param results_directory (optional) The name of the directory to which results will be written.
 #' @param model_parameter_list (optional) A list containing parameters for the model.
 #' @param algorithm_parameter_list (optional) A list containing named parameters for the algorithm.
 #' @param external_packages (optional) A vector of names of other R packages the functions rely on.
@@ -29,8 +30,6 @@ importance_sample = function(model,
                              seed = NULL,
                              grain_size = 100000)
 {
-  results_directory = paste(results_directory,"/ilike",sep="")
-
   if ((is.character(model)) && (length(model) == 1))
     model = compile(filename = model,
                     model_parameter_list = model_parameter_list,
@@ -39,6 +38,8 @@ importance_sample = function(model,
                     julia_required_libraries = julia_required_libraries,
                     verify_cpp_function_types = verify_cpp_function_types,
                     keep_temporary_model_code = keep_temporary_model_code)
+
+  results_directory = make_results_directory(results_name,results_path)
 
   if (is.null(seed))
   {

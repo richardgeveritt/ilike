@@ -3619,12 +3619,6 @@ IndependentProposalKernel* get_prior_as_proposal(const List &model,
     stop("No suitable prior to use as proposal.");
   }
   
-  if (proposal==NULL)
-  {
-    stop("No suitable prior to use as proposal.");
-  }
-  else
-  {
     if (proposals.size()==1)
     {
       return proposal;
@@ -3633,7 +3627,6 @@ IndependentProposalKernel* get_prior_as_proposal(const List &model,
     {
       return new CompositeIndependentProposalKernel(proposals);
     }
-  }
 }
 
 IndependentProposalKernel* get_prior_as_simulate_only_proposal(const List &model,
@@ -4039,7 +4032,7 @@ ProposalKernel* get_unadjusted_proposal(const List &current_proposal,
                                                           cov);
           
         }
-        if (type=="unif_rw")
+        else if (type=="unif_rw")
         {
           List info = get_single_variable_one_double_parameter_info(model_parameters,
                                                                     proposal_info,
@@ -4052,7 +4045,7 @@ ProposalKernel* get_unadjusted_proposal(const List &current_proposal,
                                                          sd);
           
         }
-        if (type=="mvunif_rw")
+        else if (type=="mvunif_rw")
         {
           List info = get_single_variable_vector_parameter_info(model_parameters,
                                                                 proposal_info,
@@ -4373,7 +4366,7 @@ SymmetricProposalKernel* get_m_proposal(const List &current_proposal,
                                                           cov);
           
         }
-        if (type=="unif_rw")
+        else if (type=="unif_rw")
         {
           List info = get_single_variable_one_double_parameter_info(model_parameters,
                                                                     proposal_info,
@@ -4386,7 +4379,7 @@ SymmetricProposalKernel* get_m_proposal(const List &current_proposal,
                                                          sd);
           
         }
-        if (type=="mvunif_rw")
+        else if (type=="mvunif_rw")
         {
           List info = get_single_variable_vector_parameter_info(model_parameters,
                                                                 proposal_info,
