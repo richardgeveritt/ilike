@@ -5255,7 +5255,7 @@ check_types = function(blocks)
       which_index = which(names(current_factor) == "simulate_data_model")
       for (j in 1:length(which_index))
       {
-      if (inherits(ccurrent_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
+      if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
       {
         RcppXPtrUtils::checkXPtr(current_factor[[which_index[j]+1]],  "Data", c("RandomNumberGenerator&","const Parameters&"))
       }
@@ -6035,7 +6035,7 @@ compile <- function(filename,
     source(paste(basename,".R",sep=""))
   }
 
-  model_for_compilation_name = paste("model_for_compilation",nesting_level,"_",ceiling(runif(1, 0, 10^7)),".cpp",sep="")
+  model_for_compilation_name = paste("model_for_compilation",nesting_level,"_",ceiling(stats::runif(1, 0, 10^7)),".cpp",sep="")
   fileConn<-file(model_for_compilation_name,open="w")
 
   the_file = file(filename,open="r")
