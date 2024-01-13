@@ -29,8 +29,6 @@ particle_filter(
 
 \item{parallel}{(optional) Set to true to perform the importance sampling in parallel, false for serial.}
 
-\item{results_directory}{(optional) The name of the directory to which results will be written.}
-
 \item{smc_iterations_to_store}{(optional) The number of iterations of filter output stored in memory as the algorithm is running (cannot be fewer than 2).}
 
 \item{write_to_file_at_each_iteration}{(optional) Do we write the algorithm output to file at each filtering step (TRUE/FALSE)?}
@@ -52,6 +50,10 @@ particle_filter(
 \item{seed}{(optional) The seed for the random number generator.}
 
 \item{grain_size}{(optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).}
+
+\item{results_name}{The name of the directory to which results will be written.}
+
+\item{results_path}{(optional) The path in which the results folder will be created (current working directory is the default).}
 }
 \value{
 Estimate of the marginal likelihood.

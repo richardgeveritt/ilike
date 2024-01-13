@@ -21,8 +21,6 @@ kalman_filter(
 \arguments{
 \item{model}{A file containing the model, or a pre-compiled model list.}
 
-\item{results_directory}{(optional) The name of the directory to which results will be written.}
-
 \item{kf_iterations_to_store}{(optional) The number of iterations of filter output stored in memory as the algorithm is running (cannot be fewer than 2).}
 
 \item{write_to_file_at_each_iteration}{(optional) Do we write the algorithm output to file at each filtering step (TRUE/FALSE)?}
@@ -40,6 +38,10 @@ kalman_filter(
 \item{verify_cpp_function_types}{(optional) If TRUE, check the types of the parameters of user-defined .cpp functions. If FALSE (default), types are not checked.}
 
 \item{keep_temporary_model_code}{(optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE,}
+
+\item{results_name}{The name of the directory to which results will be written.}
+
+\item{results_path}{(optional) The path in which the results folder will be created (current working directory is the default).}
 }
 \value{
 Estimate of the marginal likelihood.

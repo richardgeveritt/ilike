@@ -27,8 +27,6 @@ importance_sample(
 
 \item{parallel}{(optional) Set to true to perform the importance sampling in parallel, false for serial.}
 
-\item{results_directory}{(optional) The name of the directory to which results will be written.}
-
 \item{model_parameter_list}{(optional) A list containing parameters for the model.}
 
 \item{algorithm_parameter_list}{(optional) A list containing named parameters for the algorithm.}
@@ -46,6 +44,10 @@ importance_sample(
 \item{seed}{(optional) The seed for the random number generator.}
 
 \item{grain_size}{(optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).}
+
+\item{results_name}{The name of the directory to which results will be written.}
+
+\item{results_path}{(optional) The path in which the results folder will be created (current working directory is the default).}
 }
 \value{
 Estimate of the marginal likelihood.
