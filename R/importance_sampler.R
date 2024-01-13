@@ -17,9 +17,10 @@
 #' @return Estimate of the marginal likelihood.
 #' @export
 importance_sample = function(model,
+                             results_name,
+                             results_path = getwd(),
                              number_of_importance_points,
                              parallel = FALSE,
-                             results_directory = getwd(),
                              model_parameter_list = list(),
                              algorithm_parameter_list = list(),
                              external_packages = c(),

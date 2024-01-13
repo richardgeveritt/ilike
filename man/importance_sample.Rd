@@ -6,9 +6,10 @@
 \usage{
 importance_sample(
   model,
+  results_name,
+  results_path = getwd(),
   number_of_importance_points,
   parallel = FALSE,
-  results_directory = getwd(),
   model_parameter_list = list(),
   algorithm_parameter_list = list(),
   external_packages = c(),
@@ -22,6 +23,10 @@ importance_sample(
 }
 \arguments{
 \item{model}{A file containing the model, or a pre-compiled model list.}
+
+\item{results_name}{The name of the directory to which results will be written.}
+
+\item{results_path}{(optional) The path in which the results folder will be created (current working directory is the default).}
 
 \item{number_of_importance_points}{The number of importance points.}
 
@@ -44,10 +49,6 @@ importance_sample(
 \item{seed}{(optional) The seed for the random number generator.}
 
 \item{grain_size}{(optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).}
-
-\item{results_name}{The name of the directory to which results will be written.}
-
-\item{results_path}{(optional) The path in which the results folder will be created (current working directory is the default).}
 }
 \value{
 Estimate of the marginal likelihood.

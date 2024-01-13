@@ -6,9 +6,10 @@
 \usage{
 enki(
   model,
+  results_name,
+  results_path = getwd(),
   number_of_ensemble_members,
   parallel = FALSE,
-  results_directory = getwd(),
   enki_iterations_to_store = 2,
   write_to_file_at_each_iteration = TRUE,
   model_parameter_list = list(),
@@ -24,6 +25,10 @@ enki(
 }
 \arguments{
 \item{model}{A file containing the model, or a pre-compiled model list.}
+
+\item{results_name}{The name of the directory to which results will be written.}
+
+\item{results_path}{(optional) The path in which the results folder will be created (current working directory is the default).}
 
 \item{number_of_ensemble_members}{The number of ensemble members.}
 
@@ -50,10 +55,6 @@ enki(
 \item{seed}{(optional) The seed for the random number generator.}
 
 \item{grain_size}{(optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).}
-
-\item{results_name}{The name of the directory to which results will be written.}
-
-\item{results_path}{(optional) The path in which the results folder will be created (current working directory is the default).}
 }
 \value{
 Estimate of the marginal likelihood.

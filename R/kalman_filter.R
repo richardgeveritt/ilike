@@ -15,7 +15,8 @@
 #' @return Estimate of the marginal likelihood.
 #' @export
 kalman_filter = function(model,
-                         results_directory = getwd(),
+                         results_name,
+                         results_path = getwd(),
                          kf_iterations_to_store = 2,
                          write_to_file_at_each_iteration = TRUE,
                          model_parameter_list = list(),

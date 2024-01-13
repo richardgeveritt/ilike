@@ -19,9 +19,10 @@
 #' @return Estimate of the marginal likelihood.
 #' @export
 particle_filter = function(model,
+                           results_name,
+                           results_path = getwd(),
                            number_of_particles,
                            parallel = FALSE,
-                           results_directory = getwd(),
                            smc_iterations_to_store = 2,
                            write_to_file_at_each_iteration = TRUE,
                            model_parameter_list = list(),

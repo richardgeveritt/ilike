@@ -19,9 +19,10 @@
 #' @return Estimate of the marginal likelihood.
 #' @export
 enki = function(model,
+                results_name,
+                results_path = getwd(),
                 number_of_ensemble_members,
                 parallel = FALSE,
-                results_directory = getwd(),
                 enki_iterations_to_store = 2,
                 write_to_file_at_each_iteration = TRUE,
                 model_parameter_list = list(),
