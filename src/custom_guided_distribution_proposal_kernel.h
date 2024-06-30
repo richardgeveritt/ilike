@@ -25,8 +25,8 @@ public:
   //                                      EvaluateLogGuidedDistributionPtr proposal_evaluate_in);
   
   CustomGuidedDistributionProposalKernel(SimulateGuidedDistributionPtr proposal_simulate_in,
-                                        EvaluateLogGuidedDistributionPtr proposal_evaluate_in,
-                                        const Data* data_in);
+                                         EvaluateLogGuidedDistributionPtr proposal_evaluate_in,
+                                         Data* data_in);
 
   CustomGuidedDistributionProposalKernel(const CustomGuidedDistributionProposalKernel &another);
 
@@ -77,6 +77,8 @@ public:
   
   bool can_be_evaluated() const;
   
+  void set_data(Data* data_in);
+  
   //arma::mat subsample_independent_gradient_of_log(const std::string &variable,
   //                                                Variables* proposed_particle,
   //                                                const Parameters &conditioned_on_parameters);
@@ -94,7 +96,7 @@ protected:
   
   SimulateGuidedDistributionPtr proposal_simulate;
   
-  const Data* data;
+  Data* data;
   
 };
 

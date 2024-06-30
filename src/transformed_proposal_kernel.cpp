@@ -296,5 +296,10 @@ void TransformedProposalKernel::set_index_if_null(Index* index_in)
 
 bool TransformedProposalKernel::can_be_evaluated() const
 {
-  return proposal->can_be_evaluated();
+  return this->proposal->can_be_evaluated();
+}
+
+void TransformedProposalKernel::set_data(Data* data_in)
+{
+  this->proposal->set_data(data_in);
 }

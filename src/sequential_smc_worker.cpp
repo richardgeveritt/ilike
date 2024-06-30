@@ -807,6 +807,8 @@ void SequentialSMCWorker::specific_move(Particles* next_particles,
   {
     next_particles->push_back(this->the_smc->move(local_rng,
                                                   (*current_particles)[current_particles->ancestor_variables[i]]->back()));
+    //next_particles->back()->back().previous_self = &(*current_particles)[current_particles->ancestor_variables[i]]->back();
+    
     //Particle* new_particle = next_particles->add_particle();
     //this->the_smc->move(local_rng,
     //                    new_particle,
@@ -1009,6 +1011,7 @@ void SequentialSMCWorker::subsample_specific_move(Particles* next_particles,
   {
     next_particles->push_back(this->the_smc->subsample_move(local_rng,
                                                             (*current_particles)[current_particles->ancestor_variables[i]]->back()));
+    //next_particles->back()->back().previous_self = &(*current_particles)[current_particles->ancestor_variables[i]]->back();
   }
   
   /*

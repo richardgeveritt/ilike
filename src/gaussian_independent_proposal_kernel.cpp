@@ -319,3 +319,8 @@ bool GaussianIndependentProposalKernel::can_be_evaluated() const
 {
   return true;
 }
+
+void GaussianIndependentProposalKernel::set_data(Data* data_in)
+{
+  
+}

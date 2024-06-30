@@ -234,5 +234,10 @@ void TransformedIndependentProposalKernel::set_index_if_null(Index* index_in)
 
 bool TransformedIndependentProposalKernel::can_be_evaluated() const
 {
-  return proposal->can_be_evaluated();
+  return this->proposal->can_be_evaluated();
+}
+
+void TransformedIndependentProposalKernel::set_data(Data* data_in)
+{
+  this->proposal->set_data(data_in);
 }

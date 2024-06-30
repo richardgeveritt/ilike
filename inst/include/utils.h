@@ -113,7 +113,7 @@ inline arma::rowvec mean_wt(const arma::mat &x,
 inline arma::mat cov_wt(const arma::mat &x,
                         const arma::colvec &wt)
 {
-  arma::colvec mean = mean_wt(x,wt);
+  arma::rowvec mean = mean_wt(x,wt);
   arma::mat x_minus_mean = x-repmat(mean,x.n_rows,1);
   arma::mat wt_mat = repmat(wt,1,x.n_cols);
   return ((wt_mat % x_minus_mean).t()*x_minus_mean)/(1 - sum(wt%wt));
@@ -471,7 +471,7 @@ inline double hz(const arma::mat &data_in)
   }
     
   arma::vec Dj = arma::diagvec(dif*(arma::inv(S,arma::inv_opts::allow_approx))*dif.t()); // squared-Mahalanobis' distances
-  arma::mat Y = data*arma::inv(S)*data.t();
+  arma::mat Y = data*arma::pinv(S)*data.t();
   arma::mat Djk = - 2.0*Y.t() + arma::diagvec(Y.t())*arma::mat(1,n,arma::fill::ones) + arma::mat(n,1,arma::fill::ones)*(arma::diagvec(Y.t()).t());
     
   double b = 1.0/(sqrt(2.0)) * pow(((2.0*double(p) + 1.0)/4.0),(1.0/(double(p) + 4.0))) * (pow(double(n),(1.0/(double(p) + 4.0)))); // smoothing parameter

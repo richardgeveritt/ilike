@@ -1,5 +1,6 @@
 #include "hmm_ensemble_factor_variables.h"
 #include "hmm_ensemble_factors.h"
+#include "index.h"
 #include "measurement_covariance_estimator_output.h"
 
 HMMEnsembleFactorVariables::HMMEnsembleFactorVariables()
@@ -145,14 +146,18 @@ std::vector<arma::colvec*> HMMEnsembleFactorVariables::get_measurements() const
 }
 
 double HMMEnsembleFactorVariables::evaluate_ensemble_likelihood_ratios(const Index* index,
-                                                                       double inverse_incremental_temperature)
+                                                                       double inverse_incremental_temperature,
+                                                                       const std::vector<arma::mat> &inv_sigma_precomps,
+                                                                       const std::vector<double> &log_det_precomps) const
 {
   double result = 0.0;
-  for (size_t i=0;
-       i<this->measurement_covariance_estimator_outputs.size();
+  for (auto i=index->begin();
+       i!=index->end();
        ++i)
   {
-    result = result + this->measurement_covariance_estimator_outputs[i]->evaluate_ensemble_likelihood_ratio(inverse_incremental_temperature);
+    result = result + this->measurement_covariance_estimator_outputs[*i]->evaluate_ensemble_likelihood_ratio(inverse_incremental_temperature,
+                                                                                                            inv_sigma_precomps[*i],
+                                                                                                            log_det_precomps[*i]);
   }
   return result;
 }
@@ -175,14 +180,18 @@ double HMMEnsembleFactorVariables::evaluate_ensemble_likelihood_ratios(const Ind
 */
 
 double HMMEnsembleFactorVariables::subsample_evaluate_ensemble_likelihood_ratios(const Index* index,
-                                                                                 double inverse_incremental_temperature)
+                                                                                 double inverse_incremental_temperature,
+                                                                                 const std::vector<arma::mat> &inv_sigma_precomps,
+                                                                                 const std::vector<double> &log_det_precomps) const
 {
   double result = 0.0;
-  for (size_t i=0;
-       i<this->measurement_covariance_estimator_outputs.size();
+  for (auto i=index->begin();
+       i!=index->end();
        ++i)
   {
-    result = result + this->measurement_covariance_estimator_outputs[i]->subsample_evaluate_ensemble_likelihood_ratio(inverse_incremental_temperature);
+    result = result + this->measurement_covariance_estimator_outputs[*i]->subsample_evaluate_ensemble_likelihood_ratio(inverse_incremental_temperature,
+                                                                                                                      inv_sigma_precomps[*i],
+                                                                                                                      log_det_precomps[*i]);
   }
   return result;
 }
@@ -204,14 +213,14 @@ double HMMEnsembleFactorVariables::subsample_evaluate_ensemble_likelihood_ratios
 }
 */
 
-double HMMEnsembleFactorVariables::evaluate_likelihoods(const Index* index)
+double HMMEnsembleFactorVariables::evaluate_likelihoods(const Index* index) const
 {
   double result = 0.0;
-  for (size_t i=0;
-       i<this->measurement_covariance_estimator_outputs.size();
+  for (auto i=index->begin();
+       i!=index->end();
        ++i)
   {
-    result = result + this->measurement_covariance_estimator_outputs[i]->evaluate_likelihood();
+    result = result + this->measurement_covariance_estimator_outputs[*i]->evaluate_likelihood();
   }
   return result;
 }
@@ -231,14 +240,14 @@ double HMMEnsembleFactorVariables::evaluate_likelihoods(const Index* index,
 }
 */
 
-double HMMEnsembleFactorVariables::subsample_evaluate_likelihoods(const Index* index)
+double HMMEnsembleFactorVariables::subsample_evaluate_likelihoods(const Index* index) const
 {
   double result = 0.0;
-  for (size_t i=0;
-       i<this->measurement_covariance_estimator_outputs.size();
+  for (auto i=index->begin();
+       i!=index->end();
        ++i)
   {
-    result = result + this->measurement_covariance_estimator_outputs[i]->subsample_evaluate_likelihood();
+    result = result + this->measurement_covariance_estimator_outputs[*i]->subsample_evaluate_likelihood();
   }
   return result;
 }

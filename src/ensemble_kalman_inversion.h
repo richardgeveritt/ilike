@@ -26,7 +26,9 @@ public:
                           SimulateModelPtr simulate_model_in,
                           std::shared_ptr<Transform> summary_statistics_in,
                           std::shared_ptr<Transform> transform_in,
+                          const std::vector<std::string> &measurement_variables_in,
                           double significance_level_in,
+                          size_t estimator_type_in,
                           bool parallel_in,
                           size_t grain_size_in,
                           const std::string &results_name_in);
@@ -46,7 +48,9 @@ public:
                           SimulateModelPtr simulator_model_in,
                           std::shared_ptr<Transform> summary_statistics_in,
                           std::shared_ptr<Transform> transform_in,
+                          const std::vector<std::string> &measurement_variables_in,
                           double significance_level_in,
+                          size_t estimator_type_in,
                           bool parallel_in,
                           size_t grain_size_in,
                           const std::string &results_name_in);
@@ -69,11 +73,13 @@ public:
                           std::shared_ptr<Transform> summary_statistics_in,
                           std::shared_ptr<Transform> transform_in,
                           double significance_level_in,
+                          size_t estimator_type_in,
                           bool parallel_in,
                           size_t grain_size_in,
                           const std::string &results_name_in);
   
   // abc
+  /*
   EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
                           size_t* seed_in,
                           Data* data_in,
@@ -94,6 +100,30 @@ public:
                           bool parallel_in,
                           size_t grain_size_in,
                           const std::string &results_name_in);
+  */
+  
+  // abc
+  EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
+                          size_t* seed_in,
+                          Data* data_in,
+                          size_t number_of_ensemble_members_in,
+                          size_t lag_in,
+                          EnsembleShifter* shifter_in,
+                          size_t number_of_targets,
+                          //size_t number_of_bisections_in,
+                          const std::string &sequence_variable_in,
+                          IndependentProposalKernel* prior_in,
+                          const std::vector<std::string> &measurement_variables_in,
+                          double min_epsilon_in,
+                          const std::string &scale_variable_in,
+                          const arma::colvec &scale_in,
+                          std::shared_ptr<Transform> summary_statistics_in,
+                          std::shared_ptr<Transform> transform_in,
+                          double significance_level_in,
+                          size_t estimator_type_in,
+                          bool parallel_in,
+                          size_t grain_size_in,
+                          const std::string &results_name_in);
   
   EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
                           size_t* seed_in,
@@ -111,6 +141,7 @@ public:
                           const std::vector<MeasurementCovarianceEstimator*> &estimators_in,
                           std::shared_ptr<Transform> transform_in,
                           double significance_level_in,
+                          size_t estimator_type_in,
                           bool parallel_in,
                           size_t grain_size_in,
                           const std::string &results_name_in);
@@ -122,6 +153,8 @@ public:
   void operator=(const EnsembleKalmanInversion &another);
   EnsembleKalman* ensemble_kalman_duplicate() const;
   LikelihoodEstimator* duplicate() const;
+  
+  void set_abc_schedule(EnsembleKalmanOutput* current_state);
   
   MoveOutput* move(RandomNumberGenerator &rng,
                    Particle &particle);
@@ -202,6 +235,8 @@ protected:
   // If this is not 1.0, then check to see if we think the current ensemble is Gaussian, then skip to the end of the sequence if it is.
   double significance_level;
 
+  size_t estimator_type;
+  
   //void smc_step();
 
   //void weight_update();

@@ -11,6 +11,7 @@ class SquareRootEnsembleShifter;
 class MoveOutput;
 class GaussianSMCAdaptor;
 class EnsembleKalmanMFDS;
+class EnsembleKalmanInversion;
 class VectorEnsembleFactors;
 class HMMEnsembleFactors;
 class ESSSMCCriterion;
@@ -78,6 +79,14 @@ public:
   
   double calculate_log_normalising_constant();
   double calculate_inversion_log_normalising_constant(double inverse_incremental_temperature);
+  double calculate_unbiased_inversion_log_normalising_constant(double inverse_incremental_temperature);
+  void calculate_path1_inversion_log_normalising_constant(std::vector<double> &log_measurement_likelihood_means,
+                                                          double temperature,
+                                                          double multiplier);
+  void calculate_path2_inversion_log_normalising_constant(std::vector<double> &log_measurement_likelihood_means,
+                                                          std::vector<double> &log_measurement_likelihood_variances);
+  
+  void calculate_kalman_gains(double inverse_incremental_temperature);
   
   void set_previous_target_evaluated_to_target_evaluated();
   void subsample_set_previous_target_evaluated_to_target_evaluated();
@@ -97,6 +106,10 @@ public:
   
   double ess;
   
+  // used in path sampling, otherwise empty
+  std::vector<double> log_measurement_likelihood_means;
+  std::vector<double> log_measurement_likelihood_variances;
+  
   void close_ofstreams();
 
 protected: // Things that can be accessed in this class and subclasses.
@@ -109,6 +122,7 @@ protected: // Things that can be accessed in this class and subclasses.
   friend SquareRootEnsembleShifter;
   //friend GaussianSMCAdaptor;
   friend EnsembleKalmanMFDS;
+  friend EnsembleKalmanInversion;
   friend VectorEnsembleFactors;
   friend HMMEnsembleFactors;
   friend ESSSMCCriterion;
@@ -129,7 +143,12 @@ protected: // Things that can be accessed in this class and subclasses.
   std::vector<arma::mat> Cxys;
   std::vector<arma::colvec> myys;
   std::vector<arma::mat> Cyys; // need to rename since this is the raw estimate, but it is not exactly Cyy (needs +\Lambda)
+  //std::vector<arma::mat> Cygivenxs;
   std::vector<arma::mat> kalman_gains;
+  
+  std::vector<arma::mat> inv_sigma_precomps;
+  std::vector<double> log_det_precomps;
+  
   arma::mat inv_Cxx; // not calculated unless we can help it (have intractable llhds)
   
   // vector of different measurements

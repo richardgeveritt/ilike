@@ -28,12 +28,13 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                      size_t number_of_particles_in,
                                      EvaluateLogLikelihoodPtr evaluate_log_likelihood_in,
                                      SimulateDistributionPtr simulate_prior_in,
+                                     bool store_output,
                                      bool smcfixed_flag_in,
                                      bool transform_proposed_particles,
                                      bool parallel_in,
                                      size_t grain_size_in,
                                      const std::string &results_name_in)
-  :SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, 1, 0, std::vector<const ProposalKernel*>(), double(number_of_particles_in), false, smcfixed_flag_in, true, transform_proposed_particles, results_name_in)
+  :SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, std::max<size_t>(1,store_output), 0, std::vector<const ProposalKernel*>(), double(number_of_particles_in), false, smcfixed_flag_in, true, transform_proposed_particles, results_name_in)
 {
   IndependentProposalKernel* proposal = new CustomDistributionProposalKernel(simulate_prior_in);
   proposal->set_proposal_parameters(&this->algorithm_parameters);
@@ -85,12 +86,13 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                      EvaluateLogDistributionPtr evaluate_log_prior_in,
                                      SimulateDistributionPtr simulate_proposal_in,
                                      EvaluateLogDistributionPtr evaluate_log_proposal_in,
+                                     bool store_output,
                                      bool smcfixed_flag_in,
                                      bool transform_proposed_particles,
                                      bool parallel_in,
                                      size_t grain_size_in,
                                      const std::string &results_name_in)
-  :SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, 1, 0, std::vector<const ProposalKernel*>(), double(number_of_particles_in), true, smcfixed_flag_in, true, transform_proposed_particles, results_name_in)
+  :SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, std::max<size_t>(1,store_output), 0, std::vector<const ProposalKernel*>(), double(number_of_particles_in), true, smcfixed_flag_in, true, transform_proposed_particles, results_name_in)
 {
   IndependentProposalKernel* proposal = new CustomDistributionProposalKernel(simulate_proposal_in,
                                                                              evaluate_log_proposal_in);
@@ -155,12 +157,13 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                      EvaluateLogLikelihoodPtr evaluate_log_likelihood_in,
                                      EvaluateLogDistributionPtr evaluate_log_prior_in,
                                      IndependentProposalKernel* proposal_in,
+                                     bool store_output,
                                      bool smcfixed_flag_in,
                                      bool transform_proposed_particles,
                                      bool parallel_in,
                                      size_t grain_size_in,
                                      const std::string &results_name_in)
-:SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, 1, 0, std::vector<const ProposalKernel*>(), double(number_of_particles_in), true, smcfixed_flag_in, true, transform_proposed_particles, results_name_in)
+:SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, std::max<size_t>(1,store_output), 0, std::vector<const ProposalKernel*>(), double(number_of_particles_in), true, smcfixed_flag_in, true, transform_proposed_particles, results_name_in)
 {
   proposal_in->set_proposal_parameters(&this->algorithm_parameters);
   //Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
@@ -215,13 +218,14 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                      const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
                                      IndependentProposalKernel* proposal_in,
                                      bool proposal_is_evaluated_in,
+                                     bool store_output,
                                      bool smcfixed_flag_in,
                                      bool sequencer_limit_is_fixed_in,
                                      bool transform_proposed_particles,
                                      bool parallel_in,
                                      size_t grain_size_in,
                                      const std::string &results_name_in)
-:SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, 1, 0, std::vector<const ProposalKernel*>(), double(number_of_particles_in), proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, transform_proposed_particles, results_name_in)
+:SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, std::max<size_t>(1,store_output), 0, std::vector<const ProposalKernel*>(), double(number_of_particles_in), proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, transform_proposed_particles, results_name_in)
 {
   proposal_in->set_proposal_parameters(&this->algorithm_parameters);
   
@@ -281,13 +285,14 @@ ImportanceSampler::ImportanceSampler(RandomNumberGenerator* rng_in,
                                      const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
                                      IndependentProposalKernel* proposal_in,
                                      bool proposal_is_evaluated_in,
+                                     bool store_output,
                                      bool smcfixed_flag_in,
                                      bool sequencer_limit_is_fixed_in,
                                      bool transform_proposed_particles,
                                      bool parallel_in,
                                      size_t grain_size_in,
                                      const std::string &results_name_in)
-:SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, 1, 0, std::vector<const ProposalKernel*>(), double(number_of_particles_in), proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, transform_proposed_particles, results_name_in)
+:SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, std::max<size_t>(1,store_output), 0, std::vector<const ProposalKernel*>(), double(number_of_particles_in), proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, transform_proposed_particles, results_name_in)
 {
   proposal_in->set_proposal_parameters(&this->algorithm_parameters);
   
@@ -479,12 +484,16 @@ void ImportanceSampler::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* 
   //this->log_likelihood = current_state->log_likelihood_pre_last_step + current_state->latest_log_normalising_constant_ratio();
   
   current_state->log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
-  current_state->llhds.push_back(current_state->log_likelihood);
+  current_state->set_llhd(current_state->log_likelihood);
   
   //if (this->sequencer_parameters!=NULL)
   //  current_state->back().schedule_parameters = *this->sequencer_parameters;
 
   current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+  
+  current_state->set_time_and_reset_start();
+  
+  current_state->terminate();
 }
 
 MoveOutput* ImportanceSampler::move(RandomNumberGenerator &rng,
@@ -612,11 +621,15 @@ void ImportanceSampler::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* 
   //this->log_likelihood = current_state->log_likelihood_pre_last_step + current_state->latest_log_normalising_constant_ratio();
   
   current_state->log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
-  current_state->llhds.push_back(current_state->log_likelihood);
+  current_state->set_llhd(current_state->log_likelihood);
   
   //if (this->sequencer_parameters!=NULL)
   //  current_state->back().schedule_parameters = *this->sequencer_parameters;
   current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+  
+  current_state->set_time_and_reset_start();
+  
+  current_state->terminate();
 }
 
 void ImportanceSampler::subsample_simulate_smc(SMCOutput* current_state)
@@ -632,45 +645,32 @@ void ImportanceSampler::subsample_simulate_smc(SMCOutput* current_state,
 
 void ImportanceSampler::subsample_evaluate_smc(SMCOutput* current_state)
 {
-  //this->weight(current_state, conditioned_on_parameters);
-  //this->the_worker->subsample_weight(this->index,
-  //                                   current_state->back(),
-  //                                   conditioned_on_parameters);
-  
+
+  /*
   this->the_worker->subsample_weight(this->index,
                                      current_state->back());
-  //current_state->initialise_next_step();
   current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-  
-  //this->log_likelihood = current_state->log_likelihood_pre_last_step + current_state->latest_log_normalising_constant_ratio();
-  
   current_state->subsample_log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
+  */
   
-  //current_state->llhds.push_back(this->subsample_log_likelihood);
-  
-  //if (this->sequencer_parameters!=NULL)
-  //  current_state->back().schedule_parameters = *this->sequencer_parameters;
+  this->subsample_evaluate_smcfixed_part_smc(current_state);
+  this->subsample_evaluate_smcadaptive_part_given_smcfixed_smc(current_state);
 }
 
 void ImportanceSampler::subsample_evaluate_smc(SMCOutput* current_state,
                                                const Parameters &conditioned_on_parameters)
 {
-  //this->weight(current_state, conditioned_on_parameters);
-  //this->the_worker->subsample_weight(this->index,
-  //                                   current_state->back(),
-  //                                   conditioned_on_parameters);
-  
+
+  /*
   this->the_worker->subsample_weight(this->index,
                                      current_state->back());
-  //current_state->initialise_next_step();
   current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-  
-  //this->log_likelihood = current_state->log_likelihood_pre_last_step + current_state->latest_log_normalising_constant_ratio();
-  
+
   current_state->subsample_log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
+  */
   
-  //if (this->sequencer_parameters!=NULL)
-  //  current_state->back().schedule_parameters = *this->sequencer_parameters;
+  this->subsample_evaluate_smcfixed_part_smc(current_state,conditioned_on_parameters);
+  this->subsample_evaluate_smcadaptive_part_given_smcfixed_smc(current_state,conditioned_on_parameters);
 }
 
 void ImportanceSampler::subsample_evaluate_smcfixed_part_smc(SMCOutput* current_state)
@@ -745,6 +745,11 @@ void ImportanceSampler::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(S
   //if (this->sequencer_parameters!=NULL)
   //  current_state->back().schedule_parameters = *this->sequencer_parameters;
   current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+  
+  current_state->set_time_and_reset_start();
+  
+  current_state->terminate();
+  
 }
 
 void ImportanceSampler::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current_state,
@@ -775,6 +780,10 @@ void ImportanceSampler::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(S
   //if (this->sequencer_parameters!=NULL)
   //  current_state->back().schedule_parameters = *this->sequencer_parameters;
   current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
+  
+  current_state->set_time_and_reset_start();
+  
+  current_state->terminate();
 }
 
 /*

@@ -24,7 +24,15 @@ KalmanFilterOutput::KalmanFilterOutput(KalmanFilter* estimator_in,
   this->log_likelihood_smcfixed_part = 0.0;
   this->subsample_log_likelihood_smcfixed_part = 0.0;
   
-  this->lag = lag_in;
+  if (lag_in<2)
+  {
+    this->lag = 2;
+  }
+  else
+  {
+    this->lag = lag_in;
+  }
+  this->output_lag = lag_in;
   this->results_name = results_name_in;
   this->kf_iteration = 0;
   this->iteration_written_to_file = -1;
@@ -75,6 +83,7 @@ void KalmanFilterOutput::make_copy(const KalmanFilterOutput &another)
   this->log_normalising_constant_ratios = another.log_normalising_constant_ratios;
   this->schedule_parameters = another.schedule_parameters;
   this->lag = another.lag;
+  this->output_lag = another.output_lag;
   
   this->times = another.times;
   this->llhds = another.llhds;
@@ -87,9 +96,28 @@ void KalmanFilterOutput::make_copy(const KalmanFilterOutput &another)
 
 void KalmanFilterOutput::set_time()
 {
+  size_t num_to_pop_front = std::max<int>(0,this->times.size()-this->lag+1);
+  for (size_t i=0; i<num_to_pop_front; ++i)
+  {
+    this->times.pop_front();
+  }
+  
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed_time = end_time - this->start_time;
-  this->times.push_back(elapsed_time.count());
+  if (this->times.size()>0)
+    this->times.push_back(elapsed_time.count()+this->times.back());
+  else
+    this->times.push_back(elapsed_time.count());
+}
+
+void KalmanFilterOutput::set_llhd(double llhd_in)
+{
+  size_t num_to_pop_front = std::max<int>(0,this->llhds.size()-this->lag+1);
+  for (size_t i=0; i<num_to_pop_front; ++i)
+  {
+    this->llhds.pop_front();
+  }
+  this->llhds.push_back(llhd_in);
 }
 
 void KalmanFilterOutput::simulate()
@@ -279,6 +307,29 @@ void KalmanFilterOutput::forget_you_were_already_written_to_file()
   //int iteration_written_to_file = -1;
 }
 
+void KalmanFilterOutput::terminate()
+{
+  while (this->posterior_means.size()>this->output_lag)
+  {
+    this->posterior_means.pop_back();
+  }
+  
+  while (this->posterior_covariances.size()>this->output_lag)
+  {
+    this->posterior_covariances.pop_back();
+  }
+  
+  while (this->llhds.size()>this->output_lag)
+  {
+    this->llhds.pop_back();
+  }
+  
+  while (this->times.size()>this->output_lag)
+  {
+    this->times.pop_back();
+  }
+}
+
 void KalmanFilterOutput::write_to_file(const std::string &dir_name,
                                        const std::string &index)
 {
@@ -299,19 +350,8 @@ void KalmanFilterOutput::write_to_file(const std::string &dir_name,
   {
     size_t distance_from_end = this->kf_iteration-iteration;
     
-    size_t llhd_index = this->llhds.size()-1-distance_from_end;
-    
     /*
-    std::cout << llhd_index << std::endl;
-    std::cout << this->llhds.size() << std::endl;
-    std::cout << this->log_normalising_constant_ratios.size() << std::endl;
-    std::cout << this->schedule_parameters.size() << std::endl;
-    std::cout << this->posterior_means.size() << std::endl;
-    std::cout << this->posterior_covariances.size() << std::endl;
-    std::cout << this->predicted_means.size() << std::endl;
-    std::cout << this->predicted_covariances.size() << std::endl;
-    std::cout << *this->estimator->data << std::endl;
-    */
+    size_t llhd_index = this->llhds.size()-1-distance_from_end;
     
     //if (int(this->llhds.size())-1-int(distance_from_end)>=0)
     //{
@@ -322,7 +362,7 @@ void KalmanFilterOutput::write_to_file(const std::string &dir_name,
     
     if (this->estimator->log_likelihood_file_stream.is_open())
     {
-      this->estimator->log_likelihood_file_stream << this->llhds[llhd_index] << std::endl;
+      this->estimator->log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->llhds[llhd_index] << std::endl;
       //log_likelihood_file_stream.close();
     }
     else
@@ -343,27 +383,51 @@ void KalmanFilterOutput::write_to_file(const std::string &dir_name,
       {
         time_sum = time_sum + this->times[k];
       }
-      this->estimator->time_file_stream << time_sum << std::endl;
+      this->estimator->time_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << time_sum << std::endl;
       //log_likelihood_file_stream.close();
     }
     else
     {
       Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
     }
+    */
     
     if (this->posterior_means.size() > distance_from_end)
     {
       size_t deque_index = this->posterior_means.size()-1-distance_from_end;
       
-      /*
-      std::cout << deque_index << std::endl;
-      std::cout << this->log_normalising_constant_ratios.size() << std::endl;
-      std::cout << this->schedule_parameters.size() << std::endl;
-      std::cout << this->posterior_means.size() << std::endl;
-      std::cout << this->posterior_covariances.size() << std::endl;
-      std::cout << this->predicted_means.size() << std::endl;
-      std::cout << this->predicted_covariances.size() << std::endl;
-      */
+      if (!this->estimator->log_likelihood_file_stream.is_open())
+      {
+        this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
+      }
+      if (this->estimator->log_likelihood_file_stream.is_open())
+      {
+        this->estimator->log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->llhds[deque_index] << std::endl;
+        //log_likelihood_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + "cannot be opened.");
+      }
+      
+      if (!this->estimator->time_file_stream.is_open())
+      {
+        this->estimator->time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
+      }
+      if (this->estimator->time_file_stream.is_open())
+      {
+        //double time_sum = 0.0;
+        //for (size_t k=0; k<=llhd_index; ++k)
+        //{
+        //  time_sum = time_sum + this->times[k];
+        //}
+        this->estimator->time_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->times[deque_index] << std::endl;
+        //log_likelihood_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
+      }
       
       if (!this->estimator->vector_variables_file_stream.is_open())
       {
@@ -423,7 +487,7 @@ void KalmanFilterOutput::write_to_file(const std::string &dir_name,
       }
       if (this->estimator->incremental_log_likelihood_file_stream.is_open())
       {
-        this->estimator->incremental_log_likelihood_file_stream << this->log_normalising_constant_ratios[deque_index] << std::endl;
+        this->estimator->incremental_log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->log_normalising_constant_ratios[deque_index] << std::endl;
         //incremental_log_likelihood_file_stream.close();
       }
       else
@@ -437,7 +501,7 @@ void KalmanFilterOutput::write_to_file(const std::string &dir_name,
       }
       if (this->estimator->schedule_parameters_file_stream.is_open())
       {
-        this->estimator->schedule_parameters_file_stream << this->schedule_parameters[deque_index] << std::endl;
+        this->estimator->schedule_parameters_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->schedule_parameters[deque_index] << std::endl;
         //schedule_parameters_file_stream.close();
       }
       else
@@ -451,7 +515,10 @@ void KalmanFilterOutput::write_to_file(const std::string &dir_name,
       }
       if(this->estimator->posterior_means_file_stream.is_open())
       {
-        this->estimator->posterior_means_file_stream << this->posterior_means[deque_index].as_row();
+        this->estimator->posterior_means_file_stream.precision(std::numeric_limits<double>::max_digits10);
+        this->posterior_means[deque_index].as_row().raw_print(this->estimator->posterior_means_file_stream);
+        
+        //this->estimator->posterior_means_file_stream << std::fixed << std::setprecision(12) << this->posterior_means[deque_index].as_row();
         //vector_points_file_stream.close();
       }
       else
@@ -465,7 +532,10 @@ void KalmanFilterOutput::write_to_file(const std::string &dir_name,
       }
       if(this->estimator->posterior_covariances_file_stream.is_open())
       {
-        this->estimator->posterior_covariances_file_stream << this->posterior_covariances[deque_index].as_row();
+        this->estimator->posterior_covariances_file_stream.precision(std::numeric_limits<double>::max_digits10);
+        this->posterior_covariances[deque_index].as_row().raw_print(this->estimator->posterior_covariances_file_stream);
+        
+        //this->estimator->posterior_covariances_file_stream << std::fixed << std::setprecision(12) << this->posterior_covariances[deque_index].as_row();
         //vector_points_file_stream.close();
       }
       else
@@ -479,7 +549,10 @@ void KalmanFilterOutput::write_to_file(const std::string &dir_name,
       }
       if(this->estimator->predicted_means_file_stream.is_open())
       {
-        this->estimator->predicted_means_file_stream << this->predicted_means[deque_index].as_row();
+        this->estimator->predicted_means_file_stream.precision(std::numeric_limits<double>::max_digits10);
+        this->predicted_means[deque_index].as_row().raw_print(this->estimator->predicted_means_file_stream);
+        
+        //this->estimator->predicted_means_file_stream << std::fixed << std::setprecision(12) << this->predicted_means[deque_index].as_row();
         //vector_points_file_stream.close();
       }
       else
@@ -493,7 +566,10 @@ void KalmanFilterOutput::write_to_file(const std::string &dir_name,
       }
       if(this->estimator->predicted_covariances_file_stream.is_open())
       {
-        this->estimator->predicted_covariances_file_stream << this->predicted_covariances[deque_index].as_row();
+        this->estimator->predicted_covariances_file_stream.precision(std::numeric_limits<double>::max_digits10);
+        this->predicted_covariances[deque_index].as_row().raw_print(this->estimator->predicted_covariances_file_stream);
+        
+        //this->estimator->predicted_covariances_file_stream << std::fixed << std::setprecision(12) << this->predicted_covariances[deque_index].as_row();
         //vector_points_file_stream.close();
       }
       else

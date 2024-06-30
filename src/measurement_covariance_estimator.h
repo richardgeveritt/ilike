@@ -28,7 +28,8 @@ public:
                                  size_t* seed_in,
                                  Data* data_in,
                                  std::shared_ptr<Transform> transform_in,
-                                 std::shared_ptr<Transform> summary_statistics_in);
+                                 std::shared_ptr<Transform> summary_statistics_in,
+                                 const std::vector<std::string> &measurement_variables_in);
   
   virtual ~MeasurementCovarianceEstimator();
 
@@ -43,7 +44,9 @@ public:
   virtual void setup()=0;
   virtual void setup(const Parameters &parameters)=0;
   
-  virtual void precompute_gaussian_covariance(double inverse_incremental_temperature)=0;
+  virtual void precompute_gaussian_covariance(double inverse_incremental_temperature,
+                                              arma::mat &inv_sigma_precomp,
+                                              double &log_det_precomp)=0;
   
   //virtual arma::mat get_measurement_covariance()=0;
   //virtual void set_parameters(const Parameters &conditioned_on_parameters_in)=0;
@@ -76,6 +79,9 @@ public:
   Data* get_data() const;
   
   arma::colvec* get_measurement_pointer();
+  const arma::colvec* get_measurement_pointer() const;
+  
+  std::vector<std::string> get_measurement_variables() const;
 
 protected:
   
@@ -116,9 +122,6 @@ protected:
   bool set_using_parameters;
   
   std::vector<std::string> measurement_variables;
-  
-  arma::mat inv_sigma_precomp;
-  double log_det_precomp;
 
 };
 

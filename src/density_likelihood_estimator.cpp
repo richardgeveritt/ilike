@@ -22,6 +22,7 @@ DensityLikelihoodEstimator::DensityLikelihoodEstimator(RandomNumberGenerator* rn
                                                        DensityEstimator* density_estimator_in,
                                                        IndependentProposalKernel* proposal_in,
                                                        bool make_subsample_version_in,
+                                                       bool store_output_in,
                                                        bool parallel_in,
                                                        size_t grain_size_in)
 :LikelihoodEstimator(rng_in, seed_in, data_in, algorithm_parameters_in, smcfixed_flag_in)
@@ -35,6 +36,8 @@ DensityLikelihoodEstimator::DensityLikelihoodEstimator(RandomNumberGenerator* rn
   this->proposal = proposal_in;
   this->subsample_proposal = NULL;
   this->number_of_points = number_of_points_in;
+  
+  this->store_output = store_output_in;
   //this->transform = NULL;
 
   if (parallel_in==TRUE)
@@ -135,6 +138,8 @@ void DensityLikelihoodEstimator::make_copy(const DensityLikelihoodEstimator &ano
   else
     this->subsample_proposal = NULL;
   
+  this->store_output = another.store_output;
+  
   /*
   if (another.transform!=NULL)
     this->transform = another.transform->duplicate();
@@ -161,14 +166,16 @@ LikelihoodEstimatorOutput* DensityLikelihoodEstimator::initialise()
 {
   return new DensityLikelihoodEstimatorOutput(this,
                                               this->density_estimator,
-                                              this->subsample_density_estimator);
+                                              this->subsample_density_estimator,
+                                              this->store_output);
 }
 
 LikelihoodEstimatorOutput* DensityLikelihoodEstimator::initialise(const Parameters &parameters)
 {
   return new DensityLikelihoodEstimatorOutput(this,
                                               this->density_estimator,
-                                              this->subsample_density_estimator);
+                                              this->subsample_density_estimator,
+                                              this->store_output);
 }
 
 void DensityLikelihoodEstimator::setup()

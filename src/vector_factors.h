@@ -45,6 +45,8 @@ public:
   void setup();
   void setup(const Parameters &conditioned_on_parameters);
   
+  Data* get_current_data();
+  
 protected:
   
   void specific_change_data(Data* new_data);

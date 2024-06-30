@@ -100,9 +100,19 @@ void StandardMCMCOutput::write_vector_points(const std::vector<std::string> &var
          ++i)
     {
       if (transform==NULL)
-        file_stream << i->get_rowvec(variables);
+      {
+        file_stream.precision(std::numeric_limits<double>::max_digits10);
+        i->get_rowvec(variables).raw_print(file_stream);
+        
+        //file_stream << std::fixed << std::setprecision(12) << i->get_rowvec(variables);
+      }
       else
-        file_stream << transform->inverse_transform(i->parameters).get_rowvec(variables);
+      {
+        file_stream.precision(std::numeric_limits<double>::max_digits10);
+        transform->inverse_transform(i->parameters).get_rowvec(variables).raw_print(file_stream);
+        
+        //file_stream << std::fixed << std::setprecision(12) << transform->inverse_transform(i->parameters).get_rowvec(variables);
+      }
     }
   }
 }

@@ -43,7 +43,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
      data_in,
      algorithm_parameters,
      initial_points_in.size(),
-     std::max<size_t>(2,lag_in),
+     lag_in,
      lag_proposed_in,
      mcmc_in->get_proposals(),
      -1.0,
@@ -127,7 +127,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
      data_in,
      algorithm_parameters,
      number_of_particles_in,
-     std::max<size_t>(2,lag_in),
+     lag_in,
      lag_proposed_in,
      mcmc_in->get_proposals(),
      -1.0,
@@ -205,7 +205,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
      data_in,
      algorithm_parameters,
      initial_points_in.size(),
-     std::max<size_t>(2,lag_in),
+     lag_in,
      lag_proposed_in,
      mcmc_in->get_proposals(),
      -1.0,
@@ -284,7 +284,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
-:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, mcmc_in->get_proposals(), -1.0, true, true, true, transform_proposed_particles, results_name_in)
+:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, lag_in, lag_proposed_in, mcmc_in->get_proposals(), -1.0, true, true, true, transform_proposed_particles, results_name_in)
 {
   mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
   
@@ -413,7 +413,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
-  :SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, mcmc_in->get_proposals(), resampling_desired_ess_in, true, true, true, transform_proposed_particles, results_name_in)
+  :SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, lag_in, lag_proposed_in, mcmc_in->get_proposals(), resampling_desired_ess_in, true, true, true, transform_proposed_particles, results_name_in)
 {
   mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
   
@@ -529,7 +529,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
-:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, mcmc_in->get_proposals(), resampling_desired_ess_in, true, true, true, transform_proposed_particles, results_name_in)
+:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, lag_in, lag_proposed_in, mcmc_in->get_proposals(), resampling_desired_ess_in, true, true, true, transform_proposed_particles, results_name_in)
 {
   mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
   std::string variable_in = "power";
@@ -651,7 +651,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
-:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, mcmc_in->get_proposals(), resampling_desired_ess_in, proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, transform_proposed_particles, results_name_in)
+:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, lag_in, lag_proposed_in, mcmc_in->get_proposals(), resampling_desired_ess_in, proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, transform_proposed_particles, results_name_in)
 {
   //Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
   
@@ -731,7 +731,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
-:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, mcmc_in->get_proposals(), adaptive_resampling_in, proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, transform_proposed_particles, results_name_in)
+:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, lag_in, lag_proposed_in, mcmc_in->get_proposals(), adaptive_resampling_in, proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, transform_proposed_particles, results_name_in)
 {
   //Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
   
@@ -946,12 +946,11 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
     this->sequencer.find_next_target_bisection(current_state,this->index);
 
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
-    current_state->llhds.push_back(current_state->log_likelihood);
+    current_state->set_llhd(current_state->log_likelihood);
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
-    
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
@@ -964,10 +963,16 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
       if (this->mcmc_at_last_step)
       {
         this->simulate_smc(current_state);
-        current_state->llhds.push_back(current_state->log_likelihood);
+        current_state->set_llhd(current_state->log_likelihood);
+        current_state->set_time_and_reset_start();
         //current_state->decrement_smc_iteration();
       }
+      current_state->terminate();
       break;
+    }
+    else
+    {
+      current_state->set_time_and_reset_start();
     }
     
     this->simulate_smc(current_state);
@@ -1098,9 +1103,11 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
     this->sequencer.find_next_target_bisection(current_state,
                                                this->index);
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
-    current_state->llhds.push_back(current_state->log_likelihood);
+    current_state->set_llhd(current_state->log_likelihood);
     
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
+    
+    current_state->set_time_and_reset_start();
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
@@ -1112,10 +1119,16 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
       if (this->mcmc_at_last_step)
       {
         this->simulate_smc(current_state,conditioned_on_parameters);
-        current_state->llhds.push_back(current_state->log_likelihood);
+        current_state->set_llhd(current_state->log_likelihood);
+        current_state->set_time_and_reset_start();
         //current_state->decrement_smc_iteration();
       }
+      current_state->terminate();
       break;
+    }
+    else
+    {
+      current_state->set_time_and_reset_start();
     }
     
     this->simulate_smc(current_state, conditioned_on_parameters);
@@ -1268,6 +1281,8 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
+    current_state->set_time_and_reset_start();
+    
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
@@ -1278,10 +1293,16 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
       if (this->mcmc_at_last_step)
       {
         this->simulate_smc(current_state);
-        current_state->llhds.push_back(current_state->log_likelihood);
+        current_state->set_llhd(current_state->log_likelihood);
+        current_state->set_time_and_reset_start();
         //current_state->decrement_smc_iteration();
       }
+      current_state->terminate();
       break;
+    }
+    else
+    {
+      current_state->set_time_and_reset_start();
     }
     
     this->subsample_simulate_smc(current_state);
@@ -1321,6 +1342,8 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
+    current_state->set_time_and_reset_start();
+    
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
@@ -1331,10 +1354,16 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
       if (this->mcmc_at_last_step)
       {
         this->simulate_smc(current_state,conditioned_on_parameters);
-        current_state->llhds.push_back(current_state->log_likelihood);
+        current_state->set_llhd(current_state->log_likelihood);
+        current_state->set_time_and_reset_start();
         //current_state->decrement_smc_iteration();
       }
+      current_state->terminate();
       break;
+    }
+    else
+    {
+      current_state->set_time_and_reset_start();
     }
     
     this->subsample_simulate_smc(current_state,

@@ -352,6 +352,7 @@ Particle::Particle(Parameters &&parameters_in,
 : parameters(std::move(parameters_in))
 //move_transformed_parameters()
 {
+  
   if (factors_in!=NULL)
   {
     this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
@@ -701,7 +702,6 @@ void Particle::setup(const Parameters &parameters_in,
   this->parameters.merge_with_fixed(conditioned_on_parameters);
   
   this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters);
-  //this->move_parameters = &this->parameters;
   this->ensemble_factor_variables->set_particle(this);
 }
 
@@ -1464,11 +1464,15 @@ arma::mat Particle::direct_subsample_get_gradient_of_log(const std::string &vari
 */
 
 double Particle::evaluate_ensemble_likelihood_ratios(const Index* index,
-                                                     double inverse_incremental_temperature)
+                                                     double inverse_incremental_temperature,
+                                                     const std::vector<arma::mat> &inv_sigma_precomps,
+                                                     const std::vector<double> &log_det_precomps) const
 {
   if (this->ensemble_factor_variables!=NULL)
     return this->ensemble_factor_variables->evaluate_ensemble_likelihood_ratios(index,
-                                                                                inverse_incremental_temperature);
+                                                                                inverse_incremental_temperature,
+                                                                                inv_sigma_precomps,
+                                                                                log_det_precomps);
   else
     return 0.0;
 }
@@ -1488,11 +1492,15 @@ double Particle::evaluate_ensemble_likelihood_ratios(const Index* index,
 */
 
 double Particle::subsample_evaluate_ensemble_likelihood_ratios(const Index* index,
-                                                               double inverse_incremental_temperature)
+                                                               double inverse_incremental_temperature,
+                                                               const std::vector<arma::mat> &inv_sigma_precomps,
+                                                               const std::vector<double> &log_det_precomps) const
 {
   if (this->ensemble_factor_variables!=NULL)
     return this->ensemble_factor_variables->evaluate_ensemble_likelihood_ratios(index,
-                                                                                inverse_incremental_temperature);
+                                                                                inverse_incremental_temperature,
+                                                                                inv_sigma_precomps,
+                                                                                log_det_precomps);
   else
     return 0.0;
   

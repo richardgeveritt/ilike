@@ -33,10 +33,14 @@ public:
   //                                                                         double inverse_incremental_temperature) const=0;
   
   virtual double evaluate_ensemble_likelihood_ratios(const Index* index,
-                                                     double inverse_incremental_temperature)=0;
+                                                     double inverse_incremental_temperature,
+                                                     const std::vector<arma::mat> &inv_sigma_precomps,
+                                                     const std::vector<double> &log_det_precomps) const=0;
   
   virtual double subsample_evaluate_ensemble_likelihood_ratios(const Index* index,
-                                                               double inverse_incremental_temperature)=0;
+                                                               double inverse_incremental_temperature,
+                                                               const std::vector<arma::mat> &inv_sigma_precomps,
+                                                               const std::vector<double> &log_det_precomps) const=0;
   
   /*
   virtual double evaluate_ensemble_likelihood_ratios(const Index* index,
@@ -47,9 +51,9 @@ public:
                                                        const Parameters &conditioned_on_parameters)=0;
   */
   
-  virtual double evaluate_likelihoods(const Index* index)=0;
+  virtual double evaluate_likelihoods(const Index* index) const=0;
   
-  virtual double subsample_evaluate_likelihoods(const Index* index)=0;
+  virtual double subsample_evaluate_likelihoods(const Index* index) const=0;
   
   /*
   virtual double evaluate_likelihoods(const Index* index,

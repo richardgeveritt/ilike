@@ -75,6 +75,8 @@ public:
   
   //void find_next_target_quantile(SMCOutput* current_state, const Parameters &conditioned_on_parameters);
   
+  void set_schedule(const std::vector<double> &schedule_in);
+  
   bool check_termination();
   
   void set_next_with_parameter(const Parameters &parameters_in);
@@ -122,6 +124,13 @@ protected:
   double schedule_difference;
   
   size_t number_of_bisections;
+  
+  
+  // info required to automatically determine target
+  // so far, for EnKI-ABC only
+  std::string scale_variable;
+  bool find_scale;
+  //arma::colvec simulation_scale;
   
   //double extra_bit;
   

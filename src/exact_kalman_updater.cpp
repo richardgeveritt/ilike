@@ -7,16 +7,22 @@ ExactKalmanUpdater::ExactKalmanUpdater()
 {
 }
 
-ExactKalmanUpdater::ExactKalmanUpdater(const arma::mat &measurement_matrix_in,
+ExactKalmanUpdater::ExactKalmanUpdater(const std::string &state_variable_in,
+                                       const std::string &measurement_variable_in,
+                                       const arma::mat &measurement_matrix_in,
                                        const arma::mat &measurement_noise_in)
+:KalmanUpdater(state_variable_in,measurement_variable_in)
 {
   this->measurement_matrix = measurement_matrix_in;
   this->measurement_noise = measurement_noise_in;
   this->set_using_parameters = false;
 }
 
-ExactKalmanUpdater::ExactKalmanUpdater(GetMatrixPtr measurement_matrix_function_in,
+ExactKalmanUpdater::ExactKalmanUpdater(const std::string &state_variable_in,
+                                       const std::string &measurement_variable_in,
+                                       GetMatrixPtr measurement_matrix_function_in,
                                        GetMatrixPtr measurement_noise_function_in)
+:KalmanUpdater(state_variable_in,measurement_variable_in)
 {
   this->measurement_matrix_function = measurement_matrix_function_in;
   this->measurement_noise_function = measurement_noise_function_in;

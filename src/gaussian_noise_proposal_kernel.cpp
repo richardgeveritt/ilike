@@ -36,3 +36,8 @@ bool GaussianNoiseProposalKernel::can_be_evaluated() const
 {
   return true;
 }
+
+void GaussianNoiseProposalKernel::set_data(Data* data_in)
+{
+  
+}

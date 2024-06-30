@@ -18,11 +18,21 @@ public:
 
   DirectGaussianMeasurementCovarianceEstimator();
   
+  /*
   DirectGaussianMeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
                                                size_t* seed_in,
                                                Data* data_in,
                                                std::shared_ptr<Transform> transform_in,
-                                               std::shared_ptr<Transform> summary_statistics_in);
+                                               std::shared_ptr<Transform> summary_statistics_in,
+                                               const std::string &measurement_variable_in);
+  */
+  
+  DirectGaussianMeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
+                                               size_t* seed_in,
+                                               Data* data_in,
+                                               std::shared_ptr<Transform> transform_in,
+                                               std::shared_ptr<Transform> summary_statistics_in,
+                                               const std::vector<std::string> &measurement_variables_in);
 
   virtual ~DirectGaussianMeasurementCovarianceEstimator();
 

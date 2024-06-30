@@ -11,12 +11,15 @@ DensityLikelihoodEstimatorOutput::DensityLikelihoodEstimatorOutput()
 {
   this->log_likelihood_smcfixed_part = 0.0;
   this->subsample_log_likelihood_smcfixed_part = 0.0;
+  
+  this->start_time = std::chrono::high_resolution_clock::now();
 }
 
 DensityLikelihoodEstimatorOutput::DensityLikelihoodEstimatorOutput(DensityLikelihoodEstimator* estimator_in,
                                                                    
                                                                    DensityEstimator* density_estimator_in,
-                                                                   DensityEstimator* subsample_density_estimator_in)
+                                                                   DensityEstimator* subsample_density_estimator_in,
+                                                                   bool store_output_in)
   :LikelihoodEstimatorOutput()
 {
   this->estimator = estimator_in;
@@ -34,6 +37,10 @@ DensityLikelihoodEstimatorOutput::DensityLikelihoodEstimatorOutput(DensityLikeli
   
   this->log_likelihood_smcfixed_part = 0.0;
   this->subsample_log_likelihood_smcfixed_part = 0.0;
+  
+  this->start_time = std::chrono::high_resolution_clock::now();
+  
+  this->store_output = store_output_in;
   //this->results_name = results_name_in;
 }
 
@@ -101,6 +108,11 @@ void DensityLikelihoodEstimatorOutput::make_copy(const DensityLikelihoodEstimato
   this->points = another.points;
   //this->results_name = another.results_name;
   //this->variables = another.variables;
+  
+  this->time = another.time;
+  this->start_time = another.start_time;
+  
+  this->store_output = another.store_output;
 }
 
 void DensityLikelihoodEstimatorOutput::simulate()
@@ -132,6 +144,15 @@ void DensityLikelihoodEstimatorOutput::evaluate_smcadaptive_part_given_smcfixed(
     this->log_likelihood = this->log_likelihood_smcfixed_part;
   else
     this->log_likelihood = this->density_estimator_output->evaluate(*this->estimator->data);
+  
+  std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed_time = end_time - this->start_time;
+  this->time = elapsed_time.count();
+  
+  if (!store_output)
+  {
+    this->points = std::vector<Parameters>();
+  }
 }
 
 void DensityLikelihoodEstimatorOutput::subsample_simulate(const Parameters &conditioned_on_parameters)
@@ -155,6 +176,11 @@ void DensityLikelihoodEstimatorOutput::subsample_evaluate_smcadaptive_part_given
     this->subsample_log_likelihood = this->subsample_log_likelihood_smcfixed_part;
   else
     this->subsample_log_likelihood = this->subsample_density_estimator_output->evaluate(*this->estimator->data);
+  
+  if (!store_output)
+  {
+    this->points = std::vector<Parameters>();
+  }
 }
 
 LikelihoodEstimator* DensityLikelihoodEstimatorOutput::get_likelihood_estimator() const
@@ -211,7 +237,7 @@ void DensityLikelihoodEstimatorOutput::write_to_file(const std::string &dir_name
   }
   if (this->estimator->log_likelihood_file_stream.is_open())
   {
-    this->estimator->log_likelihood_file_stream << this->log_likelihood << std::endl;
+    this->estimator->log_likelihood_file_stream << std::fixed << std::setprecision(std::numeric_limits<double>::max_digits10) << this->log_likelihood << std::endl;
     //log_likelihood_file_stream.close();
   }
   else
@@ -219,17 +245,36 @@ void DensityLikelihoodEstimatorOutput::write_to_file(const std::string &dir_name
     Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + "cannot be opened.");
   }
   
+  
+  if (!this->estimator->time_file_stream.is_open())
+  {
+    this->estimator->time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
+  }
+  if (this->estimator->time_file_stream.is_open())
+  {
+    this->estimator->time_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->time << std::endl;
+    //log_likelihood_file_stream.close();
+  }
+  else
+  {
+    Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
+  }
+  
+  
   if (!this->estimator->file_stream.is_open())
   {
-    this->estimator->file_stream.open(directory_name + "/vector_points.txt");
+    this->estimator->file_stream.open(directory_name + "/vector_points.txt",std::ios::out | std::ios::app);
   }
   if (this->estimator->file_stream.is_open())
   {
+    this->estimator->file_stream.precision(std::numeric_limits<double>::max_digits10);
     for (auto i = this->points.begin();
          i!=this->points.end();
          ++i)
     {
-      this->estimator->file_stream << i->get_rowvec(this->estimator->variables);
+      i->get_rowvec(this->estimator->variables).raw_print(this->estimator->file_stream);
+      
+      //this->estimator->file_stream << std::fixed << std::setprecision(12) << i->get_rowvec(this->estimator->variables);
     }
     
     //file_stream.close();
@@ -238,6 +283,7 @@ void DensityLikelihoodEstimatorOutput::write_to_file(const std::string &dir_name
   {
     Rcpp::stop("File " + directory_name + "/vector_points.txt" + "cannot be opened.");
   }
+  
 }
 
 void DensityLikelihoodEstimatorOutput::forget_you_were_already_written_to_file()
@@ -248,4 +294,5 @@ void DensityLikelihoodEstimatorOutput::close_ofstreams()
 {
   this->estimator->log_likelihood_file_stream.close();
   this->estimator->file_stream.close();
+  this->estimator->time_file_stream.close();
 }

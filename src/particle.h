@@ -211,7 +211,9 @@ public:
   */
   
   double evaluate_ensemble_likelihood_ratios(const Index* index,
-                                             double incremental_temperature);
+                                             double incremental_temperature,
+                                             const std::vector<arma::mat> &inv_sigma_precomps,
+                                             const std::vector<double> &log_det_precomps) const;
   /*
   double evaluate_ensemble_likelihood_ratios(const Index* index,
                                              double incremental_temperature,
@@ -219,7 +221,9 @@ public:
   */
   
   double subsample_evaluate_ensemble_likelihood_ratios(const Index* index,
-                                                       double incremental_temperature);
+                                                       double incremental_temperature,
+                                                       const std::vector<arma::mat> &inv_sigma_precomps,
+                                                       const std::vector<double> &log_det_precomps) const;
   
   /*
   double subsample_evaluate_ensemble_likelihood_ratios(const Index* index,

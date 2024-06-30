@@ -8,6 +8,7 @@
 #' @param parallel (optional) Set to true to perform the MCMC chains in parallel, false for serial.
 #' @param model_parameter_list (optional) A list containing parameters for the model.
 #' @param algorithm_parameter_list (optional) A list containing named parameters for the algorithm.
+#' @param fixed_parameter_list (optional) A list containing parameters to condition on.
 #' @param external_packages (optional) A vector of names of other R packages the functions rely on.
 #' @param julia_bin_dir (optional) The directory containing the Julia bin file - only needed if Julia functions are used.
 #' @param julia_required_libraries (optional) Vector of strings, each of which is a Julia packge that will be installed and loaded.
@@ -25,6 +26,7 @@ mcmc = function(model,
                 parallel = FALSE,
                 model_parameter_list = list(),
                 algorithm_parameter_list = list(),
+                fixed_parameter_list = list(),
                 external_packages = c(),
                 julia_bin_dir="",
                 julia_required_libraries=c(),
@@ -82,15 +84,33 @@ mcmc = function(model,
     mcmc_weights_method = list()
   }
 
-  do_mcmc(model,
-          model_parameter_list,
-          algorithm_parameter_list,
-          initial_values,
-          mcmc_termination_method,
-          mcmc_weights_method,
-          number_of_chains,
-          parallel,
-          grain_size,
-          results_directory,
-          seed)
+  if (length(fixed_parameter_list)==0)
+  {
+    do_mcmc(model,
+            model_parameter_list,
+            algorithm_parameter_list,
+            initial_values,
+            mcmc_termination_method,
+            mcmc_weights_method,
+            number_of_chains,
+            parallel,
+            grain_size,
+            results_directory,
+            seed)
+  }
+  else
+  {
+    do_mcmc_with_fixed_params(model,
+                              model_parameter_list,
+                              algorithm_parameter_list,
+                              fixed_parameter_list,
+                              initial_values,
+                              mcmc_termination_method,
+                              mcmc_weights_method,
+                              number_of_chains,
+                              parallel,
+                              grain_size,
+                              results_directory,
+                              seed)
+  }
 }

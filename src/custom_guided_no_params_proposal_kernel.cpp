@@ -6,14 +6,32 @@ CustomGuidedNoParamsProposalKernel::CustomGuidedNoParamsProposalKernel()
   :ProposalKernel()
 {
   this->proposal_evaluate = NULL;
+  this->data = NULL;
 }
 
 CustomGuidedNoParamsProposalKernel::~CustomGuidedNoParamsProposalKernel()
 {
 }
 
+CustomGuidedNoParamsProposalKernel::CustomGuidedNoParamsProposalKernel(SimulateGuidedNoParamsMCMCProposalPtr proposal_simulate_in)
+:ProposalKernel()
+{
+  this->proposal_evaluate = NULL;
+  this->proposal_simulate = proposal_simulate_in;
+  this->data = NULL;
+}
+
 CustomGuidedNoParamsProposalKernel::CustomGuidedNoParamsProposalKernel(SimulateGuidedNoParamsMCMCProposalPtr proposal_simulate_in,
-                                                                       const Data* data_in)
+                                                                       EvaluateLogGuidedNoParamsMCMCProposalPtr proposal_evaluate_in)
+:ProposalKernel()
+{
+  this->proposal_evaluate = proposal_evaluate_in;
+  this->proposal_simulate = proposal_simulate_in;
+  this->data = NULL;
+}
+
+CustomGuidedNoParamsProposalKernel::CustomGuidedNoParamsProposalKernel(SimulateGuidedNoParamsMCMCProposalPtr proposal_simulate_in,
+                                                                       Data* data_in)
 :ProposalKernel()
 {
   this->proposal_evaluate = NULL;
@@ -23,7 +41,7 @@ CustomGuidedNoParamsProposalKernel::CustomGuidedNoParamsProposalKernel(SimulateG
 
 CustomGuidedNoParamsProposalKernel::CustomGuidedNoParamsProposalKernel(SimulateGuidedNoParamsMCMCProposalPtr proposal_simulate_in,
                                                                        EvaluateLogGuidedNoParamsMCMCProposalPtr proposal_evaluate_in,
-                                                                       const Data* data_in)
+                                                                       Data* data_in)
   :ProposalKernel()
 {
   this->proposal_evaluate = proposal_evaluate_in;
@@ -66,9 +84,16 @@ void CustomGuidedNoParamsProposalKernel::make_copy(const CustomGuidedNoParamsPro
 double CustomGuidedNoParamsProposalKernel::specific_evaluate_kernel(const Particle &proposed_particle,
                                                                     const Particle &old_particle) const
 {
-  return this->proposal_evaluate(proposed_particle.get_transformed_parameters(this),
-                                 old_particle.get_transformed_parameters(this),
-                                 *this->data);
+  if (this->data!=NULL)
+  {
+    return this->proposal_evaluate(proposed_particle.get_transformed_parameters(this),
+                                   old_particle.get_transformed_parameters(this),
+                                   *this->data);
+  }
+  else
+  {
+    Rcpp::stop("CustomGuidedNoParamsProposalKernel::specific_evaluate_kernel - data not specified.");
+  }
 }
 
 /*
@@ -102,9 +127,16 @@ double CustomGuidedNoParamsProposalKernel::specific_subsample_evaluate_kernel(Pa
 Parameters CustomGuidedNoParamsProposalKernel::simulate(RandomNumberGenerator &rng,
                                                         const Particle &particle) const
 {
-  return this->proposal_simulate(rng,
-                                 particle.get_transformed_parameters(this),
-                                 *this->data);
+  if (this->data!=NULL)
+  {
+    return this->proposal_simulate(rng,
+                                   particle.get_transformed_parameters(this),
+                                   *this->data);
+  }
+  else
+  {
+    Rcpp::stop("CustomGuidedNoParamsProposalKernel::specific_evaluate_kernel - data not specified.");
+  }
 }
 
 /*
@@ -209,4 +241,9 @@ bool CustomGuidedNoParamsProposalKernel::can_be_evaluated() const
     return false;
   else
     return true;
+}
+
+void CustomGuidedNoParamsProposalKernel::set_data(Data* data_in)
+{
+  this->data = data_in;
 }

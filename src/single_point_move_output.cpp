@@ -111,15 +111,20 @@ void SinglePointMoveOutput::write_vector_points(const std::vector<std::string> &
     {
       //for (size_t i=0; i<variables.size(); ++i)
       //  file_stream << output.get_rowvec(variables[i]) << ";";
+      file_stream.precision(std::numeric_limits<double>::max_digits10);
+      output.get_rowvec(variables).raw_print(file_stream);
       
-      file_stream << output.get_rowvec(variables);
+      //file_stream << std::fixed << std::setprecision(12) << output.get_rowvec(variables);
     }
     else
     {
       //for (size_t i=0; i<variables.size(); ++i)
       //  file_stream << inverse_transform(output.parameters).get_rowvec(variables[i]) << ";";
       
-      file_stream << transform->inverse_transform(output.parameters).get_rowvec(variables);
+      file_stream.precision(std::numeric_limits<double>::max_digits10);
+      transform->inverse_transform(output.parameters).get_rowvec(variables).raw_print(file_stream);
+      
+      //file_stream << std::fixed << std::setprecision(12) << transform->inverse_transform(output.parameters).get_rowvec(variables);
     }
   }
 }

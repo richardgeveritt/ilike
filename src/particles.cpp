@@ -192,7 +192,6 @@ void Particles::setup(std::vector<Parameters> &initial_values_in,
        i!=initial_values_in.end();
        ++i, ++counter)
   {
-    //arma::mat tau = (*i)["tau"];
     i->merge_with_fixed(conditioned_on_parameters);
     i->merge_with_fixed(sequencer_parameters);
     this->push_back(std::move(*i),factors_in,proposals_to_transform_for_in,proposals_to_find_gradient_for_in);
@@ -294,7 +293,7 @@ void Particles::push_back(Parameters &&parameters_in,
                           const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
                           const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in)
 {
-  //arma::mat tau = parameters_in["tau"];
+  
   MoveOutput* single_particle = new SinglePointMoveOutput(std::move(parameters_in),
                                                           factors_in,
                                                           proposals_to_transform_for_in,

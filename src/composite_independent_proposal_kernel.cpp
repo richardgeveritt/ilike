@@ -263,3 +263,13 @@ bool CompositeIndependentProposalKernel::can_be_evaluated() const
   }
   return true;
 }
+
+void CompositeIndependentProposalKernel::set_data(Data* data_in)
+{
+  for (auto i=this->all_kernels.begin();
+       i!=this->all_kernels.end();
+       ++i)
+  {
+    (*i)->set_data(data_in);
+  }
+}

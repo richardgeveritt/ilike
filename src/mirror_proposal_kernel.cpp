@@ -292,3 +292,8 @@ bool MirrorProposalKernel::can_be_evaluated() const
 {
   return true;
 }
+
+void MirrorProposalKernel::set_data(Data* data_in)
+{
+
+}

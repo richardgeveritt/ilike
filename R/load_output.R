@@ -12,6 +12,31 @@ extract_numbers <- function(inputString)
   return(numbers)
 }
 
+order_directories <- function(all_dirs)
+{
+  numbers = matrix(0,length(all_dirs))
+  for (k in 1:length(all_dirs))
+  {
+    split = strsplit(all_dirs[k],"/")[[1]]
+    numbers[k] = extract_numbers(split[length(split)])
+  }
+
+  return(all_dirs[sort(numbers,index.return=TRUE)$ix])
+}
+
+get_directory_numbers <- function(all_dirs)
+{
+  numbers = matrix(0,length(all_dirs))
+
+  for (k in 1:length(all_dirs))
+  {
+    split = strsplit(all_dirs[k],"/")[[1]]
+    numbers[k] = extract_numbers(split[length(split)])
+  }
+
+  return(numbers)
+}
+
 #' Take output from the functions load_smc_output or load_enk_output and convert it to a standard (non-tidy format with one column per dimension).
 #'
 #' @param output Output from the functions load_smc_output or load_enk_output.
@@ -59,7 +84,7 @@ load_smc_output = function(results_directory,
                            external_log_weights = c(0),
                            external_target_parameters = "",
                            nesting_level = 0,
-                           factor = 0)
+                           factor = 1)
 {
   description = results_directory
 
@@ -87,6 +112,7 @@ load_smc_output = function(results_directory,
   }
 
   all_dirs = list.dirs(results_directory,recursive = FALSE)
+  all_dirs = order_directories(all_dirs)
 
   # Factor name.
   factor_name = paste("factor",factor,sep="")
@@ -112,6 +138,7 @@ load_smc_output = function(results_directory,
                                    directory_prefix=factor_name,
                                    external_log_weights = external_log_weights,#poorman::filter(poorman::filter(theta_output,Target==i),Dimension==1)$LogWeight,
                                    nesting_level = nesting_level-1)
+
 
       numbers = extract_numbers(all_dirs[i])
       target_id = numbers[length(numbers)]
@@ -291,28 +318,30 @@ load_smc_output = function(results_directory,
   }
 
   # Store the output in a data frame.
+  all_dirs = order_directories(all_dirs)
+  target_indices = get_directory_numbers(all_dirs)
 
   if (is.null(which.targets))
   {
     if (!as.mcmc)
     {
-      which.targets = 1:length(all_dirs)
+      which.targets = target_indices
     }
     else
     {
-      which.targets = length(all_dirs)
+      which.targets = max(target_indices)
     }
   }
   else
   {
     inputted_which_targets = which.targets
 
-    target_indices = matrix(0,length(all_dirs))
-    for (k in 1:length(all_dirs))
-    {
-      split = strsplit(all_dirs[k],"/")[[1]]
-      target_indices[i] = strtoi(gsub("iteration","",split[length(split)]))
-    }
+    # target_indices = matrix(0,length(all_dirs))
+    # for (k in 1:length(all_dirs))
+    # {
+    #   split = strsplit(all_dirs[k],"/")[[1]]
+    #   target_indices[i] = strtoi(gsub("iteration","",split[length(split)]))
+    # }
 
     which.targets = matrix(0,length(inputted_which_targets))
     for (k in 1:length(inputted_which_targets))
@@ -323,8 +352,9 @@ load_smc_output = function(results_directory,
 
   for (k in which.targets)
   {
-    split = strsplit(all_dirs[k],"/")[[1]]
-    target = strtoi(gsub("iteration","",split[length(split)]))
+    #split = strsplit(all_dirs[k],"/")[[1]]
+    #target = strtoi(gsub("iteration","",split[length(split)]))
+    target = target_indices[k]
 
     iteration_directory = all_dirs[k]
 
@@ -346,12 +376,21 @@ load_smc_output = function(results_directory,
     number_of_importance_points = nrow(output) / number_of_external_points # number_of_importance_points in the waste-free SMC viewpoint
     chain_length = max(output_lengths[[k]])
     number_of_chains = number_of_importance_points/chain_length
+    number_of_targets = length(all_dirs)
 
     output_names_column = rep(output_names,number_of_points)
-    output_index_column = rep(output_index,number_of_points)
+    output_index_column = as.numeric(rep(output_index,number_of_points))
 
-    llhd_column = rep(llhds[[k]],ncol(output)*number_of_importance_points*number_of_external_points)
-    time_column = rep(times[[k]],ncol(output)*number_of_importance_points*number_of_external_points)
+    llhds_for_current_target = unlist(llhds[sapply(lapply(1:(length(llhds)/number_of_targets),FUN=function(i) { k+number_of_targets*(i-1) } ),c)])
+    llhd_column_matrix = sapply(lapply(1:number_of_external_points,FUN=function(i) { rep(llhds_for_current_target[i],ncol(output)*number_of_importance_points) } ),c)
+    llhd_column = matrix(llhd_column_matrix,length(llhd_column_matrix))
+
+    times_for_current_target = unlist(times[sapply(lapply(1:(length(times)/number_of_targets),FUN=function(i) { k+number_of_targets*(i-1) } ),c)])
+    time_column_matrix = sapply(lapply(1:number_of_external_points,FUN=function(i) { rep(times_for_current_target[i],ncol(output)*number_of_importance_points) } ),c)
+    time_column = matrix(time_column_matrix,length(time_column_matrix))
+
+    #llhd_column = rep(llhds[[k]],ncol(output)*number_of_importance_points*number_of_external_points)
+    #time_column = rep(times[[k]],ncol(output)*number_of_importance_points*number_of_external_points)
 
     # number_of_points (=nrow(output)) equals number_of_external points multiplied by number of importance points
 
@@ -450,7 +489,6 @@ load_smc_output = function(results_directory,
 
         log_weight_column = matrix(sapply(1:number_of_external_points,FUN=function(i) { log_weight_fn(i) }),length(iterations_column))
 
-        #browser()
         #log_weight = log_weight$V1 - log_sum_exp(log_weight$V1)
 
         # (repeat each value of log_weight (1:nchains) ncol(output)*niterations times)*number_of_external_points
@@ -548,6 +586,21 @@ load_smc_output = function(results_directory,
     all_output$LogWeight = as.numeric(all_output$LogWeight)
   }
 
+  if ("Time" %in% names(all_output))
+  {
+    all_output$Time = as.numeric(all_output$Time)
+  }
+
+  if ("NormalisingConstant" %in% names(all_output))
+  {
+    all_output$NormalisingConstant = as.numeric(all_output$NormalisingConstant)
+  }
+
+  if ("ISESS" %in% names(all_output))
+  {
+    all_output$ISESS = as.numeric(all_output$ISESS)
+  }
+
   if ("Particle" %in% names(all_output))
   {
     all_output$Particle = as.integer(all_output$Particle)
@@ -641,7 +694,7 @@ load_enk_output = function(results_directory,
                            external_log_weights = c(0),
                            external_target_parameters = "",
                            nesting_level = 0,
-                           factor = 0)
+                           factor = 1)
 {
   return(load_smc_output(results_directory = results_directory,
                          ggsmc = ggsmc,
@@ -651,3 +704,16 @@ load_enk_output = function(results_directory,
                          nesting_level = nesting_level,
                          factor = factor))
 }
+
+#' #' Change data to be in "wide" format, with one column per variable.
+#' #'
+#' #' @param output The output from a "load_output" function.
+#' #' @return The output in wide format.
+#' ilike_pivot_wider = function(output)
+#' {
+#'   new_variable_names = mapply(FUN = function(a,b) { paste(a,"_",b,sep="") },output$ParameterName,output$Dimension)
+#'   output = subset(output,select = -c(ParameterName,Dimension))
+#'   output$Parameter = new_variable_names
+#'   output = dplyr::distinct(output)
+#'   return(tidyr::pivot_wider(output,names_from=Parameter,values_from=Value))
+#' }

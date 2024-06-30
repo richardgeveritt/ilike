@@ -26,7 +26,8 @@ public:
                                                            Data* prior_data_in,
                                                            SimulateModelPtr simulator_in,
                                                            const std::vector<std::string> &prior_measurement_variables_in,
-                                                           const std::vector<arma::mat> &prior_measurement_noises_in);
+                                                           const std::vector<arma::mat> &prior_measurement_noises_in,
+                                                           const std::vector<std::string> &data_measurement_variables_in);
   
   virtual ~MixedGenericDirectGaussianMeasurementCovarianceEstimator();
 
@@ -79,7 +80,9 @@ public:
   void change_data();
   void change_data(std::shared_ptr<Data> new_data);
   
-  void precompute_gaussian_covariance(double inverse_incremental_temperature);
+  void precompute_gaussian_covariance(double inverse_incremental_temperature,
+                                      arma::mat &inv_sigma_precomp,
+                                      double &log_det_precomp);
 
 protected:
   

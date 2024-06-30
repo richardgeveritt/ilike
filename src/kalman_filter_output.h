@@ -53,6 +53,7 @@ public:
   LikelihoodEstimator* get_likelihood_estimator() const;
   
   void set_time();
+  void set_llhd(double llhd_in);
   
   arma::colvec predicted_mean_back() const;
   arma::colvec posterior_mean_back() const;
@@ -69,6 +70,8 @@ public:
                                 const Parameters &x);
 
   void forget_you_were_already_written_to_file();
+  
+  void terminate();
   
   void increment_kf_iteration();
   
@@ -112,6 +115,7 @@ protected:
   arma::mat current_posterior_covariance;
   
   size_t lag;
+  size_t output_lag;
   
   size_t kf_iteration;
   

@@ -131,6 +131,7 @@ void GaussianProposalInfo::set_covariance(const arma::mat &covariance_in)
     this->covariance = (this->covariance + this->covariance.t())/2.0;
     if (!this->covariance.is_sympd())
     {
+      std::cout << this->covariance << std::endl;
       Rcpp::stop("GaussianRandomWalkProposalKernel::setup_covariances - covariance matrix is not sympd.");
     }
     this->chol= arma::chol(this->covariance);
@@ -151,7 +152,10 @@ void GaussianProposalInfo::set_covariance_info()
   {
     this->covariance = (this->covariance + this->covariance.t())/2.0;
     if (!this->covariance.is_sympd())
-      Rcpp::stop("GaussianRandomWalkProposalKernel::setup_covariances - covariance matrix is not sympd.");
+    {
+      std::cout << this->covariance << std::endl;
+      Rcpp::stop("GaussianRandomWalkProposalKernel::set_covariance_info - covariance matrix is not sympd.");
+    }
     this->chol= arma::chol(this->covariance);
     this->inv_chol = arma::inv(this->chol);
     this->inv = this->inv_chol*arma::trans(this->inv_chol);

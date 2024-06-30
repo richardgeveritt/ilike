@@ -214,7 +214,9 @@ void SequentialEnsembleKalmanWorker::weight(Ensemble* ensemble,
   for (size_t i = 0; i < ensemble->size(); ++i)
   {
     this->log_unnormalised_incremental_weights[i] = (*ensemble)[i]->back().evaluate_ensemble_likelihood_ratios(index,
-                                                                                                               inverse_incremental_temperature);
+                                                                                                               inverse_incremental_temperature,
+                                                                                                               ensemble->inv_sigma_precomps,
+                                                                                                               ensemble->log_det_precomps);
   }
 }
 
@@ -237,10 +239,13 @@ void SequentialEnsembleKalmanWorker::subsample_weight(Ensemble* ensemble,
                                                       const Index* index,
                                                       double inverse_incremental_temperature)
 {
+  ensemble->precompute_gaussian_covariance(inverse_incremental_temperature);
   for (size_t i = 0; i < ensemble->size(); ++i)
   {
     this->log_unnormalised_incremental_weights[i] = (*ensemble)[i]->back().subsample_evaluate_ensemble_likelihood_ratios(index,
-                                                                                                                         inverse_incremental_temperature);
+                                                                                                                         inverse_incremental_temperature,
+                                                                                                                         ensemble->inv_sigma_precomps,
+                                                                                                                         ensemble->log_det_precomps);
   }
 }
 

@@ -109,6 +109,11 @@ Data* LikelihoodEstimator::get_data() const
   return this->data;
 }
 
+Data* LikelihoodEstimator::get_current_data() const
+{
+  return this->current_data;
+}
+
 bool LikelihoodEstimator::get_smcfixed_flag() const
 {
   return this->smcfixed_flag;

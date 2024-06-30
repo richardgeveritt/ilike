@@ -40,8 +40,8 @@ EnsembleShifter* SquareRootEnsembleShifter::duplicate() const
 void SquareRootEnsembleShifter::make_copy(const SquareRootEnsembleShifter &another)
 {
   this->mean_position = another.mean_position;
-  this->Sigma = another.Sigma;
-  this->HSigmaHts = another.HSigmaHts;
+  //this->Sigma = another.Sigma;
+  //this->HSigmaHts = another.HSigmaHts;
   this->As = another.As;
 }
 
@@ -49,8 +49,9 @@ void SquareRootEnsembleShifter::setup(Ensemble* ensemble,
                                       double inverse_incremental_temperature)
 {
   this->mean_position = arma::mean(ensemble->packed_members,0).as_col();
-  this->Sigma = arma::cov(ensemble->packed_members);
+  //this->Sigma = arma::cov(ensemble->packed_members);
   
+  /*
   this->HSigmaHts.clear();
   this->HSigmaHts.reserve(ensemble->Cxys.size());
   for (size_t i=0;
@@ -60,8 +61,14 @@ void SquareRootEnsembleShifter::setup(Ensemble* ensemble,
     this->HSigmaHts.push_back(arma::cov(ensemble->packed_measurement_states[i]));
   }
   
-  this->As = ensemble->ensemble_factors->get_sqrt_adjustments(this->Sigma,
-                                                              this->HSigmaHts,
+  if (arma::approx_equal(this->HSigmaHts[0],ensemble->Cyys[0],"absdiff",0.0001))
+  {
+    int thing = 1;
+  }
+  */
+  
+  this->As = ensemble->ensemble_factors->get_sqrt_adjustments(ensemble->Cxys,
+                                                              ensemble->Cyys,
                                                               inverse_incremental_temperature);
   
   /*
@@ -111,6 +118,7 @@ void SquareRootEnsembleShifter::shift(const EnsembleFactorVariables* ensemble_fa
        ++j)
   {
     //position = position + kalman_gains[j]*(*measurements[j] - shift_terms[j]) + this->As[j]*second_part_shiftee;
+
     position = this->mean_position + kalman_gains[j]*(*measurements[j] - myys[j]) + this->As[j]*second_part_shiftee;
   }
 }

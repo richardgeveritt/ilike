@@ -205,3 +205,8 @@ void EnsembleKalmanWorker::set_seed(size_t seed_in)
 {
   *this->the_enk->seed = seed_in;
 }
+
+void EnsembleKalmanWorker::set_enk(EnsembleKalman* the_enk_in)
+{
+  this->the_enk = the_enk_in;
+}

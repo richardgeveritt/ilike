@@ -40,8 +40,8 @@ protected:
   //arma::mat Ftranspose;
   //arma::colvec mean_position;
   //std::vector<arma::mat> Vs;
-  arma::mat Sigma;
-  std::vector<arma::mat> HSigmaHts;
+  //arma::mat Sigma;
+  //std::vector<arma::mat> HSigmaHts;
   
   //arma::mat P;
   //arma::mat Vtranspose;

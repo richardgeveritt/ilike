@@ -247,3 +247,15 @@ void VectorFactors::specific_change_data(Data* new_data)
     (*i)->change_data_with_raw_pointer(new_data);
   }
 }
+
+Data* VectorFactors::get_current_data()
+{
+  for (auto i=this->likelihood_estimators.begin();
+       i!=this->likelihood_estimators.end();
+       ++i)
+  {
+    return (*i)->get_current_data();
+  }
+  
+  return NULL;
+}

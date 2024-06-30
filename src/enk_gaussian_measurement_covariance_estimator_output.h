@@ -34,6 +34,7 @@ public:
   
   MeasurementCovarianceEstimator* get_estimator();
   GaussianMeasurementCovarianceEstimator* get_gaussian_estimator();
+  const GaussianMeasurementCovarianceEstimator* get_gaussian_estimator() const;
 
 protected:
   

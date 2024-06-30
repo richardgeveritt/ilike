@@ -30,9 +30,13 @@ public:
   arma::mat get_unconditional_measurement_covariance(const arma::mat &Cyy,
                                                      double inverse_incremental_temperature);
   
-  double evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature);
+  double evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
+                                            const arma::mat &inv_sigma_precomp,
+                                            double log_det_precomp) const;
   
-  double subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature);
+  double subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
+                                                      const arma::mat &inv_sigma_precomp,
+                                                      double log_det_precomp) const;
   
   /*
   double evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
@@ -53,6 +57,7 @@ public:
   //virtual arma::mat get_measurement_covariance()=0;
   
   virtual GaussianMeasurementCovarianceEstimator* get_gaussian_estimator()=0;
+  virtual const GaussianMeasurementCovarianceEstimator* get_gaussian_estimator() const=0;
   
   void close_ofstreams();
 
@@ -60,6 +65,7 @@ protected:
   
   arma::colvec measurement_state;
   arma::colvec random_shift;
+  
   //arma::mat measurement_noise;
   
   void write_to_file(const std::string &directory_name,

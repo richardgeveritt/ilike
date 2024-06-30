@@ -86,6 +86,9 @@ public:
   void decrement_smc_iteration();
   
   void set_time();
+  void set_llhd(double llhd_in);
+  
+  void set_time_and_reset_start();
 
   void print(std::ostream &os) const;
   
@@ -94,6 +97,8 @@ public:
   void close_ofstreams();
 
   void forget_you_were_already_written_to_file();
+  
+  void terminate();
   
   std::deque<double> times;
   
@@ -117,6 +122,7 @@ protected:
   std::deque<Particles> all_proposed;
 
   size_t lag;
+  size_t output_lag;
 
   size_t lag_proposed;
   

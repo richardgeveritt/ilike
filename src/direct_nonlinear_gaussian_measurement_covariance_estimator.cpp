@@ -7,6 +7,7 @@ DirectNonLinearGaussianMeasurementCovarianceEstimator::DirectNonLinearGaussianMe
 {
 }
 
+/*
 DirectNonLinearGaussianMeasurementCovarianceEstimator::DirectNonLinearGaussianMeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
                                                                                                              size_t* seed_in,
                                                                                                              Data* data_in,
@@ -105,6 +106,7 @@ DirectNonLinearGaussianMeasurementCovarianceEstimator::DirectNonLinearGaussianMe
   this->measurement_noise_functions = measurement_noise_functions_in;
   this->transform_function = transform_function_in;
 }
+*/
 
 DirectNonLinearGaussianMeasurementCovarianceEstimator::DirectNonLinearGaussianMeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
                                                                                                              size_t* seed_in,
@@ -119,14 +121,15 @@ DirectNonLinearGaussianMeasurementCovarianceEstimator::DirectNonLinearGaussianMe
                                                seed_in,
                                                data_in,
                                                transform_in,
-                                               summary_statistics_in)
+                                               summary_statistics_in,
+                                               {measurement_variable_in})
 {
   this->set_using_parameters = false;
-  this->measurement_variables.clear();
-  this->measurement_variables.push_back(measurement_variable_in);
+  //this->measurement_variables.clear();
+  //this->measurement_variables.push_back(measurement_variable_in);
   
-  if (this->measurement_variables.size()!=1)
-    Rcpp::stop("DirectGaussianMeasurementCovarianceEstimator - For this EnK likelihood we can only have one variable present in the data.");
+  //if (this->measurement_variables.size()!=1)
+  //  Rcpp::stop("DirectGaussianMeasurementCovarianceEstimator - For this EnK likelihood we can only have one variable present in the data.");
   
   this->kernel.set_mean(this->measurement_variables[0],
                         arma::colvec(measurement_covariance_in.n_rows));
@@ -148,11 +151,12 @@ DirectNonLinearGaussianMeasurementCovarianceEstimator::DirectNonLinearGaussianMe
                                                seed_in,
                                                data_in,
                                                transform_in,
-                                               summary_statistics_in)
+                                               summary_statistics_in,
+                                               measurement_variables_in)
 {
   this->set_using_parameters = false;
   
-  this->measurement_variables = measurement_variables_in;
+  //this->measurement_variables = measurement_variables_in;
   for (size_t i=0; i<this->measurement_variables.size(); ++i)
   {
     this->kernel.set_mean(this->measurement_variables[i],
@@ -176,15 +180,16 @@ DirectNonLinearGaussianMeasurementCovarianceEstimator::DirectNonLinearGaussianMe
                                                seed_in,
                                                data_in,
                                                transform_in,
-                                               summary_statistics_in)
+                                               summary_statistics_in,
+                                               {measurement_variable_in})
 {
   this->set_using_parameters = true;
   
-  this->measurement_variables.clear();
-  this->measurement_variables.push_back(measurement_variable_in);
+  //this->measurement_variables.clear();
+  //this->measurement_variables.push_back(measurement_variable_in);
   
-  if (this->measurement_variables.size()!=1)
-    Rcpp::stop("DirectGaussianMeasurementCovarianceEstimator - For this EnK likelihood we can only have one variable present in the data.");
+  //if (this->measurement_variables.size()!=1)
+  //  Rcpp::stop("DirectGaussianMeasurementCovarianceEstimator - For this EnK likelihood we can only have one variable present in the data.");
   
   this->measurement_noise_functions.push_back(measurement_covariance_function_in);
   this->transform_function = transform_function_in;
@@ -203,11 +208,12 @@ DirectNonLinearGaussianMeasurementCovarianceEstimator::DirectNonLinearGaussianMe
                                                seed_in,
                                                data_in,
                                                transform_in,
-                                               summary_statistics_in)
+                                               summary_statistics_in,
+                                               measurement_variables_in)
 {
   this->set_using_parameters = true;
   
-  this->measurement_variables = measurement_variables_in;
+  //this->measurement_variables = measurement_variables_in;
   this->measurement_noise_functions = measurement_noise_functions_in;
   this->transform_function = transform_function_in;
 }
@@ -436,6 +442,8 @@ arma::mat DirectNonLinearGaussianMeasurementCovarianceEstimator::get_adjustment(
    I.eye(Vtranspose.n_cols,Vtranspose.n_cols);
    
    arma::mat for_eig = Vtranspose*(arma::inv_sympd(I + Yhat*arma::inv_sympd(inverse_incremental_temperature*this->get_measurement_covariance())*Yhat.t()))*Vtranspose.t();
+  
+  for_eig = (for_eig+for_eig.t())/2.0;
    
    arma::mat U;
    arma::vec diagD;
@@ -447,8 +455,8 @@ arma::mat DirectNonLinearGaussianMeasurementCovarianceEstimator::get_adjustment(
 
 }
 
-arma::mat DirectNonLinearGaussianMeasurementCovarianceEstimator::get_sqrt_adjustment(const arma::mat &Sigma,
-                                                                                     const arma::mat &HSigmaHt,
+arma::mat DirectNonLinearGaussianMeasurementCovarianceEstimator::get_sqrt_adjustment(const arma::mat &Cxy,
+                                                                                     const arma::mat &Cyy,
                                                                                      double inverse_incremental_temperature) const
 {
   Rcpp::stop("DirectNonLinearGaussianMeasurementCovarianceEstimator::get_sqrt_adjustment - not yet implemented.");

@@ -149,7 +149,7 @@ void ABCLikelihoodEstimatorOutput::write_to_file(const std::string &dir_name,
   }
   if (this->estimator->log_likelihood_file_stream.is_open())
   {
-    this->estimator->log_likelihood_file_stream << this->log_likelihood << std::endl;
+    this->estimator->log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->log_likelihood << std::endl;
     //log_likelihood_file_stream.close();
   }
   else

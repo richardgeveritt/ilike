@@ -17,11 +17,15 @@ public:
 
   UnscentedKalmanUpdater();
   
-  UnscentedKalmanUpdater(GetMatrixSimulateMeasurementKernelPtr measurement_kernel_function_in,
+  UnscentedKalmanUpdater(const std::string &state_variable_in,
+                         const std::string &measurement_variable_in,
+                         GetMatrixSimulateMeasurementKernelPtr measurement_kernel_function_in,
                          GetMatrixPtr measurement_noise_function_in,
                          double w0_in = 1.0/3.0);
   
-  UnscentedKalmanUpdater(MatrixSimulateMeasurementKernelPtr measurement_kernel_in,
+  UnscentedKalmanUpdater(const std::string &state_variable_in,
+                         const std::string &measurement_variable_in,
+                         MatrixSimulateMeasurementKernelPtr measurement_kernel_in,
                          const arma::mat &measurement_noise_in,
                          double w0_in = 1.0/3.0);
 

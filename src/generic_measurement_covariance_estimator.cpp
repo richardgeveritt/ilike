@@ -11,12 +11,14 @@ GenericMeasurementCovarianceEstimator::GenericMeasurementCovarianceEstimator(Ran
                                                                              Data* data_in,
                                                                              std::shared_ptr<Transform> transform_in,
                                                                              std::shared_ptr<Transform> summary_statistics_in,
-                                                                             SimulateModelPtr simulator_in)
+                                                                             SimulateModelPtr simulator_in,
+                                                                             const std::vector<std::string> &measurement_variables_in)
 : MeasurementCovarianceEstimator(rng_in,
                                  seed_in,
                                  data_in,
                                  transform_in,
-                                 summary_statistics_in)
+                                 summary_statistics_in,
+                                 measurement_variables_in)
 {
   this->simulator = simulator_in;
 }
@@ -83,7 +85,7 @@ void GenericMeasurementCovarianceEstimator::setup(const Parameters &parameters)
 void GenericMeasurementCovarianceEstimator::setup_measurement_variables()
 {
   Data dummy_data = this->simulator(*this->rng,Parameters());
-  this->measurement_variables = dummy_data.get_vector_variables();
+  //this->measurement_variables = dummy_data.get_vector_variables();
   std::vector<arma::colvec> means;
   means.reserve(this->measurement_variables.size());
   std::vector<arma::mat> covs;
@@ -102,7 +104,7 @@ void GenericMeasurementCovarianceEstimator::setup_measurement_variables()
 void GenericMeasurementCovarianceEstimator::setup_measurement_variables(const Parameters &conditioned_on_parameters)
 {
   Data dummy_data = this->simulator(*this->rng,conditioned_on_parameters);
-  this->measurement_variables = dummy_data.get_vector_variables();
+  //this->measurement_variables = dummy_data.get_vector_variables();
   std::vector<arma::colvec> means;
   means.reserve(this->measurement_variables.size());
   std::vector<arma::mat> covs;
@@ -145,6 +147,8 @@ arma::mat GenericMeasurementCovarianceEstimator::get_adjustment(const arma::mat 
   
   arma::mat for_eig = Vtranspose*(arma::inv_sympd(I + Yhat*arma::inv_sympd((inverse_incremental_temperature-1.0)*this->get_Cygivenx())*Yhat.t()))*Vtranspose.t();
   
+  for_eig = (for_eig+for_eig.t())/2.0;
+  
   arma::mat U;
   arma::vec diagD;
   arma::eig_sym(diagD,U,for_eig);
@@ -154,8 +158,8 @@ arma::mat GenericMeasurementCovarianceEstimator::get_adjustment(const arma::mat 
   return P*Dhathalf*U*Dsqrt*arma::pinv(Dhathalf)*P.t();
 }
 
-arma::mat GenericMeasurementCovarianceEstimator::get_sqrt_adjustment(const arma::mat &Sigma,
-                                                                     const arma::mat &HSigmaHt,
+arma::mat GenericMeasurementCovarianceEstimator::get_sqrt_adjustment(const arma::mat &Cxy,
+                                                                     const arma::mat &Cyy,
                                                                      double inverse_incremental_temperature) const
 {
   Rcpp::stop("GenericMeasurementCovarianceEstimator::get_sqrt_adjustment - not yet implemented.");
@@ -277,9 +281,11 @@ void GenericMeasurementCovarianceEstimator::change_data(std::shared_ptr<Data> ne
   }
 }
 
-void GenericMeasurementCovarianceEstimator::precompute_gaussian_covariance(double inverse_incremental_temperature)
+void GenericMeasurementCovarianceEstimator::precompute_gaussian_covariance(double inverse_incremental_temperature,
+                                                                           arma::mat &inv_sigma_precomp,
+                                                                           double &log_det_precomp)
 {
-  this->inv_sigma_precomp = arma::inv_sympd(inverse_incremental_temperature*this->Cygivenx);
-  this->log_det_precomp = arma::log_det_sympd(inverse_incremental_temperature*this->Cygivenx);
+  inv_sigma_precomp = arma::inv_sympd(inverse_incremental_temperature*this->Cygivenx);
+  log_det_precomp = arma::log_det_sympd(inverse_incremental_temperature*this->Cygivenx);
 }
 

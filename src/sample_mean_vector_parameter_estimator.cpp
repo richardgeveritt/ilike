@@ -40,5 +40,5 @@ void SampleMeanVectorParameterEstimator::make_copy(const SampleMeanVectorParamet
 void SampleMeanVectorParameterEstimator::fit(const arma::mat &matrix_points,
                                              const arma::colvec &wt)
 {
-  this->estimated = mean_wt(matrix_points,wt);
+  this->estimated = arma::conv_to< arma::colvec >::from(mean_wt(matrix_points,wt));
 }

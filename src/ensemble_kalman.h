@@ -50,7 +50,7 @@ public:
   EnsembleKalman(const EnsembleKalman &another);
 
   void operator=(const EnsembleKalman &another);
-  //LikelihoodEstimator* duplicate() const;
+  virtual EnsembleKalman* ensemble_kalman_duplicate() const=0;
 
   // double estimate_log_likelihood(const List &inputs,
   //                                const List &auxiliary_variables) const;

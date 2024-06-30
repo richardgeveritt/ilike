@@ -142,3 +142,8 @@ bool CustomSymmetricProposalKernel::can_be_evaluated() const
   else
     return true;
 }
+
+void CustomSymmetricProposalKernel::set_data(Data* data_in)
+{
+  
+}

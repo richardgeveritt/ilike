@@ -76,3 +76,8 @@ GaussianMeasurementCovarianceEstimator* EnKGaussianMeasurementCovarianceEstimato
 {
   return this->enk_estimator;
 }
+
+const GaussianMeasurementCovarianceEstimator* EnKGaussianMeasurementCovarianceEstimatorOutput::get_gaussian_estimator() const
+{
+  return this->enk_estimator;
+}

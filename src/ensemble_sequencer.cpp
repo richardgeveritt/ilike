@@ -9,6 +9,7 @@ EnsembleSequencer::EnsembleSequencer()
 {
   this->criterion = NULL;
   this->termination = NULL;
+  this->find_scale = false;
 }
 
 EnsembleSequencer::~EnsembleSequencer()
@@ -54,24 +55,33 @@ void EnsembleSequencer::setup(EnsembleKalmanWorker* the_worker_in,
                               SMCTermination* termination_in)
 {
   this->the_worker = the_worker_in;
-  this->schedule = schedule_in;
+  
   this->criterion = criterion_in;
   this->termination = termination_in;
   this->variable_name = variable_in;
   this->number_of_bisections = number_of_bisections_in;
   
+  this->set_schedule(schedule_in);
+  
+  this->find_scale = false;
+}
+
+void EnsembleSequencer::set_schedule(const std::vector<double> &schedule_in)
+{
+  this->schedule = schedule_in;
+  
   if (this->schedule.size()<2)
-      Rcpp::stop("EnsembleSequencer::setup - invalid schedule.");
+    Rcpp::stop("EnsembleSequencer::setup - invalid schedule.");
   
   std::vector<size_t> sizes;
   sizes.reserve(1);
   //this->current_value = this->schedule.front();
   sizes.push_back(this->schedule.size());
   this->use_final = true;
-
+  
   this->mileometer = Mileometer(sizes);
   this->schedule_difference = arma::datum::inf;
-      
+  
   this->reset();
 }
 
@@ -157,6 +167,8 @@ void EnsembleSequencer::make_copy(const EnsembleSequencer &another)
   this->schedule_difference = another.schedule_difference;
   this->schedule_parameters = another.schedule_parameters;
   this->use_final = another.use_final;
+  this->find_scale = another.find_scale;
+  this->scale_variable = another.scale_variable;
 }
 
 EnsembleSequencer::EnsembleSequencer(EnsembleSequencer &&another)
@@ -204,6 +216,8 @@ void EnsembleSequencer::make_copy(EnsembleSequencer &&another)
   this->schedule_difference = std::move(another.schedule_difference);
   this->schedule_parameters = std::move(another.schedule_parameters);
   this->use_final = std::move(another.use_final);
+  this->find_scale = std::move(another.find_scale);
+  this->scale_variable = std::move(another.scale_variable);
   
   another.schedule = std::vector<double>();
   another.direction = 0.0;
@@ -219,6 +233,8 @@ void EnsembleSequencer::make_copy(EnsembleSequencer &&another)
   another.schedule_difference = 0.0;
   another.schedule_parameters = Parameters();
   another.use_final = false;
+  another.find_scale = false;
+  another.scale_variable = "";
 }
 
 void EnsembleSequencer::find_desired_criterion(EnsembleKalmanOutput* current_state)
@@ -255,7 +271,8 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
   {
     this->schedule_difference = this->schedule[this->mileometer.back()]-this->schedule[this->mileometer.back()-1];
     //this->mileometer.increment();
-    current_state->back().set_temperature(this->current_bisect_value);
+    this->current_bisect_value = this->schedule[this->mileometer.back()];
+    //current_state->back().set_temperature(this->current_bisect_value);
     this->set_schedule_parameters();
     
     return;
@@ -319,10 +336,17 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
     
     this->schedule_parameters[this->variable_name] = new_bisect_value;
     
+    if (new_bisect_value<starting_value)
+    {
+      this->current_bisect_value = starting_value;
+      break;
+    }
+    
     // Call SMC specific weight here (done for MCMC, just target for PMC).
     this->the_worker->the_enk->the_worker->weight(&current_state->back(),
                                                   index,
                                                   1.0/(new_bisect_value-starting_value));
+    
     current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
     this->current_score = (*this->criterion)(current_state->back());
@@ -475,9 +499,17 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
   // used here since if we are not doing things adaptively, we never need to calculate a weight
   if (this->criterion->always_positive())
   {
+    /*
     this->schedule_difference = this->schedule[this->mileometer.back()]-this->schedule[this->mileometer.back()-1];
     //this->mileometer.increment();
     
+    //current_state->back().set_temperature(this->current_bisect_value);
+    this->set_schedule_parameters();
+    */
+    
+    this->schedule_difference = this->schedule[this->mileometer.back()]-this->schedule[this->mileometer.back()-1];
+    //this->mileometer.increment();
+    this->current_bisect_value = this->schedule[this->mileometer.back()];
     //current_state->back().set_temperature(this->current_bisect_value);
     this->set_schedule_parameters();
     
@@ -543,6 +575,9 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
     bisect_size = bisect_size/2.0;
     
     this->schedule_parameters[this->variable_name] = new_bisect_value;
+    
+    if (new_bisect_value<starting_value)
+      new_bisect_value = starting_value;
     
     // Call SMC specific weight here (done for MCMC, just target for PMC).
     this->the_worker->the_enk->the_worker->subsample_weight(&current_state->back(),

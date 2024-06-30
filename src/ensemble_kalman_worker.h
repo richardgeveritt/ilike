@@ -33,6 +33,8 @@ public:
   RandomNumberGenerator* get_rng();
   size_t get_seed() const;
   void set_seed(size_t seed_in);
+  
+  void set_enk(EnsembleKalman* the_enk_in);
 
   void simulate(Ensemble* next_ensemble,
                 const Index* index);

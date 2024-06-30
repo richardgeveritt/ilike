@@ -6,6 +6,7 @@ CustomGuidedNoParamsSymmetricProposalKernel::CustomGuidedNoParamsSymmetricPropos
   :SymmetricProposalKernel()
 {
   this->proposal_evaluate = NULL;
+  this->data = NULL;
 }
 
 CustomGuidedNoParamsSymmetricProposalKernel::~CustomGuidedNoParamsSymmetricProposalKernel()
@@ -13,7 +14,7 @@ CustomGuidedNoParamsSymmetricProposalKernel::~CustomGuidedNoParamsSymmetricPropo
 }
 
 CustomGuidedNoParamsSymmetricProposalKernel::CustomGuidedNoParamsSymmetricProposalKernel(SimulateGuidedNoParamsMCMCProposalPtr proposal_simulate_in,
-                                                                       const Data* data_in)
+                                                                       Data* data_in)
   :SymmetricProposalKernel()
 {
   this->proposal_evaluate = NULL;
@@ -61,9 +62,16 @@ void CustomGuidedNoParamsSymmetricProposalKernel::make_copy(const CustomGuidedNo
 double CustomGuidedNoParamsSymmetricProposalKernel::specific_evaluate_kernel(const Particle &proposed_particle,
                                                                              const Particle &old_particle) const
 {
-  return this->proposal_evaluate(proposed_particle.get_transformed_parameters(this),
-                                 old_particle.get_transformed_parameters(this),
-                                 *this->data);
+  if (this->data!=NULL)
+  {
+    return this->proposal_evaluate(proposed_particle.get_transformed_parameters(this),
+                                   old_particle.get_transformed_parameters(this),
+                                   *this->data);
+  }
+  else
+  {
+    Rcpp::stop("CustomGuidedNoParamsSymmetricProposalKernel::specific_evaluate_kernel - data not specified.");
+  }
 }
 
 /*
@@ -98,9 +106,16 @@ double CustomGuidedNoParamsSymmetricProposalKernel::specific_subsample_evaluate_
 Parameters CustomGuidedNoParamsSymmetricProposalKernel::simulate(RandomNumberGenerator &rng,
                                                                  const Particle &particle) const
 {
-  return this->proposal_simulate(rng,
-                                 particle.get_transformed_parameters(this),
-                                 *this->data);
+  if (this->data!=NULL)
+  {
+    return this->proposal_simulate(rng,
+                                   particle.get_transformed_parameters(this),
+                                   *this->data);
+  }
+  else
+  {
+    Rcpp::stop("CustomGuidedNoParamsSymmetricProposalKernel::specific_evaluate_kernel - data not specified.");
+  }
 }
 
 /*
@@ -205,4 +220,9 @@ bool CustomGuidedNoParamsSymmetricProposalKernel::can_be_evaluated() const
     return false;
   else
     return true;
+}
+
+void CustomGuidedNoParamsSymmetricProposalKernel::set_data(Data* data_in)
+{
+  this->data = data_in;
 }

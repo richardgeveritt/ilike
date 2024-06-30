@@ -33,7 +33,7 @@ EnsembleKalmanFilter::EnsembleKalmanFilter(RandomNumberGenerator* rng_in,
                                            //const arma::colvec &prior_mean_in,
                                            //const arma::mat &prior_covariance_in,
                                            const std::string &index_name_in,
-                                           //const std::string &time_name_in,
+                                           const std::string &time_name_in,
                                            const std::string &time_diff_name_in,
                                            //const std::vector<std::string> &measurements_names_in,
                                            size_t first_index_in,
@@ -66,7 +66,7 @@ EnsembleKalmanFilter::EnsembleKalmanFilter(RandomNumberGenerator* rng_in,
   // Go through ENKI stuff.
 
   this->index_name = index_name_in;
-  //this->time_name = time_name_in;
+  this->time_name = time_name_in;
   this->time_diff_name = time_diff_name_in;
   this->first_index = first_index_in;
   this->last_index = last_index_in;
@@ -165,6 +165,11 @@ LikelihoodEstimator* EnsembleKalmanFilter::duplicate() const
   return( new EnsembleKalmanFilter(*this));
 }
 
+EnsembleKalman* EnsembleKalmanFilter::ensemble_kalman_duplicate() const
+{
+  return( new EnsembleKalmanFilter(*this));
+}
+
 void EnsembleKalmanFilter::make_copy(const EnsembleKalmanFilter &another)
 {
   //if (another.proposal_kernel!=NULL)
@@ -177,6 +182,8 @@ void EnsembleKalmanFilter::make_copy(const EnsembleKalmanFilter &another)
   
   this->index_name = another.index_name;
   //this->measurements_names = another.measurements_names;
+  this->time_name = another.time_name;
+  this->time_diff_name = another.time_diff_name;
   this->first_index = another.first_index;
   this->last_index = another.last_index;
   this->predictions_per_update = another.predictions_per_update;
@@ -209,10 +216,6 @@ EnsembleKalmanOutput* EnsembleKalmanFilter::specific_run()
 
 EnsembleKalmanOutput* EnsembleKalmanFilter::specific_ensemble_kalman_initialise()
 {
-  EnsembleKalmanOutput* output = new EnsembleKalmanOutput(this,
-                                                          this->lag,
-                                                          this->transform,
-                                                          this->results_name);
   //this->first_index = 0;
   this->current_index = this->first_index;
   this->ensemble_factors->set_data(this->current_index);
@@ -220,6 +223,12 @@ EnsembleKalmanOutput* EnsembleKalmanFilter::specific_ensemble_kalman_initialise(
   this->sequencer.schedule_parameters = Parameters();//this->time_name,this->current_time);
   this->sequencer.schedule_parameters[this->index_name] = this->current_index;
   this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+  this->sequencer.schedule_parameters[this->time_name] = this->current_time;
+  
+  EnsembleKalmanOutput* output = new EnsembleKalmanOutput(this,
+                                                          this->lag,
+                                                          this->transform,
+                                                          this->results_name);
   
   return output;
 }
@@ -282,6 +291,7 @@ MoveOutput* EnsembleKalmanFilter::move(RandomNumberGenerator &rng,
   for (size_t i=0; i<this->predictions_per_update; ++i)
   {
     //VectorIndex index(this->current_index);
+
     if (i==0)
     {
       moved_ensemble_member = this->transition_model_kernel->move(rng,
@@ -328,7 +338,7 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcadaptive_part_given_smcfi
     
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
-    current_state->llhds.push_back(current_state->log_likelihood);
+    current_state->set_llhd(current_state->log_likelihood);
     current_state->set_time();
     
     if (current_state->results_name!="")
@@ -342,6 +352,7 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcadaptive_part_given_smcfi
     if (this->check_termination())
     {
       //terminate = TRUE;
+      current_state->terminate();
       break;
     }
     
@@ -349,6 +360,8 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcadaptive_part_given_smcfi
     this->sequencer.schedule_parameters[this->index_name] = this->current_index;
     this->ensemble_factors->set_data(this->current_index);
     this->current_time = this->current_time + this->update_time_step;
+    this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+    this->sequencer.schedule_parameters[this->time_name] = this->current_time;
     
     this->ensemble_kalman_simulate(current_state);
     
@@ -369,10 +382,6 @@ EnsembleKalmanOutput* EnsembleKalmanFilter::specific_run(const Parameters &condi
 
 EnsembleKalmanOutput* EnsembleKalmanFilter::specific_ensemble_kalman_initialise(const Parameters &parameters)
 {
-  EnsembleKalmanOutput* output = new EnsembleKalmanOutput(this,
-                                                          this->lag,
-                                                          this->transform,
-                                                          this->results_name);
   //this->first_index = 0;
   this->current_index = this->first_index;
   this->ensemble_factors->set_data(this->current_index);
@@ -380,6 +389,12 @@ EnsembleKalmanOutput* EnsembleKalmanFilter::specific_ensemble_kalman_initialise(
   this->sequencer.schedule_parameters = Parameters();//this->time_name,this->current_time);
   this->sequencer.schedule_parameters[this->index_name] = this->current_index;
   this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+  this->sequencer.schedule_parameters[this->time_name] = this->current_time;
+  
+  EnsembleKalmanOutput* output = new EnsembleKalmanOutput(this,
+                                                          this->lag,
+                                                          this->transform,
+                                                          this->results_name);
   
   return output;
 }
@@ -389,6 +404,7 @@ void EnsembleKalmanFilter::ensemble_kalman_simulate(EnsembleKalmanOutput* curren
 {
   if (current_state->all_ensembles.size()==0)
   {
+    
     VectorIndex index(this->current_index);
     // Simulate from the proposal.
     this->simulate_proposal(current_state,
@@ -400,16 +416,10 @@ void EnsembleKalmanFilter::ensemble_kalman_simulate(EnsembleKalmanOutput* curren
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Ensemble* current_ensemble = &current_state->back();
     Ensemble* next_ensemble = current_state->add_ensemble(this->ensemble_factors);
-    
-    /*
-    this->the_worker->move(next_ensemble,
-                           current_ensemble,
-                           conditioned_on_parameters);
-    */
-    
+
     this->the_worker->move(next_ensemble,
                            current_ensemble);
-    
+
     current_state->increment_enk_iteration();
     // involves complete evaluation of weights using current adaptive param
   }
@@ -522,6 +532,8 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate(EnsembleKalmanOutput* curren
     
     this->sequencer.schedule_parameters = Parameters();//this->time_name,this->current_time);
     this->sequencer.schedule_parameters[this->index_name] = this->current_index;
+    this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+    this->sequencer.schedule_parameters[this->time_name] = this->current_time;
   }
   
   this->ensemble_kalman_evaluate_smcfixed_part(current_state,
@@ -544,6 +556,8 @@ void EnsembleKalmanFilter::ensemble_kalman_subsample_evaluate(EnsembleKalmanOutp
     
     this->sequencer.schedule_parameters = Parameters();//this->time_name,this->current_time);
     this->sequencer.schedule_parameters[this->index_name] = this->current_index;
+    this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+    this->sequencer.schedule_parameters[this->time_name] = this->current_time;
   }
   
   this->ensemble_kalman_subsample_evaluate_smcfixed_part(current_state,
@@ -582,7 +596,7 @@ void EnsembleKalmanFilter::ensemble_kalman_subsample_evaluate_smcadaptive_part_g
     
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
-    current_state->llhds.push_back(current_state->log_likelihood);
+    current_state->set_llhd(current_state->log_likelihood);
     current_state->set_time();
     
     if (current_state->results_name!="")
@@ -599,6 +613,7 @@ void EnsembleKalmanFilter::ensemble_kalman_subsample_evaluate_smcadaptive_part_g
     if (this->check_termination())
     {
       //terminate = TRUE;
+      current_state->terminate();
       break;
     }
     
@@ -606,6 +621,8 @@ void EnsembleKalmanFilter::ensemble_kalman_subsample_evaluate_smcadaptive_part_g
     this->sequencer.schedule_parameters[this->index_name] = this->current_index;
     this->ensemble_factors->set_data(this->current_index);
     this->current_time = this->current_time + this->update_time_step;
+    this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+    this->sequencer.schedule_parameters[this->time_name] = this->current_time;
     
     this->ensemble_kalman_subsample_simulate(current_state,
                                              conditioned_on_parameters);
@@ -645,7 +662,7 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcadaptive_part_given_smcfi
     
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
-    current_state->llhds.push_back(current_state->log_likelihood);
+    current_state->set_llhd(current_state->log_likelihood);
     current_state->set_time();
     
     if (current_state->results_name!="")
@@ -662,13 +679,17 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcadaptive_part_given_smcfi
     if (this->check_termination())
     {
       //terminate = TRUE;
+      current_state->terminate();
       break;
     }
     
     this->current_index = this->current_index+1;
     this->sequencer.schedule_parameters[this->index_name] = this->current_index;
+    
     this->ensemble_factors->set_data(this->current_index);
     this->current_time = this->current_time + this->update_time_step;
+    this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+    this->sequencer.schedule_parameters[this->time_name] = this->current_time;
     
     this->ensemble_kalman_simulate(current_state,
                                    conditioned_on_parameters);
@@ -777,6 +798,7 @@ void EnsembleKalmanFilter::ensemble_kalman_subsample_evaluate_smcadaptive_part_g
     if (this->check_termination())
     {
       //terminate = TRUE;
+ current_state->terminate();
       break;
     }
     

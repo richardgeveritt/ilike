@@ -17,6 +17,7 @@ using namespace Rcpp;
 class KalmanFilter;
 class EnsembleKalmanFilter;
 class ParticleFilter;
+class EnsembleShifter;
 
 KalmanFilter* get_kalman_filter(Data* the_data,
                                 const List &model,
@@ -32,6 +33,7 @@ EnsembleKalmanFilter* get_ensemble_kalman_filter(RandomNumberGenerator* rng,
                                                  const List &parameters,
                                                  const List &algorithm_parameter_list,
                                                  size_t number_of_ensemble_members,
+                                                 EnsembleShifter* shifter,
                                                  size_t enk_iterations_to_store,
                                                  bool write_to_file_at_each_iteration,
                                                  bool parallel_in,

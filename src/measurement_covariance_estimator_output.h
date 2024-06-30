@@ -33,13 +33,17 @@ public:
   
   arma::colvec* get_measurement();
   
-  virtual double evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature)=0;
+  virtual double evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
+                                                    const arma::mat &inv_sigma_precomp,
+                                                    double log_det_precomp) const=0;
   /*
   virtual double evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
                                                     const Parameters &conditioned_on_parameters)=0;
   */
   
-  virtual double subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature)=0;
+  virtual double subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
+                                                              const arma::mat &inv_sigma_precomp,
+                                                              double log_det_precomp) const=0;
   /*
   virtual double subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
                                                               const Parameters &conditioned_on_parameters)=0;

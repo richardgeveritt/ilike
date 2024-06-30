@@ -10,18 +10,24 @@ UnscentedKalmanUpdater::UnscentedKalmanUpdater()
   this->w0 = 1.0/3.0;
 }
 
-UnscentedKalmanUpdater::UnscentedKalmanUpdater(GetMatrixSimulateMeasurementKernelPtr measurement_kernel_function_in,
+UnscentedKalmanUpdater::UnscentedKalmanUpdater(const std::string &state_variable_in,
+                                               const std::string &measurement_variable_in,
+                                               GetMatrixSimulateMeasurementKernelPtr measurement_kernel_function_in,
                                                GetMatrixPtr measurement_noise_function_in,
                                                double w0_in)
+:KalmanUpdater(state_variable_in,measurement_variable_in)
 {
   this->measurement_kernel_function = measurement_kernel_function_in;
   this->measurement_noise_function = measurement_noise_function_in;
   this->w0 = w0_in;
 }
 
-UnscentedKalmanUpdater::UnscentedKalmanUpdater(MatrixSimulateMeasurementKernelPtr measurement_kernel_in,
+UnscentedKalmanUpdater::UnscentedKalmanUpdater(const std::string &state_variable_in,
+                                               const std::string &measurement_variable_in,
+                                               MatrixSimulateMeasurementKernelPtr measurement_kernel_in,
                                                const arma::mat &measurement_noise_in,
                                                double w0_in)
+:KalmanUpdater(state_variable_in,measurement_variable_in)
 {
   this->measurement_kernel = measurement_kernel_in;
   this->measurement_noise = measurement_noise_in;

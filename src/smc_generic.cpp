@@ -41,7 +41,7 @@ SMCGeneric::SMCGeneric(RandomNumberGenerator* rng_in,
                        bool parallel_in,
                        size_t grain_size_in,
                        const std::string &results_name_in)
-  :SMC(rng_in, seed_in, data_in, Parameters(), number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, proposal_kernel_in->get_proposals(), resampling_desired_ess_in, true, false, true, transform_proposed_particles, results_name_in)
+  :SMC(rng_in, seed_in, data_in, Parameters(), number_of_particles_in, lag_in, lag_proposed_in, proposal_kernel_in->get_proposals(), resampling_desired_ess_in, true, false, true, transform_proposed_particles, results_name_in)
 {
   proposal_kernel_in->set_proposal_parameters(&this->algorithm_parameters);
   L_kernel_in->set_proposal_parameters(&this->algorithm_parameters);
@@ -368,17 +368,20 @@ void SMCGeneric::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current
     
     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
-    current_state->llhds.push_back(current_state->log_likelihood);
+    current_state->set_llhd(current_state->log_likelihood);
     
     //current_state->back().set_previous_target_evaluated_to_target_evaluated();
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
+    current_state->set_time_and_reset_start();
+    
     // check termination, using sequencer
     if (this->sequencer.check_termination())
     {
       //terminate = TRUE;
+      current_state->terminate();
       break;
     }
     
@@ -622,7 +625,9 @@ void SMCGeneric::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current
 
     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
-    current_state->llhds.push_back(current_state->log_likelihood);
+    current_state->set_llhd(current_state->log_likelihood);
+    
+    current_state->set_time_and_reset_start();
     
     //current_state->back().set_previous_target_evaluated_to_target_evaluated();
     
@@ -633,6 +638,7 @@ void SMCGeneric::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current
     if (this->sequencer.check_termination())
     {
       //terminate = TRUE;
+      current_state->terminate();
       break;
     }
     
@@ -898,10 +904,13 @@ void SMCGeneric::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutpu
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
+    current_state->set_time_and_reset_start();
+    
     // check termination, using sequencer
     if (this->sequencer.check_termination())
     {
       //terminate = TRUE;
+      current_state->terminate();
       break;
     }
     
@@ -950,10 +959,13 @@ void SMCGeneric::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutpu
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
+    current_state->set_time_and_reset_start();
+    
     // check termination, using sequencer
     if (this->sequencer.check_termination())
     {
       //terminate = TRUE;
+      current_state->terminate();
       break;
     }
     

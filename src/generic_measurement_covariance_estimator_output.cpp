@@ -92,12 +92,14 @@ arma::colvec GenericMeasurementCovarianceEstimatorOutput::get_deterministic_shif
   return this->measurement_state;
 }
 
-double GenericMeasurementCovarianceEstimatorOutput::evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature)
+double GenericMeasurementCovarianceEstimatorOutput::evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
+                                                                                       const arma::mat &inv_sigma_precomp,
+                                                                                       double log_det_precomp) const
 {
   return dmvnorm_using_precomp(*this->generic_estimator->get_measurement_pointer(),
                                this->measurement_state,
-                               this->generic_estimator->inv_sigma_precomp,
-                               this->generic_estimator->log_det_precomp);
+                               inv_sigma_precomp,
+                               log_det_precomp);
 }
 
 /*
@@ -111,10 +113,12 @@ double GenericMeasurementCovarianceEstimatorOutput::evaluate_ensemble_likelihood
 }
 */
 
-double GenericMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature)
+double GenericMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
+                                                                                                 const arma::mat &inv_sigma_precomp,
+                                                                                                 double log_det_precomp) const
 {
   // parameters of covariance should already be set at this point, so second argument does nothing
-  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
+  return dmvnorm(*this->generic_estimator->get_measurement_pointer(),
                  this->measurement_state,
                  inverse_incremental_temperature*this->generic_estimator->Cygivenx);
 }

@@ -9,6 +9,7 @@
 #' @param write_to_file_at_each_iteration (optional) Do we write the algorithm output to file at each filtering step (TRUE/FALSE)?
 #' @param model_parameter_list (optional) A list containing parameters for the model.
 #' @param algorithm_parameter_list (optional) A list containing named parameters for the algorithm.
+#' @param fixed_parameter_list (optional) A list containing parameters to condition on.
 #' @param external_packages (optional) A vector of names of other R packages the functions rely on.
 #' @param julia_bin_dir (optional) The directory containing the Julia bin file - only needed if Julia functions are used.
 #' @param julia_required_libraries (optional) Vector of strings, each of which is a Julia packge that will be installed and loaded.
@@ -27,6 +28,7 @@ particle_filter = function(model,
                            write_to_file_at_each_iteration = TRUE,
                            model_parameter_list = list(),
                            algorithm_parameter_list = list(),
+                           fixed_parameter_list = list(),
                            external_packages = c(),
                            julia_bin_dir="",
                            julia_required_libraries=c(),
@@ -70,14 +72,31 @@ particle_filter = function(model,
   #   adaptive_resampling_method = list(method='ess',values=as.list(paste(number_of_particles)))
   # }
 
-  return(do_particle_filter(model,
-                            model_parameter_list,
-                            algorithm_parameter_list,
-                            number_of_particles,
-                            smc_iterations_to_store,
-                            write_to_file_at_each_iteration,
-                            parallel,
-                            grain_size,
-                            results_directory,
-                            seed))
+  if (length(fixed_parameter_list)==0)
+  {
+    return(do_particle_filter(model,
+                              model_parameter_list,
+                              algorithm_parameter_list,
+                              number_of_particles,
+                              smc_iterations_to_store,
+                              write_to_file_at_each_iteration,
+                              parallel,
+                              grain_size,
+                              results_directory,
+                              seed))
+  }
+  else
+  {
+    return(do_particle_filter_with_fixed_params(model,
+                                                model_parameter_list,
+                                                algorithm_parameter_list,
+                                                fixed_parameter_list,
+                                                number_of_particles,
+                                                smc_iterations_to_store,
+                                                write_to_file_at_each_iteration,
+                                                parallel,
+                                                grain_size,
+                                                results_directory,
+                                                seed))
+  }
 }

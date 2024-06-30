@@ -9,8 +9,9 @@ GaussianMeasurementCovarianceEstimator::GaussianMeasurementCovarianceEstimator(R
                                                                                size_t* seed_in,
                                                                                Data* data_in,
                                                                                std::shared_ptr<Transform> inverse_transform_in,
-                                                                               std::shared_ptr<Transform> summary_statistics_in)
-:MeasurementCovarianceEstimator(rng_in,seed_in,data_in,inverse_transform_in,summary_statistics_in)
+                                                                               std::shared_ptr<Transform> summary_statistics_in,
+                                                                               const std::vector<std::string> &measurement_variables_in)
+:MeasurementCovarianceEstimator(rng_in,seed_in,data_in,inverse_transform_in,summary_statistics_in,measurement_variables_in)
 {
   
 }
@@ -97,10 +98,11 @@ void GaussianMeasurementCovarianceEstimator::change_data()
 void GaussianMeasurementCovarianceEstimator::change_data(std::shared_ptr<Data> new_data)
 {
   this->current_data = new_data.get();
+  
   if (this->measurement_variables.size()>0)
   {
     this->measurement = (*this->current_data)[this->measurement_variables[0]].as_col();
-    
+
     if (this->measurement_variables.size()>0)
     {
       for (size_t i=1; i<this->measurement_variables.size(); ++i)
@@ -111,9 +113,23 @@ void GaussianMeasurementCovarianceEstimator::change_data(std::shared_ptr<Data> n
   }
 }
 
-void GaussianMeasurementCovarianceEstimator::precompute_gaussian_covariance(double inverse_incremental_temperature)
+void GaussianMeasurementCovarianceEstimator::precompute_gaussian_covariance(double inverse_incremental_temperature,
+                                                                            arma::mat &inv_sigma_precomp,
+                                                                            double &log_det_precomp)
 {
-  arma::mat for_precomp = inverse_incremental_temperature*this->get_measurement_covariance();
-  this->inv_sigma_precomp = arma::inv_sympd(for_precomp);
-  this->log_det_precomp = arma::log_det_sympd(for_precomp);
+  arma::mat for_precomp;
+  if (isinf(inverse_incremental_temperature))
+  {
+    arma::mat meas_cov = this->get_measurement_covariance();
+    inv_sigma_precomp.zeros(meas_cov.n_rows,meas_cov.n_cols);
+    log_det_precomp = arma::datum::inf;
+  }
+  else
+  {
+    for_precomp = inverse_incremental_temperature*this->get_measurement_covariance();
+    inv_sigma_precomp = arma::inv_sympd(for_precomp);
+    log_det_precomp = arma::log_det_sympd(for_precomp);
+  }
+  
+  
 }

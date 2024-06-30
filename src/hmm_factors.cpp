@@ -98,7 +98,7 @@ void HMMFactors::make_copy(const HMMFactors &another)
   
   this->smcfixed_flag = another.smcfixed_flag;
   
-  this->data_time_slices = another.data_time_slices;
+  //this->data_time_slices = another.data_time_slices;
   
   this->likelihood_estimators.resize(0);
   this->likelihood_estimators.reserve(another.likelihood_estimators.size());
@@ -149,7 +149,7 @@ void HMMFactors::set_data(const Index* index)
   
   // assumption that all llhd_estimators point to the same data
   Data* all_data = this->likelihood_estimators[0]->get_data();
-  
+
   if (this->likelihood_estimator_temp_data.size()==0)
   {
     this->likelihood_estimator_temp_data.push_back(std::make_shared<Data>(all_data->rows(indices)));
@@ -278,4 +278,16 @@ void HMMFactors::specific_change_data(Data* new_data)
   {
     (*i)->change_data_with_raw_pointer(new_data);
   }
+}
+
+Data* HMMFactors::get_current_data()
+{
+  for (auto i=this->likelihood_estimators.begin();
+       i!=this->likelihood_estimators.end();
+       ++i)
+  {
+    return (*i)->get_current_data();
+  }
+  
+  return NULL;
 }

@@ -24,22 +24,30 @@ EnsembleKalmanOutput::EnsembleKalmanOutput(EnsembleKalman* estimator_in,
                                            const std::string &results_name_in)
   :LikelihoodEstimatorOutput()
 {
-  this->estimator = estimator_in;
+  this->estimator = estimator_in->ensemble_kalman_duplicate();
   this->log_likelihood_smcfixed_part = 0.0;
   this->subsample_log_likelihood_smcfixed_part = 0.0;
-  this->lag = lag_in;
+  if (lag_in<2)
+  {
+    this->lag = 2;
+  }
+  else
+  {
+    this->lag = lag_in;
+  }
+  this->output_lag = lag_in;
   this->iteration_written_to_file = -1;
   this->results_name = results_name_in;
   this->transform = transform_in;
   this->enk_iteration = 0;
   this->skip_to_end_of_sequence = false;
-  
   this->start_time = std::chrono::high_resolution_clock::now();
 }
 
 EnsembleKalmanOutput::~EnsembleKalmanOutput()
 {
-
+  if (this->estimator!=NULL)
+    delete this->estimator;
 }
 
 //Copy constructor for the EnsembleKalmanOutput class.
@@ -54,6 +62,9 @@ void EnsembleKalmanOutput::operator=(const EnsembleKalmanOutput &another)
   if(this == &another){ //if a==a
     return;
   }
+  
+  if (this->estimator!=NULL)
+    delete this->estimator;
 
   LikelihoodEstimatorOutput::operator=(another);
   this->make_copy(another);
@@ -66,7 +77,10 @@ LikelihoodEstimatorOutput* EnsembleKalmanOutput::duplicate() const
 
 void EnsembleKalmanOutput::make_copy(const EnsembleKalmanOutput &another)
 {
-  this->estimator = another.estimator;
+  if (another.estimator!=NULL)
+    this->estimator = another.estimator->ensemble_kalman_duplicate();
+  else
+    this->estimator = NULL;
   this->enk_iteration = another.enk_iteration;
   this->iteration_written_to_file = another.iteration_written_to_file;
   this->transform = another.transform;
@@ -74,6 +88,7 @@ void EnsembleKalmanOutput::make_copy(const EnsembleKalmanOutput &another)
   this->subsample_log_likelihood_smcfixed_part = another.subsample_log_likelihood_smcfixed_part;
   this->all_ensembles = another.all_ensembles;
   this->lag = another.lag;
+  this->output_lag = another.output_lag;
   this->start_time = another.start_time;
   this->times = another.times;
   this->llhds = another.llhds;
@@ -125,6 +140,74 @@ double EnsembleKalmanOutput::calculate_latest_log_normalising_constant_ratio()
 double EnsembleKalmanOutput::calculate_inversion_latest_log_normalising_constant_ratio(double inverse_incremental_temperature)
 {
   return this->all_ensembles.back().calculate_inversion_log_normalising_constant(inverse_incremental_temperature);
+}
+
+double EnsembleKalmanOutput::calculate_unbiased_inversion_latest_log_normalising_constant_ratio(double inverse_incremental_temperature)
+{
+  return this->all_ensembles.back().calculate_unbiased_inversion_log_normalising_constant(inverse_incremental_temperature);
+}
+
+double EnsembleKalmanOutput::calculate_path1_inversion_latest_log_normalising_constant_ratio(const std::vector<double> &previous_log_measurement_likelihood_means,
+                                                                                             double inverse_incremental_temperature,
+                                                                                             double temperature,
+                                                                                             double multiplier)
+{
+  this->all_ensembles.back().calculate_path1_inversion_log_normalising_constant((this->all_ensembles.end()-1)->log_measurement_likelihood_means,
+                                                                                temperature,
+                                                                                multiplier);
+  
+  std::deque<Ensemble>::iterator current_ensemble = this->all_ensembles.end()-1;
+  //std::deque<Ensemble>::iterator previous_ensemble = this->all_ensembles.end()-2;
+  
+  double log_ratio = 0.0;
+  for (size_t i=0; i<current_ensemble->log_measurement_likelihood_means.size(); ++i)
+  {
+    log_ratio = log_ratio + (0.5/inverse_incremental_temperature)*(current_ensemble->log_measurement_likelihood_means[i] + previous_log_measurement_likelihood_means[i]);
+  }
+  
+  return log_ratio;
+}
+
+double EnsembleKalmanOutput::calculate_path2_inversion_latest_log_normalising_constant_ratio(const std::vector<double> &previous_log_measurement_likelihood_means,
+                                                                                             const std::vector<double> &previous_log_measurement_likelihood_variances,
+                                                                                             double inverse_incremental_temperature)
+{
+  this->all_ensembles.back().calculate_path2_inversion_log_normalising_constant((this->all_ensembles.end()-1)->log_measurement_likelihood_means,
+                                                                                (this->all_ensembles.end()-1)->log_measurement_likelihood_variances);
+  
+  std::deque<Ensemble>::iterator current_ensemble = this->all_ensembles.end()-1;
+  //std::deque<Ensemble>::iterator previous_ensemble = this->all_ensembles.end()-2;
+  
+  double log_ratio = 0.0;
+  for (size_t i=0; i<current_ensemble->log_measurement_likelihood_means.size(); ++i)
+  {
+    log_ratio = log_ratio + (1.0/(2.0*inverse_incremental_temperature))*(current_ensemble->log_measurement_likelihood_means[i] + previous_log_measurement_likelihood_means[i]);
+    
+    log_ratio = log_ratio - (1.0/(12.0*pow(inverse_incremental_temperature,2.0)))*(current_ensemble->log_measurement_likelihood_variances[i] - previous_log_measurement_likelihood_variances[i]);
+  }
+  
+  return log_ratio;
+}
+
+void EnsembleKalmanOutput::calculate_path1_inversion_initial_quantities(std::vector<double> &initial_log_measurement_likelihood_means,
+                                                                        double temperature,
+                                                                        double multiplier)
+{
+  this->all_ensembles.back().calculate_path1_inversion_log_normalising_constant(initial_log_measurement_likelihood_means,
+                                                                                temperature,
+                                                                                multiplier);
+}
+
+void EnsembleKalmanOutput::calculate_path2_inversion_initial_quantities(std::vector<double> &initial_log_measurement_likelihood_means,
+                                                                        std::vector<double> &initial_log_measurement_likelihood_variances)
+{
+  this->all_ensembles.back().calculate_path2_inversion_log_normalising_constant(initial_log_measurement_likelihood_means,
+                                                                                initial_log_measurement_likelihood_variances);
+}
+
+void EnsembleKalmanOutput::calculate_kalman_gains(double inverse_incremental_temperature)
+{
+  this->all_ensembles.back().calculate_kalman_gains(inverse_incremental_temperature);
 }
 
 void EnsembleKalmanOutput::simulate()
@@ -266,9 +349,27 @@ arma::mat EnsembleKalmanOutput::subsample_get_gradient_of_log(const std::string 
 
 void EnsembleKalmanOutput::set_time()
 {
+  size_t num_to_pop_front = std::max<int>(0,this->times.size()-this->lag+1);
+  for (size_t i=0; i<num_to_pop_front; ++i)
+  {
+    this->times.pop_front();
+  }
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed_time = end_time - this->start_time;
-  this->times.push_back(elapsed_time.count());
+  if (this->times.size()>0)
+    this->times.push_back(elapsed_time.count()+this->times.back());
+  else
+    this->times.push_back(elapsed_time.count());
+}
+
+void EnsembleKalmanOutput::set_llhd(double llhd_in)
+{
+  size_t num_to_pop_front = std::max<int>(0,this->llhds.size()-this->lag+1);
+  for (size_t i=0; i<num_to_pop_front; ++i)
+  {
+    this->llhds.pop_front();
+  }
+  this->llhds.push_back(llhd_in);
 }
 
 size_t EnsembleKalmanOutput::number_of_ensemble_kalman_iterations() const
@@ -284,6 +385,24 @@ void EnsembleKalmanOutput::increment_enk_iteration()
 void EnsembleKalmanOutput::forget_you_were_already_written_to_file()
 {
   this->iteration_written_to_file = -1;
+}
+
+void EnsembleKalmanOutput::terminate()
+{
+  while (this->all_ensembles.size()>this->output_lag)
+  {
+    this->all_ensembles.pop_back();
+  }
+  
+  while (this->llhds.size()>this->output_lag)
+  {
+    this->llhds.pop_back();
+  }
+  
+  while (this->times.size()>this->output_lag)
+  {
+    this->times.pop_back();
+  }
 }
 
 void EnsembleKalmanOutput::skip_to_end_of_sequence_if_points_are_gaussian(double significance_level)
@@ -314,44 +433,45 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
   {
     size_t distance_from_end = this->enk_iteration-iteration;
     
-    size_t llhd_index = this->llhds.size()-1-distance_from_end;
-    
-    if (!this->estimator->log_likelihood_file_stream.is_open())
-    {
-      this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
-    }
-    if (this->estimator->log_likelihood_file_stream.is_open())
-    {
-      this->estimator->log_likelihood_file_stream << this->llhds[llhd_index] << std::endl;
-      //log_likelihood_file_stream.close();
-    }
-    else
-    {
-      Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + "cannot be opened.");
-    }
-    
-    if (!this->estimator->time_file_stream.is_open())
-    {
-      this->estimator->time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
-    }
-    if (this->estimator->time_file_stream.is_open())
-    {
-      double time_sum = 0.0;
-      for (size_t k=0; k<=llhd_index; ++k)
-      {
-        time_sum = time_sum + this->times[k];
-      }
-      this->estimator->time_file_stream << time_sum << std::endl;
-      //log_likelihood_file_stream.close();
-    }
-    else
-    {
-      Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
-    }
+    //size_t llhd_index = this->llhds.size()-1-distance_from_end;
     
     if (this->all_ensembles.size() > distance_from_end)
     {
       size_t deque_index = this->all_ensembles.size()-1-distance_from_end;
+      
+      if (!this->estimator->log_likelihood_file_stream.is_open())
+      {
+        this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
+      }
+      if (this->estimator->log_likelihood_file_stream.is_open())
+      {
+        this->estimator->log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->llhds[deque_index] << std::endl;
+        //log_likelihood_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + "cannot be opened.");
+      }
+      
+      if (!this->estimator->time_file_stream.is_open())
+      {
+        this->estimator->time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
+      }
+      if (this->estimator->time_file_stream.is_open())
+      {
+        //double time_sum = 0.0;
+        //for (size_t k=0; k<=llhd_index; ++k)
+        //{
+        //  time_sum = time_sum + this->times[k];
+        //}
+        this->estimator->time_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->times[deque_index] << std::endl;
+        //log_likelihood_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
+      }
+      
       
       if (!this->estimator->vector_variables_file_stream.is_open())
       {
@@ -412,11 +532,11 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
       
       if (!this->estimator->incremental_log_likelihood_file_stream.is_open())
       {
-        this->estimator->incremental_log_likelihood_file_stream.open(smc_iteration_directory + "/incremental_log_likelihood.txt");
+        this->estimator->incremental_log_likelihood_file_stream.open(smc_iteration_directory + "/incremental_log_likelihood.txt",std::ios::out | std::ios::app);
       }
       if (this->estimator->incremental_log_likelihood_file_stream.is_open())
       {
-        this->estimator->incremental_log_likelihood_file_stream << this->all_ensembles[deque_index].log_normalising_constant_ratio << std::endl;
+        this->estimator->incremental_log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->all_ensembles[deque_index].log_normalising_constant_ratio << std::endl;
         //incremental_log_likelihood_file_stream.close();
       }
       else
@@ -430,7 +550,7 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
       }
       if (this->estimator->ess_file_stream.is_open())
       {
-        this->estimator->ess_file_stream << this->all_ensembles[deque_index].ess << std::endl;
+        this->estimator->ess_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->all_ensembles[deque_index].ess << std::endl;
         //ess_file_stream.close();
       }
       else
@@ -440,17 +560,17 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
       
       if (!this->estimator->schedule_parameters_file_stream.is_open())
       {
-        this->estimator->schedule_parameters_file_stream.open(smc_iteration_directory + "/schedule_parameters.txt");
+        this->estimator->schedule_parameters_file_stream.open(smc_iteration_directory + "/schedule_parameters.txt",std::ios::out | std::ios::app);
       }
       if (this->estimator->schedule_parameters_file_stream.is_open())
       {
         if (this->estimator->reciprocal_schedule_scale==0.0)
         {
-          this->estimator->schedule_parameters_file_stream << this->all_ensembles[deque_index].schedule_parameters << std::endl;
+          this->estimator->schedule_parameters_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->all_ensembles[deque_index].schedule_parameters << std::endl;
         }
         else
         {
-          this->estimator->schedule_parameters_file_stream << this->estimator->reciprocal_schedule_scale * pow(this->all_ensembles[deque_index].schedule_parameters,-0.5) << std::endl;
+          this->estimator->schedule_parameters_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->estimator->reciprocal_schedule_scale * pow(this->all_ensembles[deque_index].schedule_parameters,-0.5) << std::endl;
         }
         //schedule_parameters_file_stream.close();
       }
@@ -461,7 +581,7 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
       
       if(!this->estimator->vector_points_file_stream.is_open())
       {
-        this->estimator->vector_points_file_stream.open(smc_iteration_directory + "/vector_points.txt");
+        this->estimator->vector_points_file_stream.open(smc_iteration_directory + "/vector_points.txt",std::ios::out | std::ios::app);
       }
       if(this->estimator->vector_points_file_stream.is_open())
       {
@@ -482,7 +602,7 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
       
       if(!this->estimator->any_points_file_stream.is_open())
       {
-        this->estimator->any_points_file_stream.open(smc_iteration_directory + "/any_points.txt");
+        this->estimator->any_points_file_stream.open(smc_iteration_directory + "/any_points.txt",std::ios::out | std::ios::app);
       }
       if(this->estimator->any_points_file_stream.is_open())
       {

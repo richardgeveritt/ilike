@@ -106,8 +106,8 @@ arma::mat EnKGaussianMeasurementCovarianceEstimator::get_adjustment(const arma::
   
 }
 
-arma::mat EnKGaussianMeasurementCovarianceEstimator::get_sqrt_adjustment(const arma::mat &Sigma,
-                                                                         const arma::mat &HSigmaHt,
+arma::mat EnKGaussianMeasurementCovarianceEstimator::get_sqrt_adjustment(const arma::mat &Cxy,
+                                                                         const arma::mat &Cyy,
                                                                          double inverse_incremental_temperature) const
 {
   Rcpp::stop("EnKGaussianMeasurementCovarianceEstimator::get_sqrt_adjustment - not yet implemented.");

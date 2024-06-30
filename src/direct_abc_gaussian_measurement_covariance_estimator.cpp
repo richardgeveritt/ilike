@@ -20,7 +20,8 @@ DirectABCGaussianMeasurementCovarianceEstimator::DirectABCGaussianMeasurementCov
                                                seed_in,
                                                data_in,
                                                transform_in,
-                                               summary_statistics_in)
+                                               summary_statistics_in,
+                                               measurement_variables_in)
 {
   if (min_epsilon_in<=0.0)
   {
@@ -28,7 +29,7 @@ DirectABCGaussianMeasurementCovarianceEstimator::DirectABCGaussianMeasurementCov
   }
   
   this->set_using_parameters = true;
-  this->measurement_variables = measurement_variables_in;
+  //this->measurement_variables = measurement_variables_in;
   this->min_epsilon = min_epsilon_in;
   //this->tempering_variable = tempering_variable_in;
   this->scale_variable = scale_variable_in;
@@ -263,6 +264,9 @@ arma::mat DirectABCGaussianMeasurementCovarianceEstimator::get_adjustment(const 
   
   arma::mat U;
   arma::vec diagD;
+  
+  for_eig = (for_eig+for_eig.t())/2.0;
+  
   arma::eig_sym(diagD,U,for_eig);
   arma::mat Dsqrt(diagD.n_elem,diagD.n_elem);
   Dsqrt.diag() = arma::sqrt(diagD);
@@ -282,19 +286,54 @@ arma::mat DirectABCGaussianMeasurementCovarianceEstimator::get_adjustment(const 
    */
 }
 
-arma::mat DirectABCGaussianMeasurementCovarianceEstimator::get_sqrt_adjustment(const arma::mat &Sigma,
-                                                                               const arma::mat &HSigmaHt,
+arma::mat DirectABCGaussianMeasurementCovarianceEstimator::get_sqrt_adjustment(const arma::mat &Cxy,
+                                                                               const arma::mat &Cyy,
                                                                                double inverse_incremental_temperature) const
 {
   arma::mat sqrtV = arma::chol(inverse_incremental_temperature*this->get_measurement_covariance());
-  arma::mat sqrtS = arma::chol(HSigmaHt + inverse_incremental_temperature*this->get_measurement_covariance());
+
+  arma::colvec abs_eigenvalues = arma::abs(arma::eig_gen(Cyy));
+  double biggest_eig = arma::abs(arma::eig_gen(Cyy)).max();
   
-  arma::mat stacked_H(HSigmaHt.n_rows,Sigma.n_rows,arma::fill::value(1.0));
+  double min_nonzero_eig = 1e50;
+  double second_biggest_eig = arma::abs(arma::eig_gen(Cyy)).min();
+  for (size_t i=0; i<abs_eigenvalues.n_elem; ++i)
+  {
+    if ( (abs_eigenvalues[i]<min_nonzero_eig) && (abs_eigenvalues[i]>1e-10) )
+    {
+      min_nonzero_eig = abs_eigenvalues[i];
+    }
+    
+    if ( (abs_eigenvalues[i]>second_biggest_eig) && (abs_eigenvalues[i]<biggest_eig) )
+    {
+      second_biggest_eig = abs_eigenvalues[i];
+    }
+  }
   
-  arma::mat K = Sigma*stacked_H.t() * arma::inv_sympd(sqrtS) * arma::inv_sympd(sqrtS + sqrtV);
+  double ratio = arma::abs(arma::eig_gen(Cyy)).max()/min_nonzero_eig;
+  //double ratio = biggest_eig/second_biggest_eig;
+  
+  double scale = ratio/1e14;
+  
+  arma::mat A;
+  A.eye(Cyy.n_rows,Cyy.n_cols);
+  A = scale*A;
+  //arma::mat sqrtS3 = arma::chol(A+Cyy);
+  
+  //arma::mat sqrtS2 = arma::chol(inverse_incremental_temperature*this->get_measurement_covariance());
+  
+  arma::mat sqrtS = arma::chol(A+Cyy + inverse_incremental_temperature*this->get_measurement_covariance());
+  
+  //arma::mat sqrtS = arma::chol(Cyy + inverse_incremental_temperature*this->get_measurement_covariance());
+  
+  arma::mat stacked_H(Cyy.n_rows,Cxy.n_rows);
+  stacked_H.eye();
+  
+  //arma::mat K = Sigma*stacked_H.t() * arma::inv_sympd(sqrtS) * arma::inv_sympd(sqrtS + sqrtV);
+  arma::mat K = Cxy * arma::inv_sympd(sqrtS) * arma::inv_sympd(sqrtS + sqrtV);
   
   arma::mat I;
-  I.eye(stacked_H.n_cols,stacked_H.n_cols);
+  I.eye(Cxy.n_rows,Cxy.n_rows);
   
   return I-K*stacked_H;
 }

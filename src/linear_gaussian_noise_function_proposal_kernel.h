@@ -27,6 +27,11 @@ public:
                                             const GetMatrixPtr &A_in,
                                             const GetMatrixPtr &covariance_in);
   
+  LinearGaussianNoiseFunctionProposalKernel(const std::string &variable_name_in,
+                                            const std::vector<std::string> &conditioned_on_variable_names_in,
+                                            const GetMatrixPtr &A_in,
+                                            const GetMatrixPtr &covariance_in);
+  
   LinearGaussianNoiseFunctionProposalKernel(const LinearGaussianNoiseFunctionProposalKernel &another);
   
   void operator=(const LinearGaussianNoiseFunctionProposalKernel &another);

@@ -29,6 +29,7 @@ public:
                      size_t update_type,
                      std::shared_ptr<Transform> summary_statistics_in,
                      std::shared_ptr<Transform> transform_in,
+                     const std::vector<std::string> &measurement_variables_in,
                      bool parallel_in,
                      size_t grain_size_in,
                      const std::string &results_name_in);
@@ -63,6 +64,7 @@ public:
                      SimulateModelPtr simulate_model_in,
                      std::shared_ptr<Transform> summary_statistics_in,
                      std::shared_ptr<Transform> transform_in,
+                     const std::vector<std::string> &measurement_variables_in,
                      bool parallel_in,
                      size_t grain_size_in,
                      const std::string &results_name_in);

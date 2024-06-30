@@ -19,12 +19,17 @@ public:
   CustomGuidedNoParamsProposalKernel();
   virtual ~CustomGuidedNoParamsProposalKernel();
   
+  CustomGuidedNoParamsProposalKernel(SimulateGuidedNoParamsMCMCProposalPtr proposal_simulate_in);
+  
   CustomGuidedNoParamsProposalKernel(SimulateGuidedNoParamsMCMCProposalPtr proposal_simulate_in,
-                                     const Data* data_in);
+                                     EvaluateLogGuidedNoParamsMCMCProposalPtr proposal_evaluate_in);
+  
+  CustomGuidedNoParamsProposalKernel(SimulateGuidedNoParamsMCMCProposalPtr proposal_simulate_in,
+                                     Data* data_in);
   
   CustomGuidedNoParamsProposalKernel(SimulateGuidedNoParamsMCMCProposalPtr proposal_simulate_in,
                                      EvaluateLogGuidedNoParamsMCMCProposalPtr proposal_evaluate_in,
-                                     const Data* data_in);
+                                     Data* data_in);
 
   CustomGuidedNoParamsProposalKernel(const CustomGuidedNoParamsProposalKernel &another);
 
@@ -42,6 +47,8 @@ public:
   void set_index_if_null(Index* index_in);
   
   bool can_be_evaluated() const;
+  
+  void set_data(Data* data_in);
   
 // Mh has its own parameters.
   // Stochastic has some weights.
@@ -129,7 +136,8 @@ protected:
   
   SimulateGuidedNoParamsMCMCProposalPtr proposal_simulate;
   
-  const Data* data;
+  // not stored here
+  Data* data;
   
 };
 

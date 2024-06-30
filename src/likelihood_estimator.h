@@ -50,6 +50,8 @@ public:
   
   Data* get_data() const;
   
+  Data* get_current_data() const;
+  
   bool get_smcfixed_flag() const;
   
   Parameters algorithm_parameters;

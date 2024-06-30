@@ -53,7 +53,7 @@ public:
   
   void find_Cygivenx(const arma::mat &inv_Cxx,
                      const std::vector<arma::mat> &Cxys,
-                     const std::vector<arma::mat> &Cyys);
+                     const std::vector<arma::mat> &Cyys) const;
   
   std::vector<arma::mat> get_adjustments(const arma::mat &Zf,
                                          const arma::mat &Dhathalf,
@@ -62,18 +62,32 @@ public:
                                          const std::vector<arma::mat> &Yhats,
                                          double inverse_incremental_temperature) const;
   
-  std::vector<arma::mat> get_sqrt_adjustments(const arma::mat &Sigma,
-                                              const std::vector<arma::mat> &HSigmaHts,
+  std::vector<arma::mat> get_sqrt_adjustments(const std::vector<arma::mat> &Cxys,
+                                              const std::vector<arma::mat> &Cyys,
                                               double inverse_incremental_temperature) const;
   
-  double get_incremental_likelihood(Ensemble* ensemble);
+  double get_incremental_likelihood(Ensemble* ensemble) const;
   double get_inversion_incremental_likelihood(Ensemble* ensemble,
-                                              double inverse_incremental_temperature);
+                                              double inverse_incremental_temperature) const;
+  double get_unbiased_inversion_incremental_likelihood(Ensemble* ensemble,
+                                                       double inverse_incremental_temperature) const;
+  void get_path1_inversion_incremental_likelihood(Ensemble* ensemble,
+                                                  std::vector<double> &log_measurement_likelihood_means,
+                                                  double temperature,
+                                                  double multiplier) const;
+  void get_path2_inversion_incremental_likelihood(Ensemble* ensemble,
+                                                  std::vector<double> &log_measurement_likelihood_means,
+                                                  std::vector<double> &log_measurement_likelihood_variances) const;
+  
+  void calculate_kalman_gains(Ensemble* ensemble,
+                              double inverse_incremental_temperature) const;
   
   void setup();
   void setup(const Parameters &conditioned_on_parameters);
   
-  void precompute_gaussian_covariance(double inverse_incremental_temperature);
+  void precompute_gaussian_covariance(double inverse_incremental_temperature,
+                                      std::vector<arma::mat> &inv_sigma_precomps,
+                                      std::vector<double> &log_det_precomps) const;
   
 protected:
 

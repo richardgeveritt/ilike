@@ -1,6 +1,10 @@
+//#include <boost/range/join.hpp>
+
 #include "mixed_generic_direct_gaussian_measurement_covariance_estimator.h"
 #include "mixed_generic_direct_gaussian_measurement_covariance_estimator_output.h"
 #include "utils.h"
+
+//boost::copy_range<std::vector<std::string>>(boost::join(prior_measurement_variables_in,data_measurement_variables_in))
 
 MixedGenericDirectGaussianMeasurementCovarianceEstimator::MixedGenericDirectGaussianMeasurementCovarianceEstimator()
   :MeasurementCovarianceEstimator()
@@ -15,12 +19,14 @@ MixedGenericDirectGaussianMeasurementCovarianceEstimator::MixedGenericDirectGaus
                                                                                                                    Data* prior_data_in,
                                                                              SimulateModelPtr simulator_in,
                                                                                                                    const std::vector<std::string> &prior_measurement_variables_in,
-                                                                                                                   const std::vector<arma::mat> &prior_measurement_noises_in)
+                                                                                                                   const std::vector<arma::mat> &prior_measurement_noises_in,
+                                                                                                                   const std::vector<std::string> &data_measurement_variables_in)
 : MeasurementCovarianceEstimator(rng_in,
                                  seed_in,
                                  data_in,
                                  transform_in,
-                                 summary_statistics_in)
+                                 summary_statistics_in,
+                                 data_measurement_variables_in)
 {
   this->set_using_parameters = false;
   this->prior_measurement_variables = prior_measurement_variables_in;
@@ -109,7 +115,7 @@ void MixedGenericDirectGaussianMeasurementCovarianceEstimator::setup(const Param
 void MixedGenericDirectGaussianMeasurementCovarianceEstimator::setup_measurement_variables()
 {
   Data likelihood_dummy_data = this->simulator(*this->rng,Parameters());
-  this->measurement_variables = likelihood_dummy_data.get_vector_variables();
+  //this->measurement_variables = likelihood_dummy_data.get_vector_variables();
   std::vector<arma::colvec> means;
   means.reserve(this->measurement_variables.size());
   std::vector<arma::mat> covs;
@@ -130,7 +136,7 @@ void MixedGenericDirectGaussianMeasurementCovarianceEstimator::setup_measurement
 void MixedGenericDirectGaussianMeasurementCovarianceEstimator::setup_measurement_variables(const Parameters &conditioned_on_parameters)
 {
   Data likelihood_dummy_data = this->simulator(*this->rng,conditioned_on_parameters);
-  this->measurement_variables = likelihood_dummy_data.get_vector_variables();
+  //this->measurement_variables = likelihood_dummy_data.get_vector_variables();
   std::vector<arma::colvec> means;
   means.reserve(this->measurement_variables.size());
   std::vector<arma::mat> covs;
@@ -188,8 +194,8 @@ arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_adjustme
   return P*Dhathalf*U*Dsqrt*arma::pinv(Dhathalf)*P.t();
 }
 
-arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_sqrt_adjustment(const arma::mat &Sigma,
-                                                                                        const arma::mat &HSigmaHt,
+arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_sqrt_adjustment(const arma::mat &Cxy,
+                                                                                        const arma::mat &Cyy,
                                                                                         double inverse_incremental_temperature) const
 {
   Rcpp::stop("MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_sqrt_adjustment - not yet implemented.");
@@ -380,9 +386,11 @@ void MixedGenericDirectGaussianMeasurementCovarianceEstimator::change_data(std::
   }
 }
 
-void MixedGenericDirectGaussianMeasurementCovarianceEstimator::precompute_gaussian_covariance(double inverse_incremental_temperature)
+void MixedGenericDirectGaussianMeasurementCovarianceEstimator::precompute_gaussian_covariance(double inverse_incremental_temperature,
+                                                                                              arma::mat &inv_sigma_precomp,
+                                                                                              double &log_det_precomp)
 {
   arma::mat for_precomp = this->get_measurement_covariance_for_likelihood_ratio(inverse_incremental_temperature);
-  this->inv_sigma_precomp = arma::inv_sympd(for_precomp);
-  this->log_det_precomp = arma::log_det_sympd(for_precomp);
+  inv_sigma_precomp = arma::inv_sympd(for_precomp);
+  log_det_precomp = arma::log_det_sympd(for_precomp);
 }

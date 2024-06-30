@@ -200,3 +200,8 @@ bool CustomNoParamsSymmetricProposalKernel::can_be_evaluated() const
   else
     return true;
 }
+
+void CustomNoParamsSymmetricProposalKernel::set_data(Data* data_in)
+{
+  
+}

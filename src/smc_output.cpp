@@ -32,7 +32,15 @@ SMCOutput::SMCOutput(SMC* estimator_in,
   :LikelihoodEstimatorOutput()
 {
   this->log_likelihood_pre_last_step = 0.0;
-  this->lag = lag_in;
+  if (lag_in<2)
+  {
+    this->lag = 2;
+  }
+  else
+  {
+    this->lag = lag_in;
+  }
+  this->output_lag = lag_in;
   this->lag_proposed = lag_proposed_in;
   this->estimator = estimator_in;
   this->results_name = results_name_in;
@@ -71,7 +79,7 @@ LikelihoodEstimatorOutput* SMCOutput::duplicate() const
   return( new SMCOutput(*this));
 }
 
-SMCOutput* SMCOutput::smc_duplicate(void)const
+SMCOutput* SMCOutput::smc_duplicate() const
 {
   return( new SMCOutput(*this));
 }
@@ -82,6 +90,7 @@ void SMCOutput::make_copy(const SMCOutput &another)
   this->all_proposed = another.all_proposed;
   //this->log_normalising_constant_ratios = another.log_normalising_constant_ratios;
   this->lag = another.lag;
+  this->output_lag = another.output_lag;
   this->lag_proposed = another.lag_proposed;
   this->estimator = another.estimator;
   this->log_likelihood_pre_last_step = another.log_likelihood_pre_last_step;
@@ -319,10 +328,14 @@ void SMCOutput::normalise_and_resample_weights()
   this->log_likelihood_pre_last_step = this->log_likelihood;
   this->all_particles.back().normalise_weights();
   this->resample();
-  this->set_time();
   
   if (this->results_name!="")
     this->write(results_name);
+}
+
+void SMCOutput::set_time_and_reset_start()
+{
+  this->set_time();
   
   this->start_time = std::chrono::high_resolution_clock::now();
 }
@@ -356,14 +369,52 @@ arma::mat SMCOutput::subsample_get_gradient_of_log(const std::string &variable,
 
 void SMCOutput::set_time()
 {
+  size_t num_to_pop_front = std::max<int>(0,this->times.size()-this->lag+1);
+  for (size_t i=0; i<num_to_pop_front; ++i)
+  {
+    this->times.pop_front();
+  }
+  
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed_time = end_time - this->start_time;
-  this->times.push_back(elapsed_time.count());
+  
+  if (this->times.size()>0)
+    this->times.push_back(elapsed_time.count()+this->times.back());
+  else
+    this->times.push_back(elapsed_time.count());
+}
+
+void SMCOutput::set_llhd(double llhd_in)
+{
+  size_t num_to_pop_front = std::max<int>(0,this->llhds.size()-this->lag+1);
+  for (size_t i=0; i<num_to_pop_front; ++i)
+  {
+    this->llhds.pop_front();
+  }
+  this->llhds.push_back(llhd_in);
 }
 
 void SMCOutput::forget_you_were_already_written_to_file()
 {
   this->iteration_written_to_file = -1;
+}
+
+void SMCOutput::terminate()
+{
+  while (this->all_particles.size()>this->output_lag)
+  {
+    this->all_particles.pop_back();
+  }
+  
+  while (this->llhds.size()>this->output_lag)
+  {
+    this->llhds.pop_back();
+  }
+  
+  while (this->times.size()>this->output_lag)
+  {
+    this->times.pop_back();
+  }
 }
 
 void SMCOutput::write_to_file(const std::string &dir_name,
@@ -386,6 +437,7 @@ void SMCOutput::write_to_file(const std::string &dir_name,
   {
     size_t distance_from_end = this->smc_iteration-iteration;
    
+    /*
     size_t llhd_index = this->llhds.size()-1-distance_from_end;
     
     //if (int(this->llhds.size())-1-int(distance_from_end)>=0)
@@ -396,14 +448,13 @@ void SMCOutput::write_to_file(const std::string &dir_name,
     }
     if (this->estimator->log_likelihood_file_stream.is_open())
     {
-      this->estimator->log_likelihood_file_stream << this->llhds[llhd_index] << std::endl;
+      this->estimator->log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->llhds[llhd_index] << std::endl;
       //log_likelihood_file_stream.close();
     }
     else
     {
       Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + " cannot be opened.");
-      }
-    //}
+    }
     
     if (!this->estimator->time_file_stream.is_open())
     {
@@ -416,17 +467,51 @@ void SMCOutput::write_to_file(const std::string &dir_name,
       {
         time_sum = time_sum + this->times[k];
       }
-      this->estimator->time_file_stream << time_sum << std::endl;
+      this->estimator->time_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << time_sum << std::endl;
       //log_likelihood_file_stream.close();
     }
     else
     {
       Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
     }
+    */
     
     if (this->all_particles.size() > distance_from_end)
     {
       size_t deque_index = this->all_particles.size()-1-distance_from_end;
+      
+      if (!this->estimator->log_likelihood_file_stream.is_open())
+      {
+        this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
+      }
+      if (this->estimator->log_likelihood_file_stream.is_open())
+      {
+        this->estimator->log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->llhds[deque_index] << std::endl;
+        //log_likelihood_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + "cannot be opened.");
+      }
+      
+      if (!this->estimator->time_file_stream.is_open())
+      {
+        this->estimator->time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
+      }
+      if (this->estimator->time_file_stream.is_open())
+      {
+        //double time_sum = 0.0;
+        //for (size_t k=0; k<=llhd_index; ++k)
+        //{
+        //  time_sum = time_sum + this->times[k];
+        //}
+        this->estimator->time_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->times[deque_index] << std::endl;
+        //log_likelihood_file_stream.close();
+      }
+      else
+      {
+        Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
+      }
       
       if (!this->estimator->vector_variables_file_stream.is_open())
       {
@@ -509,7 +594,7 @@ void SMCOutput::write_to_file(const std::string &dir_name,
       }
       if (this->estimator->incremental_log_likelihood_file_stream.is_open())
       {
-        this->estimator->incremental_log_likelihood_file_stream << this->all_particles[deque_index].log_normalising_constant_ratio << std::endl;
+        this->estimator->incremental_log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->all_particles[deque_index].log_normalising_constant_ratio << std::endl;
         //incremental_log_likelihood_file_stream.close();
       }
       else
@@ -537,7 +622,7 @@ void SMCOutput::write_to_file(const std::string &dir_name,
       }
       if (this->estimator->ess_file_stream.is_open())
       {
-        this->estimator->ess_file_stream << this->all_particles[deque_index].ess << std::endl;
+        this->estimator->ess_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->all_particles[deque_index].ess << std::endl;
         //ess_file_stream.close();
       }
       else
@@ -551,6 +636,7 @@ void SMCOutput::write_to_file(const std::string &dir_name,
       }
       if (this->estimator->schedule_parameters_file_stream.is_open())
       {
+        this->estimator->schedule_parameters_file_stream.precision(std::numeric_limits<double>::max_digits10);
         this->estimator->schedule_parameters_file_stream << this->all_particles[deque_index].schedule_parameters << std::endl;
         //schedule_parameters_file_stream.close();
       }
@@ -627,7 +713,10 @@ void SMCOutput::write_to_file(const std::string &dir_name,
       }
       if(this->estimator->normalised_weights_file_stream.is_open())
       {
-        this->estimator->normalised_weights_file_stream << this->all_particles[deque_index].normalised_log_weights;
+        this->estimator->normalised_weights_file_stream.precision(std::numeric_limits<double>::max_digits10);
+        this->all_particles[deque_index].normalised_log_weights.raw_print(this->estimator->normalised_weights_file_stream);
+        
+        //this->estimator->normalised_weights_file_stream << std::fixed << std::setprecision(12) << this->all_particles[deque_index].normalised_log_weights;
         //normalised_weights_file_stream.close();
       }
       else
@@ -641,7 +730,10 @@ void SMCOutput::write_to_file(const std::string &dir_name,
       }
       if(this->estimator->unnormalised_weights_file_stream.is_open())
       {
-        this->estimator->unnormalised_weights_file_stream << this->all_particles[deque_index].unnormalised_log_weights;
+        this->estimator->unnormalised_weights_file_stream.precision(std::numeric_limits<double>::max_digits10);
+        this->all_particles[deque_index].unnormalised_log_weights.raw_print(this->estimator->unnormalised_weights_file_stream);
+        
+        //this->estimator->unnormalised_weights_file_stream << std::setprecision() << this->all_particles[deque_index].unnormalised_log_weights;
         //unnormalised_weights_file_stream.close();
       }
       else

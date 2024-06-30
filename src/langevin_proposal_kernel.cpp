@@ -492,3 +492,8 @@ bool LangevinProposalKernel::can_be_evaluated() const
 {
   return true;
 }
+
+void LangevinProposalKernel::set_data(Data* data_in)
+{
+  
+}

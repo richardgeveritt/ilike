@@ -170,7 +170,10 @@ void Ensemble::make_copy(const Ensemble &another)
   this->Cxys = another.Cxys;
   this->Cyys = another.Cyys;
   this->myys = another.myys;
+  //this->Cygivenxs = another.Cygivenxs;
   this->kalman_gains = another.kalman_gains;
+  this->inv_sigma_precomps = another.inv_sigma_precomps;
+  this->log_det_precomps = another.log_det_precomps;
   this->inv_Cxx = another.inv_Cxx;
   //this->measurements = another.measurements;
   this->ensemble_factors = another.ensemble_factors;
@@ -178,6 +181,8 @@ void Ensemble::make_copy(const Ensemble &another)
   this->unnormalised_log_weights = another.unnormalised_log_weights;
   this->schedule_parameters = another.schedule_parameters;
   this->ess = another.ess;
+  this->log_measurement_likelihood_means = another.log_measurement_likelihood_means;
+  this->log_measurement_likelihood_variances = another.log_measurement_likelihood_variances;
   //this->partially_packed_measurement_random_shifts = another.partially_packed_measurement_random_shifts;
 }
 
@@ -221,7 +226,10 @@ void Ensemble::make_copy(Ensemble &&another)
   this->Cxys = std::move(another.Cxys);
   this->Cyys = std::move(another.Cyys);
   this->myys = std::move(another.myys);
-  this->kalman_gains = std::move(another.kalman_gains);
+  //this->Cygivenxs = std::move(another.Cygivenxs);
+  this->inv_sigma_precomps = std::move(another.inv_sigma_precomps);
+  this->log_det_precomps = std::move(another.log_det_precomps);
+  
   this->inv_Cxx = std::move(another.inv_Cxx);
   //this->measurements = another.measurements;
   this->ensemble_factors = another.ensemble_factors;
@@ -229,6 +237,8 @@ void Ensemble::make_copy(Ensemble &&another)
   this->unnormalised_log_weights = std::move(another.unnormalised_log_weights);
   this->schedule_parameters = std::move(another.schedule_parameters);
   this->ess = std::move(another.ess);
+  this->log_measurement_likelihood_means = std::move(another.log_measurement_likelihood_means);
+  this->log_measurement_likelihood_variances = std::move(another.log_measurement_likelihood_variances);
   //this->partially_packed_measurement_random_shifts = another.partially_packed_measurement_random_shifts;
   
   another.members = std::vector<MoveOutput*>();
@@ -246,6 +256,8 @@ void Ensemble::make_copy(Ensemble &&another)
   another.Cyys = std::vector<arma::mat>();
   another.myys = std::vector<arma::colvec>();
   another.kalman_gains = std::vector<arma::mat>();
+  another.inv_sigma_precomps = std::vector<arma::mat>();
+  another.log_det_precomps = std::vector<double>();
   another.inv_Cxx = arma::mat();
   //another.measurements = another.measurements;
   another.ensemble_factors = NULL;
@@ -253,6 +265,8 @@ void Ensemble::make_copy(Ensemble &&another)
   another.unnormalised_log_weights = arma::colvec();
   another.schedule_parameters = Parameters();
   another.ess = 0.0;
+  another.log_measurement_likelihood_means = std::vector<double>();
+  another.log_measurement_likelihood_variances = std::vector<double>();
 }
 
 // The = operator.
@@ -393,6 +407,39 @@ double Ensemble::calculate_inversion_log_normalising_constant(double inverse_inc
   return this->log_normalising_constant_ratio;
 }
 
+double Ensemble::calculate_unbiased_inversion_log_normalising_constant(double inverse_incremental_temperature)
+{
+  this->log_normalising_constant_ratio = this->ensemble_factors->get_unbiased_inversion_incremental_likelihood(this,
+                                                                                                      inverse_incremental_temperature);
+  this->ess = exp(2.0*log_sum_exp(this->unnormalised_log_weights) - log_sum_exp(2.0*this->unnormalised_log_weights));
+  return this->log_normalising_constant_ratio;
+}
+
+void Ensemble::calculate_path1_inversion_log_normalising_constant(std::vector<double> &log_measurement_likelihood_means,
+                                                                  double temperature,
+                                                                  double multiplier)
+{
+  this->ensemble_factors->get_path1_inversion_incremental_likelihood(this,
+                                                                     log_measurement_likelihood_means,
+                                                                     temperature,
+                                                                     multiplier);
+}
+
+void Ensemble::calculate_path2_inversion_log_normalising_constant(std::vector<double> &log_measurement_likelihood_means,
+                                                                  std::vector<double> &log_measurement_likelihood_variances)
+{
+  this->ensemble_factors->get_path2_inversion_incremental_likelihood(this,
+                                                                     log_measurement_likelihood_means,
+                                                                     log_measurement_likelihood_variances);
+}
+
+void Ensemble::calculate_kalman_gains(double inverse_incremental_temperature)
+{
+  this->ensemble_factors->calculate_kalman_gains(this,
+                                                 inverse_incremental_temperature);
+  this->ess = exp(2.0*log_sum_exp(this->unnormalised_log_weights) - log_sum_exp(2.0*this->unnormalised_log_weights));
+}
+
 arma::rowvec Ensemble::get_output_lengths() const
 {
   arma::rowvec output_lengths(this->size());
@@ -420,7 +467,8 @@ void Ensemble::find_measurement_covariances()
     this->Cxys.push_back(arma::cov(this->packed_members,this->packed_measurement_states[i]));
     //this->Cyys.push_back(arma::cov(this->packed_measurement_states[i] + inverse_incremental_temperature*measurement_covariances[i]));
     
-    this->Cyys.push_back(arma::cov(this->packed_measurement_states[i]));
+    arma::mat Cyy = arma::cov(this->packed_measurement_states[i]);
+    this->Cyys.push_back((Cyy+Cyy.t())/2.0);
     this->myys.push_back(arma::conv_to<arma::colvec>::from(arma::mean(this->packed_measurement_states[i],0)));
   }
   
@@ -485,7 +533,13 @@ double Ensemble::get_inverse_incremental_temperature() const
 
 void Ensemble::precompute_gaussian_covariance(double inverse_incremental_temperature)
 {
-  ensemble_factors->precompute_gaussian_covariance(inverse_incremental_temperature);
+  this->inv_sigma_precomps.clear();
+  this->inv_sigma_precomps.reserve(this->Cyys.size());
+  this->log_det_precomps.clear();
+  this->log_det_precomps.reserve(this->Cyys.size());
+  this->ensemble_factors->precompute_gaussian_covariance(inverse_incremental_temperature,
+                                                         this->inv_sigma_precomps,
+                                                         this->log_det_precomps);
 }
 
 arma::mat Ensemble::get_packed_members() const

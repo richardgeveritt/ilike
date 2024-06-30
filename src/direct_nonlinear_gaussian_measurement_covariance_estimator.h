@@ -19,6 +19,7 @@ public:
   DirectNonLinearGaussianMeasurementCovarianceEstimator();
 
   
+  /*
   DirectNonLinearGaussianMeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
                                                         size_t* seed_in,
                                                         Data* data_in,
@@ -54,6 +55,7 @@ public:
                                                         std::shared_ptr<Transform> transform_function_in,
                                                         const std::vector<GetMatrixPtr> &measurement_noise_functions_in);
                                                         //const std::vector<std::string> &measurements_variable_in);
+  */
   
   DirectNonLinearGaussianMeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
                                                         size_t* seed_in,

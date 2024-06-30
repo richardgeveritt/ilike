@@ -103,3 +103,8 @@ GaussianMeasurementCovarianceEstimator* DirectGaussianMeasurementCovarianceEstim
 {
   return this->direct_estimator;
 }
+
+const GaussianMeasurementCovarianceEstimator* DirectGaussianMeasurementCovarianceEstimatorOutput::get_gaussian_estimator() const
+{
+  return this->direct_estimator;
+}

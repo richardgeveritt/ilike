@@ -311,3 +311,8 @@ bool CustomDistributionProposalKernel::can_be_evaluated() const
   else
     return true;
 }
+
+void CustomDistributionProposalKernel::set_data(Data* data_in)
+{
+
+}

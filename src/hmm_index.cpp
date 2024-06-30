@@ -16,6 +16,7 @@ HMMIndex::HMMIndex(const std::vector<size_t> &likelihood_indices_time_zero_in,
   this->likelihood_indices_time_zero = likelihood_indices_time_zero_in;
   //this->evaluate_prior = evaluate_prior;
   this->likelihood_indices_time_not_zero = likelihood_indices_time_not_zero_in;
+  
   this->evaluate_transition_model = evaluate_transition_model_in;
   this->first_time_index = first_time_index_in;
 }

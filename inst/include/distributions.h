@@ -15,6 +15,7 @@
 #include <boost/random/lognormal_distribution.hpp>
 #include <boost/random/discrete_distribution.hpp>
 #include <boost/random/normal_distribution.hpp>
+#include <boost/random/poisson_distribution.hpp>
 
 //save compiler switches
 #pragma GCC diagnostic push
@@ -192,6 +193,32 @@ inline double dexp(double x, double rate)
   if (x<0)
     return -arma::datum::inf;
   return log(rate) - rate*x;
+}
+
+inline int rpois(RandomNumberGenerator &rng, double rate)
+{
+  boost::random::poisson_distribution<int> my_poisson(rate);
+  return my_poisson(rng);
+}
+
+inline arma::colvec rpois(RandomNumberGenerator &rng, size_t n, double rate)
+{
+  boost::random::poisson_distribution<int> my_poisson(rate);
+  arma::colvec output(n);
+  for (size_t i=0; i<n; ++i)
+  {
+    output(i) = my_poisson(rng);
+  }
+  return output;
+}
+
+inline double dpois(double x, double rate)
+{
+  if ( (rate<=0) )
+    return double(NAN);
+  if (x<0)
+    return -arma::datum::inf;
+  return x*log(rate) - rate - std::lgamma(x+1);
 }
 
 inline double rtranslatedexp(RandomNumberGenerator &rng, double rate, double min)
@@ -755,6 +782,30 @@ inline double dmvnorm(const arma::colvec &x,
   return result;
 }
 
+// Robust to numerical issues with the Sigma matrix.
+/*
+inline double dmvnorm_without_sympd(const arma::colvec &x,
+                                    const arma::colvec &mu,
+                                    const arma::mat &Sigma)
+{
+  double result;
+  arma::colvec x_minus_mean = x-mu;
+  //try
+  //{
+  result = -((arma::size(Sigma)[0]/2.0) * log(2.0*M_PI)) - 0.5*arma::log_det(Sigma).real();
+  //double thing = double(x_minus_mean.t()*arma::inv_sympd(c)*x_minus_mean(0,0));
+  arma::mat b = x_minus_mean.t()*arma::inv(Sigma)*x_minus_mean;
+  result = result - 0.5*b(0,0);
+  //}
+  //catch (std::exception)
+  //{
+  //  Rcpp::stop("mvnormal_logpdf - covariance is not positive definite.");
+  //  //Rcpp::stop("mvnormal_logpdf - covariance is not positive definite.");
+  //}
+  return result;
+}
+*/
+
 // rmvnorm from https://gallery.rcpp.org/articles/simulate-multivariate-normal/
 
 inline arma::colvec rtmvnorm_using_chol(RandomNumberGenerator &rng,
@@ -904,6 +955,39 @@ inline double dmvnorm_estimated_params(const arma::colvec &x,
   //}
 
 }
+
+/*
+inline double dmvnorm_estimated_params_without_sympd(const arma::colvec &x,
+                                                     const arma::colvec &estimated_mean,
+                                                     const arma::mat &estimated_covariance,
+                                                     size_t n)
+{
+  size_t d = estimated_mean.n_rows;
+  //try
+  //{
+  double cormac = -(double(d)/2.0)*log(2.0*M_PI) + log_c(d,n-2) - log_c(d,n-1) - (double(d)/2.0)*log(1.0-(1.0/double(n))) - (double(n-d-2)/2.0)*arma::log_det(double(n-1)*estimated_covariance).real();
+  arma::colvec x_minus_mean = x-estimated_mean;
+  arma::mat inner_bracket = double(n-1)*estimated_covariance - x_minus_mean*x_minus_mean.t()/(1.0-(1.0/double(n)));
+  double log_phi;
+  if (inner_bracket.is_sympd())
+  {
+    log_phi = arma::log_det_sympd(inner_bracket);
+  }
+  else
+  {
+    log_phi = arma::log_det(inner_bracket).real();//-arma::datum::inf;
+  }
+  double mclaggen = (double(n-d-3)/2.0)*log_phi;
+  
+  return(cormac + mclaggen);
+  //}
+  //catch(std::exception)
+  //{
+  //  Rcpp::stop("mvnormal_logpdf_unbiased_with_estimated_params - it might be that n<=d-3.");
+  //}
+  
+}
+*/
 
 inline double rgamma(RandomNumberGenerator &rng, double shape, double rate)
 {

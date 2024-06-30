@@ -27,6 +27,19 @@ LinearGaussianNoiseFunctionProposalKernel::LinearGaussianNoiseFunctionProposalKe
   this->conditioned_on_variable_names.push_back(conditioned_on_variable_name_in);
 }
 
+LinearGaussianNoiseFunctionProposalKernel::LinearGaussianNoiseFunctionProposalKernel(const std::string &variable_name_in,
+                                                                                     const std::vector<std::string> &conditioned_on_variable_names_in,
+                                                                                     const GetMatrixPtr &A_in,
+                                                                                     const GetMatrixPtr &covariance_in)
+:GaussianNoiseProposalKernel()
+{
+  //this->unused_variables_kept = true;
+  this->proposal_info[variable_name_in] = GaussianProposalFunctionsInfo();
+  this->proposal_info[variable_name_in].set_covariance(covariance_in);
+  this->proposal_info[variable_name_in].set_A(A_in);
+  this->conditioned_on_variable_names = conditioned_on_variable_names_in;
+}
+
 LinearGaussianNoiseFunctionProposalKernel::LinearGaussianNoiseFunctionProposalKernel(const LinearGaussianNoiseFunctionProposalKernel &another)
 :GaussianNoiseProposalKernel(another)
 {
@@ -68,12 +81,14 @@ double LinearGaussianNoiseFunctionProposalKernel::specific_evaluate_kernel(const
                                                                            const Particle &old_particle) const
 {
   double output = 0.0;
+  
   Parameters current_parameters = old_particle.get_transformed_parameters(this);
   for (auto i=this->proposal_info.begin();
        i!=this->proposal_info.end();
        ++i)
   {
-    arma::colvec mean = i->second.get_A(current_parameters)*current_parameters.get_colvec(conditioned_on_variable_names);
+    arma::colvec mean = i->second.get_A(current_parameters)*current_parameters.get_colvec(this->conditioned_on_variable_names);
+    
     double scale = i->second.get_double_scale();
     double dim = double(mean.n_rows);
     

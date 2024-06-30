@@ -475,3 +475,8 @@ bool BarkerDynamicsProposalKernel::can_be_evaluated() const
 {
   return true;
 }
+
+void BarkerDynamicsProposalKernel::set_data(Data* data_in)
+{
+
+}

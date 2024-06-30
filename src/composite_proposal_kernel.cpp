@@ -314,6 +314,16 @@ bool CompositeProposalKernel::can_be_evaluated() const
   return true;
 }
 
+void CompositeProposalKernel::set_data(Data* data_in)
+{
+  for (auto i=this->all_kernels.begin();
+       i!=this->all_kernels.end();
+       ++i)
+  {
+    (*i)->set_data(data_in);
+  }
+}
+
 /*
 arma::mat CompositeProposalKernel::specific_gradient_of_log(const std::string &variable,
                                            Particle &proposed_particle,

@@ -28,6 +28,8 @@ public:
   
   void change_data(Data* new_data);
   
+  virtual Data* get_current_data()=0;
+  
   virtual FactorVariables* simulate_factor_variables(const Parameters &simulated_parameters) const=0;
   
   /*

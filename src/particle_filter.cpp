@@ -42,6 +42,7 @@ ParticleFilter::ParticleFilter(RandomNumberGenerator* rng_in,
                                size_t lag_in,
                                size_t lag_proposed_in,
                                const std::string &index_name_in,
+                               const std::string &time_name_in,
                                const std::string &time_diff_name_in,
                                size_t first_index_in,
                                size_t last_index_in,
@@ -63,14 +64,14 @@ ParticleFilter::ParticleFilter(RandomNumberGenerator* rng_in,
                                bool parallel_in,
                                size_t grain_size_in,
                                const std::string &results_name_in)
-  :SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, std::max<size_t>(2,lag_in), lag_proposed_in, transition_proposal_in->get_proposals(), adaptive_resampling_in, proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, transform_proposed_particles, results_name_in)
+  :SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, lag_in, lag_proposed_in, transition_proposal_in->get_proposals(), adaptive_resampling_in, proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, transform_proposed_particles, results_name_in)
 {
   
   proposal_in->set_proposal_parameters(&this->algorithm_parameters);
   transition_proposal_in->set_proposal_parameters(&this->algorithm_parameters);
   
   this->index_name = index_name_in;
-  //this->time_name = time_name_in;
+  this->time_name = time_name_in;
   this->time_diff_name = time_diff_name_in;
   this->first_index = first_index_in;
   this->last_index = last_index_in;
@@ -273,6 +274,7 @@ void ParticleFilter::make_copy(const ParticleFilter &another)
     this->index = NULL;
   
   this->index_name = another.index_name;
+  this->time_name = another.time_name;
   this->time_diff_name = another.time_diff_name;
   //this->measurements_names = another.measurements_names;
   this->first_index = another.first_index;
@@ -313,6 +315,7 @@ SMCOutput* ParticleFilter::specific_initialise_smc()
   this->current_index = this->first_index;
   this->factors->set_data(this->current_index);
   this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+  this->sequencer.schedule_parameters[this->time_name] = this->current_time;
   this->sequencer.schedule_parameters[this->index_name] = this->current_index;
   this->index->set_time_index(this->current_index);
   return output;
@@ -364,6 +367,7 @@ void ParticleFilter::evaluate_smc(SMCOutput* current_state)
     this->current_index = this->first_index;
     this->factors->set_data(this->current_index);
     this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+    this->sequencer.schedule_parameters[this->time_name] = this->current_time;
     this->sequencer.schedule_parameters[this->index_name] = this->current_index;
     this->index->set_time_index(this->current_index);
   }
@@ -375,7 +379,6 @@ void ParticleFilter::evaluate_smc(SMCOutput* current_state)
 void ParticleFilter::evaluate_smcfixed_part_smc(SMCOutput* current_state)
 {
   //VectorIndex index(this->current_index);
-  
   this->the_worker->smcfixed_weight(this->index,
                                     current_state->back());
   
@@ -401,6 +404,7 @@ MoveOutput* ParticleFilter::move(RandomNumberGenerator &rng,
   //double predict_time_step = this->update_time_step/double(this->predictions_per_update);
   
   Particle moved_particle;
+  this->transition_proposal->set_data(this->factors->get_current_data());
   for (size_t i=0; i<this->predictions_per_update; ++i)
   {
     if (i==0)
@@ -417,6 +421,7 @@ MoveOutput* ParticleFilter::move(RandomNumberGenerator &rng,
     }
       
   }
+  
   return new SinglePointMoveOutput(std::move(moved_particle));
 }
 
@@ -457,17 +462,19 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
                                     NULL);
       }
     }
-    
+
     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
     // need to add Sequencer here when we add MCMC moves
     
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
-    current_state->llhds.push_back(current_state->log_likelihood);
-    
+    current_state->set_llhd(current_state->log_likelihood);
+
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
+    
+    current_state->set_time_and_reset_start();
     
     //current_state->back().set_previous_target_evaluated_to_target_evaluated();
     
@@ -478,6 +485,7 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
     if (this->check_termination())
     {
       //terminate = TRUE;
+      current_state->terminate();
       break;
     }
     
@@ -520,6 +528,7 @@ SMCOutput* ParticleFilter::specific_initialise_smc(const Parameters &conditioned
   this->current_index = this->first_index;
   this->factors->set_data(this->current_index);
   this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+  this->sequencer.schedule_parameters[this->time_name] = this->current_time;
   this->sequencer.schedule_parameters[this->index_name] = this->current_index;
   this->index->set_time_index(this->current_index);
   return output;
@@ -578,6 +587,7 @@ void ParticleFilter::evaluate_smc(SMCOutput* current_state,
     this->current_index = this->first_index;
     this->factors->set_data(this->current_index);
     this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+    this->sequencer.schedule_parameters[this->time_name] = this->current_time;
     this->sequencer.schedule_parameters[this->index_name] = this->current_index;
     this->index->set_time_index(this->current_index);
   }
@@ -672,7 +682,7 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
 
     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
-    current_state->llhds.push_back(current_state->log_likelihood);
+    current_state->set_llhd(current_state->log_likelihood);
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
@@ -680,13 +690,16 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
     
     //current_state->back().set_previous_target_evaluated_to_target_evaluated();
     
+    current_state->set_time_and_reset_start();
+    
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
     // check termination, using sequencer
-    if (this->sequencer.check_termination())
+    if (this->check_termination())
     {
       //terminate = TRUE;
+      current_state->terminate();
       break;
     }
     
@@ -749,6 +762,7 @@ void ParticleFilter::subsample_evaluate_smc(SMCOutput* current_state)
     this->current_index = this->first_index;
     this->factors->set_data(this->current_index);
     this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+    this->sequencer.schedule_parameters[this->time_name] = this->current_time;
     this->sequencer.schedule_parameters[this->index_name] = this->current_index;
     this->index->set_time_index(this->current_index);
   }
@@ -846,10 +860,13 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
+    current_state->set_time_and_reset_start();
+    
     // check termination, using sequencer
     if (this->check_termination())
     {
       //terminate = TRUE;
+      current_state->terminate();
       break;
     }
     
@@ -911,6 +928,7 @@ void ParticleFilter::subsample_evaluate_smc(SMCOutput* current_state,
     this->current_index = this->first_index;
     this->factors->set_data(this->current_index);
     this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+    this->sequencer.schedule_parameters[this->time_name] = this->current_time;
     this->sequencer.schedule_parameters[this->index_name] = this->current_index;
     this->index->set_time_index(this->current_index);
   }
@@ -1019,10 +1037,13 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
+    current_state->set_time_and_reset_start();
+    
     // check termination, using sequencer
     if (this->check_termination())
     {
       //terminate = TRUE;
+      current_state->terminate();
       break;
     }
     
@@ -1055,6 +1076,7 @@ MoveOutput* ParticleFilter::subsample_move(RandomNumberGenerator &rng,
   //double predict_time_step = this->update_time_step/double(this->predictions_per_update);
   
   Particle moved_particle;
+  this->transition_proposal->set_data(this->factors->get_current_data());
   for (size_t i=0; i<this->predictions_per_update; ++i)
   {
     if (i==0)
@@ -1100,12 +1122,14 @@ void ParticleFilter::increment_time_index()
 {
   // should move to sequencer
   this->current_index = this->current_index+1;
+  
   // should move to sequencer
   this->sequencer.schedule_parameters[this->index_name] = this->current_index;
   
   this->factors->set_data(this->current_index);
   this->index->set_time_index(this->current_index);
   this->current_time = this->current_time + this->update_time_step;
+  this->sequencer.schedule_parameters[this->time_name] = this->current_time;
 }
 
 // void ParticleFilter::smc_step(void)

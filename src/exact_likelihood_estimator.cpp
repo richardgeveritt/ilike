@@ -301,7 +301,7 @@ void ExactLikelihoodEstimator::setup(const Parameters &parameters)
 double ExactLikelihoodEstimator::evaluate(const Parameters &parameters) const
 {
   double result = 0.0;
-  
+
   for (auto i=this->numerator_distribution_factors.begin();
        i!=this->numerator_distribution_factors.end();
        ++i)
@@ -311,7 +311,7 @@ double ExactLikelihoodEstimator::evaluate(const Parameters &parameters) const
       result = result + (*i)->evaluate(parameters);
     }
   }
-  
+
   for (auto i=this->numerator_likelihood_factors.begin();
        i!=this->numerator_likelihood_factors.end();
        ++i)
@@ -342,7 +342,7 @@ double ExactLikelihoodEstimator::evaluate(const Parameters &parameters) const
                                               parameters);
     }
   }
-  
+
   return result;
 }
 

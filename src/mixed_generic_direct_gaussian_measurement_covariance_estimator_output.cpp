@@ -125,12 +125,15 @@ arma::colvec MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::get
   return arma::join_cols(this->likelihood_measurement_state,this->prior_measurement_state);
 }
 
-double MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature)
+double MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
+                                                                                                          const arma::mat &inv_sigma_precomp,
+                                                                                                          const double log_det_precomp) const
+                                                                                                          
 {
   return dmvnorm_using_precomp(*this->estimator->get_measurement_pointer(),
                                arma::join_cols(this->likelihood_measurement_state,this->prior_measurement_state),
-                               this->estimator->inv_sigma_precomp,
-                               this->estimator->log_det_precomp);
+                               inv_sigma_precomp,
+                               log_det_precomp);
 }
 
 /*
@@ -144,10 +147,12 @@ double MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::evaluate_
 }
 */
 
-double MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature)
+double MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
+                                                                                                                    const arma::mat &inv_sigma_precomp,
+                                                                                                                    double log_det_precomp) const
 {
   // parameters of covariance should already be set at this point, so second argument does nothing
-  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
+  return dmvnorm(*this->estimator->get_measurement_pointer(),
                  arma::join_cols(this->likelihood_measurement_state,this->prior_measurement_state),
                  this->estimator->get_measurement_covariance_for_likelihood_ratio(inverse_incremental_temperature));
 }

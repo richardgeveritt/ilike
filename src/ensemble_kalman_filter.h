@@ -29,6 +29,7 @@ public:
                        Data* data_in,
                        size_t lag_in,
                        const std::string &index_name_in,
+                       const std::string &time_name_in,
                        const std::string &time_diff_name_in,
                        size_t first_index_in,
                        size_t last_index_in,
@@ -53,6 +54,7 @@ public:
 
   void operator=(const EnsembleKalmanFilter &another);
   LikelihoodEstimator* duplicate() const;
+  EnsembleKalman* ensemble_kalman_duplicate() const;
 
   // double estimate_log_likelihood(const List &inputs,
   //                                const List &auxiliary_variables) const;
@@ -162,7 +164,7 @@ protected:
   //arma::mat prior_covariance;
   
   std::string index_name;
-  //std::string time_name;
+  std::string time_name;
   std::string time_diff_name;
   //std::vector<std::string> measurements_names;
   size_t first_index;

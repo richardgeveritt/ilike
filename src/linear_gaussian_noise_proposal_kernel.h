@@ -34,6 +34,11 @@ public:
   
   // make cov_names from var_names
   LinearGaussianNoiseProposalKernel(const std::string &variable_name_in,
+                                    const std::vector<std::string> &conditioned_on_variable_names_in,
+                                    const arma::mat &A_in,
+                                    const arma::mat &covariance_in);
+  
+  LinearGaussianNoiseProposalKernel(const std::string &variable_name_in,
                                     const std::string &conditioned_on_variable_name_in,
                                     const arma::mat &A_in,
                                     const arma::mat &covariance_in);

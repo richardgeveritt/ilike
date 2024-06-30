@@ -301,3 +301,8 @@ bool GaussianRandomWalkProposalKernel::can_be_evaluated() const
 {
   return true;
 }
+
+void GaussianRandomWalkProposalKernel::set_data(Data* data_in)
+{
+  
+}

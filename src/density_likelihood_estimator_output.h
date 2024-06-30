@@ -23,7 +23,8 @@ public:
   DensityLikelihoodEstimatorOutput();
   DensityLikelihoodEstimatorOutput(DensityLikelihoodEstimator* estimator_in,
                                    DensityEstimator* density_estimator_in,
-                                   DensityEstimator* subsample_density_estimator_in);
+                                   DensityEstimator* subsample_density_estimator_in,
+                                   bool store_output_in);
   //DensityLikelihoodEstimatorOutput(DensityLikelihoodEstimator* estimator_in,
   //                                 const Parameters &conditioned_on_parameters);
   virtual ~DensityLikelihoodEstimatorOutput();
@@ -73,13 +74,19 @@ protected:
   //Particles particles;
   std::vector<Parameters> points;
   
+  double time;
+  
   double log_likelihood_smcfixed_part;
   double subsample_log_likelihood_smcfixed_part;
+  
+  bool store_output;
   
   void write_to_file(const std::string &directory_name,
                      const std::string &index = "");
   
   //std::string results_name;
+  
+  std::chrono::high_resolution_clock::time_point start_time;
 
   void make_copy(const DensityLikelihoodEstimatorOutput &another);
 

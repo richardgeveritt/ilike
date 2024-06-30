@@ -41,4 +41,6 @@ void SampleCovarianceMatrixParameterEstimator::fit(const arma::mat &matrix_point
                                                    const arma::colvec &wt)
 {
   this->estimated = cov_wt(matrix_points,wt);
+  if (!this->estimated.is_sympd())
+    this->estimated = this->estimated + 0.0000000000001*arma::eye(arma::size(this->estimated));
 }

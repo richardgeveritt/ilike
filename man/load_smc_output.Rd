@@ -16,7 +16,7 @@ load_smc_output(
   external_log_weights = c(0),
   external_target_parameters = "",
   nesting_level = 0,
-  factor = 0
+  factor = 1
 )
 }
 \arguments{

@@ -38,7 +38,7 @@ CustomGuidedIndependentProposalKernel::CustomGuidedIndependentProposalKernel(Sim
 
 CustomGuidedIndependentProposalKernel::CustomGuidedIndependentProposalKernel(SimulateGuidedIndependentProposalPtr proposal_simulate_in,
                                                                  EvaluateLogGuidedIndependentProposalPtr proposal_evaluate_in,
-                                                                             const Data* data_in)
+                                                                             Data* data_in)
   :IndependentProposalKernel()
 {
   this->proposal_evaluate = proposal_evaluate_in;
@@ -240,4 +240,9 @@ bool CustomGuidedIndependentProposalKernel::can_be_evaluated() const
     return false;
   else
     return true;
+}
+
+void CustomGuidedIndependentProposalKernel::set_data(Data* data_in)
+{
+  this->data = data_in;
 }

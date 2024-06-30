@@ -47,12 +47,14 @@ arma::colvec GaussianMeasurementCovarianceEstimatorOutput::get_deterministic_shi
   return this->measurement_state;
 }
 
-double GaussianMeasurementCovarianceEstimatorOutput::evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature)
+double GaussianMeasurementCovarianceEstimatorOutput::evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
+                                                                                        const arma::mat &inv_sigma_precomp,
+                                                                                        double log_det_precomp) const
 {
   return dmvnorm_using_precomp(*this->get_gaussian_estimator()->get_measurement_pointer(),
                                this->measurement_state,
-                               this->get_gaussian_estimator()->inv_sigma_precomp,
-                               this->get_gaussian_estimator()->log_det_precomp);
+                               inv_sigma_precomp,
+                               log_det_precomp);
 }
 
 /*
@@ -66,12 +68,19 @@ double GaussianMeasurementCovarianceEstimatorOutput::evaluate_ensemble_likelihoo
 }
 */
 
-double GaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature)
+double GaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
+                                                                                                  const arma::mat &inv_sigma_precomp,
+                                                                                                  double log_det_precomp) const
 {
   // parameters of covariance should already be set at this point, so second argument does nothing
-  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
-                 this->measurement_state,
-                 inverse_incremental_temperature*this->get_gaussian_estimator()->get_measurement_covariance());
+  //return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
+  //               this->measurement_state,
+  //               inverse_incremental_temperature*this->get_gaussian_estimator()->get_measurement_covariance());
+  
+  return dmvnorm_using_precomp(*this->get_gaussian_estimator()->get_measurement_pointer(),
+                               this->measurement_state,
+                               inv_sigma_precomp,
+                               log_det_precomp);
 }
 
 /*

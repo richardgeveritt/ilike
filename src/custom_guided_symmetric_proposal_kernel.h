@@ -20,7 +20,7 @@ public:
   virtual ~CustomGuidedSymmetricProposalKernel();
   
   CustomGuidedSymmetricProposalKernel(SimulateGuidedMCMCProposalPtr proposal_simulate_in,
-                             const Data* data_in);
+                                      Data* data_in);
 
   CustomGuidedSymmetricProposalKernel(const CustomGuidedSymmetricProposalKernel &another);
 
@@ -39,6 +39,8 @@ public:
   void set_index_if_null(Index* index_in);
   
   bool can_be_evaluated() const;
+  
+  void set_data(Data* data_in);
   
 // Mh has its own parameters.
   // Stochastic has some weights.
@@ -86,7 +88,7 @@ protected:
   
   Parameters* proposal_parameters;
   
-  const Data* data;
+  Data* data;
 };
 
 #endif

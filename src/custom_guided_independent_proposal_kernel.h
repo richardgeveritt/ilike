@@ -26,7 +26,7 @@ public:
   
   CustomGuidedIndependentProposalKernel(SimulateGuidedIndependentProposalPtr proposal_simulate_in,
                                         EvaluateLogGuidedIndependentProposalPtr proposal_evaluate_in,
-                                        const Data* data_in);
+                                        Data* data_in);
 
   CustomGuidedIndependentProposalKernel(const CustomGuidedIndependentProposalKernel &another);
 
@@ -80,6 +80,8 @@ public:
   
   bool can_be_evaluated() const;
   
+  void set_data(Data* data_in);
+  
 // Mh has its own parameters.
   // Stochastic has some weights.
   // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.
@@ -96,7 +98,7 @@ protected:
   // not stored here - points to algorithm_parameters
   Parameters* proposal_parameters;
   
-  const Data* data;
+  Data* data;
   
 };
 

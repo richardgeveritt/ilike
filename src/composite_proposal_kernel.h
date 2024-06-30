@@ -37,6 +37,8 @@ public:
   
   bool can_be_evaluated() const;
   
+  void set_data(Data* data_in);
+  
 // Mh has its own parameters.
   // Stochastic has some weights.
   // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.

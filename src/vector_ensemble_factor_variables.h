@@ -38,7 +38,9 @@ public:
   std::vector<arma::colvec*> get_measurements() const;
   
   double evaluate_ensemble_likelihood_ratios(const Index* index,
-                                             double inverse_incremental_temperature);
+                                             double inverse_incremental_temperature,
+                                             const std::vector<arma::mat> &inv_sigma_precomps,
+                                             const std::vector<double> &log_det_precomps) const;
   
   /*
   double evaluate_ensemble_likelihood_ratios(const Index* index,
@@ -47,7 +49,9 @@ public:
   */
   
   double subsample_evaluate_ensemble_likelihood_ratios(const Index* index,
-                                                       double inverse_incremental_temperature);
+                                                       double inverse_incremental_temperature,
+                                                       const std::vector<arma::mat> &inv_sigma_precomps,
+                                                       const std::vector<double> &log_det_precomps) const;
   
   /*
   double subsample_evaluate_ensemble_likelihood_ratios(const Index* index,
@@ -55,12 +59,12 @@ public:
                                                        const Parameters &conditioned_on_parameters);
   */
   
-  double evaluate_likelihoods(const Index* index);
+  double evaluate_likelihoods(const Index* index) const;
   /*
   double evaluate_likelihoods(const Index* index,
                               const Parameters &conditioned_on_parameters);
   */
-  double subsample_evaluate_likelihoods(const Index* index);
+  double subsample_evaluate_likelihoods(const Index* index) const;
   /*
   double subsample_evaluate_likelihoods(const Index* index,
                                         const Parameters &conditioned_on_parameters);

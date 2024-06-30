@@ -15,10 +15,14 @@ public:
 
   ExactKalmanUpdater();
   
-  ExactKalmanUpdater(const arma::mat &measurement_matrix_in,
+  ExactKalmanUpdater(const std::string &state_variable_in,
+                     const std::string &measurement_variable_in,
+                     const arma::mat &measurement_matrix_in,
                      const arma::mat &measurement_noise_in);
   
-  ExactKalmanUpdater(GetMatrixPtr measurement_matrix_function,
+  ExactKalmanUpdater(const std::string &state_variable_in,
+                     const std::string &measurement_variable_in,
+                     GetMatrixPtr measurement_matrix_function,
                      GetMatrixPtr measurement_noise_function);
 
   virtual ~ExactKalmanUpdater();

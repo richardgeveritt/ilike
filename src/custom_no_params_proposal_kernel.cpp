@@ -61,8 +61,15 @@ void CustomNoParamsProposalKernel::make_copy(const CustomNoParamsProposalKernel 
 double CustomNoParamsProposalKernel::specific_evaluate_kernel(const Particle &proposed_particle,
                                                               const Particle &old_particle) const
 {
-  return this->proposal_evaluate(proposed_particle.get_transformed_parameters(this),
-                                 old_particle.get_transformed_parameters(this));
+  if (this->proposal_evaluate!=NULL)
+  {
+    return this->proposal_evaluate(proposed_particle.get_transformed_parameters(this),
+                                   old_particle.get_transformed_parameters(this));
+  }
+  else
+  {
+    Rcpp::stop("CustomNoParamsProposalKernel::specific_evaluate_kernel - evaluate not set.");
+  }
 }
 
 /*
@@ -202,4 +209,9 @@ bool CustomNoParamsProposalKernel::can_be_evaluated() const
     return false;
   else
     return true;
+}
+
+void CustomNoParamsProposalKernel::set_data(Data* data_in)
+{
+  
 }

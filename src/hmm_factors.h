@@ -46,6 +46,10 @@ public:
   void setup();
   void setup(const Parameters &conditioned_on_parameters);
   
+  Data* get_current_data();
+  
+  //std::shared_ptr<Data> get
+  
 protected:
   
   void specific_change_data(Data* new_data);
@@ -58,7 +62,7 @@ protected:
   bool smcfixed_flag;
   
   // stored here
-  std::vector<Data> data_time_slices;
+  //std::vector<Data> data_time_slices;
   
   // pointers to llhd estimators
   // stored here

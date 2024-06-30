@@ -296,3 +296,8 @@ bool LogGaussianIndependentProposalKernel::can_be_evaluated() const
 {
   return true;
 }
+
+void LogGaussianIndependentProposalKernel::set_data(Data* data_in)
+{
+
+}

@@ -168,3 +168,8 @@ bool GammaIndependentProposalKernel::can_be_evaluated() const
 {
   return true;
 }
+
+void GammaIndependentProposalKernel::set_data(Data* data_in)
+{
+  
+}

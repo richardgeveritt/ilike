@@ -27,6 +27,8 @@ void MeasurementCovarianceEstimatorOutput::operator=(const MeasurementCovariance
 void MeasurementCovarianceEstimatorOutput::make_copy(const MeasurementCovarianceEstimatorOutput &another)
 {
   this->write_to_file_flag = another.write_to_file_flag;
+  //this->inv_sigma_precomp = another.inv_sigma_precomp;
+  //this->log_det_precomp = another.log_det_precomp;
   //this->estimator = another.estimator;
   //this->set_using_parameters = another.set_using_parameters;
 }

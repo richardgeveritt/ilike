@@ -40,6 +40,7 @@
 #include "custom_no_params_proposal_kernel.h"
 #include "custom_proposal_kernel.h"
 #include "custom_guided_proposal_kernel.h"
+#include "custom_guided_no_params_proposal_kernel.h"
 #include "custom_guided_no_params_symmetric_proposal_kernel.h"
 #include "custom_no_params_symmetric_proposal_kernel.h"
 #include "custom_symmetric_proposal_kernel.h"
@@ -77,6 +78,7 @@
 #include "particle_filter.h"
 #include "square_root_ensemble_shifter.h"
 #include "adjustment_ensemble_shifter.h"
+#include "density_likelihood_estimator.h"
 
 //#include "linear_gaussian_state_space_model.h"
 //#include "enk_linear_gaussian_state_space_model.h"
@@ -394,8 +396,46 @@ std::string extract_string_parameter(const List &parameters_from_file,
                                      const List &model_parameters,
                                      size_t index)
 {
+  std::string result;
   std::string parameter_string = parameters_from_file[index];
-  return parameter_string;
+  
+  if (parameter_string.at(0)=='p')
+  {
+    size_t parameter_index;
+    try
+    {
+      parameter_index = std::stoi(parameter_string.substr(1));
+    } catch (...)
+    {
+      std::string temp_string = parameters_from_file[index];
+      result = temp_string;
+    }
+    
+    if (isStringInList(model_parameters,parameter_index))
+    {
+      std::string temp_string = model_parameters[parameter_index-1];
+      result = temp_string;
+    }
+    else
+    {
+      Rcpp::stop("extract_string_parameter: Parameter index does not correspond to a string in the parameters file.");
+    }
+    
+  }
+  else
+  {
+    try
+    {
+      std::string temp_string = parameters_from_file[index];
+      result = temp_string;
+    }
+    catch (...)
+    {
+      Rcpp::stop("Parameter in model file is not a string - something is wrong with a list of arguments you provided in the ilike file.");
+    }
+  }
+  
+  return result;
 }
 
 arma::colvec extract_vector_parameter(const List &parameters_from_file,
@@ -636,18 +676,18 @@ List get_abc_euclidean_uniform_parameter_info(const List &model_parameters,
                                               const List &current_sbi,
                                               const std::string &sbi_name)
 {
-  std::string augmented_variable_names = current_sbi["variables"];
+  //std::string augmented_variable_names = current_sbi["variables"];
   
   // split string in ;
-  std::vector<std::string> variable_names = split(augmented_variable_names,';');
+  //std::vector<std::string> variable_names = split(augmented_variable_names,';');
   
   if (!current_sbi.containsElementNamed("parameters"))
-    Rcpp::stop("Missing parameters for " + sbi_name + " (3-5 parameters required).");
+    Rcpp::stop("Missing parameters for " + sbi_name + " (3-6 parameters required).");
   
   List parameters = current_sbi["parameters"];
   
-  if (! ( (parameters.size()==3) || (parameters.size()==4) || (parameters.size()==5) ) )
-    Rcpp::stop("3-5 parameters required for " + sbi_name + ".");
+  if (! ( (parameters.size()==3) || (parameters.size()==4) || (parameters.size()==5) || (parameters.size()==6) ) )
+    Rcpp::stop("3-6 parameters required for " + sbi_name + ".");
   
   int number_of_points = extract_int_parameter(parameters,
                                                model_parameters,
@@ -661,41 +701,49 @@ List get_abc_euclidean_uniform_parameter_info(const List &model_parameters,
                                               model_parameters,
                                               2);
   
-  bool parallel = false;
+  bool store_output = false;
   if (parameters.size()>3)
+  {
+    store_output = extract_bool_parameter(parameters,
+                                          model_parameters,
+                                          3);
+  }
+  
+  bool parallel = false;
+  if (parameters.size()>4)
   {
     parallel = extract_bool_parameter(parameters,
                                       model_parameters,
-                                      3);
+                                      5);
   }
   
   int grain_size = 100000;
-  if (parameters.size()>4)
+  if (parameters.size()>5)
   {
     grain_size = extract_int_parameter(parameters,
                                        model_parameters,
-                                       4);
+                                       5);
   }
   
-  return List::create(variable_names,number_of_points,tolerance_variable,tolerance,parallel,grain_size);
+  return List::create(number_of_points,tolerance_variable,tolerance,store_output,parallel,grain_size);
 }
 
 List get_abc_lp_uniform_parameter_info(const List &model_parameters,
                                        const List &current_sbi,
                                        const std::string &sbi_name)
 {
-  std::string augmented_variable_names = current_sbi["variables"];
+  //std::string augmented_variable_names = current_sbi["variables"];
   
   // split string in ;
-  std::vector<std::string> variable_names = split(augmented_variable_names,';');
+  //std::vector<std::string> variable_names = split(augmented_variable_names,';');
   
   if (!current_sbi.containsElementNamed("parameters"))
-    Rcpp::stop("Missing parameters for " + sbi_name + " (4-6 parameters required).");
+    Rcpp::stop("Missing parameters for " + sbi_name + " (4-7 parameters required).");
   
   List parameters = current_sbi["parameters"];
   
-  if (! ( (parameters.size()==4) || (parameters.size()==5) || (parameters.size()==6) ) )
-    Rcpp::stop("4-6 parameters required for " + sbi_name + ".");
+  if (! ( (parameters.size()==4) || (parameters.size()==5) || (parameters.size()==6) || (parameters.size()==7) ) )
+    Rcpp::stop("4-7 parameters required for " + sbi_name + ".");
   
   int number_of_points = extract_int_parameter(parameters,
                                                model_parameters,
@@ -713,52 +761,66 @@ List get_abc_lp_uniform_parameter_info(const List &model_parameters,
                                       model_parameters,
                                       3);
   
-  bool parallel = false;
+  bool store_output = false;
   if (parameters.size()>4)
+  {
+    store_output = extract_bool_parameter(parameters,
+                                          model_parameters,
+                                          4);
+  }
+  
+  bool parallel = false;
+  if (parameters.size()>5)
   {
     parallel = extract_bool_parameter(parameters,
                                       model_parameters,
-                                      4);
+                                      5);
   }
   
   int grain_size = 100000;
-  if (parameters.size()>5)
+  if (parameters.size()>6)
   {
     grain_size = extract_int_parameter(parameters,
                                        model_parameters,
-                                       5);
+                                       6);
   }
   
-  return List::create(variable_names,number_of_points,tolerance_variable,tolerance,p,parallel,grain_size);
+  return List::create(number_of_points,tolerance_variable,tolerance,p,store_output,parallel,grain_size);
 }
 
 List get_abc_enki_parameter_info(const List &model_parameters,
                                  const List &current_sbi,
                                  const std::string &sbi_name)
 {
-  std::string augmented_variable_names = current_sbi["variables"];
+  //std::string augmented_variable_names = current_sbi["variables"];
   
   // split string in ;
-  std::vector<std::string> variable_names = split(augmented_variable_names,';');
+  //std::vector<std::string> variable_names = split(augmented_variable_names,';');
   
   // throw error if more than one variable
   //if (variable_names.size()!=1)
   //  Rcpp::stop("Only one variable allowed for " + sbi_name + ".");
   
   if (!current_sbi.containsElementNamed("parameters"))
-    Rcpp::stop("Missing parameters for " + sbi_name + " (8-10 parameters required).");
+    Rcpp::stop("Missing parameters for " + sbi_name + " (9-13 parameters required).");
   
   List parameters = current_sbi["parameters"];
   
-  if (! ( (parameters.size()==8) || (parameters.size()==9) || (parameters.size()==10) ) )
-    Rcpp::stop("8-10 parameters required for " + sbi_name + ".");
+  if (! ( (parameters.size()==9) || (parameters.size()==10) || (parameters.size()==11) || (parameters.size()==12) || (parameters.size()==13) ) )
+    Rcpp::stop("9-13 parameters required for " + sbi_name + ".");
   
   int number_of_points = extract_int_parameter(parameters,
                                                model_parameters,
                                                0);
+  
+  int estimator_type_in = extract_int_parameter(parameters,
+                                                model_parameters,
+                                                1);
+  
   std::string tolerance_variable = extract_string_parameter(parameters,
                                                             model_parameters,
-                                                            1);
+                                                            2);
+  /*
   arma::colvec schedule_colvec = extract_vector_parameter(parameters,
                                                           model_parameters,
                                                           2);
@@ -780,16 +842,22 @@ List get_abc_enki_parameter_info(const List &model_parameters,
       schedule.push_back(schedule_colvec[k]);
     }
   }
+  */
+  
+  double epsilon = extract_double_parameter(parameters,
+                                            model_parameters,
+                                            3);
   
   std::string shifter_name = extract_string_parameter(parameters,
                                                       model_parameters,
-                                                      3);
+                                                      4);
   
   int enki_lag = extract_int_parameter(parameters,
                                        model_parameters,
-                                       4);
+                                       5);
 
   
+  /*
   double proportion = extract_double_parameter(parameters,
                                                model_parameters,
                                                5);
@@ -800,7 +868,12 @@ List get_abc_enki_parameter_info(const List &model_parameters,
   int enki_number_of_bisections = extract_int_parameter(parameters,
                                                         model_parameters,
                                                         6);
-
+  */
+  
+  size_t number_of_targets_in = extract_int_parameter(parameters,
+                                                      model_parameters,
+                                                      6);
+  
   
   bool enki_on_summary = extract_bool_parameter(parameters,
                                                 model_parameters,
@@ -811,35 +884,108 @@ List get_abc_enki_parameter_info(const List &model_parameters,
                                                        model_parameters,
                                                        8);
 
-    
-  bool parallel = false;
+  std::string scale_variable_in;
   if (parameters.size()>9)
+  {
+    scale_variable_in = extract_string_parameter(parameters,
+                                                 model_parameters,
+                                                 9);
+  }
+  
+  arma::colvec scale_in;
+  if (parameters.size()>10)
+  {
+    scale_in = extract_vector_parameter(parameters,
+                                        model_parameters,
+                                        10);
+  }
+  
+  bool parallel = false;
+  if (parameters.size()>11)
   {
     parallel = extract_bool_parameter(parameters,
                                       model_parameters,
-                                      9);
+                                      11);
   }
   
   int grain_size = 100000;
-  if (parameters.size()>10)
+  if (parameters.size()>12)
   {
     grain_size = extract_int_parameter(parameters,
                                        model_parameters,
-                                       10);
+                                       12);
   }
   
-  return List::create(variable_names,
-                      number_of_points,
+  return List::create(number_of_points,
+                      estimator_type_in,
                       tolerance_variable,
-                      schedule,
+                      epsilon,
                       shifter_name,
                       enki_lag,
-                      enki_annealing_desired_cess,
-                      enki_number_of_bisections,
+                      number_of_targets_in,
                       enki_on_summary,
                       significance_level,
+                      scale_variable_in,
+                      scale_in,
                       parallel,
                       grain_size);
+}
+
+List get_sl_parameter_info(const List &model_parameters,
+                           const List &current_sbi,
+                           const std::string &sbi_name)
+{
+  //std::string augmented_variable_names = current_sbi["variables"];
+  
+  // split string in ;
+  //std::vector<std::string> variable_names = split(augmented_variable_names,';');
+  
+  if (!current_sbi.containsElementNamed("parameters"))
+    Rcpp::stop("Missing parameters for " + sbi_name + " (1-5 parameters required).");
+  
+  List parameters = current_sbi["parameters"];
+  
+  if (! ( (parameters.size()==1) || (parameters.size()==2) || (parameters.size()==3) || (parameters.size()==4) || (parameters.size()==5) ) )
+    Rcpp::stop("1-5 parameters required for " + sbi_name + ".");
+  
+  int number_of_points = extract_int_parameter(parameters,
+                                               model_parameters,
+                                               0);
+  
+  bool unbiased = false;
+  if (parameters.size()>1)
+  {
+    unbiased = extract_bool_parameter(parameters,
+                                      model_parameters,
+                                      1);
+  }
+  
+  bool store_output = false;
+  if (parameters.size()>2)
+  {
+    store_output = extract_bool_parameter(parameters,
+                                          model_parameters,
+                                          2);
+  }
+
+  
+  bool parallel = false;
+  if (parameters.size()>3)
+  {
+    parallel = extract_bool_parameter(parameters,
+                                      model_parameters,
+                                      3);
+  }
+  
+  int grain_size = 100000;
+  if (parameters.size()>4)
+  {
+    grain_size = extract_int_parameter(parameters,
+                                       model_parameters,
+                                       4);
+  }
+  
+  return List::create(number_of_points,unbiased,store_output,parallel,grain_size);
 }
 
 List get_kf_info(const List &model_parameters,
@@ -878,19 +1024,23 @@ List get_enkf_info(const List &model_parameters,
   
   List parameters = current_likelihood["parameters"];
   
-  if (! ( (parameters.size()==1) || (parameters.size()==2) || (parameters.size()==3) || (parameters.size()==4)) )
-    Rcpp::stop("1-4 parameters required for " + likelihood_name + ".");
+  if (! ( (parameters.size()==2) || (parameters.size()==3) || (parameters.size()==4) || (parameters.size()==5)) )
+    Rcpp::stop("2-5 parameters required for " + likelihood_name + ".");
   
   size_t number_of_ensemble_members = extract_int_parameter(parameters,
                                                             model_parameters,
                                                             0);
   
+  std::string shifter_name = extract_string_parameter(parameters,
+                                                      model_parameters,
+                                                      1);
+  
   int iterations_to_store;
-  if (parameters.size()>1)
+  if (parameters.size()>2)
   {
     iterations_to_store = extract_int_parameter(parameters,
                                                 model_parameters,
-                                                1);
+                                                2);
   }
   else
   {
@@ -898,11 +1048,11 @@ List get_enkf_info(const List &model_parameters,
   }
   
   bool parallel;
-  if (parameters.size()>2)
+  if (parameters.size()>3)
   {
     parallel = extract_bool_parameter(parameters,
                                       model_parameters,
-                                      2);
+                                      3);
   }
   else
   {
@@ -910,18 +1060,18 @@ List get_enkf_info(const List &model_parameters,
   }
   
   size_t grain_size;
-  if (parameters.size()>3)
+  if (parameters.size()>4)
   {
     grain_size = extract_int_parameter(parameters,
                                        model_parameters,
-                                       3);
+                                       4);
   }
   else
   {
     grain_size = 100000;
   }
   
-  return List::create(number_of_ensemble_members,iterations_to_store,parallel,grain_size);
+  return List::create(number_of_ensemble_members,shifter_name,iterations_to_store,parallel,grain_size);
 
 }
 
@@ -1063,52 +1213,52 @@ List get_filtering_info(const List &model,
                                                          2);
             
             //output[2] = last_index_in;
-            //std::string time_name_in = extract_string_parameter(values,
-            //                                                    model_parameters,
-            //                                                    3);
+            std::string time_name_in = extract_string_parameter(values,
+                                                                model_parameters,
+                                                                3);
             
             //output[3] = time_name_in;
             double initial_time_in = extract_double_parameter(values,
                                                               model_parameters,
-                                                              3);
+                                                              4);
             
             //output[4] = initial_time_in;
             std::string time_diff_name_in = extract_string_parameter(values,
                                                                      model_parameters,
-                                                                     4);
+                                                                     5);
             
             //output[5] = time_diff_name_in;
             double update_time_step_in = extract_double_parameter(values,
                                                                   model_parameters,
-                                                                  5);
+                                                                  6);
             
             //output[6] = update_time_step_in;
             size_t predictions_per_update_in = extract_int_parameter(values,
                                                                      model_parameters,
-                                                                     6);
+                                                                     7);
             
             //output[7] = predictions_per_update_in;
-            std::string state_name_in = extract_string_parameter(values,
-                                                                 model_parameters,
-                                                                 7);
+            //std::string state_name_in = extract_string_parameter(values,
+            //                                                     model_parameters,
+            //                                                     7);
             
             //output[8] = state_name_in;
-            std::string measurement_name_in = extract_string_parameter(values,
-                                                                       model_parameters,
-                                                                       8);
+            //std::string measurement_name_in = extract_string_parameter(values,
+            //                                                           model_parameters,
+            //                                                           8);
             
             //output[9] = measurement_name_in;
             
             return List::create(index_name_in,
                                 first_index_in,
                                 last_index_in,
-                                //time_name_in,
+                                time_name_in,
                                 initial_time_in,
                                 time_diff_name_in,
                                 update_time_step_in,
-                                predictions_per_update_in,
-                                state_name_in,
-                                measurement_name_in);
+                                predictions_per_update_in);
+                                //state_name_in,
+                                //measurement_name_in);
           }
           else
           {
@@ -1143,6 +1293,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                             const std::vector<std::vector<double>> &sequencer_schedules,
                                                             IndependentProposalKernel* proposal_in,
                                                             VectorIndex* &without_cancelled_index,
+                                                            VectorIndex* &without_priors_index,
                                                             VectorIndex* &full_index,
                                                             bool &any_annealing,
                                                             const std::vector<int> &factors_affected_by_smc_sequence,
@@ -1152,6 +1303,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
   //data_created_in_get_likelihood_estimators.clear();
   
   std::vector<size_t> without_cancelled_index_vector;
+  std::vector<size_t> without_priors_index_vector;
   std::vector<size_t> full_index_vector;
   
   any_annealing = false;
@@ -1404,6 +1556,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
           
           full_index_vector.push_back(likelihood_estimators.size());
           without_cancelled_index_vector.push_back(likelihood_estimators.size());
+          without_priors_index_vector.push_back(likelihood_estimators.size());
           
           if (any_annealing)
           {
@@ -1434,20 +1587,34 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
             stop("sbi_likelihood factor must also contain simulate_data_model.");
           }
           
+          std::vector<std::string> data_variables_in;
+          if (current_factor.containsElementNamed("data_variable"))
+          {
+            SEXP data_variable_SEXP = current_factor["data_variable"];
+            std::string augmented_data_variable_names = load_string(data_variable_SEXP);
+            // split string in ;
+            data_variables_in = split(augmented_data_variable_names,';');
+          }
+          else
+          {
+            stop("sbi_likelihood factor must also contain data_variable.");
+          }
+          
           LikelihoodEstimator* new_likelihood_estimator;
           
           List current_sbi = current_factor["sbi_likelihood"];
-          if ( current_sbi.containsElementNamed("type") && current_sbi.containsElementNamed("variables") )
+          if ( current_sbi.containsElementNamed("type") && current_sbi.containsElementNamed("parameters") )
           {
             std::string type = current_sbi["type"];
             
             if ( (type=="euclidean_uniform_abc") || (type=="lp_uniform_abc") )
             {
-              std::vector<std::string> data_variables_in;
+              //std::vector<std::string> data_variables_in;
               size_t number_of_points;
               std::string tolerance_variable;
               double tolerance;
               double p;
+              bool store_output;
               bool parallel;
               size_t grain_size;
               
@@ -1457,13 +1624,14 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                      current_sbi,
                                                                      type);
                 
-                std::vector<std::string> temp_data_variables = info[0];
-                data_variables_in = temp_data_variables;
-                number_of_points = info[1];
-                std::string temp_tolerance_variable = info[2];
+                //std::vector<std::string> temp_data_variables = info[0];
+                //data_variables_in = temp_data_variables;
+                number_of_points = info[0];
+                std::string temp_tolerance_variable = info[1];
                 tolerance_variable = temp_tolerance_variable;
-                tolerance = info[3];
+                tolerance = info[2];
                 p = 2.0;
+                store_output = info[3];
                 parallel = info[4];
                 grain_size = info[5];
               }
@@ -1473,15 +1641,16 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                               current_sbi,
                                                               type);
                 
-                std::vector<std::string> temp_data_variables = info[0];
-                data_variables_in = temp_data_variables;
-                number_of_points = info[1];
-                std::string temp_tolerance_variable = info[2];
+                //std::vector<std::string> temp_data_variables = info[0];
+                //data_variables_in = temp_data_variables;
+                number_of_points = info[0];
+                std::string temp_tolerance_variable = info[1];
                 tolerance_variable = temp_tolerance_variable;
-                tolerance = info[3];
-                p = info[4];
-                parallel = info[5];
-                grain_size = info[6];
+                tolerance = info[2];
+                p = info[3];
+                store_output = info[3];
+                parallel = info[4];
+                grain_size = info[5];
               }
               
               bool adaptive = false;
@@ -1518,6 +1687,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                           simulate_data_model_in,
                                                                                           std::make_shared<Transform>(summary_stats),
                                                                                           number_of_points,
+                                                                                          store_output,
                                                                                           parallel,
                                                                                           grain_size);
                 }
@@ -1533,6 +1703,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                             simulate_data_model_in,
                                                                                             std::make_shared<Transform>(summary_stats),
                                                                                             number_of_points,
+                                                                                            store_output,
                                                                                             parallel,
                                                                                             grain_size);
                 }
@@ -1551,6 +1722,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                           tolerance,
                                                                                           simulate_data_model_in,
                                                                                           number_of_points,
+                                                                                          store_output,
                                                                                           parallel,
                                                                                           grain_size);
                 }
@@ -1565,6 +1737,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                             tolerance_variable,
                                                                                             simulate_data_model_in,
                                                                                             number_of_points,
+                                                                                            store_output,
                                                                                             parallel,
                                                                                             grain_size);
                 }
@@ -1573,10 +1746,11 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
             }
             else if (type=="gaussian_abc")
             {
-              std::vector<std::string> data_variables_in;
+              //std::vector<std::string> data_variables_in;
               size_t number_of_points;
               std::string tolerance_variable;
               double tolerance;
+              bool store_output;
               bool parallel;
               size_t grain_size;
               
@@ -1585,12 +1759,13 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                    current_sbi,
                                                                    type);
               
-              std::vector<std::string> temp_data_variables = info[0];
-              data_variables_in = temp_data_variables;
-              number_of_points = info[1];
-              std::string temp_tolerance_variable = info[2];
+              //std::vector<std::string> temp_data_variables = info[0];
+              //data_variables_in = temp_data_variables;
+              number_of_points = info[0];
+              std::string temp_tolerance_variable = info[1];
               tolerance_variable = temp_tolerance_variable;
-              tolerance = info[3];
+              tolerance = info[2];
+              store_output = info[3];
               parallel = info[4];
               grain_size = info[5];
               
@@ -1627,6 +1802,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                         simulate_data_model_in,
                                                                                         std::make_shared<Transform>(summary_stats),
                                                                                         number_of_points,
+                                                                                        store_output,
                                                                                         parallel,
                                                                                         grain_size);
                 }
@@ -1641,6 +1817,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                           simulate_data_model_in,
                                                                                           std::make_shared<Transform>(summary_stats),
                                                                                           number_of_points,
+                                                                                          store_output,
                                                                                           parallel,
                                                                                           grain_size);
                 }
@@ -1658,6 +1835,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                         tolerance,
                                                                                         simulate_data_model_in,
                                                                                         number_of_points,
+                                                                                        store_output,
                                                                                         parallel,
                                                                                         grain_size);
                 }
@@ -1671,6 +1849,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                           tolerance_variable,
                                                                                           simulate_data_model_in,
                                                                                           number_of_points,
+                                                                                          store_output,
                                                                                           parallel,
                                                                                           grain_size);
                 }
@@ -1679,14 +1858,18 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
             }
             else if (type=="enki_abc")
             {
-              std::vector<std::string> data_variables_in;
+              //std::vector<std::string> data_variables_in;
               size_t number_of_points;
+              size_t estimator_type_in;
               std::string tolerance_variable;
-              std::vector<double> schedule;
+              double epsilon;
+              //std::vector<double> schedule;
               size_t enki_lag;
+              //arma::colvec scale_in;
               std::string shifter_name;
-              double enki_annealing_desired_cess;
-              size_t enki_number_of_bisections;
+              //double enki_annealing_desired_cess;
+              //size_t enki_number_of_bisections;
+              size_t number_of_targets_in;
               bool enki_on_summary;
               double significance_level;
               bool parallel;
@@ -1696,23 +1879,40 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                       current_sbi,
                                                       type);
               
-              std::vector<std::string> temp_data_variables = info[0];
-              data_variables_in = temp_data_variables;
-              number_of_points = info[1];
-              std::string temp_tolerance_variable = info[2];
+              //std::vector<std::string> temp_data_variables = info[0];
+              //data_variables_in = temp_data_variables;
+              /*
+              number_of_points = info[0];
+              std::string temp_tolerance_variable = info[1];
               tolerance_variable = temp_tolerance_variable;
-              std::vector<double> temp_schedule = info[3];
-              std::string temp_shifter_name = info[4];
+              std::vector<double> temp_schedule = info[2];
+              std::string temp_shifter_name = info[3];
               shifter_name = temp_shifter_name;
               schedule = temp_schedule;
-              enki_lag = info[5];
+              enki_lag = info[4];
+              enki_annealing_desired_cess = info[5];
+              enki_number_of_bisections = info[6];
+              enki_on_summary = info[7];
+              significance_level = info[8];
+              parallel = info[9];
+              grain_size = info[10];
+              */
               
-              enki_annealing_desired_cess = info[6];
-              enki_number_of_bisections = info[7];
-              enki_on_summary = info[8];
-              significance_level = info[9];
-              parallel = info[10];
-              grain_size = info[11];
+              number_of_points = info[0];
+              estimator_type_in = info[1];
+              std::string temp_tolerance_variable = info[2];
+              tolerance_variable = temp_tolerance_variable;
+              epsilon = info[3];
+              std::string temp_shifter_name = info[4];
+              shifter_name = temp_shifter_name;
+              enki_lag = info[5];
+              number_of_targets_in = info[6];
+              enki_on_summary = info[7];
+              significance_level = info[8];
+              std::string scale_variable_in = info[9];
+              arma::colvec scale_in = info[10];
+              parallel = info[11];
+              grain_size = info[12];
               
               EnsembleShifter* shifter;
               if (shifter_name=="stochastic")
@@ -1729,7 +1929,8 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
               }
               else
               {
-                Rcpp::stop("Invalid shifter type from EnKF");
+                Rcout << "Shifter type: " << shifter_name << std::endl;
+                Rcpp::stop("Invalid shifter type for EnKI");
               }
               
               bool adaptive = false;
@@ -1760,17 +1961,18 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                     &data_created_in_get_likelihood_estimators.back(),
                                                                                     enki_lag,
                                                                                     shifter,
-                                                                                    enki_annealing_desired_cess,
-                                                                                    enki_number_of_bisections,
-                                                                                    "",
+                                                                                    scale_variable_in,
                                                                                     tolerance_variable,
-                                                                                    schedule,
+                                                                                    epsilon,
+                                                                                    number_of_targets_in,
+                                                                                    scale_in,
                                                                                     data_variables_in,
                                                                                     simulate_data_model_in,
                                                                                     std::make_shared<Transform>(summary_stats),
                                                                                     enki_on_summary,
                                                                                     number_of_points,
                                                                                     significance_level,
+                                                                                    estimator_type_in,
                                                                                     parallel,
                                                                                     grain_size);
                 }
@@ -1788,15 +1990,16 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                                     data_in,
                                                                                     enki_lag,
                                                                                     shifter,
-                                                                                    enki_annealing_desired_cess,
-                                                                                    enki_number_of_bisections,
-                                                                                    "",
+                                                                                    scale_variable_in,
                                                                                     tolerance_variable,
-                                                                                    schedule,
+                                                                                    epsilon,
+                                                                                    number_of_targets_in,
+                                                                                    scale_in,
                                                                                     data_variables_in,
                                                                                     simulate_data_model_in,
                                                                                     number_of_points,
                                                                                     significance_level,
+                                                                                    estimator_type_in,
                                                                                     parallel,
                                                                                     grain_size);
                 }
@@ -1804,6 +2007,62 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                 {
                   stop("Adaptive approach to choosing epsilon not yet implemented in EnKI-ABC.");
                 }
+              }
+              
+            }
+            else if (type=="sl")
+            {
+              //std::vector<std::string> data_variables_in;
+              size_t number_of_points;
+              bool unbiased;
+              bool store_output;
+              bool parallel;
+              size_t grain_size;
+              
+              // same function as getting a Gaussian
+              List info = get_sl_parameter_info(model_parameters,
+                                                current_sbi,
+                                                type);
+              
+              //std::vector<std::string> temp_data_variables = info[0];
+              //data_variables_in = temp_data_variables;
+              number_of_points = info[0];
+              unbiased = info[1];
+              store_output = info[2];
+              parallel = info[3];
+              grain_size = info[4];
+              
+              if (current_factor.containsElementNamed("summary_statistics"))
+              {
+                SEXP summary_statistics_SEXP = current_factor["summary_statistics"];
+                SummaryStatisticsPtr summary_stats = load_summary_statistics(summary_statistics_SEXP);
+                
+                data_created_in_get_likelihood_estimators.push_back(summary_stats(*data_in));
+                
+                new_likelihood_estimator = make_sl_likelihood(rng_in,
+                                                              seed_in,
+                                                              &data_created_in_get_likelihood_estimators.back(),
+                                                              data_variables_in,
+                                                              simulate_data_model_in,
+                                                              std::make_shared<Transform>(summary_stats),
+                                                              number_of_points,
+                                                              unbiased,
+                                                              store_output,
+                                                              parallel,
+                                                              grain_size);
+              }
+              else
+              {
+                new_likelihood_estimator = make_sl_likelihood(rng_in,
+                                                              seed_in,
+                                                              data_in,
+                                                              data_variables_in,
+                                                              simulate_data_model_in,
+                                                              number_of_points,
+                                                              unbiased,
+                                                              store_output,
+                                                              parallel,
+                                                              grain_size);
               }
               
             }
@@ -1821,6 +2080,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
           
           full_index_vector.push_back(likelihood_estimators.size());
           without_cancelled_index_vector.push_back(likelihood_estimators.size());
+          without_priors_index_vector.push_back(likelihood_estimators.size());
           
           if (any_annealing)
           {
@@ -1850,12 +2110,10 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
             stop("linear_gaussian_data must contain a type.");
           }
           
-          /*
           if (!current_factor.containsElementNamed("linear_gaussian_data_variable"))
           {
             stop("linear_gaussian_data must contain linear_gaussian_data_variable.");
           }
-          */
           
           if (!current_factor.containsElementNamed("linear_gaussian_data_state_variable"))
           {
@@ -1864,26 +2122,30 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
           
           SEXP linear_gaussian_data_matrix_SEXP = current_factor["linear_gaussian_data_matrix"];
           SEXP linear_gaussian_data_covariance_SEXP = current_factor["linear_gaussian_data_covariance"];
-          //SEXP linear_gaussian_data_variable_SEXP = current_factor["linear_gaussian_data_variable"];
+          SEXP linear_gaussian_data_variable_SEXP = current_factor["linear_gaussian_data_variable"];
           SEXP linear_gaussian_data_state_variable_SEXP = current_factor["linear_gaussian_data_state_variable"];
           
-          std::vector<std::string> variables = data_in->get_vector_variables();
-          if (variables.size()!=1)
-            stop("For this linear-Gaussian likelihood we can only have one variable present in the data.");
+          std::string augmented_state_variable_names = load_string(linear_gaussian_data_state_variable_SEXP);
+          // split string in ;
+          std::vector<std::string> state_variable_names = split(augmented_state_variable_names,';');
+          
+          //std::vector<std::string> variables = data_in->get_vector_variables();
+          //if (variables.size()!=1)
+          //  stop("For this linear-Gaussian likelihood we can only have one variable present in the data.");
           
           size_t type = current_factor["type"];
           ProposalKernel* proposal;
           if (type==1)
           {
-            proposal = new LinearGaussianNoiseProposalKernel(variables[0],
-                                                             load_string(linear_gaussian_data_state_variable_SEXP),
+            proposal = new LinearGaussianNoiseProposalKernel(load_string(linear_gaussian_data_variable_SEXP),
+                                                             state_variable_names,//load_string(linear_gaussian_data_state_variable_SEXP),
                                                              load_matrix(linear_gaussian_data_matrix_SEXP),
                                                              load_matrix(linear_gaussian_data_covariance_SEXP));
           }
           else if (type==2)
           {
-            proposal = new LinearGaussianNoiseFunctionProposalKernel(variables[0],
-                                                                     load_string(linear_gaussian_data_state_variable_SEXP),
+            proposal = new LinearGaussianNoiseFunctionProposalKernel(load_string(linear_gaussian_data_variable_SEXP),
+                                                                     state_variable_names,//load_string(linear_gaussian_data_state_variable_SEXP),
                                                                      load_matrix_function(linear_gaussian_data_matrix_SEXP),
                                                                      load_matrix_function(linear_gaussian_data_covariance_SEXP));
           }
@@ -1900,6 +2162,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
           
           full_index_vector.push_back(likelihood_estimators.size());
           without_cancelled_index_vector.push_back(likelihood_estimators.size());
+          without_priors_index_vector.push_back(likelihood_estimators.size());
           
           if (any_annealing)
           {
@@ -1928,35 +2191,31 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
             stop("nonlinear_gaussian_data must contain a type.");
           }
           
-          /*
           if (!current_factor.containsElementNamed("nonlinear_gaussian_data_variable"))
           {
             stop("nonlinear_gaussian_data must contain nonlinear_gaussian_data_variable.");
           }
-          */
           
-          std::vector<std::string> variables = data_in->get_vector_variables();
-          if (variables.size()!=1)
-            stop("For this linear-Gaussian likelihood we can only have one variable present in the data.");
+          //std::vector<std::string> variables = data_in->get_vector_variables();
+          //if (variables.size()!=1)
+          //  stop("For this linear-Gaussian likelihood we can only have one variable present in the data.");
           
           SEXP nonlinear_gaussian_data_function_SEXP = current_factor["nonlinear_gaussian_data_function"];
           SEXP nonlinear_gaussian_data_covariance_SEXP = current_factor["nonlinear_gaussian_data_covariance"];
           
-          //SEXP nonlinear_gaussian_data_variable_SEXP = current_factor["nonlinear_gaussian_data_variable"];
-          
-          
+          SEXP nonlinear_gaussian_data_variable_SEXP = current_factor["nonlinear_gaussian_data_variable"];
           
           size_t type = current_factor["type"];
           ProposalKernel* proposal;
           if (type==1)
           {
-            proposal = new NonLinearGaussianNoiseProposalKernel(variables[0],
+            proposal = new NonLinearGaussianNoiseProposalKernel(load_string(nonlinear_gaussian_data_variable_SEXP),
                                                                 std::make_shared<Transform>(load_transform(nonlinear_gaussian_data_function_SEXP)),
                                                                 load_matrix(nonlinear_gaussian_data_covariance_SEXP));
           }
           else if (type==2)
           {
-            proposal = new NonLinearGaussianNoiseFunctionProposalKernel(variables[0],
+            proposal = new NonLinearGaussianNoiseFunctionProposalKernel(load_string(nonlinear_gaussian_data_variable_SEXP),
                                                                         std::make_shared<Transform>(load_transform(nonlinear_gaussian_data_function_SEXP)),
                                                                         load_matrix_function(nonlinear_gaussian_data_covariance_SEXP));
           }
@@ -1973,6 +2232,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
           
           full_index_vector.push_back(likelihood_estimators.size());
           without_cancelled_index_vector.push_back(likelihood_estimators.size());
+          without_priors_index_vector.push_back(likelihood_estimators.size());
           
           if (any_annealing)
           {
@@ -2037,9 +2297,31 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                llhd_type);
               
               size_t number_of_ensemble_members = enkf_params[0];
-              size_t iterations_to_store = enkf_params[1];
-              bool parallel = enkf_params[2];
-              size_t grain_size = enkf_params[3];
+              std::string shifter_name = enkf_params[1];
+              size_t iterations_to_store = enkf_params[2];
+              bool parallel = enkf_params[3];
+              size_t grain_size = enkf_params[4];
+              
+              EnsembleShifter* shifter;
+              if (shifter_name=="stochastic")
+              {
+                shifter = new StochasticEnsembleShifter();
+              }
+              else if (shifter_name=="sqrt")
+              {
+                //stop("Sqrt shifter not currently implemented for ensemble Kalman filters.");
+                // To work, sqrt shifter needs construction of an "A" matrix (H matrix) that uses the state variables in the packing_instructions in EnsembleKalman and the state variables stored in the meascovest to construct this matrix. Can be done in the "setup" functions that are called before running the ensemble Kalman method.
+                shifter = new SquareRootEnsembleShifter();
+              }
+              else if (shifter_name=="adjustment")
+              {
+                shifter = new AdjustmentEnsembleShifter();
+              }
+              else
+              {
+                Rcout << "Shifter type: " << shifter_name << std::endl;
+                Rcpp::stop("Invalid shifter type for EnKF");
+              }
               
               new_likelihood_estimator = get_ensemble_kalman_filter(rng_in,
                                                                     data_in,
@@ -2047,6 +2329,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
                                                                     model_parameters,
                                                                     algorithm_parameter_list,
                                                                     number_of_ensemble_members,
+                                                                    shifter,
                                                                     iterations_to_store,
                                                                     false,
                                                                     parallel,
@@ -2090,6 +2373,7 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
             
             full_index_vector.push_back(likelihood_estimators.size());
             without_cancelled_index_vector.push_back(likelihood_estimators.size());
+            without_priors_index_vector.push_back(likelihood_estimators.size());
             
             if (any_annealing)
             {
@@ -2159,9 +2443,9 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
     
   }
   
-  
   full_index = new VectorIndex(full_index_vector);
   without_cancelled_index = new VectorIndex(without_cancelled_index_vector);
+  without_priors_index = new VectorIndex(without_priors_index_vector);
   
   /*
   std::cout << "Full index." << std::endl;
@@ -2176,9 +2460,10 @@ std::vector<LikelihoodEstimator*> get_likelihood_estimators(RandomNumberGenerato
 }
 
 
-KalmanUpdater* get_kalman_updater(const List &model,
-                                  const List &model_parameters)
+std::vector<KalmanUpdater*> get_kalman_updaters(const List &model,
+                                                const List &model_parameters)
 {
+  std::vector<KalmanUpdater*> updaters;
   
   if ( model.containsElementNamed("factor") )
   {
@@ -2203,31 +2488,35 @@ KalmanUpdater* get_kalman_updater(const List &model,
             stop("linear_gaussian must contain a type.");
           }
           
-          //if (!current_factor.containsElementNamed("linear_gaussian_data_variable"))
-          //{
-          //  stop("linear_gaussian_data must contain linear_gaussian_data_variable.");
-          //}
+          if (!current_factor.containsElementNamed("linear_gaussian_data_variable"))
+          {
+            stop("linear_gaussian_data must contain linear_gaussian_data_variable.");
+          }
           
-          //if (!current_factor.containsElementNamed("linear_gaussian_data_state_variable"))
-          //{
-          //  stop("linear_gaussian_data must contain linear_gaussian_data_state_variable.");
-          //}
+          if (!current_factor.containsElementNamed("linear_gaussian_data_state_variable"))
+          {
+            stop("linear_gaussian_data must contain linear_gaussian_data_state_variable.");
+          }
           
           SEXP linear_gaussian_data_matrix_SEXP = current_factor["linear_gaussian_data_matrix"];
           SEXP linear_gaussian_data_covariance_SEXP = current_factor["linear_gaussian_data_covariance"];
-          //SEXP linear_gaussian_data_variable_SEXP = current_factor["linear_gaussian_data_variable"];
-          //SEXP linear_gaussian_data_state_variable_SEXP = current_factor["linear_gaussian_data_state_variable"];
+          SEXP linear_gaussian_data_variable_SEXP = current_factor["linear_gaussian_data_variable"];
+          SEXP linear_gaussian_data_state_variable_SEXP = current_factor["linear_gaussian_data_state_variable"];
           size_t type = current_factor["type"];
 
           if (type==1)
           {
-            return new ExactKalmanUpdater(load_matrix(linear_gaussian_data_matrix_SEXP),
-                                          load_matrix(linear_gaussian_data_covariance_SEXP));
+            updaters.push_back(new ExactKalmanUpdater(load_string(linear_gaussian_data_state_variable_SEXP),
+                                                      load_string(linear_gaussian_data_variable_SEXP),
+                                                      load_matrix(linear_gaussian_data_matrix_SEXP),
+                                                      load_matrix(linear_gaussian_data_covariance_SEXP)));
           }
           else if (type==2)
           {
-            return new ExactKalmanUpdater(load_matrix_function(linear_gaussian_data_matrix_SEXP),
-                                          load_matrix_function(linear_gaussian_data_covariance_SEXP));
+            updaters.push_back(new ExactKalmanUpdater(load_string(linear_gaussian_data_state_variable_SEXP),
+                                                      load_string(linear_gaussian_data_variable_SEXP),
+                                                      load_matrix_function(linear_gaussian_data_matrix_SEXP),
+                                                      load_matrix_function(linear_gaussian_data_covariance_SEXP)));
           }
           else
           {
@@ -2293,7 +2582,10 @@ KalmanUpdater* get_kalman_updater(const List &model,
     stop("No factors found in model file.");
   }
 
-  stop("Valid Kalman updater not found.");
+  if (updaters.size()==0)
+    stop("Valid Kalman updater not found.");
+  else
+    return updaters;
 }
 
 KalmanPredictor* get_kalman_predictor(const List &model,
@@ -2323,19 +2615,14 @@ KalmanPredictor* get_kalman_predictor(const List &model,
             stop("linear_gaussian must contain a type.");
           }
           
-          //if (!current_factor.containsElementNamed("linear_gaussian_data_variable"))
+          //if (!current_factor.containsElementNamed("linear_gaussian_transition_variable"))
           //{
-          //  stop("linear_gaussian_data must contain linear_gaussian_data_variable.");
-          //}
-          
-          //if (!current_factor.containsElementNamed("linear_gaussian_data_state_variable"))
-          //{
-          //  stop("linear_gaussian_data must contain linear_gaussian_data_state_variable.");
+          //  stop("linear_gaussian must contain linear_gaussian_transition_variable.");
           //}
           
           SEXP linear_gaussian_transition_matrix_SEXP = current_factor["linear_gaussian_transition_matrix"];
           SEXP linear_gaussian_transition_covariance_SEXP = current_factor["linear_gaussian_transition_covariance"];
-          //SEXP linear_gaussian_data_variable_SEXP = current_factor["linear_gaussian_data_variable"];
+          //SEXP linear_gaussian_transition_variable_SEXP = current_factor["linear_gaussian_transition_variable"];
           //SEXP linear_gaussian_data_state_variable_SEXP = current_factor["linear_gaussian_data_state_variable"];
           size_t type = current_factor["type"];
           
@@ -2521,7 +2808,7 @@ ProposalKernel* get_transition_proposal(const List &model,
         }
         else if ( current_factor.containsElementNamed("transition_proposal") )
         {
-          DistributionFactor* new_factor;
+          //DistributionFactor* new_factor;
           
           if (Rf_isNewList(current_factor["transition_proposal"]))
           {
@@ -2610,12 +2897,12 @@ ProposalKernel* get_transition_proposal(const List &model,
           if (current_factor.containsElementNamed("evaluate_log_transition_proposal"))
           {
             SEXP evaluate_log_transition_proposal_SEXP = current_factor["evaluate_log_transition_proposal"];
-            return new CustomNoParamsProposalKernel(load_simulate_no_params_mcmc_proposal(simulate_transition_proposal_SEXP),
-                                                        load_evaluate_log_no_params_mcmc_proposal(evaluate_log_transition_proposal_SEXP));
+            return new CustomGuidedNoParamsProposalKernel(load_simulate_guided_no_params_mcmc_proposal(simulate_transition_proposal_SEXP),
+                                                        load_evaluate_log_guided_no_params_mcmc_proposal(evaluate_log_transition_proposal_SEXP));
           }
           else
           {
-            return new CustomNoParamsProposalKernel(load_simulate_no_params_mcmc_proposal(simulate_transition_proposal_SEXP));
+            return new CustomGuidedNoParamsProposalKernel(load_simulate_guided_no_params_mcmc_proposal(simulate_transition_proposal_SEXP));
           }
           
         }
@@ -2875,7 +3162,7 @@ List get_prior_mean_and_covariance(const List &model,
         List current_factor = factors[i];
         if ( current_factor.containsElementNamed("prior") )
         {
-          DistributionFactor* new_factor;
+          //DistributionFactor* new_factor;
           
           if (Rf_isNewList(current_factor["prior"]))
           {
@@ -3010,6 +3297,17 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
           SEXP simulate_data_model_SEXP = current_factor["simulate_data_model"];
           simulate_data_model_in = load_simulate_data_model(simulate_data_model_SEXP);
           
+          if (!current_factor.containsElementNamed("data_variable"))
+          {
+            stop("simulator-based model must be associated with a data_variable.");
+          }
+          
+          SEXP data_variable_SEXP = current_factor["data_variable"];
+          
+          std::string augmented_data_variable_names = load_string(data_variable_SEXP);
+          // split string in ;
+          std::vector<std::string> data_variable_names = split(augmented_data_variable_names,';');
+          
           MeasurementCovarianceEstimator* new_measurement_covariance_estimator;
           
           if (current_factor.containsElementNamed("summary_statistics"))
@@ -3024,7 +3322,8 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
                                                                                              &data_created_in_get_measurement_covariance_estimators.back(),
                                                                                              transform,
                                                                                              std::make_shared<Transform>(summary_stats),
-                                                                                             simulate_data_model_in);
+                                                                                             simulate_data_model_in,
+                                                                                             data_variable_names);
           }
           else
           {
@@ -3034,7 +3333,8 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
                                                                                              data_in,
                                                                                              transform,
                                                                                              NULL,
-                                                                                             simulate_data_model_in);
+                                                                                             simulate_data_model_in,
+                                                                                             data_variable_names);
           }
           
           measurement_covariance_estimators.push_back(new_measurement_covariance_estimator);
@@ -3051,12 +3351,10 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
             stop("linear_gaussian_data must contain a type.");
           }
           
-          /*
           if (!current_factor.containsElementNamed("linear_gaussian_data_variable"))
           {
             stop("linear_gaussian_data must contain linear_gaussian_data_variable.");
           }
-          */
           
           if (!current_factor.containsElementNamed("linear_gaussian_data_state_variable"))
           {
@@ -3065,9 +3363,13 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
           
           SEXP linear_gaussian_data_matrix_SEXP = current_factor["linear_gaussian_data_matrix"];
           SEXP linear_gaussian_data_covariance_SEXP = current_factor["linear_gaussian_data_covariance"];
-          //SEXP linear_gaussian_data_variable_SEXP = current_factor["linear_gaussian_data_variable"];
+          SEXP linear_gaussian_data_variable_SEXP = current_factor["linear_gaussian_data_variable"];
           SEXP linear_gaussian_data_state_variable_SEXP = current_factor["linear_gaussian_data_state_variable"];
           size_t type = current_factor["type"];
+          
+          std::string augmented_state_variable_names = load_string(linear_gaussian_data_state_variable_SEXP);
+          // split string in ;
+          std::vector<std::string> state_variable_names = split(augmented_state_variable_names,';');
           
           MeasurementCovarianceEstimator* new_measurement_covariance_estimator;
           
@@ -3087,20 +3389,22 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
                                                                                                             std::make_shared<Transform>(summary_stats),
                                                                                                             load_matrix(linear_gaussian_data_matrix_SEXP),
                                                                                                             load_matrix(linear_gaussian_data_covariance_SEXP),
-                                                                                                            //load_string(linear_gaussian_data_variable_SEXP),
-                                                                                                            load_string(linear_gaussian_data_state_variable_SEXP));
+                                                                                                            load_string(linear_gaussian_data_variable_SEXP),
+                                                                                                            state_variable_names);
             }
             else if (type==2)
             {
               new_measurement_covariance_estimator = new DirectLinearGaussianMeasurementCovarianceEstimator(rng_in,
                                                                                                             seed_in,
-                                                                                                            &data_created_in_get_measurement_covariance_estimators.back(),
+                                                                                                            data_in,
+                                                                                                            //&data_created_in_get_measurement_covariance_estimators.back(),
                                                                                                             transform,
-                                                                                                            std::make_shared<Transform>(summary_stats),
+                                                                                                            //std::make_shared<Transform>(summary_stats),
+                                                                                                            NULL,
                                                                                                             load_matrix_function(linear_gaussian_data_matrix_SEXP),
                                                                                                             load_matrix_function(linear_gaussian_data_covariance_SEXP),
-                                                                                                            //load_string(linear_gaussian_data_variable_SEXP),
-                                                                                                            load_string(linear_gaussian_data_state_variable_SEXP));
+                                                                                                            load_string(linear_gaussian_data_variable_SEXP),
+                                                                                                            state_variable_names);
             }
             else
             {
@@ -3120,8 +3424,8 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
                                                                                                             NULL,
                                                                                                             load_matrix(linear_gaussian_data_matrix_SEXP),
                                                                                                             load_matrix(linear_gaussian_data_covariance_SEXP),
-                                                                                                            //load_string(linear_gaussian_data_variable_SEXP),
-                                                                                                            load_string(linear_gaussian_data_state_variable_SEXP));
+                                                                                                            load_string(linear_gaussian_data_variable_SEXP),
+                                                                                                            state_variable_names);
             }
             else if (type==2)
             {
@@ -3132,8 +3436,8 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
                                                                                                             NULL,
                                                                                                             load_matrix_function(linear_gaussian_data_matrix_SEXP),
                                                                                                             load_matrix_function(linear_gaussian_data_covariance_SEXP),
-                                                                                                            //load_string(linear_gaussian_data_variable_SEXP),
-                                                                                                            load_string(linear_gaussian_data_state_variable_SEXP));
+                                                                                                            load_string(linear_gaussian_data_variable_SEXP),
+                                                                                                            state_variable_names);
             }
             else
             {
@@ -3166,7 +3470,7 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
           
           SEXP nonlinear_gaussian_data_function_SEXP = current_factor["nonlinear_gaussian_data_function"];
           SEXP nonlinear_gaussian_data_covariance_SEXP = current_factor["nonlinear_gaussian_data_covariance"];
-          //SEXP nonlinear_gaussian_data_variable_SEXP = current_factor["nonlinear_gaussian_data_variable"];
+          SEXP nonlinear_gaussian_data_variable_SEXP = current_factor["nonlinear_gaussian_data_variable"];
           size_t type = current_factor["type"];
           
           TransformPtr nonlinear_gaussian_data_function = load_transform(nonlinear_gaussian_data_function_SEXP);
@@ -3188,19 +3492,21 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
                                                                                                                transform,
                                                                                                               std::make_shared<Transform>(summary_stats),
                                                                                                                std::make_shared<Transform>(nonlinear_gaussian_data_function),
-                                                                                                               load_matrix(nonlinear_gaussian_data_covariance_SEXP));
-                                                                                                               //load_string(nonlinear_gaussian_data_variable_SEXP));
+                                                                                                               load_matrix(nonlinear_gaussian_data_covariance_SEXP),
+                                                                                                               load_string(nonlinear_gaussian_data_variable_SEXP));
             }
             else if (type==2)
             {
               new_measurement_covariance_estimator = new DirectNonLinearGaussianMeasurementCovarianceEstimator(rng_in,
                                                                                                                seed_in,
-                                                                                                               &data_created_in_get_measurement_covariance_estimators.back(),
+                                                                                                               data_in,
+                                                                                                               //&data_created_in_get_measurement_covariance_estimators.back(),
                                                                                                                transform,
-                                                                                                               std::make_shared<Transform>(summary_stats),
+                                                                                                               //std::make_shared<Transform>(summary_stats),
+                                                                                                               NULL,
                                                                                                                std::make_shared<Transform>(nonlinear_gaussian_data_function),
-                                                                                                               load_matrix_function(nonlinear_gaussian_data_covariance_SEXP));
-                                                                                                               //load_string(nonlinear_gaussian_data_variable_SEXP));
+                                                                                                               load_matrix_function(nonlinear_gaussian_data_covariance_SEXP),
+                                                                                                               load_string(nonlinear_gaussian_data_variable_SEXP));
             }
             else
             {
@@ -3219,8 +3525,8 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
                                                                                                                transform,
                                                                                                                NULL,
                                                                                                                std::make_shared<Transform>(nonlinear_gaussian_data_function),
-                                                                                                               load_matrix(nonlinear_gaussian_data_covariance_SEXP));
-                                                                                                               //load_string(nonlinear_gaussian_data_variable_SEXP));
+                                                                                                               load_matrix(nonlinear_gaussian_data_covariance_SEXP),
+                                                                                                               load_string(nonlinear_gaussian_data_variable_SEXP));
             }
             else if (type==2)
             {
@@ -3230,8 +3536,8 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
                                                                                                                transform,
                                                                                                                NULL,
                                                                                                                std::make_shared<Transform>(nonlinear_gaussian_data_function),
-                                                                                                               load_matrix_function(nonlinear_gaussian_data_covariance_SEXP));
-                                                                                                               //load_string(nonlinear_gaussian_data_variable_SEXP));
+                                                                                                               load_matrix_function(nonlinear_gaussian_data_covariance_SEXP),
+                                                                                                               load_string(nonlinear_gaussian_data_variable_SEXP));
             }
             else
             {
@@ -3271,7 +3577,7 @@ std::vector<MeasurementCovarianceEstimator*> get_measurement_covariance_estimato
 
 IndependentProposalKernel* get_proposal(const List &model,
                                         const List &model_parameters,
-                                        const Data* data)
+                                        Data* data)
 {
   IndependentProposalKernel* proposal = NULL;
   std::vector<IndependentProposalKernel*> proposals;
@@ -3808,7 +4114,7 @@ IndependentProposalKernel* get_prior_as_simulate_only_proposal(const List &model
 
 ProposalKernel* get_mh_proposal(const List &current_proposal,
                                 const List &model_parameters,
-                                const Data* data)
+                                Data* data)
 {
   ProposalKernel* proposal;
   if ( current_proposal.containsElementNamed("mh_proposal") )
@@ -3993,8 +4299,8 @@ ProposalKernel* get_mh_proposal(const List &current_proposal,
 }
 
 ProposalKernel* get_unadjusted_proposal(const List &current_proposal,
-                                const List &model_parameters,
-                                const Data* data)
+                                        const List &model_parameters,
+                                        Data* data)
 {
   ProposalKernel* proposal;
   if ( current_proposal.containsElementNamed("unadjusted_proposal") )
@@ -4177,7 +4483,7 @@ ProposalKernel* get_unadjusted_proposal(const List &current_proposal,
 
 IndependentProposalKernel* get_independent_mh_proposal(const List &current_proposal,
                                                        const List &model_parameters,
-                                                       const Data* data)
+                                                       Data* data)
 {
   IndependentProposalKernel* proposal;
   if ( current_proposal.containsElementNamed("independent_mh_proposal") )
@@ -4328,7 +4634,7 @@ IndependentProposalKernel* get_independent_mh_proposal(const List &current_propo
 
 SymmetricProposalKernel* get_m_proposal(const List &current_proposal,
                                         const List &model_parameters,
-                                        const Data* data)
+                                        Data* data)
 {
   SymmetricProposalKernel* proposal;
   if ( current_proposal.containsElementNamed("m_proposal") )
@@ -4548,7 +4854,7 @@ MCMCTermination* make_mcmc_termination(const List &model_parameters,
 
 MCMC* make_mcmc(const List &model,
                 const List &model_parameters,
-                const Data* data,
+                Data* data,
                 const List &mcmc_termination_method,
                 const List &mcmc_weights_method,
                 Index* full_index)
@@ -4920,14 +5226,14 @@ SMCCriterion* get_resampling_method(const List &model,
       {
         List adaptive_resampling_method = current_method["adaptive_resampling"];
         
-        if (adaptive_resampling_method.containsElementNamed("method") && adaptive_resampling_method.containsElementNamed("values"))
+        if (adaptive_resampling_method.containsElementNamed("type") && adaptive_resampling_method.containsElementNamed("parameters"))
         {
-          std::string method = adaptive_resampling_method["method"];
+          std::string method = adaptive_resampling_method["type"];
           if (method=="ess")
           {
-            if (Rf_isNewList(adaptive_resampling_method["values"]))
+            if (Rf_isNewList(adaptive_resampling_method["parameters"]))
             {
-              List values = adaptive_resampling_method["values"];
+              List values = adaptive_resampling_method["parameters"];
               
               if (values.length()==1)
               {
@@ -5401,6 +5707,7 @@ ImportanceSampler* get_importance_sampler(RandomNumberGenerator* rng,
   }
   
   VectorIndex* without_cancelled_index = NULL;
+  VectorIndex* without_priors_index = NULL;
   VectorIndex* full_index = NULL;
   bool any_annealing = false;
   
@@ -5424,6 +5731,7 @@ ImportanceSampler* get_importance_sampler(RandomNumberGenerator* rng,
                                                       sequencer_schedules,
                                                       proposal_in,
                                                       without_cancelled_index,
+                                                      without_priors_index,
                                                       full_index,
                                                       any_annealing,
                                                       factors_affected_by_smc_sequence,
@@ -5452,6 +5760,7 @@ ImportanceSampler* get_importance_sampler(RandomNumberGenerator* rng,
                                                       sequencer_schedules,
                                                       proposal_in,
                                                       without_cancelled_index,
+                                                      without_priors_index,
                                                       full_index,
                                                       any_annealing,
                                                       factors_affected_by_smc_sequence,
@@ -5472,6 +5781,7 @@ ImportanceSampler* get_importance_sampler(RandomNumberGenerator* rng,
                                likelihood_estimators,
                                proposal_in,
                                proposal_is_evaluated_in,
+                               true,
                                true,
                                true,
                                false,
@@ -5509,6 +5819,48 @@ double do_importance_sampler(const List &model,
                                                   data_created_in_measurement_covariance_estimators);
   
   SMCOutput* output = alg->run();
+  
+  if (strcmp(results_name_in.get_cstring(),"") != 0)
+    output->write(results_name_in.get_cstring());
+  
+  double log_likelihood = output->log_likelihood;
+  
+  delete output;
+  delete alg;
+  
+  return log_likelihood;
+}
+
+// [[Rcpp::export]]
+double do_importance_sampler_with_fixed_params(const List &model,
+                                               const List &parameters,
+                                               const List &algorithm_parameter_list,
+                                               const List &fixed_parameter_list,
+                                               size_t number_of_importance_points,
+                                               bool parallel_in,
+                                               size_t grain_size_in,
+                                               const String &results_name_in,
+                                               size_t seed)
+{
+  RandomNumberGenerator rng;
+  Data the_data = get_data(model);
+  std::vector<Data> data_created_in_get_likelihood_estimators;
+  std::vector<Data> data_created_in_measurement_covariance_estimators;
+  
+  ImportanceSampler* alg = get_importance_sampler(&rng,
+                                                  &the_data,
+                                                  model,
+                                                  parameters,
+                                                  algorithm_parameter_list,
+                                                  number_of_importance_points,
+                                                  parallel_in,
+                                                  grain_size_in,
+                                                  results_name_in,
+                                                  &seed,
+                                                  data_created_in_get_likelihood_estimators,
+                                                  data_created_in_measurement_covariance_estimators);
+  
+  SMCOutput* output = alg->run(list_to_parameters(fixed_parameter_list));
   
   if (strcmp(results_name_in.get_cstring(),"") != 0)
     output->write(results_name_in.get_cstring());
@@ -5566,6 +5918,7 @@ void do_mcmc(const List &model,
   }
   
   VectorIndex* without_cancelled_index = NULL;
+  VectorIndex* without_priors_index = NULL;
   VectorIndex* full_index = NULL;
   bool any_annealing = false;
   
@@ -5582,6 +5935,7 @@ void do_mcmc(const List &model,
                                                     sequencer_schedules,
                                                     NULL,
                                                     without_cancelled_index,
+                                                    without_priors_index,
                                                     full_index,
                                                     any_annealing,
                                                     factors_affected_by_smc_sequence,
@@ -5684,6 +6038,167 @@ void do_mcmc(const List &model,
 
 }
 
+// [[Rcpp::export]]
+void do_mcmc_with_fixed_params(const List &model,
+                               const List &parameters,
+                               const List &algorithm_parameter_list,
+                               const List &fixed_parameter_list,
+                               const List &initial_values,
+                               const List &mcmc_termination_method,
+                               const List &mcmc_weights_method,
+                               size_t number_of_chains,
+                               bool parallel_in,
+                               size_t grain_size_in,
+                               const String &results_name_in,
+                               size_t seed)
+{
+  // could specify with mhproposalkernels
+  // if more than one, need to specify type of sweep
+  // for each need to specify if g, m or mh proposal, also which factors involved
+  
+  // either use initial values list if supplied, else use prior
+  
+  // ilike:: includes any of the options we have made
+  
+  RandomNumberGenerator rng;
+  Data the_data = get_data(model);
+  std::vector<Data> data_created_in_get_likelihood_estimators;
+  std::vector<Data> data_created_in_get_measurement_covariance_estimators;
+  
+  // May need to alter for cases where the likelihood needs to be tuned automatically (e.g. in ABC).
+  
+  // Check if the prior is the proposal: affects what llhd_estimators we include.
+  
+  List sequencer_info = get_smc_sequencer_info(model,
+                                               parameters,
+                                               List());
+  std::vector<std::string> sequencer_types = sequencer_info[0];
+  std::vector<std::string> sequencer_variables = sequencer_info[1];
+  std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
+  
+  std::vector<int> factors_affected_by_smc_sequence;
+  if (sequencer_info.length()==5)
+  {
+    NumericVector factors_affected_by_smc_sequence_temp = sequencer_info[4];
+    factors_affected_by_smc_sequence = as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
+  }
+  
+  VectorIndex* without_cancelled_index = NULL;
+  VectorIndex* without_priors_index = NULL;
+  VectorIndex* full_index = NULL;
+  bool any_annealing = false;
+  
+  std::vector<LikelihoodEstimator*> likelihood_estimators;
+  likelihood_estimators = get_likelihood_estimators(&rng,
+                                                    &seed,
+                                                    &the_data,
+                                                    model,
+                                                    parameters,
+                                                    algorithm_parameter_list,
+                                                    true,
+                                                    sequencer_types,
+                                                    sequencer_variables,
+                                                    sequencer_schedules,
+                                                    NULL,
+                                                    without_cancelled_index,
+                                                    without_priors_index,
+                                                    full_index,
+                                                    any_annealing,
+                                                    factors_affected_by_smc_sequence,
+                                                    data_created_in_get_likelihood_estimators,
+                                                    data_created_in_get_measurement_covariance_estimators);
+  
+  Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list);
+  
+  MCMC* the_mcmc = make_mcmc(model,
+                             parameters,
+                             &the_data,
+                             mcmc_termination_method,
+                             mcmc_weights_method,
+                             full_index);
+  
+  SMCMCMCMove* alg;
+  
+  
+  if (initial_values.size()==0)
+  {
+    
+    IndependentProposalKernel* proposal_in = get_prior_as_proposal(model,
+                                                                   parameters);
+    
+    /*
+     alg = new SMCMCMCMove(&rng,
+     &seed,
+     &the_data,
+     algorithm_parameters,
+     number_of_chains,
+     2,
+     2,
+     the_mcmc,
+     likelihood_estimators,
+     proposal_in,
+     without_cancelled_index,
+     full_index,
+     true,
+     parallel_in,
+     grain_size_in,
+     "");
+     */
+    
+    alg = new SMCMCMCMove(&rng,
+                          &seed,
+                          &the_data,
+                          algorithm_parameters,
+                          number_of_chains,
+                          2,
+                          2,
+                          the_mcmc,
+                          likelihood_estimators,
+                          proposal_in,
+                          without_cancelled_index,
+                          full_index,
+                          true,
+                          parallel_in,
+                          grain_size_in,
+                          "");
+  }
+  else
+  {
+    std::vector<Parameters> initial_points = make_initial_points(initial_values);
+    
+    
+    arma::colvec log_probabilities_of_initial_values(initial_points.size());
+    
+    alg = new SMCMCMCMove(&rng,
+                          &seed,
+                          &the_data,
+                          algorithm_parameters,
+                          2,
+                          2,
+                          the_mcmc,
+                          likelihood_estimators,
+                          initial_points,
+                          log_probabilities_of_initial_values,
+                          without_cancelled_index,
+                          full_index,
+                          true,
+                          parallel_in,
+                          grain_size_in,
+                          "");
+    
+  }
+  
+  SMCOutput* output = alg->run(list_to_parameters(fixed_parameter_list));
+  
+  if (strcmp(results_name_in.get_cstring(),"") != 0)
+    output->write(results_name_in.get_cstring());
+  
+  delete output;
+  
+  delete alg;
+  
+}
+
 SMCMCMCMove* get_smc_mcmc_move(RandomNumberGenerator* rng,
                                Data* the_data,
                                const List &model,
@@ -5723,6 +6238,7 @@ SMCMCMCMove* get_smc_mcmc_move(RandomNumberGenerator* rng,
   }
   
   VectorIndex* without_cancelled_index = NULL;
+  VectorIndex* without_priors_index = NULL;
   VectorIndex* full_index = NULL;
   
   bool any_annealing = false;
@@ -5745,6 +6261,7 @@ SMCMCMCMove* get_smc_mcmc_move(RandomNumberGenerator* rng,
                                                       sequencer_schedules,
                                                       proposal_in,
                                                       without_cancelled_index,
+                                                      without_priors_index,
                                                       full_index,
                                                       any_annealing,
                                                       factors_affected_by_smc_sequence,
@@ -5773,6 +6290,7 @@ SMCMCMCMove* get_smc_mcmc_move(RandomNumberGenerator* rng,
                                                       sequencer_schedules,
                                                       proposal_in,
                                                       without_cancelled_index,
+                                                      without_priors_index,
                                                       full_index,
                                                       any_annealing,
                                                       factors_affected_by_smc_sequence,
@@ -5982,6 +6500,7 @@ EnsembleKalmanInversion* get_enki(RandomNumberGenerator* rng,
   }
   
   VectorIndex* without_cancelled_index = NULL;
+  VectorIndex* without_priors_index = NULL;
   VectorIndex* full_index = NULL;
   
   bool any_annealing = false;
@@ -6005,6 +6524,7 @@ EnsembleKalmanInversion* get_enki(RandomNumberGenerator* rng,
                                                     sequencer_schedules,
                                                     proposal_in,
                                                     without_cancelled_index,
+                                                    without_priors_index,
                                                     full_index,
                                                     any_annealing,
                                                     factors_affected_by_smc_sequence,
@@ -6073,6 +6593,7 @@ EnsembleKalmanInversion* get_enki(RandomNumberGenerator* rng,
                                        estimators,
                                        transform,
                                        1.0,
+                                       0,
                                        parallel_in,
                                        grain_size_in,
                                        results_name_in.get_cstring());
@@ -6096,6 +6617,7 @@ EnsembleKalmanInversion* get_enki(RandomNumberGenerator* rng,
                                        estimators,
                                        transform,
                                        1.0,
+                                       0,
                                        parallel_in,
                                        grain_size_in,
                                        "");
@@ -6214,6 +6736,7 @@ double do_enkmfds(const List &model,
   }
   
   VectorIndex* without_cancelled_index = NULL;
+  VectorIndex* without_priors_index = NULL;
   VectorIndex* full_index = NULL;
   
   bool any_annealing = false;
@@ -6236,6 +6759,7 @@ double do_enkmfds(const List &model,
                                                       sequencer_schedules,
                                                       proposal_in,
                                                       without_cancelled_index,
+                                                      without_priors_index,
                                                       full_index,
                                                       any_annealing,
                                                       factors_affected_by_smc_sequence,
@@ -6264,6 +6788,7 @@ double do_enkmfds(const List &model,
                                                       sequencer_schedules,
                                                       proposal_in,
                                                       without_cancelled_index,
+                                                      without_priors_index,
                                                       full_index,
                                                       any_annealing,
                                                       factors_affected_by_smc_sequence,
@@ -6410,8 +6935,8 @@ KalmanFilter* get_kalman_filter(Data* the_data,
   KalmanPredictor* predictor_in = get_kalman_predictor(model,
                                                        parameters);
   
-  KalmanUpdater* updater_in = get_kalman_updater(model,
-                                                 parameters);
+  std::vector<KalmanUpdater*> updaters_in = get_kalman_updaters(model,
+                                                                parameters);
   
   List filtering_info = get_filtering_info(model,parameters);
   
@@ -6419,13 +6944,13 @@ KalmanFilter* get_kalman_filter(Data* the_data,
   std::string index_name_in = filtering_info[0];
   size_t first_index_in = filtering_info[1];
   size_t last_index_in = filtering_info[2];
-  //std::string time_name_in = filtering_info[3];
-  double initial_time_in = filtering_info[3];
-  std::string time_diff_name_in = filtering_info[4];
-  double update_time_step_in = filtering_info[5];
-  size_t predictions_per_update_in = filtering_info[6];
-  std::string state_name_in = filtering_info[7];
-  std::string measurement_name_in = filtering_info[8];
+  std::string time_name_in = filtering_info[3];
+  double initial_time_in = filtering_info[4];
+  std::string time_diff_name_in = filtering_info[5];
+  double update_time_step_in = filtering_info[6];
+  size_t predictions_per_update_in = filtering_info[7];
+  //std::string state_name_in = filtering_info[7];
+  //std::string measurement_name_in = filtering_info[8];
   
   /*
   std::cout << index_name_in << std::endl;
@@ -6442,11 +6967,16 @@ KalmanFilter* get_kalman_filter(Data* the_data,
   if (first_index_in>last_index_in)
     stop("Cannot construct a filter where the first index is bigger than the last.");
   
-  if ( (measurement_name_in=="") && (last_index_in>=the_data->min_n_rows()) )
-    stop("Last index goes past the end of the data.");
-  
-  if ( (measurement_name_in!="") && (last_index_in>=(*the_data)[measurement_name_in].n_rows) )
-    stop("Last index goes past the end of the data.");
+  for (auto i=updaters_in.begin();
+       i!=updaters_in.end();
+       ++i)
+  {
+    if ( ((*i)->get_measurement_variable()=="") && (last_index_in>=the_data->min_n_rows()) )
+      stop("Last index goes past the end of the data.");
+    
+    if ( ((*i)->get_measurement_variable()!="") && (last_index_in>=(*the_data)[(*i)->get_measurement_variable()].n_rows) )
+      stop("Last index goes past the end of the data.");
+  }
   
   //KalmanPredictor* predictor_in = new ExactKalmanPredictor(transition_model_A,
   //                                                         transition_model_Q);
@@ -6456,8 +6986,8 @@ KalmanFilter* get_kalman_filter(Data* the_data,
   //arma::colvec prior_mean_in = initial_mean();
   //arma::mat prior_covariance_in = initial_covariance();
   
-  std::vector<std::string> measurement_names_in;
-  measurement_names_in.push_back(measurement_name_in);
+  //std::vector<std::string> measurement_names_in;
+  //measurement_names_in.push_back(measurement_name_in);
   
   Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list);
   
@@ -6465,13 +6995,13 @@ KalmanFilter* get_kalman_filter(Data* the_data,
   {
     return new KalmanFilter(the_data,
                             kf_iterations_to_store,
-                            state_name_in,
+                            //state_name_in,
                             prior_mean_in,
                             prior_covariance_in,
                             index_name_in,
-                            //time_name_in,
+                            time_name_in,
                             time_diff_name_in,
-                            measurement_names_in,
+                            //measurement_names_in,
                             first_index_in,
                             last_index_in,
                             predictions_per_update_in,
@@ -6479,7 +7009,7 @@ KalmanFilter* get_kalman_filter(Data* the_data,
                             initial_time_in,
                             true,
                             predictor_in,
-                            updater_in,
+                            updaters_in,
                             true,
                             results_name_in);
     
@@ -6488,13 +7018,11 @@ KalmanFilter* get_kalman_filter(Data* the_data,
   {
     return new KalmanFilter(the_data,
                             kf_iterations_to_store,
-                            state_name_in,
                             prior_mean_in,
                             prior_covariance_in,
                             index_name_in,
-                            //time_name_in,
+                            time_name_in,
                             time_diff_name_in,
-                            measurement_names_in,
                             first_index_in,
                             last_index_in,
                             predictions_per_update_in,
@@ -6502,7 +7030,7 @@ KalmanFilter* get_kalman_filter(Data* the_data,
                             initial_time_in,
                             true,
                             predictor_in,
-                            updater_in,
+                            updaters_in,
                             true,
                             "");
     
@@ -6554,6 +7082,7 @@ EnsembleKalmanFilter* get_ensemble_kalman_filter(RandomNumberGenerator* rng,
                                                  const List &parameters,
                                                  const List &algorithm_parameter_list,
                                                  size_t number_of_ensemble_members,
+                                                 EnsembleShifter* shifter,
                                                  //const List &enk_likelihood_index_method,
                                                  //const List &enk_shifter_method,
                                                  size_t enk_iterations_to_store,
@@ -6580,9 +7109,6 @@ EnsembleKalmanFilter* get_ensemble_kalman_filter(RandomNumberGenerator* rng,
   }
   */
   
-  EnsembleShifter* shifter = get_enk_shifter_method(model,
-                                                    parameters);
-  
   //std::cout << shifter << std::endl;
   
   bool smcfixed_flag = true;
@@ -6593,21 +7119,16 @@ EnsembleKalmanFilter* get_ensemble_kalman_filter(RandomNumberGenerator* rng,
   std::string index_name_in = filtering_info[0];
   size_t first_index_in = filtering_info[1];
   size_t last_index_in = filtering_info[2];
-  double initial_time_in = filtering_info[3];
-  std::string time_diff_name_in = filtering_info[4];
-  double update_time_step_in = filtering_info[5];
-  size_t predictions_per_update_in = filtering_info[6];
-  std::string state_name_in = filtering_info[7];
-  std::string measurement_name_in = filtering_info[8];
+  std::string time_name_in = filtering_info[3];
+  double initial_time_in = filtering_info[4];
+  std::string time_diff_name_in = filtering_info[5];
+  double update_time_step_in = filtering_info[6];
+  size_t predictions_per_update_in = filtering_info[7];
+  //std::string state_name_in = filtering_info[7];
+  //std::string measurement_name_in = filtering_info[8];
   
   if (first_index_in>last_index_in)
     stop("Cannot construct a filter where the first index is bigger than the last.");
-  
-  if ( (measurement_name_in=="") && (last_index_in>=the_data->min_n_rows()) )
-    stop("Last index goes past the end of the data.");
-  
-  if ( (measurement_name_in!="") && (last_index_in>=(*the_data)[measurement_name_in].n_rows) )
-    stop("Last index goes past the end of the data.");
   
   Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list);
   
@@ -6631,6 +7152,24 @@ EnsembleKalmanFilter* get_ensemble_kalman_filter(RandomNumberGenerator* rng,
                                                                                transform,
                                                                                data_created_in_get_measurement_covariance_estimators);
   
+  for (auto i=measurement_covariance_estimators_in.begin();
+       i!=measurement_covariance_estimators_in.end();
+       ++i)
+  {
+    std::vector<std::string> measurement_variables = (*i)->get_measurement_variables();
+    
+    for (auto j=measurement_variables.begin();
+         j!=measurement_variables.end();
+         ++j)
+    {
+      if ( (*j=="") && (last_index_in>=the_data->min_n_rows()) )
+        stop("Last index goes past the end of the data.");
+      
+      if ( (*j!="") && (last_index_in>=(*the_data)[*j].n_rows) )
+        stop("Last index goes past the end of the data.");
+    }
+  }
+  
   /*
   for (size_t i=0; i<measurement_covariance_estimators_in.size(); ++i)
   {
@@ -6645,6 +7184,7 @@ EnsembleKalmanFilter* get_ensemble_kalman_filter(RandomNumberGenerator* rng,
                                     the_data,
                                     enk_iterations_to_store,
                                     index_name_in,
+                                    time_name_in,
                                     time_diff_name_in,
                                     first_index_in,
                                     last_index_in,
@@ -6671,8 +7211,9 @@ EnsembleKalmanFilter* get_ensemble_kalman_filter(RandomNumberGenerator* rng,
                                     the_data,
                                     enk_iterations_to_store,
                                     index_name_in,
+                                    time_name_in,
                                     time_diff_name_in,
-                                     first_index_in,
+                                    first_index_in,
                                     last_index_in,
                                     predictions_per_update_in,
                                     update_time_step_in,
@@ -6712,12 +7253,16 @@ double do_ensemble_kalman_filter(const List &model,
   
   std::vector<Data> data_created_in_get_measurement_covariance_estimators;
   
+  EnsembleShifter* shifter = get_enk_shifter_method(model,
+                                                    parameters);
+  
   EnsembleKalmanFilter* alg = get_ensemble_kalman_filter(&rng,
                                                          &the_data,
                                                          model,
                                                          parameters,
                                                          algorithm_parameter_list,
                                                          number_of_ensemble_members,
+                                                         shifter,
                                                          enk_iterations_to_store,
                                                          write_to_file_at_each_iteration,
                                                          parallel_in,
@@ -6735,6 +7280,62 @@ double do_ensemble_kalman_filter(const List &model,
       output->write(results_name_in.get_cstring());
   }
 
+  double log_likelihood = output->log_likelihood;
+  
+  delete output;
+  delete alg;
+  
+  return log_likelihood;
+  
+}
+
+// [[Rcpp::export]]
+double do_ensemble_kalman_filter_with_fixed_params(const List &model,
+                                 const List &parameters,
+                                 const List &algorithm_parameter_list,
+                                                   const List &fixed_parameter_list,
+                                 size_t number_of_ensemble_members,
+                                 size_t enk_iterations_to_store,
+                                 bool write_to_file_at_each_iteration,
+                                 bool parallel_in,
+                                 size_t grain_size_in,
+                                 const String &results_name_in,
+                                 size_t seed)
+{
+  
+  RandomNumberGenerator rng;
+  
+  Data the_data = get_data(model);
+  
+  std::vector<Data> data_created_in_get_measurement_covariance_estimators;
+  
+  EnsembleShifter* shifter = get_enk_shifter_method(model,
+                                                    parameters);
+  
+  EnsembleKalmanFilter* alg = get_ensemble_kalman_filter(&rng,
+                                                         &the_data,
+                                                         model,
+                                                         parameters,
+                                                         algorithm_parameter_list,
+                                                         number_of_ensemble_members,
+                                                         shifter,
+                                                         enk_iterations_to_store,
+                                                         write_to_file_at_each_iteration,
+                                                         parallel_in,
+                                                         grain_size_in,
+                                                         results_name_in,
+                                                         &seed,
+                                                         data_created_in_get_measurement_covariance_estimators);
+  
+  
+  EnsembleKalmanOutput* output = alg->run(list_to_parameters(fixed_parameter_list));
+  
+  if (!write_to_file_at_each_iteration)
+  {
+    if (strcmp(results_name_in.get_cstring(),"") != 0)
+      output->write(results_name_in.get_cstring());
+  }
+  
   double log_likelihood = output->log_likelihood;
   
   delete output;
@@ -6766,6 +7367,7 @@ ParticleFilter* get_particle_filter(RandomNumberGenerator* rng,
   VectorIndex* evaluated_in_initial_weight_update = NULL;
   //Index* full_index = NULL;
   VectorIndex* evaluated_in_pf_weight_update = NULL;
+  VectorIndex* full_index = NULL;
   
   std::vector<std::string> sequencer_types;
   std::vector<std::string> sequencer_variables;
@@ -6777,6 +7379,7 @@ ParticleFilter* get_particle_filter(RandomNumberGenerator* rng,
   
   if ( model.containsElementNamed("importance_proposal") )
   {
+    
     proposal_in = get_proposal(model,
                                parameters,
                                the_data);
@@ -6794,6 +7397,7 @@ ParticleFilter* get_particle_filter(RandomNumberGenerator* rng,
                                                       proposal_in,
                                                       evaluated_in_initial_weight_update,
                                                       evaluated_in_pf_weight_update,
+                                                      full_index,
                                                       any_annealing,
                                                       factors_affected_by_smc_sequence,
                                                       data_created_in_get_likelihood_estimators,
@@ -6804,6 +7408,7 @@ ParticleFilter* get_particle_filter(RandomNumberGenerator* rng,
   }
   else
   {
+    
     Rcout << "No importance sampling proposal specified; using prior." << std::endl;
     
     proposal_in = get_prior_as_simulate_only_proposal(model,
@@ -6822,6 +7427,7 @@ ParticleFilter* get_particle_filter(RandomNumberGenerator* rng,
                                                       proposal_in,
                                                       evaluated_in_initial_weight_update,
                                                       evaluated_in_pf_weight_update,
+                                                      full_index,
                                                       any_annealing,
                                                       factors_affected_by_smc_sequence,
                                                       data_created_in_get_likelihood_estimators,
@@ -6842,21 +7448,25 @@ ParticleFilter* get_particle_filter(RandomNumberGenerator* rng,
   std::string index_name_in = filtering_info[0];
   size_t first_index_in = filtering_info[1];
   size_t last_index_in = filtering_info[2];
-  double initial_time_in = filtering_info[3];
-  std::string time_diff_name_in = filtering_info[4];
-  double update_time_step_in = filtering_info[5];
-  size_t predictions_per_update_in = filtering_info[6];
-  std::string state_name_in = filtering_info[7];
-  std::string measurement_name_in = filtering_info[8];
+  std::string time_name_in = filtering_info[3];
+  double initial_time_in = filtering_info[4];
+  std::string time_diff_name_in = filtering_info[5];
+  double update_time_step_in = filtering_info[6];
+  size_t predictions_per_update_in = filtering_info[7];
+  //std::string state_name_in = filtering_info[7];
+  //std::string measurement_name_in = filtering_info[8];
   
   if (first_index_in>last_index_in)
     stop("Cannot construct a filter where the first index is bigger than the last.");
   
+  // Commented out with the intention to replace - issue is that we no longer store the measurement name.
+  /*
   if ( (measurement_name_in=="") && (last_index_in>=the_data->min_n_rows()) )
     stop("Last index goes past the end of the data.");
   
   if ( (measurement_name_in!="") && (last_index_in>=(*the_data)[measurement_name_in].n_rows) )
     stop("Last index goes past the end of the data.");
+  */
   
   Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list);
   
@@ -6897,6 +7507,7 @@ ParticleFilter* get_particle_filter(RandomNumberGenerator* rng,
                               smc_iterations_to_store,
                               smc_iterations_to_store,
                               index_name_in,
+                              time_name_in,
                               time_diff_name_in,
                               first_index_in,
                               last_index_in,
@@ -6930,6 +7541,7 @@ ParticleFilter* get_particle_filter(RandomNumberGenerator* rng,
                               smc_iterations_to_store,
                               smc_iterations_to_store,
                               index_name_in,
+                              time_name_in,
                               time_diff_name_in,
                               first_index_in,
                               last_index_in,
@@ -6994,7 +7606,61 @@ double do_particle_filter(const List &model,
   
   SMCOutput* output = alg->run();
   
-  if (write_to_file_at_each_iteration)
+  if (!write_to_file_at_each_iteration)
+  {
+    if (strcmp(results_name_in.get_cstring(),"") != 0)
+      output->write(results_name_in.get_cstring());
+  }
+  
+  double log_likelihood = output->log_likelihood;
+  
+  delete output;
+  delete alg;
+  
+  return log_likelihood;
+  
+}
+
+
+// [[Rcpp::export]]
+double do_particle_filter_with_fixed_params(const List &model,
+                                            const List &parameters,
+                                            const List &algorithm_parameter_list,
+                                            const List &fixed_parameter_list,
+                                            size_t number_of_particles,
+                                            size_t smc_iterations_to_store,
+                                            bool write_to_file_at_each_iteration,
+                                            bool parallel_in,
+                                            size_t grain_size_in,
+                                            const String &results_name_in,
+                                            size_t seed)
+{
+  
+  RandomNumberGenerator rng;
+  
+  Data the_data = get_data(model);
+  
+  std::vector<Data> data_created_in_get_likelihood_estimators;
+  std::vector<Data> data_created_in_get_measurement_covariance_estimators;
+  
+  ParticleFilter* alg = get_particle_filter(&rng,
+                                            &the_data,
+                                            model,
+                                            parameters,
+                                            algorithm_parameter_list,
+                                            number_of_particles,
+                                            smc_iterations_to_store,
+                                            write_to_file_at_each_iteration,
+                                            parallel_in,
+                                            grain_size_in,
+                                            results_name_in,
+                                            &seed,
+                                            data_created_in_get_likelihood_estimators,
+                                            data_created_in_get_measurement_covariance_estimators);
+  
+  SMCOutput* output = alg->run(list_to_parameters(fixed_parameter_list));
+  
+  if (!write_to_file_at_each_iteration)
   {
     if (strcmp(results_name_in.get_cstring(),"") != 0)
       output->write(results_name_in.get_cstring());

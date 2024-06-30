@@ -11,12 +11,14 @@ DirectGaussianMeasurementCovarianceEstimator::DirectGaussianMeasurementCovarianc
                                                                                            size_t* seed_in,
                                                                                            Data* data_in,
                                                                                            std::shared_ptr<Transform> transform_in,
-                                                                                           std::shared_ptr<Transform> summary_statistics_in)
+                                                                                           std::shared_ptr<Transform> summary_statistics_in,
+                                                                                           const std::vector<std::string> &measurement_variables_in)
 : GaussianMeasurementCovarianceEstimator(rng_in,
                                          seed_in,
                                          data_in,
                                          transform_in,
-                                         summary_statistics_in)
+                                         summary_statistics_in,
+                                         measurement_variables_in)
 {
 
 }

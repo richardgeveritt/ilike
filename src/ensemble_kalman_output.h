@@ -49,6 +49,22 @@ public:
   
   double calculate_latest_log_normalising_constant_ratio();
   double calculate_inversion_latest_log_normalising_constant_ratio(double inverse_incremental_temperature);
+  double calculate_unbiased_inversion_latest_log_normalising_constant_ratio(double inverse_incremental_temperature);
+  double calculate_path1_inversion_latest_log_normalising_constant_ratio(const std::vector<double> &previous_log_measurement_likelihood_means,
+                                                                         double inverse_incremental_temperature,
+                                                                         double temperature,
+                                                                         double multiplier);
+  double calculate_path2_inversion_latest_log_normalising_constant_ratio(const std::vector<double> &previous_log_measurement_likelihood_means,
+                                                                         const std::vector<double> &previous_log_measurement_likelihood_variances,
+                                                                         double inverse_incremental_temperature);
+  
+  void calculate_path1_inversion_initial_quantities(std::vector<double> &initial_log_measurement_likelihood_means,
+                                                    double temperature,
+                                                    double multiplier);
+  void calculate_path2_inversion_initial_quantities(std::vector<double> &initial_log_measurement_likelihood_means,
+                                                    std::vector<double> &initial_log_measurement_likelihood_variances);
+  
+  void calculate_kalman_gains(double inverse_incremental_temperature);
   
   void simulate();
   
@@ -90,6 +106,8 @@ public:
   
   void set_time();
   
+  void set_llhd(double llhd_in);
+  
   /*
   void set_current_predicted_statistics(const arma::colvec &latest_mean,
                                         const arma::mat &latest_covariance);
@@ -114,6 +132,8 @@ public:
   
   void forget_you_were_already_written_to_file();
   
+  void terminate();
+  
   void skip_to_end_of_sequence_if_points_are_gaussian(double significance_level);
   
   void close_ofstreams();
@@ -124,8 +144,9 @@ protected:
   friend EnsembleKalmanInversion;
   friend EnsembleSequencer;
   friend EnsembleKalmanMFDS;
-
+  
   // Stored in Factors.
+  // Moving to be stored here (May 2024).
   EnsembleKalman* estimator;
   
   size_t enk_iteration;
@@ -155,6 +176,7 @@ protected:
   std::deque<double> llhds;
   
   size_t lag;
+  size_t output_lag;
   
   std::chrono::high_resolution_clock::time_point start_time;
 

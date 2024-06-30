@@ -24,7 +24,6 @@ public:
 
   DensityLikelihoodEstimator();
 
-  // Takes control of DensityEstimator memory.
   DensityLikelihoodEstimator(RandomNumberGenerator* rng_in,
                              size_t* seed_in,
                              Data* data_in,
@@ -34,6 +33,7 @@ public:
                              DensityEstimator* density_estimator_in,
                              IndependentProposalKernel* proposal_in,
                              bool make_subsample_version_in,
+                             bool store_output_in,
                              bool parallel_in,
                              size_t grain_size_in);
   
@@ -77,6 +77,8 @@ protected:
   //SimulateIndependentProposalPtr subsample_simulate_distribution;
   
   size_t number_of_points;
+  
+  bool store_output;
 
   //Transform* transform;
   
@@ -92,6 +94,7 @@ protected:
   
   std::ofstream log_likelihood_file_stream;
   std::ofstream file_stream;
+  std::ofstream time_file_stream;
 
 };
 

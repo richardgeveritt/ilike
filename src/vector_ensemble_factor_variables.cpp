@@ -149,14 +149,18 @@ std::vector<arma::colvec*> VectorEnsembleFactorVariables::get_measurements() con
 */
 
 double VectorEnsembleFactorVariables::evaluate_ensemble_likelihood_ratios(const Index* index,
-                                                                          double inverse_incremental_temperature)
+                                                                          double inverse_incremental_temperature,
+                                                                          const std::vector<arma::mat> &inv_sigma_precomps,
+                                                                          const std::vector<double> &log_det_precomps) const
 {
   double result = 0.0;
   for (auto i=index->begin();
        i!=index->end();
        ++i)
   {
-    result = result + this->measurement_covariance_estimator_outputs[*i]->evaluate_ensemble_likelihood_ratio(inverse_incremental_temperature);
+    result = result + this->measurement_covariance_estimator_outputs[*i]->evaluate_ensemble_likelihood_ratio(inverse_incremental_temperature,
+                                                                                                             inv_sigma_precomps[*i],
+                                                                                                             log_det_precomps[*i]);
   }
   return result;
 }
@@ -179,14 +183,18 @@ double VectorEnsembleFactorVariables::evaluate_ensemble_likelihood_ratios(const 
 */
 
 double VectorEnsembleFactorVariables::subsample_evaluate_ensemble_likelihood_ratios(const Index* index,
-                                                                                    double inverse_incremental_temperature)
+                                                                                    double inverse_incremental_temperature,
+                                                                                    const std::vector<arma::mat> &inv_sigma_precomps,
+                                                                                    const std::vector<double> &log_det_precomps) const
 {
   double result = 0.0;
   for (auto i=index->begin();
        i!=index->end();
        ++i)
   {
-    result = result + this->measurement_covariance_estimator_outputs[*i]->subsample_evaluate_ensemble_likelihood_ratio(inverse_incremental_temperature);
+    result = result + this->measurement_covariance_estimator_outputs[*i]->subsample_evaluate_ensemble_likelihood_ratio(inverse_incremental_temperature,
+                                                                                                                       inv_sigma_precomps[*i],
+                                                                                                                       log_det_precomps[*i]);
   }
   return result;
 }
@@ -208,7 +216,7 @@ double VectorEnsembleFactorVariables::subsample_evaluate_ensemble_likelihood_rat
 }
 */
 
-double VectorEnsembleFactorVariables::evaluate_likelihoods(const Index* index)
+double VectorEnsembleFactorVariables::evaluate_likelihoods(const Index* index) const
 {
   double result = 0.0;
   for (auto i=index->begin();
@@ -235,7 +243,7 @@ double VectorEnsembleFactorVariables::evaluate_likelihoods(const Index* index,
 }
 */
 
-double VectorEnsembleFactorVariables::subsample_evaluate_likelihoods(const Index* index)
+double VectorEnsembleFactorVariables::subsample_evaluate_likelihoods(const Index* index) const
 {
   double result = 0.0;
   for (auto i=index->begin();

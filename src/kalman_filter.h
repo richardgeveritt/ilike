@@ -24,13 +24,13 @@ public:
 
   KalmanFilter(Data* data_in,
                size_t lag_in,
-               const std::string &state_name,
+               //const std::string &state_name,
                const arma::colvec &prior_mean_in,
                const arma::mat &prior_covariance_in,
                const std::string &index_name_in,
-               //const std::string &time_name_in,
+               const std::string &time_name_in,
                const std::string &time_diff_name_in,
-               const std::vector<std::string> &measurements_names_in,
+               //const std::vector<std::string> &measurements_names_in,
                size_t first_index_in,
                size_t last_index_in,
                size_t predictions_per_update_in,
@@ -38,7 +38,7 @@ public:
                double initial_time_in,
                bool last_index_is_fixed_in,
                KalmanPredictor* predictor_in,
-               KalmanUpdater* updater_in,
+               const std::vector<KalmanUpdater*> &updaters_in,
                bool smcfixed_flag_in,
                const std::string &results_name_in);
 
@@ -97,9 +97,9 @@ protected:
   std::string state_name;
   size_t state_dimension;
   std::string index_name;
-  //std::string time_name;
+  std::string time_name;
   std::string time_diff_name;
-  std::vector<std::string> measurements_names;
+  //std::vector<std::string> measurements_names;
   size_t first_index;
   size_t last_index;
   size_t predictions_per_update;
@@ -110,7 +110,7 @@ protected:
   size_t lag;
   
   // stored here
-  KalmanUpdater* updater;
+  std::vector<KalmanUpdater*> updaters;
   KalmanPredictor* predictor;
   
   Parameters schedule_parameters;

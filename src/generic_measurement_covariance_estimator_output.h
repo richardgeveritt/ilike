@@ -30,12 +30,15 @@ public:
   arma::colvec get_shift(double inverse_incremental_temperature) const;
   arma::colvec get_deterministic_shift() const;
   
-  double evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature);
+  double evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,const arma::mat &inv_sigma_precomp,
+                                            double log_det_precomp) const;
   /*
   double evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
                                             const Parameters &conditioned_on_parameters);
   */
-  double subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature);
+  double subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
+                                                      const arma::mat &inv_sigma_precomp,
+                                                      double log_det_precomp) const;
   /*
   double subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
                                                       const Parameters &conditioned_on_parameters);

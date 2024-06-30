@@ -14,26 +14,27 @@ DirectLinearGaussianMeasurementCovarianceEstimator::DirectLinearGaussianMeasurem
                                                                                                        std::shared_ptr<Transform> summary_statistics_in,
                                                                                                        const arma::mat &measurement_matrix_in,
                                                                                                        const arma::mat &measurement_covariance_in,
-                                                                                                       //const std::string &measurement_variable_in,
-                                                                                                       const std::string &state_variable_in)
+                                                                                                       const std::string &measurement_variable_in,
+                                                                                                       const std::vector<std::string> &state_variables_in)
 : DirectGaussianMeasurementCovarianceEstimator(rng_in,
                                                seed_in,
                                                data_in,
                                                transform_in,
-                                               summary_statistics_in)
+                                               summary_statistics_in,
+                                               {measurement_variable_in})
 {
   this->set_using_parameters = false;
   //this->measurement_variables.push_back(measurement_variable_in); // reinstate if we don't automatically get from data
   
-  if (this->measurement_variables.size()!=1)
-    Rcpp::stop("DirectGaussianMeasurementCovarianceEstimator - For this EnK likelihood we can only have one variable present in the data.");
+  //if (this->measurement_variables.size()!=1)
+  //  Rcpp::stop("DirectGaussianMeasurementCovarianceEstimator - for this EnK likelihood we can only .");
   
   this->kernel.set_mean(this->measurement_variables[0],
                         arma::colvec(measurement_covariance_in.n_rows));
   this->kernel.set_covariance(this->measurement_variables[0],
                               measurement_covariance_in);
   this->As.push_back(measurement_matrix_in);
-  this->state_variable = state_variable_in;
+  this->state_variables = state_variables_in;
 }
 
 DirectLinearGaussianMeasurementCovarianceEstimator::DirectLinearGaussianMeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
@@ -43,19 +44,24 @@ DirectLinearGaussianMeasurementCovarianceEstimator::DirectLinearGaussianMeasurem
                                                                                                        std::shared_ptr<Transform> summary_statistics_in,
                                                                                                        GetMatrixPtr measurement_matrix_in,
                                                                                                        GetMatrixPtr measurement_covariance_in,
-                                                                                                       //const std::string &measurement_variable_in,
-                                                                                                       const std::string &state_variable_in)
+                                                                                                       const std::string &measurement_variable_in,
+                                                                                                       const std::vector<std::string> &state_variables_in)
 : DirectGaussianMeasurementCovarianceEstimator(rng_in,
                                                seed_in,
                                                data_in,
                                                transform_in,
-                                               summary_statistics_in)
+                                               summary_statistics_in,
+                                               {measurement_variable_in})
 {
   this->set_using_parameters = true;
   //this->measurement_variables.push_back(measurement_variable_in);
+  
+  if (this->measurement_variables.size()!=1)
+    Rcpp::stop("DirectGaussianMeasurementCovarianceEstimator - for this EnK likelihood we can only .");
+  
   this->measurement_noise_functions.push_back(measurement_covariance_in);
   this->A_functions.push_back(measurement_matrix_in);
-  this->state_variable = state_variable_in;
+  this->state_variables = state_variables_in;
 }
 
 DirectLinearGaussianMeasurementCovarianceEstimator::~DirectLinearGaussianMeasurementCovarianceEstimator()
@@ -97,7 +103,7 @@ void DirectLinearGaussianMeasurementCovarianceEstimator::make_copy(const DirectL
   this->As = another.As;
   this->A_functions = another.A_functions;
   //this->conditioned_on_parameters = another.conditioned_on_parameters;
-  this->state_variable = another.state_variable;
+  this->state_variables = another.state_variables;
 }
 
 /*
@@ -172,7 +178,7 @@ void DirectLinearGaussianMeasurementCovarianceEstimator::setup_measurement_varia
          i<this->measurement_variables.size();
          ++i)
     {
-      arma::mat dummy_data = this->A_functions[i](conditioned_on_parameters)*conditioned_on_parameters[this->state_variable];
+      arma::mat dummy_data = this->A_functions[i](conditioned_on_parameters)*conditioned_on_parameters[this->state_variables];
       this->kernel.set_mean(this->measurement_variables[i],
                             arma::colvec(dummy_data.n_elem));
       this->kernel.set_covariance(this->measurement_variables[i],
@@ -263,7 +269,7 @@ Parameters DirectLinearGaussianMeasurementCovarianceEstimator::get_measurement_s
        i<this->measurement_variables.size();
        ++i)
   {
-    output[measurement_variables[i]] = this->As[i]*parameters[state_variable];
+    output[measurement_variables[i]] = this->As[i]*parameters[this->state_variables];
   }
   return output;
 }
@@ -288,6 +294,8 @@ arma::mat DirectLinearGaussianMeasurementCovarianceEstimator::get_adjustment(con
   I.eye(Vtranspose.n_cols,Vtranspose.n_cols);
   
   arma::mat for_eig = Vtranspose*(arma::inv_sympd(I + Yhat*arma::inv_sympd(inverse_incremental_temperature*this->get_measurement_covariance())*Yhat.t()))*Vtranspose.t();
+  
+  for_eig = (for_eig+for_eig.t())/2.0;
    
   arma::mat U;
   arma::vec diagD;
@@ -299,12 +307,13 @@ arma::mat DirectLinearGaussianMeasurementCovarianceEstimator::get_adjustment(con
 
 }
 
-arma::mat DirectLinearGaussianMeasurementCovarianceEstimator::get_sqrt_adjustment(const arma::mat &Sigma,
-                                                                                  const arma::mat &HSigmaHt,
+arma::mat DirectLinearGaussianMeasurementCovarianceEstimator::get_sqrt_adjustment(const arma::mat &Cxy,
+                                                                                  const arma::mat &Cyy,
                                                                                   double inverse_incremental_temperature) const
 {
+
   arma::mat sqrtV = arma::chol(inverse_incremental_temperature*this->get_measurement_covariance());
-  arma::mat sqrtS = arma::chol(HSigmaHt + inverse_incremental_temperature*this->get_measurement_covariance());
+  arma::mat sqrtS = arma::chol(Cyy + inverse_incremental_temperature*this->get_measurement_covariance());
   
   arma::mat stacked_H = this->As[0];
   if (this->As.size()>1)
@@ -315,10 +324,10 @@ arma::mat DirectLinearGaussianMeasurementCovarianceEstimator::get_sqrt_adjustmen
     }
   }
   
-  arma::mat K = Sigma*stacked_H.t() * arma::inv_sympd(sqrtS) * arma::inv_sympd(sqrtS + sqrtV);
+  arma::mat K = Cxy * arma::inv_sympd(sqrtS) * arma::inv_sympd(sqrtS + sqrtV);
   
   arma::mat I;
-  I.eye(stacked_H.n_cols,stacked_H.n_cols);
+  I.eye(Cxy.n_cols,Cxy.n_cols);
   
   return I-K*stacked_H;
 }

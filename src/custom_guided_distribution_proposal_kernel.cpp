@@ -35,7 +35,7 @@ CustomGuidedDistributionProposalKernel::CustomGuidedDistributionProposalKernel(S
 
 CustomGuidedDistributionProposalKernel::CustomGuidedDistributionProposalKernel(SimulateGuidedDistributionPtr proposal_simulate_in,
                                                                  EvaluateLogGuidedDistributionPtr proposal_evaluate_in,
-                                                                             const Data* data_in)
+                                                                             Data* data_in)
   :IndependentProposalKernel()
 {
   this->proposal_evaluate = proposal_evaluate_in;
@@ -82,8 +82,16 @@ void CustomGuidedDistributionProposalKernel::make_copy(const CustomGuidedDistrib
 
 double CustomGuidedDistributionProposalKernel::evaluate_independent_kernel(const Parameters &proposed_particle) const
 {
-  return this->proposal_evaluate(proposed_particle,
-                                 *this->data);
+  if (this->data!=NULL)
+  {
+    return this->proposal_evaluate(proposed_particle,
+                                   *this->data);
+  }
+  else
+  {
+    Rcpp::stop("CustomGuidedDistributionProposalKernel::specific_evaluate_kernel - data not specified.");
+  }
+  
 }
 
 /*
@@ -103,8 +111,15 @@ double CustomGuidedDistributionProposalKernel::subsample_evaluate_independent_ke
 
 Parameters CustomGuidedDistributionProposalKernel::independent_simulate(RandomNumberGenerator &rng) const
 {
-  return this->proposal_simulate(rng,
-                                 *this->data);
+  if (this->data!=NULL)
+  {
+    return this->proposal_simulate(rng,
+                                   *this->data);
+  }
+  else
+  {
+    Rcpp::stop("CustomGuidedDistributionProposalKernel::specific_evaluate_kernel - data not specified.");
+  }
 }
 
 Parameters CustomGuidedDistributionProposalKernel::independent_simulate(RandomNumberGenerator &rng,
@@ -211,4 +226,9 @@ bool CustomGuidedDistributionProposalKernel::can_be_evaluated() const
     return false;
   else
     return true;
+}
+
+void CustomGuidedDistributionProposalKernel::set_data(Data* data_in)
+{
+  this->data = data_in;
 }

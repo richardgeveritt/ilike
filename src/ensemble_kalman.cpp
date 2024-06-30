@@ -24,6 +24,8 @@ EnsembleKalman::EnsembleKalman()
   
   this->initialised = false;
   this->reciprocal_schedule_scale = 0.0;
+  
+  this->the_worker = NULL;
   //this->measurement_covariance_estimators.resize(0);
   //this->measurements_names.resize(0);
   //this->states_names.resize(0);
@@ -62,6 +64,8 @@ EnsembleKalman::EnsembleKalman(RandomNumberGenerator* rng_in,
   
   this->initialised = false;
   this->reciprocal_schedule_scale = 0.0;
+  
+  this->the_worker = NULL;
   //this->measurement_covariance_estimators.resize(0);
   //this->measurements_names.resize(0);
   //this->states_names.resize(0);
@@ -90,6 +94,9 @@ EnsembleKalman::~EnsembleKalman()
   if (this->ensemble_shifter!=NULL)
     delete this->ensemble_shifter;
   
+  if (this->the_worker!=NULL)
+    delete this->the_worker;
+  
   //if (this->transform!=NULL)
   //  delete this->transform;
 }
@@ -115,6 +122,9 @@ void EnsembleKalman::operator=(const EnsembleKalman &another)
   
   if (this->ensemble_shifter!=NULL)
     delete this->ensemble_shifter;
+  
+  if (this->the_worker!=NULL)
+    delete this->the_worker;
   
   //if (this->transform!=NULL)
   //  delete this->transform;
@@ -170,6 +180,12 @@ void EnsembleKalman::make_copy(const EnsembleKalman &another)
     this->ensemble_shifter = another.ensemble_shifter->duplicate();
   else
     this->ensemble_shifter = NULL;
+  
+  if (another.the_worker!=NULL)
+    this->the_worker = another.the_worker->duplicate();
+  else
+    this->the_worker = NULL;
+  this->the_worker->set_enk(this);
   
   this->transform = another.transform;
   //if (another.transform!=NULL)
