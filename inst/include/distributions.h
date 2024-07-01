@@ -1,6 +1,8 @@
 #ifndef SIMULATION
 #define SIMULATION
 
+#include <RcppArmadillo.h>
+
 //#include <random>
 //#include <boost/random/binomial_distribution.hpp>
 //#include <boost/random/mersenne_twister.hpp>
@@ -30,8 +32,6 @@
 
 //#include <pcg_random.hpp>
 //#include <xoshiro.h>
-
-#include <RcppArmadillo.h>
 
 #define BOOST_DISABLE_ASSERTS 1
 
