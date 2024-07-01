@@ -1,6 +1,3 @@
-//#include <Rcpp.h>
-//using namespace Rcpp;
-
 #ifndef UTILS_H
 #define UTILS_H
 

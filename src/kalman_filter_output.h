@@ -1,8 +1,6 @@
 #ifndef KALMANFILTEROUTPUT_H
 #define KALMANFILTEROUTPUT_H
 
-//#include <Rcpp.h>
-
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 

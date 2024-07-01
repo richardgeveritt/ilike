@@ -1,8 +1,6 @@
 #ifndef DensityLikelihoodEstimatorOutput_H
 #define DensityLikelihoodEstimatorOutput_H
 
-//#include <Rcpp.h>
-
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 

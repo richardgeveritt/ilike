@@ -1,8 +1,6 @@
 #ifndef ExactLikelihoodEstimatorOutput_H
 #define ExactLikelihoodEstimatorOutput_H
 
-//#include <Rcpp.h>
-
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 

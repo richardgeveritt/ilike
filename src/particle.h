@@ -1,8 +1,6 @@
 #ifndef PARTICLE_H
 #define PARTICLE_H
 
-//#include <Rcpp.h>
-
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 #include <vector>

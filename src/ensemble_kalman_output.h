@@ -1,8 +1,6 @@
 #ifndef ENSEMBLEKALMANOUTPUT_H
 #define ENSEMBLEKALMANOUTPUT_H
 
-//#include <Rcpp.h>
-
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 

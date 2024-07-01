@@ -32,7 +32,6 @@
 //#include <xoshiro.h>
 
 #include <RcppArmadillo.h>
-//#include <RcppCommon.h>
 
 #define BOOST_DISABLE_ASSERTS 1
 
@@ -1127,8 +1126,6 @@ inline double dmvlnorm(const arma::colvec &x,
 
 //RCPP_EXPOSED_CLASS(pcg64);
 
-//#include <Rcpp.h>
-
 // namespace Rcpp {
 //
 //   inline SEXP wrap(RNG& rng) {
@@ -1203,7 +1200,6 @@ inline double dmvlnorm(const arma::colvec &x,
 //
 // RCPP_EXPOSED_WRAP(MyRNG);
 //
-// #include <Rcpp.h>
 //
 //
 // // inline uint64_t xoshiro256plus::rotl(const uint64_t x, int k) {

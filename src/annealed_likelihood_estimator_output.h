@@ -1,8 +1,6 @@
 #ifndef ANNEALEDLIKELIHOODESTIMATOROUTPUT_H
 #define ANNEALEDLIKELIHOODESTIMATOROUTPUT_H
 
-//#include <Rcpp.h>
-
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 

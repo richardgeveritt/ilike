@@ -1,8 +1,6 @@
 #ifndef SMCOUTPUT_H
 #define SMCOUTPUT_H
 
-//#include <Rcpp.h>
-
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 

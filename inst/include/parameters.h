@@ -2,7 +2,7 @@
 #define PARAMETERS_H
 
 #include <RcppArmadillo.h>
-#include <RcppCommon.h>
+//#include <RcppCommon.h>
 
 #include <iostream>
 #include <vector>

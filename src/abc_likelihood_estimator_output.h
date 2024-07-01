@@ -1,8 +1,6 @@
 #ifndef ABCLIKELIHOODESTIMATOROUTPUT_H
 #define ABCLIKELIHOODESTIMATOROUTPUT_H
 
-//#include <Rcpp.h>
-
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 
