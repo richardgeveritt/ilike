@@ -1,7 +1,7 @@
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
 
-#include <RcppArmadilloForward.h>
+#include <RcppArmadillo.h>
 #include <RcppCommon.h>
 
 #include <iostream>
