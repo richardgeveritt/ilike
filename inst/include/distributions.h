@@ -31,7 +31,7 @@
 //#include <pcg_random.hpp>
 //#include <xoshiro.h>
 
-#include <RcppArmadilloForward.h>
+#include <RcppArmadillo.h>
 #include <RcppCommon.h>
 
 #define BOOST_DISABLE_ASSERTS 1
