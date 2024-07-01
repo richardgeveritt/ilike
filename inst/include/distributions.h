@@ -32,7 +32,7 @@
 //#include <xoshiro.h>
 
 #include <RcppArmadillo.h>
-#include <RcppCommon.h>
+//#include <RcppCommon.h>
 
 #define BOOST_DISABLE_ASSERTS 1
 
