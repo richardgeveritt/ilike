@@ -13,6 +13,7 @@ mcmc(
   parallel = FALSE,
   model_parameter_list = list(),
   algorithm_parameter_list = list(),
+  fixed_parameter_list = list(),
   external_packages = c(),
   julia_bin_dir = "",
   julia_required_libraries = c(),
@@ -38,6 +39,8 @@ mcmc(
 \item{model_parameter_list}{(optional) A list containing parameters for the model.}
 
 \item{algorithm_parameter_list}{(optional) A list containing named parameters for the algorithm.}
+
+\item{fixed_parameter_list}{(optional) A list containing parameters to condition on.}
 
 \item{external_packages}{(optional) A vector of names of other R packages the functions rely on.}
 
