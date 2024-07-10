@@ -714,7 +714,7 @@ List get_abc_euclidean_uniform_parameter_info(const List &model_parameters,
   {
     parallel = extract_bool_parameter(parameters,
                                       model_parameters,
-                                      5);
+                                      4);
   }
   
   int grain_size = 100000;
