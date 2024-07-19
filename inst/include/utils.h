@@ -468,7 +468,9 @@ inline double hz(const arma::mat &data_in)
   }
     
   arma::vec Dj = arma::diagvec(dif*(arma::inv(S,arma::inv_opts::allow_approx))*dif.t()); // squared-Mahalanobis' distances
-  arma::mat Y = data*arma::pinv(S)*data.t();
+  arma::mat X;
+  arma::solve(X,S,arma::eye(arma::size(S)));
+  arma::mat Y = data*X*data.t();
   arma::mat Djk = - 2.0*Y.t() + arma::diagvec(Y.t())*arma::mat(1,n,arma::fill::ones) + arma::mat(n,1,arma::fill::ones)*(arma::diagvec(Y.t()).t());
     
   double b = 1.0/(sqrt(2.0)) * pow(((2.0*double(p) + 1.0)/4.0),(1.0/(double(p) + 4.0))) * (pow(double(n),(1.0/(double(p) + 4.0)))); // smoothing parameter
