@@ -7,20 +7,22 @@ using namespace Rcpp;
 #include <vector>
 #include "move_output.h"
 
+namespace ilike
+{
 class PDMPMCMCOutput : public MoveOutput
 {
-
+  
 public:
-
+  
   PDMPMCMCOutput();
-
+  
   virtual ~PDMPMCMCOutput();
-
+  
   PDMPMCMCOutput(const PDMPMCMCOutput &another);
-
+  
   void operator=(const PDMPMCMCOutput &another);
   MoveOutput* duplicate() const;
-
+  
   Particle& back();
   Particle back() const;
   
@@ -46,9 +48,10 @@ public:
 protected:
   
   Particle dummy;
-
+  
   void make_copy(const PDMPMCMCOutput &another);
-
+  
 };
+}
 
 #endif

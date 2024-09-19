@@ -9,22 +9,24 @@ using namespace Rcpp;
 #include "particle.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class Ensemble;
 class Particles;
 
 class MoveOutput
 {
-
+  
 public:
-
+  
   MoveOutput();
   virtual ~MoveOutput();
-
+  
   MoveOutput(const MoveOutput &another);
-
+  
   void operator=(const MoveOutput &another);
   virtual MoveOutput* duplicate() const=0;
-
+  
   virtual Particle& back()=0;
   virtual Particle back() const=0;
   
@@ -46,14 +48,15 @@ public:
   virtual void close_ofstreams()=0;
   
   virtual Parameters get_current_algorithm_parameters() const=0;
-
+  
 protected:
-
+  
   void make_copy(const MoveOutput &another);
   
   //std::vector<std::string> vector_variables;
   //std::vector<std::string> any_variables;
-
+  
 };
+}
 
 #endif

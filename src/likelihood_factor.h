@@ -6,17 +6,19 @@ using namespace Rcpp;
 
 #include "factor.h"
 
+namespace ilike
+{
 class LikelihoodFactor : public Factor
 {
-
+  
 public:
-
+  
   LikelihoodFactor();
   LikelihoodFactor(Data* data_in);
   virtual ~LikelihoodFactor();
-
+  
   LikelihoodFactor(const LikelihoodFactor &another);
-
+  
   void operator=(const LikelihoodFactor &another);
   virtual LikelihoodFactor* likelihood_factor_duplicate() const=0;
   
@@ -29,16 +31,17 @@ public:
                                                  const Parameters &input) const=0;
   
   void set_data(Data* data_in);
-
+  
 protected:
   
   virtual void specific_set_data()=0;
-
+  
   void make_copy(const LikelihoodFactor &another);
   
   // Not stored here. Stored in "main'.
   Data* data;
   
 };
+}
 
 #endif

@@ -11,11 +11,13 @@ using namespace Rcpp;
 #include "distributions.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class CustomGuidedIndependentProposalKernel : public IndependentProposalKernel
 {
-
+  
 public:
-
+  
   CustomGuidedIndependentProposalKernel();
   virtual ~CustomGuidedIndependentProposalKernel();
   
@@ -27,9 +29,9 @@ public:
   CustomGuidedIndependentProposalKernel(SimulateGuidedIndependentProposalPtr proposal_simulate_in,
                                         EvaluateLogGuidedIndependentProposalPtr proposal_evaluate_in,
                                         Data* data_in);
-
+  
   CustomGuidedIndependentProposalKernel(const CustomGuidedIndependentProposalKernel &another);
-
+  
   void operator=(const CustomGuidedIndependentProposalKernel &another);
   Kernel* duplicate() const;
   ProposalKernel* proposal_kernel_duplicate() const;
@@ -82,13 +84,13 @@ public:
   
   void set_data(Data* data_in);
   
-// Mh has its own parameters.
+  // Mh has its own parameters.
   // Stochastic has some weights.
   // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.
   // Proposal needs to call simulate in all llhdoutputs
-
+  
 protected:
-
+  
   void make_copy(const CustomGuidedIndependentProposalKernel &another);
   
   EvaluateLogGuidedIndependentProposalPtr proposal_evaluate;
@@ -101,5 +103,6 @@ protected:
   Data* data;
   
 };
+}
 
 #endif

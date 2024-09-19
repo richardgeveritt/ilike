@@ -3,6 +3,8 @@
 
 #include "particle.h"
 
+namespace ilike
+{
 class SequentialEnsembleKalmanWorker;
 class PackingInstructions;
 class EnsembleFactors;
@@ -19,9 +21,9 @@ class ESSSMCCriterion;
 class Ensemble
 {
 public:
-
-	Ensemble();
-	virtual ~Ensemble();
+  
+  Ensemble();
+  virtual ~Ensemble();
   
   Ensemble(EnsembleFactors* ensemble_factors_in);
   Ensemble(std::vector<Parameters> &initial_values_in,
@@ -32,16 +34,16 @@ public:
            EnsembleFactors* factors_in,
            const Parameters &conditioned_on_parameters,
            const Parameters &sequencer_parameters);
-
-	// Everything you need to copy the class.
-	Ensemble(const Ensemble &another);
+  
+  // Everything you need to copy the class.
+  Ensemble(const Ensemble &another);
   Ensemble& operator=(const Ensemble &another);
   
   Ensemble(Ensemble &&another);
   Ensemble& operator=(Ensemble &&another);
   
-	Ensemble* duplicate() const;
-	
+  Ensemble* duplicate() const;
+  
   void setup(std::vector<Parameters> &initial_values_in,
              EnsembleFactors* factors_in,
              const Parameters &conditioned_on_parameters);
@@ -111,7 +113,7 @@ public:
   std::vector<double> log_measurement_likelihood_variances;
   
   void close_ofstreams();
-
+  
 protected: // Things that can be accessed in this class and subclasses.
   
   void make_copy(const Ensemble &another);
@@ -160,9 +162,10 @@ protected: // Things that can be accessed in this class and subclasses.
   // not stored here
   //PackingInstructions* packing_instructions;
   EnsembleFactors* ensemble_factors;
-
+  
 private: // Things that can be accessed only by this class.
-
+  
 };
+}
 
 #endif

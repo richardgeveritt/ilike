@@ -12,6 +12,8 @@ using namespace Rcpp;
 #include "sequencer.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class SMCOutput;
 class SMCWorker;
 class SequentialSMCWorker;
@@ -23,7 +25,7 @@ class ParticleSimulator;
 class SMC : public LikelihoodEstimator
 {
 public:
-
+  
   SMC();
   SMC(RandomNumberGenerator* rng_in,
       size_t* seed_in,
@@ -71,18 +73,18 @@ public:
   //    bool sequencer_limit_is_fixed_in);
   
   virtual ~SMC();
-
+  
   SMC(const SMC &another);
   void operator=(const SMC &another);
   virtual SMC* smc_duplicate() const=0;
-
+  
   SMCOutput* run();
   SMCOutput* run(const Parameters &conditioned_on_parameters);
   
   SMCOutput* run(const std::string &directory_name);
   SMCOutput* run(const std::string &directory_name,
                  const Parameters &conditioned_on_parameters);
-
+  
   LikelihoodEstimatorOutput* initialise();
   LikelihoodEstimatorOutput* initialise(const Parameters &conditioned_on_parameters);
   
@@ -103,10 +105,10 @@ public:
   //                                          Particles &current_particles)=0;
   
   /*
-  virtual MoveOutput* move(RandomNumberGenerator &rng,
-                           Particle &particle,
-                           const Parameters &conditioned_on_parameters)=0;
-  */
+   virtual MoveOutput* move(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters)=0;
+   */
   //virtual void specific_move(RandomNumberGenerator &rng,
   //                           Particle* new_particle,
   //                           Particle &particle,
@@ -116,19 +118,19 @@ public:
                                             Particles &current_particles)=0;
   
   /*
-  virtual void weight_for_adapting_sequence(const Index* index,
-                                            Particles &current_particles,
-                                            const Parameters &conditioned_on_parameters)=0;
-  */
+   virtual void weight_for_adapting_sequence(const Index* index,
+   Particles &current_particles,
+   const Parameters &conditioned_on_parameters)=0;
+   */
   
   virtual MoveOutput* subsample_move(RandomNumberGenerator &rng,
                                      const Particle &particle) const=0;
   
   /*
-  virtual MoveOutput* subsample_move(RandomNumberGenerator &rng,
-                                     Particle &particle,
-                                     const Parameters &conditioned_on_parameters)=0;
-  */
+   virtual MoveOutput* subsample_move(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters)=0;
+   */
   
   //virtual void specific_subsample_move(RandomNumberGenerator &rng,
   //                                     Particle* new_particle,
@@ -139,10 +141,10 @@ public:
                                                       Particles &current_particles)=0;
   
   /*
-  virtual void subsample_weight_for_adapting_sequence(const Index* index,
-                                                      Particles &current_particles,
-                                                      const Parameters &conditioned_on_parameters)=0;
-  */
+   virtual void subsample_weight_for_adapting_sequence(const Index* index,
+   Particles &current_particles,
+   const Parameters &conditioned_on_parameters)=0;
+   */
   
   //EvaluateLogDistributionPtr evaluate_log_proposal;
   
@@ -165,9 +167,9 @@ protected:
   
   virtual SMCOutput* specific_run()=0;
   //virtual SMCOutput* specific_run(const std::string &directory_name)=0;
-
+  
   void simulate_proposal(SMCOutput* simulation);
-                                        
+  
   virtual SMCOutput* specific_run(const Parameters &conditioned_on_parameters)=0;
   //virtual SMCOutput* specific_run(const std::string &directory_name,
   //                                const Parameters &conditioned_on_parameters)=0;
@@ -214,11 +216,11 @@ protected:
   
   //virtual void smc_simulate(SMCOutput* current_state)=0;
   //virtual void smc_weight(SMCOutput* current_state)=0;
-
+  
   void make_copy(const SMC &another);
-
+  
   //Particles is_step() const;
-
+  
   friend SMCWorker;
   friend SMCOutput;
   // Stored here.
@@ -276,16 +278,17 @@ protected:
   std::ofstream unnormalised_weights_file_stream;
   
   //Parameters single_particle_is_step() const;
-
+  
   //virtual void smc_step()=0;
-
+  
   //virtual void weight_update()=0;
-
+  
   //virtual double single_particle_weight_update() const=0;
-
+  
   // Stored here.
   //SMCOutput* output;
-
+  
 };
+}
 
 #endif

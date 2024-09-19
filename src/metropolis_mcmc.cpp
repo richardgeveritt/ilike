@@ -6,8 +6,10 @@
 #include "ensemble_kalman_output.h"
 #include "metropolis_standard_mcmc_output.h"
 
+namespace ilike
+{
 MetropolisMCMC::MetropolisMCMC()
-  :MCMC()
+:MCMC()
 {
   this->index = NULL;
   this->proposal = NULL;
@@ -15,7 +17,7 @@ MetropolisMCMC::MetropolisMCMC()
 
 MetropolisMCMC::MetropolisMCMC(size_t number_of_iterations_in,
                                SymmetricProposalKernel* proposal_in)
-  :MCMC(number_of_iterations_in)
+:MCMC(number_of_iterations_in)
 {
   this->proposal = proposal_in;
   this->index = NULL;
@@ -24,7 +26,7 @@ MetropolisMCMC::MetropolisMCMC(size_t number_of_iterations_in,
 MetropolisMCMC::MetropolisMCMC(size_t number_of_iterations_in,
                                const std::vector<Parameters> &initial_points_in,
                                const Parameters &proposal_variances_in)
-  :MCMC(number_of_iterations_in)
+:MCMC(number_of_iterations_in)
 {
   this->index = NULL;
   this->proposal = NULL;
@@ -52,7 +54,7 @@ MetropolisMCMC::~MetropolisMCMC()
 
 //Copy constructor for the MetropolisMCMC class.
 MetropolisMCMC::MetropolisMCMC(const MetropolisMCMC &another)
-  :MCMC(another)
+:MCMC(another)
 {
   this->make_copy(another);
 }
@@ -131,31 +133,31 @@ Particle MetropolisMCMC::move(RandomNumberGenerator &rng,
 }
 
 /*
-Particle MetropolisMCMC::move(RandomNumberGenerator &rng,
-                              Particle &particle,
-                              const Parameters &conditioned_on_parameters) const
-{
-  Particle proposed_particle = this->proposal->move(rng,
-                                                    particle,
-                                                    conditioned_on_parameters);
-  
-  double log_u = log(runif(rng));
-  
-  if (log_u < proposed_particle.evaluate_likelihoods(this->index,
-                                                     conditioned_on_parameters) -
-      particle.target_evaluated)
-  {
-    proposed_particle.set_acceptance(this->proposal,true);
-    return proposed_particle;
-  }
-  else
-  {
-    proposed_particle.set_acceptance(this->proposal,false);
-    return particle;
-  }
-  
-}
-*/
+ Particle MetropolisMCMC::move(RandomNumberGenerator &rng,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ Particle proposed_particle = this->proposal->move(rng,
+ particle,
+ conditioned_on_parameters);
+ 
+ double log_u = log(runif(rng));
+ 
+ if (log_u < proposed_particle.evaluate_likelihoods(this->index,
+ conditioned_on_parameters) -
+ particle.target_evaluated)
+ {
+ proposed_particle.set_acceptance(this->proposal,true);
+ return proposed_particle;
+ }
+ else
+ {
+ proposed_particle.set_acceptance(this->proposal,false);
+ return particle;
+ }
+ 
+ }
+ */
 
 Particle MetropolisMCMC::subsample_move(RandomNumberGenerator &rng,
                                         const Particle &particle) const
@@ -187,29 +189,29 @@ Particle MetropolisMCMC::subsample_move(RandomNumberGenerator &rng,
 }
 
 /*
-Particle MetropolisMCMC::subsample_move(RandomNumberGenerator &rng,
-                                        Particle &particle,
-                                        const Parameters &conditioned_on_parameters) const
-{
-  Particle proposed_particle = this->proposal->subsample_move(rng,
-                                                              particle,
-                                                              conditioned_on_parameters);
-  
-  double log_u = log(runif(rng));
-  
-  if (log_u < proposed_particle.subsample_evaluate_likelihoods(this->index,
-                                                               conditioned_on_parameters) -
-      particle.subsample_target_evaluated)
-  {
-    return proposed_particle;
-  }
-  else
-  {
-    return particle;
-  }
-  
-}
-*/
+ Particle MetropolisMCMC::subsample_move(RandomNumberGenerator &rng,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ Particle proposed_particle = this->proposal->subsample_move(rng,
+ particle,
+ conditioned_on_parameters);
+ 
+ double log_u = log(runif(rng));
+ 
+ if (log_u < proposed_particle.subsample_evaluate_likelihoods(this->index,
+ conditioned_on_parameters) -
+ particle.subsample_target_evaluated)
+ {
+ return proposed_particle;
+ }
+ else
+ {
+ return particle;
+ }
+ 
+ }
+ */
 
 void MetropolisMCMC::smc_adapt(SMCOutput* current_state)
 {
@@ -222,7 +224,7 @@ void MetropolisMCMC::ensemble_adapt(EnsembleKalmanOutput* current_state)
 }
 
 void MetropolisMCMC::specific_mcmc_adapt(const Particle &current_particle,
-                                                 size_t iteration_counter)
+                                         size_t iteration_counter)
 {
   this->proposal->mcmc_adapt(current_particle,
                              iteration_counter);
@@ -269,4 +271,5 @@ std::vector<const ProposalKernel*> MetropolisMCMC::get_proposals() const
 StandardMCMCOutput* MetropolisMCMC::initialise_mcmc_output() const
 {
   return new MetropolisStandardMCMCOutput(this->metropolis_mcmc_duplicate());
+}
 }

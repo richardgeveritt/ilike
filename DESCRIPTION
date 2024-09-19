@@ -1,14 +1,14 @@
 Package: ilike
-Title: Methods for Bayesian computation when the likelihood is intractable
-Version: 0.0.2.2
+Type: Package
+Title: Methods for Bayesian Computation when the Likelihood is Intractable
+Version: 0.0.2.3
 Authors@R: 
-    person(given = "Richard",
+    person(given = c("Richard","G"),
            family = "Everitt",
            role = c("aut", "cre"),
            email = "richard.g.everitt@gmail.com",
            comment = c(ORCID = "0000-0002-0822-5648"))
-Description: Implements Monte Carlo methods for Bayesian computation when the likelihood is intractable.
-License: BSD_2_clause
+Description: Functions that implement Bayesian computation techniques, focussed on cases when the likelihood is intractable. The functions in the package use statistical models specified in a .ilike file. This file allows a user to specify priors, likelihoods, data, and the parameters of the inference algorithm (in either C++, R, python, julia or native ilike functions). Inference algorithms include importance sampling, Markov chain Monte Carlo, sequential Monte Carlo, iterative ensemble Kalman inversion, particle filters and ensemble Kalman filters. .ilike files include the option to estimate the likelihood using any of the inference algorithms above (with the exception of MCMC), alongside approximate Bayesian computation and synthetic likelihood.
 Encoding: UTF-8
 LazyData: true
 SystemRequirements: C++11, GNU make
@@ -22,3 +22,4 @@ Suggests: knitr, rmarkdown, testthat
 VignetteBuilder: knitr
 Depends: 
     R (>= 2.10)
+License: MIT + file LICENSE

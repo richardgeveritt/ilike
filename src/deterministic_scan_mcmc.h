@@ -7,27 +7,29 @@ using namespace Rcpp;
 #include <vector>
 #include "mcmc.h"
 
+namespace ilike
+{
 class DeterministicScanMCMC : public MCMC
 {
-
+  
 public:
-
+  
   DeterministicScanMCMC();
   
   DeterministicScanMCMC(const std::vector<MCMC*> &moves_in);
   
   DeterministicScanMCMC(MCMCTermination* termination_in,
                         const std::vector<MCMC*> &moves_in);
-
+  
   virtual ~DeterministicScanMCMC();
-
+  
   DeterministicScanMCMC(const DeterministicScanMCMC &another);
-
+  
   void operator=(const DeterministicScanMCMC &another);
   Kernel* duplicate() const;
   MCMC* mcmc_duplicate() const;
   DeterministicScanMCMC* deterministic_scan_mcmc_duplicate() const;
-
+  
   Particle move(RandomNumberGenerator &rng,
                 const Particle &particle) const;
   
@@ -35,14 +37,14 @@ public:
                           const Particle &particle) const;
   
   /*
-  Particle move(RandomNumberGenerator &rng,
-                Particle &particle,
-                const Parameters &conditioned_on_parameters) const;
-  
-  Particle subsample_move(RandomNumberGenerator &rng,
-                Particle &particle,
-                const Parameters &conditioned_on_parameters) const;
-  */
+   Particle move(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters) const;
+   
+   Particle subsample_move(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters) const;
+   */
   
   void smc_adapt(SMCOutput* current_state);
   void ensemble_adapt(EnsembleKalmanOutput* current_state);
@@ -67,9 +69,10 @@ protected:
   std::vector<MCMC*> moves;
   
   std::vector<size_t> order;
-
+  
   void make_copy(const DeterministicScanMCMC &another);
-
+  
 };
+}
 
 #endif

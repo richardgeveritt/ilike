@@ -5,8 +5,10 @@
 #include "likelihood_estimator.h"
 #include "mcmc_adaptor.h"
 
+namespace ilike
+{
 LogGaussianIndependentProposalKernel::LogGaussianIndependentProposalKernel()
-  :IndependentProposalKernel()
+:IndependentProposalKernel()
 {
 }
 
@@ -16,7 +18,7 @@ LogGaussianIndependentProposalKernel::~LogGaussianIndependentProposalKernel()
 
 // find mean and cov adaptively
 LogGaussianIndependentProposalKernel::LogGaussianIndependentProposalKernel(const std::vector<std::string> &variable_names_in)
-  :IndependentProposalKernel()
+:IndependentProposalKernel()
 {
   for (auto i=variable_names_in.begin();
        i!=variable_names_in.end();
@@ -28,8 +30,8 @@ LogGaussianIndependentProposalKernel::LogGaussianIndependentProposalKernel(const
 
 // find cov adaptively
 LogGaussianIndependentProposalKernel::LogGaussianIndependentProposalKernel(const std::vector<std::string> &variable_names_in,
-                                                                     const std::vector<arma::colvec> &means_in)
-  :IndependentProposalKernel()
+                                                                           const std::vector<arma::colvec> &means_in)
+:IndependentProposalKernel()
 {
   for (size_t i=0;
        i<variable_names_in.size();
@@ -41,8 +43,8 @@ LogGaussianIndependentProposalKernel::LogGaussianIndependentProposalKernel(const
 
 // find mean adaptively
 LogGaussianIndependentProposalKernel::LogGaussianIndependentProposalKernel(const std::vector<std::string> &variable_names_in,
-                                                                     const std::vector<arma::mat> &covariances_in)
-  :IndependentProposalKernel()
+                                                                           const std::vector<arma::mat> &covariances_in)
+:IndependentProposalKernel()
 {
   for (size_t i=0;
        i<variable_names_in.size();
@@ -53,8 +55,8 @@ LogGaussianIndependentProposalKernel::LogGaussianIndependentProposalKernel(const
 }
 
 LogGaussianIndependentProposalKernel::LogGaussianIndependentProposalKernel(const std::string &variable_name_in,
-                                                                     const double &mean_in,
-                                                                     const double &sd_in)
+                                                                           const double &mean_in,
+                                                                           const double &sd_in)
 :IndependentProposalKernel()
 {
   this->proposal_info[variable_name_in] = GaussianProposalInfo(mean_in,sd_in);
@@ -69,9 +71,9 @@ LogGaussianIndependentProposalKernel::LogGaussianIndependentProposalKernel(const
 }
 
 LogGaussianIndependentProposalKernel::LogGaussianIndependentProposalKernel(const std::vector<std::string> &variable_names_in,
-                                                                     const std::vector<arma::colvec> &means_in,
-                                                                     const std::vector<arma::mat> &covariances_in)
-  :IndependentProposalKernel()
+                                                                           const std::vector<arma::colvec> &means_in,
+                                                                           const std::vector<arma::mat> &covariances_in)
+:IndependentProposalKernel()
 {
   for (size_t i=0;
        i<variable_names_in.size();
@@ -82,7 +84,7 @@ LogGaussianIndependentProposalKernel::LogGaussianIndependentProposalKernel(const
 }
 
 LogGaussianIndependentProposalKernel::LogGaussianIndependentProposalKernel(const LogGaussianIndependentProposalKernel &another)
-  :IndependentProposalKernel(another)
+:IndependentProposalKernel(another)
 {
   this->make_copy(another);
 }
@@ -91,7 +93,7 @@ void LogGaussianIndependentProposalKernel::operator=(const LogGaussianIndependen
 {
   if(this == &another)
     return;
-
+  
   IndependentProposalKernel::operator=(another);
   this->make_copy(another);
 }
@@ -117,13 +119,13 @@ void LogGaussianIndependentProposalKernel::make_copy(const LogGaussianIndependen
 }
 
 void LogGaussianIndependentProposalKernel::set_mean(const std::string &variable,
-                                                 const arma::colvec &mean_in)
+                                                    const arma::colvec &mean_in)
 {
   this->proposal_info[variable].set_mean(mean_in);
 }
 
 void LogGaussianIndependentProposalKernel::set_covariance(const std::string &variable,
-                                                       const arma::mat &covariance_in)
+                                                          const arma::mat &covariance_in)
 {
   this->proposal_info[variable].set_covariance(covariance_in);
 }
@@ -182,12 +184,12 @@ double LogGaussianIndependentProposalKernel::evaluate_independent_kernel(const P
 }
 
 /*
-double LogGaussianIndependentProposalKernel::evaluate_independent_kernel(Variables* proposed_particle,
-                                                                      const Parameters &conditioned_on_parameters) const
-{
-  return this->evaluate_independent_kernel(proposed_particle);
-}
-*/
+ double LogGaussianIndependentProposalKernel::evaluate_independent_kernel(Variables* proposed_particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ return this->evaluate_independent_kernel(proposed_particle);
+ }
+ */
 
 double LogGaussianIndependentProposalKernel::subsample_evaluate_independent_kernel(const Parameters &proposed_particle) const
 {
@@ -210,7 +212,7 @@ Parameters LogGaussianIndependentProposalKernel::independent_simulate(RandomNumb
 }
 
 Parameters LogGaussianIndependentProposalKernel::independent_simulate(RandomNumberGenerator &rng,
-                                                                   const Parameters &conditioned_on_parameters) const
+                                                                      const Parameters &conditioned_on_parameters) const
 {
   return this->independent_simulate(rng);
 }
@@ -222,14 +224,14 @@ Parameters LogGaussianIndependentProposalKernel::subsample_independent_simulate(
 }
 
 Parameters LogGaussianIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
-                                                                             const Parameters &conditioned_on_parameters) const
+                                                                                const Parameters &conditioned_on_parameters) const
 {
   // no difference since size of data set does not impact on proposal
   return this->independent_simulate(rng);
 }
 
 Parameters LogGaussianIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
-                                                                             const std::string &variable) const
+                                                                                const std::string &variable) const
 {
   // no difference since size of data set does not impact on proposal
   auto found = this->proposal_info.find(variable);
@@ -242,8 +244,8 @@ Parameters LogGaussianIndependentProposalKernel::subsample_independent_simulate(
 }
 
 Parameters LogGaussianIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
-                                                                             const std::string &variable,
-                                                                             const Parameters &conditioned_on_parameters) const
+                                                                                const std::string &variable,
+                                                                                const Parameters &conditioned_on_parameters) const
 {
   // no difference since size of data set does not impact on proposal
   auto found = this->proposal_info.find(variable);
@@ -256,13 +258,13 @@ Parameters LogGaussianIndependentProposalKernel::subsample_independent_simulate(
 }
 
 arma::mat LogGaussianIndependentProposalKernel::independent_gradient_of_log(const std::string &variable,
-                                                                         const Parameters &proposed_particle)
+                                                                            const Parameters &proposed_particle)
 {
   Rcpp::stop("LogGaussianIndependentProposalKernel::independent_gradient_of_log - not written yet.");
 }
 
 arma::mat LogGaussianIndependentProposalKernel::subsample_independent_gradient_of_log(const std::string &variable,
-                                                                                   const Parameters &proposed_particle)
+                                                                                      const Parameters &proposed_particle)
 {
   Rcpp::stop("LogGaussianIndependentProposalKernel::independent_gradient_of_log - not written yet.");
 }
@@ -299,5 +301,6 @@ bool LogGaussianIndependentProposalKernel::can_be_evaluated() const
 
 void LogGaussianIndependentProposalKernel::set_data(Data* data_in)
 {
-
+  
+}
 }

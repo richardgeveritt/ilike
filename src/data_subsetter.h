@@ -8,25 +8,27 @@ using namespace Rcpp;
 #include "distributions.h"
 #include "parameters.h"
 
+namespace ilike
+{
 class DataSubsampler;
 
 class DataSubsetter
 {
-
+  
 public:
-
+  
   DataSubsetter();
   virtual ~DataSubsetter();
-
+  
   DataSubsetter(const DataSubsetter &another);
-
+  
   void operator=(const DataSubsetter &another);
   virtual DataSubsetter* duplicate() const=0;
   
   virtual void subset(size_t num_pieces)=0;
-
+  
 protected:
-
+  
   void make_copy(const DataSubsetter &another);
   
   // Not stored here. Stored in "main'.
@@ -34,7 +36,8 @@ protected:
   
   // not stored here
   DataSubsampler* subsampler;
-
+  
 };
+}
 
 #endif

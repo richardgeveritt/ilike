@@ -4,8 +4,10 @@
 #include "likelihood_estimator.h"
 #include "smc_adaptor.h"
 
+namespace ilike
+{
 SymmetricProposalKernel::SymmetricProposalKernel()
-  :ProposalKernel()
+:ProposalKernel()
 {
 }
 
@@ -14,7 +16,7 @@ SymmetricProposalKernel::~SymmetricProposalKernel()
 }
 
 SymmetricProposalKernel::SymmetricProposalKernel(const SymmetricProposalKernel &another)
-  :ProposalKernel(another)
+:ProposalKernel(another)
 {
   this->make_copy(another);
 }
@@ -23,11 +25,12 @@ void SymmetricProposalKernel::operator=(const SymmetricProposalKernel &another)
 {
   if(this == &another)
     return;
-
+  
   ProposalKernel::operator=(another);
   this->make_copy(another);
 }
 
 void SymmetricProposalKernel::make_copy(const SymmetricProposalKernel &another)
 {
+}
 }

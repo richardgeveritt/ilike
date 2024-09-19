@@ -1,12 +1,14 @@
 #include "ensemble_shifter.h"
 
+namespace ilike
+{
 EnsembleShifter::EnsembleShifter()
 {
 }
 
 EnsembleShifter::~EnsembleShifter()
 {
-
+  
 }
 
 EnsembleShifter::EnsembleShifter(const EnsembleShifter &another)
@@ -18,10 +20,11 @@ void EnsembleShifter::operator=(const EnsembleShifter &another)
 {
   if(this == &another)
     return;
-
+  
   this->make_copy(another);
 }
 
 void EnsembleShifter::make_copy(const EnsembleShifter &another)
 {
+}
 }

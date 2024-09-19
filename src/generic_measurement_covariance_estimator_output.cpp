@@ -2,8 +2,10 @@
 #include "generic_measurement_covariance_estimator.h"
 #include "transform.h"
 
+namespace ilike
+{
 GenericMeasurementCovarianceEstimatorOutput::GenericMeasurementCovarianceEstimatorOutput()
-  :MeasurementCovarianceEstimatorOutput()
+:MeasurementCovarianceEstimatorOutput()
 {
 }
 
@@ -17,7 +19,7 @@ GenericMeasurementCovarianceEstimatorOutput::GenericMeasurementCovarianceEstimat
 }
 
 GenericMeasurementCovarianceEstimatorOutput::GenericMeasurementCovarianceEstimatorOutput(const GenericMeasurementCovarianceEstimatorOutput &another)
-  :MeasurementCovarianceEstimatorOutput(another)
+:MeasurementCovarianceEstimatorOutput(another)
 {
   this->make_copy(another);
 }
@@ -26,7 +28,7 @@ void GenericMeasurementCovarianceEstimatorOutput::operator=(const GenericMeasure
 {
   if(this == &another)
     return;
-
+  
   MeasurementCovarianceEstimatorOutput::operator=(another);
   this->make_copy(another);
 }
@@ -103,15 +105,15 @@ double GenericMeasurementCovarianceEstimatorOutput::evaluate_ensemble_likelihood
 }
 
 /*
-double GenericMeasurementCovarianceEstimatorOutput::evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
-                                                                                       const Parameters &conditioned_on_parameters)
-{
-  // parameters of covariance should already be set at this point, so second argument does nothing
-  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
-                 this->measurement_state,
-                 inverse_incremental_temperature*this->generic_estimator->Cygivenx);
-}
-*/
+ double GenericMeasurementCovarianceEstimatorOutput::evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
+ const Parameters &conditioned_on_parameters)
+ {
+ // parameters of covariance should already be set at this point, so second argument does nothing
+ return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
+ this->measurement_state,
+ inverse_incremental_temperature*this->generic_estimator->Cygivenx);
+ }
+ */
 
 double GenericMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
                                                                                                  const arma::mat &inv_sigma_precomp,
@@ -124,15 +126,15 @@ double GenericMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble_
 }
 
 /*
-double GenericMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
-                                                    const Parameters &conditioned_on_parameters)
-{
-  // parameters of covariance should already be set at this point, so second argument does nothing
-  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
-                 this->measurement_state,
-                 inverse_incremental_temperature*this->generic_estimator->Cygivenx);
-}
-*/
+ double GenericMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
+ const Parameters &conditioned_on_parameters)
+ {
+ // parameters of covariance should already be set at this point, so second argument does nothing
+ return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
+ this->measurement_state,
+ inverse_incremental_temperature*this->generic_estimator->Cygivenx);
+ }
+ */
 
 double GenericMeasurementCovarianceEstimatorOutput::evaluate_likelihood()
 {
@@ -142,13 +144,13 @@ double GenericMeasurementCovarianceEstimatorOutput::evaluate_likelihood()
 }
 
 /*
-double GenericMeasurementCovarianceEstimatorOutput::evaluate_likelihood(const Parameters &conditioned_on_parameters)
-{
-  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
-                 this->measurement_state,
-                 this->generic_estimator->Cygivenx);
-}
-*/
+ double GenericMeasurementCovarianceEstimatorOutput::evaluate_likelihood(const Parameters &conditioned_on_parameters)
+ {
+ return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
+ this->measurement_state,
+ this->generic_estimator->Cygivenx);
+ }
+ */
 
 double GenericMeasurementCovarianceEstimatorOutput::subsample_evaluate_likelihood()
 {
@@ -158,13 +160,13 @@ double GenericMeasurementCovarianceEstimatorOutput::subsample_evaluate_likelihoo
 }
 
 /*
-double GenericMeasurementCovarianceEstimatorOutput::subsample_evaluate_likelihood(const Parameters &conditioned_on_parameters)
-{
-  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
-                 this->measurement_state,
-                 this->generic_estimator->Cygivenx);
-}
-*/
+ double GenericMeasurementCovarianceEstimatorOutput::subsample_evaluate_likelihood(const Parameters &conditioned_on_parameters)
+ {
+ return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
+ this->measurement_state,
+ this->generic_estimator->Cygivenx);
+ }
+ */
 
 MeasurementCovarianceEstimator* GenericMeasurementCovarianceEstimatorOutput::get_estimator()
 {
@@ -180,4 +182,5 @@ void GenericMeasurementCovarianceEstimatorOutput::write_to_file(const std::strin
 void GenericMeasurementCovarianceEstimatorOutput::close_ofstreams()
 {
   
+}
 }

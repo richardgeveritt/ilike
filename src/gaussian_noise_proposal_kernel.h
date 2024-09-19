@@ -11,16 +11,18 @@ using namespace Rcpp;
 #include "distributions.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class GaussianNoiseProposalKernel : public ProposalKernel
 {
-
+  
 public:
-
+  
   GaussianNoiseProposalKernel();
   virtual ~GaussianNoiseProposalKernel();
-
+  
   GaussianNoiseProposalKernel(const GaussianNoiseProposalKernel &another);
-
+  
   void operator=(const GaussianNoiseProposalKernel &another);
   //Kernel* duplicate() const;
   virtual GaussianNoiseProposalKernel* gaussian_noise_proposal_kernel_duplicate() const=0;
@@ -28,11 +30,12 @@ public:
   bool can_be_evaluated() const;
   
   void set_data(Data* data_in);
-
+  
 protected:
-
+  
   void make_copy(const GaussianNoiseProposalKernel &another);
   
 };
+}
 
 #endif

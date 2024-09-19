@@ -1,6 +1,8 @@
 #include "factors.h"
 #include "vector_index.h"
 
+namespace ilike
+{
 Factors::Factors()
 {
 }
@@ -18,7 +20,7 @@ void Factors::operator=(const Factors &another)
 {
   if(this == &another)
     return;
-
+  
   this->make_copy(another);
 }
 
@@ -35,4 +37,5 @@ void Factors::set_data(size_t index)
 void Factors::change_data(Data* new_data)
 {
   this->specific_change_data(new_data);
+}
 }

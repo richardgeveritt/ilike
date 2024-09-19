@@ -1,6 +1,8 @@
 #include "gaussian_proposal_functions_info.h"
 #include "utils.h"
 
+namespace ilike
+{
 GaussianProposalFunctionsInfo::GaussianProposalFunctionsInfo()
 : scale(1.0)
 {
@@ -138,4 +140,6 @@ arma::mat GaussianProposalFunctionsInfo::get_inv(const Parameters &parameters) c
 double GaussianProposalFunctionsInfo::get_logdet(const Parameters &parameters) const
 {
   return arma::log_det_sympd(this->covariance(parameters));
+}
+
 }

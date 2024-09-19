@@ -2,8 +2,10 @@
 #include "enk_gaussian_measurement_covariance_estimator_output.h"
 #include "parameters.h"
 
+namespace ilike
+{
 EnKGaussianMeasurementCovarianceEstimator::EnKGaussianMeasurementCovarianceEstimator()
-  :GaussianMeasurementCovarianceEstimator()
+:GaussianMeasurementCovarianceEstimator()
 {
 }
 EnKGaussianMeasurementCovarianceEstimator::~EnKGaussianMeasurementCovarianceEstimator()
@@ -11,7 +13,7 @@ EnKGaussianMeasurementCovarianceEstimator::~EnKGaussianMeasurementCovarianceEsti
 }
 
 EnKGaussianMeasurementCovarianceEstimator::EnKGaussianMeasurementCovarianceEstimator(const EnKGaussianMeasurementCovarianceEstimator &another)
-  :GaussianMeasurementCovarianceEstimator(another)
+:GaussianMeasurementCovarianceEstimator(another)
 {
   this->make_copy(another);
 }
@@ -20,7 +22,7 @@ void EnKGaussianMeasurementCovarianceEstimator::operator=(const EnKGaussianMeasu
 {
   if(this == &another)
     return;
-
+  
   GaussianMeasurementCovarianceEstimator::operator=(another);
   this->make_copy(another);
 }
@@ -113,23 +115,24 @@ arma::mat EnKGaussianMeasurementCovarianceEstimator::get_sqrt_adjustment(const a
   Rcpp::stop("EnKGaussianMeasurementCovarianceEstimator::get_sqrt_adjustment - not yet implemented.");
   
   /*
-  arma::mat sqrtV = arma::chol(inverse_incremental_temperature*this->get_measurement_covariance());
-  arma::mat sqrtS = arma::chol(HSigmaHt + inverse_incremental_temperature*this->get_measurement_covariance());
-  
-  arma::mat stacked_H = this->As[0];
-  if (this->As.size()>1)
-  {
-    for (size_t i=1; i<this->As.size(); ++i)
-    {
-      stacked_H = arma::join_cols(stacked_H, As[i]);
-    }
-  }
-  
-  arma::mat K = Sigma*stacked_H.t() * arma::inv_sympd(sqrtS) * arma::inv_sympd(sqrtS + sqrtV);
-  
-  arma::mat I;
-  I.eye(stacked_H.n_cols,stacked_H.n_cols);
-  
-  return I-K*stacked_H;
-  */
+   arma::mat sqrtV = arma::chol(inverse_incremental_temperature*this->get_measurement_covariance());
+   arma::mat sqrtS = arma::chol(HSigmaHt + inverse_incremental_temperature*this->get_measurement_covariance());
+   
+   arma::mat stacked_H = this->As[0];
+   if (this->As.size()>1)
+   {
+   for (size_t i=1; i<this->As.size(); ++i)
+   {
+   stacked_H = arma::join_cols(stacked_H, As[i]);
+   }
+   }
+   
+   arma::mat K = Sigma*stacked_H.t() * arma::inv_sympd(sqrtS) * arma::inv_sympd(sqrtS + sqrtV);
+   
+   arma::mat I;
+   I.eye(stacked_H.n_cols,stacked_H.n_cols);
+   
+   return I-K*stacked_H;
+   */
+}
 }

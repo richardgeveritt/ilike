@@ -7,6 +7,8 @@
 #include "distributions.h"
 #include "parameters.h"
 
+namespace ilike
+{
 class SMCOutput;
 class MoveOutput;
 class IndependentProposalKernel;
@@ -14,7 +16,7 @@ class IndependentProposalKernel;
 class ImportanceSampler : public SMC
 {
 public:
-
+  
   ImportanceSampler();
   ImportanceSampler(RandomNumberGenerator* rng_in,
                     size_t* seed_in,
@@ -95,10 +97,10 @@ public:
                     bool parallel_in,
                     size_t grain_size_in,
                     const std::string &results_name_in);
-
+  
   ImportanceSampler(const ImportanceSampler &another);
   virtual ~ImportanceSampler();
-
+  
   void operator=(const ImportanceSampler &another);
   SMC* smc_duplicate() const;
   LikelihoodEstimator* duplicate() const;
@@ -107,38 +109,38 @@ public:
                    const Particle &particle) const;
   
   /*
-  MoveOutput* move(RandomNumberGenerator &rng,
-                   Particle &particle,
-                   const Parameters &conditioned_on_parameters);
-  */
+   MoveOutput* move(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters);
+   */
   
   void weight_for_adapting_sequence(const Index* index,
                                     Particles &current_particles);
   
   /*
-  void weight_for_adapting_sequence(const Index* index,
-                                    Particles &current_particles,
-                                    const Parameters &conditioned_on_parameters);
-  */
+   void weight_for_adapting_sequence(const Index* index,
+   Particles &current_particles,
+   const Parameters &conditioned_on_parameters);
+   */
   
   MoveOutput* subsample_move(RandomNumberGenerator &rng,
                              const Particle &particle) const;
   
   /*
-  MoveOutput* subsample_move(RandomNumberGenerator &rng,
-                             Particle &particle,
-                             const Parameters &conditioned_on_parameters);
-  */
+   MoveOutput* subsample_move(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters);
+   */
   
   void subsample_weight_for_adapting_sequence(const Index* index,
                                               Particles &current_particles);
   
   /*
-  void subsample_weight_for_adapting_sequence(const Index* index,
-                                              Particles &current_particles,
-                                              const Parameters &conditioned_on_parameters);
-  */
-
+   void subsample_weight_for_adapting_sequence(const Index* index,
+   Particles &current_particles,
+   const Parameters &conditioned_on_parameters);
+   */
+  
 protected:
   
   SMCOutput* specific_run();
@@ -156,16 +158,16 @@ protected:
   //                        const Parameters &conditioned_on_parameters);
   
   SMCOutput* specific_initialise_smc(const Parameters &conditioned_on_parameters);
-
+  
   void simulate_smc(SMCOutput* simulation,
                     const Parameters &conditioned_on_parameters);
   
   void evaluate_smc(SMCOutput* simulation,
                     const Parameters &conditioned_on_parameters);
   void evaluate_smcfixed_part_smc(SMCOutput* simulation,
-                    const Parameters &conditioned_on_parameters);
+                                  const Parameters &conditioned_on_parameters);
   void evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* simulation,
-                                          const Parameters &conditioned_on_parameters);
+                                                    const Parameters &conditioned_on_parameters);
   
   void subsample_simulate_smc(SMCOutput* simulation);
   
@@ -183,28 +185,29 @@ protected:
                                                               const Parameters &conditioned_on_parameters);
   
   /*
-  void weight(SMCOutput* simuation,
-              const Parameters &conditioned_on_parameters);
-  
-  void smcfixed_weight(SMCOutput* simuation,
-              const Parameters &conditioned_on_parameters);
-  
-  void smcadaptive_given_smcfixed_weight(SMCOutput* simuation,
-                          const Parameters &conditioned_on_parameters);
-  */
+   void weight(SMCOutput* simuation,
+   const Parameters &conditioned_on_parameters);
+   
+   void smcfixed_weight(SMCOutput* simuation,
+   const Parameters &conditioned_on_parameters);
+   
+   void smcadaptive_given_smcfixed_weight(SMCOutput* simuation,
+   const Parameters &conditioned_on_parameters);
+   */
   //void smc_simulate(SMCOutput* current_state);
   //void smc_weight(SMCOutput* current_state);
-
+  
   void make_copy(const ImportanceSampler &another);
   
   // stored here
   Index* index;
-
+  
   // void smc_step();
   //
   // void weight_update();
-
+  
   //double single_particle_weight_update() const;
 };
+}
 
 #endif

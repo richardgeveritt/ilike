@@ -2,8 +2,10 @@
 #include "ensemble_factor_variables.h"
 #include "distributions.h"
 
+namespace ilike
+{
 StochasticEnsembleShifter::StochasticEnsembleShifter()
-  :EnsembleShifter()
+:EnsembleShifter()
 {
 }
 
@@ -14,7 +16,7 @@ StochasticEnsembleShifter::~StochasticEnsembleShifter()
 
 //Copy constructor for the StochasticEnsembleShifter class.
 StochasticEnsembleShifter::StochasticEnsembleShifter(const StochasticEnsembleShifter &another)
-  :EnsembleShifter(another)
+:EnsembleShifter(another)
 {
   this->make_copy(another);
 }
@@ -61,4 +63,5 @@ void StochasticEnsembleShifter::shift(const EnsembleFactorVariables* ensemble_fa
   {
     position = position + kalman_gains[j]*(*measurements[j] - shift_terms[j]);
   }
+}
 }

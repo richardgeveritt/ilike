@@ -7,8 +7,10 @@
 #include "particle.h"
 #include "transform.h"
 
+namespace ilike
+{
 CompositeIndependentProposalKernel::CompositeIndependentProposalKernel()
-  :IndependentProposalKernel()
+:IndependentProposalKernel()
 {
 }
 
@@ -30,7 +32,7 @@ CompositeIndependentProposalKernel::CompositeIndependentProposalKernel(const std
 }
 
 CompositeIndependentProposalKernel::CompositeIndependentProposalKernel(const CompositeIndependentProposalKernel &another)
-  :IndependentProposalKernel(another)
+:IndependentProposalKernel(another)
 {
   this->make_copy(another);
 }
@@ -48,7 +50,7 @@ void CompositeIndependentProposalKernel::operator=(const CompositeIndependentPro
       delete *i;
   }
   this->all_kernels.clear();
-
+  
   IndependentProposalKernel::operator=(another);
   this->make_copy(another);
 }
@@ -141,7 +143,7 @@ Parameters CompositeIndependentProposalKernel::subsample_independent_simulate(Ra
 }
 
 Parameters CompositeIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
-                                                                             const Parameters &conditioned_on_parameters) const
+                                                                              const Parameters &conditioned_on_parameters) const
 {
   Particle output;
   output.parameters.merge(conditioned_on_parameters);
@@ -156,7 +158,7 @@ Parameters CompositeIndependentProposalKernel::subsample_independent_simulate(Ra
 }
 
 Parameters CompositeIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
-                                                                             const std::string &variable) const
+                                                                              const std::string &variable) const
 {
   Particle output;
   for (auto i=this->all_kernels.begin();
@@ -170,8 +172,8 @@ Parameters CompositeIndependentProposalKernel::subsample_independent_simulate(Ra
 }
 
 Parameters CompositeIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
-                                                                             const std::string &variable,
-                                                                             const Parameters &conditioned_on_parameters) const
+                                                                              const std::string &variable,
+                                                                              const Parameters &conditioned_on_parameters) const
 {
   Particle output;
   output.parameters.merge(conditioned_on_parameters);
@@ -186,13 +188,13 @@ Parameters CompositeIndependentProposalKernel::subsample_independent_simulate(Ra
 }
 
 arma::mat CompositeIndependentProposalKernel::independent_gradient_of_log(const std::string &variable,
-                                                                         const Parameters &proposed_particle)
+                                                                          const Parameters &proposed_particle)
 {
   Rcpp::stop("CompositeIndependentProposalKernel::independent_gradient_of_log - not written yet.");
 }
 
 arma::mat CompositeIndependentProposalKernel::subsample_independent_gradient_of_log(const std::string &variable,
-                                                                                   const Parameters &proposed_particle)
+                                                                                    const Parameters &proposed_particle)
 {
   Rcpp::stop("CompositeIndependentProposalKernel::independent_gradient_of_log - not written yet.");
 }
@@ -272,4 +274,5 @@ void CompositeIndependentProposalKernel::set_data(Data* data_in)
   {
     (*i)->set_data(data_in);
   }
+}
 }

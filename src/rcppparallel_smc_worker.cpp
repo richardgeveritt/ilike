@@ -1,5 +1,7 @@
 #include "rcppparallel_smc_worker.h"
 
+namespace ilike
+{
 //Default constructor.
 RcppParallelSMCWorker::RcppParallelSMCWorker()
 {
@@ -8,7 +10,7 @@ RcppParallelSMCWorker::RcppParallelSMCWorker()
 
 RcppParallelSMCWorker::RcppParallelSMCWorker(SMC* the_smc_in,
                                              size_t grain_size_in)
-  :SMCWorker(the_smc_in)
+:SMCWorker(the_smc_in)
 {
   this->log_unnormalised_incremental_weights = NULL;
   this->simulate_worker = SimulateWorker(this);
@@ -27,7 +29,7 @@ RcppParallelSMCWorker::RcppParallelSMCWorker(SMC* the_smc_in,
 
 //Copy constructor for the RcppParallelSMCWorker class.
 RcppParallelSMCWorker::RcppParallelSMCWorker(const RcppParallelSMCWorker &another)
-  :SMCWorker(another)
+:SMCWorker(another)
 {
   this->make_copy(another);
 }
@@ -42,7 +44,7 @@ void RcppParallelSMCWorker::operator=(const RcppParallelSMCWorker &another)
   if(this == &another){ //if a==a
     return;
   }
-
+  
   SMCWorker::operator=(another);
   this->make_copy(another);
 }
@@ -358,4 +360,5 @@ void RcppParallelSMCWorker::subsample_pf_weight(const Index* index,
   
   parallelFor(0, this->get_number_of_particles(), this->subsample_pf_weight_worker, this->grain_size);
   this->log_unnormalised_incremental_weights = &this->subsample_pf_weight_worker.my_log_unnormalised_incremental_weights;
+}
 }

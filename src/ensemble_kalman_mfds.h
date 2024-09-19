@@ -4,6 +4,8 @@
 #include "ensemble_kalman.h"
 #include "ensemble_sequencer.h"
 
+namespace ilike
+{
 class EnsembleKalmanOutput;
 class MCMC;
 class Index;
@@ -11,7 +13,7 @@ class Index;
 class EnsembleKalmanMFDS : public EnsembleKalman
 {
 public:
-
+  
   EnsembleKalmanMFDS();
   
   // constructor for all variants that have a joint representation as intractable and Gaussian
@@ -72,7 +74,7 @@ public:
   EnsembleKalmanMFDS(const EnsembleKalmanMFDS &another);
   
   virtual ~EnsembleKalmanMFDS(void);
-
+  
   void operator=(const EnsembleKalmanMFDS &another);
   EnsembleKalman* ensemble_kalman_duplicate() const;
   LikelihoodEstimator* duplicate() const;
@@ -84,16 +86,16 @@ public:
                              Particle &particle);
   
   /*
-  MoveOutput* move(RandomNumberGenerator &rng,
-                   Particle &particle,
-                   const Parameters &conditioned_on_parameters);
-  */
+   MoveOutput* move(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters);
+   */
   
   /*
-  MoveOutput* subsample_move(RandomNumberGenerator &rng,
-                             Particle &particle,
-                             const Parameters &conditioned_on_parameters);
-  */
+   MoveOutput* subsample_move(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters);
+   */
   
   //void weight_for_adapting_sequence(Particles &current_particles);
   
@@ -105,7 +107,7 @@ public:
   
   //void weight_for_adapting_sequence(Ensemble &current_particles,
   //                                  double incremental_temperature);
-
+  
 protected:
   
   EnsembleKalmanOutput* specific_run();
@@ -139,14 +141,14 @@ protected:
   void ensemble_kalman_subsample_evaluate_smcfixed_part(EnsembleKalmanOutput* simulation,
                                                         const Parameters &conditioned_on_parameters);
   void ensemble_kalman_subsample_evaluate_smcadaptive_part_given_smcfixed(EnsembleKalmanOutput* simulation,
-                                                                         const Parameters &conditioned_on_parameters);
+                                                                          const Parameters &conditioned_on_parameters);
   
   void predict(EnsembleKalmanOutput* simulation);
   
   //void setup_variables();
-
+  
   //void smc_update(EnsembleKalmanOutput* current_state);
-
+  
   void make_copy(const EnsembleKalmanMFDS &another);
   
   // Stored here.
@@ -164,10 +166,11 @@ protected:
   
   // stored here
   Index* index;
-
+  
   //void smc_step();
-
+  
   //void weight_update();
 };
+}
 
 #endif

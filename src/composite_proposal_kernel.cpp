@@ -5,6 +5,8 @@
 #include "smc_adaptor.h"
 #include "transform.h"
 
+namespace ilike
+{
 CompositeProposalKernel::CompositeProposalKernel()
   :ProposalKernel()
 {
@@ -348,3 +350,4 @@ arma::mat CompositeProposalKernel::specific_subsample_gradient_of_log(const std:
 }
 */
 
+}

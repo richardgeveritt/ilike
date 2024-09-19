@@ -9,13 +9,15 @@ using namespace Rcpp;
 #include "ilike_header.h"
 #include "gaussian_independent_proposal_kernel.h"
 
+namespace ilike
+{
 //class DirectGaussianMeasurementCovarianceEstimatorOutput;
 
 class DirectLinearGaussianMeasurementCovarianceEstimator : public DirectGaussianMeasurementCovarianceEstimator
 {
-
+  
 public:
-
+  
   DirectLinearGaussianMeasurementCovarianceEstimator();
   
   DirectLinearGaussianMeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
@@ -37,11 +39,11 @@ public:
                                                      GetMatrixPtr measurement_covariance_in,
                                                      const std::string &measurement_variable_in,
                                                      const std::vector<std::string> &state_variables_in);
-
+  
   virtual ~DirectLinearGaussianMeasurementCovarianceEstimator();
-
+  
   DirectLinearGaussianMeasurementCovarianceEstimator(const DirectLinearGaussianMeasurementCovarianceEstimator &another);
-
+  
   void operator=(const DirectLinearGaussianMeasurementCovarianceEstimator &another);
   MeasurementCovarianceEstimator* duplicate() const;
   GaussianMeasurementCovarianceEstimator* gaussian_duplicate() const;
@@ -71,7 +73,7 @@ public:
   
   //void setup();
   //void setup(const Parameters &parameters);
-
+  
 protected:
   
   //friend DirectGaussianMeasurementCovarianceEstimatorOutput;
@@ -81,7 +83,7 @@ protected:
   
   void setup_measurement_variables();
   void setup_measurement_variables(const Parameters &conditioned_on_parameters);
-
+  
   void make_copy(const DirectLinearGaussianMeasurementCovarianceEstimator &another);
   
   //Parameters conditioned_on_parameters;
@@ -98,7 +100,8 @@ protected:
   //arma::mat measurement_noise;
   
   std::vector<std::string> state_variables;
-
+  
 };
+}
 
 #endif

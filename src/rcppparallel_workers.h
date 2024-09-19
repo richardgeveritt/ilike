@@ -7,35 +7,38 @@
 
 #include "particles.h"
 
+namespace ilike
+{
+
 class MoveOutput;
 
 class RcppParallelSMCWorker;
 
 class SimulateWorker : public RcppParallel::Worker {
-
+  
 public:
-
+  
   SimulateWorker();
-
+  
   SimulateWorker(RcppParallelSMCWorker* smc_worker_in);
-
+  
   ~SimulateWorker();
-
+  
   SimulateWorker(const SimulateWorker &another);
-
+  
   void operator=(const SimulateWorker &another);
-
+  
   void operator()(std::size_t begin, std::size_t end);
-
+  
   std::vector< MoveOutput* >* particles_pointer;
-
+  
 private:
-
+  
   friend class RcppParallelSMCWorker;
   RcppParallelSMCWorker* smc_worker;
-
+  
   void make_copy(const SimulateWorker &another);
-
+  
 };
 
 class ConditionalSimulateWorker : public RcppParallel::Worker {
@@ -670,5 +673,6 @@ private:
   void make_copy(const SubsamplePFWeightWorker &another);
   
 };
+}
 
 #endif

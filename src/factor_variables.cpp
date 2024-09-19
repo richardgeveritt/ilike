@@ -1,5 +1,7 @@
 #include "factor_variables.h"
 
+namespace ilike
+{
 FactorVariables::FactorVariables()
 {
   this->particle = NULL;
@@ -41,4 +43,5 @@ void FactorVariables::set_particle(Particle* particle_in)
 Particle* FactorVariables::get_particle()
 {
   return this->particle;
+}
 }

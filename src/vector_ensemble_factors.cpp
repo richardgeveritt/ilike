@@ -7,8 +7,10 @@
 #include "index.h"
 #include "ensemble.h"
 
+namespace ilike
+{
 VectorEnsembleFactors::VectorEnsembleFactors()
-  :EnsembleFactors()
+:EnsembleFactors()
 {
   this->measurement_covariance_estimators.resize(0);
   this->measurement_covariance_estimator_temp_data.resize(0);
@@ -31,19 +33,19 @@ VectorEnsembleFactors::~VectorEnsembleFactors()
   }
   
   /*
-  for (std::vector<Data*>::iterator i=this->measurement_covariance_estimator_temp_data.begin();
-       i!=this->measurement_covariance_estimator_temp_data.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
-  */
+   for (std::vector<Data*>::iterator i=this->measurement_covariance_estimator_temp_data.begin();
+   i!=this->measurement_covariance_estimator_temp_data.end();
+   ++i)
+   {
+   if (*i!=NULL)
+   delete *i;
+   }
+   */
 }
 
 //Copy constructor for the VectorEnsembleFactors class.
 VectorEnsembleFactors::VectorEnsembleFactors(const VectorEnsembleFactors &another)
-  :EnsembleFactors(another)
+:EnsembleFactors(another)
 {
   this->make_copy(another);
 }
@@ -64,15 +66,15 @@ void VectorEnsembleFactors::operator=(const VectorEnsembleFactors &another)
   this->measurement_covariance_estimators.clear();
   
   /*
-  for (std::vector<Data*>::iterator i=this->measurement_covariance_estimator_temp_data.begin();
-       i!=this->measurement_covariance_estimator_temp_data.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
-  this->measurement_covariance_estimator_temp_data.clear();
-  */
+   for (std::vector<Data*>::iterator i=this->measurement_covariance_estimator_temp_data.begin();
+   i!=this->measurement_covariance_estimator_temp_data.end();
+   ++i)
+   {
+   if (*i!=NULL)
+   delete *i;
+   }
+   this->measurement_covariance_estimator_temp_data.clear();
+   */
   
   EnsembleFactors::operator=(another);
   this->make_copy(another);
@@ -98,17 +100,17 @@ void VectorEnsembleFactors::make_copy(const VectorEnsembleFactors &another)
   }
   
   /*
-  this->measurement_covariance_estimator_temp_data.resize(0);
-  for (std::vector<Data*>::const_iterator i=another.measurement_covariance_estimator_temp_data.begin();
-       i!=another.measurement_covariance_estimator_temp_data.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      this->measurement_covariance_estimator_temp_data.push_back((*i)->duplicate());
-    else
-      this->measurement_covariance_estimator_temp_data.push_back(NULL);
-  }
-  */
+   this->measurement_covariance_estimator_temp_data.resize(0);
+   for (std::vector<Data*>::const_iterator i=another.measurement_covariance_estimator_temp_data.begin();
+   i!=another.measurement_covariance_estimator_temp_data.end();
+   ++i)
+   {
+   if (*i!=NULL)
+   this->measurement_covariance_estimator_temp_data.push_back((*i)->duplicate());
+   else
+   this->measurement_covariance_estimator_temp_data.push_back(NULL);
+   }
+   */
   this->measurement_covariance_estimator_temp_data = another.measurement_covariance_estimator_temp_data;
 }
 
@@ -174,33 +176,33 @@ EnsembleFactorVariables* VectorEnsembleFactors::simulate_ensemble_factor_variabl
 }
 
 /*
-EnsembleFactorVariables* VectorEnsembleFactors::simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
-                                                                                   const Parameters &conditioned_on_parameters)
-{
-  std::vector<MeasurementCovarianceEstimatorOutput*> outputs;
-  outputs.reserve(this->measurement_covariance_estimators.size());
-  
-  Parameters all_parameters = simulated_parameters.merge(conditioned_on_parameters);
-  
-  for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
-       i != this->measurement_covariance_estimators.end();
-       ++i)
-  {
-    outputs.push_back((*i)->initialise(all_parameters));
-    
-    // call set params first
-    // should be a proposalkernel? check for consistency
-    
-    //(*i)->set_parameters(conditioned_on_parameters);
-    
-    outputs.back()->simulate(all_parameters);
-    // need to separate current state from params in this case
-  }
-  
-  return new VectorEnsembleFactorVariables(this,
-                                           outputs);
-}
-*/
+ EnsembleFactorVariables* VectorEnsembleFactors::simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
+ const Parameters &conditioned_on_parameters)
+ {
+ std::vector<MeasurementCovarianceEstimatorOutput*> outputs;
+ outputs.reserve(this->measurement_covariance_estimators.size());
+ 
+ Parameters all_parameters = simulated_parameters.merge(conditioned_on_parameters);
+ 
+ for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+ i != this->measurement_covariance_estimators.end();
+ ++i)
+ {
+ outputs.push_back((*i)->initialise(all_parameters));
+ 
+ // call set params first
+ // should be a proposalkernel? check for consistency
+ 
+ //(*i)->set_parameters(conditioned_on_parameters);
+ 
+ outputs.back()->simulate(all_parameters);
+ // need to separate current state from params in this case
+ }
+ 
+ return new VectorEnsembleFactorVariables(this,
+ outputs);
+ }
+ */
 
 EnsembleFactorVariables* VectorEnsembleFactors::subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters) const
 {
@@ -220,62 +222,62 @@ EnsembleFactorVariables* VectorEnsembleFactors::subsample_simulate_ensemble_fact
 }
 
 /*
-EnsembleFactorVariables* VectorEnsembleFactors::subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
-                                                                      const Parameters &conditioned_on_parameters)
-{
-  std::vector<MeasurementCovarianceEstimatorOutput*> outputs;
-  outputs.reserve(this->measurement_covariance_estimators.size());
-  
-  Parameters all_parameters = simulated_parameters.merge(conditioned_on_parameters);
-  
-  for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
-       i != this->measurement_covariance_estimators.end();
-       ++i)
-  {
-    outputs.push_back((*i)->initialise(all_parameters));
-    
-    // call set params first
-    // should be a proposalkernel? check for consistency
-    
-    //(*i)->set_parameters(conditioned_on_parameters);
-    
-    outputs.back()->subsample_simulate(all_parameters);
-    // need to separate current state from params in this case
-  }
-  
-  return new VectorEnsembleFactorVariables(this,
-                                           outputs);
-}
-*/
+ EnsembleFactorVariables* VectorEnsembleFactors::subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
+ const Parameters &conditioned_on_parameters)
+ {
+ std::vector<MeasurementCovarianceEstimatorOutput*> outputs;
+ outputs.reserve(this->measurement_covariance_estimators.size());
+ 
+ Parameters all_parameters = simulated_parameters.merge(conditioned_on_parameters);
+ 
+ for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+ i != this->measurement_covariance_estimators.end();
+ ++i)
+ {
+ outputs.push_back((*i)->initialise(all_parameters));
+ 
+ // call set params first
+ // should be a proposalkernel? check for consistency
+ 
+ //(*i)->set_parameters(conditioned_on_parameters);
+ 
+ outputs.back()->subsample_simulate(all_parameters);
+ // need to separate current state from params in this case
+ }
+ 
+ return new VectorEnsembleFactorVariables(this,
+ outputs);
+ }
+ */
 
 /*
-std::vector<arma::mat> VectorEnsembleFactors::get_measurement_covariances()
-{
-  std::vector<arma::mat> output;
-  output.reserve(this->measurement_covariance_estimators.size());
-  for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
-       i != this->measurement_covariance_estimators.end();
-       ++i)
-  {
-    output.push_back((*i)->get_measurement_covariamce());
-  }
-  return output;
-}
-
-std::vector<arma::mat> VectorEnsembleFactors::get_measurement_covariances(const Parameters &conditioned_on_parameters)
-{
-  std::vector<arma::mat> output;
-  output.reserve(this->measurement_covariance_estimators.size());
-  for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
-       i != this->measurement_covariance_estimators.end();
-       ++i)
-  {
-    (*i)->set_parameters(conditioned_on_parameters);
-    output.push_back((*i)->get_measurement_covariamce());
-  }
-  return output;
-}
-*/
+ std::vector<arma::mat> VectorEnsembleFactors::get_measurement_covariances()
+ {
+ std::vector<arma::mat> output;
+ output.reserve(this->measurement_covariance_estimators.size());
+ for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+ i != this->measurement_covariance_estimators.end();
+ ++i)
+ {
+ output.push_back((*i)->get_measurement_covariamce());
+ }
+ return output;
+ }
+ 
+ std::vector<arma::mat> VectorEnsembleFactors::get_measurement_covariances(const Parameters &conditioned_on_parameters)
+ {
+ std::vector<arma::mat> output;
+ output.reserve(this->measurement_covariance_estimators.size());
+ for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+ i != this->measurement_covariance_estimators.end();
+ ++i)
+ {
+ (*i)->set_parameters(conditioned_on_parameters);
+ output.push_back((*i)->get_measurement_covariamce());
+ }
+ return output;
+ }
+ */
 
 bool VectorEnsembleFactors::need_Cxx() const
 {
@@ -429,7 +431,7 @@ double VectorEnsembleFactors::get_unbiased_inversion_incremental_likelihood(Ense
 }
 
 void VectorEnsembleFactors:: get_path1_inversion_incremental_likelihood(Ensemble* ensemble,
-                                                                       std::vector<double> &log_measurement_likelihood_means,
+                                                                        std::vector<double> &log_measurement_likelihood_means,
                                                                         double temperature,
                                                                         double multiplier) const
 {
@@ -441,7 +443,7 @@ void VectorEnsembleFactors:: get_path1_inversion_incremental_likelihood(Ensemble
        ++i)
   {
     arma::mat Cygivenx = this->measurement_covariance_estimators[i]->get_Cygivenx();
-
+    
     //double mean_for_this_term = 0.0;
     size_t n = ensemble->size();
     
@@ -451,34 +453,34 @@ void VectorEnsembleFactors:: get_path1_inversion_incremental_likelihood(Ensemble
       log_likelihoods[j] = dmvnorm(*this->measurement_covariance_estimators[i]->get_measurement_pointer(), ensemble->partially_packed_members_col[j], Cygivenx);
     }
     /*
-    arma::colvec x = *this->measurement_covariance_estimators[i]->get_measurement_pointer();
-    arma::colvec log_quadratic_parts(n);
-    arma::mat invCygivenx = arma::inv_sympd(Cygivenx);
-    for (size_t j=0; j<n; ++j)
-    {
-      arma::colvec x_minus_mean = x-ensemble->partially_packed_members_col[j];
-      arma::mat qt = x_minus_mean.t()*invCygivenx*x_minus_mean;
-      log_quadratic_parts[j] = qt(0,0);
-    }
-    */
+     arma::colvec x = *this->measurement_covariance_estimators[i]->get_measurement_pointer();
+     arma::colvec log_quadratic_parts(n);
+     arma::mat invCygivenx = arma::inv_sympd(Cygivenx);
+     for (size_t j=0; j<n; ++j)
+     {
+     arma::colvec x_minus_mean = x-ensemble->partially_packed_members_col[j];
+     arma::mat qt = x_minus_mean.t()*invCygivenx*x_minus_mean;
+     log_quadratic_parts[j] = qt(0,0);
+     }
+     */
     
     //double dy = double(Cygivenx.n_rows);
     
     log_measurement_likelihood_means.push_back(multiplier*arma::mean(log_likelihoods));
     
     /*
-    if (temperature==0)
-    {
-      log_measurement_likelihood_means.push_back(0.0);
-    }
-    else
-    {
-      double test1 = -(dy/(2.0*temperature));
-      double test3 = arma::mean(log_quadratic_parts);
-      log_measurement_likelihood_means.push_back(-(dy/(2.0*temperature)) + 0.5*arma::mean(log_quadratic_parts) );
-      log_measurement_likelihood_means.push_back(multiplier*(-(dy/(2.0*temperature)) - (dy/2.0)*log(2*M_PI) - 0.5*arma::log_det_sympd(Cygivenx) + arma::mean(log_likelihoods)));
-    }
-    */
+     if (temperature==0)
+     {
+     log_measurement_likelihood_means.push_back(0.0);
+     }
+     else
+     {
+     double test1 = -(dy/(2.0*temperature));
+     double test3 = arma::mean(log_quadratic_parts);
+     log_measurement_likelihood_means.push_back(-(dy/(2.0*temperature)) + 0.5*arma::mean(log_quadratic_parts) );
+     log_measurement_likelihood_means.push_back(multiplier*(-(dy/(2.0*temperature)) - (dy/2.0)*log(2*M_PI) - 0.5*arma::log_det_sympd(Cygivenx) + arma::mean(log_likelihoods)));
+     }
+     */
     
   }
   
@@ -488,7 +490,7 @@ void VectorEnsembleFactors::get_path2_inversion_incremental_likelihood(Ensemble*
                                                                        std::vector<double> &log_measurement_likelihood_means,
                                                                        std::vector<double> &log_measurement_likelihood_variances) const
 {
-
+  
   log_measurement_likelihood_means.clear();
   log_measurement_likelihood_means.reserve(this->measurement_covariance_estimators.size());
   
@@ -499,9 +501,9 @@ void VectorEnsembleFactors::get_path2_inversion_incremental_likelihood(Ensemble*
        i<this->measurement_covariance_estimators.size();
        ++i)
   {
-
+    
     arma::mat Cygivenx = this->measurement_covariance_estimators[i]->get_Cygivenx();
-
+    
     size_t n = ensemble->size();
     arma::colvec log_likelihoods(n);
     for (size_t j=0; j<n; ++j)
@@ -570,8 +572,9 @@ void VectorEnsembleFactors::precompute_gaussian_covariance(double inverse_increm
 }
 
 /*
-void VectorEnsembleFactors::find_measurement_covariances(EnsembleKalmanOutput* simulation)
-{
-  
+ void VectorEnsembleFactors::find_measurement_covariances(EnsembleKalmanOutput* simulation)
+ {
+ 
+ }
+ */
 }
-*/

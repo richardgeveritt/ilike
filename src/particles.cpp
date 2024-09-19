@@ -7,6 +7,8 @@
 
 //#include <array>
 
+namespace ilike
+{
 Particles::Particles()
 {
   this->resampled_flag = false;
@@ -31,59 +33,59 @@ Particles::Particles(const std::vector< MoveOutput* > &particles_in)
 }
 
 /*
-Particles::Particles(std::vector<Parameters> &initial_values_in,
-                     const arma::colvec &log_probabilities_of_initial_values_in,
-                     Factors* factors_in,
-                     const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
-                     const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in)
-{
-  this->setup(initial_values_in,
-              log_probabilities_of_initial_values_in,
-              factors_in,
-              proposals_to_transform_for_in,
-              proposals_to_find_gradient_for_in);
-}
-
-void Particles::setup(std::vector<Parameters> &initial_values_in,
-                      const arma::colvec &log_probabilities_of_initial_values_in,
-                      Factors* factors_in,
-                      const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
-                      const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in)
-{
-  if (initial_values_in.size()!=log_probabilities_of_initial_values_in.n_rows)
-  {
-    Rcpp::stop("Particles(initial_values,probs) constructor: values and probabilities need to be of the same length.");
-  }
-  
-  if (factors_in==NULL)
-  {
-    Rcpp::stop("Particles(initial_values,probs) constructor: factors need to be non-null.");
-  }
-  
-  size_t number_of_particles_in = initial_values_in.size();
-  this->particles.reserve(number_of_particles_in);
-  this->resampling_variables = arma::colvec(number_of_particles_in);
-  this->ancestor_variables = std::vector<size_t>(number_of_particles_in);
-  this->unnormalised_log_weights = arma::colvec(number_of_particles_in);
-  this->normalised_log_weights = arma::colvec(number_of_particles_in);
-  this->previous_normalised_log_weights = arma::colvec(number_of_particles_in);
-  this->incremental_log_weights = arma::colvec(number_of_particles_in);
-  this->log_normalising_constant_ratio = 0.0;
-  this->resampled_flag = false;
-  
-  size_t counter = 0;
-  for (std::vector<Parameters>::iterator i=initial_values_in.begin();
-       i!=initial_values_in.end();
-       ++i, ++counter)
-  {
-    
-    //arma::mat tau = (*i)["tau"];
-    this->push_back(std::move(*i),factors_in,proposals_to_transform_for_in,proposals_to_find_gradient_for_in);
-    //this->push_back(*i,factors_in,proposals_to_transform_for_in,proposals_to_find_gradient_for_in);
-    this->particles.back()->back().previous_target_evaluated = log_probabilities_of_initial_values_in[counter];
-  }
-}
-*/
+ Particles::Particles(std::vector<Parameters> &initial_values_in,
+ const arma::colvec &log_probabilities_of_initial_values_in,
+ Factors* factors_in,
+ const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+ const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in)
+ {
+ this->setup(initial_values_in,
+ log_probabilities_of_initial_values_in,
+ factors_in,
+ proposals_to_transform_for_in,
+ proposals_to_find_gradient_for_in);
+ }
+ 
+ void Particles::setup(std::vector<Parameters> &initial_values_in,
+ const arma::colvec &log_probabilities_of_initial_values_in,
+ Factors* factors_in,
+ const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+ const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in)
+ {
+ if (initial_values_in.size()!=log_probabilities_of_initial_values_in.n_rows)
+ {
+ Rcpp::stop("Particles(initial_values,probs) constructor: values and probabilities need to be of the same length.");
+ }
+ 
+ if (factors_in==NULL)
+ {
+ Rcpp::stop("Particles(initial_values,probs) constructor: factors need to be non-null.");
+ }
+ 
+ size_t number_of_particles_in = initial_values_in.size();
+ this->particles.reserve(number_of_particles_in);
+ this->resampling_variables = arma::colvec(number_of_particles_in);
+ this->ancestor_variables = std::vector<size_t>(number_of_particles_in);
+ this->unnormalised_log_weights = arma::colvec(number_of_particles_in);
+ this->normalised_log_weights = arma::colvec(number_of_particles_in);
+ this->previous_normalised_log_weights = arma::colvec(number_of_particles_in);
+ this->incremental_log_weights = arma::colvec(number_of_particles_in);
+ this->log_normalising_constant_ratio = 0.0;
+ this->resampled_flag = false;
+ 
+ size_t counter = 0;
+ for (std::vector<Parameters>::iterator i=initial_values_in.begin();
+ i!=initial_values_in.end();
+ ++i, ++counter)
+ {
+ 
+ //arma::mat tau = (*i)["tau"];
+ this->push_back(std::move(*i),factors_in,proposals_to_transform_for_in,proposals_to_find_gradient_for_in);
+ //this->push_back(*i,factors_in,proposals_to_transform_for_in,proposals_to_find_gradient_for_in);
+ this->particles.back()->back().previous_target_evaluated = log_probabilities_of_initial_values_in[counter];
+ }
+ }
+ */
 
 Particles::Particles(std::vector<Parameters> &initial_values_in,
                      const arma::colvec &log_probabilities_of_initial_values_in,
@@ -234,7 +236,7 @@ Particles& Particles::operator=(const Particles &another)
   }
   
   this->particles.clear();
-
+  
   this->make_copy(another);
   
   return *this;
@@ -273,20 +275,20 @@ void Particles::reserve(size_t number_of_particles_in)
 }
 
 /*
-void Particles::push_back(const Parameters &parameters_in,
-                          Factors* factors_in)
-{
-  MoveOutput* single_particle = new SinglePointMoveOutput(parameters_in,
-                                                          factors_in);
-  this->particles.push_back(single_particle);
-}
-
-void Particles::push_back(const Particle &particle_in)
-{
-  MoveOutput* single_particle = new SinglePointMoveOutput(particle_in);
-  this->particles.push_back(single_particle);
-}
-*/
+ void Particles::push_back(const Parameters &parameters_in,
+ Factors* factors_in)
+ {
+ MoveOutput* single_particle = new SinglePointMoveOutput(parameters_in,
+ factors_in);
+ this->particles.push_back(single_particle);
+ }
+ 
+ void Particles::push_back(const Particle &particle_in)
+ {
+ MoveOutput* single_particle = new SinglePointMoveOutput(particle_in);
+ this->particles.push_back(single_particle);
+ }
+ */
 
 void Particles::push_back(Parameters &&parameters_in,
                           Factors* factors_in,
@@ -339,10 +341,10 @@ Particle* Particles::add_particle()
 }
 
 /*
-void Particles::push_back(const std::deque<Particle> &particle_in)
-{
-  this->particles.push_back((particle_in));
-}
+ void Particles::push_back(const std::deque<Particle> &particle_in)
+ {
+ this->particles.push_back((particle_in));
+ }
  */
 
 void Particles::simulate_resampling_variables(RandomNumberGenerator &rng)
@@ -420,17 +422,17 @@ void Particles::make_copy(Particles &&another)
 }
 
 /*
-double& Particles::operator[](const size_t &i)
-{
-  return 1.0;
-  //return(this->particles[i]);
-}
-
-double Particles::operator[](const size_t &i) const
-{
-  return 1.0;
-  //return(this->particles[i]);
-}
+ double& Particles::operator[](const size_t &i)
+ {
+ return 1.0;
+ //return(this->particles[i]);
+ }
+ 
+ double Particles::operator[](const size_t &i) const
+ {
+ return 1.0;
+ //return(this->particles[i]);
+ }
  */
 
 MoveOutput* Particles::operator[](const size_t &i)
@@ -459,15 +461,15 @@ size_t Particles::size() const
 }
 
 /*
-arma::colvec Particles::get_resampling_variables() const
-{
-  return this->resampling_variables;
-}
-
-void Particles::set_ancestor_variables(const std::vector<size_t> &ancestor_variables_in)
-{
-  this->ancestor_variables = ancestor_variables_in;
-}
+ arma::colvec Particles::get_resampling_variables() const
+ {
+ return this->resampling_variables;
+ }
+ 
+ void Particles::set_ancestor_variables(const std::vector<size_t> &ancestor_variables_in)
+ {
+ this->ancestor_variables = ancestor_variables_in;
+ }
  */
 
 void Particles::resample()
@@ -513,13 +515,13 @@ void Particles::update_weights(const arma::colvec &latest_unnormalised_log_incre
   
   // Set each particle to know what its probability was last time it was evaluated at the most recent target.
   /*
-  for (std::vector< std::deque<Particle> >::iterator i = this->particles.begin();
-       i != this->particles.end();
-       ++i)
-  {
-    i->back().previous_target_evaluated = i->back().target_evaluated;
-  }
-  */
+   for (std::vector< std::deque<Particle> >::iterator i = this->particles.begin();
+   i != this->particles.end();
+   ++i)
+   {
+   i->back().previous_target_evaluated = i->back().target_evaluated;
+   }
+   */
   
   //this->most_recent_log_ratio_estimator =
   
@@ -596,16 +598,17 @@ void Particles::subsample_set_previous_target_evaluated_to_target_evaluated()
 std::ostream& operator<<(std::ostream& os, const Particles &p)
 {
   //std::vector< std::deque<Particle> >::const_iterator it;
-
+  
   /*
-  for (it=p.particles.begin();it!=p.particles.end();++it)
-  {
-    if (it==p.particles.begin())
-      os << *it;
-    else
-      os << std::endl << *it;
-  }
+   for (it=p.particles.begin();it!=p.particles.end();++it)
+   {
+   if (it==p.particles.begin())
+   os << *it;
+   else
+   os << std::endl << *it;
+   }
    */
-
+  
   return os;
+}
 }

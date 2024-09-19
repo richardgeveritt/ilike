@@ -9,6 +9,8 @@ using namespace Rcpp;
 #include "distributions.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class MeasurementCovarianceEstimator;
 class MeasurementCovarianceEstimatorOutput;
 class GenericMeasurementCovarianceEstimatorOutput;
@@ -19,9 +21,9 @@ class Transform;
 
 class MeasurementCovarianceEstimator
 {
-
+  
 public:
-
+  
   MeasurementCovarianceEstimator();
   
   MeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
@@ -32,9 +34,9 @@ public:
                                  const std::vector<std::string> &measurement_variables_in);
   
   virtual ~MeasurementCovarianceEstimator();
-
+  
   MeasurementCovarianceEstimator(const MeasurementCovarianceEstimator &another);
-
+  
   void operator=(const MeasurementCovarianceEstimator &another);
   virtual MeasurementCovarianceEstimator* duplicate() const=0;
   
@@ -82,7 +84,7 @@ public:
   const arma::colvec* get_measurement_pointer() const;
   
   std::vector<std::string> get_measurement_variables() const;
-
+  
 protected:
   
   friend MeasurementCovarianceEstimatorOutput;
@@ -122,7 +124,8 @@ protected:
   bool set_using_parameters;
   
   std::vector<std::string> measurement_variables;
-
+  
 };
+}
 
 #endif

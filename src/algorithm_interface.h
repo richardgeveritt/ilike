@@ -14,10 +14,15 @@ using namespace Rcpp;
 #include "distributions.h"
 #include "parameters.h"
 
+namespace ilike
+{
 class KalmanFilter;
 class EnsembleKalmanFilter;
 class ParticleFilter;
 class EnsembleShifter;
+}
+
+using namespace ilike;
 
 KalmanFilter* get_kalman_filter(Data* the_data,
                                 const List &model,

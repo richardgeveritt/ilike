@@ -5,6 +5,8 @@
 #include "likelihood_estimator.h"
 #include "mcmc_adaptor.h"
 
+namespace ilike
+{
 GammaIndependentProposalKernel::GammaIndependentProposalKernel()
   :IndependentProposalKernel()
 {
@@ -172,4 +174,5 @@ bool GammaIndependentProposalKernel::can_be_evaluated() const
 void GammaIndependentProposalKernel::set_data(Data* data_in)
 {
   
+}
 }

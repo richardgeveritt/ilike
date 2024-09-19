@@ -10,8 +10,6 @@ using namespace Rcpp;
 
 namespace ilike
 {
-namespace exact_factor
-{
 
 /// An ABCKernel type of Factor, to be used in an ExactLikelihoodEstimator.
 /// ExactLikelihoodEstimator contains LikelihoodFactor%s, DistributionFactor%s and IndependentProposalKernel%s. These will be evaluated
@@ -79,7 +77,6 @@ protected:
   PackingInstructionsMap packing_instructions;
   
 };
-}
 }
 
 #endif

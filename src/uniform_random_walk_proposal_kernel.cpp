@@ -4,8 +4,10 @@
 #include "likelihood_estimator.h"
 #include "distributions.h"
 
+namespace ilike
+{
 UniformRandomWalkProposalKernel::UniformRandomWalkProposalKernel()
-  :SymmetricProposalKernel()
+:SymmetricProposalKernel()
 {
   //this->unused_variables_kept = true;
 }
@@ -15,7 +17,7 @@ UniformRandomWalkProposalKernel::~UniformRandomWalkProposalKernel()
 }
 
 UniformRandomWalkProposalKernel::UniformRandomWalkProposalKernel(const std::vector<std::string> &variable_names_in)
-  :SymmetricProposalKernel()
+:SymmetricProposalKernel()
 {
   //this->unused_variables_kept = true;
   
@@ -56,7 +58,7 @@ UniformRandomWalkProposalKernel::UniformRandomWalkProposalKernel(const std::stri
 
 UniformRandomWalkProposalKernel::UniformRandomWalkProposalKernel(const std::vector<std::string> &variable_names_in,
                                                                  const std::vector<arma::mat> &halfwidths_in)
-  :SymmetricProposalKernel()
+:SymmetricProposalKernel()
 {
   //this->unused_variables_kept = true;
   
@@ -69,7 +71,7 @@ UniformRandomWalkProposalKernel::UniformRandomWalkProposalKernel(const std::vect
 }
 
 UniformRandomWalkProposalKernel::UniformRandomWalkProposalKernel(const UniformRandomWalkProposalKernel &another)
-  :SymmetricProposalKernel(another)
+:SymmetricProposalKernel(another)
 {
   this->make_copy(another);
 }
@@ -78,7 +80,7 @@ void UniformRandomWalkProposalKernel::operator=(const UniformRandomWalkProposalK
 {
   if(this == &another)
     return;
-
+  
   SymmetricProposalKernel::operator=(another);
   this->make_copy(another);
 }
@@ -122,13 +124,13 @@ double UniformRandomWalkProposalKernel::specific_evaluate_kernel(const Particle 
 }
 
 /*
-double UniformRandomWalkProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
-                                                                 Particle &old_particle,
-                                                                 const Parameters &conditioned_on_parameters) const
-{
-  return this->specific_evaluate_kernel(proposed_particle, old_particle);
-}
-*/
+ double UniformRandomWalkProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
+ Particle &old_particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ return this->specific_evaluate_kernel(proposed_particle, old_particle);
+ }
+ */
 
 double UniformRandomWalkProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
                                                                            const Particle &old_particle) const
@@ -138,14 +140,14 @@ double UniformRandomWalkProposalKernel::specific_subsample_evaluate_kernel(const
 }
 
 /*
-double UniformRandomWalkProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                                         Particle &old_particle,
-                                                         const Parameters &conditioned_on_parameters) const
-{
-  // no difference since size of data set does not impact on proposal
-  return this->specific_evaluate_kernel(proposed_particle, old_particle);
-}
-*/
+ double UniformRandomWalkProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
+ Particle &old_particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ // no difference since size of data set does not impact on proposal
+ return this->specific_evaluate_kernel(proposed_particle, old_particle);
+ }
+ */
 
 Parameters UniformRandomWalkProposalKernel::simulate(RandomNumberGenerator &rng,
                                                      const Particle &particle) const
@@ -223,14 +225,14 @@ arma::mat UniformRandomWalkProposalKernel::specific_gradient_of_log(const std::s
 }
 
 /*
-arma::mat UniformRandomWalkProposalKernel::specific_gradient_of_log(const std::string &variable,
-                                                                    Particle &proposed_particle,
-                                                                    Particle &old_particle,
-                                                                    const Parameters &conditioned_on_parameters)
-{
-  Rcpp::stop("UniformRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
-}
-*/
+ arma::mat UniformRandomWalkProposalKernel::specific_gradient_of_log(const std::string &variable,
+ Particle &proposed_particle,
+ Particle &old_particle,
+ const Parameters &conditioned_on_parameters)
+ {
+ Rcpp::stop("UniformRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
+ }
+ */
 
 arma::mat UniformRandomWalkProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
                                                                               const Particle &proposed_particle,
@@ -240,14 +242,14 @@ arma::mat UniformRandomWalkProposalKernel::specific_subsample_gradient_of_log(co
 }
 
 /*
-arma::mat UniformRandomWalkProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
-                                                                              Particle &proposed_particle,
-                                                                              Particle &old_particle,
-                                                                              const Parameters &conditioned_on_parameters)
-{
-  Rcpp::stop("UniformRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
-}
-*/
+ arma::mat UniformRandomWalkProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
+ Particle &proposed_particle,
+ Particle &old_particle,
+ const Parameters &conditioned_on_parameters)
+ {
+ Rcpp::stop("UniformRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
+ }
+ */
 
 void UniformRandomWalkProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
 {
@@ -282,4 +284,5 @@ bool UniformRandomWalkProposalKernel::can_be_evaluated() const
 void UniformRandomWalkProposalKernel::set_data(Data* data_in)
 {
   
+}
 }

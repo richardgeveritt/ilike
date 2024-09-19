@@ -4,6 +4,8 @@
 #include "ensemble_kalman.h"
 #include "ensemble_sequencer.h"
 
+namespace ilike
+{
 class EnsembleKalmanOutput;
 class MCMC;
 class MoveOutput;
@@ -12,7 +14,7 @@ class GaussianNoiseProposalKernel;
 class EnsembleKalmanInversion : public EnsembleKalman
 {
 public:
-
+  
   EnsembleKalmanInversion();
   
   // single move from start to end
@@ -80,27 +82,27 @@ public:
   
   // abc
   /*
-  EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
-                          size_t* seed_in,
-                          Data* data_in,
-                          size_t number_of_ensemble_members_in,
-                          size_t lag_in,
-                          EnsembleShifter* shifter_in,
-                          double annealing_desired_cess_in,
-                          size_t number_of_bisections_in,
-                          const std::string &sequence_variable_in,
-                          const std::vector<double> &schedule_in,
-                          IndependentProposalKernel* prior_in,
-                          const std::vector<std::string> &measurement_variables_in,
-                          double min_epsilon_in,
-                          const std::string &scale_variable_in,
-                          std::shared_ptr<Transform> summary_statistics_in,
-                          std::shared_ptr<Transform> transform_in,
-                          double significance_level_in,
-                          bool parallel_in,
-                          size_t grain_size_in,
-                          const std::string &results_name_in);
-  */
+   EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
+   size_t* seed_in,
+   Data* data_in,
+   size_t number_of_ensemble_members_in,
+   size_t lag_in,
+   EnsembleShifter* shifter_in,
+   double annealing_desired_cess_in,
+   size_t number_of_bisections_in,
+   const std::string &sequence_variable_in,
+   const std::vector<double> &schedule_in,
+   IndependentProposalKernel* prior_in,
+   const std::vector<std::string> &measurement_variables_in,
+   double min_epsilon_in,
+   const std::string &scale_variable_in,
+   std::shared_ptr<Transform> summary_statistics_in,
+   std::shared_ptr<Transform> transform_in,
+   double significance_level_in,
+   bool parallel_in,
+   size_t grain_size_in,
+   const std::string &results_name_in);
+   */
   
   // abc
   EnsembleKalmanInversion(RandomNumberGenerator* rng_in,
@@ -149,7 +151,7 @@ public:
   EnsembleKalmanInversion(const EnsembleKalmanInversion &another);
   
   virtual ~EnsembleKalmanInversion();
-
+  
   void operator=(const EnsembleKalmanInversion &another);
   EnsembleKalman* ensemble_kalman_duplicate() const;
   LikelihoodEstimator* duplicate() const;
@@ -163,14 +165,14 @@ public:
                              Particle &particle);
   
   /*
-  MoveOutput* move(RandomNumberGenerator &rng,
-                   Particle &particle,
-                   const Parameters &conditioned_on_parameters);
-  
-  MoveOutput* subsample_move(RandomNumberGenerator &rng,
-                             Particle &particle,
-                             const Parameters &conditioned_on_parameters);
-  */
+   MoveOutput* move(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters);
+   
+   MoveOutput* subsample_move(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters);
+   */
   
   //void weight_for_adapting_sequence(Particles &current_particles);
   
@@ -182,7 +184,7 @@ public:
   
   //void weight_for_adapting_sequence(Ensemble &current_particles,
   //                                  double incremental_temperature);
-
+  
 protected:
   
   EnsembleKalmanOutput* specific_run();
@@ -216,12 +218,12 @@ protected:
   void ensemble_kalman_subsample_evaluate_smcfixed_part(EnsembleKalmanOutput* simulation,
                                                         const Parameters &conditioned_on_parameters);
   void ensemble_kalman_subsample_evaluate_smcadaptive_part_given_smcfixed(EnsembleKalmanOutput* simulation,
-                                                                         const Parameters &conditioned_on_parameters);
-
+                                                                          const Parameters &conditioned_on_parameters);
+  
   //void smc_update(EnsembleKalmanOutput* current_state);
   
   //void setup_variables();
-
+  
   void make_copy(const EnsembleKalmanInversion &another);
   
   // Stored here.
@@ -234,12 +236,13 @@ protected:
   
   // If this is not 1.0, then check to see if we think the current ensemble is Gaussian, then skip to the end of the sequence if it is.
   double significance_level;
-
+  
   size_t estimator_type;
   
   //void smc_step();
-
+  
   //void weight_update();
 };
+}
 
 #endif

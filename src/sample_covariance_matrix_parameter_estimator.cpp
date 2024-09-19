@@ -1,8 +1,10 @@
 #include "sample_covariance_matrix_parameter_estimator.h"
 #include "utils.h"
 
+namespace ilike
+{
 SampleCovarianceMatrixParameterEstimator::SampleCovarianceMatrixParameterEstimator()
-  :MatrixParameterEstimator()
+:MatrixParameterEstimator()
 {
 }
 
@@ -13,7 +15,7 @@ SampleCovarianceMatrixParameterEstimator::~SampleCovarianceMatrixParameterEstima
 
 //Copy constructor for the SampleCovarianceMatrixParameterEstimator class.
 SampleCovarianceMatrixParameterEstimator::SampleCovarianceMatrixParameterEstimator(const SampleCovarianceMatrixParameterEstimator &another)
-  :MatrixParameterEstimator(another)
+:MatrixParameterEstimator(another)
 {
   this->make_copy(another);
 }
@@ -43,4 +45,5 @@ void SampleCovarianceMatrixParameterEstimator::fit(const arma::mat &matrix_point
   this->estimated = cov_wt(matrix_points,wt);
   if (!this->estimated.is_sympd())
     this->estimated = this->estimated + 0.0000000000001*arma::eye(arma::size(this->estimated));
+}
 }

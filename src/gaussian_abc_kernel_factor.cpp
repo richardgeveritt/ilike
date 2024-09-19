@@ -4,8 +4,6 @@
 
 namespace ilike
 {
-namespace exact_factor
-{
 
 GaussianABCKernelFactor::GaussianABCKernelFactor()
 :ABCKernelFactor()
@@ -155,5 +153,4 @@ arma::mat GaussianABCKernelFactor::likelihood_evaluate_gradient(const std::strin
   }
 }
 
-}
 }

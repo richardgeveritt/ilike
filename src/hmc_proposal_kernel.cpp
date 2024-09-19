@@ -3,8 +3,10 @@
 #include "likelihood_estimator.h"
 #include "distributions.h"
 
+namespace ilike
+{
 HMCProposalKernel::HMCProposalKernel()
-  :ProposalKernel()
+:ProposalKernel()
 {
   
 }
@@ -60,13 +62,13 @@ HMCProposalKernel::HMCProposalKernel(const std::string &variable_name_in,
 :ProposalKernel()
 {
   /*
-  this->unused_variables_kept = true;
-  
-  this->gradient_estimator = NULL;
-  this->index = NULL;
-  
-  this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in);
-  */
+   this->unused_variables_kept = true;
+   
+   this->gradient_estimator = NULL;
+   this->index = NULL;
+   
+   this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in);
+   */
 }
 
 HMCProposalKernel::HMCProposalKernel(const std::string &variable_name_in,
@@ -93,7 +95,7 @@ HMCProposalKernel::HMCProposalKernel(const std::vector<std::string> &variable_na
 }
 
 HMCProposalKernel::HMCProposalKernel(const HMCProposalKernel &another)
-  :ProposalKernel(another)
+:ProposalKernel(another)
 {
   this->make_copy(another);
 }
@@ -102,7 +104,7 @@ void HMCProposalKernel::operator=(const HMCProposalKernel &another)
 {
   if(this == &another)
     return;
-
+  
   ProposalKernel::operator=(another);
   this->make_copy(another);
 }
@@ -128,25 +130,25 @@ double HMCProposalKernel::specific_evaluate_kernel(const Particle &proposed_part
 {
   double output = 0.0;
   /*
-  for (size_t i=0; i<this->covariance_names.size(); ++i)
-  {
-    output = output + dmvnorm(proposed_particle.parameters.get_vector(this->variable_names[i]),
-                              old_particle.parameters.get_vector(this->variable_names[i]),
-                              this->proposal_parameters[this->covariance_names[i]]);
-  }
-  */
+   for (size_t i=0; i<this->covariance_names.size(); ++i)
+   {
+   output = output + dmvnorm(proposed_particle.parameters.get_vector(this->variable_names[i]),
+   old_particle.parameters.get_vector(this->variable_names[i]),
+   this->proposal_parameters[this->covariance_names[i]]);
+   }
+   */
   return output;
 }
 
 /*
-double HMCProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
-                                          Particle &old_particle,
-                                          const Parameters &conditioned_on_parameters) const
-{
-  double output = 0.0;
-  return output;
-}
-*/
+ double HMCProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
+ Particle &old_particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ double output = 0.0;
+ return output;
+ }
+ */
 
 double HMCProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
                                                              const Particle &old_particle) const
@@ -165,15 +167,15 @@ double HMCProposalKernel::specific_subsample_evaluate_kernel(const Particle &pro
 }
 
 /*
-double HMCProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                                         Particle &old_particle,
-                                                         const Parameters &conditioned_on_parameters) const
-{
-  // needs changing
-  double output = 0.0;
-  return output;
-}
-*/
+ double HMCProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
+ Particle &old_particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ // needs changing
+ double output = 0.0;
+ return output;
+ }
+ */
 
 Parameters HMCProposalKernel::simulate(RandomNumberGenerator &rng,
                                        const Particle &particle) const
@@ -185,16 +187,16 @@ Parameters HMCProposalKernel::simulate(RandomNumberGenerator &rng,
 }
 
 /*
-Parameters HMCProposalKernel::simulate(RandomNumberGenerator &rng,
-                                       Particle &particle,
-                                       const Parameters &conditioned_on_parameters) const
-{
-  Parameters output;
-  if (this->unused_variables_kept)
-    output = *particle.move_parameters;
-  return output;
-}
-*/
+ Parameters HMCProposalKernel::simulate(RandomNumberGenerator &rng,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ Parameters output;
+ if (this->unused_variables_kept)
+ output = *particle.move_parameters;
+ return output;
+ }
+ */
 
 Parameters HMCProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                  const Particle &particle) const
@@ -207,17 +209,17 @@ Parameters HMCProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
 }
 
 /*
-Parameters HMCProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                 Particle &particle,
-                                                 const Parameters &conditioned_on_parameters) const
-{
-  // needs changing
-  Parameters output;
-  if (this->unused_variables_kept)
-    output = *particle.move_parameters;
-  return output;
-}
-*/
+ Parameters HMCProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ // needs changing
+ Parameters output;
+ if (this->unused_variables_kept)
+ output = *particle.move_parameters;
+ return output;
+ }
+ */
 
 Parameters HMCProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                  const std::string &variable,
@@ -231,18 +233,18 @@ Parameters HMCProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
 }
 
 /*
-Parameters HMCProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                 const std::string &variable,
-                                                 Particle &particle,
-                                                 const Parameters &conditioned_on_parameters) const
-{
-  // needs changing
-  Parameters output;
-  if (this->unused_variables_kept)
-    output = *particle.move_parameters;
-  return output;
-}
-*/
+ Parameters HMCProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
+ const std::string &variable,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ // needs changing
+ Parameters output;
+ if (this->unused_variables_kept)
+ output = *particle.move_parameters;
+ return output;
+ }
+ */
 
 arma::mat HMCProposalKernel::specific_gradient_of_log(const std::string &variable,
                                                       const Particle &proposed_particle,
@@ -252,14 +254,14 @@ arma::mat HMCProposalKernel::specific_gradient_of_log(const std::string &variabl
 }
 
 /*
-arma::mat HMCProposalKernel::specific_gradient_of_log(const std::string &variable,
-                                                           Particle &proposed_particle,
-                                                           Particle &old_particle,
-                                                           const Parameters &conditioned_on_parameters)
-{
-  Rcpp::stop("HMCProposalKernel::specific_gradient_of_log - not written yet.");
-}
-*/
+ arma::mat HMCProposalKernel::specific_gradient_of_log(const std::string &variable,
+ Particle &proposed_particle,
+ Particle &old_particle,
+ const Parameters &conditioned_on_parameters)
+ {
+ Rcpp::stop("HMCProposalKernel::specific_gradient_of_log - not written yet.");
+ }
+ */
 
 arma::mat HMCProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
                                                                 const Particle &proposed_particle,
@@ -269,14 +271,14 @@ arma::mat HMCProposalKernel::specific_subsample_gradient_of_log(const std::strin
 }
 
 /*
-arma::mat HMCProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
-                                                                     Particle &proposed_particle,
-                                                                     Particle &old_particle,
-                                                                     const Parameters &conditioned_on_parameters)
-{
-  Rcpp::stop("HMCProposalKernel::specific_gradient_of_log - not written yet.");
-}
-*/
+ arma::mat HMCProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
+ Particle &proposed_particle,
+ Particle &old_particle,
+ const Parameters &conditioned_on_parameters)
+ {
+ Rcpp::stop("HMCProposalKernel::specific_gradient_of_log - not written yet.");
+ }
+ */
 
 void HMCProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
 {
@@ -314,4 +316,5 @@ bool HMCProposalKernel::can_be_evaluated() const
 void HMCProposalKernel::set_data(Data* data_in)
 {
   
+}
 }

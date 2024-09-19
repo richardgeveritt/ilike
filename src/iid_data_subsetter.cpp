@@ -3,8 +3,10 @@
 #include "parameters.h"
 #include "data_subsampler.h"
 
+namespace ilike
+{
 IIDDataSubsetter::IIDDataSubsetter()
-  :DataSubsetter()
+:DataSubsetter()
 {
 }
 
@@ -15,7 +17,7 @@ IIDDataSubsetter::~IIDDataSubsetter()
 
 //Copy constructor for the IIDDataSubsetter class.
 IIDDataSubsetter::IIDDataSubsetter(const IIDDataSubsetter &another)
-  :DataSubsetter(another)
+:DataSubsetter(another)
 {
   this->make_copy(another);
 }
@@ -64,4 +66,5 @@ void IIDDataSubsetter::subset(size_t num_pieces)
       this->subsampler->ratio = current_ratio;
   }
   // multinomial better in the case where we only store pointers to data
+}
 }

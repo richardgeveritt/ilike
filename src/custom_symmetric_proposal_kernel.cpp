@@ -2,8 +2,10 @@
 #include "likelihood_estimator_output.h"
 #include "likelihood_estimator.h"
 
+namespace ilike
+{
 CustomSymmetricProposalKernel::CustomSymmetricProposalKernel()
-  :SymmetricProposalKernel()
+:SymmetricProposalKernel()
 {
   this->proposal_evaluate = NULL;
 }
@@ -13,14 +15,14 @@ CustomSymmetricProposalKernel::~CustomSymmetricProposalKernel()
 }
 
 CustomSymmetricProposalKernel::CustomSymmetricProposalKernel(SimulateMCMCProposalPtr proposal_simulate_in)
-  :SymmetricProposalKernel()
+:SymmetricProposalKernel()
 {
   this->proposal_evaluate = NULL;
   this->proposal_simulate = proposal_simulate_in;
 }
 
 CustomSymmetricProposalKernel::CustomSymmetricProposalKernel(const CustomSymmetricProposalKernel &another)
-  :SymmetricProposalKernel(another)
+:SymmetricProposalKernel(another)
 {
   this->make_copy(another);
 }
@@ -29,7 +31,7 @@ void CustomSymmetricProposalKernel::operator=(const CustomSymmetricProposalKerne
 {
   if(this == &another)
     return;
-
+  
   SymmetricProposalKernel::operator=(another);
   this->make_copy(another);
 }
@@ -146,4 +148,5 @@ bool CustomSymmetricProposalKernel::can_be_evaluated() const
 void CustomSymmetricProposalKernel::set_data(Data* data_in)
 {
   
+}
 }

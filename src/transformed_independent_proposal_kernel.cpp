@@ -5,8 +5,10 @@
 #include "likelihood_estimator.h"
 #include "mcmc_adaptor.h"
 
+namespace ilike
+{
 TransformedIndependentProposalKernel::TransformedIndependentProposalKernel()
-  :IndependentProposalKernel()
+:IndependentProposalKernel()
 {
   this->proposal = NULL;
   this->distribution_on_transformed_space = true;
@@ -22,7 +24,7 @@ TransformedIndependentProposalKernel::~TransformedIndependentProposalKernel()
 TransformedIndependentProposalKernel::TransformedIndependentProposalKernel(IndependentProposalKernel* proposal_in,
                                                                            std::shared_ptr<Transform> transform_in,
                                                                            bool distribution_on_transformed_space_in)
-  :IndependentProposalKernel(), transform(transform_in), distribution_on_transformed_space(distribution_on_transformed_space_in)
+:IndependentProposalKernel(), transform(transform_in), distribution_on_transformed_space(distribution_on_transformed_space_in)
 {
   this->proposal = proposal_in;
   
@@ -33,7 +35,7 @@ TransformedIndependentProposalKernel::TransformedIndependentProposalKernel(Indep
 }
 
 TransformedIndependentProposalKernel::TransformedIndependentProposalKernel(const TransformedIndependentProposalKernel &another)
-  :IndependentProposalKernel(another)
+:IndependentProposalKernel(another)
 {
   this->make_copy(another);
 }
@@ -45,7 +47,7 @@ void TransformedIndependentProposalKernel::operator=(const TransformedIndependen
   
   if (this->proposal!=NULL)
     delete this->proposal;
-
+  
   IndependentProposalKernel::operator=(another);
   this->make_copy(another);
 }
@@ -89,12 +91,12 @@ double TransformedIndependentProposalKernel::evaluate_independent_kernel(const P
 }
 
 /*
-double TransformedIndependentProposalKernel::evaluate_independent_kernel(Variables* proposed_particle,
-                                                                      const Parameters &conditioned_on_parameters) const
-{
-  return this->evaluate_independent_kernel(proposed_particle);
-}
-*/
+ double TransformedIndependentProposalKernel::evaluate_independent_kernel(Variables* proposed_particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ return this->evaluate_independent_kernel(proposed_particle);
+ }
+ */
 
 double TransformedIndependentProposalKernel::subsample_evaluate_independent_kernel(const Parameters &proposed_particle) const
 {
@@ -183,8 +185,8 @@ Parameters TransformedIndependentProposalKernel::subsample_independent_simulate(
 {
   if (this->distribution_on_transformed_space==true)
     return this->transform->transform(this->proposal->subsample_independent_simulate(rng,
-                                                                                    variable,
-                                                                                    conditioned_on_parameters));
+                                                                                     variable,
+                                                                                     conditioned_on_parameters));
   else
   {
     Parameters output(this->proposal->independent_simulate(rng));
@@ -240,4 +242,5 @@ bool TransformedIndependentProposalKernel::can_be_evaluated() const
 void TransformedIndependentProposalKernel::set_data(Data* data_in)
 {
   this->proposal->set_data(data_in);
+}
 }

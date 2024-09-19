@@ -7,15 +7,17 @@ using namespace Rcpp;
 #include <vector>
 #include "mcmc.h"
 
+namespace ilike
+{
 class EnsembleKalmanOutput;
 class StandardMCMCOutput;
 class ProposalKernel;
 
 class UnadjustedMCMC : public MCMC
 {
-
+  
 public:
-
+  
   UnadjustedMCMC();
   
   // Gaussian random walk.
@@ -28,33 +30,33 @@ public:
   
   UnadjustedMCMC(MCMCTermination* termination_in,
                  ProposalKernel* proposal_in);
-
+  
   virtual ~UnadjustedMCMC();
-
+  
   UnadjustedMCMC(const UnadjustedMCMC &another);
-
+  
   void operator=(const UnadjustedMCMC &another);
   Kernel* duplicate() const;
   MCMC* mcmc_duplicate() const;
   UnadjustedMCMC* unadjusted_mcmc_duplicate() const;
-
+  
   Particle move(RandomNumberGenerator &rng,
                 const Particle &particle) const;
   
   /*
-  Particle move(RandomNumberGenerator &rng,
-                Particle &particle,
-                const Parameters &conditioned_on_parameters) const;
-  */
+   Particle move(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters) const;
+   */
   
   Particle subsample_move(RandomNumberGenerator &rng,
                           const Particle &particle) const;
   
   /*
-  Particle subsample_move(RandomNumberGenerator &rng,
-                          Particle &particle,
-                          const Parameters &conditioned_on_parameters) const;
-  */
+   Particle subsample_move(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters) const;
+   */
   
   void smc_adapt(SMCOutput* current_state);
   void ensemble_adapt(EnsembleKalmanOutput* current_state);
@@ -75,12 +77,13 @@ protected:
   
   // stored here
   ProposalKernel* proposal;
-
+  
   void make_copy(const UnadjustedMCMC &another);
   
   // stored here (change to shared pointer so that memory is not duplicated)
   Index* index;
-
+  
 };
+}
 
 #endif

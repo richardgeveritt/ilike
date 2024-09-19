@@ -12,6 +12,8 @@ using namespace Rcpp;
 #include "distributions.h"
 #include "proposal_store.h"
 
+namespace ilike
+{
 class ModelAndAlgorithm;
 class LikelihoodEstimatorOutput;
 class Transform;
@@ -25,9 +27,9 @@ class EnsembleFactorVariables;
 
 class Particle
 {
-
+  
 public:
-
+  
   Particle();
   //Particle(const Parameters &&parameters_in);
   
@@ -145,13 +147,13 @@ public:
              const Parameters &sequencer_parameters);
   
   Particle copy_without_factor_variables() const;
-
+  
   Particle(const Particle &another);
   Particle& operator=(const Particle &another);
   
   Particle(Particle &&another);
   Particle& operator=(Particle &&another);
-
+  
   friend std::ostream& operator<<(std::ostream& os, const Particle &p);
   
   void simulate_factor_variables();
@@ -160,63 +162,63 @@ public:
                                    const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
   
   /*
-  void evaluate_smcfixed_part_of_likelihoods();
-  void evaluate_smcfixed_part_of_likelihoods(const Parameters &conditioned_on_parameters);
-  double evaluate_smcadaptive_part_given_smcfixed_likelihoods();
-  double evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Parameters &conditioned_on_parameters);
-  double evaluate_likelihoods();
-  double evaluate_likelihoods(const Parameters &conditioned_on_parameters);
-  void subsample_evaluate_smcfixed_part_of_likelihoods(const Parameters &conditioned_on_parameters);
-  double subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Parameters &conditioned_on_parameters);
-  double subsample_evaluate_likelihoods();
-  double subsample_evaluate_likelihoods(const Parameters &conditioned_on_parameters);
-  */
+   void evaluate_smcfixed_part_of_likelihoods();
+   void evaluate_smcfixed_part_of_likelihoods(const Parameters &conditioned_on_parameters);
+   double evaluate_smcadaptive_part_given_smcfixed_likelihoods();
+   double evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Parameters &conditioned_on_parameters);
+   double evaluate_likelihoods();
+   double evaluate_likelihoods(const Parameters &conditioned_on_parameters);
+   void subsample_evaluate_smcfixed_part_of_likelihoods(const Parameters &conditioned_on_parameters);
+   double subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Parameters &conditioned_on_parameters);
+   double subsample_evaluate_likelihoods();
+   double subsample_evaluate_likelihoods(const Parameters &conditioned_on_parameters);
+   */
   
   void evaluate_smcfixed_part_of_likelihoods(const Index* index);
   /*
-  void evaluate_smcfixed_part_of_likelihoods(const Index* index,
-                                             const Parameters &conditioned_on_parameters);
-  */
+   void evaluate_smcfixed_part_of_likelihoods(const Index* index,
+   const Parameters &conditioned_on_parameters);
+   */
   double evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index);
   
   /*
-  double evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index,
-                                                              const Parameters &conditioned_on_parameters);
-  */
+   double evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index,
+   const Parameters &conditioned_on_parameters);
+   */
   
   double evaluate_likelihoods(const Index* index);
   
   /*
-  double evaluate_likelihoods(const Index* index,
-                              const Parameters &conditioned_on_parameters);
-  */
+   double evaluate_likelihoods(const Index* index,
+   const Parameters &conditioned_on_parameters);
+   */
   
   void subsample_evaluate_smcfixed_part_of_likelihoods(const Index* index);
   double subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index);
   
   /*
-  void subsample_evaluate_smcfixed_part_of_likelihoods(const Index* index,
-                                                       const Parameters &conditioned_on_parameters);
-  double subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index,
-                                                                        const Parameters &conditioned_on_parameters);
-  */
+   void subsample_evaluate_smcfixed_part_of_likelihoods(const Index* index,
+   const Parameters &conditioned_on_parameters);
+   double subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index,
+   const Parameters &conditioned_on_parameters);
+   */
   
   double subsample_evaluate_likelihoods(const Index* index);
   
   /*
-  double subsample_evaluate_likelihoods(const Index* index,
-                                        const Parameters &conditioned_on_parameters);
-  */
+   double subsample_evaluate_likelihoods(const Index* index,
+   const Parameters &conditioned_on_parameters);
+   */
   
   double evaluate_ensemble_likelihood_ratios(const Index* index,
                                              double incremental_temperature,
                                              const std::vector<arma::mat> &inv_sigma_precomps,
                                              const std::vector<double> &log_det_precomps) const;
   /*
-  double evaluate_ensemble_likelihood_ratios(const Index* index,
-                                             double incremental_temperature,
-                                             const Parameters &conditioned_on_parameters);
-  */
+   double evaluate_ensemble_likelihood_ratios(const Index* index,
+   double incremental_temperature,
+   const Parameters &conditioned_on_parameters);
+   */
   
   double subsample_evaluate_ensemble_likelihood_ratios(const Index* index,
                                                        double incremental_temperature,
@@ -224,24 +226,24 @@ public:
                                                        const std::vector<double> &log_det_precomps) const;
   
   /*
-  double subsample_evaluate_ensemble_likelihood_ratios(const Index* index,
-                                                       double incremental_temperature,
-                                                       const Parameters &conditioned_on_parameters);
-  */
+   double subsample_evaluate_ensemble_likelihood_ratios(const Index* index,
+   double incremental_temperature,
+   const Parameters &conditioned_on_parameters);
+   */
   
   double evaluate_all_likelihoods(const Index* index);
   
   /*
-  double evaluate_all_likelihoods(const Index* index,
-                                  const Parameters &conditioned_on_parameters);
-  */
+   double evaluate_all_likelihoods(const Index* index,
+   const Parameters &conditioned_on_parameters);
+   */
   
   double subsample_evaluate_all_likelihoods(const Index* index);
   
   /*
-  double subsample_evaluate_all_likelihoods(const Index* index,
-                                            const Parameters &conditioned_on_parameters);
-  */
+   double subsample_evaluate_all_likelihoods(const Index* index,
+   const Parameters &conditioned_on_parameters);
+   */
   
   //arma::colvec get_vector() const;
   
@@ -257,15 +259,15 @@ public:
   
   GradientEstimatorOutput* get_gradient_estimator_output(const ProposalKernel* proposal_in) const;
   /*
-  void set_current_transformed_parameters(const ProposalKernel* proposal_in);
-  void set_previous_transformed_parameters(const ProposalKernel* proposal_in,
-                                                Transform* transform_in);
-  
-  void set_previous(const Particle &previous_particle);
-  
-  Parameters get_previous_transformed_parameters(const ProposalKernel* proposal_in) const;
-  */
+   void set_current_transformed_parameters(const ProposalKernel* proposal_in);
+   void set_previous_transformed_parameters(const ProposalKernel* proposal_in,
+   Transform* transform_in);
    
+   void set_previous(const Particle &previous_particle);
+   
+   Parameters get_previous_transformed_parameters(const ProposalKernel* proposal_in) const;
+   */
+  
   //void set_previous_move_transformed_parameters();
   //void set_previous_move_transformed_parameters(Transform* transform_in);
   
@@ -294,12 +296,12 @@ public:
   // pointer returned will be owned by this class
   // function is member of Variables since we will not always create a new GradientEstimatorOutput if one already exists for this proposal
   /*
-  GradientEstimatorOutput* initialise_gradient_estimator_output(const ProposalKernel* proposal,
-                                                                GradientEstimator* gradient_estimator);
-  
-  GradientEstimatorOutput* initialise_previous_gradient_estimator_output(const ProposalKernel* proposal,
-                                                                         GradientEstimator* gradient_estimator);
-  */
+   GradientEstimatorOutput* initialise_gradient_estimator_output(const ProposalKernel* proposal,
+   GradientEstimator* gradient_estimator);
+   
+   GradientEstimatorOutput* initialise_previous_gradient_estimator_output(const ProposalKernel* proposal,
+   GradientEstimator* gradient_estimator);
+   */
   
   // take the transformed parameters, store them in the ProposalInfo, and also go through the inverse transform to set the parameters
   //void set_parameters(const ProposalKernel* proposal,
@@ -336,55 +338,56 @@ public:
                                        const Index* index) const;
   
   /*
-  arma::mat direct_get_gradient_of_log(const std::string &variable,
-                                       const Index* index,
-                                       const Parameters &conditioned_on_parameters);
-  */
+   arma::mat direct_get_gradient_of_log(const std::string &variable,
+   const Index* index,
+   const Parameters &conditioned_on_parameters);
+   */
   
   arma::mat direct_subsample_get_gradient_of_log(const std::string &variable,
                                                  const Index* index) const;
   
   /*
-  arma::mat direct_subsample_get_gradient_of_log(const std::string &variable,
-                                                 const Index* index,
-                                                 const Parameters &conditioned_on_parameters);
-  */
+   arma::mat direct_subsample_get_gradient_of_log(const std::string &variable,
+   const Index* index,
+   const Parameters &conditioned_on_parameters);
+   */
   
   void simulate_factor_variables(const Factors* factors);
   
   void simulate_ensemble_factor_variables(const EnsembleFactors* ensemble_factors);
   
   /*
-  void simulate_factor_variables(Factors* factors,
-                                 const Parameters &conditioned_on_parameters);
-  
-  void simulate_ensemble_factor_variables(EnsembleFactors* ensemble_factors,
-                                          const Parameters &conditioned_on_parameters);
-  */
+   void simulate_factor_variables(Factors* factors,
+   const Parameters &conditioned_on_parameters);
+   
+   void simulate_ensemble_factor_variables(EnsembleFactors* ensemble_factors,
+   const Parameters &conditioned_on_parameters);
+   */
   
   void subsample_simulate_factor_variables(const Factors* factors);
   
   void subsample_simulate_ensemble_factor_variables(const EnsembleFactors* ensemble_factors);
   
   /*
-  void subsample_simulate_factor_variables(Factors* factors,
-                                           const Parameters &conditioned_on_parameters);
-  
-  void subsample_simulate_ensemble_factor_variables(EnsembleFactors* ensemble_factors,
-                                                    const Parameters &conditioned_on_parameters);
-  */
+   void subsample_simulate_factor_variables(Factors* factors,
+   const Parameters &conditioned_on_parameters);
+   
+   void subsample_simulate_ensemble_factor_variables(EnsembleFactors* ensemble_factors,
+   const Parameters &conditioned_on_parameters);
+   */
   
   // not stored here
   const Particle* previous_self;
   
   void tell_factors_to_forget_they_were_already_written_to_file();
-
+  
 protected:
-
+  
   void make_copy(const Particle &another);
   
   void make_copy(Particle &&another);
-
+  
 };
+}
 
 #endif

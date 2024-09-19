@@ -8,14 +8,16 @@ using namespace Rcpp;
 #include "ilike_header.h"
 #include "gaussian_independent_proposal_kernel.h"
 
+namespace ilike
+{
 class MeasurementCovarianceEstimatorOutput;
 class MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput;
 
 class MixedGenericDirectGaussianMeasurementCovarianceEstimator : public MeasurementCovarianceEstimator
 {
-
+  
 public:
-
+  
   MixedGenericDirectGaussianMeasurementCovarianceEstimator();
   
   MixedGenericDirectGaussianMeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
@@ -30,9 +32,9 @@ public:
                                                            const std::vector<std::string> &data_measurement_variables_in);
   
   virtual ~MixedGenericDirectGaussianMeasurementCovarianceEstimator();
-
+  
   MixedGenericDirectGaussianMeasurementCovarianceEstimator(const MixedGenericDirectGaussianMeasurementCovarianceEstimator &another);
-
+  
   void operator=(const MixedGenericDirectGaussianMeasurementCovarianceEstimator &another);
   MeasurementCovarianceEstimator* duplicate() const;
   
@@ -83,7 +85,7 @@ public:
   void precompute_gaussian_covariance(double inverse_incremental_temperature,
                                       arma::mat &inv_sigma_precomp,
                                       double &log_det_precomp);
-
+  
 protected:
   
   friend MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput;
@@ -93,7 +95,7 @@ protected:
   
   void setup_measurement_variables();
   void setup_measurement_variables(const Parameters &conditioned_on_parameters);
-
+  
   void make_copy(const MixedGenericDirectGaussianMeasurementCovarianceEstimator &another);
   
   // not stored here
@@ -128,5 +130,6 @@ protected:
   Data* prior_data;
   
 };
+}
 
 #endif

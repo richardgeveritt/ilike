@@ -2,8 +2,10 @@
 #include "utils.h"
 #include "kalman_filter_output.h"
 
+namespace ilike
+{
 ExactKalmanPredictor::ExactKalmanPredictor()
-  :KalmanPredictor()
+:KalmanPredictor()
 {
 }
 
@@ -26,26 +28,26 @@ ExactKalmanPredictor::ExactKalmanPredictor(GetMatrixPtr transition_matrix_functi
 }
 
 /*
-ExactKalmanPredictor::ExactKalmanPredictor(GetProcessMatrixFromParametersPtr transition_matrix_parameters_function_in,
-                     GetProcessMatrixFromParametersPtr process_noise_parameters_function_in)
-{
-  this->transition_matrix_parameters_function = transition_matrix_parameters_function;
-  this->process_noise_parameters_function = process_noise_parameters_function;
-  this->set_using_time = false;
-  this->set_using_parameters = true;
-}
+ ExactKalmanPredictor::ExactKalmanPredictor(GetProcessMatrixFromParametersPtr transition_matrix_parameters_function_in,
+ GetProcessMatrixFromParametersPtr process_noise_parameters_function_in)
+ {
+ this->transition_matrix_parameters_function = transition_matrix_parameters_function;
+ this->process_noise_parameters_function = process_noise_parameters_function;
+ this->set_using_time = false;
+ this->set_using_parameters = true;
+ }
  */
 
 /*
-ExactKalmanPredictor::ExactKalmanPredictor(GetProcessMatrixFromTimeParametersPtr transition_matrix_time_parameters_function_in,
-                     GetProcessMatrixFromTimeParametersPtr process_noise_time_parameters_function_in)
-{
-  this->transition_matrix_time_parameters_function = transition_matrix_time_parameters_function_in;
-  this->process_noise_time_parameters_function = process_noise_time_parameters_function_in;
-  this->set_using_time = true;
-  this->set_using_parameters = true;
-}
-*/
+ ExactKalmanPredictor::ExactKalmanPredictor(GetProcessMatrixFromTimeParametersPtr transition_matrix_time_parameters_function_in,
+ GetProcessMatrixFromTimeParametersPtr process_noise_time_parameters_function_in)
+ {
+ this->transition_matrix_time_parameters_function = transition_matrix_time_parameters_function_in;
+ this->process_noise_time_parameters_function = process_noise_time_parameters_function_in;
+ this->set_using_time = true;
+ this->set_using_parameters = true;
+ }
+ */
 
 ExactKalmanPredictor::~ExactKalmanPredictor()
 {
@@ -53,7 +55,7 @@ ExactKalmanPredictor::~ExactKalmanPredictor()
 }
 
 ExactKalmanPredictor::ExactKalmanPredictor(const ExactKalmanPredictor &another)
-  :KalmanPredictor(another)
+:KalmanPredictor(another)
 {
   this->make_copy(another);
 }
@@ -109,19 +111,20 @@ void ExactKalmanPredictor::predict(KalmanFilterOutput* current_state)
 void ExactKalmanPredictor::set_parameters(const Parameters &conditioned_on_parameters_in)
 {
   /*
-  if (this->set_using_parameters && !this->set_using_time)
-  {
-    this->transition_matrix = this->transition_matrix_parameters_function(conditioned_on_parameters_in);
-    this->process_noise = this->process_noise_parameters_function(conditioned_on_parameters_in);
-  }
-  else if (this->set_using_parameters && this->set_using_time)
-  {
-    this->conditioned_on_parameters = conditioned_on_parameters_in;
-  }
-  */
+   if (this->set_using_parameters && !this->set_using_time)
+   {
+   this->transition_matrix = this->transition_matrix_parameters_function(conditioned_on_parameters_in);
+   this->process_noise = this->process_noise_parameters_function(conditioned_on_parameters_in);
+   }
+   else if (this->set_using_parameters && this->set_using_time)
+   {
+   this->conditioned_on_parameters = conditioned_on_parameters_in;
+   }
+   */
   
   if (this->set_using_parameters)
   {
     this->conditioned_on_parameters = conditioned_on_parameters_in;
   }
+}
 }

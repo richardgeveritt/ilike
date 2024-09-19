@@ -4,8 +4,10 @@
 
 #include <math.h>
 
+namespace ilike
+{
 UnscentedKalmanUpdater::UnscentedKalmanUpdater()
-  :KalmanUpdater()
+:KalmanUpdater()
 {
   this->w0 = 1.0/3.0;
 }
@@ -40,7 +42,7 @@ UnscentedKalmanUpdater::~UnscentedKalmanUpdater()
 }
 
 UnscentedKalmanUpdater::UnscentedKalmanUpdater(const UnscentedKalmanUpdater &another)
-  :KalmanUpdater(another)
+:KalmanUpdater(another)
 {
   this->make_copy(another);
 }
@@ -133,4 +135,5 @@ void UnscentedKalmanUpdater::set_parameters(const Parameters &conditioned_on_par
     this->conditioned_on_parameters = conditioned_on_parameters_in;
     this->measurement_noise = this->measurement_noise_function(conditioned_on_parameters_in);
   }
+}
 }

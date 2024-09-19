@@ -1,7 +1,9 @@
 #include "positive_smc_criterion.h"
 
+namespace ilike
+{
 PositiveSMCCriterion::PositiveSMCCriterion()
-  :SMCCriterion()
+:SMCCriterion()
 {
 }
 
@@ -12,7 +14,7 @@ PositiveSMCCriterion::~PositiveSMCCriterion()
 
 // Copy constructor for the PositiveSMCCriterion class.
 PositiveSMCCriterion::PositiveSMCCriterion(const PositiveSMCCriterion &another)
-  :SMCCriterion(another)
+:SMCCriterion(another)
 {
   this->make_copy(another);
 }
@@ -46,11 +48,11 @@ void PositiveSMCCriterion::find_desired_criterion(SMCOutput* current_state)
 }
 
 /*
-void PositiveSMCCriterion::find_desired_criterion(SMCOutput* current_state,
-                                                  const Parameters &conditioned_on_parameters)
-{
-}
-*/
+ void PositiveSMCCriterion::find_desired_criterion(SMCOutput* current_state,
+ const Parameters &conditioned_on_parameters)
+ {
+ }
+ */
 
 void PositiveSMCCriterion::subsample_find_desired_criterion(SMCOutput* current_state)
 {
@@ -67,14 +69,15 @@ void PositiveSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_
 }
 
 /*
-void PositiveSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_state,
-                                                  const Parameters &conditioned_on_parameters)
-{
-  
-}
-*/
+ void PositiveSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_state,
+ const Parameters &conditioned_on_parameters)
+ {
+ 
+ }
+ */
 
 bool PositiveSMCCriterion::always_positive() const
 {
   return true;
+}
 }

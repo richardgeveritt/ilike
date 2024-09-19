@@ -10,6 +10,8 @@ using namespace Rcpp;
 #include "ilike_header.h"
 #include "parameters.h"
 
+namespace ilike
+{
 class ExactLikelihoodEstimatorOutput;
 class IndependentProposalKernel;
 class DistributionFactor;
@@ -94,12 +96,12 @@ public:
                            bool smcfixed_flag_in);
   
   /*
-  ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
-                           size_t* seed_in,
-                           Data* data_in,
-                           std::vector<DistributionFactor*> numerator_distribution_factors,
-                           bool smcfixed_flag_in);
-  */
+   ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
+   size_t* seed_in,
+   Data* data_in,
+   std::vector<DistributionFactor*> numerator_distribution_factors,
+   bool smcfixed_flag_in);
+   */
   
   /*
    ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
@@ -145,16 +147,16 @@ protected:
   //double evaluate(const Parameters &parameters);
   
   /*
-  std::vector<EvaluateLogLikelihoodPtr> numerator_llhds;
-  std::vector<EvaluateLogDistributionPtr> numerator_distributions;
-  std::vector<EvaluateLogLikelihoodPtr> denominator_llhds;
-  std::vector<EvaluateLogDistributionPtr> denominator_distributions;
-  
-  std::vector<EvaluateGradientLogLikelihoodPtr> gradient_numerator_llhds;
-  std::vector<EvaluateGradientLogDistributionPtr> gradient_numerator_distributions;
-  std::vector<EvaluateGradientLogLikelihoodPtr> gradient_denominator_llhds;
-  std::vector<EvaluateGradientLogDistributionPtr> gradient_denominator_distributions;
-  */
+   std::vector<EvaluateLogLikelihoodPtr> numerator_llhds;
+   std::vector<EvaluateLogDistributionPtr> numerator_distributions;
+   std::vector<EvaluateLogLikelihoodPtr> denominator_llhds;
+   std::vector<EvaluateLogDistributionPtr> denominator_distributions;
+   
+   std::vector<EvaluateGradientLogLikelihoodPtr> gradient_numerator_llhds;
+   std::vector<EvaluateGradientLogDistributionPtr> gradient_numerator_distributions;
+   std::vector<EvaluateGradientLogLikelihoodPtr> gradient_denominator_llhds;
+   std::vector<EvaluateGradientLogDistributionPtr> gradient_denominator_distributions;
+   */
   
   // stored here
   std::vector<DistributionFactor*> numerator_distribution_factors;
@@ -176,5 +178,6 @@ protected:
   void make_copy(const ExactLikelihoodEstimator &another);
   
 };
+}
 
 #endif

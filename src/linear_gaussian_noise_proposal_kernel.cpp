@@ -4,6 +4,8 @@
 #include "likelihood_estimator.h"
 #include "distributions.h"
 
+namespace ilike
+{
 LinearGaussianNoiseProposalKernel::LinearGaussianNoiseProposalKernel()
 :GaussianNoiseProposalKernel()
 {
@@ -122,7 +124,7 @@ double LinearGaussianNoiseProposalKernel::specific_evaluate_kernel(const Particl
                                                                    const Particle &old_particle) const
 {
   double output = 0.0;
-
+  
   for (auto i=this->proposal_info.begin();
        i!=this->proposal_info.end();
        ++i)
@@ -210,7 +212,7 @@ Parameters LinearGaussianNoiseProposalKernel::simulate(RandomNumberGenerator &rn
  */
 
 Parameters LinearGaussianNoiseProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                                const Particle &particle) const
+                                                                 const Particle &particle) const
 {
   // no difference since size of data set does not impact on proposal
   return this->simulate(rng, particle);
@@ -227,8 +229,8 @@ Parameters LinearGaussianNoiseProposalKernel::subsample_simulate(RandomNumberGen
  */
 
 Parameters LinearGaussianNoiseProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                                const std::string &variable,
-                                                                const Particle &particle) const
+                                                                 const std::string &variable,
+                                                                 const Particle &particle) const
 {
   // no difference since size of data set does not impact on proposal
   auto found = this->proposal_info.find(variable);
@@ -254,8 +256,8 @@ Parameters LinearGaussianNoiseProposalKernel::subsample_simulate(RandomNumberGen
  */
 
 arma::mat LinearGaussianNoiseProposalKernel::specific_gradient_of_log(const std::string &variable,
-                                                                     const Particle &proposed_particle,
-                                                                     const Particle &old_particle)
+                                                                      const Particle &proposed_particle,
+                                                                      const Particle &old_particle)
 {
   Rcpp::stop("LinearGaussianNoiseProposalKernel::specific_gradient_of_log - not written yet.");
 }
@@ -271,8 +273,8 @@ arma::mat LinearGaussianNoiseProposalKernel::specific_gradient_of_log(const std:
  */
 
 arma::mat LinearGaussianNoiseProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
-                                                                               const Particle &proposed_particle,
-                                                                               const Particle &old_particle)
+                                                                                const Particle &proposed_particle,
+                                                                                const Particle &old_particle)
 {
   Rcpp::stop("LinearGaussianNoiseProposalKernel::specific_gradient_of_log - not written yet.");
 }
@@ -323,4 +325,5 @@ void LinearGaussianNoiseProposalKernel::set_index(Index* index_in)
 
 void LinearGaussianNoiseProposalKernel::set_index_if_null(Index* index_in)
 {
+}
 }

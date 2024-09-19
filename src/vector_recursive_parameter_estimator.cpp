@@ -1,7 +1,9 @@
 #include "vector_recursive_parameter_estimator.h"
 
+namespace ilike
+{
 VectorRecursiveParameterEstimator::VectorRecursiveParameterEstimator()
-  :RecursiveParameterEstimator()
+:RecursiveParameterEstimator()
 {
 }
 
@@ -12,7 +14,7 @@ VectorRecursiveParameterEstimator::~VectorRecursiveParameterEstimator()
 
 //Copy constructor for the VectorRecursiveParameterEstimator class.
 VectorRecursiveParameterEstimator::VectorRecursiveParameterEstimator(const VectorRecursiveParameterEstimator &another)
-  :RecursiveParameterEstimator(another)
+:RecursiveParameterEstimator(another)
 {
   this->make_copy(another);
 }
@@ -30,4 +32,5 @@ void VectorRecursiveParameterEstimator::operator=(const VectorRecursiveParameter
 void VectorRecursiveParameterEstimator::make_copy(const VectorRecursiveParameterEstimator &another)
 {
   this->estimated = another.estimated;
+}
 }

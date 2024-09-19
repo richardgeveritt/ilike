@@ -9,6 +9,8 @@ using namespace Rcpp;
 //#include "ensemble_member.h"
 #include "distributions.h"
 
+namespace ilike
+{
 class SMCOutput;
 class MCMCTermination;
 class MoveOutput;
@@ -20,16 +22,16 @@ class StandardMCMCOutput;
 
 class MCMC : public Kernel
 {
-
+  
 public:
-
+  
   MCMC();
   MCMC(size_t number_of_iterations_in);
   MCMC(MCMCTermination* termination_in);
   virtual ~MCMC();
-
+  
   MCMC(const MCMC &another);
-
+  
   void operator=(const MCMC &another);
   virtual MCMC* mcmc_duplicate() const=0;
   
@@ -37,35 +39,35 @@ public:
                   const Particle &particle) const;
   
   /*
-  MoveOutput* run(RandomNumberGenerator &rng,
-                  Particle &particle,
-                  const Parameters &conditioned_on_parameters);
-  */
+   MoveOutput* run(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters);
+   */
   
   MoveOutput* subsample_run(RandomNumberGenerator &rng,
                             const Particle &particle) const;
   
   /*
-  MoveOutput* subsample_run(RandomNumberGenerator &rng,
-                            Particle &particle,
-                            const Parameters &conditioned_on_parameters);
-  */
+   MoveOutput* subsample_run(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters);
+   */
   
   // could change to also have MoveOutput*
   // change when needed
   // EnsembleMember and particle should merge
   /*
-  EnsembleMember run(RandomNumberGenerator &rng,
-                     EnsembleMember &particle);
-  
-  EnsembleMember run(RandomNumberGenerator &rng,
-                     EnsembleMember &particle,
-                     const Parameters &conditioned_on_parameters);
-  
-  EnsembleMember subsample_run(RandomNumberGenerator &rng,
-                               EnsembleMember &particle,
-                               const Parameters &conditioned_on_parameters);
-  */
+   EnsembleMember run(RandomNumberGenerator &rng,
+   EnsembleMember &particle);
+   
+   EnsembleMember run(RandomNumberGenerator &rng,
+   EnsembleMember &particle,
+   const Parameters &conditioned_on_parameters);
+   
+   EnsembleMember subsample_run(RandomNumberGenerator &rng,
+   EnsembleMember &particle,
+   const Parameters &conditioned_on_parameters);
+   */
   
   // Mh has its own parameters.
   // Stochastic has some weights.
@@ -85,7 +87,7 @@ public:
   MCMCTermination* get_duplicated_termination() const;
   
   //virtual void set_termination_parameters(h)=0;
-
+  
 protected:
   
   friend StochasticScanMCMC;
@@ -101,9 +103,10 @@ protected:
   
   // stored here
   //Index* index;
-
+  
   void make_copy(const MCMC &another);
-
+  
 };
+}
 
 #endif

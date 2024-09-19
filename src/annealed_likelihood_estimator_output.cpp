@@ -3,14 +3,16 @@
 #include "utils.h"
 #include "filesystem.h"
 
+namespace ilike
+{
 AnnealedLikelihoodEstimatorOutput::AnnealedLikelihoodEstimatorOutput()
-  :LikelihoodEstimatorOutput()
+:LikelihoodEstimatorOutput()
 {
 }
 
 AnnealedLikelihoodEstimatorOutput::AnnealedLikelihoodEstimatorOutput(AnnealedLikelihoodEstimator* estimator_in,
-     LikelihoodEstimatorOutput* estimator_output_in)
-  :LikelihoodEstimatorOutput()
+                                                                     LikelihoodEstimatorOutput* estimator_output_in)
+:LikelihoodEstimatorOutput()
 {
   this->estimator = estimator_in;
   this->estimator_output = estimator_output_in;
@@ -24,7 +26,7 @@ AnnealedLikelihoodEstimatorOutput::~AnnealedLikelihoodEstimatorOutput()
 
 //Copy constructor for the AnnealedLikelihoodEstimatorOutput class.
 AnnealedLikelihoodEstimatorOutput::AnnealedLikelihoodEstimatorOutput(const AnnealedLikelihoodEstimatorOutput &another)
-  :LikelihoodEstimatorOutput(another)
+:LikelihoodEstimatorOutput(another)
 {
   this->make_copy(another);
 }
@@ -37,7 +39,7 @@ void AnnealedLikelihoodEstimatorOutput::operator=(const AnnealedLikelihoodEstima
   
   if (this->estimator_output!=NULL)
     delete this->estimator_output;
-
+  
   LikelihoodEstimatorOutput::operator=(another);
   this->make_copy(another);
 }
@@ -235,7 +237,7 @@ arma::mat AnnealedLikelihoodEstimatorOutput::subsample_get_gradient_of_log(const
 
 void AnnealedLikelihoodEstimatorOutput::print(std::ostream &os) const
 {
-
+  
 }
 
 void AnnealedLikelihoodEstimatorOutput::write_to_file(const std::string &dir_name,
@@ -277,4 +279,5 @@ void AnnealedLikelihoodEstimatorOutput::close_ofstreams()
 {
   this->estimator->log_likelihood_file_stream.close();
   this->estimator_output->close_ofstreams();
+}
 }

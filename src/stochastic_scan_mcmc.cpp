@@ -2,8 +2,10 @@
 #include "distributions.h"
 #include "stochastic_scan_standard_mcmc_output.h"
 
+namespace ilike
+{
 StochasticScanMCMC::StochasticScanMCMC()
-  :MCMC()
+:MCMC()
 {
 }
 
@@ -37,7 +39,7 @@ StochasticScanMCMC::~StochasticScanMCMC()
 
 //Copy constructor for the StochasticScanMCMC class.
 StochasticScanMCMC::StochasticScanMCMC(const StochasticScanMCMC &another)
-  :MCMC(another)
+:MCMC(another)
 {
   this->make_copy(another);
 }
@@ -101,15 +103,15 @@ Particle StochasticScanMCMC::move(RandomNumberGenerator &rng,
 }
 
 /*
-Particle StochasticScanMCMC::move(RandomNumberGenerator &rng,
-                                  Particle &particle,
-                                  const Parameters &conditioned_on_parameters) const
-{
-  return this->moves[rdis(rng, this->probabilities)]->move(rng,
-                                                           particle,
-                                                           conditioned_on_parameters);
-}
-*/
+ Particle StochasticScanMCMC::move(RandomNumberGenerator &rng,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ return this->moves[rdis(rng, this->probabilities)]->move(rng,
+ particle,
+ conditioned_on_parameters);
+ }
+ */
 
 Particle StochasticScanMCMC::subsample_move(RandomNumberGenerator &rng,
                                             const Particle &particle) const
@@ -119,15 +121,15 @@ Particle StochasticScanMCMC::subsample_move(RandomNumberGenerator &rng,
 }
 
 /*
-Particle StochasticScanMCMC::subsample_move(RandomNumberGenerator &rng,
-                                            Particle &particle,
-                                            const Parameters &conditioned_on_parameters) const
-{
-  return this->moves[rdis(rng, this->probabilities)]->subsample_move(rng,
-                                                                     particle,
-                                                                     conditioned_on_parameters);
-}
-*/
+ Particle StochasticScanMCMC::subsample_move(RandomNumberGenerator &rng,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ return this->moves[rdis(rng, this->probabilities)]->subsample_move(rng,
+ particle,
+ conditioned_on_parameters);
+ }
+ */
 
 void StochasticScanMCMC::smc_adapt(SMCOutput* current_state)
 {
@@ -142,38 +144,38 @@ void StochasticScanMCMC::smc_adapt(SMCOutput* current_state)
 }
 
 /*
-EnsembleMember StochasticScanMCMC::move(RandomNumberGenerator &rng,
-                                        const Index* index,
-                                        EnsembleMember &particle) const
-{
-  return this->moves[rdis(rng, this->probabilities)]->move(rng,
-                                                           index,
-                                                           particle);
-}
-
-EnsembleMember StochasticScanMCMC::move(RandomNumberGenerator &rng,
-                                        const Index* index,
-                                        EnsembleMember &particle,
-                                        const Parameters &conditioned_on_parameters) const
-{
-  return this->moves[rdis(rng, this->probabilities)]->move(rng,
-                                                           index,
-                                                           particle,
-                                                           conditioned_on_parameters);
-}
-
-EnsembleMember StochasticScanMCMC::subsample_move(RandomNumberGenerator &rng,
-                                                  const Index* index,
-                                                  EnsembleMember &particle,
-                                                  const Parameters &conditioned_on_parameters) const
-{
-  return this->moves[rdis(rng, this->probabilities)]->subsample_move(rng,
-                                                                     index,
-                                                                     particle,
-                                                                     conditioned_on_parameters);
-}
-*/
+ EnsembleMember StochasticScanMCMC::move(RandomNumberGenerator &rng,
+ const Index* index,
+ EnsembleMember &particle) const
+ {
+ return this->moves[rdis(rng, this->probabilities)]->move(rng,
+ index,
+ particle);
+ }
  
+ EnsembleMember StochasticScanMCMC::move(RandomNumberGenerator &rng,
+ const Index* index,
+ EnsembleMember &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ return this->moves[rdis(rng, this->probabilities)]->move(rng,
+ index,
+ particle,
+ conditioned_on_parameters);
+ }
+ 
+ EnsembleMember StochasticScanMCMC::subsample_move(RandomNumberGenerator &rng,
+ const Index* index,
+ EnsembleMember &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ return this->moves[rdis(rng, this->probabilities)]->subsample_move(rng,
+ index,
+ particle,
+ conditioned_on_parameters);
+ }
+ */
+
 void StochasticScanMCMC::ensemble_adapt(EnsembleKalmanOutput* current_state)
 {
   // Adapt probabilities?
@@ -263,4 +265,5 @@ std::vector<MCMC*> StochasticScanMCMC::get_duplicate_moves() const
 StandardMCMCOutput* StochasticScanMCMC::initialise_mcmc_output() const
 {
   return new StochasticScanStandardMCMCOutput(this->stochastic_scan_mcmc_duplicate());
+}
 }

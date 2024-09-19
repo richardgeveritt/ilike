@@ -3,8 +3,6 @@
 
 namespace ilike
 {
-namespace exact_factor
-{
 
 LpUniformABCKernelFactor::LpUniformABCKernelFactor()
 :ABCKernelFactor()
@@ -155,5 +153,4 @@ arma::mat LpUniformABCKernelFactor::likelihood_evaluate_gradient(const std::stri
   return arma::mat(input[variable].n_elem,1);
 }
 
-}
 }

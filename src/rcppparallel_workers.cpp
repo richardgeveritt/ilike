@@ -6,6 +6,9 @@
 #include "vector_index.h"
 #include "utils.h"
 
+namespace ilike
+{
+
 SimulateWorker::SimulateWorker()
 {
 }
@@ -18,7 +21,7 @@ SimulateWorker::SimulateWorker(RcppParallelSMCWorker* smc_worker_in)
 
 SimulateWorker::~SimulateWorker()
 {
-
+  
 }
 
 SimulateWorker::SimulateWorker(const SimulateWorker &another)
@@ -31,7 +34,7 @@ void SimulateWorker::operator=(const SimulateWorker &another)
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
@@ -42,11 +45,11 @@ void SimulateWorker::operator()(std::size_t begin, std::size_t end)
   for (std::size_t i = begin; i < end; ++i)
   {
     (*this->particles_pointer)[i] = new SinglePointMoveOutput(this->smc_worker->the_smc->particle_simulator->simulate(local_rng,
-                                                                              this->smc_worker->the_smc->factors,
-                                                                              &this->smc_worker->the_smc->proposals_to_transform_for,
-                                                                              &this->smc_worker->the_smc->proposals_to_find_gradient_for,
-                                                                              this->smc_worker->the_smc->sequencer.schedule_parameters));
-
+                                                                                                                      this->smc_worker->the_smc->factors,
+                                                                                                                      &this->smc_worker->the_smc->proposals_to_transform_for,
+                                                                                                                      &this->smc_worker->the_smc->proposals_to_find_gradient_for,
+                                                                                                                      this->smc_worker->the_smc->sequencer.schedule_parameters));
+    
     if (this->smc_worker->the_smc->proposal_is_evaluated==true)
     {
       (*this->particles_pointer)[i]->back().previous_target_evaluated = this->smc_worker->the_smc->particle_simulator->evaluate((*this->particles_pointer)[i]->back());
@@ -74,7 +77,7 @@ ConditionalSimulateWorker::ConditionalSimulateWorker(RcppParallelSMCWorker* smc_
 
 ConditionalSimulateWorker::~ConditionalSimulateWorker()
 {
-
+  
 }
 
 ConditionalSimulateWorker::ConditionalSimulateWorker(const ConditionalSimulateWorker &another)
@@ -87,7 +90,7 @@ void ConditionalSimulateWorker::operator=(const ConditionalSimulateWorker &anoth
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
@@ -103,7 +106,7 @@ void ConditionalSimulateWorker::operator()(std::size_t begin, std::size_t end)
                                                                                                                       &this->smc_worker->the_smc->proposals_to_find_gradient_for,
                                                                                                                       *this->conditioned_on_parameters_pointer,
                                                                                                                       this->smc_worker->the_smc->sequencer.schedule_parameters));
-
+    
     if (this->smc_worker->the_smc->proposal_is_evaluated==true)
     {
       (*this->particles_pointer)[i]->back().previous_target_evaluated = this->smc_worker->the_smc->particle_simulator->evaluate((*this->particles_pointer)[i]->back());
@@ -131,7 +134,7 @@ SubsampleSimulateWorker::SubsampleSimulateWorker(RcppParallelSMCWorker* smc_work
 
 SubsampleSimulateWorker::~SubsampleSimulateWorker()
 {
-
+  
 }
 
 SubsampleSimulateWorker::SubsampleSimulateWorker(const SubsampleSimulateWorker &another)
@@ -144,7 +147,7 @@ void SubsampleSimulateWorker::operator=(const SubsampleSimulateWorker &another)
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
@@ -155,11 +158,11 @@ void SubsampleSimulateWorker::operator()(std::size_t begin, std::size_t end)
   for (std::size_t i = begin; i < end; ++i)
   {
     (*this->particles_pointer)[i] = new SinglePointMoveOutput(this->smc_worker->the_smc->particle_simulator->subsample_simulate(local_rng,
-                                                                                                                      this->smc_worker->the_smc->factors,
-                                                                                                                      &this->smc_worker->the_smc->proposals_to_transform_for,
-                                                                                                                      &this->smc_worker->the_smc->proposals_to_find_gradient_for,
-                                                                                                                      this->smc_worker->the_smc->sequencer.schedule_parameters));
-
+                                                                                                                                this->smc_worker->the_smc->factors,
+                                                                                                                                &this->smc_worker->the_smc->proposals_to_transform_for,
+                                                                                                                                &this->smc_worker->the_smc->proposals_to_find_gradient_for,
+                                                                                                                                this->smc_worker->the_smc->sequencer.schedule_parameters));
+    
     if (this->smc_worker->the_smc->proposal_is_evaluated==true)
     {
       (*this->particles_pointer)[i]->back().previous_target_evaluated = this->smc_worker->the_smc->particle_simulator->subsample_evaluate((*this->particles_pointer)[i]->back());
@@ -187,7 +190,7 @@ SubsampleConditionalSimulateWorker::SubsampleConditionalSimulateWorker(RcppParal
 
 SubsampleConditionalSimulateWorker::~SubsampleConditionalSimulateWorker()
 {
-
+  
 }
 
 SubsampleConditionalSimulateWorker::SubsampleConditionalSimulateWorker(const SubsampleConditionalSimulateWorker &another)
@@ -200,7 +203,7 @@ void SubsampleConditionalSimulateWorker::operator=(const SubsampleConditionalSim
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
@@ -211,12 +214,12 @@ void SubsampleConditionalSimulateWorker::operator()(std::size_t begin, std::size
   for (std::size_t i = begin; i < end; ++i)
   {
     (*this->particles_pointer)[i] = new SinglePointMoveOutput(this->smc_worker->the_smc->particle_simulator->subsample_simulate(local_rng,
-                                                                                                                      this->smc_worker->the_smc->factors,
-                                                                                                                      &this->smc_worker->the_smc->proposals_to_transform_for,
-                                                                                                                      &this->smc_worker->the_smc->proposals_to_find_gradient_for,
-                                                                                                                      *this->conditioned_on_parameters_pointer,
-                                                                                                                      this->smc_worker->the_smc->sequencer.schedule_parameters));
-
+                                                                                                                                this->smc_worker->the_smc->factors,
+                                                                                                                                &this->smc_worker->the_smc->proposals_to_transform_for,
+                                                                                                                                &this->smc_worker->the_smc->proposals_to_find_gradient_for,
+                                                                                                                                *this->conditioned_on_parameters_pointer,
+                                                                                                                                this->smc_worker->the_smc->sequencer.schedule_parameters));
+    
     if (this->smc_worker->the_smc->proposal_is_evaluated==true)
     {
       (*this->particles_pointer)[i]->back().previous_target_evaluated = this->smc_worker->the_smc->particle_simulator->subsample_evaluate((*this->particles_pointer)[i]->back());
@@ -245,7 +248,7 @@ MoveWorker::MoveWorker(RcppParallelSMCWorker* smc_worker_in)
 
 MoveWorker::~MoveWorker()
 {
-
+  
 }
 
 MoveWorker::MoveWorker(const MoveWorker &another)
@@ -258,7 +261,7 @@ void MoveWorker::operator=(const MoveWorker &another)
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
@@ -266,7 +269,7 @@ void MoveWorker::operator()(std::size_t begin, std::size_t end)
 {
   RandomNumberGenerator local_rng(*this->smc_worker->get_rng());
   local_rng.seed(this->smc_worker->get_seed(),end);
-
+  
   for (std::size_t i = begin; i < end; ++i)
   {
     (*this->particles_pointer)[i] = this->smc_worker->the_smc->move(local_rng,
@@ -295,7 +298,7 @@ SubsampleMoveWorker::SubsampleMoveWorker(RcppParallelSMCWorker* smc_worker_in)
 
 SubsampleMoveWorker::~SubsampleMoveWorker()
 {
-
+  
 }
 
 SubsampleMoveWorker::SubsampleMoveWorker(const SubsampleMoveWorker &another)
@@ -308,7 +311,7 @@ void SubsampleMoveWorker::operator=(const SubsampleMoveWorker &another)
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
@@ -344,7 +347,7 @@ WeightWorker::WeightWorker(RcppParallelSMCWorker* smc_worker_in)
 
 WeightWorker::~WeightWorker()
 {
-
+  
 }
 
 WeightWorker::WeightWorker(const WeightWorker &another)
@@ -357,7 +360,7 @@ void WeightWorker::operator=(const WeightWorker &another)
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
@@ -390,7 +393,7 @@ PFInitialWeightWorker::PFInitialWeightWorker(RcppParallelSMCWorker* smc_worker_i
 
 PFInitialWeightWorker::~PFInitialWeightWorker()
 {
-
+  
 }
 
 PFInitialWeightWorker::PFInitialWeightWorker(const PFInitialWeightWorker &another)
@@ -403,14 +406,14 @@ void PFInitialWeightWorker::operator=(const PFInitialWeightWorker &another)
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
 void PFInitialWeightWorker::operator()(std::size_t begin, std::size_t end)
 {
   VectorIndex index(0);
-
+  
   for (std::size_t i = begin; i < end; ++i)
   {
     this->my_log_unnormalised_incremental_weights[i] = (*this->current_particles_pointer)[i]->back().evaluate_likelihoods(&index) - (*this->current_particles_pointer)[i]->back().previous_target_evaluated;
@@ -438,7 +441,7 @@ SMCFixedWeightWorker::SMCFixedWeightWorker(RcppParallelSMCWorker* smc_worker_in)
 
 SMCFixedWeightWorker::~SMCFixedWeightWorker()
 {
-
+  
 }
 
 SMCFixedWeightWorker::SMCFixedWeightWorker(const SMCFixedWeightWorker &another)
@@ -451,7 +454,7 @@ void SMCFixedWeightWorker::operator=(const SMCFixedWeightWorker &another)
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
@@ -485,7 +488,7 @@ SMCAdaptiveGivenSMCFixedWeightWorker::SMCAdaptiveGivenSMCFixedWeightWorker(RcppP
 
 SMCAdaptiveGivenSMCFixedWeightWorker::~SMCAdaptiveGivenSMCFixedWeightWorker()
 {
-
+  
 }
 
 SMCAdaptiveGivenSMCFixedWeightWorker::SMCAdaptiveGivenSMCFixedWeightWorker(const SMCAdaptiveGivenSMCFixedWeightWorker &another)
@@ -498,7 +501,7 @@ void SMCAdaptiveGivenSMCFixedWeightWorker::operator=(const SMCAdaptiveGivenSMCFi
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
@@ -544,7 +547,7 @@ SMCAdaptiveGivenSMCFixedEvaluateTargetWorker::SMCAdaptiveGivenSMCFixedEvaluateTa
 
 SMCAdaptiveGivenSMCFixedEvaluateTargetWorker::~SMCAdaptiveGivenSMCFixedEvaluateTargetWorker()
 {
-
+  
 }
 
 SMCAdaptiveGivenSMCFixedEvaluateTargetWorker::SMCAdaptiveGivenSMCFixedEvaluateTargetWorker(const SMCAdaptiveGivenSMCFixedEvaluateTargetWorker &another)
@@ -557,7 +560,7 @@ void SMCAdaptiveGivenSMCFixedEvaluateTargetWorker::operator=(const SMCAdaptiveGi
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
@@ -593,7 +596,7 @@ MarginalWeightWorker::MarginalWeightWorker(RcppParallelSMCWorker* smc_worker_in)
 
 MarginalWeightWorker::~MarginalWeightWorker()
 {
-
+  
 }
 
 MarginalWeightWorker::MarginalWeightWorker(const MarginalWeightWorker &another)
@@ -606,24 +609,24 @@ void MarginalWeightWorker::operator=(const MarginalWeightWorker &another)
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
 void MarginalWeightWorker::operator()(std::size_t begin, std::size_t end)
 {
-
+  
   for (std::size_t i = begin; i < end; ++i)
   {
     arma::colvec terms(this->smc_worker->get_number_of_particles());
-
+    
     // If proposal is Gaussian, might be able to use the fast Gauss transform in low-dim
     for (size_t j = 0; j < this->smc_worker->get_number_of_particles(); ++j)
     {
       terms[j] = this->current_particles_pointer->previous_normalised_log_weights[j] + this->proposal_kernel_pointer->evaluate_kernel((*this->current_particles_pointer)[i]->back(),
-                                                                                                         (*this->previous_particles_pointer)[this->previous_particles_pointer->ancestor_variables[j]]->back());
+                                                                                                                                      (*this->previous_particles_pointer)[this->previous_particles_pointer->ancestor_variables[j]]->back());
     }
-
+    
     this->my_log_unnormalised_incremental_weights[i] = (*this->current_particles_pointer)[i]->back().evaluate_likelihoods(this->index_pointer) - log_sum_exp(terms);
   }
 }
@@ -655,7 +658,7 @@ GenericWeightWorker::GenericWeightWorker(RcppParallelSMCWorker* smc_worker_in)
 
 GenericWeightWorker::~GenericWeightWorker()
 {
-
+  
 }
 
 GenericWeightWorker::GenericWeightWorker(const GenericWeightWorker &another)
@@ -668,7 +671,7 @@ void GenericWeightWorker::operator=(const GenericWeightWorker &another)
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
@@ -678,10 +681,10 @@ void GenericWeightWorker::operator()(std::size_t begin, std::size_t end)
   {
     this->my_log_unnormalised_incremental_weights[i] = (*this->current_particles_pointer)[i]->back().evaluate_likelihoods(this->index_pointer)
     + this->L_kernel_pointer->evaluate_kernel((*this->previous_particles_pointer)[this->previous_particles_pointer->ancestor_variables[i]]->back(),
-                                (*this->current_particles_pointer)[i]->back())
+                                              (*this->current_particles_pointer)[i]->back())
     - (*this->previous_particles_pointer)[this->previous_particles_pointer->ancestor_variables[i]]->back().target_evaluated
     - this->proposal_kernel_pointer->evaluate_kernel((*this->current_particles_pointer)[i]->back(),
-                                       (*this->previous_particles_pointer)[this->previous_particles_pointer->ancestor_variables[i]]->back());
+                                                     (*this->previous_particles_pointer)[this->previous_particles_pointer->ancestor_variables[i]]->back());
   }
 }
 
@@ -712,7 +715,7 @@ PFWeightWorker::PFWeightWorker(RcppParallelSMCWorker* smc_worker_in)
 
 PFWeightWorker::~PFWeightWorker()
 {
-
+  
 }
 
 PFWeightWorker::PFWeightWorker(const PFWeightWorker &another)
@@ -725,7 +728,7 @@ void PFWeightWorker::operator=(const PFWeightWorker &another)
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
@@ -736,7 +739,7 @@ void PFWeightWorker::operator()(std::size_t begin, std::size_t end)
     this->my_log_unnormalised_incremental_weights[i] = (*this->current_particles_pointer)[i]->back().evaluate_likelihoods(this->index_pointer);
     if (this->proposal_kernel_pointer!=NULL)
       this->my_log_unnormalised_incremental_weights[i] = this->my_log_unnormalised_incremental_weights[i] - this->proposal_kernel_pointer->evaluate_kernel((*this->current_particles_pointer)[i]->back(),
-                                                                                                                                                                           (*this->previous_particles_pointer)[this->previous_particles_pointer->ancestor_variables[i]]->back());
+                                                                                                                                                           (*this->previous_particles_pointer)[this->previous_particles_pointer->ancestor_variables[i]]->back());
   }
 }
 
@@ -764,7 +767,7 @@ SubsampleWeightWorker::SubsampleWeightWorker(RcppParallelSMCWorker* smc_worker_i
 
 SubsampleWeightWorker::~SubsampleWeightWorker()
 {
-
+  
 }
 
 SubsampleWeightWorker::SubsampleWeightWorker(const SubsampleWeightWorker &another)
@@ -777,7 +780,7 @@ void SubsampleWeightWorker::operator=(const SubsampleWeightWorker &another)
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
@@ -810,7 +813,7 @@ SubsamplePFInitialWeightWorker::SubsamplePFInitialWeightWorker(RcppParallelSMCWo
 
 SubsamplePFInitialWeightWorker::~SubsamplePFInitialWeightWorker()
 {
-
+  
 }
 
 SubsamplePFInitialWeightWorker::SubsamplePFInitialWeightWorker(const SubsamplePFInitialWeightWorker &another)
@@ -823,14 +826,14 @@ void SubsamplePFInitialWeightWorker::operator=(const SubsamplePFInitialWeightWor
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
 void SubsamplePFInitialWeightWorker::operator()(std::size_t begin, std::size_t end)
 {
   VectorIndex index(0);
-
+  
   for (std::size_t i = begin; i < end; ++i)
   {
     this->my_log_unnormalised_incremental_weights[i] = (*this->current_particles_pointer)[i]->back().subsample_evaluate_likelihoods(&index) - (*this->current_particles_pointer)[i]->back().subsample_previous_target_evaluated;
@@ -858,7 +861,7 @@ SubsampleSMCFixedWeightWorker::SubsampleSMCFixedWeightWorker(RcppParallelSMCWork
 
 SubsampleSMCFixedWeightWorker::~SubsampleSMCFixedWeightWorker()
 {
-
+  
 }
 
 SubsampleSMCFixedWeightWorker::SubsampleSMCFixedWeightWorker(const SubsampleSMCFixedWeightWorker &another)
@@ -871,7 +874,7 @@ void SubsampleSMCFixedWeightWorker::operator=(const SubsampleSMCFixedWeightWorke
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
@@ -905,7 +908,7 @@ SubsampleSMCAdaptiveGivenSMCFixedWeightWorker::SubsampleSMCAdaptiveGivenSMCFixed
 
 SubsampleSMCAdaptiveGivenSMCFixedWeightWorker::~SubsampleSMCAdaptiveGivenSMCFixedWeightWorker()
 {
-
+  
 }
 
 SubsampleSMCAdaptiveGivenSMCFixedWeightWorker::SubsampleSMCAdaptiveGivenSMCFixedWeightWorker(const SubsampleSMCAdaptiveGivenSMCFixedWeightWorker &another)
@@ -918,7 +921,7 @@ void SubsampleSMCAdaptiveGivenSMCFixedWeightWorker::operator=(const SubsampleSMC
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
@@ -952,7 +955,7 @@ SubsampleSMCAdaptiveGivenSMCFixedEvaluateTargetWorker::SubsampleSMCAdaptiveGiven
 
 SubsampleSMCAdaptiveGivenSMCFixedEvaluateTargetWorker::~SubsampleSMCAdaptiveGivenSMCFixedEvaluateTargetWorker()
 {
-
+  
 }
 
 SubsampleSMCAdaptiveGivenSMCFixedEvaluateTargetWorker::SubsampleSMCAdaptiveGivenSMCFixedEvaluateTargetWorker(const SubsampleSMCAdaptiveGivenSMCFixedEvaluateTargetWorker &another)
@@ -965,7 +968,7 @@ void SubsampleSMCAdaptiveGivenSMCFixedEvaluateTargetWorker::operator=(const Subs
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
@@ -1001,7 +1004,7 @@ SubsampleMarginalWeightWorker::SubsampleMarginalWeightWorker(RcppParallelSMCWork
 
 SubsampleMarginalWeightWorker::~SubsampleMarginalWeightWorker()
 {
-
+  
 }
 
 SubsampleMarginalWeightWorker::SubsampleMarginalWeightWorker(const SubsampleMarginalWeightWorker &another)
@@ -1014,24 +1017,24 @@ void SubsampleMarginalWeightWorker::operator=(const SubsampleMarginalWeightWorke
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
 void SubsampleMarginalWeightWorker::operator()(std::size_t begin, std::size_t end)
 {
-
+  
   for (std::size_t i = begin; i < end; ++i)
   {
     arma::colvec terms(this->smc_worker->get_number_of_particles());
-
+    
     // If proposal is Gaussian, might be able to use the fast Gauss transform in low-dim
     for (size_t j = 0; j < this->smc_worker->get_number_of_particles(); ++j)
     {
       terms[j] = this->current_particles_pointer->previous_normalised_log_weights[j] + this->proposal_kernel_pointer->subsample_evaluate_kernel((*this->current_particles_pointer)[i]->back(),
-                                                                                                                                      (*this->previous_particles_pointer)[this->previous_particles_pointer->ancestor_variables[j]]->back());
+                                                                                                                                                (*this->previous_particles_pointer)[this->previous_particles_pointer->ancestor_variables[j]]->back());
     }
-
+    
     this->my_log_unnormalised_incremental_weights[i] = (*this->current_particles_pointer)[i]->back().subsample_evaluate_likelihoods(this->index_pointer) - log_sum_exp(terms);
   }
 }
@@ -1063,7 +1066,7 @@ SubsampleGenericWeightWorker::SubsampleGenericWeightWorker(RcppParallelSMCWorker
 
 SubsampleGenericWeightWorker::~SubsampleGenericWeightWorker()
 {
-
+  
 }
 
 SubsampleGenericWeightWorker::SubsampleGenericWeightWorker(const SubsampleGenericWeightWorker &another)
@@ -1076,7 +1079,7 @@ void SubsampleGenericWeightWorker::operator=(const SubsampleGenericWeightWorker 
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
@@ -1086,10 +1089,10 @@ void SubsampleGenericWeightWorker::operator()(std::size_t begin, std::size_t end
   {
     this->my_log_unnormalised_incremental_weights[i] = (*this->current_particles_pointer)[i]->back().subsample_evaluate_likelihoods(this->index_pointer)
     + this->L_kernel_pointer->subsample_evaluate_kernel((*this->previous_particles_pointer)[this->previous_particles_pointer->ancestor_variables[i]]->back(),
-                                              (*this->current_particles_pointer)[i]->back())
+                                                        (*this->current_particles_pointer)[i]->back())
     - (*this->previous_particles_pointer)[this->previous_particles_pointer->ancestor_variables[i]]->back().subsample_target_evaluated
     - this->proposal_kernel_pointer->subsample_evaluate_kernel((*this->current_particles_pointer)[i]->back(),
-                                                     (*this->previous_particles_pointer)[this->previous_particles_pointer->ancestor_variables[i]]->back());
+                                                               (*this->previous_particles_pointer)[this->previous_particles_pointer->ancestor_variables[i]]->back());
   }
 }
 
@@ -1120,7 +1123,7 @@ SubsamplePFWeightWorker::SubsamplePFWeightWorker(RcppParallelSMCWorker* smc_work
 
 SubsamplePFWeightWorker::~SubsamplePFWeightWorker()
 {
-
+  
 }
 
 SubsamplePFWeightWorker::SubsamplePFWeightWorker(const SubsamplePFWeightWorker &another)
@@ -1133,7 +1136,7 @@ void SubsamplePFWeightWorker::operator=(const SubsamplePFWeightWorker &another)
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
@@ -1144,7 +1147,7 @@ void SubsamplePFWeightWorker::operator()(std::size_t begin, std::size_t end)
     this->my_log_unnormalised_incremental_weights[i] = (*this->current_particles_pointer)[i]->back().subsample_evaluate_likelihoods(this->index_pointer);
     if (this->proposal_kernel_pointer!=NULL)
       this->my_log_unnormalised_incremental_weights[i] = this->my_log_unnormalised_incremental_weights[i] - this->proposal_kernel_pointer->subsample_evaluate_kernel((*this->current_particles_pointer)[i]->back(),
-                                                                                                                                                                           (*this->previous_particles_pointer)[this->previous_particles_pointer->ancestor_variables[i]]->back());
+                                                                                                                                                                     (*this->previous_particles_pointer)[this->previous_particles_pointer->ancestor_variables[i]]->back());
   }
 }
 
@@ -1156,4 +1159,6 @@ void SubsamplePFWeightWorker::make_copy(const SubsamplePFWeightWorker &another)
   this->current_particles_pointer = another.current_particles_pointer;
   this->previous_particles_pointer = another.previous_particles_pointer;
   this->proposal_kernel_pointer = another.proposal_kernel_pointer;
+}
+
 }

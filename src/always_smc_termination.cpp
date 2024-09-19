@@ -1,7 +1,9 @@
 #include "always_smc_termination.h"
 
+namespace ilike
+{
 AlwaysSMCTermination::AlwaysSMCTermination()
-  :SMCTermination()
+:SMCTermination()
 {
 }
 
@@ -12,7 +14,7 @@ AlwaysSMCTermination::~AlwaysSMCTermination()
 
 //Copy constructor for the AlwaysSMCTermination class.
 AlwaysSMCTermination::AlwaysSMCTermination(const AlwaysSMCTermination &another)
-  :SMCTermination(another)
+:SMCTermination(another)
 {
   this->make_copy(another);
 }
@@ -40,4 +42,5 @@ void AlwaysSMCTermination::make_copy(const AlwaysSMCTermination &another)
 bool AlwaysSMCTermination::terminate(double score)
 {
   return true;
+}
 }

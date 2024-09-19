@@ -6,6 +6,8 @@
 //
 #include "packing_instructions.h"
 
+namespace ilike
+{
 PackingInstructions::PackingInstructions()
 {
   
@@ -49,4 +51,6 @@ void PackingInstructions::set_info(const Parameters &parameters,
     this->states_start_and_end.push_back(std::make_pair(counter, counter+current.n_elem-1));
     counter = counter + current.n_elem;
   }
+}
+
 }

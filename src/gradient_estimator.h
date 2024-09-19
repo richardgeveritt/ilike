@@ -10,6 +10,9 @@ using namespace Rcpp;
 #include "data_subsampler.h"
 #include "distributions.h"
 
+namespace ilike
+{
+
 class ReinforceGradientEstimator;
 class GradientEstimatorOutput;
 class ProposalKernel;
@@ -17,16 +20,16 @@ class DirectGradientEstimatorOutput;
 
 class GradientEstimator
 {
-
+  
 public:
-
+  
   GradientEstimator();
   virtual ~GradientEstimator();
   
   GradientEstimator(const ProposalKernel* proposal_in);
-
+  
   GradientEstimator(const GradientEstimator &another);
-
+  
   void operator=(const GradientEstimator &another);
   virtual GradientEstimator* duplicate() const=0;
   
@@ -35,21 +38,21 @@ public:
   void set_proposal(const ProposalKernel* proposal_in);
   
   /*
-  virtual arma::mat get_gradient_of_log(const std::string &variable,
-                                        Particle &particle)=0;
+   virtual arma::mat get_gradient_of_log(const std::string &variable,
+   Particle &particle)=0;
+   
+   virtual arma::mat get_gradient_of_log(const std::string &variable,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters)=0;
+   
+   virtual arma::mat subsample_get_gradient_of_log(const std::string &variable,
+   Particle &particle)=0;
+   
+   virtual arma::mat subsample_get_gradient_of_log(const std::string &variable,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters)=0;
+   */
   
-  virtual arma::mat get_gradient_of_log(const std::string &variable,
-                                        Particle &particle,
-                                        const Parameters &conditioned_on_parameters)=0;
-  
-  virtual arma::mat subsample_get_gradient_of_log(const std::string &variable,
-                                        Particle &particle)=0;
-  
-  virtual arma::mat subsample_get_gradient_of_log(const std::string &variable,
-                                        Particle &particle,
-                                        const Parameters &conditioned_on_parameters)=0;
-  */
-
 protected:
   
   friend ReinforceGradientEstimator;
@@ -62,9 +65,10 @@ protected:
   
   // Not stored here. Stored in "main'.
   size_t* seed;
-
+  
   void make_copy(const GradientEstimator &another);
-
+  
 };
+}
 
 #endif

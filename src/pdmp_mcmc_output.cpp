@@ -1,7 +1,9 @@
 #include "pdmp_mcmc_output.h"
 
+namespace ilike
+{
 PDMPMCMCOutput::PDMPMCMCOutput()
-  :MoveOutput()
+:MoveOutput()
 {
 }
 
@@ -12,7 +14,7 @@ PDMPMCMCOutput::~PDMPMCMCOutput()
 
 //Copy constructor for the PDMPMCMCOutput class.
 PDMPMCMCOutput::PDMPMCMCOutput(const PDMPMCMCOutput &another)
-  :MoveOutput(another)
+:MoveOutput(another)
 {
   this->make_copy(another);
 }
@@ -68,7 +70,7 @@ void PDMPMCMCOutput::write_any_points(const std::vector<std::string> &variables,
 void PDMPMCMCOutput::write_factors(const std::string &directory_name,
                                    const std::string &index) const
 {
-
+  
 }
 
 void PDMPMCMCOutput::write_ensemble_factors(const std::string &directory_name,
@@ -89,4 +91,5 @@ void PDMPMCMCOutput::close_ofstreams()
 Parameters PDMPMCMCOutput::get_current_algorithm_parameters() const
 {
   return Parameters();
+}
 }

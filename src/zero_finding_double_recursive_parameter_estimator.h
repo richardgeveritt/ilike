@@ -8,19 +8,21 @@ using namespace Rcpp;
 #include "double_recursive_parameter_estimator.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class ZeroFindingDoubleRecursiveParameterEstimator : public DoubleRecursiveParameterEstimator
 {
-
+  
 public:
-
+  
   ZeroFindingDoubleRecursiveParameterEstimator();
   ZeroFindingDoubleRecursiveParameterEstimator(double initial_value,
                                                double target_score_in);
-
+  
   virtual ~ZeroFindingDoubleRecursiveParameterEstimator();
-
+  
   ZeroFindingDoubleRecursiveParameterEstimator(const ZeroFindingDoubleRecursiveParameterEstimator &another);
-
+  
   void operator=(const ZeroFindingDoubleRecursiveParameterEstimator &another);
   RecursiveParameterEstimator* duplicate() const;
   DoubleRecursiveParameterEstimator* double_duplicate() const;
@@ -35,9 +37,10 @@ protected:
   GainPtr gain;
   
   double target_score;
-
+  
   void make_copy(const ZeroFindingDoubleRecursiveParameterEstimator &another);
-
+  
 };
+}
 
 #endif

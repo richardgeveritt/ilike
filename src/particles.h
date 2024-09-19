@@ -11,6 +11,8 @@ using namespace Rcpp;
 #include "particle.h"
 #include "distributions.h"
 
+namespace ilike
+{
 class SMC;
 class SequentialSMCWorker;
 class MoveOutput;
@@ -19,17 +21,17 @@ class Factors;
 class Particles
 {
 public:
-
+  
   Particles();
   Particles(size_t number_of_particles_in);
   Particles(const std::vector< MoveOutput* > &particles_in);
   /*
-  Particles(std::vector<Parameters> &initial_values_in,
-            const arma::colvec &log_probabilities_of_initial_values_in,
-            Factors* factors_in,
-            const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
-            const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
-  */
+   Particles(std::vector<Parameters> &initial_values_in,
+   const arma::colvec &log_probabilities_of_initial_values_in,
+   Factors* factors_in,
+   const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+   const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
+   */
   Particles(std::vector<Parameters> &initial_values_in,
             const arma::colvec &log_probabilities_of_initial_values_in,
             Factors* factors_in,
@@ -45,12 +47,12 @@ public:
             const Parameters &sequencer_parameters);
   
   /*
-  void setup(std::vector<Parameters> &initial_values_in,
-             const arma::colvec &log_probabilities_of_initial_values_in,
-             Factors* factors_in,
-             const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
-             const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
-  */
+   void setup(std::vector<Parameters> &initial_values_in,
+   const arma::colvec &log_probabilities_of_initial_values_in,
+   Factors* factors_in,
+   const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+   const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
+   */
   
   void setup(std::vector<Parameters> &initial_values_in,
              const arma::colvec &log_probabilities_of_initial_values_in,
@@ -66,9 +68,9 @@ public:
              const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in,
              const Parameters &conditioned_on_parameters,
              const Parameters &sequencer_parameters);
-
+  
   virtual ~Particles();
-
+  
   Particles(const Particles &another);
   Particles& operator=(const Particles &another);
   
@@ -94,7 +96,7 @@ public:
   Particle* add_particle();
   
   void simulate_resampling_variables(RandomNumberGenerator &rng);
-
+  
   //arma::colvec get_resampling_variables() const;
   //void set_ancestor_variables(const std::vector<size_t> &ancestor_variables_in);
   
@@ -113,7 +115,7 @@ public:
   
   //virtual List& operator[](int index)=0;
   //virtual List operator[](int index) const=0;
-
+  
   friend std::ostream& operator<<(std::ostream& os, const Particles &p);
   
   // Access only elements in std::vector<Particle>.
@@ -134,11 +136,11 @@ public:
   arma::colvec unnormalised_log_weights;
   
   arma::colvec incremental_log_weights;
-
+  
   arma::colvec normalised_log_weights;
   
   arma::colvec previous_normalised_log_weights;
-
+  
   double log_normalising_constant_ratio;
   
   // Also store anything that needs to be stored in a different structure across all particles.
@@ -153,18 +155,19 @@ public:
   double ess;
   
   void close_ofstreams();
-
+  
 protected:
   
   //friend SequentialSMCWorker;
-
+  
   void make_copy(const Particles &another);
   
   void make_copy(Particles &&another);
   
   // Stored here. // moved to model_and_algorithm
   //std::vector<LikelihoodEstimator*> likelihood_estimators;
-
+  
 };
+}
 
 #endif

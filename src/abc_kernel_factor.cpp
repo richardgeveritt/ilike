@@ -3,8 +3,6 @@
 
 namespace ilike
 {
-namespace exact_factor
-{
 
 ABCKernelFactor::ABCKernelFactor()
 :LikelihoodFactor()
@@ -66,5 +64,4 @@ void ABCKernelFactor::make_copy(const ABCKernelFactor &another)
   this->packing_instructions = another.packing_instructions;
 }
 
-}
 }

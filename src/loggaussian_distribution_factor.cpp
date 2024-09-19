@@ -1,6 +1,8 @@
 #include <iterator>
 #include "loggaussian_distribution_factor.h"
 
+namespace ilike
+{
 LogGaussianDistributionFactor::LogGaussianDistributionFactor()
 :DistributionFactor()
 {
@@ -92,4 +94,5 @@ arma::mat LogGaussianDistributionFactor::distribution_evaluate_gradient(const st
 {
   //auto found = this->proposal_info.find(variable);
   Rcpp::stop("LogGaussianDistributionFactor::distribution_evaluate_gradient - not written yet.");
+}
 }

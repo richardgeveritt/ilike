@@ -8,11 +8,13 @@ using namespace Rcpp;
 #include "kalman_predictor.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class ExactKalmanPredictor : public KalmanPredictor
 {
-
+  
 public:
-
+  
   ExactKalmanPredictor();
   
   ExactKalmanPredictor(const arma::mat &transition_matrix,
@@ -26,14 +28,14 @@ public:
   
   //ExactKalmanPredictor(GetProcessMatrixFromTimeParametersPtr transition_matrix_time_parameters_function,
   //                     GetProcessMatrixFromTimeParametersPtr process_noise_time_parameters_function);
-
+  
   virtual ~ExactKalmanPredictor();
-
+  
   ExactKalmanPredictor(const ExactKalmanPredictor &another);
-
+  
   void operator=(const ExactKalmanPredictor &another);
   KalmanPredictor* duplicate() const;
-
+  
   void predict(KalmanFilterOutput* current_state);
   
   void set_parameters(const Parameters &conditioned_on_parameters_in);
@@ -61,7 +63,8 @@ protected:
   
   //GetProcessMatrixFromTimeParametersPtr transition_matrix_time_parameters_function;
   //GetProcessMatrixFromTimeParametersPtr process_noise_time_parameters_function;
-
+  
 };
+}
 
 #endif

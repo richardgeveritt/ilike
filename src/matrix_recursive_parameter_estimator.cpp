@@ -1,7 +1,9 @@
 #include "matrix_recursive_parameter_estimator.h"
 
+namespace ilike
+{
 MatrixRecursiveParameterEstimator::MatrixRecursiveParameterEstimator()
-  :RecursiveParameterEstimator()
+:RecursiveParameterEstimator()
 {
 }
 
@@ -12,7 +14,7 @@ MatrixRecursiveParameterEstimator::~MatrixRecursiveParameterEstimator()
 
 //Copy constructor for the MatrixRecursiveParameterEstimator class.
 MatrixRecursiveParameterEstimator::MatrixRecursiveParameterEstimator(const MatrixRecursiveParameterEstimator &another)
-  :RecursiveParameterEstimator(another)
+:RecursiveParameterEstimator(another)
 {
   this->make_copy(another);
 }
@@ -30,4 +32,5 @@ void MatrixRecursiveParameterEstimator::operator=(const MatrixRecursiveParameter
 void MatrixRecursiveParameterEstimator::make_copy(const MatrixRecursiveParameterEstimator &another)
 {
   this->estimated = another.estimated;
+}
 }

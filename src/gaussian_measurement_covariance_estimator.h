@@ -6,11 +6,13 @@ using namespace Rcpp;
 
 #include "measurement_covariance_estimator.h"
 
+namespace ilike
+{
 class GaussianMeasurementCovarianceEstimator : public MeasurementCovarianceEstimator
 {
-
+  
 public:
-
+  
   GaussianMeasurementCovarianceEstimator();
   
   GaussianMeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
@@ -21,9 +23,9 @@ public:
                                          const std::vector<std::string> &measurement_variables_in);
   
   virtual ~GaussianMeasurementCovarianceEstimator();
-
+  
   GaussianMeasurementCovarianceEstimator(const GaussianMeasurementCovarianceEstimator &another);
-
+  
   void operator=(const GaussianMeasurementCovarianceEstimator &another);
   virtual GaussianMeasurementCovarianceEstimator* gaussian_duplicate() const=0;
   
@@ -44,11 +46,12 @@ public:
   void precompute_gaussian_covariance(double inverse_incremental_temperature,
                                       arma::mat &inv_sigma_precomp,
                                       double &log_det_precomp);
-
+  
 protected:
-
+  
   void make_copy(const GaussianMeasurementCovarianceEstimator &another);
   
 };
+}
 
 #endif

@@ -11,17 +11,19 @@ using namespace Rcpp;
 #include "ilike_header.h"
 #include "parameters.h"
 
+namespace ilike
+{
 class KalmanFilterOutput;
 class KalmanUpdater;
 class KalmanPredictor;
 
 class KalmanFilter : public LikelihoodEstimator
 {
-
+  
 public:
-
+  
   KalmanFilter();
-
+  
   KalmanFilter(Data* data_in,
                size_t lag_in,
                //const std::string &state_name,
@@ -41,14 +43,14 @@ public:
                const std::vector<KalmanUpdater*> &updaters_in,
                bool smcfixed_flag_in,
                const std::string &results_name_in);
-
+  
   virtual ~KalmanFilter();
-
+  
   KalmanFilter(const KalmanFilter &another);
-
+  
   void operator=(const KalmanFilter &another);
   //LikelihoodEstimator* duplicate() const;
-
+  
   // double estimate_log_likelihood(const List &inputs,
   //                                const List &auxiliary_variables) const;
   
@@ -66,7 +68,7 @@ public:
   //                                    const std::vector<List> &all_auxiliary_variables);
   
   KalmanFilterOutput* run();
-
+  
   LikelihoodEstimatorOutput* initialise(const Parameters &parameters);
   KalmanFilterOutput* kalman_filter_initialise(const Parameters &parameters);
   
@@ -76,19 +78,19 @@ public:
   void subsample_evaluate(KalmanFilterOutput* simulation);
   
   void subsample_evaluate(KalmanFilterOutput* simulation,
-                const Parameters &conditioned_on_parameters);
-
+                          const Parameters &conditioned_on_parameters);
+  
   // void is_setup_likelihood_estimator(const std::vector<List> &all_points,
   //                                    const std::vector<List> &all_auxiliary_variables);
   
   KalmanFilterOutput* run(const Parameters &conditioned_on_parameters);
-
+  
 protected:
   
   void specific_change_data(Data* new_data);
   
   bool check_termination() const;
-
+  
   friend KalmanFilterOutput;
   
   arma::colvec prior_mean;
@@ -116,9 +118,9 @@ protected:
   Parameters schedule_parameters;
   
   std::string results_name;
-
+  
   void make_copy(const KalmanFilter &another);
-
+  
   std::ofstream log_likelihood_file_stream;
   std::ofstream time_file_stream;
   std::ofstream vector_variables_file_stream;
@@ -132,5 +134,6 @@ protected:
   std::ofstream predicted_covariances_file_stream;
   
 };
+}
 
 #endif

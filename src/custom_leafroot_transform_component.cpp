@@ -1,6 +1,8 @@
 // Include the class definition.
 #include "custom_leafroot_transform_component.h"
 
+namespace ilike
+{
 // Include other class definitions that are needed.
 
 // Public functions //
@@ -127,4 +129,5 @@ void CustomLeafRootTransformComponent::set_child(TransformComponent* new_child)
 void CustomLeafRootTransformComponent::set_parent(TransformComponent* new_parent)
 {
   Rcpp::stop("CustomLeafRootTransformComponent::set_parent - this component has no children.");
+}
 }

@@ -9,13 +9,15 @@ using namespace Rcpp;
 #include "ilike_header.h"
 #include "gaussian_proposal_info.h"
 
+namespace ilike
+{
 class GaussianDistributionFactor : public DistributionFactor
 {
-
+  
 public:
-
+  
   GaussianDistributionFactor();
-
+  
   GaussianDistributionFactor(const std::string &variable_in,
                              double mean_in,
                              double sd_in);
@@ -29,9 +31,9 @@ public:
                              const std::vector<arma::mat> &covariances_in);
   
   virtual ~GaussianDistributionFactor();
-
+  
   GaussianDistributionFactor(const GaussianDistributionFactor &another);
-
+  
   void operator=(const GaussianDistributionFactor &another);
   Factor* duplicate() const;
   DistributionFactor* distribution_factor_duplicate() const;
@@ -40,13 +42,14 @@ public:
   
   arma::mat distribution_evaluate_gradient(const std::string &variable,
                                            const Parameters &input) const;
-
+  
 protected:
-
+  
   void make_copy(const GaussianDistributionFactor &another);
   
   boost::unordered_map< std::string, GaussianProposalInfo> proposal_info;
-
+  
 };
+}
 
 #endif

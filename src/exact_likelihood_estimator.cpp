@@ -6,6 +6,8 @@
 #include "custom_distribution_factor.h"
 #include "custom_likelihood_factor.h"
 
+namespace ilike
+{
 ExactLikelihoodEstimator::ExactLikelihoodEstimator()
 :LikelihoodEstimator()
 {
@@ -176,14 +178,14 @@ ExactLikelihoodEstimator::~ExactLikelihoodEstimator()
   }
   
   /*
-  for (auto i=this->numerator_proposals.begin();
-       i!=this->numerator_proposals.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
-  */
+   for (auto i=this->numerator_proposals.begin();
+   i!=this->numerator_proposals.end();
+   ++i)
+   {
+   if (*i!=NULL)
+   delete *i;
+   }
+   */
 }
 
 //Copy constructor for the ExactLikelihoodEstimator class.
@@ -256,18 +258,18 @@ void ExactLikelihoodEstimator::make_copy(const ExactLikelihoodEstimator &another
   this->numerator_likelihood_proposals = another.numerator_likelihood_proposals;
   
   /*
-  this->numerator_proposals.resize(0);
-  this->numerator_proposals.reserve(another.numerator_proposals.size());
-  for (auto i=another.numerator_proposals.begin();
-       i!=numerator_proposals.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      this->numerator_proposals.push_back((*i)->independent_proposal_kernel_duplicate());
-    else
-      this->numerator_proposals.push_back(NULL);
-  }
-  */
+   this->numerator_proposals.resize(0);
+   this->numerator_proposals.reserve(another.numerator_proposals.size());
+   for (auto i=another.numerator_proposals.begin();
+   i!=numerator_proposals.end();
+   ++i)
+   {
+   if (*i!=NULL)
+   this->numerator_proposals.push_back((*i)->independent_proposal_kernel_duplicate());
+   else
+   this->numerator_proposals.push_back(NULL);
+   }
+   */
   //if (this->output!=NULL)
   //  this->output = another.output->duplicate();
 }
@@ -301,7 +303,7 @@ void ExactLikelihoodEstimator::setup(const Parameters &parameters)
 double ExactLikelihoodEstimator::evaluate(const Parameters &parameters) const
 {
   double result = 0.0;
-
+  
   for (auto i=this->numerator_distribution_factors.begin();
        i!=this->numerator_distribution_factors.end();
        ++i)
@@ -311,7 +313,7 @@ double ExactLikelihoodEstimator::evaluate(const Parameters &parameters) const
       result = result + (*i)->evaluate(parameters);
     }
   }
-
+  
   for (auto i=this->numerator_likelihood_factors.begin();
        i!=this->numerator_likelihood_factors.end();
        ++i)
@@ -342,7 +344,7 @@ double ExactLikelihoodEstimator::evaluate(const Parameters &parameters) const
                                               parameters);
     }
   }
-
+  
   return result;
 }
 
@@ -477,3 +479,4 @@ void ExactLikelihoodEstimator::specific_change_data(Data* new_data)
 // {
 //
 // }
+}

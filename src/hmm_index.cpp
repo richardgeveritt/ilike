@@ -1,8 +1,10 @@
 #include <iterator>
 #include "hmm_index.h"
 
+namespace ilike
+{
 HMMIndex::HMMIndex()
-  :Index()
+:Index()
 {
 }
 
@@ -26,7 +28,7 @@ HMMIndex::~HMMIndex()
 }
 
 HMMIndex::HMMIndex(const HMMIndex &another)
-  :Index(another)
+:Index(another)
 {
   this->make_copy(another);
 }
@@ -35,7 +37,7 @@ void HMMIndex::operator=(const HMMIndex &another)
 {
   if(this == &another)
     return;
-
+  
   Index::operator=(another);
   this->make_copy(another);
 }
@@ -102,7 +104,7 @@ arma::uvec HMMIndex::get_uvec() const
     {
       result[i] = this->likelihood_indices_time_zero[i];
     }
-
+    
     return result;
     
   }
@@ -130,25 +132,26 @@ bool HMMIndex::get_transition_model() const
 }
 
 /*
-std::vector<size_t> HMMIndex::get_prior_indices() const
-{
-  return this->prior_indices;
-}
-
-std::vector<size_t> HMMIndex::get_transition_indices() const
-{
-  return this->transition_indices;
-}
-
-std::vector<size_t> HMMIndex::get_likelihood_indices() const
-{
-  return this->likelihood_indices;
-}
-*/
+ std::vector<size_t> HMMIndex::get_prior_indices() const
+ {
+ return this->prior_indices;
+ }
+ 
+ std::vector<size_t> HMMIndex::get_transition_indices() const
+ {
+ return this->transition_indices;
+ }
+ 
+ std::vector<size_t> HMMIndex::get_likelihood_indices() const
+ {
+ return this->likelihood_indices;
+ }
+ */
 
 /*
-void HMMIndex::add_index(const size_t &number)
-{
-  this->indices.push_back(number);
+ void HMMIndex::add_index(const size_t &number)
+ {
+ this->indices.push_back(number);
+ }
+ */
 }
-*/

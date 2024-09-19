@@ -9,19 +9,21 @@ using namespace Rcpp;
 #include "particle.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class ProposalKernel;
 
 class SampleAverageGaussianRecursiveParameterEstimator : public GaussianRecursiveParameterEstimator
 {
-
+  
 public:
-
+  
   SampleAverageGaussianRecursiveParameterEstimator();
-
+  
   virtual ~SampleAverageGaussianRecursiveParameterEstimator();
-
+  
   SampleAverageGaussianRecursiveParameterEstimator(const SampleAverageGaussianRecursiveParameterEstimator &another);
-
+  
   void operator=(const SampleAverageGaussianRecursiveParameterEstimator &another);
   RecursiveParameterEstimator* duplicate() const;
   GaussianRecursiveParameterEstimator* gaussian_duplicate() const;
@@ -34,9 +36,10 @@ public:
 protected:
   
   GainPtr gain;
-
+  
   void make_copy(const SampleAverageGaussianRecursiveParameterEstimator &another);
-
+  
 };
+}
 
 #endif

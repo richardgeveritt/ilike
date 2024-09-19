@@ -1,8 +1,11 @@
 #include "abc_likelihood_estimator.h"
 #include "abc_likelihood_estimator_output.h"
 
+namespace ilike
+{
+
 ABCLikelihoodEstimator::ABCLikelihoodEstimator()
-  :LikelihoodEstimator()
+:LikelihoodEstimator()
 {
 }
 
@@ -24,7 +27,7 @@ ABCLikelihoodEstimator::~ABCLikelihoodEstimator()
 
 //Copy constructor for the ABCLikelihoodEstimator class.
 ABCLikelihoodEstimator::ABCLikelihoodEstimator(const ABCLikelihoodEstimator &another)
-  :LikelihoodEstimator(another)
+:LikelihoodEstimator(another)
 {
   this->make_copy(another);
 }
@@ -37,7 +40,7 @@ void ABCLikelihoodEstimator::operator=(const ABCLikelihoodEstimator &another)
   
   if (this->abc_kernel!=NULL)
     delete this->abc_kernel;
-
+  
   LikelihoodEstimator::operator=(another);
   this->make_copy(another);
 }
@@ -84,4 +87,6 @@ void ABCLikelihoodEstimator::setup(const Parameters &parameters)
 void ABCLikelihoodEstimator::specific_change_data(Data* new_data)
 {
   this->abc_kernel->set_data(new_data);
+}
+
 }

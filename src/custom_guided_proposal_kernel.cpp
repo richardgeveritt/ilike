@@ -2,8 +2,10 @@
 #include "likelihood_estimator_output.h"
 #include "likelihood_estimator.h"
 
+namespace ilike
+{
 CustomGuidedProposalKernel::CustomGuidedProposalKernel()
-  :ProposalKernel()
+:ProposalKernel()
 {
   this->proposal_evaluate = NULL;
   this->data = NULL;
@@ -26,7 +28,7 @@ CustomGuidedProposalKernel::CustomGuidedProposalKernel(SimulateGuidedMCMCProposa
 CustomGuidedProposalKernel::CustomGuidedProposalKernel(SimulateGuidedMCMCProposalPtr proposal_simulate_in,
                                                        EvaluateLogGuidedMCMCProposalPtr proposal_evaluate_in,
                                                        Data* data_in)
-  :ProposalKernel()
+:ProposalKernel()
 {
   this->proposal_evaluate = proposal_evaluate_in;
   this->proposal_simulate = proposal_simulate_in;
@@ -34,7 +36,7 @@ CustomGuidedProposalKernel::CustomGuidedProposalKernel(SimulateGuidedMCMCProposa
 }
 
 CustomGuidedProposalKernel::CustomGuidedProposalKernel(const CustomGuidedProposalKernel &another)
-  :ProposalKernel(another)
+:ProposalKernel(another)
 {
   this->make_copy(another);
 }
@@ -43,7 +45,7 @@ void CustomGuidedProposalKernel::operator=(const CustomGuidedProposalKernel &ano
 {
   if(this == &another)
     return;
-
+  
   ProposalKernel::operator=(another);
   this->make_copy(another);
 }
@@ -172,4 +174,5 @@ bool CustomGuidedProposalKernel::can_be_evaluated() const
 void CustomGuidedProposalKernel::set_data(Data* data_in)
 {
   this->data = data_in;
+}
 }

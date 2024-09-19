@@ -1,5 +1,7 @@
 #include "particle_simulator.h"
 
+namespace ilike
+{
 ParticleSimulator::ParticleSimulator()
 {
 }
@@ -22,11 +24,12 @@ void ParticleSimulator::operator=(const ParticleSimulator &another)
 {
   if(this == &another)
     return;
-
+  
   this->make_copy(another);
 }
 
 void ParticleSimulator::make_copy(const ParticleSimulator &another)
 {
   this->resample_variable_name = another.resample_variable_name;
+}
 }

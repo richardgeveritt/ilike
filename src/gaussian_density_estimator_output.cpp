@@ -5,8 +5,10 @@
 #include "distributions.h"
 #include "utils.h"
 
+namespace ilike
+{
 GaussianDensityEstimatorOutput::GaussianDensityEstimatorOutput()
-  :DensityEstimatorOutput()
+:DensityEstimatorOutput()
 {
   this->mean_estimator = NULL;
   this->covariance_estimator = NULL;
@@ -30,7 +32,7 @@ GaussianDensityEstimatorOutput::~GaussianDensityEstimatorOutput()
 
 //Copy constructor for the GaussianDensityEstimatorOutput class.
 GaussianDensityEstimatorOutput::GaussianDensityEstimatorOutput(const GaussianDensityEstimatorOutput &another)
-  :DensityEstimatorOutput(another)
+:DensityEstimatorOutput(another)
 {
   this->make_copy(another);
 }
@@ -98,4 +100,5 @@ double GaussianDensityEstimatorOutput::evaluate(const Data &point) const
                    this->mean_estimator->estimated,
                    this->covariance_estimator->estimated));
   }
+}
 }

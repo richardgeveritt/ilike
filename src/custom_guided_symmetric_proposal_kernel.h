@@ -11,19 +11,21 @@ using namespace Rcpp;
 #include "distributions.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class CustomGuidedSymmetricProposalKernel : public SymmetricProposalKernel
 {
-
+  
 public:
-
+  
   CustomGuidedSymmetricProposalKernel();
   virtual ~CustomGuidedSymmetricProposalKernel();
   
   CustomGuidedSymmetricProposalKernel(SimulateGuidedMCMCProposalPtr proposal_simulate_in,
                                       Data* data_in);
-
+  
   CustomGuidedSymmetricProposalKernel(const CustomGuidedSymmetricProposalKernel &another);
-
+  
   void operator=(const CustomGuidedSymmetricProposalKernel &another);
   Kernel* duplicate() const;
   ProposalKernel* proposal_kernel_duplicate() const;
@@ -42,11 +44,11 @@ public:
   
   void set_data(Data* data_in);
   
-// Mh has its own parameters.
+  // Mh has its own parameters.
   // Stochastic has some weights.
   // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.
   // Proposal needs to call simulate in all llhdoutputs
-
+  
 protected:
   
   double specific_evaluate_kernel(const Particle &proposed_particle,
@@ -79,7 +81,7 @@ protected:
   //virtual arma::mat specific_subsample_gradient_of_log(const std::string &variable,
   //                                                     Particle &proposed_particle,
   //                                                     Particle &old_particle)=0;
-
+  
   void make_copy(const CustomGuidedSymmetricProposalKernel &another);
   
   EvaluateLogGuidedMCMCProposalPtr proposal_evaluate;
@@ -90,5 +92,6 @@ protected:
   
   Data* data;
 };
+}
 
 #endif

@@ -2,8 +2,10 @@
 #include "gradient_estimator_output.h"
 #include "direct_gradient_estimator_output.h"
 
+namespace ilike
+{
 DirectGradientEstimator::DirectGradientEstimator()
-  :GradientEstimator()
+:GradientEstimator()
 {
 }
 
@@ -14,7 +16,7 @@ DirectGradientEstimator::~DirectGradientEstimator()
 
 //Copy constructor for the DirectGradientEstimator class.
 DirectGradientEstimator::DirectGradientEstimator(const DirectGradientEstimator &another)
-  :GradientEstimator(another)
+:GradientEstimator(another)
 {
   this->make_copy(another);
 }
@@ -44,10 +46,10 @@ GradientEstimatorOutput* DirectGradientEstimator::initialise()
 }
 
 /*
-GradientEstimatorOutput* DirectGradientEstimator::generate_new_gradient_estimator_output(Particle &particle)
-{
-  return new DirectGradientEstimatorOutput();
-}
+ GradientEstimatorOutput* DirectGradientEstimator::generate_new_gradient_estimator_output(Particle &particle)
+ {
+ return new DirectGradientEstimatorOutput();
+ }
  */
 
 arma::mat DirectGradientEstimator::get_gradient_of_log(const std::string &variable,
@@ -59,16 +61,16 @@ arma::mat DirectGradientEstimator::get_gradient_of_log(const std::string &variab
 }
 
 /*
-arma::mat DirectGradientEstimator::get_gradient_of_log(const std::string &variable,
-                                                       const Index* index,
-                                                       Particle &particle,
-                                                       const Parameters &conditioned_on_parameters)
-{
-  return particle.direct_get_gradient_of_log(variable,
-                                             index,
-                                             conditioned_on_parameters);
-}
-*/
+ arma::mat DirectGradientEstimator::get_gradient_of_log(const std::string &variable,
+ const Index* index,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters)
+ {
+ return particle.direct_get_gradient_of_log(variable,
+ index,
+ conditioned_on_parameters);
+ }
+ */
 
 arma::mat DirectGradientEstimator::subsample_get_gradient_of_log(const std::string &variable,
                                                                  const Index* index,
@@ -79,13 +81,14 @@ arma::mat DirectGradientEstimator::subsample_get_gradient_of_log(const std::stri
 }
 
 /*
-arma::mat DirectGradientEstimator::subsample_get_gradient_of_log(const std::string &variable,
-                                                                 const Index* index,
-                                                                 Particle &particle,
-                                                                 const Parameters &conditioned_on_parameters)
-{
-  return particle.direct_subsample_get_gradient_of_log(variable,
-                                                       index,
-                                                       conditioned_on_parameters);
+ arma::mat DirectGradientEstimator::subsample_get_gradient_of_log(const std::string &variable,
+ const Index* index,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters)
+ {
+ return particle.direct_subsample_get_gradient_of_log(variable,
+ index,
+ conditioned_on_parameters);
+ }
+ */
 }
-*/

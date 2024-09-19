@@ -8,25 +8,27 @@ using namespace Rcpp;
 
 #include "likelihood_estimator_output.h"
 
+namespace ilike
+{
 class KalmanFilter;
 
 class KalmanFilterOutput : public LikelihoodEstimatorOutput
 {
-
+  
 public:
-
+  
   KalmanFilterOutput();
   KalmanFilterOutput(KalmanFilter* estimator_in,
                      size_t lag_in,
                      const std::string &results_name_in);
   virtual ~KalmanFilterOutput();
-
+  
   KalmanFilterOutput(const KalmanFilterOutput &another);
   void operator=(const KalmanFilterOutput &another);
   LikelihoodEstimatorOutput* duplicate() const;
   
   void simulate();
-
+  
   void simulate(const Parameters &parameters);
   //double evaluate(const Parameters &parameters);
   void evaluate_smcfixed_part(const Parameters &conditioned_on_parameters);
@@ -65,8 +67,8 @@ public:
   arma::mat get_gradient_of_log(const std::string &variable,
                                 const Parameters &x);
   arma::mat subsample_get_gradient_of_log(const std::string &variable,
-                                const Parameters &x);
-
+                                          const Parameters &x);
+  
   void forget_you_were_already_written_to_file();
   
   void terminate();
@@ -84,9 +86,9 @@ public:
   std::string results_name;
   
   std::chrono::high_resolution_clock::time_point start_time;
-
+  
 protected:
-
+  
   // Stored in ModelAndAlgorithm.
   KalmanFilter* estimator;
   
@@ -95,7 +97,7 @@ protected:
   
   void write_to_file(const std::string &directory_name,
                      const std::string &index="");
-
+  
   void make_copy(const KalmanFilterOutput &another);
   
   std::deque<arma::colvec> predicted_means;
@@ -118,7 +120,8 @@ protected:
   size_t kf_iteration;
   
   int iteration_written_to_file;
-
+  
 };
+}
 
 #endif

@@ -2,6 +2,8 @@
 #include "likelihood_estimator_output.h"
 #include "likelihood_estimator.h"
 
+namespace ilike
+{
 CustomProposalKernel::CustomProposalKernel()
   :ProposalKernel()
 {
@@ -149,4 +151,5 @@ bool CustomProposalKernel::can_be_evaluated() const
 void CustomProposalKernel::set_data(Data* data_in)
 {
   
+}
 }

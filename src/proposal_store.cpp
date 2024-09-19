@@ -1,6 +1,8 @@
 #include "proposal_store.h"
 #include "gradient_estimator_output.h"
 
+namespace ilike
+{
 ProposalStore::ProposalStore()
 {
   this->gradient_estimator_output = NULL;
@@ -79,4 +81,5 @@ GradientEstimatorOutput* ProposalStore::get_gradient_estimator_output() const
 Parameters ProposalStore::get_transformed_parameters() const
 {
   return this->transformed_parameters;
+}
 }

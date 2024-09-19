@@ -1,6 +1,8 @@
 #include "recursive_parameter_estimator.h"
 #include "proposal_kernel.h"
 
+namespace ilike
+{
 RecursiveParameterEstimator::RecursiveParameterEstimator()
 {
 }
@@ -18,10 +20,11 @@ void RecursiveParameterEstimator::operator=(const RecursiveParameterEstimator &a
 {
   if(this == &another)
     return;
-
+  
   this->make_copy(another);
 }
 
 void RecursiveParameterEstimator::make_copy(const RecursiveParameterEstimator &another)
 {
+}
 }

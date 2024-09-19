@@ -2,8 +2,10 @@
 #include "utils.h"
 #include "move_output.h"
 
+namespace ilike
+{
 MatrixParameterEstimator::MatrixParameterEstimator()
-  :ParameterEstimator()
+:ParameterEstimator()
 {
 }
 
@@ -14,7 +16,7 @@ MatrixParameterEstimator::~MatrixParameterEstimator()
 
 //Copy constructor for the MatrixParameterEstimator class.
 MatrixParameterEstimator::MatrixParameterEstimator(const MatrixParameterEstimator &another)
-  :ParameterEstimator(another)
+:ParameterEstimator(another)
 {
   this->make_copy(another);
 }
@@ -77,4 +79,5 @@ void MatrixParameterEstimator::fit(const std::string &variable,
   arma::mat matrix_points = vector_of_parameters_to_mat(variable,
                                                         all_points);
   this->fit(matrix_points,exp(normalised_log_weights));
+}
 }

@@ -2,6 +2,8 @@
 #include "measurement_covariance_estimator.h"
 #include "transform.h"
 
+namespace ilike
+{
 MeasurementCovarianceEstimatorOutput::MeasurementCovarianceEstimatorOutput()
 {
   this->write_to_file_flag = true;
@@ -20,7 +22,7 @@ void MeasurementCovarianceEstimatorOutput::operator=(const MeasurementCovariance
 {
   if(this == &another)
     return;
-
+  
   this->make_copy(another);
 }
 
@@ -60,4 +62,5 @@ void MeasurementCovarianceEstimatorOutput::write(const std::string &directory_na
 {
   if (this->write_to_file_flag==true)
     this->write_to_file(directory_name);
+}
 }

@@ -6,8 +6,10 @@
 #include "independent_proposal_kernel.h"
 #include "density_estimator_output.h"
 
+namespace ilike
+{
 DensityLikelihoodEstimatorOutput::DensityLikelihoodEstimatorOutput()
-  :LikelihoodEstimatorOutput()
+:LikelihoodEstimatorOutput()
 {
   this->log_likelihood_smcfixed_part = 0.0;
   this->subsample_log_likelihood_smcfixed_part = 0.0;
@@ -20,7 +22,7 @@ DensityLikelihoodEstimatorOutput::DensityLikelihoodEstimatorOutput(DensityLikeli
                                                                    DensityEstimator* density_estimator_in,
                                                                    DensityEstimator* subsample_density_estimator_in,
                                                                    bool store_output_in)
-  :LikelihoodEstimatorOutput()
+:LikelihoodEstimatorOutput()
 {
   this->estimator = estimator_in;
   
@@ -45,17 +47,17 @@ DensityLikelihoodEstimatorOutput::DensityLikelihoodEstimatorOutput(DensityLikeli
 }
 
 /*
-DensityLikelihoodEstimatorOutput::DensityLikelihoodEstimatorOutput(DensityLikelihoodEstimator* estimator_in,
-                                                                   const Parameters &conditioned_on_parameters)
-:LikelihoodEstimatorOutput()
-{
-  this->estimator = estimator_in;
-  //this->density_estimator = this->estimator->density_estimator->duplicate();
-  this->log_likelihood_smcfixed_part = 0.0;
-  this->subsample_log_likelihood_smcfixed_part = 0.0;
-  //this->results_name = results_name_in;
-}
-*/
+ DensityLikelihoodEstimatorOutput::DensityLikelihoodEstimatorOutput(DensityLikelihoodEstimator* estimator_in,
+ const Parameters &conditioned_on_parameters)
+ :LikelihoodEstimatorOutput()
+ {
+ this->estimator = estimator_in;
+ //this->density_estimator = this->estimator->density_estimator->duplicate();
+ this->log_likelihood_smcfixed_part = 0.0;
+ this->subsample_log_likelihood_smcfixed_part = 0.0;
+ //this->results_name = results_name_in;
+ }
+ */
 
 DensityLikelihoodEstimatorOutput::~DensityLikelihoodEstimatorOutput()
 {
@@ -65,7 +67,7 @@ DensityLikelihoodEstimatorOutput::~DensityLikelihoodEstimatorOutput()
 
 //Copy constructor for the DensityLikelihoodEstimatorOutput class.
 DensityLikelihoodEstimatorOutput::DensityLikelihoodEstimatorOutput(const DensityLikelihoodEstimatorOutput &another)
-  :LikelihoodEstimatorOutput(another)
+:LikelihoodEstimatorOutput(another)
 {
   this->make_copy(another);
 }
@@ -78,7 +80,7 @@ void DensityLikelihoodEstimatorOutput::operator=(const DensityLikelihoodEstimato
   
   //if (this->density_estimator!=NULL)
   //  delete this->density_estimator;
-
+  
   LikelihoodEstimatorOutput::operator=(another);
   this->make_copy(another);
 }
@@ -197,7 +199,7 @@ arma::mat DensityLikelihoodEstimatorOutput::get_gradient_of_log(const std::strin
 }
 
 arma::mat DensityLikelihoodEstimatorOutput::subsample_get_gradient_of_log(const std::string &variable,
-                                                                const Parameters &x)
+                                                                          const Parameters &x)
 {
   // need to use chain rule
   // need differential of llhd wrt parameters (easy) and differential of parameters wrt to theta (not easy)
@@ -218,7 +220,7 @@ void DensityLikelihoodEstimatorOutput::subsample_fit(const std::vector<Parameter
 
 void DensityLikelihoodEstimatorOutput::print(std::ostream &os) const
 {
-
+  
 }
 
 void DensityLikelihoodEstimatorOutput::write_to_file(const std::string &dir_name,
@@ -295,4 +297,5 @@ void DensityLikelihoodEstimatorOutput::close_ofstreams()
   this->estimator->log_likelihood_file_stream.close();
   this->estimator->file_stream.close();
   this->estimator->time_file_stream.close();
+}
 }

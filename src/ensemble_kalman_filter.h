@@ -11,6 +11,8 @@ using namespace Rcpp;
 #include "ilike_header.h"
 #include "parameters.h"
 
+namespace ilike
+{
 class EnsembleKalmanOutput;
 class ProposalKernel;
 class MoveOutput;
@@ -19,11 +21,11 @@ class MoveOutput;
 
 class EnsembleKalmanFilter : public EnsembleKalman
 {
-
+  
 public:
-
+  
   EnsembleKalmanFilter();
-
+  
   EnsembleKalmanFilter(RandomNumberGenerator* rng_in,
                        size_t* seed_in,
                        Data* data_in,
@@ -47,18 +49,18 @@ public:
                        bool parallel_in,
                        size_t grain_size_in,
                        const std::string &results_name_in);
-
+  
   virtual ~EnsembleKalmanFilter();
-
+  
   EnsembleKalmanFilter(const EnsembleKalmanFilter &another);
-
+  
   void operator=(const EnsembleKalmanFilter &another);
   LikelihoodEstimator* duplicate() const;
   EnsembleKalman* ensemble_kalman_duplicate() const;
-
+  
   // double estimate_log_likelihood(const List &inputs,
   //                                const List &auxiliary_variables) const;
-
+  
   EnsembleKalmanOutput* specific_ensemble_kalman_initialise();
   EnsembleKalmanOutput* specific_ensemble_kalman_initialise(const Parameters &parameters);
   
@@ -69,7 +71,7 @@ public:
   
   void subsample_evaluate(EnsembleKalmanOutput* simulation,
                           const Parameters &conditioned_on_parameters);
-
+  
   // void is_setup_likelihood_estimator(const std::vector<List> &all_points,
   //                                    const std::vector<List> &all_auxiliary_variables);
   
@@ -83,18 +85,18 @@ public:
                              Particle &particle);
   
   /*
-  MoveOutput* move(RandomNumberGenerator &rng,
-                   Particle &particle,
-                   const Parameters &conditioned_on_parameters);
-  
-  MoveOutput* subsample_move(RandomNumberGenerator &rng,
-                             Particle &particle,
-                             const Parameters &conditioned_on_parameters);
-  */
+   MoveOutput* move(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters);
+   
+   MoveOutput* subsample_move(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters);
+   */
   
   //void weight_for_adapting_sequence(Ensemble &current_particles,
   //                                  double incremental_temperature);
-
+  
 protected:
   
   void ensemble_kalman_simulate(EnsembleKalmanOutput* simulation);
@@ -130,22 +132,22 @@ protected:
                                           const Parameters &conditioned_on_parameters);
   
   /*
-  void ensemble_kalman_subsample_simulate(EnsembleKalmanOutput* simulation,
-                                          const Parameters &conditioned_on_parameters);
-  void ensemble_kalman_subsample_evaluate(EnsembleKalmanOutput* simulation,
-                                          const Parameters &conditioned_on_parameters);
-  
-  void ensemble_kalman_subsample_evaluate_smcfixed_part(EnsembleKalmanOutput* simulation,
-                                                        const Parameters &conditioned_on_parameters);
-  void ensemble_kalman_subsample_evaluate_smcadaptive_part_given_smcfixed(EnsembleKalmanOutput* simulation,
-                                                                          const Parameters &conditioned_on_parameters);
-  */
+   void ensemble_kalman_subsample_simulate(EnsembleKalmanOutput* simulation,
+   const Parameters &conditioned_on_parameters);
+   void ensemble_kalman_subsample_evaluate(EnsembleKalmanOutput* simulation,
+   const Parameters &conditioned_on_parameters);
+   
+   void ensemble_kalman_subsample_evaluate_smcfixed_part(EnsembleKalmanOutput* simulation,
+   const Parameters &conditioned_on_parameters);
+   void ensemble_kalman_subsample_evaluate_smcadaptive_part_given_smcfixed(EnsembleKalmanOutput* simulation,
+   const Parameters &conditioned_on_parameters);
+   */
   
   bool check_termination() const;
   
   //
   void setup_variables();
-
+  
   friend EnsembleKalmanOutput;
   
   
@@ -174,13 +176,14 @@ protected:
   double current_time;
   size_t current_index;
   //bool last_index_is_fixed;
-
-
+  
+  
   // Stored here.
   //EnsembleKalmanFilterOutput* output;
-
+  
   void make_copy(const EnsembleKalmanFilter &another);
-
+  
 };
+}
 
 #endif

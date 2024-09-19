@@ -3,8 +3,10 @@
 #include "metropolis_mcmc.h"
 #include "mcmc_termination.h"
 
+namespace ilike
+{
 MetropolisStandardMCMCOutput::MetropolisStandardMCMCOutput()
-  :StandardMCMCOutput()
+:StandardMCMCOutput()
 {
   this->mcmc = NULL;
 }
@@ -24,7 +26,7 @@ MetropolisStandardMCMCOutput::~MetropolisStandardMCMCOutput()
 
 //Copy constructor for the MetropolisStandardMCMCOutput class.
 MetropolisStandardMCMCOutput::MetropolisStandardMCMCOutput(const MetropolisStandardMCMCOutput &another)
-  :StandardMCMCOutput(another)
+:StandardMCMCOutput(another)
 {
   this->make_copy(another);
 }
@@ -63,4 +65,5 @@ MCMC* MetropolisStandardMCMCOutput::get_mcmc()
 const MCMC* MetropolisStandardMCMCOutput::get_mcmc() const
 {
   return this->mcmc;
+}
 }

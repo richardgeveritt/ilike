@@ -18,8 +18,10 @@
 //#include "ensemble_kalman_updater.h"
 //#include "ensemble_kalman_predictor.h"
 
+namespace ilike
+{
 EnsembleKalmanFilter::EnsembleKalmanFilter()
-  :EnsembleKalman()
+:EnsembleKalman()
 {
   //this->proposal_kernel = NULL;
   this->index = NULL;
@@ -64,7 +66,7 @@ EnsembleKalmanFilter::EnsembleKalmanFilter(RandomNumberGenerator* rng_in,
                 results_name_in)
 {
   // Go through ENKI stuff.
-
+  
   this->index_name = index_name_in;
   this->time_name = time_name_in;
   this->time_diff_name = time_diff_name_in;
@@ -109,19 +111,19 @@ EnsembleKalmanFilter::EnsembleKalmanFilter(RandomNumberGenerator* rng_in,
   }
   
   /*
-  std::vector<double> schedule_in;
-  schedule_in.reserve(this->last_index-this->first_index+1);
-  for (size_t i=0; i<this->last_index-this->first_index+1; ++i)
-  {
-    schedule_in.push_back(this->first_index+i);
-  }
-  
-  this->sequencer = EnsembleSequencer(this->the_worker,
-                                      schedule_in,
-                                      this->index_name,
-                                      100,
-                                      new PositiveSMCCriterion());
-  */
+   std::vector<double> schedule_in;
+   schedule_in.reserve(this->last_index-this->first_index+1);
+   for (size_t i=0; i<this->last_index-this->first_index+1; ++i)
+   {
+   schedule_in.push_back(this->first_index+i);
+   }
+   
+   this->sequencer = EnsembleSequencer(this->the_worker,
+   schedule_in,
+   this->index_name,
+   100,
+   new PositiveSMCCriterion());
+   */
   
   // needed to store schedule parameters
   this->sequencer = EnsembleSequencer();
@@ -139,7 +141,7 @@ EnsembleKalmanFilter::~EnsembleKalmanFilter()
 
 //Copy constructor for the EnsembleKalmanFilter class.
 EnsembleKalmanFilter::EnsembleKalmanFilter(const EnsembleKalmanFilter &another)
-  :EnsembleKalman(another)
+:EnsembleKalman(another)
 {
   this->make_copy(another);
 }
@@ -149,7 +151,7 @@ void EnsembleKalmanFilter::operator=(const EnsembleKalmanFilter &another)
   if(this == &another){ //if a==a
     return;
   }
-
+  
   //if (this->proposal_kernel!=NULL)
   //  delete this->proposal_kernel;
   
@@ -291,7 +293,7 @@ MoveOutput* EnsembleKalmanFilter::move(RandomNumberGenerator &rng,
   for (size_t i=0; i<this->predictions_per_update; ++i)
   {
     //VectorIndex index(this->current_index);
-
+    
     if (i==0)
     {
       moved_ensemble_member = this->transition_model_kernel->move(rng,
@@ -305,7 +307,7 @@ MoveOutput* EnsembleKalmanFilter::move(RandomNumberGenerator &rng,
   }
   
   //moved_ensemble_member.simulate_ensemble_factor_variables(&ensemble_member);
-    
+  
   MoveOutput* moved_output = new SinglePointMoveOutput(std::move(moved_ensemble_member));
   
   return moved_output;
@@ -416,10 +418,10 @@ void EnsembleKalmanFilter::ensemble_kalman_simulate(EnsembleKalmanOutput* curren
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Ensemble* current_ensemble = &current_state->back();
     Ensemble* next_ensemble = current_state->add_ensemble(this->ensemble_factors);
-
+    
     this->the_worker->move(next_ensemble,
                            current_ensemble);
-
+    
     current_state->increment_enk_iteration();
     // involves complete evaluation of weights using current adaptive param
   }
@@ -427,35 +429,35 @@ void EnsembleKalmanFilter::ensemble_kalman_simulate(EnsembleKalmanOutput* curren
 }
 
 /*
-MoveOutput* EnsembleKalmanFilter::move(RandomNumberGenerator &rng,
-                                          Particle &ensemble_member,
-                                          const Parameters &conditioned_on_parameters)
-{
-  Particle moved_ensemble_member;
-  for (size_t i=0; i<this->predictions_per_update; ++i)
-  {
-    VectorIndex index(this->current_index);
-    if (i==0)
-    {
-      moved_ensemble_member = this->proposal_kernel->move(rng,
-                                                          ensemble_member,
-                                                          conditioned_on_parameters);
-    }
-    else
-    {
-      moved_ensemble_member = this->proposal_kernel->move(rng,
-                                                          moved_ensemble_member,
-                                                          conditioned_on_parameters);
-    }
-  }
-  
-  //moved_ensemble_member.simulate_ensemble_factor_variables(&ensemble_member);
-  
-  MoveOutput* moved_output = new SinglePointMoveOutput(std::move(moved_ensemble_member));
-  
-  return moved_output;
-}
-*/
+ MoveOutput* EnsembleKalmanFilter::move(RandomNumberGenerator &rng,
+ Particle &ensemble_member,
+ const Parameters &conditioned_on_parameters)
+ {
+ Particle moved_ensemble_member;
+ for (size_t i=0; i<this->predictions_per_update; ++i)
+ {
+ VectorIndex index(this->current_index);
+ if (i==0)
+ {
+ moved_ensemble_member = this->proposal_kernel->move(rng,
+ ensemble_member,
+ conditioned_on_parameters);
+ }
+ else
+ {
+ moved_ensemble_member = this->proposal_kernel->move(rng,
+ moved_ensemble_member,
+ conditioned_on_parameters);
+ }
+ }
+ 
+ //moved_ensemble_member.simulate_ensemble_factor_variables(&ensemble_member);
+ 
+ MoveOutput* moved_output = new SinglePointMoveOutput(std::move(moved_ensemble_member));
+ 
+ return moved_output;
+ }
+ */
 
 MoveOutput* EnsembleKalmanFilter::subsample_move(RandomNumberGenerator &rng,
                                                  Particle &ensemble_member)
@@ -488,35 +490,35 @@ MoveOutput* EnsembleKalmanFilter::subsample_move(RandomNumberGenerator &rng,
 }
 
 /*
-MoveOutput* EnsembleKalmanFilter::subsample_move(RandomNumberGenerator &rng,
-                                                 Particle &ensemble_member,
-                                                 const Parameters &conditioned_on_parameters)
-{
-  Particle moved_ensemble_member;
-  for (size_t i=0; i<this->predictions_per_update; ++i)
-  {
-    VectorIndex index(this->current_index);
-    if (i==0)
-    {
-      moved_ensemble_member = this->proposal_kernel->subsample_move(rng,
-                                                                    ensemble_member,
-                                                                    conditioned_on_parameters);
-    }
-    else
-    {
-      moved_ensemble_member = this->proposal_kernel->subsample_move(rng,
-                                                                    moved_ensemble_member,
-                                                                    conditioned_on_parameters);
-    }
-  }
-  
-  //moved_ensemble_member.simulate_ensemble_factor_variables(&ensemble_member);
-  
-  MoveOutput* moved_output = new SinglePointMoveOutput(std::move(moved_ensemble_member));
-  
-  return moved_output;
-}
-*/
+ MoveOutput* EnsembleKalmanFilter::subsample_move(RandomNumberGenerator &rng,
+ Particle &ensemble_member,
+ const Parameters &conditioned_on_parameters)
+ {
+ Particle moved_ensemble_member;
+ for (size_t i=0; i<this->predictions_per_update; ++i)
+ {
+ VectorIndex index(this->current_index);
+ if (i==0)
+ {
+ moved_ensemble_member = this->proposal_kernel->subsample_move(rng,
+ ensemble_member,
+ conditioned_on_parameters);
+ }
+ else
+ {
+ moved_ensemble_member = this->proposal_kernel->subsample_move(rng,
+ moved_ensemble_member,
+ conditioned_on_parameters);
+ }
+ }
+ 
+ //moved_ensemble_member.simulate_ensemble_factor_variables(&ensemble_member);
+ 
+ MoveOutput* moved_output = new SinglePointMoveOutput(std::move(moved_ensemble_member));
+ 
+ return moved_output;
+ }
+ */
 
 void EnsembleKalmanFilter::ensemble_kalman_evaluate(EnsembleKalmanOutput* current_state,
                                                     const Parameters &conditioned_on_parameters)
@@ -628,7 +630,7 @@ void EnsembleKalmanFilter::ensemble_kalman_subsample_evaluate_smcadaptive_part_g
                                              conditioned_on_parameters);
     
   }
-
+  
 }
 
 void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcfixed_part(EnsembleKalmanOutput* current_state,
@@ -695,7 +697,7 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcadaptive_part_given_smcfi
                                    conditioned_on_parameters);
     
   }
-
+  
 }
 
 void EnsembleKalmanFilter::ensemble_kalman_subsample_simulate(EnsembleKalmanOutput* current_state)
@@ -752,194 +754,194 @@ void EnsembleKalmanFilter::ensemble_kalman_subsample_simulate(EnsembleKalmanOutp
 }
 
 /*
-void EnsembleKalmanFilter::ensemble_kalman_subsample_evaluate(EnsembleKalmanOutput* current_state,
-                                                              const Parameters &conditioned_on_parameters)
-{
-  if (!this->last_index_is_fixed)
-  {
-    Rcpp::stop("EnsembleKalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
-  }
-  
-  this->ensemble_kalman_subsample_evaluate_smcfixed_part(current_state,
-                                                         conditioned_on_parameters);
-  this->ensemble_kalman_subsample_evaluate_smcadaptive_part_given_smcfixed(current_state,
-                                                                           conditioned_on_parameters);
-}
-
-void EnsembleKalmanFilter::ensemble_kalman_subsample_evaluate_smcfixed_part(EnsembleKalmanOutput* current_state,
-                                                                            const Parameters &conditioned_on_parameters)
-{
-  //this->the_worker->smcfixed_weight(current_state->all_ensembles.back());
-  //current_state->initialise_next_step();
-}
-
-void EnsembleKalmanFilter::ensemble_kalman_subsample_evaluate_smcadaptive_part_given_smcfixed(EnsembleKalmanOutput* current_state,
-                                                                                              const Parameters &conditioned_on_parameters)
-{
-  // set sequencer to have values from conditioned_on_parameters
-  //if (!this->sequencer_limit_is_fixed)
-  //  this->sequencer.set_next_with_parameter(conditioned_on_parameters);
-  
-  // If first step, then weight then check termination. What to do about find desired criterion and find next target? See below - make it different in first iteration?
-  
-  // iterate until stop.
-  bool terminate = FALSE;
-  while (terminate==FALSE)
-  {
-    this->the_worker->pack(&current_state->back());
-    this->find_measurement_covariances(current_state);
-    this->the_worker->shift(&current_state->back());
-    this->the_worker->unpack(&current_state->back());
-    
-    //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
-    //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-    
-    // check termination, using sequencer
-    if (this->check_termination())
-    {
-      //terminate = TRUE;
+ void EnsembleKalmanFilter::ensemble_kalman_subsample_evaluate(EnsembleKalmanOutput* current_state,
+ const Parameters &conditioned_on_parameters)
+ {
+ if (!this->last_index_is_fixed)
+ {
+ Rcpp::stop("EnsembleKalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
+ }
+ 
+ this->ensemble_kalman_subsample_evaluate_smcfixed_part(current_state,
+ conditioned_on_parameters);
+ this->ensemble_kalman_subsample_evaluate_smcadaptive_part_given_smcfixed(current_state,
+ conditioned_on_parameters);
+ }
+ 
+ void EnsembleKalmanFilter::ensemble_kalman_subsample_evaluate_smcfixed_part(EnsembleKalmanOutput* current_state,
+ const Parameters &conditioned_on_parameters)
+ {
+ //this->the_worker->smcfixed_weight(current_state->all_ensembles.back());
+ //current_state->initialise_next_step();
+ }
+ 
+ void EnsembleKalmanFilter::ensemble_kalman_subsample_evaluate_smcadaptive_part_given_smcfixed(EnsembleKalmanOutput* current_state,
+ const Parameters &conditioned_on_parameters)
+ {
+ // set sequencer to have values from conditioned_on_parameters
+ //if (!this->sequencer_limit_is_fixed)
+ //  this->sequencer.set_next_with_parameter(conditioned_on_parameters);
+ 
+ // If first step, then weight then check termination. What to do about find desired criterion and find next target? See below - make it different in first iteration?
+ 
+ // iterate until stop.
+ bool terminate = FALSE;
+ while (terminate==FALSE)
+ {
+ this->the_worker->pack(&current_state->back());
+ this->find_measurement_covariances(current_state);
+ this->the_worker->shift(&current_state->back());
+ this->the_worker->unpack(&current_state->back());
+ 
+ //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
+ //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
+ 
+ // check termination, using sequencer
+ if (this->check_termination())
+ {
+ //terminate = TRUE;
  current_state->terminate();
-      break;
-    }
-    
-    this->current_index = this->current_index+1;
-    this->ensemble_factors->set_data(this->current_index);
-    
-    this->ensemble_kalman_subsample_simulate(current_state,
-                                             conditioned_on_parameters);
-    
-  }
-}
-*/
+ break;
+ }
+ 
+ this->current_index = this->current_index+1;
+ this->ensemble_factors->set_data(this->current_index);
+ 
+ this->ensemble_kalman_subsample_simulate(current_state,
+ conditioned_on_parameters);
+ 
+ }
+ }
+ */
 
 //void EnsembleKalmanFilter::evaluate(EnsembleKalmanOutput* current_state,
 //                            const Parameters &conditioned_on_parameters)
 //{
-  // unsure
-  // copied from KF??????
-  
-  /*
-  
-  // use conditioned_on_parameters to set the next index to stop on
-  if (!this->last_index_is_fixed)
-  {
-    this->first_index = this->last_index+1;
-    this->current_index = this->first_index;
-    this->last_index = size_t(conditioned_on_parameters[this->index_name][0]);
-    if (this->first_index>this->last_index)
-      Rcpp::stop("EnsembleKalmanFilter::evaluate - last index from parameters is before the current state of the filter.");
-  }
-  
-  // Set predictor and updater with parameters.
-  this->predictor->conditioned_on_parameters = conditioned_on_parameters;
-  this->updater->conditioned_on_parameters = conditioned_on_parameters;
-  
-  if (current_state->predicted_size()==0)
-  {
-    // Initial step.
-    current_state->set_current_predicted_statistics(this->prior_mean,
-                                                    this->prior_covariance);
-    current_state->add_predicted_statistics();
-    
-    // For a particle filter, we instead need to use
-    // Data current_measurement = this->data->get_using_time_index(this->measurements_names);
-    // Returns the data for a time slice, which will include a bunch of variables.
-    arma::colvec current_measurement = (*this->data)[this->measurements_names].col(this->current_index);
-    
-    // Update at initial step.
-    this->updater->update(current_state,
-                          current_measurement);
-    current_state->add_posterior_statistics();
-  }
-  
-  double predict_time_step = this->update_time_step/double(this->predictions_per_update);
+// unsure
+// copied from KF??????
 
-  while (!this->check_termination())
-  {
-    current_state->set_current_predicted_to_be_current_posterior();
-    for (size_t i=0; i<this->predictions_per_update; ++i)
-    {
-      double previous_time = this->current_time;
-      this->current_time = this->current_time + predict_time_step;
-      this->predictor->predict(current_state,
-                               previous_time,
-                               this->current_time);
-    }
-    current_state->add_predicted_statistics();
-    this->current_index = this->current_index + 1;
-    
-    arma::colvec current_measurement = (*this->data)[this->measurements_names].col(this->current_index);
-    
-    this->updater->update(current_state,
-                          current_measurement);
-    current_state->add_posterior_statistics();
-  }
-  */
+/*
+ 
+ // use conditioned_on_parameters to set the next index to stop on
+ if (!this->last_index_is_fixed)
+ {
+ this->first_index = this->last_index+1;
+ this->current_index = this->first_index;
+ this->last_index = size_t(conditioned_on_parameters[this->index_name][0]);
+ if (this->first_index>this->last_index)
+ Rcpp::stop("EnsembleKalmanFilter::evaluate - last index from parameters is before the current state of the filter.");
+ }
+ 
+ // Set predictor and updater with parameters.
+ this->predictor->conditioned_on_parameters = conditioned_on_parameters;
+ this->updater->conditioned_on_parameters = conditioned_on_parameters;
+ 
+ if (current_state->predicted_size()==0)
+ {
+ // Initial step.
+ current_state->set_current_predicted_statistics(this->prior_mean,
+ this->prior_covariance);
+ current_state->add_predicted_statistics();
+ 
+ // For a particle filter, we instead need to use
+ // Data current_measurement = this->data->get_using_time_index(this->measurements_names);
+ // Returns the data for a time slice, which will include a bunch of variables.
+ arma::colvec current_measurement = (*this->data)[this->measurements_names].col(this->current_index);
+ 
+ // Update at initial step.
+ this->updater->update(current_state,
+ current_measurement);
+ current_state->add_posterior_statistics();
+ }
+ 
+ double predict_time_step = this->update_time_step/double(this->predictions_per_update);
+ 
+ while (!this->check_termination())
+ {
+ current_state->set_current_predicted_to_be_current_posterior();
+ for (size_t i=0; i<this->predictions_per_update; ++i)
+ {
+ double previous_time = this->current_time;
+ this->current_time = this->current_time + predict_time_step;
+ this->predictor->predict(current_state,
+ previous_time,
+ this->current_time);
+ }
+ current_state->add_predicted_statistics();
+ this->current_index = this->current_index + 1;
+ 
+ arma::colvec current_measurement = (*this->data)[this->measurements_names].col(this->current_index);
+ 
+ this->updater->update(current_state,
+ current_measurement);
+ current_state->add_posterior_statistics();
+ }
+ */
 //}
 
 //void EnsembleKalmanFilter::subsample_evaluate(EnsembleKalmanOutput* current_state,
 //                                    const Parameters &conditioned_on_parameters)
 //{
-  // unsure
-  // copied from KF??????
-  
-  /*
-   
-   // use conditioned_on_parameters to set the next index to stop on
-   if (!this->last_index_is_fixed)
-   {
-   this->first_index = this->last_index+1;
-   this->current_index = this->first_index;
-   this->last_index = size_t(conditioned_on_parameters[this->index_name][0]);
-   if (this->first_index>this->last_index)
-   Rcpp::stop("EnsembleKalmanFilter::evaluate - last index from parameters is before the current state of the filter.");
-   }
-   
-   // Set predictor and updater with parameters.
-   this->predictor->conditioned_on_parameters = conditioned_on_parameters;
-   this->updater->conditioned_on_parameters = conditioned_on_parameters;
-   
-   if (current_state->predicted_size()==0)
-   {
-   // Initial step.
-   current_state->set_current_predicted_statistics(this->prior_mean,
-   this->prior_covariance);
-   current_state->add_predicted_statistics();
-   
-   // For a particle filter, we instead need to use
-   // Data current_measurement = this->data->get_using_time_index(this->measurements_names);
-   // Returns the data for a time slice, which will include a bunch of variables.
-   arma::colvec current_measurement = (*this->data)[this->measurements_names].col(this->current_index);
-   
-   // Update at initial step.
-   this->updater->update(current_state,
-   current_measurement);
-   current_state->add_posterior_statistics();
-   }
-   
-   double predict_time_step = this->update_time_step/double(this->predictions_per_update);
-   
-   while (!this->check_termination())
-   {
-   current_state->set_current_predicted_to_be_current_posterior();
-   for (size_t i=0; i<this->predictions_per_update; ++i)
-   {
-   double previous_time = this->current_time;
-   this->current_time = this->current_time + predict_time_step;
-   this->predictor->predict(current_state,
-   previous_time,
-   this->current_time);
-   }
-   current_state->add_predicted_statistics();
-   this->current_index = this->current_index + 1;
-   
-   arma::colvec current_measurement = (*this->data)[this->measurements_names].col(this->current_index);
-   
-   this->updater->update(current_state,
-   current_measurement);
-   current_state->add_posterior_statistics();
-   }
-   */
+// unsure
+// copied from KF??????
+
+/*
+ 
+ // use conditioned_on_parameters to set the next index to stop on
+ if (!this->last_index_is_fixed)
+ {
+ this->first_index = this->last_index+1;
+ this->current_index = this->first_index;
+ this->last_index = size_t(conditioned_on_parameters[this->index_name][0]);
+ if (this->first_index>this->last_index)
+ Rcpp::stop("EnsembleKalmanFilter::evaluate - last index from parameters is before the current state of the filter.");
+ }
+ 
+ // Set predictor and updater with parameters.
+ this->predictor->conditioned_on_parameters = conditioned_on_parameters;
+ this->updater->conditioned_on_parameters = conditioned_on_parameters;
+ 
+ if (current_state->predicted_size()==0)
+ {
+ // Initial step.
+ current_state->set_current_predicted_statistics(this->prior_mean,
+ this->prior_covariance);
+ current_state->add_predicted_statistics();
+ 
+ // For a particle filter, we instead need to use
+ // Data current_measurement = this->data->get_using_time_index(this->measurements_names);
+ // Returns the data for a time slice, which will include a bunch of variables.
+ arma::colvec current_measurement = (*this->data)[this->measurements_names].col(this->current_index);
+ 
+ // Update at initial step.
+ this->updater->update(current_state,
+ current_measurement);
+ current_state->add_posterior_statistics();
+ }
+ 
+ double predict_time_step = this->update_time_step/double(this->predictions_per_update);
+ 
+ while (!this->check_termination())
+ {
+ current_state->set_current_predicted_to_be_current_posterior();
+ for (size_t i=0; i<this->predictions_per_update; ++i)
+ {
+ double previous_time = this->current_time;
+ this->current_time = this->current_time + predict_time_step;
+ this->predictor->predict(current_state,
+ previous_time,
+ this->current_time);
+ }
+ current_state->add_predicted_statistics();
+ this->current_index = this->current_index + 1;
+ 
+ arma::colvec current_measurement = (*this->data)[this->measurements_names].col(this->current_index);
+ 
+ this->updater->update(current_state,
+ current_measurement);
+ current_state->add_posterior_statistics();
+ }
+ */
 //}
 
 bool EnsembleKalmanFilter::check_termination() const
@@ -948,11 +950,11 @@ bool EnsembleKalmanFilter::check_termination() const
 }
 
 /*
-void EnsembleKalmanFilter::setup_variables()
-{
-  this->setup_variables_using_candidate_parameters(this->proposal->independent_simulate(*this->rng));
-}
-*/
+ void EnsembleKalmanFilter::setup_variables()
+ {
+ this->setup_variables_using_candidate_parameters(this->proposal->independent_simulate(*this->rng));
+ }
+ */
 
 //double EnsembleKalmanFilter::evaluate(const Parameters &parameters)
 //{
@@ -966,10 +968,11 @@ void EnsembleKalmanFilter::setup_variables()
 // }
 
 /*
-void EnsembleKalmanFilter::weight_for_adapting_sequence(Ensemble &current_particles,
-                                                        double incremental_temperature)
-{
-  // no adaptation so don't do anything
-  //this->the_worker->smcadaptive_given_smcfixed_evaluate_target(current_particles);
+ void EnsembleKalmanFilter::weight_for_adapting_sequence(Ensemble &current_particles,
+ double incremental_temperature)
+ {
+ // no adaptation so don't do anything
+ //this->the_worker->smcadaptive_given_smcfixed_evaluate_target(current_particles);
+ }
+ */
 }
-*/

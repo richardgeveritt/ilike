@@ -9,17 +9,19 @@
 
 #include "rcppparallel_workers.h"
 
+namespace ilike
+{
 class SMC;
 
 class RcppParallelSMCWorker : public SMCWorker
 {
 public:
-
+  
   RcppParallelSMCWorker();
   RcppParallelSMCWorker(SMC* the_smc,
                         size_t grain_size_in);
   virtual ~RcppParallelSMCWorker();
-
+  
   RcppParallelSMCWorker(const RcppParallelSMCWorker &another);
   void operator=(const RcppParallelSMCWorker &another);
   SMCWorker* duplicate() const;
@@ -71,14 +73,14 @@ public:
                            ProposalKernel* proposal_kernel);
   
   arma::colvec get_unnormalised_log_incremental_weights() const;
-
+  
   //std::vector<Particle> get_particles() const;
-
+  
   // Simulate from the proposal and weight.
   //void simulate_and_weight();
-
+  
 protected:
-
+  
   // Just does the simulation from the proposal.
   void specific_simulate(Particles* next_particles);
   
@@ -95,14 +97,14 @@ protected:
   
   void subsample_specific_simulate(Particles* next_particles,
                                    const Parameters &conditioned_on_parameters);
-
+  
   void make_copy(const RcppParallelSMCWorker &another);
-
+  
   //uint64_t seed;
   //RandomNumberGenerator rng;
-
+  
   size_t grain_size;
-
+  
   friend SimulateWorker;
   friend ConditionalSimulateWorker;
   friend SubsampleSimulateWorker;
@@ -135,7 +137,8 @@ protected:
   SubsamplePFWeightWorker subsample_pf_weight_worker;
   
   std::vector<double>* log_unnormalised_incremental_weights;
-
+  
 };
+}
 
 #endif

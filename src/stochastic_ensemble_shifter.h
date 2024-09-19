@@ -6,17 +6,19 @@ using namespace Rcpp;
 
 #include "ensemble_shifter.h"
 
+namespace ilike
+{
 class StochasticEnsembleShifter : public EnsembleShifter
 {
-
+  
 public:
-
+  
   StochasticEnsembleShifter();
-
+  
   virtual ~StochasticEnsembleShifter();
-
+  
   StochasticEnsembleShifter(const StochasticEnsembleShifter &another);
-
+  
   void operator=(const StochasticEnsembleShifter &another);
   EnsembleShifter* duplicate() const;
   
@@ -31,9 +33,10 @@ public:
              double inverse_incremental_temperature) const;
   
 protected:
-
+  
   void make_copy(const StochasticEnsembleShifter &another);
-
+  
 };
+}
 
 #endif

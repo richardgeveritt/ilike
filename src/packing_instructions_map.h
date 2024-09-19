@@ -10,6 +10,8 @@
 
 #include "parameters.h"
 
+namespace ilike
+{
 class PackingInstructionsMap
 {
 public:
@@ -26,8 +28,9 @@ public:
   
   std::pair<size_t,size_t>& operator[](const std::string &variable);
   std::pair<size_t,size_t> operator[](const std::string &variable) const;
-
+  
   boost::unordered_map< std::string, std::pair<size_t,size_t>> variable_indexed_start_and_end;
 };
+}
 
 #endif /* packing_instructions_h */

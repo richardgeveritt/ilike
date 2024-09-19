@@ -6,20 +6,22 @@ using namespace Rcpp;
 
 #include "measurement_covariance_estimator_output.h"
 
+namespace ilike
+{
 class GenericMeasurementCovarianceEstimator;
 
 class GenericMeasurementCovarianceEstimatorOutput : public MeasurementCovarianceEstimatorOutput
 {
-
+  
 public:
-
+  
   GenericMeasurementCovarianceEstimatorOutput();
   virtual ~GenericMeasurementCovarianceEstimatorOutput();
   
   GenericMeasurementCovarianceEstimatorOutput(GenericMeasurementCovarianceEstimator* generic_estimator_in);
-
+  
   GenericMeasurementCovarianceEstimatorOutput(const GenericMeasurementCovarianceEstimatorOutput &another);
-
+  
   void operator=(const GenericMeasurementCovarianceEstimatorOutput &another);
   MeasurementCovarianceEstimatorOutput* duplicate() const;
   
@@ -33,30 +35,30 @@ public:
   double evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,const arma::mat &inv_sigma_precomp,
                                             double log_det_precomp) const;
   /*
-  double evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
-                                            const Parameters &conditioned_on_parameters);
-  */
+   double evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
+   const Parameters &conditioned_on_parameters);
+   */
   double subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
                                                       const arma::mat &inv_sigma_precomp,
                                                       double log_det_precomp) const;
   /*
-  double subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
-                                                      const Parameters &conditioned_on_parameters);
-  */
+   double subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
+   const Parameters &conditioned_on_parameters);
+   */
   
   double evaluate_likelihood();
   /*
-  double evaluate_likelihood(const Parameters &conditioned_on_parameters);
-  */
+   double evaluate_likelihood(const Parameters &conditioned_on_parameters);
+   */
   double subsample_evaluate_likelihood();
   /*
-  double subsample_evaluate_likelihood(const Parameters &conditioned_on_parameters);
-  */
+   double subsample_evaluate_likelihood(const Parameters &conditioned_on_parameters);
+   */
   
   MeasurementCovarianceEstimator* get_estimator();
   
   void close_ofstreams();
-
+  
 protected:
   
   // not stored here
@@ -69,9 +71,10 @@ protected:
   //Parameters simulated_measurement;
   arma::colvec measurement_state;
   arma::colvec random_shift;
-
+  
   void make_copy(const GenericMeasurementCovarianceEstimatorOutput &another);
   
 };
+}
 
 #endif

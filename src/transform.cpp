@@ -4,6 +4,8 @@
 #include "custom_transform_component.h"
 #include "custom_leafroot_transform_component.h"
 
+namespace ilike
+{
 // Include other class definitions that are needed.
 
 // Public functions //
@@ -13,7 +15,7 @@
 // Comment about function.
 Transform::Transform()
 {
-	// Set all the pointers owned by this class to be something (possibly NULL).
+  // Set all the pointers owned by this class to be something (possibly NULL).
 }
 
 Transform::Transform(TransformPtr transform_in)
@@ -35,7 +37,7 @@ Transform::Transform(TransformPtr transform_in,
 // Comment about function.
 Transform::~Transform()
 {
-	// Delete all the pointers owned by this class.
+  // Delete all the pointers owned by this class.
   
   for (std::vector<TransformComponent*>::iterator i=this->components.begin();
        i!=this->components.end();
@@ -54,19 +56,19 @@ Transform::~Transform()
 // The copy constructor.
 Transform::Transform(const Transform &another)
 {
-	this->make_copy(another);
+  this->make_copy(another);
 }
 
 // Returns a pointer to a base class of type Transform.
 Transform* Transform::duplicate() const
 {
-	return new Transform(*this);
+  return new Transform(*this);
 }
 
 // Copy all the members of the class.
 void Transform::make_copy(const Transform &another)
 {
-	// Copy all members, duplicating the memory where appropriate.
+  // Copy all members, duplicating the memory where appropriate.
   
   this->components.resize(0);
   this->components.reserve(another.components.size());
@@ -111,8 +113,8 @@ void Transform::make_copy(const Transform &another)
 // The = operator.
 void Transform::operator=(const Transform &another)
 {
-	if(this==&another)//a==a
-		return;
+  if(this==&another)//a==a
+    return;
   
   for (std::vector<TransformComponent*>::iterator i=this->components.begin();
        i!=this->components.end();
@@ -123,7 +125,7 @@ void Transform::operator=(const Transform &another)
   }
   this->components.clear();
   
-	this->make_copy(another);
+  this->make_copy(another);
 }
 
 Parameters Transform::transform(const Parameters &input) const
@@ -154,4 +156,5 @@ double Transform::log_abs_jacobian_determinant(const Parameters &input) const
 double Transform::log_abs_inverse_jacobian_determinant(const Parameters &input) const
 {
   return this->leaf->log_abs_inverse_jacobian_determinant(input);
+}
 }

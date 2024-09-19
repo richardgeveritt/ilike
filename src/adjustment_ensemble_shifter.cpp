@@ -3,10 +3,12 @@
 #include "ensemble_factor_variables.h"
 #include "ensemble.h"
 
+namespace ilike
+{
 // follows https://arxiv.org/abs/2006.02941
 
 AdjustmentEnsembleShifter::AdjustmentEnsembleShifter()
-  :EnsembleShifter()
+:EnsembleShifter()
 {
 }
 
@@ -17,7 +19,7 @@ AdjustmentEnsembleShifter::~AdjustmentEnsembleShifter()
 
 //Copy constructor for the AdjustmentEnsembleShifter class.
 AdjustmentEnsembleShifter::AdjustmentEnsembleShifter(const AdjustmentEnsembleShifter &another)
-  :EnsembleShifter(another)
+:EnsembleShifter(another)
 {
   this->make_copy(another);
 }
@@ -64,11 +66,11 @@ void AdjustmentEnsembleShifter::setup(Ensemble* ensemble,
   this->Dhathalf = arma::mat(this->Zf.n_rows,this->Zf.n_cols);
   
   /*
-  for (size_t i=0; i<this->Zf.n_cols; ++i)
-  {
-    this->Dhathalf.col(i) =
-  }
-  */
+   for (size_t i=0; i<this->Zf.n_cols; ++i)
+   {
+   this->Dhathalf.col(i) =
+   }
+   */
   this->Dhathalf.diag() = Dhathalf_vec;
   
   this->Yhats.clear();
@@ -88,29 +90,29 @@ void AdjustmentEnsembleShifter::setup(Ensemble* ensemble,
                                                          inverse_incremental_temperature);
   
   /*
-  arma::mat U;
-  arma::vec Gdiag;
-  arma::svd(this->Ftranspose,Gdiag,U,this->Zf);
-  this->Ftranspose = this->Ftranspose.t();
-  arma::mat G(this->Zf.n_rows,this->Zf.n_cols);
-  G.diag() = Gdiag;
-  this->Ginv = arma::pinv(G);
-  
-  this->Vs.clear();
-  this->Vs.reserve(ensemble->Cxys.size());
-  for (size_t i=0;
-       i<ensemble->Cxys.size();
-       ++i)
-  {
-    this->Vs.push_back(ensemble->packed_measurement_states[i].each_row()-arma::conv_to<arma::rowvec>::from(ensemble->myys[i]));
-  }
-  
-  As = ensemble->ensemble_factors->get_adjustments(this->Zf,
-                                                   this->Ginv,
-                                                   this->Ftranspose,
-                                                   this->Vs,
-                                                   inverse_incremental_temperature);
-  */
+   arma::mat U;
+   arma::vec Gdiag;
+   arma::svd(this->Ftranspose,Gdiag,U,this->Zf);
+   this->Ftranspose = this->Ftranspose.t();
+   arma::mat G(this->Zf.n_rows,this->Zf.n_cols);
+   G.diag() = Gdiag;
+   this->Ginv = arma::pinv(G);
+   
+   this->Vs.clear();
+   this->Vs.reserve(ensemble->Cxys.size());
+   for (size_t i=0;
+   i<ensemble->Cxys.size();
+   ++i)
+   {
+   this->Vs.push_back(ensemble->packed_measurement_states[i].each_row()-arma::conv_to<arma::rowvec>::from(ensemble->myys[i]));
+   }
+   
+   As = ensemble->ensemble_factors->get_adjustments(this->Zf,
+   this->Ginv,
+   this->Ftranspose,
+   this->Vs,
+   inverse_incremental_temperature);
+   */
 }
 
 void AdjustmentEnsembleShifter::shift(const EnsembleFactorVariables* ensemble_factor_variables,
@@ -136,4 +138,6 @@ void AdjustmentEnsembleShifter::shift(const EnsembleFactorVariables* ensemble_fa
     //position = position + kalman_gains[j]*(*measurements[j] - shift_terms[j]) + this->As[j]*second_part_shiftee;
     position = this->mean_position + kalman_gains[j]*(*measurements[j] - myys[j]) + this->As[j]*second_part_shiftee;
   }
+}
+
 }

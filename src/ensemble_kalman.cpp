@@ -11,8 +11,10 @@
 #include "factors.h"
 #include "transform.h"
 
+namespace ilike
+{
 EnsembleKalman::EnsembleKalman()
-  :LikelihoodEstimator()
+:LikelihoodEstimator()
 {
   this->proposal = NULL;
   //this->sequencer_parameters = NULL;
@@ -76,14 +78,14 @@ EnsembleKalman::EnsembleKalman(RandomNumberGenerator* rng_in,
 EnsembleKalman::~EnsembleKalman()
 {
   /*
-  for (std::vector<MeasurementCovarianceEstimator*>::iterator i=this->measurement_covariance_estimators.begin();
-       i!=this->measurement_covariance_estimators.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
-  */
+   for (std::vector<MeasurementCovarianceEstimator*>::iterator i=this->measurement_covariance_estimators.begin();
+   i!=this->measurement_covariance_estimators.end();
+   ++i)
+   {
+   if (*i!=NULL)
+   delete *i;
+   }
+   */
   
   if (this->proposal!=NULL)
     delete this->proposal;
@@ -103,7 +105,7 @@ EnsembleKalman::~EnsembleKalman()
 
 //Copy constructor for the EnsembleKalman class.
 EnsembleKalman::EnsembleKalman(const EnsembleKalman &another)
-  :LikelihoodEstimator(another)
+:LikelihoodEstimator(another)
 {
   this->make_copy(another);
 }
@@ -130,16 +132,16 @@ void EnsembleKalman::operator=(const EnsembleKalman &another)
   //  delete this->transform;
   
   /*
-  for (std::vector<MeasurementCovarianceEstimator*>::iterator i=this->measurement_covariance_estimators.begin();
-       i!=this->measurement_covariance_estimators.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
-  this->measurement_covariance_estimators.clear();
-  */
-
+   for (std::vector<MeasurementCovarianceEstimator*>::iterator i=this->measurement_covariance_estimators.begin();
+   i!=this->measurement_covariance_estimators.end();
+   ++i)
+   {
+   if (*i!=NULL)
+   delete *i;
+   }
+   this->measurement_covariance_estimators.clear();
+   */
+  
   LikelihoodEstimator::operator=(another);
   this->make_copy(another);
 }
@@ -153,18 +155,18 @@ void EnsembleKalman::make_copy(const EnsembleKalman &another)
   this->reciprocal_schedule_scale = another.reciprocal_schedule_scale;
   
   /*
-  this->measurement_covariance_estimators.resize(0);
-  this->measurement_covariance_estimators.reserve(another.measurement_covariance_estimators.size());
-  for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i=another.measurement_covariance_estimators.begin();
-       i!=another.measurement_covariance_estimators.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      this->measurement_covariance_estimators.push_back((*i)->duplicate());
-    else
-      this->measurement_covariance_estimators.push_back(NULL);
-  }
-  */
+   this->measurement_covariance_estimators.resize(0);
+   this->measurement_covariance_estimators.reserve(another.measurement_covariance_estimators.size());
+   for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i=another.measurement_covariance_estimators.begin();
+   i!=another.measurement_covariance_estimators.end();
+   ++i)
+   {
+   if (*i!=NULL)
+   this->measurement_covariance_estimators.push_back((*i)->duplicate());
+   else
+   this->measurement_covariance_estimators.push_back(NULL);
+   }
+   */
   
   if (another.proposal!=NULL)
     this->proposal = another.proposal->independent_proposal_kernel_duplicate();
@@ -202,15 +204,15 @@ void EnsembleKalman::make_copy(const EnsembleKalman &another)
   
   this->sequencer = another.sequencer;
   /*
-  if (another.sequencer_parameters!=NULL)
-  {
-    this->sequencer_parameters = &this->sequencer.schedule_parameters;
-  }
-  else
-  {
-    this->sequencer_parameters = NULL;
-  }
-  */
+   if (another.sequencer_parameters!=NULL)
+   {
+   this->sequencer_parameters = &this->sequencer.schedule_parameters;
+   }
+   else
+   {
+   this->sequencer_parameters = NULL;
+   }
+   */
   
   this->proposed_particles_inputted = another.proposed_particles_inputted;
   this->initial_ensemble = another.initial_ensemble;
@@ -324,7 +326,7 @@ void EnsembleKalman::set_packing_instructions()
   {
     dummy_parameters = this->proposal->independent_simulate(*this->rng);
   }
-
+  
   this->vector_variables = dummy_parameters.get_vector_variables();
   this->packing_instructions.set_info(dummy_parameters,this->vector_variables);
 }
@@ -337,11 +339,11 @@ LikelihoodEstimatorOutput* EnsembleKalman::initialise(const Parameters &conditio
 EnsembleKalmanOutput* EnsembleKalman::ensemble_kalman_initialise(const Parameters &conditioned_on_parameters)
 {
   /*
-  Parameters dummy_parameters = this->proposal->independent_simulate(*this->rng,
-                                                                     conditioned_on_parameters);
-  this->vector_variables = dummy_parameters.get_vector_variables();
-  this->any_variables = dummy_parameters.get_any_variables();
-  */
+   Parameters dummy_parameters = this->proposal->independent_simulate(*this->rng,
+   conditioned_on_parameters);
+   this->vector_variables = dummy_parameters.get_vector_variables();
+   this->any_variables = dummy_parameters.get_any_variables();
+   */
   
   if (this->initialised==false)
   {
@@ -373,7 +375,7 @@ void EnsembleKalman::simulate_proposal(EnsembleKalmanOutput* current_state,
                          this->ensemble_factors,
                          this->sequencer.schedule_parameters);
   }
-
+  
   current_state->back().log_normalising_constant_ratio = 0.0;
 }
 
@@ -466,15 +468,16 @@ void EnsembleKalman::set_reciprocal_schedule_scale(double reciprocal_schedule_sc
 }
 
 /*
-void EnsembleKalman::setup_variables_using_candidate_parameters(const Parameters &candidate_parameters)
-{
-  this->vector_variables = candidate_parameters.get_vector_variables();
-  this->packing_instructions.set_info(candidate_parameters,this->vector_variables);
-  this->any_variables = candidate_parameters.get_any_variables();
-}
-*/
+ void EnsembleKalman::setup_variables_using_candidate_parameters(const Parameters &candidate_parameters)
+ {
+ this->vector_variables = candidate_parameters.get_vector_variables();
+ this->packing_instructions.set_info(candidate_parameters,this->vector_variables);
+ this->any_variables = candidate_parameters.get_any_variables();
+ }
+ */
 
 void EnsembleKalman::specific_change_data(Data* new_data)
 {
   
+}
 }

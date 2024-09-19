@@ -2,8 +2,10 @@
 #include "utils.h"
 #include "proposal_kernel.h"
 
+namespace ilike
+{
 SampleAverageVectorRecursiveParameterEstimator::SampleAverageVectorRecursiveParameterEstimator()
-  :VectorRecursiveParameterEstimator()
+:VectorRecursiveParameterEstimator()
 {
   this->gain = equal_weight_gain;
 }
@@ -15,7 +17,7 @@ SampleAverageVectorRecursiveParameterEstimator::~SampleAverageVectorRecursivePar
 
 //Copy constructor for the SampleAverageVectorRecursiveParameterEstimator class.
 SampleAverageVectorRecursiveParameterEstimator::SampleAverageVectorRecursiveParameterEstimator(const SampleAverageVectorRecursiveParameterEstimator &another)
-  :VectorRecursiveParameterEstimator(another)
+:VectorRecursiveParameterEstimator(another)
 {
   this->make_copy(another);
 }
@@ -53,13 +55,14 @@ void SampleAverageVectorRecursiveParameterEstimator::update(const std::string &v
   Rcpp::stop("SampleAverageVectorRecursiveParameterEstimator::update - need to sort out transform.");
   
   /*
-  if (iteration_counter==0)
-  {
-    this->estimated = latest_particle.move_parameters->get_colvec(variable_name);
-  }
-  else
-  {
-    this->estimated = this->estimated + this->gain(iteration_counter+1)*(latest_particle.move_parameters->get_colvec(variable_name) - this->estimated);
-  }
-  */
+   if (iteration_counter==0)
+   {
+   this->estimated = latest_particle.move_parameters->get_colvec(variable_name);
+   }
+   else
+   {
+   this->estimated = this->estimated + this->gain(iteration_counter+1)*(latest_particle.move_parameters->get_colvec(variable_name) - this->estimated);
+   }
+   */
+}
 }

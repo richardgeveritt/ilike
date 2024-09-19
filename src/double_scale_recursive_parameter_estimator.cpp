@@ -2,8 +2,10 @@
 #include "double_recursive_parameter_estimator.h"
 #include "utils.h"
 
+namespace ilike
+{
 DoubleScaleRecursiveParameterEstimator::DoubleScaleRecursiveParameterEstimator()
-  :ScaleRecursiveParameterEstimator()
+:ScaleRecursiveParameterEstimator()
 {
 }
 
@@ -15,7 +17,7 @@ DoubleScaleRecursiveParameterEstimator::~DoubleScaleRecursiveParameterEstimator(
 
 //Copy constructor for the DoubleScaleRecursiveParameterEstimator class.
 DoubleScaleRecursiveParameterEstimator::DoubleScaleRecursiveParameterEstimator(const DoubleScaleRecursiveParameterEstimator &another)
-  :ScaleRecursiveParameterEstimator(another)
+:ScaleRecursiveParameterEstimator(another)
 {
   this->make_copy(another);
 }
@@ -61,4 +63,5 @@ void DoubleScaleRecursiveParameterEstimator::update(const std::string &variable_
                                     iteration_counter,
                                     proposal);
   this->estimated.get_constant() = exp(this->recursive_estimator->estimated);
+}
 }

@@ -3,6 +3,8 @@
 
 #include "smc.h"
 
+namespace ilike
+{
 class SMCOutput;
 class MoveOutput;
 class IndependentProposalKernel;
@@ -14,9 +16,9 @@ class ParticleFilter : public SMC
 public:
   
   // unsure
-
+  
   ParticleFilter();
-
+  
   ParticleFilter(RandomNumberGenerator* rng_in,
                  size_t* seed_in,
                  Data* data_in,
@@ -49,7 +51,7 @@ public:
                  const std::string &results_name_in);
   ParticleFilter(const ParticleFilter &another);
   virtual ~ParticleFilter(void);
-
+  
   void operator=(const ParticleFilter &another);
   SMC* smc_duplicate() const;
   LikelihoodEstimator* duplicate() const;
@@ -60,38 +62,38 @@ public:
   //void weight_for_adapting_sequence(Particles &current_particles);
   
   /*
-  MoveOutput* move(RandomNumberGenerator &rng,
-                   Particle &particle,
-                   const Parameters &conditioned_on_parameters);
-  */
+   MoveOutput* move(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters);
+   */
   
   void weight_for_adapting_sequence(const Index* index,
                                     Particles &current_particles);
   
   /*
-  void weight_for_adapting_sequence(const Index* index,
-                                    Particles &current_particles,
-                                    const Parameters &conditioned_on_parameters);
-  */
+   void weight_for_adapting_sequence(const Index* index,
+   Particles &current_particles,
+   const Parameters &conditioned_on_parameters);
+   */
   
   MoveOutput* subsample_move(RandomNumberGenerator &rng,
                              const Particle &particle) const;
   
   /*
-  MoveOutput* subsample_move(RandomNumberGenerator &rng,
-                             Particle &particle,
-                             const Parameters &conditioned_on_parameters);
-  */
+   MoveOutput* subsample_move(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters);
+   */
   
   void subsample_weight_for_adapting_sequence(const Index* index,
                                               Particles &current_particles);
   
   /*
-  void subsample_weight_for_adapting_sequence(const Index* index,
-                                              Particles &current_particles,
-                                              const Parameters &conditioned_on_parameters);
-  */
-
+   void subsample_weight_for_adapting_sequence(const Index* index,
+   Particles &current_particles,
+   const Parameters &conditioned_on_parameters);
+   */
+  
 protected:
   
   void increment_time_index();
@@ -117,7 +119,7 @@ protected:
   void evaluate_smc(SMCOutput* simulation,
                     const Parameters &conditioned_on_parameters);
   void evaluate_smcfixed_part_smc(SMCOutput* simulation,
-                    const Parameters &conditioned_on_parameters);
+                                  const Parameters &conditioned_on_parameters);
   void evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* simulation,
                                                     const Parameters &conditioned_on_parameters);
   
@@ -137,9 +139,9 @@ protected:
   
   //void mcmc_move(SMCOutput* current_state,
   //               const Parameters &conditioned_on_parameters);
-
+  
   //void smc_update(SMCOutput* current_state);
-
+  
   void make_copy(const ParticleFilter &another);
   
   // stored here
@@ -166,10 +168,11 @@ protected:
   bool transition_proposal_is_evaluated;
   
   bool check_termination() const;
-
+  
   //void smc_step();
-
+  
   //void weight_update();
 };
+}
 
 #endif

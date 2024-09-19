@@ -7,6 +7,8 @@ using namespace Rcpp;
 #include <vector>
 #include "standard_mcmc_output.h"
 
+namespace ilike
+{
 class MetropolisHastingsMCMC;
 
 class MetropolisHastingsStandardMCMCOutput : public StandardMCMCOutput
@@ -26,12 +28,12 @@ public:
   MoveOutput* duplicate() const;
   
   /*
-  Particle move(RandomNumberGenerator &rng,
-                const Particle &particle) const;
-  
-  Particle subsample_move(RandomNumberGenerator &rng,
-                          const Particle &particle) const;
-  */
+   Particle move(RandomNumberGenerator &rng,
+   const Particle &particle) const;
+   
+   Particle subsample_move(RandomNumberGenerator &rng,
+   const Particle &particle) const;
+   */
   
   MCMC* get_mcmc();
   const MCMC* get_mcmc() const;
@@ -46,5 +48,6 @@ protected:
   MetropolisHastingsMCMC* mcmc;
   
 };
+}
 
 #endif

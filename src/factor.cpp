@@ -1,5 +1,7 @@
 #include "factor.h"
 
+namespace ilike
+{
 Factor::Factor()
 {
 }
@@ -17,11 +19,12 @@ void Factor::operator=(const Factor &another)
 {
   if(this == &another)
     return;
-
+  
   this->make_copy(another);
 }
 
 void Factor::make_copy(const Factor &another)
 {
   
+}
 }

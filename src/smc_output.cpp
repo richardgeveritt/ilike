@@ -9,8 +9,10 @@
 #include "filesystem.h"
 #include "move_output.h"
 
+namespace ilike
+{
 SMCOutput::SMCOutput()
-  :LikelihoodEstimatorOutput()
+:LikelihoodEstimatorOutput()
 {
   this->estimator = NULL;
   this->smc_iteration = 0;
@@ -22,14 +24,14 @@ SMCOutput::SMCOutput()
 
 SMCOutput::~SMCOutput()
 {
-
+  
 }
 
 SMCOutput::SMCOutput(SMC* estimator_in,
                      size_t lag_in,
                      size_t lag_proposed_in,
                      const std::string &results_name_in)
-  :LikelihoodEstimatorOutput()
+:LikelihoodEstimatorOutput()
 {
   this->log_likelihood_pre_last_step = 0.0;
   if (lag_in<2)
@@ -52,7 +54,7 @@ SMCOutput::SMCOutput(SMC* estimator_in,
 
 //Copy constructor for the SMCOutput class.
 SMCOutput::SMCOutput(const SMCOutput &another)
-  :LikelihoodEstimatorOutput(another)
+:LikelihoodEstimatorOutput(another)
 {
   this->make_copy(another);
 }
@@ -69,7 +71,7 @@ void SMCOutput::operator=(const SMCOutput &another)
   //this->normalised_log_weights.clear();
   //this->log_normalising_constant_ratios.clear();
   //this->incremental_log_weights.clear();
-
+  
   LikelihoodEstimatorOutput::operator=(another);
   this->make_copy(another);
 }
@@ -141,8 +143,8 @@ void SMCOutput::evaluate_smcfixed_part(const Parameters &parameters)
   {
     this->estimator->evaluate_smc(this, parameters);
     //this->log_likelihood_smcfixed_part = std::accumulate(this->log_normalising_constant_ratios.begin(),
-                        //this->log_normalising_constant_ratios.end(),
-                        //1.0);
+    //this->log_normalising_constant_ratios.end(),
+    //1.0);
   }
   else
   {
@@ -290,17 +292,17 @@ void SMCOutput::update_weights(const arma::colvec &latest_unnormalised_log_incre
 
 //void SMCOutput::initialise_unnormalised_log_incremental_weights(const arma::colvec &latest_unnormalised_log_incremental_weights)
 //{
-  //arma::colvec latest_unnormalised_log_weights;
-  //if (this->unnormalised_log_incremental_weights.size()>0)
-  //  latest_unnormalised_log_weights = this->unnormalised_log_weights.back() + latest_unnormalised_log_incremental_weights;
-  //else
-  //  latest_unnormalised_log_weights = latest_unnormalised_log_weight_updates;
-  //this->unnormalised_log_incremental_weights.push_back(latest_unnormalised_log_incremental_weights);
-  //size_t num_to_pop_front = std::max<int>(0,unnormalised_log_incremental_weights.size()-lag);
-  //for (size_t i=0; i<num_to_pop_front; ++i)
-  //{
-  //  this->unnormalised_log_incremental_weights.pop_front();
-  //}
+//arma::colvec latest_unnormalised_log_weights;
+//if (this->unnormalised_log_incremental_weights.size()>0)
+//  latest_unnormalised_log_weights = this->unnormalised_log_weights.back() + latest_unnormalised_log_incremental_weights;
+//else
+//  latest_unnormalised_log_weights = latest_unnormalised_log_weight_updates;
+//this->unnormalised_log_incremental_weights.push_back(latest_unnormalised_log_incremental_weights);
+//size_t num_to_pop_front = std::max<int>(0,unnormalised_log_incremental_weights.size()-lag);
+//for (size_t i=0; i<num_to_pop_front; ++i)
+//{
+//  this->unnormalised_log_incremental_weights.pop_front();
+//}
 //}
 
 //void SMCOutput::set_unnormalised_log_incremental_weights(const arma::colvec &latest_unnormalised_log_incremental_weights)
@@ -362,7 +364,7 @@ arma::mat SMCOutput::get_gradient_of_log(const std::string &variable,
 }
 
 arma::mat SMCOutput::subsample_get_gradient_of_log(const std::string &variable,
-                                         const Parameters &x)
+                                                   const Parameters &x)
 {
   Rcpp::stop("SMCOutput::get_gradient_of_log - not yet implemented.");
 }
@@ -436,45 +438,45 @@ void SMCOutput::write_to_file(const std::string &dir_name,
        ++iteration)
   {
     size_t distance_from_end = this->smc_iteration-iteration;
-   
+    
     /*
-    size_t llhd_index = this->llhds.size()-1-distance_from_end;
-    
-    //if (int(this->llhds.size())-1-int(distance_from_end)>=0)
-    //{
-    if (!this->estimator->log_likelihood_file_stream.is_open())
-    {
-      this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
-    }
-    if (this->estimator->log_likelihood_file_stream.is_open())
-    {
-      this->estimator->log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->llhds[llhd_index] << std::endl;
-      //log_likelihood_file_stream.close();
-    }
-    else
-    {
-      Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + " cannot be opened.");
-    }
-    
-    if (!this->estimator->time_file_stream.is_open())
-    {
-      this->estimator->time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
-    }
-    if (this->estimator->time_file_stream.is_open())
-    {
-      double time_sum = 0.0;
-      for (size_t k=0; k<this->times.size(); ++k)
-      {
-        time_sum = time_sum + this->times[k];
-      }
-      this->estimator->time_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << time_sum << std::endl;
-      //log_likelihood_file_stream.close();
-    }
-    else
-    {
-      Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
-    }
-    */
+     size_t llhd_index = this->llhds.size()-1-distance_from_end;
+     
+     //if (int(this->llhds.size())-1-int(distance_from_end)>=0)
+     //{
+     if (!this->estimator->log_likelihood_file_stream.is_open())
+     {
+     this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
+     }
+     if (this->estimator->log_likelihood_file_stream.is_open())
+     {
+     this->estimator->log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->llhds[llhd_index] << std::endl;
+     //log_likelihood_file_stream.close();
+     }
+     else
+     {
+     Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + " cannot be opened.");
+     }
+     
+     if (!this->estimator->time_file_stream.is_open())
+     {
+     this->estimator->time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
+     }
+     if (this->estimator->time_file_stream.is_open())
+     {
+     double time_sum = 0.0;
+     for (size_t k=0; k<this->times.size(); ++k)
+     {
+     time_sum = time_sum + this->times[k];
+     }
+     this->estimator->time_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << time_sum << std::endl;
+     //log_likelihood_file_stream.close();
+     }
+     else
+     {
+     Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
+     }
+     */
     
     if (this->all_particles.size() > distance_from_end)
     {
@@ -564,22 +566,22 @@ void SMCOutput::write_to_file(const std::string &dir_name,
       }
       
       /*
-      std::ofstream any_variables_file_stream;
-      any_variables_file_stream.open(directory_name + "/any_variables.txt",std::ios::out | std::ios::app);
-      if (any_variables_file_stream.is_open())
-      {
-        for (size_t i=0; i<this->estimator->any_variables.size(); ++i)
-        {
-          any_variables_file_stream << this->estimator->any_variables[i] << ";";
-        }
-        any_variables_file_stream << std::endl;
-        any_variables_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + directory_name + "/any_variables.txt" + " cannot be opened.");
-      }
-      */
+       std::ofstream any_variables_file_stream;
+       any_variables_file_stream.open(directory_name + "/any_variables.txt",std::ios::out | std::ios::app);
+       if (any_variables_file_stream.is_open())
+       {
+       for (size_t i=0; i<this->estimator->any_variables.size(); ++i)
+       {
+       any_variables_file_stream << this->estimator->any_variables[i] << ";";
+       }
+       any_variables_file_stream << std::endl;
+       any_variables_file_stream.close();
+       }
+       else
+       {
+       Rcpp::stop("File " + directory_name + "/any_variables.txt" + " cannot be opened.");
+       }
+       */
       
       std::string smc_iteration_directory = directory_name + "/iteration" + std::to_string(iteration+1);
       
@@ -831,7 +833,7 @@ void SMCOutput::print(std::ostream &os) const
       os << std::endl << "," << std::endl << *it;
   }
   os << std::endl << ")" << std::endl;
-
+  
   os << "all_proposed" << std::endl << "(" << std::endl;
   for (it=this->all_proposed.begin();it!=this->all_proposed.end();++it)
   {
@@ -841,38 +843,39 @@ void SMCOutput::print(std::ostream &os) const
       os << std::endl << "," << std::endl << *it;
   }
   os << std::endl << ")" << std::endl;
-
+  
   /*
-  os << "unnormalised_log_weights" << std::endl << "(" << std::endl;
-  std::deque<arma::colvec>::const_iterator itd;
-  for (itd=this->unnormalised_log_weights.begin();itd!=this->unnormalised_log_weights.end();++itd)
-  {
-    if (itd==this->unnormalised_log_weights.begin())
-      os << *itd;
-    else
-      os << std::endl << "," << std::endl << *itd;
-  }
-  os << std::endl << ")" << std::endl;
-
-  os << "normalised_log_weights" << std::endl << "(" << std::endl;
-  for (itd=this->normalised_log_weights.begin();itd!=this->normalised_log_weights.end();++itd)
-  {
-    if (itd==this->normalised_log_weights.begin())
-      os << *itd;
-    else
-      os << std::endl << "," << std::endl << *itd;
-  }
-  os << std::endl << ")" << std::endl;
-
-  os << "log_normalising_constant_ratios" << std::endl << "(" << std::endl;
-  std::vector<double>::const_iterator i;
-  for (i=this->log_normalising_constant_ratios.begin();i!=this->log_normalising_constant_ratios.end();++i)
-  {
-    if (i==this->log_normalising_constant_ratios.begin())
-      os << *i;
-    else
-      os << std::endl << "," << std::endl << *i;
-  }
-  os << std::endl << ")" << std::endl;
-  */
+   os << "unnormalised_log_weights" << std::endl << "(" << std::endl;
+   std::deque<arma::colvec>::const_iterator itd;
+   for (itd=this->unnormalised_log_weights.begin();itd!=this->unnormalised_log_weights.end();++itd)
+   {
+   if (itd==this->unnormalised_log_weights.begin())
+   os << *itd;
+   else
+   os << std::endl << "," << std::endl << *itd;
+   }
+   os << std::endl << ")" << std::endl;
+   
+   os << "normalised_log_weights" << std::endl << "(" << std::endl;
+   for (itd=this->normalised_log_weights.begin();itd!=this->normalised_log_weights.end();++itd)
+   {
+   if (itd==this->normalised_log_weights.begin())
+   os << *itd;
+   else
+   os << std::endl << "," << std::endl << *itd;
+   }
+   os << std::endl << ")" << std::endl;
+   
+   os << "log_normalising_constant_ratios" << std::endl << "(" << std::endl;
+   std::vector<double>::const_iterator i;
+   for (i=this->log_normalising_constant_ratios.begin();i!=this->log_normalising_constant_ratios.end();++i)
+   {
+   if (i==this->log_normalising_constant_ratios.begin())
+   os << *i;
+   else
+   os << std::endl << "," << std::endl << *i;
+   }
+   os << std::endl << ")" << std::endl;
+   */
+}
 }

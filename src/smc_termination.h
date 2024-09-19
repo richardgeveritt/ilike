@@ -7,25 +7,29 @@ using namespace Rcpp;
 #include <vector>
 #include "particles.h"
 
+namespace ilike
+{
 class SMCTermination
 {
-
+  
 public:
-
+  
   SMCTermination();
   virtual ~SMCTermination();
-
+  
   SMCTermination(const SMCTermination &another);
-
+  
   void operator=(const SMCTermination &another);
   virtual SMCTermination* duplicate() const=0;
-
+  
   virtual bool terminate(double score)=0;
-
+  
 protected:
-
+  
   void make_copy(const SMCTermination &another);
-
+  
 };
+
+}
 
 #endif

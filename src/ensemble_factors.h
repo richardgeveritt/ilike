@@ -7,20 +7,22 @@ using namespace Rcpp;
 #include "distributions.h"
 #include "parameters.h"
 
+namespace ilike
+{
 class Index;
 class EnsembleFactorVariables;
 class Ensemble;
 
 class EnsembleFactors
 {
-
+  
 public:
-
+  
   EnsembleFactors();
   virtual ~EnsembleFactors();
   
   EnsembleFactors(const EnsembleFactors &another);
-
+  
   void operator=(const EnsembleFactors &another);
   virtual EnsembleFactors* duplicate() const=0;
   
@@ -33,20 +35,20 @@ public:
   virtual EnsembleFactorVariables* simulate_ensemble_factor_variables(const Parameters &simulated_parameters) const=0;
   
   /*
-  virtual EnsembleFactorVariables* simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
-                                                                      const Parameters &conditioned_on_parameters)=0;
-  */
+   virtual EnsembleFactorVariables* simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
+   const Parameters &conditioned_on_parameters)=0;
+   */
   
   virtual EnsembleFactorVariables* subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters) const=0;
   
   /*
-  virtual EnsembleFactorVariables* subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
-                                                                                const Parameters &conditioned_on_parameters)=0;
-  */
+   virtual EnsembleFactorVariables* subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
+   const Parameters &conditioned_on_parameters)=0;
+   */
   
   //virtual std::vector<arma::mat> get_measurement_covariances()=0;
   //virtual std::vector<arma::mat> get_measurement_covariances(const Parameters &conditioned_on_parameters)=0;
-
+  
   virtual bool need_Cxx() const=0;
   
   virtual void find_Cygivenx(const arma::mat &inv_Cxx,
@@ -54,12 +56,12 @@ public:
                              const std::vector<arma::mat> &Cyys) const=0;
   
   /*
-  virtual std::vector<arma::mat> get_adjustments(const arma::mat &Zf,
-                                                 const arma::mat &Ginv,
-                                                 const arma::mat &Ftranspose,
-                                                 const std::vector<arma::mat> &Vs,
-                                                 double inverse_incremental_temperature) const=0;
-  */
+   virtual std::vector<arma::mat> get_adjustments(const arma::mat &Zf,
+   const arma::mat &Ginv,
+   const arma::mat &Ftranspose,
+   const std::vector<arma::mat> &Vs,
+   double inverse_incremental_temperature) const=0;
+   */
   
   virtual std::vector<arma::mat> get_sqrt_adjustments(const std::vector<arma::mat> &Cxys,
                                                       const std::vector<arma::mat> &Cyys,
@@ -82,8 +84,8 @@ public:
                                                           double temperature,
                                                           double multiplier) const=0;
   virtual void get_path2_inversion_incremental_likelihood(Ensemble* ensemble,
-                                                  std::vector<double> &log_measurement_likelihood_means,
-                                                  std::vector<double> &log_measurement_likelihood_variances) const=0;
+                                                          std::vector<double> &log_measurement_likelihood_means,
+                                                          std::vector<double> &log_measurement_likelihood_variances) const=0;
   
   virtual void calculate_kalman_gains(Ensemble* ensemble,
                                       double inverse_incremental_temperature) const=0;
@@ -100,7 +102,7 @@ public:
                                               std::vector<double> &log_det_precomps) const=0;
   
 protected:
-
+  
   std::vector<std::string> measurement_names;
   
   // quite hacky...
@@ -108,7 +110,8 @@ protected:
   //double previous_temperature;
   
   void make_copy(const EnsembleFactors &another);
-
+  
 };
+}
 
 #endif

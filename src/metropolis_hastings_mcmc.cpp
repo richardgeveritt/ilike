@@ -5,8 +5,10 @@
 #include "gaussian_random_walk_proposal_kernel.h"
 #include "metropolis_hastings_standard_mcmc_output.h"
 
+namespace ilike
+{
 MetropolisHastingsMCMC::MetropolisHastingsMCMC()
-  :MCMC()
+:MCMC()
 {
   this->index = NULL;
   this->proposal = NULL;
@@ -14,7 +16,7 @@ MetropolisHastingsMCMC::MetropolisHastingsMCMC()
 
 MetropolisHastingsMCMC::MetropolisHastingsMCMC(size_t number_of_iterations_in,
                                                ProposalKernel* proposal_in)
-  :MCMC(number_of_iterations_in)
+:MCMC(number_of_iterations_in)
 {
   this->proposal = proposal_in;
   this->index = NULL;
@@ -37,7 +39,7 @@ MetropolisHastingsMCMC::MetropolisHastingsMCMC(size_t number_of_iterations_in,
 MetropolisHastingsMCMC::MetropolisHastingsMCMC(size_t number_of_iterations_in,
                                                const std::vector<std::string> &variable_names_in,
                                                const std::vector<arma::mat> &proposal_covariances_in)
-  :MCMC(number_of_iterations_in)
+:MCMC(number_of_iterations_in)
 {
   this->index = NULL;
   this->proposal = new GaussianRandomWalkProposalKernel(variable_names_in,
@@ -67,7 +69,7 @@ MetropolisHastingsMCMC::~MetropolisHastingsMCMC()
 
 //Copy constructor for the MetropolisHastingsMCMC class.
 MetropolisHastingsMCMC::MetropolisHastingsMCMC(const MetropolisHastingsMCMC &another)
-  :MCMC(another)
+:MCMC(another)
 {
   this->make_copy(another);
 }
@@ -121,7 +123,7 @@ Particle MetropolisHastingsMCMC::move(RandomNumberGenerator &rng,
 {
   Particle proposed_particle = this->proposal->move(rng,
                                                     particle);
-
+  
   double log_u = log(runif(rng));
   
   double numerator = proposed_particle.evaluate_likelihoods(this->index);
@@ -148,31 +150,31 @@ Particle MetropolisHastingsMCMC::move(RandomNumberGenerator &rng,
 }
 
 /*
-Particle MetropolisHastingsMCMC::move(RandomNumberGenerator &rng,
-                                      Particle &particle,
-                                      const Parameters &conditioned_on_parameters) const
-{
-  Particle proposed_particle = this->proposal->move(rng,
-                                                    particle,
-                                                    conditioned_on_parameters);
-  
-  double log_u = log(runif(rng));
-  
-  if (log_u < proposed_particle.evaluate_likelihoods(this->index,
-                                                     conditioned_on_parameters) -
-      particle.target_evaluated +
-      this->proposal->evaluate_kernel(particle, proposed_particle, conditioned_on_parameters) -
-      this->proposal->evaluate_kernel(proposed_particle, particle, conditioned_on_parameters))
-  {
-    return proposed_particle;
-  }
-  else
-  {
-    return particle;
-  }
-  
-}
-*/
+ Particle MetropolisHastingsMCMC::move(RandomNumberGenerator &rng,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ Particle proposed_particle = this->proposal->move(rng,
+ particle,
+ conditioned_on_parameters);
+ 
+ double log_u = log(runif(rng));
+ 
+ if (log_u < proposed_particle.evaluate_likelihoods(this->index,
+ conditioned_on_parameters) -
+ particle.target_evaluated +
+ this->proposal->evaluate_kernel(particle, proposed_particle, conditioned_on_parameters) -
+ this->proposal->evaluate_kernel(proposed_particle, particle, conditioned_on_parameters))
+ {
+ return proposed_particle;
+ }
+ else
+ {
+ return particle;
+ }
+ 
+ }
+ */
 
 Particle MetropolisHastingsMCMC::subsample_move(RandomNumberGenerator &rng,
                                                 const Particle &particle) const
@@ -206,112 +208,112 @@ Particle MetropolisHastingsMCMC::subsample_move(RandomNumberGenerator &rng,
 }
 
 /*
-Particle MetropolisHastingsMCMC::subsample_move(RandomNumberGenerator &rng,
-                                                Particle &particle,
-                                                const Parameters &conditioned_on_parameters) const
-{
-  Particle proposed_particle = this->proposal->subsample_move(rng,
-                                                              particle,
-                                                              conditioned_on_parameters);
-  
-  double log_u = log(runif(rng));
-  
-  if (log_u < proposed_particle.subsample_evaluate_likelihoods(this->index,
-                                                               conditioned_on_parameters) -
-      particle.subsample_target_evaluated +
-      this->proposal->subsample_evaluate_kernel(particle, proposed_particle, conditioned_on_parameters) -
-      this->proposal->subsample_evaluate_kernel(proposed_particle, particle, conditioned_on_parameters))
-  {
-    proposed_particle.set_acceptance(this->proposal,true);
-    return proposed_particle;
-  }
-  else
-  {
-    proposed_particle.set_acceptance(this->proposal,false);
-    return particle;
-  }
-  
-}
-*/
+ Particle MetropolisHastingsMCMC::subsample_move(RandomNumberGenerator &rng,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ Particle proposed_particle = this->proposal->subsample_move(rng,
+ particle,
+ conditioned_on_parameters);
+ 
+ double log_u = log(runif(rng));
+ 
+ if (log_u < proposed_particle.subsample_evaluate_likelihoods(this->index,
+ conditioned_on_parameters) -
+ particle.subsample_target_evaluated +
+ this->proposal->subsample_evaluate_kernel(particle, proposed_particle, conditioned_on_parameters) -
+ this->proposal->subsample_evaluate_kernel(proposed_particle, particle, conditioned_on_parameters))
+ {
+ proposed_particle.set_acceptance(this->proposal,true);
+ return proposed_particle;
+ }
+ else
+ {
+ proposed_particle.set_acceptance(this->proposal,false);
+ return particle;
+ }
+ 
+ }
+ */
 
 /*
-EnsembleMember MetropolisHastingsMCMC::move(RandomNumberGenerator &rng,
-                                            const Index* index,
-                                            EnsembleMember &particle) const
-{
-  EnsembleMember proposed_particle = this->proposal->move(rng,
-                                                          particle);
-  
-  double log_u = log(runif(rng));
-  
-  if (log_u < proposed_particle.evaluate_all_likelihoods(index) -
-      particle.target_evaluated +
-      this->proposal->evaluate_kernel(&particle, &proposed_particle) -
-      this->proposal->evaluate_kernel(&proposed_particle, &particle))
-  {
-    return proposed_particle;
-  }
-  else
-  {
-    return particle;
-  }
-  
-}
-
-EnsembleMember MetropolisHastingsMCMC::move(RandomNumberGenerator &rng,
-                                            const Index* index,
-                                            EnsembleMember &particle,
-                                            const Parameters &conditioned_on_parameters) const
-{
-  EnsembleMember proposed_particle = this->proposal->move(rng,
-                                                          particle,
-                                                          conditioned_on_parameters);
-  
-  double log_u = log(runif(rng));
-  
-  if (log_u < proposed_particle.evaluate_all_likelihoods(index,
-                                                         conditioned_on_parameters) -
-      particle.target_evaluated +
-      this->proposal->evaluate_kernel(&particle, &proposed_particle, conditioned_on_parameters) -
-      this->proposal->evaluate_kernel(&proposed_particle, &particle, conditioned_on_parameters))
-  {
-    return proposed_particle;
-  }
-  else
-  {
-    return particle;
-  }
-  
-}
-
-EnsembleMember MetropolisHastingsMCMC::subsample_move(RandomNumberGenerator &rng,
-                                                      const Index* index,
-                                                      EnsembleMember &particle,
-                                                      const Parameters &conditioned_on_parameters) const
-{
-  EnsembleMember proposed_particle = this->proposal->subsample_move(rng,
-                                                              particle,
-                                                              conditioned_on_parameters);
-  
-  double log_u = log(runif(rng));
-  
-  if (log_u < proposed_particle.subsample_evaluate_all_likelihoods(index,
-                                                                   conditioned_on_parameters) -
-      particle.subsample_target_evaluated +
-      this->proposal->subsample_evaluate_kernel(&particle, &proposed_particle, conditioned_on_parameters) -
-      this->proposal->subsample_evaluate_kernel(&proposed_particle, &particle, conditioned_on_parameters))
-  {
-    proposed_particle.set_acceptance(this->proposal,true);
-    return proposed_particle;
-  }
-  else
-  {
-    proposed_particle.set_acceptance(this->proposal,false);
-    return particle;
-  }
-  
-}
-*/
+ EnsembleMember MetropolisHastingsMCMC::move(RandomNumberGenerator &rng,
+ const Index* index,
+ EnsembleMember &particle) const
+ {
+ EnsembleMember proposed_particle = this->proposal->move(rng,
+ particle);
+ 
+ double log_u = log(runif(rng));
+ 
+ if (log_u < proposed_particle.evaluate_all_likelihoods(index) -
+ particle.target_evaluated +
+ this->proposal->evaluate_kernel(&particle, &proposed_particle) -
+ this->proposal->evaluate_kernel(&proposed_particle, &particle))
+ {
+ return proposed_particle;
+ }
+ else
+ {
+ return particle;
+ }
+ 
+ }
+ 
+ EnsembleMember MetropolisHastingsMCMC::move(RandomNumberGenerator &rng,
+ const Index* index,
+ EnsembleMember &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ EnsembleMember proposed_particle = this->proposal->move(rng,
+ particle,
+ conditioned_on_parameters);
+ 
+ double log_u = log(runif(rng));
+ 
+ if (log_u < proposed_particle.evaluate_all_likelihoods(index,
+ conditioned_on_parameters) -
+ particle.target_evaluated +
+ this->proposal->evaluate_kernel(&particle, &proposed_particle, conditioned_on_parameters) -
+ this->proposal->evaluate_kernel(&proposed_particle, &particle, conditioned_on_parameters))
+ {
+ return proposed_particle;
+ }
+ else
+ {
+ return particle;
+ }
+ 
+ }
+ 
+ EnsembleMember MetropolisHastingsMCMC::subsample_move(RandomNumberGenerator &rng,
+ const Index* index,
+ EnsembleMember &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ EnsembleMember proposed_particle = this->proposal->subsample_move(rng,
+ particle,
+ conditioned_on_parameters);
+ 
+ double log_u = log(runif(rng));
+ 
+ if (log_u < proposed_particle.subsample_evaluate_all_likelihoods(index,
+ conditioned_on_parameters) -
+ particle.subsample_target_evaluated +
+ this->proposal->subsample_evaluate_kernel(&particle, &proposed_particle, conditioned_on_parameters) -
+ this->proposal->subsample_evaluate_kernel(&proposed_particle, &particle, conditioned_on_parameters))
+ {
+ proposed_particle.set_acceptance(this->proposal,true);
+ return proposed_particle;
+ }
+ else
+ {
+ proposed_particle.set_acceptance(this->proposal,false);
+ return particle;
+ }
+ 
+ }
+ */
 
 void MetropolisHastingsMCMC::smc_adapt(SMCOutput* current_state)
 {
@@ -371,4 +373,5 @@ std::vector<const ProposalKernel*> MetropolisHastingsMCMC::get_proposals() const
 StandardMCMCOutput* MetropolisHastingsMCMC::initialise_mcmc_output() const
 {
   return new MetropolisHastingsStandardMCMCOutput(this->metropolis_hastings_mcmc_duplicate());
+}
 }

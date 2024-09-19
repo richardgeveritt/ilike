@@ -4,6 +4,8 @@
 #include "smc.h"
 #include "proposal_kernel.h"
 
+namespace ilike
+{
 class SMCOutput;
 class MoveOutput;
 class Index;
@@ -11,9 +13,9 @@ class Index;
 class SMCMarginal : public SMC
 {
 public:
-
+  
   SMCMarginal();
-
+  
   SMCMarginal(RandomNumberGenerator* rng_in,
               size_t* seed_in,
               Data* data_in,
@@ -33,7 +35,7 @@ public:
   
   SMCMarginal(const SMCMarginal &another);
   virtual ~SMCMarginal();
-
+  
   void operator=(const SMCMarginal &another);
   SMC* smc_duplicate() const;
   LikelihoodEstimator* duplicate() const;
@@ -44,38 +46,38 @@ public:
   //void weight_for_adapting_sequence(Particles &current_particles);
   
   /*
-  MoveOutput* move(RandomNumberGenerator &rng,
-                   Particle &particle,
-                   const Parameters &conditioned_on_parameters);
-  */
+   MoveOutput* move(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters);
+   */
   
   void weight_for_adapting_sequence(const Index* index,
                                     Particles &current_particles);
   
   /*
-  void weight_for_adapting_sequence(const Index* index,
-                                    Particles &current_particles,
-                                    const Parameters &conditioned_on_parameters);
-  */
+   void weight_for_adapting_sequence(const Index* index,
+   Particles &current_particles,
+   const Parameters &conditioned_on_parameters);
+   */
   
   MoveOutput* subsample_move(RandomNumberGenerator &rng,
                              const Particle &particle) const;
   
   /*
-  MoveOutput* subsample_move(RandomNumberGenerator &rng,
-                             Particle &particle,
-                             const Parameters &conditioned_on_parameters);
-  */
+   MoveOutput* subsample_move(RandomNumberGenerator &rng,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters);
+   */
   
   void subsample_weight_for_adapting_sequence(const Index* index,
                                               Particles &current_particles);
   
   /*
-  void subsample_weight_for_adapting_sequence(const Index* index,
-                                              Particles &current_particles,
-                                              const Parameters &conditioned_on_parameters);
-  */
-
+   void subsample_weight_for_adapting_sequence(const Index* index,
+   Particles &current_particles,
+   const Parameters &conditioned_on_parameters);
+   */
+  
 protected:
   
   SMCOutput* specific_run();
@@ -92,9 +94,9 @@ protected:
   
   SMCOutput* specific_run(const Parameters &parameters);
   /*
-  SMCOutput* specific_run(const std::string &directory_name,
-                          const Parameters &parameters);
-  */
+   SMCOutput* specific_run(const std::string &directory_name,
+   const Parameters &parameters);
+   */
   SMCOutput* specific_initialise_smc(const Parameters &parameters);
   void simulate_smc(SMCOutput* simulation,
                     const Parameters &conditioned_on_parameters);
@@ -124,9 +126,9 @@ protected:
                                             const Parameters &conditioned_on_parameters);
   void subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* simulation,
                                                               const Parameters &conditioned_on_parameters);
-
+  
   //void smc_update(SMCOutput* current_state);
-
+  
   void make_copy(const SMCMarginal &another);
   
   // Stored here.
@@ -134,10 +136,11 @@ protected:
   
   // stored here
   Index* index;
-
+  
   //void smc_step();
-
+  
   //void weight_update();
 };
+}
 
 #endif

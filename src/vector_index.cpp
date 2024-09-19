@@ -1,8 +1,10 @@
 #include <iterator>
 #include "vector_index.h"
 
+namespace ilike
+{
 VectorIndex::VectorIndex()
-  :Index()
+:Index()
 {
 }
 
@@ -13,7 +15,7 @@ VectorIndex::VectorIndex(const std::vector<size_t> &indices_in)
 }
 
 VectorIndex::VectorIndex(size_t start_in,
-                                     size_t end_in)
+                         size_t end_in)
 :Index()
 {
   if (start_in>end_in)
@@ -36,7 +38,7 @@ VectorIndex::~VectorIndex()
 }
 
 VectorIndex::VectorIndex(const VectorIndex &another)
-  :Index(another)
+:Index(another)
 {
   this->make_copy(another);
 }
@@ -45,7 +47,7 @@ void VectorIndex::operator=(const VectorIndex &another)
 {
   if(this == &another)
     return;
-
+  
   Index::operator=(another);
   this->make_copy(another);
 }
@@ -103,8 +105,9 @@ arma::uvec VectorIndex::get_uvec() const
 }
 
 /*
-void VectorIndex::add_index(const size_t &number)
-{
-  this->indices.push_back(number);
+ void VectorIndex::add_index(const size_t &number)
+ {
+ this->indices.push_back(number);
+ }
+ */
 }
-*/

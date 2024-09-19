@@ -1,7 +1,9 @@
 #include "likelihood_factor.h"
 
+namespace ilike
+{
 LikelihoodFactor::LikelihoodFactor()
-  :Factor()
+:Factor()
 {
 }
 
@@ -16,7 +18,7 @@ LikelihoodFactor::~LikelihoodFactor()
 }
 
 LikelihoodFactor::LikelihoodFactor(const LikelihoodFactor &another)
-  :Factor(another)
+:Factor(another)
 {
   this->make_copy(another);
 }
@@ -25,7 +27,7 @@ void LikelihoodFactor::operator=(const LikelihoodFactor &another)
 {
   if(this == &another)
     return;
-
+  
   Factor::operator=(another);
   this->make_copy(another);
 }
@@ -50,4 +52,5 @@ void LikelihoodFactor::set_data(Data* data_in)
 {
   this->data = data_in;
   this->specific_set_data();
+}
 }

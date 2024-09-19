@@ -1,6 +1,8 @@
 #include <iterator>
 #include "gaussian_distribution_factor.h"
 
+namespace ilike
+{
 GaussianDistributionFactor::GaussianDistributionFactor()
   :DistributionFactor()
 {
@@ -92,4 +94,5 @@ arma::mat GaussianDistributionFactor::distribution_evaluate_gradient(const std::
 {
   auto found = this->proposal_info.find(variable);
   return -(1.0/found->second.get_double_scale())*found->second.get_inv()*(input[variable]-found->second.get_mean());
+}
 }

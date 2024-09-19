@@ -6,6 +6,8 @@ using namespace Rcpp;
 
 #include "parameters.h"
 
+namespace ilike
+{
 class Particle;
 class Index;
 class Factors;
@@ -105,5 +107,6 @@ protected:
   void make_copy(const FactorVariables &another);
 
 };
+}
 
 #endif

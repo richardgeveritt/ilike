@@ -6,22 +6,25 @@ using namespace Rcpp;
 
 #include <vector>
 
+namespace ilike
+{
 class ParameterEstimator
 {
-
+  
 public:
-
+  
   ParameterEstimator();
   virtual ~ParameterEstimator();
-
+  
   ParameterEstimator(const ParameterEstimator &another);
-
+  
   void operator=(const ParameterEstimator &another);
-
+  
 protected:
-
+  
   void make_copy(const ParameterEstimator &another);
-
+  
 };
+}
 
 #endif

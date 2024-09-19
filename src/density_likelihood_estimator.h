@@ -10,6 +10,8 @@ using namespace Rcpp;
 #include "ilike_header.h"
 #include "parameters.h"
 
+namespace ilike
+{
 class DensityLikelihoodEstimatorOutput;
 class DensityEstimator;
 class DensityLikelihoodEstimatorWorker;
@@ -19,11 +21,11 @@ class IndependentProposalKernel;
 
 class DensityLikelihoodEstimator : public LikelihoodEstimator
 {
-
+  
 public:
-
+  
   DensityLikelihoodEstimator();
-
+  
   DensityLikelihoodEstimator(RandomNumberGenerator* rng_in,
                              size_t* seed_in,
                              Data* data_in,
@@ -38,28 +40,28 @@ public:
                              size_t grain_size_in);
   
   virtual ~DensityLikelihoodEstimator();
-
+  
   DensityLikelihoodEstimator(const DensityLikelihoodEstimator &another);
-
+  
   void operator=(const DensityLikelihoodEstimator &another);
   LikelihoodEstimator* duplicate() const;
-
+  
   // double estimate_log_likelihood(const List &inputs,
   //                                const List &auxiliary_variables) const;
-
+  
   LikelihoodEstimatorOutput* initialise();
   LikelihoodEstimatorOutput* initialise(const Parameters &parameters);
   
   void setup();
   void setup(const Parameters &parameters);
-
+  
   // void is_setup_likelihood_estimator(const std::vector<List> &all_points,
   //                                    const std::vector<List> &all_auxiliary_variables);
-
+  
 protected:
   
   void specific_change_data(Data* new_data);
-
+  
   friend DensityLikelihoodEstimatorOutput;
   friend DensityLikelihoodEstimatorWorker;
   friend SequentialDensityLikelihoodEstimatorWorker;
@@ -79,7 +81,7 @@ protected:
   size_t number_of_points;
   
   bool store_output;
-
+  
   //Transform* transform;
   
   // Stored here.
@@ -89,13 +91,14 @@ protected:
   DensityLikelihoodEstimatorWorker* the_worker;
   
   std::vector<std::string> variables;
-
+  
   void make_copy(const DensityLikelihoodEstimator &another);
   
   std::ofstream log_likelihood_file_stream;
   std::ofstream file_stream;
   std::ofstream time_file_stream;
-
+  
 };
+}
 
 #endif

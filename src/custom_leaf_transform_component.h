@@ -5,17 +5,19 @@
 #include "transform_component.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class CustomLeafTransformComponent : public TransformComponent
 {
 public:
-
-	CustomLeafTransformComponent();
-	virtual ~CustomLeafTransformComponent();
-
-	CustomLeafTransformComponent(const CustomLeafTransformComponent &another);
-	CustomLeafTransformComponent* duplicate() const;
-	void make_copy(const CustomLeafTransformComponent &another);
-	void operator=(const CustomLeafTransformComponent &another);
+  
+  CustomLeafTransformComponent();
+  virtual ~CustomLeafTransformComponent();
+  
+  CustomLeafTransformComponent(const CustomLeafTransformComponent &another);
+  CustomLeafTransformComponent* duplicate() const;
+  void make_copy(const CustomLeafTransformComponent &another);
+  void operator=(const CustomLeafTransformComponent &another);
   
   Parameters transform(const Parameters &input) const;
   Parameters inverse_transform(const Parameters &input) const;
@@ -28,9 +30,9 @@ public:
   int find_parent_index(const std::vector<TransformComponent*> &components) const;
   void set_child(TransformComponent* new_child);
   void set_parent(TransformComponent* new_parent);
-
+  
 protected: // Things that can be accessed in this class and subclasses.
-
+  
   TransformPtr transform_function;
   JacobianPtr jacobian_function;
   
@@ -40,5 +42,7 @@ protected: // Things that can be accessed in this class and subclasses.
   TransformComponent* parent;
   
 };
+
+}
 
 #endif

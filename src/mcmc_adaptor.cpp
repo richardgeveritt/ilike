@@ -1,6 +1,8 @@
 #include "mcmc_adaptor.h"
 #include "proposal_kernel.h"
 
+namespace ilike
+{
 MCMCAdaptor::MCMCAdaptor()
 {
 }
@@ -18,7 +20,7 @@ void MCMCAdaptor::operator=(const MCMCAdaptor &another)
 {
   if(this == &another)
     return;
-
+  
   this->make_copy(another);
 }
 
@@ -33,4 +35,5 @@ void MCMCAdaptor::mcmc_adapt(const Particle &latest_particle,
   //this->proposal->use_transform(latest_particle);
   this->specific_mcmc_adapt(latest_particle,
                             iteration_counter);
+}
 }

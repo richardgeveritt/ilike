@@ -8,6 +8,8 @@ using namespace Rcpp;
 #include "factors.h"
 #include "parameters.h"
 
+namespace ilike
+{
 class ProposalKernel;
 class HMMFactorVariables;
 class LikelihoodEstimator;
@@ -16,17 +18,17 @@ class Particle;
 
 class HMMFactors : public Factors
 {
-
+  
 public:
-
+  
   HMMFactors();
   HMMFactors(ProposalKernel* transition_kernel_in,
              const std::vector<LikelihoodEstimator*> &likelihood_estimators_in);
-
+  
   virtual ~HMMFactors();
-
+  
   HMMFactors(const HMMFactors &another);
-
+  
   void operator=(const HMMFactors &another);
   Factors* duplicate() const;
   
@@ -34,14 +36,14 @@ public:
   
   FactorVariables* simulate_factor_variables(const Parameters &simulated_parameters) const;
   /*
-  FactorVariables* simulate_factor_variables(const Parameters &simulated_parameters,
-                                             const Parameters &conditioned_on_parameters);
-  */
+   FactorVariables* simulate_factor_variables(const Parameters &simulated_parameters,
+   const Parameters &conditioned_on_parameters);
+   */
   FactorVariables* subsample_simulate_factor_variables(const Parameters &simulated_parameters) const;
   /*
-  FactorVariables* subsample_simulate_factor_variables(const Parameters &simulated_parameters,
-                                                       const Parameters &conditioned_on_parameters);
-  */
+   FactorVariables* subsample_simulate_factor_variables(const Parameters &simulated_parameters,
+   const Parameters &conditioned_on_parameters);
+   */
   
   void setup();
   void setup(const Parameters &conditioned_on_parameters);
@@ -71,9 +73,10 @@ protected:
   // stored here
   // data temporarily used in a likelihood estimator
   std::vector< std::shared_ptr<Data> > likelihood_estimator_temp_data;
-
+  
   void make_copy(const HMMFactors &another);
-
+  
 };
+}
 
 #endif

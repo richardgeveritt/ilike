@@ -3,8 +3,10 @@
 #include "stochastic_scan_mcmc.h"
 #include "mcmc_termination.h"
 
+namespace ilike
+{
 StochasticScanStandardMCMCOutput::StochasticScanStandardMCMCOutput()
-  :StandardMCMCOutput()
+:StandardMCMCOutput()
 {
   this->mcmc = NULL;
 }
@@ -24,7 +26,7 @@ StochasticScanStandardMCMCOutput::~StochasticScanStandardMCMCOutput()
 
 //Copy constructor for the StochasticScanStandardMCMCOutput class.
 StochasticScanStandardMCMCOutput::StochasticScanStandardMCMCOutput(const StochasticScanStandardMCMCOutput &another)
-  :StandardMCMCOutput(another)
+:StandardMCMCOutput(another)
 {
   this->make_copy(another);
 }
@@ -56,33 +58,33 @@ void StochasticScanStandardMCMCOutput::make_copy(const StochasticScanStandardMCM
 }
 
 /*
-void StochasticScanStandardMCMCOutput::specific_mcmc_adapt()
-{
-  for (std::vector<MCMC*>::iterator i=this->moves.begin();
-       i!=this->moves.end();
-       ++i)
-  {
-    (*i)->mcmc_adapt(this->output.back(),
-                     this->iteration_counter);
-  }
-}
-*/
+ void StochasticScanStandardMCMCOutput::specific_mcmc_adapt()
+ {
+ for (std::vector<MCMC*>::iterator i=this->moves.begin();
+ i!=this->moves.end();
+ ++i)
+ {
+ (*i)->mcmc_adapt(this->output.back(),
+ this->iteration_counter);
+ }
+ }
+ */
 
 /*
-Particle StochasticScanStandardMCMCOutput::move(RandomNumberGenerator &rng,
-                                                const Particle &particle) const
-{
-  return this->moves[rdis(rng, this->probabilities)]->move(rng,
-                                                           particle);
-}
-
-Particle StochasticScanStandardMCMCOutput::subsample_move(RandomNumberGenerator &rng,
-                                                          const Particle &particle) const
-{
-  return this->moves[rdis(rng, this->probabilities)]->subsample_move(rng,
-                                                                     particle);
-}
-*/
+ Particle StochasticScanStandardMCMCOutput::move(RandomNumberGenerator &rng,
+ const Particle &particle) const
+ {
+ return this->moves[rdis(rng, this->probabilities)]->move(rng,
+ particle);
+ }
+ 
+ Particle StochasticScanStandardMCMCOutput::subsample_move(RandomNumberGenerator &rng,
+ const Particle &particle) const
+ {
+ return this->moves[rdis(rng, this->probabilities)]->subsample_move(rng,
+ particle);
+ }
+ */
 
 MCMC* StochasticScanStandardMCMCOutput::get_mcmc()
 {
@@ -92,4 +94,5 @@ MCMC* StochasticScanStandardMCMCOutput::get_mcmc()
 const MCMC* StochasticScanStandardMCMCOutput::get_mcmc() const
 {
   return this->mcmc;
+}
 }

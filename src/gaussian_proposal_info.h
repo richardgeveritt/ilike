@@ -6,27 +6,29 @@ using namespace Rcpp;
 
 #include "scale.h"
 
+namespace ilike
+{
 class GaussianProposalInfo
 {
-
+  
 public:
-
+  
   GaussianProposalInfo();
-
+  
   virtual ~GaussianProposalInfo();
   
   GaussianProposalInfo(const double &mean_in,
                        const double &sd_in);
   
   GaussianProposalInfo(const double &sd_in);
-
+  
   GaussianProposalInfo(const arma::colvec &mean_in);
   GaussianProposalInfo(const arma::mat &covariance_in);
   GaussianProposalInfo(const arma::colvec &mean_in,
                        const arma::mat &covariance_in);
   
   GaussianProposalInfo(const GaussianProposalInfo &another);
-
+  
   GaussianProposalInfo& operator=(const GaussianProposalInfo &another);
   GaussianProposalInfo* duplicate() const;
   
@@ -58,9 +60,9 @@ public:
   arma::mat& get_inv();
   arma::mat& get_inv_chol();
   double& get_logdet();
-
+  
 protected:
-
+  
   void make_copy(const GaussianProposalInfo &another);
   
   void make_copy(GaussianProposalInfo &&another);
@@ -73,7 +75,8 @@ protected:
   arma::mat inv;
   arma::mat inv_chol;
   double logdet;
-
+  
 };
+}
 
 #endif

@@ -8,11 +8,13 @@ using namespace Rcpp;
 #include "kalman_updater.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class ExactKalmanUpdater : public KalmanUpdater
 {
-
+  
 public:
-
+  
   ExactKalmanUpdater();
   
   ExactKalmanUpdater(const std::string &state_variable_in,
@@ -24,14 +26,14 @@ public:
                      const std::string &measurement_variable_in,
                      GetMatrixPtr measurement_matrix_function,
                      GetMatrixPtr measurement_noise_function);
-
+  
   virtual ~ExactKalmanUpdater();
-
+  
   ExactKalmanUpdater(const ExactKalmanUpdater &another);
-
+  
   void operator=(const ExactKalmanUpdater &another);
   KalmanUpdater* duplicate() const;
-
+  
   void update(KalmanFilterOutput* current_state,
               const arma::colvec &current_measurement);
   
@@ -46,7 +48,8 @@ protected:
   
   arma::mat measurement_matrix;
   arma::mat measurement_noise;
-
+  
 };
+}
 
 #endif

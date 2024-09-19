@@ -8,6 +8,8 @@ using namespace Rcpp;
 #include <iostream>
 #include "parameters.h"
 
+namespace ilike
+{
 class LikelihoodEstimator;
 class HMMFactorVariables;
 class VectorFactorVariables;
@@ -16,23 +18,23 @@ class AnnealedLikelihoodEstimatorOutput;
 
 class LikelihoodEstimatorOutput
 {
-
+  
 public:
-
+  
   LikelihoodEstimatorOutput();
-
+  
   virtual ~LikelihoodEstimatorOutput();
-
+  
   //virtual void simulate(const Parameters &parameters);
-
+  
   LikelihoodEstimatorOutput(const LikelihoodEstimatorOutput &another);
-
+  
   void operator=(const LikelihoodEstimatorOutput &another);
   virtual LikelihoodEstimatorOutput* duplicate() const=0;
   
   // Simulate all auxilliary variables.
   virtual void simulate()=0;
-
+  
   // Simulate all auxilliary variables.
   virtual void simulate(const Parameters &parameters)=0;
   
@@ -72,9 +74,9 @@ public:
   virtual void forget_you_were_already_written_to_file()=0;
   
   void write(const std::string &directory_name);
-
+  
   friend std::ostream& operator<<(std::ostream& os, const LikelihoodEstimatorOutput &p);
-
+  
   virtual void print(std::ostream &os) const;
   
   double log_likelihood;
@@ -84,7 +86,7 @@ public:
   bool write_to_file_flag;
   
   virtual void close_ofstreams()=0;
-
+  
   // virtual double estimate_log_likelihood(const List &inputs,
   //                                        const List &auxiliary_variables) const=0;
   //
@@ -92,7 +94,7 @@ public:
   //
   // virtual void is_setup_likelihood_estimator(const std::vector<List> &all_points,
   //                                            const std::vector<List> &all_auxiliary_variables)=0;
-
+  
 protected:
   
   friend HMMFactorVariables;
@@ -101,10 +103,12 @@ protected:
   
   virtual void write_to_file(const std::string &directory_name,
                              const std::string &index = "")=0;
-
+  
   void make_copy(const LikelihoodEstimatorOutput &another);
-
+  
 };
+
+}
 
 #endif
 

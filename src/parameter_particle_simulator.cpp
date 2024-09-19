@@ -10,23 +10,25 @@
 #include "vector_factor_variables.h"
 #include "transform.h"
 
+namespace ilike
+{
 //Default constructor.
 ParameterParticleSimulator::ParameterParticleSimulator()
-  :ParticleSimulator()
+:ParticleSimulator()
 {
   this->proposal = NULL;
 }
 
 /*
-ParameterParticleSimulator::ParameterParticleSimulator(SimulateDistributionPtr simulate_parameters_in,
-                                                       const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
-                                                       const std::string &resample_variable_name_in)
-  :ParticleSimulator(resample_variable_name_in)
-{
-  this->simulate_parameters = simulate_parameters_in;
-  this->likelihood_estimators = likelihood_estimators_in;
-}
-*/
+ ParameterParticleSimulator::ParameterParticleSimulator(SimulateDistributionPtr simulate_parameters_in,
+ const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
+ const std::string &resample_variable_name_in)
+ :ParticleSimulator(resample_variable_name_in)
+ {
+ this->simulate_parameters = simulate_parameters_in;
+ this->likelihood_estimators = likelihood_estimators_in;
+ }
+ */
 
 ParameterParticleSimulator::ParameterParticleSimulator(const IndependentProposalKernel* proposal_in,
                                                        const std::vector<LikelihoodEstimator*> &likelihood_estimators_in)
@@ -38,7 +40,7 @@ ParameterParticleSimulator::ParameterParticleSimulator(const IndependentProposal
 
 //Copy constructor for the ParameterParticleSimulator class.
 ParameterParticleSimulator::ParameterParticleSimulator(const ParameterParticleSimulator &another)
-  :ParticleSimulator(another)
+:ParticleSimulator(another)
 {
   this->make_copy(another);
 }
@@ -60,7 +62,7 @@ void ParameterParticleSimulator::operator=(const ParameterParticleSimulator &ano
     delete this->proposal;
   
   this->likelihood_estimators.clear();
-
+  
   ParticleSimulator::operator=(another);
   this->make_copy(another);
 }
@@ -261,66 +263,66 @@ Particle ParameterParticleSimulator::subsample_simulate(RandomNumberGenerator &r
 }
 
 /*
-void ParameterParticleSimulator::simulate_and_transform(RandomNumberGenerator &rng,
-                                                        Particle* new_particle,
-                                                        Factors* factors,
-                                                        Transform* transform,
-                                                        bool store_raw) const
-{
-  new_particle->parameters = this->proposal->independent_simulate(rng);
-  if (!store_raw)
-  {
-    new_particle->parameters = transform->transform(new_particle->parameters);
-  }
-  else
-  {
-    new_particle->parameters.add_parameters_overwrite(transform->transform(new_particle->parameters));
-  }
-  new_particle->setup(factors);
-}
-
-void ParameterParticleSimulator::simulate_and_transform(RandomNumberGenerator &rng,
-                                                        Particle* new_particle,
-                                                        Factors* factors,
-                                                        Transform* transform,
-                                                        bool store_raw,
-                                                        const Parameters &conditioned_on_parameters) const
-{
-  new_particle->parameters = this->proposal->independent_simulate(rng,
-                                                                  conditioned_on_parameters);
-  if (!store_raw)
-  {
-    new_particle->parameters = transform->transform(new_particle->parameters);
-  }
-  else
-  {
-    new_particle->parameters.add_parameters_overwrite(transform->transform(new_particle->parameters));
-  }
-  new_particle->setup(factors,
-                      conditioned_on_parameters);
-}
-
-void ParameterParticleSimulator::subsample_simulate_and_transform(RandomNumberGenerator &rng,
-                                                                  Particle* new_particle,
-                                                                  Factors* factors,
-                                                                  Transform* transform,
-                                                                  bool store_raw,
-                                                                  const Parameters &conditioned_on_parameters) const
-{
-  new_particle->parameters = this->proposal->subsample_independent_simulate(rng,
-                                                                            conditioned_on_parameters);
-  if (!store_raw)
-  {
-    new_particle->parameters = transform->transform(new_particle->parameters);
-  }
-  else
-  {
-    new_particle->parameters.add_parameters_overwrite(transform->transform(new_particle->parameters));
-  }
-  new_particle->setup(factors,
-                      conditioned_on_parameters);
-}
-*/
+ void ParameterParticleSimulator::simulate_and_transform(RandomNumberGenerator &rng,
+ Particle* new_particle,
+ Factors* factors,
+ Transform* transform,
+ bool store_raw) const
+ {
+ new_particle->parameters = this->proposal->independent_simulate(rng);
+ if (!store_raw)
+ {
+ new_particle->parameters = transform->transform(new_particle->parameters);
+ }
+ else
+ {
+ new_particle->parameters.add_parameters_overwrite(transform->transform(new_particle->parameters));
+ }
+ new_particle->setup(factors);
+ }
+ 
+ void ParameterParticleSimulator::simulate_and_transform(RandomNumberGenerator &rng,
+ Particle* new_particle,
+ Factors* factors,
+ Transform* transform,
+ bool store_raw,
+ const Parameters &conditioned_on_parameters) const
+ {
+ new_particle->parameters = this->proposal->independent_simulate(rng,
+ conditioned_on_parameters);
+ if (!store_raw)
+ {
+ new_particle->parameters = transform->transform(new_particle->parameters);
+ }
+ else
+ {
+ new_particle->parameters.add_parameters_overwrite(transform->transform(new_particle->parameters));
+ }
+ new_particle->setup(factors,
+ conditioned_on_parameters);
+ }
+ 
+ void ParameterParticleSimulator::subsample_simulate_and_transform(RandomNumberGenerator &rng,
+ Particle* new_particle,
+ Factors* factors,
+ Transform* transform,
+ bool store_raw,
+ const Parameters &conditioned_on_parameters) const
+ {
+ new_particle->parameters = this->proposal->subsample_independent_simulate(rng,
+ conditioned_on_parameters);
+ if (!store_raw)
+ {
+ new_particle->parameters = transform->transform(new_particle->parameters);
+ }
+ else
+ {
+ new_particle->parameters.add_parameters_overwrite(transform->transform(new_particle->parameters));
+ }
+ new_particle->setup(factors,
+ conditioned_on_parameters);
+ }
+ */
 
 double ParameterParticleSimulator::evaluate(const Particle &input) const
 {
@@ -334,36 +336,37 @@ double ParameterParticleSimulator::subsample_evaluate(const Particle &input) con
 }
 
 /*
-double ParameterParticleSimulator::evaluate(Particle &input,
-                                            const Parameters &conditioned_on_parameters) const
-{
-  // could generalise to evaluating the proposals for the likelihoodestimators
-  if (input.parameters.is_empty())
-  {
-    return this->proposal->evaluate_independent_kernel(conditioned_on_parameters);
-  }
-  
-  if (conditioned_on_parameters.is_empty())
-  {
-    return this->proposal->evaluate_independent_kernel(input.parameters);
-  }
-  
-  return this->proposal->evaluate_independent_kernel(input.parameters.merge(conditioned_on_parameters));
+ double ParameterParticleSimulator::evaluate(Particle &input,
+ const Parameters &conditioned_on_parameters) const
+ {
+ // could generalise to evaluating the proposals for the likelihoodestimators
+ if (input.parameters.is_empty())
+ {
+ return this->proposal->evaluate_independent_kernel(conditioned_on_parameters);
+ }
+ 
+ if (conditioned_on_parameters.is_empty())
+ {
+ return this->proposal->evaluate_independent_kernel(input.parameters);
+ }
+ 
+ return this->proposal->evaluate_independent_kernel(input.parameters.merge(conditioned_on_parameters));
+ }
+ 
+ double ParameterParticleSimulator::subsample_evaluate(Particle &input,
+ const Parameters &conditioned_on_parameters) const
+ {
+ if (input.parameters.is_empty())
+ {
+ return this->proposal->subsample_evaluate_independent_kernel(conditioned_on_parameters);
+ }
+ 
+ if (conditioned_on_parameters.is_empty())
+ {
+ return this->proposal->subsample_evaluate_independent_kernel(input.parameters);
+ }
+ 
+ return this->proposal->subsample_evaluate_independent_kernel(input.parameters.merge(conditioned_on_parameters));
+ }
+ */
 }
-
-double ParameterParticleSimulator::subsample_evaluate(Particle &input,
-                                                      const Parameters &conditioned_on_parameters) const
-{
-  if (input.parameters.is_empty())
-  {
-    return this->proposal->subsample_evaluate_independent_kernel(conditioned_on_parameters);
-  }
-  
-  if (conditioned_on_parameters.is_empty())
-  {
-    return this->proposal->subsample_evaluate_independent_kernel(input.parameters);
-  }
-  
-  return this->proposal->subsample_evaluate_independent_kernel(input.parameters.merge(conditioned_on_parameters));
-}
-*/

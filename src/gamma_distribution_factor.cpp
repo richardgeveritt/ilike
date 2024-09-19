@@ -2,6 +2,8 @@
 #include "gamma_distribution_factor.h"
 #include "distributions.h"
 
+namespace ilike
+{
 GammaDistributionFactor::GammaDistributionFactor()
   :DistributionFactor()
 {
@@ -64,4 +66,5 @@ arma::mat GammaDistributionFactor::distribution_evaluate_gradient(const std::str
                                                                      const Parameters &input) const
 {
   stop("GammaDistributionFactor::distribution_evaluate_gradient - not written yet.");
+}
 }

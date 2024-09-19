@@ -8,22 +8,24 @@ using namespace Rcpp;
 #include "distribution_factor.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class CustomDistributionFactor : public DistributionFactor
 {
-
+  
 public:
-
+  
   CustomDistributionFactor();
-
+  
   CustomDistributionFactor(EvaluateLogDistributionPtr distribution_in);
   
   CustomDistributionFactor(EvaluateLogDistributionPtr distribution_in,
                            EvaluateGradientLogDistributionPtr distribution_gradient_in);
   
   virtual ~CustomDistributionFactor();
-
+  
   CustomDistributionFactor(const CustomDistributionFactor &another);
-
+  
   void operator=(const CustomDistributionFactor &another);
   Factor* duplicate() const;
   DistributionFactor* distribution_factor_duplicate() const;
@@ -32,16 +34,15 @@ public:
   
   arma::mat distribution_evaluate_gradient(const std::string &variable,
                                            const Parameters &input) const;
-
+  
 protected:
-
+  
   void make_copy(const CustomDistributionFactor &another);
   
   EvaluateLogDistributionPtr distribution;
   EvaluateGradientLogDistributionPtr distribution_gradient;
   
-  
-
 };
+}
 
 #endif

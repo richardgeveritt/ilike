@@ -1,6 +1,8 @@
 #include <iterator>
 #include "custom_likelihood_factor.h"
 
+namespace ilike
+{
 CustomLikelihoodFactor::CustomLikelihoodFactor()
   :LikelihoodFactor()
 {
@@ -81,4 +83,5 @@ arma::mat CustomLikelihoodFactor::likelihood_evaluate_gradient(const std::string
 void CustomLikelihoodFactor::specific_set_data()
 {
   
+}
 }

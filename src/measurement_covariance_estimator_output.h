@@ -5,21 +5,23 @@
 using namespace Rcpp;
 
 #include "distributions.h"
+#include "parameters.h"
 
-class Parameters;
+namespace ilike
+{
 class MeasurementCovarianceEstimator;
 class Index;
 
 class MeasurementCovarianceEstimatorOutput
 {
-
+  
 public:
-
+  
   MeasurementCovarianceEstimatorOutput();
   virtual ~MeasurementCovarianceEstimatorOutput();
-
+  
   MeasurementCovarianceEstimatorOutput(const MeasurementCovarianceEstimatorOutput &another);
-
+  
   void operator=(const MeasurementCovarianceEstimatorOutput &another);
   virtual MeasurementCovarianceEstimatorOutput* duplicate() const=0;
   
@@ -37,17 +39,17 @@ public:
                                                     const arma::mat &inv_sigma_precomp,
                                                     double log_det_precomp) const=0;
   /*
-  virtual double evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
-                                                    const Parameters &conditioned_on_parameters)=0;
-  */
+   virtual double evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
+   const Parameters &conditioned_on_parameters)=0;
+   */
   
   virtual double subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
                                                               const arma::mat &inv_sigma_precomp,
                                                               double log_det_precomp) const=0;
   /*
-  virtual double subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
-                                                              const Parameters &conditioned_on_parameters)=0;
-  */
+   virtual double subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
+   const Parameters &conditioned_on_parameters)=0;
+   */
   
   virtual double evaluate_likelihood()=0;
   //virtual double evaluate_likelihood(const Parameters &conditioned_on_parameters)=0;
@@ -74,7 +76,8 @@ protected:
   //MeasurementCovarianceEstimator* estimator;
   
   void make_copy(const MeasurementCovarianceEstimatorOutput &another);
-
+  
 };
+}
 
 #endif

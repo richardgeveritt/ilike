@@ -37,7 +37,7 @@ get_directory_numbers <- function(all_dirs)
   return(numbers)
 }
 
-#' Take output from the functions load_smc_output or load_enk_output and convert it to a standard (non-tidy format with one column per dimension).
+#' Take output from the functions load_smc_output or load_enk_output and convert it to a more standard format (non-tidy format with one column per dimension).
 #'
 #' @param output Output from the functions load_smc_output or load_enk_output.
 #' @param variables (optional) Variables to include in the output (default is all).

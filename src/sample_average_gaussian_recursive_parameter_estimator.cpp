@@ -2,8 +2,10 @@
 #include "utils.h"
 #include "proposal_kernel.h"
 
+namespace ilike
+{
 SampleAverageGaussianRecursiveParameterEstimator::SampleAverageGaussianRecursiveParameterEstimator()
-  :GaussianRecursiveParameterEstimator()
+:GaussianRecursiveParameterEstimator()
 {
 }
 
@@ -14,7 +16,7 @@ SampleAverageGaussianRecursiveParameterEstimator::~SampleAverageGaussianRecursiv
 
 //Copy constructor for the SampleAverageGaussianRecursiveParameterEstimator class.
 SampleAverageGaussianRecursiveParameterEstimator::SampleAverageGaussianRecursiveParameterEstimator(const SampleAverageGaussianRecursiveParameterEstimator &another)
-  :GaussianRecursiveParameterEstimator(another)
+:GaussianRecursiveParameterEstimator(another)
 {
   this->make_copy(another);
 }
@@ -64,4 +66,5 @@ void SampleAverageGaussianRecursiveParameterEstimator::update(const std::string 
     arma::colvec current_difference = current_point - this->estimated.get_mean();
     this->estimated.get_covariance() = this->estimated.get_covariance() + current_gain*(current_difference*current_difference.t() - this->estimated.get_covariance());
   }
+}
 }

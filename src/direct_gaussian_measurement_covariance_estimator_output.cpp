@@ -2,8 +2,10 @@
 #include "direct_gaussian_measurement_covariance_estimator.h"
 #include "transform.h"
 
+namespace ilike
+{
 DirectGaussianMeasurementCovarianceEstimatorOutput::DirectGaussianMeasurementCovarianceEstimatorOutput()
-  :GaussianMeasurementCovarianceEstimatorOutput()
+:GaussianMeasurementCovarianceEstimatorOutput()
 {
 }
 
@@ -18,7 +20,7 @@ DirectGaussianMeasurementCovarianceEstimatorOutput::~DirectGaussianMeasurementCo
 }
 
 DirectGaussianMeasurementCovarianceEstimatorOutput::DirectGaussianMeasurementCovarianceEstimatorOutput(const DirectGaussianMeasurementCovarianceEstimatorOutput &another)
-  :GaussianMeasurementCovarianceEstimatorOutput(another)
+:GaussianMeasurementCovarianceEstimatorOutput(another)
 {
   this->make_copy(another);
 }
@@ -27,7 +29,7 @@ void DirectGaussianMeasurementCovarianceEstimatorOutput::operator=(const DirectG
 {
   if(this == &another)
     return;
-
+  
   GaussianMeasurementCovarianceEstimatorOutput::operator=(another);
   this->make_copy(another);
 }
@@ -88,11 +90,11 @@ void DirectGaussianMeasurementCovarianceEstimatorOutput::subsample_specific_simu
 }
 
 /*
-arma::rowvec DirectGaussianMeasurementCovarianceEstimatorOutput::get_measurement_random_shift()
-{
-  
-}
-*/
+ arma::rowvec DirectGaussianMeasurementCovarianceEstimatorOutput::get_measurement_random_shift()
+ {
+ 
+ }
+ */
 
 MeasurementCovarianceEstimator* DirectGaussianMeasurementCovarianceEstimatorOutput::get_estimator()
 {
@@ -107,4 +109,5 @@ GaussianMeasurementCovarianceEstimator* DirectGaussianMeasurementCovarianceEstim
 const GaussianMeasurementCovarianceEstimator* DirectGaussianMeasurementCovarianceEstimatorOutput::get_gaussian_estimator() const
 {
   return this->direct_estimator;
+}
 }

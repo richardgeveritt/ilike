@@ -9,18 +9,20 @@ using namespace Rcpp;
 #include "particle.h"
 #include "distributions.h"
 
+namespace ilike
+{
 class MCMCOutput;
 
 class MCMCAdaptor
 {
-
+  
 public:
-
+  
   MCMCAdaptor();
   virtual ~MCMCAdaptor();
-
+  
   MCMCAdaptor(const MCMCAdaptor &another);
-
+  
   void operator=(const MCMCAdaptor &another);
   virtual MCMCAdaptor* duplicate() const=0;
   
@@ -31,7 +33,7 @@ public:
   // Stochastic has some weights.
   // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.
   // Proposal needs to call simulate in all llhdoutputs
-
+  
 protected:
   
   virtual void specific_mcmc_adapt(const Particle &latest_particle,
@@ -39,9 +41,10 @@ protected:
   
   // not stored here
   ProposalKernel* proposal;
-
+  
   void make_copy(const MCMCAdaptor &another);
-
+  
 };
+}
 
 #endif

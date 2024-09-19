@@ -18,6 +18,8 @@
 #include <direct.h>
 #endif
 
+namespace ilike
+{
 inline bool directory_exists(const std::string &directory_name)
 {
   struct stat info;
@@ -35,16 +37,17 @@ inline bool directory_exists(const std::string &directory_name)
 
 inline void make_directory(const std::string &sPath)
 {
-   mode_t nMode = 0733; // UNIX style permissions
-   int nError = 0;
-   #if defined(_WIN32)
-   nError = _mkdir(sPath.c_str()); // can be used on Windows
-   #else
-   nError = mkdir(sPath.c_str(),nMode); // can be used on non-Windows
-   #endif
-   if (nError != 0) {
-     stop("Error creating directory.");
-   }
+  mode_t nMode = 0733; // UNIX style permissions
+  int nError = 0;
+#if defined(_WIN32)
+  nError = _mkdir(sPath.c_str()); // can be used on Windows
+#else
+  nError = mkdir(sPath.c_str(),nMode); // can be used on non-Windows
+#endif
+  if (nError != 0) {
+    stop("Error creating directory.");
+  }
+}
 }
 
 #endif // #ifndef INCLUDE_STD_FILESYSTEM_EXPERIMENTAL

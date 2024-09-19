@@ -2,8 +2,10 @@
 #include "utils.h"
 #include "kalman_filter_output.h"
 
+namespace ilike
+{
 ExactKalmanUpdater::ExactKalmanUpdater()
-  :KalmanUpdater()
+:KalmanUpdater()
 {
 }
 
@@ -35,7 +37,7 @@ ExactKalmanUpdater::~ExactKalmanUpdater()
 }
 
 ExactKalmanUpdater::ExactKalmanUpdater(const ExactKalmanUpdater &another)
-  :KalmanUpdater(another)
+:KalmanUpdater(another)
 {
   this->make_copy(another);
 }
@@ -97,4 +99,5 @@ void ExactKalmanUpdater::set_parameters(const Parameters &conditioned_on_paramet
     this->measurement_matrix = this->measurement_matrix_function(conditioned_on_parameters_in);
     this->measurement_noise = this->measurement_noise_function(conditioned_on_parameters_in);
   }
+}
 }

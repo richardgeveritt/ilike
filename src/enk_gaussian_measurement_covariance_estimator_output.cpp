@@ -1,8 +1,10 @@
 #include "enk_gaussian_measurement_covariance_estimator_output.h"
 #include "enk_gaussian_measurement_covariance_estimator.h"
 
+namespace ilike
+{
 EnKGaussianMeasurementCovarianceEstimatorOutput::EnKGaussianMeasurementCovarianceEstimatorOutput()
-  :GaussianMeasurementCovarianceEstimatorOutput()
+:GaussianMeasurementCovarianceEstimatorOutput()
 {
 }
 
@@ -17,7 +19,7 @@ EnKGaussianMeasurementCovarianceEstimatorOutput::~EnKGaussianMeasurementCovarian
 }
 
 EnKGaussianMeasurementCovarianceEstimatorOutput::EnKGaussianMeasurementCovarianceEstimatorOutput(const EnKGaussianMeasurementCovarianceEstimatorOutput &another)
-  :GaussianMeasurementCovarianceEstimatorOutput(another)
+:GaussianMeasurementCovarianceEstimatorOutput(another)
 {
   this->make_copy(another);
 }
@@ -26,7 +28,7 @@ void EnKGaussianMeasurementCovarianceEstimatorOutput::operator=(const EnKGaussia
 {
   if(this == &another)
     return;
-
+  
   GaussianMeasurementCovarianceEstimatorOutput::operator=(another);
   this->make_copy(another);
 }
@@ -46,16 +48,16 @@ void EnKGaussianMeasurementCovarianceEstimatorOutput::make_copy(const EnKGaussia
 }
 
 /*
-arma::rowvec EnKGaussianMeasurementCovarianceEstimatorOutput::get_measurement_state_for_covariance()
-{
-  return arma::rowvec();
-}
-
-arma::rowvec EnKGaussianMeasurementCovarianceEstimatorOutput::get_measurement_random_shift()
-{
-  return arma::rowvec();
-}
-*/
+ arma::rowvec EnKGaussianMeasurementCovarianceEstimatorOutput::get_measurement_state_for_covariance()
+ {
+ return arma::rowvec();
+ }
+ 
+ arma::rowvec EnKGaussianMeasurementCovarianceEstimatorOutput::get_measurement_random_shift()
+ {
+ return arma::rowvec();
+ }
+ */
 
 void EnKGaussianMeasurementCovarianceEstimatorOutput::specific_simulate(const Parameters &parameters)
 {
@@ -80,4 +82,5 @@ GaussianMeasurementCovarianceEstimator* EnKGaussianMeasurementCovarianceEstimato
 const GaussianMeasurementCovarianceEstimator* EnKGaussianMeasurementCovarianceEstimatorOutput::get_gaussian_estimator() const
 {
   return this->enk_estimator;
+}
 }

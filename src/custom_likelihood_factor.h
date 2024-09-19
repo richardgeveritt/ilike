@@ -8,22 +8,24 @@ using namespace Rcpp;
 #include "ilike_header.h"
 #include "likelihood_factor.h"
 
+namespace ilike
+{
 class CustomLikelihoodFactor : public LikelihoodFactor
 {
-
+  
 public:
-
+  
   CustomLikelihoodFactor();
   CustomLikelihoodFactor(EvaluateLogLikelihoodPtr likelihood_in,
                          Data* data_in);
   CustomLikelihoodFactor(EvaluateLogLikelihoodPtr likelihood_in,
                          EvaluateGradientLogLikelihoodPtr likelihood_gradient_in,
                          Data* data_in);
-
+  
   virtual ~CustomLikelihoodFactor();
-
+  
   CustomLikelihoodFactor(const CustomLikelihoodFactor &another);
-
+  
   void operator=(const CustomLikelihoodFactor &another);
   Factor* duplicate() const;
   LikelihoodFactor* likelihood_factor_duplicate() const;
@@ -32,16 +34,17 @@ public:
   
   arma::mat likelihood_evaluate_gradient(const std::string &variable,
                                          const Parameters &input) const;
-
+  
 protected:
   
   void specific_set_data();
-
+  
   void make_copy(const CustomLikelihoodFactor &another);
   
   EvaluateLogLikelihoodPtr likelihood;
   EvaluateGradientLogLikelihoodPtr likelihood_gradient;
-
+  
 };
+}
 
 #endif

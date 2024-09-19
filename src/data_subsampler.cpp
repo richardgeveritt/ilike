@@ -4,6 +4,8 @@
 #include "parameters.h"
 #include "iid_data_subsetter.h"
 
+namespace ilike
+{
 DataSubsampler::DataSubsampler()
 {
   this->small_data = NULL;
@@ -45,7 +47,7 @@ void DataSubsampler::operator=(const DataSubsampler &another)
   
   if (this->small_data!=NULL)
     delete this->small_data;
-
+  
   this->make_copy(another);
 }
 
@@ -86,4 +88,5 @@ void DataSubsampler::subsample(size_t num_pieces)
   {
     (*i)->subset(num_pieces);
   }
+}
 }

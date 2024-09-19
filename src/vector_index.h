@@ -7,21 +7,23 @@ using namespace Rcpp;
 #include <vector>
 #include "index.h"
 
+namespace ilike
+{
 class VectorIndex : public Index
 {
-
+  
 public:
-
+  
   VectorIndex();
   VectorIndex(const std::vector<size_t> &indices_in);
   VectorIndex(size_t start_in,
-                    size_t end_in);
+              size_t end_in);
   VectorIndex(size_t single_index_in);
-
+  
   virtual ~VectorIndex();
-
+  
   VectorIndex(const VectorIndex &another);
-
+  
   void operator=(const VectorIndex &another);
   Index* duplicate() const;
   Index* single_index_duplicate() const;
@@ -38,13 +40,14 @@ public:
   arma::uvec get_uvec() const;
   
   //void add_index(const size_t &number);
-
+  
 protected:
-
+  
   void make_copy(const VectorIndex &another);
   
   std::vector<size_t> indices;
-
+  
 };
+}
 
 #endif

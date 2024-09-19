@@ -8,19 +8,21 @@ using namespace Rcpp;
 #include "gradient_estimator.h"
 #include "particle.h"
 
+namespace ilike
+{
 class GradientEstimatorOutput;
 
 class DirectGradientEstimator : public GradientEstimator
 {
-
+  
 public:
-
+  
   DirectGradientEstimator();
-
+  
   virtual ~DirectGradientEstimator();
-
+  
   DirectGradientEstimator(const DirectGradientEstimator &another);
-
+  
   void operator=(const DirectGradientEstimator &another);
   GradientEstimator* duplicate() const;
   
@@ -34,27 +36,28 @@ public:
                                 const Particle &particle) const;
   
   /*
-  arma::mat get_gradient_of_log(const std::string &variable,
-                                const Index* index,
-                                Particle &particle,
-                                const Parameters &conditioned_on_parameters);
-  */
+   arma::mat get_gradient_of_log(const std::string &variable,
+   const Index* index,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters);
+   */
   
   arma::mat subsample_get_gradient_of_log(const std::string &variable,
                                           const Index* index,
                                           const Particle &particle) const;
   
   /*
-  arma::mat subsample_get_gradient_of_log(const std::string &variable,
-                                          const Index* index,
-                                          Particle &particle,
-                                          const Parameters &conditioned_on_parameters);
-  */
+   arma::mat subsample_get_gradient_of_log(const std::string &variable,
+   const Index* index,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters);
+   */
   
 protected:
-
+  
   void make_copy(const DirectGradientEstimator &another);
-
+  
 };
+}
 
 #endif

@@ -9,6 +9,8 @@ using namespace Rcpp;
 #include "particles.h"
 #include "mileometer.h"
 
+namespace ilike
+{
 class SMCCriterion;
 class SMCTermination;
 class EnsembleKalmanWorker;
@@ -21,12 +23,12 @@ class EnsembleKalman;
 class EnsembleSequencer
 {
 public:
-
+  
   EnsembleSequencer();
   virtual ~EnsembleSequencer();
   
   //EnsembleSequencer(const std::vector<double> &schedule_in,
-            //const std::string &variable_in);
+  //const std::string &variable_in);
   
   EnsembleSequencer(EnsembleKalmanWorker* the_worker_in,
                     const std::vector<double> &schedule_in,
@@ -36,8 +38,8 @@ public:
                     SMCTermination* termination_in = NULL);
   
   //EnsembleSequencer(const std::vector< std::vector<double> > &schedules_in,
-            //const std::vector<std::string> &variable_names_in);
-
+  //const std::vector<std::string> &variable_names_in);
+  
   EnsembleSequencer(const EnsembleSequencer &another);
   EnsembleSequencer& operator=(const EnsembleSequencer &another);
   
@@ -55,23 +57,23 @@ public:
                                             const Index* index);
   
   /*
-  void find_desired_criterion(EnsembleKalmanOutput* current_state,
-                              const Parameters &conditioned_on_parameters);
-  
-  void find_next_target_bisection(EnsembleKalmanOutput* current_state,
-                                  const Index* index,
-                                  const Parameters &conditioned_on_parameters);
-  
-  arma::colvec find_next_target_quantile(EnsembleKalmanOutput* current_state,
-                                         const Parameters &conditioned_on_parameters);
-  
-  void subsample_find_next_target_bisection(EnsembleKalmanOutput* current_state,
-                                            const Index* index,
-                                            const Parameters &conditioned_on_parameters);
-  
-  arma::colvec subsample_find_next_target_quantile(EnsembleKalmanOutput* current_state,
-                                                   const Parameters &conditioned_on_parameters);
-  */
+   void find_desired_criterion(EnsembleKalmanOutput* current_state,
+   const Parameters &conditioned_on_parameters);
+   
+   void find_next_target_bisection(EnsembleKalmanOutput* current_state,
+   const Index* index,
+   const Parameters &conditioned_on_parameters);
+   
+   arma::colvec find_next_target_quantile(EnsembleKalmanOutput* current_state,
+   const Parameters &conditioned_on_parameters);
+   
+   void subsample_find_next_target_bisection(EnsembleKalmanOutput* current_state,
+   const Index* index,
+   const Parameters &conditioned_on_parameters);
+   
+   arma::colvec subsample_find_next_target_quantile(EnsembleKalmanOutput* current_state,
+   const Parameters &conditioned_on_parameters);
+   */
   
   //void find_next_target_quantile(SMCOutput* current_state, const Parameters &conditioned_on_parameters);
   
@@ -84,7 +86,7 @@ public:
   Parameters schedule_parameters;
   
   void reset();
-
+  
 protected:
   
   friend EnsembleKalmanInversion;
@@ -101,7 +103,7 @@ protected:
   
   void set_initial_schedule_parameters();
   void set_schedule_parameters();
-
+  
   void make_copy(const EnsembleSequencer &another);
   void make_copy(EnsembleSequencer &&another);
   
@@ -140,7 +142,8 @@ protected:
   // stored here
   SMCCriterion* criterion;
   SMCTermination* termination;
-
+  
 };
+}
 
 #endif

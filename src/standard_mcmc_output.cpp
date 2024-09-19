@@ -6,8 +6,10 @@
 #include "mcmc_termination.h"
 #include "mcmc.h"
 
+namespace ilike
+{
 StandardMCMCOutput::StandardMCMCOutput()
-  :MoveOutput()
+:MoveOutput()
 {
   this->iteration_counter = 0;
   this->termination = NULL;
@@ -33,7 +35,7 @@ StandardMCMCOutput::~StandardMCMCOutput()
 
 //Copy constructor for the StandardMCMCOutput class.
 StandardMCMCOutput::StandardMCMCOutput(const StandardMCMCOutput &another)
-  :MoveOutput(another)
+:MoveOutput(another)
 {
   this->make_copy(another);
 }
@@ -225,4 +227,5 @@ Particle StandardMCMCOutput::subsample_move(RandomNumberGenerator &rng,
 Parameters StandardMCMCOutput::get_current_algorithm_parameters() const
 {
   return this->algorithm_parameters.back();
+}
 }

@@ -2,8 +2,10 @@
 #include "likelihood_estimator_output.h"
 #include "likelihood_estimator.h"
 
+namespace ilike
+{
 CustomGuidedIndependentProposalKernel::CustomGuidedIndependentProposalKernel()
-  :IndependentProposalKernel()
+:IndependentProposalKernel()
 {
   this->proposal_evaluate = NULL;
   this->proposal_simulate = NULL;
@@ -25,21 +27,21 @@ CustomGuidedIndependentProposalKernel::CustomGuidedIndependentProposalKernel(Sim
 }
 
 /*
-CustomGuidedIndependentProposalKernel::CustomGuidedIndependentProposalKernel(SimulateGuidedIndependentProposalPtr proposal_simulate_in,
-                                                                 EvaluateLogGuidedIndependentProposalPtr proposal_evaluate_in)
-:IndependentProposalKernel()
-{
-  this->proposal_evaluate = proposal_evaluate_in;
-  this->proposal_simulate = proposal_simulate_in;
-  this->proposal_parameters = NULL;
-  this->data = NULL;
-}
-*/
+ CustomGuidedIndependentProposalKernel::CustomGuidedIndependentProposalKernel(SimulateGuidedIndependentProposalPtr proposal_simulate_in,
+ EvaluateLogGuidedIndependentProposalPtr proposal_evaluate_in)
+ :IndependentProposalKernel()
+ {
+ this->proposal_evaluate = proposal_evaluate_in;
+ this->proposal_simulate = proposal_simulate_in;
+ this->proposal_parameters = NULL;
+ this->data = NULL;
+ }
+ */
 
 CustomGuidedIndependentProposalKernel::CustomGuidedIndependentProposalKernel(SimulateGuidedIndependentProposalPtr proposal_simulate_in,
-                                                                 EvaluateLogGuidedIndependentProposalPtr proposal_evaluate_in,
+                                                                             EvaluateLogGuidedIndependentProposalPtr proposal_evaluate_in,
                                                                              Data* data_in)
-  :IndependentProposalKernel()
+:IndependentProposalKernel()
 {
   this->proposal_evaluate = proposal_evaluate_in;
   this->proposal_simulate = proposal_simulate_in;
@@ -48,7 +50,7 @@ CustomGuidedIndependentProposalKernel::CustomGuidedIndependentProposalKernel(Sim
 }
 
 CustomGuidedIndependentProposalKernel::CustomGuidedIndependentProposalKernel(const CustomGuidedIndependentProposalKernel &another)
-  :IndependentProposalKernel(another)
+:IndependentProposalKernel(another)
 {
   this->make_copy(another);
 }
@@ -57,7 +59,7 @@ void CustomGuidedIndependentProposalKernel::operator=(const CustomGuidedIndepend
 {
   if(this == &another)
     return;
-
+  
   IndependentProposalKernel::operator=(another);
   this->make_copy(another);
 }
@@ -105,13 +107,13 @@ double CustomGuidedIndependentProposalKernel::evaluate_independent_kernel(const 
 }
 
 /*
-double CustomGuidedIndependentProposalKernel::evaluate_independent_kernel(const Parameters &proposed_particle,
-                                                                    const Parameters &conditioned_on_parameters) const
-{
-  return this->proposal_evaluate(proposed_particle.merge(conditioned_on_parameters),
-                                 this->proposal_parameters);
-}
-*/
+ double CustomGuidedIndependentProposalKernel::evaluate_independent_kernel(const Parameters &proposed_particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ return this->proposal_evaluate(proposed_particle.merge(conditioned_on_parameters),
+ this->proposal_parameters);
+ }
+ */
 
 double CustomGuidedIndependentProposalKernel::subsample_evaluate_independent_kernel(const Parameters &proposed_particle) const
 {
@@ -134,7 +136,7 @@ Parameters CustomGuidedIndependentProposalKernel::independent_simulate(RandomNum
 }
 
 Parameters CustomGuidedIndependentProposalKernel::independent_simulate(RandomNumberGenerator &rng,
-                                                                 const Parameters &conditioned_on_parameters) const
+                                                                       const Parameters &conditioned_on_parameters) const
 {
   if (this->proposal_parameters!=NULL)
   {
@@ -157,7 +159,7 @@ Parameters CustomGuidedIndependentProposalKernel::subsample_independent_simulate
 }
 
 Parameters CustomGuidedIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
-                                                                           const Parameters &conditioned_on_parameters) const
+                                                                                 const Parameters &conditioned_on_parameters) const
 {
   stop("CustomGuidedIndependentProposalKernel::subsample_independent_simulate - not yet written.");
   // no difference since size of data set does not impact on proposal
@@ -166,7 +168,7 @@ Parameters CustomGuidedIndependentProposalKernel::subsample_independent_simulate
 }
 
 Parameters CustomGuidedIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
-                                                                           const std::string &variable) const
+                                                                                 const std::string &variable) const
 {
   // no difference since size of data set does not impact on proposal
   Rcpp::stop("CustomGuidedIndependentProposalKernel::subsample_independent_simulate - not written yet.");
@@ -175,8 +177,8 @@ Parameters CustomGuidedIndependentProposalKernel::subsample_independent_simulate
 }
 
 Parameters CustomGuidedIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
-                                                                           const std::string &variable,
-                                                                           const Parameters &conditioned_on_parameters) const
+                                                                                 const std::string &variable,
+                                                                                 const Parameters &conditioned_on_parameters) const
 {
   // no difference since size of data set does not impact on proposal
   Rcpp::stop("CustomGuidedIndependentProposalKernel::subsample_independent_simulate - not written yet.");
@@ -185,34 +187,34 @@ Parameters CustomGuidedIndependentProposalKernel::subsample_independent_simulate
 }
 
 arma::mat CustomGuidedIndependentProposalKernel::independent_gradient_of_log(const std::string &variable,
-                                                                       const Parameters &proposed_particle)
+                                                                             const Parameters &proposed_particle)
 {
   Rcpp::stop("CustomGuidedIndependentProposalKernel::independent_gradient_of_log - not written yet.");
 }
 
 /*
-arma::mat CustomGuidedIndependentProposalKernel::independent_gradient_of_log(const std::string &variable,
-                                                                       Variables* proposed_particle,
-                                                                       const Parameters &conditioned_on_parameters)
-{
-  Rcpp::stop("CustomGuidedIndependentProposalKernel::independent_gradient_of_log - not written yet.");
-}
-*/
+ arma::mat CustomGuidedIndependentProposalKernel::independent_gradient_of_log(const std::string &variable,
+ Variables* proposed_particle,
+ const Parameters &conditioned_on_parameters)
+ {
+ Rcpp::stop("CustomGuidedIndependentProposalKernel::independent_gradient_of_log - not written yet.");
+ }
+ */
 
 arma::mat CustomGuidedIndependentProposalKernel::subsample_independent_gradient_of_log(const std::string &variable,
-                                                                                 const Parameters &proposed_particle)
+                                                                                       const Parameters &proposed_particle)
 {
   Rcpp::stop("CustomGuidedIndependentProposalKernel::subsample_independent_gradient_of_log - not written yet.");
 }
 
 /*
-arma::mat CustomGuidedIndependentProposalKernel::subsample_independent_gradient_of_log(const std::string &variable,
-                                             Variables* proposed_particle,
-                                             const Parameters &conditioned_on_parameters)
-{
-  Rcpp::stop("CustomGuidedIndependentProposalKernel::subsample_independent_gradient_of_log - not written yet.");
-}
-*/
+ arma::mat CustomGuidedIndependentProposalKernel::subsample_independent_gradient_of_log(const std::string &variable,
+ Variables* proposed_particle,
+ const Parameters &conditioned_on_parameters)
+ {
+ Rcpp::stop("CustomGuidedIndependentProposalKernel::subsample_independent_gradient_of_log - not written yet.");
+ }
+ */
 
 GradientEstimatorOutput* CustomGuidedIndependentProposalKernel::simulate_gradient_estimator_output() const
 {
@@ -245,4 +247,5 @@ bool CustomGuidedIndependentProposalKernel::can_be_evaluated() const
 void CustomGuidedIndependentProposalKernel::set_data(Data* data_in)
 {
   this->data = data_in;
+}
 }

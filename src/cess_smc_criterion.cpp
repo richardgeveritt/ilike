@@ -3,13 +3,15 @@
 #include "smc_output.h"
 #include "ensemble_kalman_output.h"
 
+namespace ilike
+{
 CESSSMCCriterion::CESSSMCCriterion()
-  :SMCCriterion()
+:SMCCriterion()
 {
 }
 
 CESSSMCCriterion::CESSSMCCriterion(double desired_criterion_in)
-  :SMCCriterion(desired_criterion_in)
+:SMCCriterion(desired_criterion_in)
 {
   this->desired_criterion = desired_criterion_in;
 }
@@ -21,7 +23,7 @@ CESSSMCCriterion::~CESSSMCCriterion()
 
 //Copy constructor for the CESSSMCCriterion class.
 CESSSMCCriterion::CESSSMCCriterion(const CESSSMCCriterion &another)
-  :SMCCriterion(another)
+:SMCCriterion(another)
 {
   this->make_copy(another);
 }
@@ -83,28 +85,28 @@ void CESSSMCCriterion::subsample_find_desired_criterion(SMCOutput* current_state
   // use current_particles.current_llhd
 }
 /*
-void CESSSMCCriterion::find_desired_criterion(SMCOutput* current_state,
-                                              const Parameters &conditioned_on_parameters)
-{
-  // use ratio method from https://arxiv.org/pdf/1907.01505.pdf
-  
-  // different at first step
-  
-  // use previous_particles.previous_llhd
-  // use current_particles.current_llhd
-}
-
-void CESSSMCCriterion::subsample_find_desired_criterion(SMCOutput* current_state,
-                                                        const Parameters &conditioned_on_parameters)
-{
-  // use ratio method from https://arxiv.org/pdf/1907.01505.pdf
-  
-  // different at first step
-  
-  // use previous_particles.previous_llhd
-  // use current_particles.current_llhd
-}
-*/
+ void CESSSMCCriterion::find_desired_criterion(SMCOutput* current_state,
+ const Parameters &conditioned_on_parameters)
+ {
+ // use ratio method from https://arxiv.org/pdf/1907.01505.pdf
+ 
+ // different at first step
+ 
+ // use previous_particles.previous_llhd
+ // use current_particles.current_llhd
+ }
+ 
+ void CESSSMCCriterion::subsample_find_desired_criterion(SMCOutput* current_state,
+ const Parameters &conditioned_on_parameters)
+ {
+ // use ratio method from https://arxiv.org/pdf/1907.01505.pdf
+ 
+ // different at first step
+ 
+ // use previous_particles.previous_llhd
+ // use current_particles.current_llhd
+ }
+ */
 
 double CESSSMCCriterion::operator()(const Ensemble &particles) const
 {
@@ -122,19 +124,20 @@ void CESSSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_stat
 }
 
 /*
-void CESSSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_state,
-                                              const Parameters &conditioned_on_parameters)
-{
-  // use ratio method from https://arxiv.org/pdf/1907.01505.pdf
-  
-  // different at first step
-  
-  // use previous_particles.previous_llhd
-  // use current_particles.current_llhd
-}
-*/
+ void CESSSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_state,
+ const Parameters &conditioned_on_parameters)
+ {
+ // use ratio method from https://arxiv.org/pdf/1907.01505.pdf
+ 
+ // different at first step
+ 
+ // use previous_particles.previous_llhd
+ // use current_particles.current_llhd
+ }
+ */
 
 bool CESSSMCCriterion::always_positive() const
 {
   return false;
+}
 }

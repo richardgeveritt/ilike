@@ -15,8 +15,10 @@
 #include "vector_factors.h"
 #include "vector_index.h"
 
+namespace ilike
+{
 SMCMCMCMove::SMCMCMCMove()
-   :SMC()
+:SMC()
 {
   this->mcmc = NULL;
   this->index = NULL;
@@ -66,7 +68,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                                                                true));
   indices.push_back(0);
   this->index = new VectorIndex(indices);
-
+  
   this->factors = new VectorFactors(likelihood_estimators);
   
   this->particle_simulator = NULL;
@@ -153,7 +155,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                                                             likelihood_estimators_in);
   
   this->proposed_particles_inputted = false;
-
+  
   //this->model_and_algorithm.particle_simulator = new ParameterParticleSimulator(simulate_proposal_in,
   //                                                                              this->model_and_algorithm.likelihood_estimators);
   
@@ -312,13 +314,13 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                                                             likelihood_estimators);
   
   /*
-  for (auto i=likelihood_estimators.begin();
-       i!=likelihood_estimators.end();
-       ++i)
-  {
-    (*i)->setup(candidate_parameters);
-  }
-  */
+   for (auto i=likelihood_estimators.begin();
+   i!=likelihood_estimators.end();
+   ++i)
+   {
+   (*i)->setup(candidate_parameters);
+   }
+   */
   
   if (parallel_in==TRUE)
   {
@@ -345,53 +347,53 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
 }
 
 /*
-void SMCMCMCMove::set_multiple_mcmc(RandomNumberGenerator* rng_in,
-                                    size_t* seed_in,
-                                    const Data* data_in,
-                                    MCMC* mcmc_in,
-                                    SimulateDistributionPtr simulate_proposal_in,
-                                    EvaluateLogDistributionPtr evaluate_log_prior_in,
-                                    EvaluateLogLikelihoodPtr evaluate_log_likelihood_in,
-                                    bool parallel_in,
-                                    size_t grain_size_in)
-{
-  this->model_and_algorithm.likelihood_estimators.resize(0);
-  this->model_and_algorithm.likelihood_estimators.reserve(1);
-  this->model_and_algorithm.likelihood_estimators.push_back(new ExactLikelihoodEstimator(rng_in,
-                                                                                         seed_in,
-                                                                                         data_in,
-                                                                                         evaluate_log_prior_in,
-                                                                                         evaluate_log_likelihood_in,
-                                                                                         true));
-  
-  this->model_and_algorithm.particle_simulator = new ParameterParticleSimulator(simulate_proposal_in,
-                                                                                this->model_and_algorithm.likelihood_estimators);
-  
-  if (parallel_in==TRUE)
-  {
-  }
-  else
-  {
-    this->the_worker = new SequentialSMCWorker(this,
-                                               this->model_and_algorithm.particle_simulator,
-                                               this->model_and_algorithm.likelihood_estimators);
-  }
-  
-  std::vector<double> schedule_in;
-  schedule_in.push_back(0.0);
-  schedule_in.push_back(1.0);
-  std::string variable_in = "power";
-  this->model_and_algorithm.smc_criterion = new CESSSMCCriterion(-1.0);
-  this->model_and_algorithm.smc_termination = NULL;
-  this->sequencer = Sequencer(this->the_worker,
-                              schedule_in,
-                              variable_in,
-                              this->model_and_algorithm.smc_criterion,
-                              this->model_and_algorithm.smc_termination);
-  
-  this->mcmc = mcmc_in;
-}
-*/
+ void SMCMCMCMove::set_multiple_mcmc(RandomNumberGenerator* rng_in,
+ size_t* seed_in,
+ const Data* data_in,
+ MCMC* mcmc_in,
+ SimulateDistributionPtr simulate_proposal_in,
+ EvaluateLogDistributionPtr evaluate_log_prior_in,
+ EvaluateLogLikelihoodPtr evaluate_log_likelihood_in,
+ bool parallel_in,
+ size_t grain_size_in)
+ {
+ this->model_and_algorithm.likelihood_estimators.resize(0);
+ this->model_and_algorithm.likelihood_estimators.reserve(1);
+ this->model_and_algorithm.likelihood_estimators.push_back(new ExactLikelihoodEstimator(rng_in,
+ seed_in,
+ data_in,
+ evaluate_log_prior_in,
+ evaluate_log_likelihood_in,
+ true));
+ 
+ this->model_and_algorithm.particle_simulator = new ParameterParticleSimulator(simulate_proposal_in,
+ this->model_and_algorithm.likelihood_estimators);
+ 
+ if (parallel_in==TRUE)
+ {
+ }
+ else
+ {
+ this->the_worker = new SequentialSMCWorker(this,
+ this->model_and_algorithm.particle_simulator,
+ this->model_and_algorithm.likelihood_estimators);
+ }
+ 
+ std::vector<double> schedule_in;
+ schedule_in.push_back(0.0);
+ schedule_in.push_back(1.0);
+ std::string variable_in = "power";
+ this->model_and_algorithm.smc_criterion = new CESSSMCCriterion(-1.0);
+ this->model_and_algorithm.smc_termination = NULL;
+ this->sequencer = Sequencer(this->the_worker,
+ schedule_in,
+ variable_in,
+ this->model_and_algorithm.smc_criterion,
+ this->model_and_algorithm.smc_termination);
+ 
+ this->mcmc = mcmc_in;
+ }
+ */
 
 SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          size_t* seed_in,
@@ -413,7 +415,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                          bool parallel_in,
                          size_t grain_size_in,
                          const std::string &results_name_in)
-  :SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, lag_in, lag_proposed_in, mcmc_in->get_proposals(), resampling_desired_ess_in, true, true, true, transform_proposed_particles, results_name_in)
+:SMC(rng_in, seed_in, data_in, algorithm_parameters, number_of_particles_in, lag_in, lag_proposed_in, mcmc_in->get_proposals(), resampling_desired_ess_in, true, true, true, transform_proposed_particles, results_name_in)
 {
   mcmc_in->set_proposal_parameters(&this->algorithm_parameters);
   
@@ -439,10 +441,10 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   PowerFunctionPtr power = annealing_power;
   
   likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(rng_in,
-                                  seed_in,
-                                  data_in,
-                                  prior_times_likelihood,
-                                  power,
+                                                                  seed_in,
+                                                                  data_in,
+                                                                  prior_times_likelihood,
+                                                                  power,
                                                                   variable_in,
                                                                   false));
   indices.push_back(0);
@@ -455,7 +457,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                                                                                    true);
   
   PowerFunctionPtr second_power = annealing_one_minus_power;
-                                                            
+  
   
   likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(rng_in,
                                                                   seed_in,
@@ -469,20 +471,20 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   this->index = new VectorIndex(indices);
   
   /*
-  for (auto i=likelihood_estimators.begin();
-       i!=likelihood_estimators.end();
-       ++i)
-  {
-    (*i)->setup(candidate_parameters);
-  }
-  */
+   for (auto i=likelihood_estimators.begin();
+   i!=likelihood_estimators.end();
+   ++i)
+   {
+   (*i)->setup(candidate_parameters);
+   }
+   */
   
   this->factors = new VectorFactors(likelihood_estimators);
   
   // Need to construct LikelihoodEstimator to read in to this constructor.
   this->particle_simulator = new ParameterParticleSimulator(proposal,
                                                             likelihood_estimators);
-
+  
   if (parallel_in==true)
   {
   }
@@ -585,13 +587,13 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   this->factors = new VectorFactors(likelihood_estimators);
   
   /*
-  for (auto i=likelihood_estimators.begin();
-       i!=likelihood_estimators.end();
-       ++i)
-  {
-    (*i)->setup(candidate_parameters);
-  }
-  */
+   for (auto i=likelihood_estimators.begin();
+   i!=likelihood_estimators.end();
+   ++i)
+   {
+   (*i)->setup(candidate_parameters);
+   }
+   */
   
   // Need to construct LikelihoodEstimator to read in to this constructor.
   this->particle_simulator = new ParameterParticleSimulator(proposal,
@@ -667,13 +669,13 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   this->factors = new VectorFactors(likelihood_estimators_in);
   
   /*
-  for (auto i=likelihood_estimators.begin();
-       i!=likelihood_estimators.end();
-       ++i)
-  {
-    (*i)->setup(candidate_parameters);
-  }
-  */
+   for (auto i=likelihood_estimators.begin();
+   i!=likelihood_estimators.end();
+   ++i)
+   {
+   (*i)->setup(candidate_parameters);
+   }
+   */
   
   // Need to construct LikelihoodEstimator to read in to this constructor.
   this->particle_simulator = new ParameterParticleSimulator(proposal_in,
@@ -784,13 +786,13 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   this->mcmc = mcmc_in;
   if (this->mcmc!=NULL)
     this->mcmc->set_index_if_null(full_index);
-                                  
+  
   this->mcmc_at_last_step = mcmc_at_last_step_in;
 }
 
 //Copy constructor for the SMCMCMCMove class.
 SMCMCMCMove::SMCMCMCMove(const SMCMCMCMove &another)
-  :SMC(another)
+:SMC(another)
 {
   this->make_copy(another);
 }
@@ -816,7 +818,7 @@ void SMCMCMCMove::operator=(const SMCMCMCMove &another)
   
   if (this->index!=NULL)
     delete this->index;
-
+  
   SMC::operator=(another);
   this->make_copy(another);
 }
@@ -856,15 +858,15 @@ SMCOutput* SMCMCMCMove::specific_run()
 }
 
 /*
-SMCOutput* SMCMCMCMove::specific_run(const std::string &directory_name)
-{
-  SMCOutput* simulation = this->initialise_smc();
-  this->simulate_smc(simulation);
-  this->evaluate_smc(simulation);
-  simulation->normalise_and_resample_weights();
-  return simulation;
-}
-*/
+ SMCOutput* SMCMCMCMove::specific_run(const std::string &directory_name)
+ {
+ SMCOutput* simulation = this->initialise_smc();
+ this->simulate_smc(simulation);
+ this->evaluate_smc(simulation);
+ simulation->normalise_and_resample_weights();
+ return simulation;
+ }
+ */
 
 SMCOutput* SMCMCMCMove::specific_initialise_smc()
 {
@@ -891,7 +893,7 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state)
     Particles* current_particles = &current_state->back();
     Particles* next_particles = current_state->add_particles(current_particles);
     
-
+    
     this->the_worker->move(next_particles,
                            current_particles);
     
@@ -912,18 +914,18 @@ void SMCMCMCMove::evaluate_smc(SMCOutput* current_state)
 void SMCMCMCMove::evaluate_smcfixed_part_smc(SMCOutput* current_state)
 {
   /*
-  if (this->sequencer_parameters!=NULL)
-  {
-    this->the_worker->smcfixed_weight(this->index,
-                                      current_state->back(),
-                                      *this->sequencer_parameters);
-  }
-  else
-  {
-    this->the_worker->smcfixed_weight(this->index,
-                                      current_state->back());
-  }
-  */
+   if (this->sequencer_parameters!=NULL)
+   {
+   this->the_worker->smcfixed_weight(this->index,
+   current_state->back(),
+   *this->sequencer_parameters);
+   }
+   else
+   {
+   this->the_worker->smcfixed_weight(this->index,
+   current_state->back());
+   }
+   */
   this->the_worker->smcfixed_weight(this->index,
                                     current_state->back());
   //current_state->initialise_next_step();
@@ -939,12 +941,12 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
   bool terminate = FALSE;
   while (terminate==FALSE)
   {
-
+    
     this->sequencer.find_desired_criterion(current_state);
     
     // (involves evaluating adaptive weights, using Sequencer)
     this->sequencer.find_next_target_bisection(current_state,this->index);
-
+    
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
     current_state->set_llhd(current_state->log_likelihood);
     
@@ -1004,16 +1006,16 @@ SMCOutput* SMCMCMCMove::specific_run(const Parameters &conditioned_on_parameters
 }
 
 /*
-SMCOutput* SMCMCMCMove::specific_run(const std::string &directory_name,
-                                     const Parameters &conditioned_on_parameters)
-{
-  SMCOutput* simulation = this->initialise_smc(conditioned_on_parameters);
-  this->simulate_smc(simulation, conditioned_on_parameters);
-  this->evaluate_smc(simulation, conditioned_on_parameters);
-  simulation->normalise_and_resample_weights();
-  return simulation;
-}
-*/
+ SMCOutput* SMCMCMCMove::specific_run(const std::string &directory_name,
+ const Parameters &conditioned_on_parameters)
+ {
+ SMCOutput* simulation = this->initialise_smc(conditioned_on_parameters);
+ this->simulate_smc(simulation, conditioned_on_parameters);
+ this->evaluate_smc(simulation, conditioned_on_parameters);
+ simulation->normalise_and_resample_weights();
+ return simulation;
+ }
+ */
 
 SMCOutput* SMCMCMCMove::specific_initialise_smc(const Parameters &conditioned_on_parameters)
 {
@@ -1048,7 +1050,7 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state,
     current_state->increment_smc_iteration();
     // involves complete evaluation of weights using current adaptive param
   }
-
+  
 }
 
 void SMCMCMCMove::evaluate_smc(SMCOutput* current_state,
@@ -1064,20 +1066,20 @@ void SMCMCMCMove::evaluate_smcfixed_part_smc(SMCOutput* current_state,
                                              const Parameters &conditioned_on_parameters)
 {
   /*
-  if (this->sequencer_parameters!=NULL)
-  {
-    Parameters all_parameters = conditioned_on_parameters.merge(*this->sequencer_parameters);
-    this->the_worker->smcfixed_weight(this->index,
-                                      current_state->back(),
-                                      all_parameters);
-  }
-  else
-  {
-    this->the_worker->smcfixed_weight(this->index,
-                                      current_state->back(),
-                                      conditioned_on_parameters);
-  }
-  */
+   if (this->sequencer_parameters!=NULL)
+   {
+   Parameters all_parameters = conditioned_on_parameters.merge(*this->sequencer_parameters);
+   this->the_worker->smcfixed_weight(this->index,
+   current_state->back(),
+   all_parameters);
+   }
+   else
+   {
+   this->the_worker->smcfixed_weight(this->index,
+   current_state->back(),
+   conditioned_on_parameters);
+   }
+   */
   
   this->the_worker->smcfixed_weight(this->index,
                                     current_state->back());
@@ -1205,9 +1207,9 @@ void SMCMCMCMove::subsample_evaluate_smc(SMCOutput* current_state,
                                          const Parameters &conditioned_on_parameters)
 {
   this->subsample_evaluate_smcfixed_part_smc(current_state,
-                                   conditioned_on_parameters);
+                                             conditioned_on_parameters);
   this->subsample_evaluate_smcadaptive_part_given_smcfixed_smc(current_state,
-                                                     conditioned_on_parameters);
+                                                               conditioned_on_parameters);
 }
 
 void SMCMCMCMove::subsample_evaluate_smcfixed_part_smc(SMCOutput* current_state)
@@ -1236,20 +1238,20 @@ void SMCMCMCMove::subsample_evaluate_smcfixed_part_smc(SMCOutput* current_state,
                                                        const Parameters &conditioned_on_parameters)
 {
   /*
-  if (this->sequencer_parameters!=NULL)
-  {
-    Parameters all_parameters = conditioned_on_parameters.merge(*this->sequencer_parameters);
-    this->the_worker->subsample_smcfixed_weight(this->index,
-                                                current_state->back(),
-                                                all_parameters);
-  }
-  else
-  {
-    this->the_worker->subsample_smcfixed_weight(this->index,
-                                                current_state->back(),
-                                                conditioned_on_parameters);
-  }
-  */
+   if (this->sequencer_parameters!=NULL)
+   {
+   Parameters all_parameters = conditioned_on_parameters.merge(*this->sequencer_parameters);
+   this->the_worker->subsample_smcfixed_weight(this->index,
+   current_state->back(),
+   all_parameters);
+   }
+   else
+   {
+   this->the_worker->subsample_smcfixed_weight(this->index,
+   current_state->back(),
+   conditioned_on_parameters);
+   }
+   */
   this->the_worker->subsample_smcfixed_weight(this->index,
                                               current_state->back());
   //current_state->initialise_next_step();
@@ -1374,15 +1376,15 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
 }
 
 /*
-MoveOutput* SMCMCMCMove::move(RandomNumberGenerator &rng,
-                              Particle &particle,
-                              const Parameters &conditioned_on_parameters)
-{
-  return this->mcmc->run(rng,
-                         particle,
-                         conditioned_on_parameters);
-}
-*/
+ MoveOutput* SMCMCMCMove::move(RandomNumberGenerator &rng,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters)
+ {
+ return this->mcmc->run(rng,
+ particle,
+ conditioned_on_parameters);
+ }
+ */
 
 void SMCMCMCMove::weight_for_adapting_sequence(const Index* index,
                                                Particles &current_particles)
@@ -1392,15 +1394,15 @@ void SMCMCMCMove::weight_for_adapting_sequence(const Index* index,
 }
 
 /*
-void SMCMCMCMove::weight_for_adapting_sequence(const Index* index,
-                                               Particles &current_particles,
-                                               const Parameters &conditioned_on_parameters)
-{
-  this->the_worker->smcadaptive_given_smcfixed_weight(this->index,
-                                                      current_particles,
-                                                      conditioned_on_parameters);
-}
-*/
+ void SMCMCMCMove::weight_for_adapting_sequence(const Index* index,
+ Particles &current_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ this->the_worker->smcadaptive_given_smcfixed_weight(this->index,
+ current_particles,
+ conditioned_on_parameters);
+ }
+ */
 
 MoveOutput* SMCMCMCMove::subsample_move(RandomNumberGenerator &rng,
                                         const Particle &particle) const
@@ -1410,15 +1412,15 @@ MoveOutput* SMCMCMCMove::subsample_move(RandomNumberGenerator &rng,
 }
 
 /*
-MoveOutput* SMCMCMCMove::subsample_move(RandomNumberGenerator &rng,
-                                        Particle &particle,
-                                        const Parameters &conditioned_on_parameters)
-{
-  return this->mcmc->subsample_run(rng,
-                                   particle,
-                                   conditioned_on_parameters);
-}
-*/
+ MoveOutput* SMCMCMCMove::subsample_move(RandomNumberGenerator &rng,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters)
+ {
+ return this->mcmc->subsample_run(rng,
+ particle,
+ conditioned_on_parameters);
+ }
+ */
 
 void SMCMCMCMove::subsample_weight_for_adapting_sequence(const Index* index,
                                                          Particles &current_particles)
@@ -1428,15 +1430,15 @@ void SMCMCMCMove::subsample_weight_for_adapting_sequence(const Index* index,
 }
 
 /*
-void SMCMCMCMove::subsample_weight_for_adapting_sequence(const Index* index,
-                                                         Particles &current_particles,
-                                                         const Parameters &conditioned_on_parameters)
-{
-  this->the_worker->subsample_smcadaptive_given_smcfixed_weight(this->index,
-                                                                current_particles,
-                                                                conditioned_on_parameters);
-}
-*/
+ void SMCMCMCMove::subsample_weight_for_adapting_sequence(const Index* index,
+ Particles &current_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ this->the_worker->subsample_smcadaptive_given_smcfixed_weight(this->index,
+ current_particles,
+ conditioned_on_parameters);
+ }
+ */
 
 // void SMCMCMCMove::smc_step(void)
 // {
@@ -1450,67 +1452,68 @@ void SMCMCMCMove::subsample_weight_for_adapting_sequence(const Index* index,
 
 //void SMCMCMCMove::smc_update(SMCOutput* current_state)
 //{
-  /*
-   unsigned int number_of_points = algorithm["number_of_points"];
-
-   List observed_data = model["observed_data"];
-
-   // Do the initial importance sampling step.
-
-   // Do the simulation.
-   SEXP simulate_proposal_SEXP = algorithm["simulate_proposal"];
-   SimulateDistributionPtr simulate_proposal = load_simulate_distribution(simulate_proposal_SEXP);
-
-   std::vector<List> proposed_points;
-   proposed_points.reserve(number_of_points);
-   for (unsigned int i=0; i<number_of_points; ++i)
-   {
-   proposed_points.push_back(simulate_proposal());
-   }
-
-   LikelihoodEstimator* likelihood_estimator = make_likelihood_estimator(model, algorithm);
-
-   std::vector<List> proposed_auxiliary_variables;
-   proposed_auxiliary_variables.reserve(number_of_points);
-
-   for (std::vector<List>::const_iterator i=proposed_points.begin(); i!=proposed_points.end(); ++i)
-   {
-   proposed_auxiliary_variables.push_back(likelihood_estimator->simulate_auxiliary_variables(*i));
-   }
-
-   likelihood_estimator->is_setup_likelihood_estimator(proposed_points,
-   proposed_auxiliary_variables);
-
-   arma::colvec log_weights(number_of_points);
-   bool prior_is_proposal = algorithm["prior_is_proposal"];
-   if (prior_is_proposal==TRUE)
-   {
-   for (unsigned int i=0; i<number_of_points; ++i)
-   {
-   log_weights[i] = likelihood_estimator->estimate_log_likelihood(proposed_points[i], proposed_auxiliary_variables[i]);
-   }
-   }
-   else
-   {
-   SEXP evaluate_log_prior_SEXP = model["evaluate_log_prior"];
-   EvaluateLogDistributionPtr evaluate_log_prior = load_evaluate_log_distribution(evaluate_log_prior_SEXP);
-
-   SEXP evaluate_log_proposal_SEXP = algorithm["evaluate_log_proposal"];
-   EvaluateLogDistributionPtr evaluate_log_proposal = load_evaluate_log_distribution(evaluate_log_proposal_SEXP);
-
-   for (unsigned int i=0; i<number_of_points; ++i)
-   {
-   log_weights[i] = likelihood_estimator->estimate_log_likelihood(proposed_points[i], proposed_auxiliary_variables[i]) + evaluate_log_prior(proposed_points[i]) - evaluate_log_proposal(proposed_points[i]);
-   }
-   }
-
-   if (likelihood_estimator != NULL)
-   delete likelihood_estimator;
-
-   return List::create(Named("proposed_points") = proposed_points,
-   Named("proposed_auxiliary_variables") = wrap(proposed_auxiliary_variables),
-   Named("log_weights") = log_weights,
-   Named("log_normalising_constant") = log_sum_exp(log_weights));
-   */
+/*
+ unsigned int number_of_points = algorithm["number_of_points"];
+ 
+ List observed_data = model["observed_data"];
+ 
+ // Do the initial importance sampling step.
+ 
+ // Do the simulation.
+ SEXP simulate_proposal_SEXP = algorithm["simulate_proposal"];
+ SimulateDistributionPtr simulate_proposal = load_simulate_distribution(simulate_proposal_SEXP);
+ 
+ std::vector<List> proposed_points;
+ proposed_points.reserve(number_of_points);
+ for (unsigned int i=0; i<number_of_points; ++i)
+ {
+ proposed_points.push_back(simulate_proposal());
+ }
+ 
+ LikelihoodEstimator* likelihood_estimator = make_likelihood_estimator(model, algorithm);
+ 
+ std::vector<List> proposed_auxiliary_variables;
+ proposed_auxiliary_variables.reserve(number_of_points);
+ 
+ for (std::vector<List>::const_iterator i=proposed_points.begin(); i!=proposed_points.end(); ++i)
+ {
+ proposed_auxiliary_variables.push_back(likelihood_estimator->simulate_auxiliary_variables(*i));
+ }
+ 
+ likelihood_estimator->is_setup_likelihood_estimator(proposed_points,
+ proposed_auxiliary_variables);
+ 
+ arma::colvec log_weights(number_of_points);
+ bool prior_is_proposal = algorithm["prior_is_proposal"];
+ if (prior_is_proposal==TRUE)
+ {
+ for (unsigned int i=0; i<number_of_points; ++i)
+ {
+ log_weights[i] = likelihood_estimator->estimate_log_likelihood(proposed_points[i], proposed_auxiliary_variables[i]);
+ }
+ }
+ else
+ {
+ SEXP evaluate_log_prior_SEXP = model["evaluate_log_prior"];
+ EvaluateLogDistributionPtr evaluate_log_prior = load_evaluate_log_distribution(evaluate_log_prior_SEXP);
+ 
+ SEXP evaluate_log_proposal_SEXP = algorithm["evaluate_log_proposal"];
+ EvaluateLogDistributionPtr evaluate_log_proposal = load_evaluate_log_distribution(evaluate_log_proposal_SEXP);
+ 
+ for (unsigned int i=0; i<number_of_points; ++i)
+ {
+ log_weights[i] = likelihood_estimator->estimate_log_likelihood(proposed_points[i], proposed_auxiliary_variables[i]) + evaluate_log_prior(proposed_points[i]) - evaluate_log_proposal(proposed_points[i]);
+ }
+ }
+ 
+ if (likelihood_estimator != NULL)
+ delete likelihood_estimator;
+ 
+ return List::create(Named("proposed_points") = proposed_points,
+ Named("proposed_auxiliary_variables") = wrap(proposed_auxiliary_variables),
+ Named("log_weights") = log_weights,
+ Named("log_normalising_constant") = log_sum_exp(log_weights));
+ */
 
 //}
+}

@@ -9,8 +9,6 @@ using namespace Rcpp;
 
 namespace ilike
 {
-namespace exact_factor
-{
 
 class LpUniformABCKernelFactor : public ABCKernelFactor
 {
@@ -62,7 +60,6 @@ protected:
   
 };
 
-}
 }
 
 #endif

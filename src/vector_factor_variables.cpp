@@ -4,8 +4,10 @@
 #include "particle.h"
 #include "vector_factors.h"
 
+namespace ilike
+{
 VectorFactorVariables::VectorFactorVariables()
-  :FactorVariables()
+:FactorVariables()
 {
   this->likelihood_estimator_outputs.resize(0);
   this->vector_factors = NULL;
@@ -41,7 +43,7 @@ VectorFactorVariables::VectorFactorVariables(VectorFactors* vector_factors_in,
 
 //Copy constructor for the VectorFactorVariables class.
 VectorFactorVariables::VectorFactorVariables(const VectorFactorVariables &another)
-  :FactorVariables(another)
+:FactorVariables(another)
 {
   this->make_copy(another);
 }
@@ -107,48 +109,48 @@ void VectorFactorVariables::evaluate_smcfixed_part_of_likelihoods(const Index* i
 }
 
 /*
-void VectorFactorVariables::evaluate_smcfixed_part_of_likelihoods(const Index* index,
-                                                                  const Parameters &conditioned_on_parameters)
-{
-  Parameters all_parameters;
-  if (conditioned_on_parameters.is_empty())
-  {
-    for (auto i=index->begin();
-         i!=index->end();
-         ++i)
-    {
-      if (this->likelihood_estimator_outputs[*i]!=NULL)
-      {
-        this->likelihood_estimator_outputs[*i]->evaluate_smcfixed_part(this->particle->parameters);
-      }
-    }
-  }
-  else if (this->particle->parameters.is_empty())
-  {
-    for (auto i=index->begin();
-         i!=index->end();
-         ++i)
-    {
-      if (this->likelihood_estimator_outputs[*i]!=NULL)
-      {
-        this->likelihood_estimator_outputs[*i]->evaluate_smcfixed_part(conditioned_on_parameters);
-      }
-    }
-  }
-  else
-  {
-    for (auto i=index->begin();
-         i!=index->end();
-         ++i)
-    {
-      if (this->likelihood_estimator_outputs[*i]!=NULL)
-      {
-        this->likelihood_estimator_outputs[*i]->evaluate_smcfixed_part(this->particle->parameters.merge(conditioned_on_parameters));
-      }
-    }
-  }
-}
-*/
+ void VectorFactorVariables::evaluate_smcfixed_part_of_likelihoods(const Index* index,
+ const Parameters &conditioned_on_parameters)
+ {
+ Parameters all_parameters;
+ if (conditioned_on_parameters.is_empty())
+ {
+ for (auto i=index->begin();
+ i!=index->end();
+ ++i)
+ {
+ if (this->likelihood_estimator_outputs[*i]!=NULL)
+ {
+ this->likelihood_estimator_outputs[*i]->evaluate_smcfixed_part(this->particle->parameters);
+ }
+ }
+ }
+ else if (this->particle->parameters.is_empty())
+ {
+ for (auto i=index->begin();
+ i!=index->end();
+ ++i)
+ {
+ if (this->likelihood_estimator_outputs[*i]!=NULL)
+ {
+ this->likelihood_estimator_outputs[*i]->evaluate_smcfixed_part(conditioned_on_parameters);
+ }
+ }
+ }
+ else
+ {
+ for (auto i=index->begin();
+ i!=index->end();
+ ++i)
+ {
+ if (this->likelihood_estimator_outputs[*i]!=NULL)
+ {
+ this->likelihood_estimator_outputs[*i]->evaluate_smcfixed_part(this->particle->parameters.merge(conditioned_on_parameters));
+ }
+ }
+ }
+ }
+ */
 
 void VectorFactorVariables::subsample_evaluate_smcfixed_part_of_likelihoods(const Index* index)
 {
@@ -165,21 +167,21 @@ void VectorFactorVariables::subsample_evaluate_smcfixed_part_of_likelihoods(cons
 }
 
 /*
-void VectorFactorVariables::subsample_evaluate_smcfixed_part_of_likelihoods(const Index* index,
-                                                                            const Parameters &conditioned_on_parameters)
-{
-  Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
-  for (auto i=index->begin();
-       i!=index->end();
-       ++i)
-  {
-    if (this->likelihood_estimator_outputs[*i]!=NULL)
-    {
-      this->likelihood_estimator_outputs[*i]->subsample_evaluate_smcfixed_part(all_parameters);
-    }
-  }
-}
-*/
+ void VectorFactorVariables::subsample_evaluate_smcfixed_part_of_likelihoods(const Index* index,
+ const Parameters &conditioned_on_parameters)
+ {
+ Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
+ for (auto i=index->begin();
+ i!=index->end();
+ ++i)
+ {
+ if (this->likelihood_estimator_outputs[*i]!=NULL)
+ {
+ this->likelihood_estimator_outputs[*i]->subsample_evaluate_smcfixed_part(all_parameters);
+ }
+ }
+ }
+ */
 
 double VectorFactorVariables::evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index)
 {
@@ -201,25 +203,25 @@ double VectorFactorVariables::evaluate_smcadaptive_part_given_smcfixed_likelihoo
 }
 
 /*
-double VectorFactorVariables::evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index,
-                                                                                   const Parameters &conditioned_on_parameters)
-{
-  Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
-  double result = 0.0;
-  for (auto i=index->begin();
-       i!=index->end();
-       ++i)
-  {
-    if (this->likelihood_estimator_outputs[*i]!=NULL)
-    {
-      this->likelihood_estimator_outputs[*i]->evaluate_smcadaptive_part_given_smcfixed(all_parameters);
-      result = result + this->likelihood_estimator_outputs[*i]->log_likelihood;
-    }
-  }
-  //this->target_evaluated = result;
-  return result;
-}
-*/
+ double VectorFactorVariables::evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index,
+ const Parameters &conditioned_on_parameters)
+ {
+ Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
+ double result = 0.0;
+ for (auto i=index->begin();
+ i!=index->end();
+ ++i)
+ {
+ if (this->likelihood_estimator_outputs[*i]!=NULL)
+ {
+ this->likelihood_estimator_outputs[*i]->evaluate_smcadaptive_part_given_smcfixed(all_parameters);
+ result = result + this->likelihood_estimator_outputs[*i]->log_likelihood;
+ }
+ }
+ //this->target_evaluated = result;
+ return result;
+ }
+ */
 
 double VectorFactorVariables::subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index)
 {
@@ -239,25 +241,25 @@ double VectorFactorVariables::subsample_evaluate_smcadaptive_part_given_smcfixed
 }
 
 /*
-double VectorFactorVariables::subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index,
-                                                                                             const Parameters &conditioned_on_parameters)
-{
-  Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
-  double result = 0.0;
-  for (auto i=index->begin();
-       i!=index->end();
-       ++i)
-  {
-    if (this->likelihood_estimator_outputs[*i]!=NULL)
-    {
-      this->likelihood_estimator_outputs[*i]->subsample_evaluate_smcadaptive_part_given_smcfixed(all_parameters);
-      result = result + this->likelihood_estimator_outputs[*i]->subsample_log_likelihood;
-    }
-  }
-  //this->subsample_target_evaluated = result;
-  return result;
-}
-*/
+ double VectorFactorVariables::subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index,
+ const Parameters &conditioned_on_parameters)
+ {
+ Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
+ double result = 0.0;
+ for (auto i=index->begin();
+ i!=index->end();
+ ++i)
+ {
+ if (this->likelihood_estimator_outputs[*i]!=NULL)
+ {
+ this->likelihood_estimator_outputs[*i]->subsample_evaluate_smcadaptive_part_given_smcfixed(all_parameters);
+ result = result + this->likelihood_estimator_outputs[*i]->subsample_log_likelihood;
+ }
+ }
+ //this->subsample_target_evaluated = result;
+ return result;
+ }
+ */
 
 double VectorFactorVariables::evaluate_likelihoods(const Index* index) const
 {
@@ -276,24 +278,24 @@ double VectorFactorVariables::evaluate_likelihoods(const Index* index) const
 }
 
 /*
-double VectorFactorVariables::evaluate_likelihoods(const Index* index,
-                                                   const Parameters &conditioned_on_parameters)
-{
-  Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
-  double result = 0.0;
-  for (auto i=index->begin();
-       i!=index->end();
-       ++i)
-  {
-    if (this->likelihood_estimator_outputs[*i]!=NULL)
-    {
-      result = result + this->likelihood_estimator_outputs[*i]->evaluate(all_parameters);
-    }
-  }
-  //this->target_evaluated = result;
-  return result;
-}
-*/
+ double VectorFactorVariables::evaluate_likelihoods(const Index* index,
+ const Parameters &conditioned_on_parameters)
+ {
+ Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
+ double result = 0.0;
+ for (auto i=index->begin();
+ i!=index->end();
+ ++i)
+ {
+ if (this->likelihood_estimator_outputs[*i]!=NULL)
+ {
+ result = result + this->likelihood_estimator_outputs[*i]->evaluate(all_parameters);
+ }
+ }
+ //this->target_evaluated = result;
+ return result;
+ }
+ */
 
 double VectorFactorVariables::subsample_evaluate_likelihoods(const Index* index) const
 {
@@ -312,24 +314,24 @@ double VectorFactorVariables::subsample_evaluate_likelihoods(const Index* index)
 }
 
 /*
-double VectorFactorVariables::subsample_evaluate_likelihoods(const Index* index,
-                                                             const Parameters &conditioned_on_parameters)
-{
-  Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
-  double result = 0.0;
-  for (auto i=index->begin();
-       i!=index->end();
-       ++i)
-  {
-    if (this->likelihood_estimator_outputs[*i]!=NULL)
-    {
-      result = result + this->likelihood_estimator_outputs[*i]->subsample_evaluate(all_parameters);
-    }
-  }
-  //this->subsample_target_evaluated = result;
-  return result;
-}
-*/
+ double VectorFactorVariables::subsample_evaluate_likelihoods(const Index* index,
+ const Parameters &conditioned_on_parameters)
+ {
+ Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
+ double result = 0.0;
+ for (auto i=index->begin();
+ i!=index->end();
+ ++i)
+ {
+ if (this->likelihood_estimator_outputs[*i]!=NULL)
+ {
+ result = result + this->likelihood_estimator_outputs[*i]->subsample_evaluate(all_parameters);
+ }
+ }
+ //this->subsample_target_evaluated = result;
+ return result;
+ }
+ */
 
 arma::mat VectorFactorVariables::direct_get_gradient_of_log(const std::string &variable) const
 {
@@ -350,26 +352,26 @@ arma::mat VectorFactorVariables::direct_get_gradient_of_log(const std::string &v
 }
 
 /*
-arma::mat VectorFactorVariables::direct_get_gradient_of_log(const std::string &variable,
-                                               const Parameters &conditioned_on_parameters)
-{
-  Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
-  arma::mat current_parameter = this->particle->parameters[variable];
-  arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
-  for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=this->likelihood_estimator_outputs.begin();
-       i!=this->likelihood_estimator_outputs.end();
-       ++i)
-  {
-    if (*i!=NULL)
-    {
-      result = result + (*i)->get_gradient_of_log(variable,
-                                                  all_parameters);
-    }
-  }
-  //this->target_gradients_of_log[variable] = result;
-  return result;
-}
-*/
+ arma::mat VectorFactorVariables::direct_get_gradient_of_log(const std::string &variable,
+ const Parameters &conditioned_on_parameters)
+ {
+ Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
+ arma::mat current_parameter = this->particle->parameters[variable];
+ arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
+ for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=this->likelihood_estimator_outputs.begin();
+ i!=this->likelihood_estimator_outputs.end();
+ ++i)
+ {
+ if (*i!=NULL)
+ {
+ result = result + (*i)->get_gradient_of_log(variable,
+ all_parameters);
+ }
+ }
+ //this->target_gradients_of_log[variable] = result;
+ return result;
+ }
+ */
 
 arma::mat VectorFactorVariables::direct_subsample_get_gradient_of_log(const std::string &variable) const
 {
@@ -390,26 +392,26 @@ arma::mat VectorFactorVariables::direct_subsample_get_gradient_of_log(const std:
 }
 
 /*
-arma::mat VectorFactorVariables::direct_subsample_get_gradient_of_log(const std::string &variable,
-                                                                      const Parameters &conditioned_on_parameters)
-{
-  Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
-  arma::mat current_parameter = this->particle->parameters[variable];
-  arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
-  for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=this->likelihood_estimator_outputs.begin();
-       i!=this->likelihood_estimator_outputs.end();
-       ++i)
-  {
-    if (*i!=NULL)
-    {
-      result = result + (*i)->subsample_get_gradient_of_log(variable,
-                                                            all_parameters);
-    }
-  }
-  //this->subsample_target_gradients_of_log[variable] = result;
-  return result;
-}
-*/
+ arma::mat VectorFactorVariables::direct_subsample_get_gradient_of_log(const std::string &variable,
+ const Parameters &conditioned_on_parameters)
+ {
+ Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
+ arma::mat current_parameter = this->particle->parameters[variable];
+ arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
+ for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=this->likelihood_estimator_outputs.begin();
+ i!=this->likelihood_estimator_outputs.end();
+ ++i)
+ {
+ if (*i!=NULL)
+ {
+ result = result + (*i)->subsample_get_gradient_of_log(variable,
+ all_parameters);
+ }
+ }
+ //this->subsample_target_gradients_of_log[variable] = result;
+ return result;
+ }
+ */
 
 arma::mat VectorFactorVariables::direct_get_gradient_of_log(const Index* index,
                                                             const std::string &variable) const
@@ -431,27 +433,27 @@ arma::mat VectorFactorVariables::direct_get_gradient_of_log(const Index* index,
 }
 
 /*
-arma::mat VectorFactorVariables::direct_get_gradient_of_log(const Index* index,
-                                                            const std::string &variable,
-                                                            const Parameters &conditioned_on_parameters)
-{
-  Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
-  arma::mat current_parameter = this->particle->parameters[variable];
-  arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
-  for (auto i=index->begin();
-       i!=index->end();
-       ++i)
-  {
-    if (this->likelihood_estimator_outputs[*i]!=NULL)
-    {
-      result = result + this->likelihood_estimator_outputs[*i]->get_gradient_of_log(variable,
-                                                                                    all_parameters);
-    }
-  }
-  //this->target_gradients_of_log[variable] = result;
-  return result;
-}
-*/
+ arma::mat VectorFactorVariables::direct_get_gradient_of_log(const Index* index,
+ const std::string &variable,
+ const Parameters &conditioned_on_parameters)
+ {
+ Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
+ arma::mat current_parameter = this->particle->parameters[variable];
+ arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
+ for (auto i=index->begin();
+ i!=index->end();
+ ++i)
+ {
+ if (this->likelihood_estimator_outputs[*i]!=NULL)
+ {
+ result = result + this->likelihood_estimator_outputs[*i]->get_gradient_of_log(variable,
+ all_parameters);
+ }
+ }
+ //this->target_gradients_of_log[variable] = result;
+ return result;
+ }
+ */
 
 arma::mat VectorFactorVariables::direct_subsample_get_gradient_of_log(const Index* index,
                                                                       const std::string &variable) const
@@ -473,27 +475,27 @@ arma::mat VectorFactorVariables::direct_subsample_get_gradient_of_log(const Inde
 }
 
 /*
-arma::mat VectorFactorVariables::direct_subsample_get_gradient_of_log(const Index* index,
-                                                                      const std::string &variable,
-                                                                      const Parameters &conditioned_on_parameters)
-{
-  Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
-  arma::mat current_parameter = this->particle->parameters[variable];
-  arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
-  for (auto i=index->begin();
-       i!=index->end();
-       ++i)
-  {
-    if (this->likelihood_estimator_outputs[*i]!=NULL)
-    {
-      result = result + this->likelihood_estimator_outputs[*i]->subsample_get_gradient_of_log(variable,
-                                                                                              all_parameters);
-    }
-  }
-  //this->subsample_target_gradients_of_log[variable] = result;
-  return result;
-}
-*/
+ arma::mat VectorFactorVariables::direct_subsample_get_gradient_of_log(const Index* index,
+ const std::string &variable,
+ const Parameters &conditioned_on_parameters)
+ {
+ Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
+ arma::mat current_parameter = this->particle->parameters[variable];
+ arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
+ for (auto i=index->begin();
+ i!=index->end();
+ ++i)
+ {
+ if (this->likelihood_estimator_outputs[*i]!=NULL)
+ {
+ result = result + this->likelihood_estimator_outputs[*i]->subsample_get_gradient_of_log(variable,
+ all_parameters);
+ }
+ }
+ //this->subsample_target_gradients_of_log[variable] = result;
+ return result;
+ }
+ */
 
 const Factors* VectorFactorVariables::get_factors() const
 {
@@ -531,4 +533,5 @@ void VectorFactorVariables::close_ofstreams()
   {
     this->likelihood_estimator_outputs[i]->close_ofstreams();
   }
+}
 }

@@ -9,21 +9,23 @@ using namespace Rcpp;
 #include "gradient_estimator_output.h"
 #include "particle.h"
 
+namespace ilike
+{
 class DirectGradientEstimator;
 
 class DirectGradientEstimatorOutput : public GradientEstimatorOutput
 {
-
+  
 public:
-
+  
   DirectGradientEstimatorOutput();
   
   DirectGradientEstimatorOutput(DirectGradientEstimator* estimator_in);
-
+  
   virtual ~DirectGradientEstimatorOutput();
-
+  
   DirectGradientEstimatorOutput(const DirectGradientEstimatorOutput &another);
-
+  
   void operator=(const DirectGradientEstimatorOutput &another);
   GradientEstimatorOutput* duplicate() const;
   
@@ -36,11 +38,11 @@ public:
   //                                          const Particle &particle);
   
   /*
-  arma::mat get_gradient_of_log(const std::string &variable,
-                                const Index* index,
-                                Particle &particle,
-                                const Parameters &conditioned_on_parameters_in);
-  */
+   arma::mat get_gradient_of_log(const std::string &variable,
+   const Index* index,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters_in);
+   */
   
   arma::mat subsample_get_gradient_of_log(const std::string &variable,
                                           const Index* index,
@@ -53,23 +55,24 @@ public:
   void simulate_auxiliary_variables();
   
   /*
-  arma::mat subsample_get_gradient_of_log(const std::string &variable,
-                                          const Index* index,
-                                          Particle &particle,
-                                          const Parameters &conditioned_on_parameters_in);
-  */
+   arma::mat subsample_get_gradient_of_log(const std::string &variable,
+   const Index* index,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters_in);
+   */
   
 protected:
   
   // stored in the proposal
   DirectGradientEstimator* estimator;
-
+  
   void make_copy(const DirectGradientEstimatorOutput &another);
   
   boost::unordered_map< std::string, arma::mat> gradients;
   
   boost::unordered_map< std::string, arma::mat> subsample_gradients;
-
+  
 };
+}
 
 #endif

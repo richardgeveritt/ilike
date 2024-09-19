@@ -1,6 +1,8 @@
 #include "ensemble_factors.h"
 #include "vector_index.h"
 
+namespace ilike
+{
 EnsembleFactors::EnsembleFactors()
 {
   //this->temperature = 0.0;
@@ -20,7 +22,7 @@ void EnsembleFactors::operator=(const EnsembleFactors &another)
 {
   if(this == &another)
     return;
-
+  
   this->make_copy(another);
 }
 
@@ -38,19 +40,20 @@ void EnsembleFactors::set_data(size_t index)
 }
 
 /*
-void EnsembleFactors::set_temperature(double temperature_in)
-{
-  this->previous_temperature = this->temperature;
-  this->temperature = temperature_in;
+ void EnsembleFactors::set_temperature(double temperature_in)
+ {
+ this->previous_temperature = this->temperature;
+ this->temperature = temperature_in;
+ }
+ 
+ double EnsembleFactors::get_temperature() const
+ {
+ return this->temperature;
+ }
+ 
+ double EnsembleFactors::get_inverse_incremental_temperature() const
+ {
+ return 1.0/(this->temperature - this->previous_temperature);
+ }
+ */
 }
-
-double EnsembleFactors::get_temperature() const
-{
-  return this->temperature;
-}
-
-double EnsembleFactors::get_inverse_incremental_temperature() const
-{
-  return 1.0/(this->temperature - this->previous_temperature);
-}
-*/

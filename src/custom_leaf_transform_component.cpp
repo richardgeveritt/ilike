@@ -1,6 +1,8 @@
 // Include the class definition.
 #include "custom_leaf_transform_component.h"
 
+namespace ilike
+{
 // Include other class definitions that are needed.
 
 // Public functions //
@@ -11,13 +13,13 @@
 CustomLeafTransformComponent::CustomLeafTransformComponent()
 :TransformComponent()
 {
-	// Set all the pointers owned by this class to be something (possibly NULL).
+  // Set all the pointers owned by this class to be something (possibly NULL).
 }
 
 // Comment about function.
 CustomLeafTransformComponent::~CustomLeafTransformComponent()
 {
-	// Delete all the pointers owned by this class.
+  // Delete all the pointers owned by this class.
 }
 
 // Other constuctors.
@@ -27,19 +29,19 @@ CustomLeafTransformComponent::~CustomLeafTransformComponent()
 // The copy constructor.
 CustomLeafTransformComponent::CustomLeafTransformComponent(const CustomLeafTransformComponent &another)
 {
-	this->make_copy(another);
+  this->make_copy(another);
 }
 
 // Returns a pointer to a base class of type CustomLeafTransformComponent.
 CustomLeafTransformComponent* CustomLeafTransformComponent::duplicate() const
 {
-	return new CustomLeafTransformComponent(*this);
+  return new CustomLeafTransformComponent(*this);
 }
 
 // Copy all the members of the class.
 void CustomLeafTransformComponent::make_copy(const CustomLeafTransformComponent &another)
 {
-	// Copy all members, duplicating the memory where appropriate.
+  // Copy all members, duplicating the memory where appropriate.
   this->transform_function = another.transform_function;
   this->jacobian_function = another.jacobian_function;
   this->inverse_transform_function = another.inverse_transform_function;
@@ -51,11 +53,11 @@ void CustomLeafTransformComponent::make_copy(const CustomLeafTransformComponent 
 // The = operator.
 void CustomLeafTransformComponent::operator=(const CustomLeafTransformComponent &another)
 {
-	if(this==&another)//a==a
-		return;
+  if(this==&another)//a==a
+    return;
   
   TransformComponent::operator=(another);
-	
+  
   this->make_copy(another);
 }
 
@@ -112,4 +114,5 @@ void CustomLeafTransformComponent::set_child(TransformComponent* new_child)
 void CustomLeafTransformComponent::set_parent(TransformComponent* new_parent)
 {
   this->parent = new_parent;
+}
 }

@@ -1,8 +1,10 @@
 #include "sample_mean_vector_parameter_estimator.h"
 #include "utils.h"
 
+namespace ilike
+{
 SampleMeanVectorParameterEstimator::SampleMeanVectorParameterEstimator()
-  :VectorParameterEstimator()
+:VectorParameterEstimator()
 {
 }
 
@@ -13,7 +15,7 @@ SampleMeanVectorParameterEstimator::~SampleMeanVectorParameterEstimator()
 
 //Copy constructor for the SampleMeanVectorParameterEstimator class.
 SampleMeanVectorParameterEstimator::SampleMeanVectorParameterEstimator(const SampleMeanVectorParameterEstimator &another)
-  :VectorParameterEstimator(another)
+:VectorParameterEstimator(another)
 {
   this->make_copy(another);
 }
@@ -41,4 +43,5 @@ void SampleMeanVectorParameterEstimator::fit(const arma::mat &matrix_points,
                                              const arma::colvec &wt)
 {
   this->estimated = arma::conv_to< arma::colvec >::from(mean_wt(matrix_points,wt));
+}
 }

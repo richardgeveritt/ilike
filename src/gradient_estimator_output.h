@@ -7,16 +7,18 @@ using namespace Rcpp;
 #include <string>
 #include "particle.h"
 
+namespace ilike
+{
 class GradientEstimatorOutput
 {
-
+  
 public:
-
+  
   GradientEstimatorOutput();
   virtual ~GradientEstimatorOutput();
-
+  
   GradientEstimatorOutput(const GradientEstimatorOutput &another);
-
+  
   void operator=(const GradientEstimatorOutput &another);
   virtual GradientEstimatorOutput* duplicate() const=0;
   
@@ -29,11 +31,11 @@ public:
   //                                                  const Particle &particle)=0;
   
   /*
-  virtual arma::mat get_gradient_of_log(const std::string &variable,
-                                        const Index* index,
-                                        Particle &particle,
-                                        const Parameters &conditioned_on_parameters_in)=0;
-  */
+   virtual arma::mat get_gradient_of_log(const std::string &variable,
+   const Index* index,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters_in)=0;
+   */
   
   virtual arma::mat subsample_get_gradient_of_log(const std::string &variable,
                                                   const Index* index,
@@ -46,16 +48,17 @@ public:
   virtual void simulate_auxiliary_variables()=0;
   
   /*
-  virtual arma::mat subsample_get_gradient_of_log(const std::string &variable,
-                                                  const Index* index,
-                                                  Particle &particle,
-                                                  const Parameters &conditioned_on_parameters_in)=0;
-  */
-
+   virtual arma::mat subsample_get_gradient_of_log(const std::string &variable,
+   const Index* index,
+   Particle &particle,
+   const Parameters &conditioned_on_parameters_in)=0;
+   */
+  
 protected:
-
+  
   void make_copy(const GradientEstimatorOutput &another);
-
+  
 };
+}
 
 #endif

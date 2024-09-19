@@ -5,8 +5,10 @@
 #include "matrix_parameter_estimator.h"
 #include "vector_parameter_estimator.h"
 
+namespace ilike
+{
 GaussianSMCAdaptor::GaussianSMCAdaptor()
-  :SMCAdaptor()
+:SMCAdaptor()
 {
 }
 
@@ -30,7 +32,7 @@ GaussianSMCAdaptor::~GaussianSMCAdaptor()
 }
 
 GaussianSMCAdaptor::GaussianSMCAdaptor(const GaussianSMCAdaptor &another)
-  :SMCAdaptor(another)
+:SMCAdaptor(another)
 {
   this->make_copy(another);
 }
@@ -57,7 +59,7 @@ void GaussianSMCAdaptor::operator=(const GaussianSMCAdaptor &another)
       delete *i;
   }
   this->covariance_estimators.clear();
-
+  
   SMCAdaptor::operator=(another);
   this->make_copy(another);
 }
@@ -161,4 +163,5 @@ void GaussianSMCAdaptor::ensemble_adapt(EnsembleKalmanOutput* current_state)
   // needs sorting
   // Set specified variable in parameter_to_adapt to have scaled covariance.
   //parameter_to_adapt[this->variance_name] = this->scale(dimension)*sample_covariance;
+}
 }

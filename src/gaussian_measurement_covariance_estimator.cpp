@@ -1,7 +1,9 @@
 #include "gaussian_measurement_covariance_estimator.h"
 
+namespace ilike
+{
 GaussianMeasurementCovarianceEstimator::GaussianMeasurementCovarianceEstimator()
-  :MeasurementCovarianceEstimator()
+:MeasurementCovarianceEstimator()
 {
 }
 
@@ -21,7 +23,7 @@ GaussianMeasurementCovarianceEstimator::~GaussianMeasurementCovarianceEstimator(
 }
 
 GaussianMeasurementCovarianceEstimator::GaussianMeasurementCovarianceEstimator(const GaussianMeasurementCovarianceEstimator &another)
-  :MeasurementCovarianceEstimator(another)
+:MeasurementCovarianceEstimator(another)
 {
   this->make_copy(another);
 }
@@ -30,7 +32,7 @@ void GaussianMeasurementCovarianceEstimator::operator=(const GaussianMeasurement
 {
   if(this == &another)
     return;
-
+  
   MeasurementCovarianceEstimator::operator=(another);
   this->make_copy(another);
 }
@@ -52,28 +54,28 @@ void GaussianMeasurementCovarianceEstimator::find_Cygivenx(const arma::mat &inv_
 }
 
 /*
-arma::mat GaussianMeasurementCovarianceEstimator::get_adjustment(const arma::mat &Zf,
-                                                                 const arma::mat &Ginv,
-                                                                 const arma::mat &Ftranspose,
-                                                                 const arma::mat &V,
-                                                                 double inverse_incremental_temperature)
-{
-  // follows https://arxiv.org/abs/2006.02941
-  arma::mat for_eig = V*(inverse_incremental_temperature*this->get_measurement_covariance())*V.t();
-  
-  arma::mat C;
-  arma::vec diagGamma;
-  arma::mat Ctrans;
-  arma::svd(C,diagGamma,Ctrans,for_eig);
-  
-  arma::mat Gamma(diagGamma.n_elem,diagGamma.n_elem);
-  Gamma.diag() = diagGamma;
-  arma::mat I;
-  I.eye(diagGamma.n_elem,diagGamma.n_elem);
-  
-  return Zf*C*arma::sqrtmat_sympd(arma::inv_sympd(I+Gamma))*Ginv*Ftranspose;
-}
-*/
+ arma::mat GaussianMeasurementCovarianceEstimator::get_adjustment(const arma::mat &Zf,
+ const arma::mat &Ginv,
+ const arma::mat &Ftranspose,
+ const arma::mat &V,
+ double inverse_incremental_temperature)
+ {
+ // follows https://arxiv.org/abs/2006.02941
+ arma::mat for_eig = V*(inverse_incremental_temperature*this->get_measurement_covariance())*V.t();
+ 
+ arma::mat C;
+ arma::vec diagGamma;
+ arma::mat Ctrans;
+ arma::svd(C,diagGamma,Ctrans,for_eig);
+ 
+ arma::mat Gamma(diagGamma.n_elem,diagGamma.n_elem);
+ Gamma.diag() = diagGamma;
+ arma::mat I;
+ I.eye(diagGamma.n_elem,diagGamma.n_elem);
+ 
+ return Zf*C*arma::sqrtmat_sympd(arma::inv_sympd(I+Gamma))*Ginv*Ftranspose;
+ }
+ */
 
 arma::mat GaussianMeasurementCovarianceEstimator::get_unconditional_measurement_covariance(const arma::mat &Cyy,
                                                                                            double inverse_incremental_temperature) const
@@ -102,7 +104,7 @@ void GaussianMeasurementCovarianceEstimator::change_data(std::shared_ptr<Data> n
   if (this->measurement_variables.size()>0)
   {
     this->measurement = (*this->current_data)[this->measurement_variables[0]].as_col();
-
+    
     if (this->measurement_variables.size()>0)
     {
       for (size_t i=1; i<this->measurement_variables.size(); ++i)
@@ -132,4 +134,5 @@ void GaussianMeasurementCovarianceEstimator::precompute_gaussian_covariance(doub
   }
   
   
+}
 }

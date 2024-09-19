@@ -2,8 +2,10 @@
 #include "utils.h"
 #include "proposal_kernel.h"
 
+namespace ilike
+{
 ZeroFindingDoubleRecursiveParameterEstimator::ZeroFindingDoubleRecursiveParameterEstimator()
-  :DoubleRecursiveParameterEstimator()
+:DoubleRecursiveParameterEstimator()
 {
 }
 
@@ -21,7 +23,7 @@ ZeroFindingDoubleRecursiveParameterEstimator::~ZeroFindingDoubleRecursiveParamet
 
 //Copy constructor for the ZeroFindingDoubleRecursiveParameterEstimator class.
 ZeroFindingDoubleRecursiveParameterEstimator::ZeroFindingDoubleRecursiveParameterEstimator(const ZeroFindingDoubleRecursiveParameterEstimator &another)
-  :DoubleRecursiveParameterEstimator(another)
+:DoubleRecursiveParameterEstimator(another)
 {
   this->make_copy(another);
 }
@@ -58,4 +60,5 @@ void ZeroFindingDoubleRecursiveParameterEstimator::update(const std::string &var
 {
   // only uses acceptance at the moment
   this->estimated = this->estimated + this->gain(iteration_counter+1)*(double(latest_particle.accepted_outputs.find(proposal->get_instance_index())->second) - this->target_score);
+}
 }

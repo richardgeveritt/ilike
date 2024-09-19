@@ -12,6 +12,8 @@ using namespace Rcpp;
 #include "scale.h"
 #include "gaussian_proposal_info.h"
 
+namespace ilike
+{
 class SMCOutput;
 class ScaleRecursiveParameterEstimator;
 class VectorRecursiveParameterEstimator;
@@ -19,19 +21,19 @@ class GaussianRecursiveParameterEstimator;
 
 class GaussianMCMCAdaptor : public MCMCAdaptor
 {
-
+  
 public:
-
+  
   GaussianMCMCAdaptor();
   virtual ~GaussianMCMCAdaptor();
-
+  
   GaussianMCMCAdaptor(const GaussianMCMCAdaptor &another);
-
+  
   void operator=(const GaussianMCMCAdaptor &another);
   MCMCAdaptor* duplicate() const;
-
+  
 protected:
-
+  
   void make_copy(const GaussianMCMCAdaptor &another);
   
   void specific_mcmc_adapt(const Particle &latest_particle,
@@ -48,7 +50,8 @@ protected:
   std::vector<ScaleRecursiveParameterEstimator*> scale_estimators;
   std::vector<VectorRecursiveParameterEstimator*> mean_estimators;
   std::vector<GaussianRecursiveParameterEstimator*> gaussian_estimators;
-
+  
 };
+}
 
 #endif

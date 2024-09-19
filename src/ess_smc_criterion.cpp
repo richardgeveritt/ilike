@@ -3,13 +3,15 @@
 #include "smc_output.h"
 #include "ensemble_kalman_output.h"
 
+namespace ilike
+{
 ESSSMCCriterion::ESSSMCCriterion()
-  :SMCCriterion()
+:SMCCriterion()
 {
 }
 
 ESSSMCCriterion::ESSSMCCriterion(double desired_criterion_in)
-  :SMCCriterion(desired_criterion_in)
+:SMCCriterion(desired_criterion_in)
 {
   this->desired_criterion = desired_criterion_in;
 }
@@ -21,7 +23,7 @@ ESSSMCCriterion::~ESSSMCCriterion()
 
 //Copy constructor for the ESSSMCCriterion class.
 ESSSMCCriterion::ESSSMCCriterion(const ESSSMCCriterion &another)
-  :SMCCriterion(another)
+:SMCCriterion(another)
 {
   this->make_copy(another);
 }
@@ -72,28 +74,28 @@ void ESSSMCCriterion::subsample_find_desired_criterion(SMCOutput* current_state)
 }
 
 /*
-void ESSSMCCriterion::find_desired_criterion(SMCOutput* current_state,
-                                             const Parameters &conditioned_on_parameters)
-{
-  // use ratio method from https://arxiv.org/pdf/1907.01505.pdf
-  
-  // different at first step
-  
-  // use previous_particles.previous_llhd
-  // use current_particles.current_llhd
-}
-
-void ESSSMCCriterion::subsample_find_desired_criterion(SMCOutput* current_state,
-                                                       const Parameters &conditioned_on_parameters)
-{
-  // use ratio method from https://arxiv.org/pdf/1907.01505.pdf
-  
-  // different at first step
-  
-  // use previous_particles.previous_llhd
-  // use current_particles.current_llhd
-}
-*/
+ void ESSSMCCriterion::find_desired_criterion(SMCOutput* current_state,
+ const Parameters &conditioned_on_parameters)
+ {
+ // use ratio method from https://arxiv.org/pdf/1907.01505.pdf
+ 
+ // different at first step
+ 
+ // use previous_particles.previous_llhd
+ // use current_particles.current_llhd
+ }
+ 
+ void ESSSMCCriterion::subsample_find_desired_criterion(SMCOutput* current_state,
+ const Parameters &conditioned_on_parameters)
+ {
+ // use ratio method from https://arxiv.org/pdf/1907.01505.pdf
+ 
+ // different at first step
+ 
+ // use previous_particles.previous_llhd
+ // use current_particles.current_llhd
+ }
+ */
 
 void ESSSMCCriterion::find_desired_criterion(SMCOutput* current_state)
 {
@@ -123,17 +125,17 @@ double ESSSMCCriterion::operator()(const Ensemble &particles) const
 }
 
 /*
-void ESSSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_state,
-                                             const Parameters &conditioned_on_parameters)
-{
-  // use ratio method from https://arxiv.org/pdf/1907.01505.pdf
-  
-  // different at first step
-  
-  // use previous_particles.previous_llhd
-  // use current_particles.current_llhd
-}
-*/
+ void ESSSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_state,
+ const Parameters &conditioned_on_parameters)
+ {
+ // use ratio method from https://arxiv.org/pdf/1907.01505.pdf
+ 
+ // different at first step
+ 
+ // use previous_particles.previous_llhd
+ // use current_particles.current_llhd
+ }
+ */
 
 void ESSSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_state)
 {
@@ -148,4 +150,5 @@ void ESSSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_state
 bool ESSSMCCriterion::always_positive() const
 {
   return false;
+}
 }

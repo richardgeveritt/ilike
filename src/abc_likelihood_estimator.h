@@ -10,16 +10,17 @@ using namespace Rcpp;
 #include "parameters.h"
 #include "abc_kernel_factor.h"
 
+namespace ilike
+{
+
 class ABCLikelihoodEstimatorOutput;
 class IndependentProposalKernel;
 
-using namespace ilike::exact_factor;
-
 class ABCLikelihoodEstimator : public LikelihoodEstimator
 {
-
+  
 public:
-
+  
   ABCLikelihoodEstimator();
   
   ABCLikelihoodEstimator(RandomNumberGenerator* rng_in,
@@ -29,31 +30,32 @@ public:
                          bool smcfixed_flag_in);
   
   virtual ~ABCLikelihoodEstimator();
-
+  
   ABCLikelihoodEstimator(const ABCLikelihoodEstimator &another);
-
+  
   void operator=(const ABCLikelihoodEstimator &another);
   LikelihoodEstimator* duplicate() const;
-
+  
   LikelihoodEstimatorOutput* initialise();
   LikelihoodEstimatorOutput* initialise(const Parameters &parameters);
   
   void setup();
   void setup(const Parameters &parameters);
-
+  
 private:
   
   void specific_change_data(Data* new_data);
-
+  
   friend ABCLikelihoodEstimatorOutput;
-
+  
   // Stored here.
   ABCKernelFactor* abc_kernel;
   
   std::ofstream log_likelihood_file_stream;
-
+  
   void make_copy(const ABCLikelihoodEstimator &another);
-
+  
 };
+}
 
 #endif

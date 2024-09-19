@@ -3,22 +3,24 @@
 #include "kalman_filter.h"
 #include "filesystem.h"
 
+namespace ilike
+{
 KalmanFilterOutput::KalmanFilterOutput()
-  :LikelihoodEstimatorOutput()
+:LikelihoodEstimatorOutput()
 {
   this->log_likelihood_smcfixed_part = 0.0;
   this->subsample_log_likelihood_smcfixed_part = 0.0;
   
   this->kf_iteration = 0;
   this->iteration_written_to_file = -1;
-
+  
   this->start_time = std::chrono::high_resolution_clock::now();
 }
 
 KalmanFilterOutput::KalmanFilterOutput(KalmanFilter* estimator_in,
                                        size_t lag_in,
                                        const std::string &results_name_in)
-  :LikelihoodEstimatorOutput()
+:LikelihoodEstimatorOutput()
 {
   this->estimator = estimator_in;
   this->log_likelihood_smcfixed_part = 0.0;
@@ -42,12 +44,12 @@ KalmanFilterOutput::KalmanFilterOutput(KalmanFilter* estimator_in,
 
 KalmanFilterOutput::~KalmanFilterOutput()
 {
-
+  
 }
 
 //Copy constructor for the KalmanFilterOutput class.
 KalmanFilterOutput::KalmanFilterOutput(const KalmanFilterOutput &another)
-  :LikelihoodEstimatorOutput(another)
+:LikelihoodEstimatorOutput(another)
 {
   this->make_copy(another);
 }
@@ -57,7 +59,7 @@ void KalmanFilterOutput::operator=(const KalmanFilterOutput &another)
   if(this == &another){ //if a==a
     return;
   }
-
+  
   LikelihoodEstimatorOutput::operator=(another);
   this->make_copy(another);
 }
@@ -291,14 +293,14 @@ arma::mat KalmanFilterOutput::get_gradient_of_log(const std::string &variable,
 }
 
 arma::mat KalmanFilterOutput::subsample_get_gradient_of_log(const std::string &variable,
-                                                  const Parameters &x)
+                                                            const Parameters &x)
 {
   Rcpp::stop("KalmanFilterOutput::subsample_get_gradient_of_log - not yet implemented.");
 }
 
 void KalmanFilterOutput::print(std::ostream &os) const
 {
-
+  
 }
 
 void KalmanFilterOutput::forget_you_were_already_written_to_file()
@@ -351,46 +353,46 @@ void KalmanFilterOutput::write_to_file(const std::string &dir_name,
     size_t distance_from_end = this->kf_iteration-iteration;
     
     /*
-    size_t llhd_index = this->llhds.size()-1-distance_from_end;
-    
-    //if (int(this->llhds.size())-1-int(distance_from_end)>=0)
-    //{
-    if (!this->estimator->log_likelihood_file_stream.is_open())
-    {
-      this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
-    }
-    
-    if (this->estimator->log_likelihood_file_stream.is_open())
-    {
-      this->estimator->log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->llhds[llhd_index] << std::endl;
-      //log_likelihood_file_stream.close();
-    }
-    else
-    {
-      Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + " cannot be opened.");
-    }
-    
-    //}
-    
-    if (!this->estimator->time_file_stream.is_open())
-    {
-      this->estimator->time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
-    }
-    if (this->estimator->time_file_stream.is_open())
-    {
-      double time_sum = 0.0;
-      for (size_t k=0; k<this->times.size(); ++k)
-      {
-        time_sum = time_sum + this->times[k];
-      }
-      this->estimator->time_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << time_sum << std::endl;
-      //log_likelihood_file_stream.close();
-    }
-    else
-    {
-      Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
-    }
-    */
+     size_t llhd_index = this->llhds.size()-1-distance_from_end;
+     
+     //if (int(this->llhds.size())-1-int(distance_from_end)>=0)
+     //{
+     if (!this->estimator->log_likelihood_file_stream.is_open())
+     {
+     this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
+     }
+     
+     if (this->estimator->log_likelihood_file_stream.is_open())
+     {
+     this->estimator->log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->llhds[llhd_index] << std::endl;
+     //log_likelihood_file_stream.close();
+     }
+     else
+     {
+     Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + " cannot be opened.");
+     }
+     
+     //}
+     
+     if (!this->estimator->time_file_stream.is_open())
+     {
+     this->estimator->time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
+     }
+     if (this->estimator->time_file_stream.is_open())
+     {
+     double time_sum = 0.0;
+     for (size_t k=0; k<this->times.size(); ++k)
+     {
+     time_sum = time_sum + this->times[k];
+     }
+     this->estimator->time_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << time_sum << std::endl;
+     //log_likelihood_file_stream.close();
+     }
+     else
+     {
+     Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
+     }
+     */
     
     if (this->posterior_means.size() > distance_from_end)
     {
@@ -599,4 +601,5 @@ void KalmanFilterOutput::close_ofstreams()
   this->estimator->posterior_covariances_file_stream.close();
   this->estimator->predicted_means_file_stream.close();
   this->estimator->predicted_covariances_file_stream.close();
+}
 }

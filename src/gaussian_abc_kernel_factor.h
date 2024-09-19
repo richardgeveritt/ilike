@@ -9,8 +9,6 @@ using namespace Rcpp;
 
 namespace ilike
 {
-namespace exact_factor
-{
 
 class GaussianABCKernelFactor : public ABCKernelFactor
 {
@@ -57,7 +55,6 @@ protected:
   double constant;
   
 };
-}
 }
 
 #endif

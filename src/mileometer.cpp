@@ -1,6 +1,8 @@
 // Include the class definition.
 #include "mileometer.h"
 
+namespace ilike
+{
 // Include other class definitions that are needed.
 
 // Public functions //
@@ -10,13 +12,13 @@
 // Comment about function.
 Mileometer::Mileometer()
 {
-	// Set all the pointers owned by this class to be something (possibly NULL).
+  // Set all the pointers owned by this class to be something (possibly NULL).
 }
 
 // Comment about function.
 Mileometer::~Mileometer()
 {
-	// Delete all the pointers owned by this class.
+  // Delete all the pointers owned by this class.
 }
 
 // Other constuctors.
@@ -24,15 +26,15 @@ Mileometer::~Mileometer()
 // If the sizes vector is empty, then
 Mileometer::Mileometer(const std::vector<size_t> &limitsin)
 {
-	this->limits = limitsin;
-	this->current_index.reserve(this->limits.size());
-
-	for (std::vector<size_t>::const_iterator j=this->limits.begin();
-		j!=this->limits.end();
-		++j)
-	{
-		this->current_index.push_back(0);
-	}
+  this->limits = limitsin;
+  this->current_index.reserve(this->limits.size());
+  
+  for (std::vector<size_t>::const_iterator j=this->limits.begin();
+       j!=this->limits.end();
+       ++j)
+  {
+    this->current_index.push_back(0);
+  }
 }
 
 // Everything you need to copy the class.
@@ -40,32 +42,32 @@ Mileometer::Mileometer(const std::vector<size_t> &limitsin)
 // The copy constructor.
 Mileometer::Mileometer(const Mileometer &another)
 {
-	this->make_copy(another);
+  this->make_copy(another);
 }
 
 // Returns a pointer to a base class of type Mileometer.
 Mileometer* Mileometer::duplicate() const
 {
-	return new Mileometer(*this);
+  return new Mileometer(*this);
 }
 
 // Copy all the members of the class.
 void Mileometer::make_copy(const Mileometer &another)
 {
-	// Copy all members, duplicating the memory where appropriate.
-	this->current_index = another.current_index;
-	this->limits = another.limits;
+  // Copy all members, duplicating the memory where appropriate.
+  this->current_index = another.current_index;
+  this->limits = another.limits;
 }
 
 // The = operator.
 Mileometer& Mileometer::operator=(const Mileometer &another)
 {
-	if(this==&another)//a==a
-		return *this;
+  if(this==&another)//a==a
+    return *this;
   
-	this->current_index.clear();
-	this->limits.clear();
-	
+  this->current_index.clear();
+  this->limits.clear();
+  
   this->make_copy(another);
   
   return *this;
@@ -105,7 +107,7 @@ Mileometer& Mileometer::operator=(Mileometer &&another)
 // Get the current index.
 std::vector<size_t> Mileometer::get_current_index() const
 {
-	return this->current_index;
+  return this->current_index;
 }
 
 bool Mileometer::at_start() const
@@ -166,35 +168,35 @@ size_t Mileometer::get_next_index() const
 // Increment current and return it.
 void Mileometer::increment()
 {
-	// Call increment on the end counter.
-	this->increment(this->current_index.size()-1);
+  // Call increment on the end counter.
+  this->increment(this->current_index.size()-1);
 }
 
 // Increment current dimension.
 void Mileometer::increment(size_t dimension)
 {
-	// The current index.
-	std::vector<size_t>::iterator the_current_index = current_index.begin()+dimension;
-
-	// The current limit.
-	std::vector<size_t>::iterator the_current_limit = limits.begin()+dimension;
-
-	// If we pass the size of this dimension, also increment the previous dimension.
-	// Unless we are already at the smallest dimension.
-	if (*the_current_index != (*the_current_limit) - 1 )
-	{
-		// Increment.
-		*the_current_index = *the_current_index + 1;
-	}
-	else
-	{
-		// Set back to the start.
-		*the_current_index = 0;
-		
-		// Sort out the other dimensions.
-		if (dimension!=0)
-			this->increment(dimension-1);
-	}
+  // The current index.
+  std::vector<size_t>::iterator the_current_index = current_index.begin()+dimension;
+  
+  // The current limit.
+  std::vector<size_t>::iterator the_current_limit = limits.begin()+dimension;
+  
+  // If we pass the size of this dimension, also increment the previous dimension.
+  // Unless we are already at the smallest dimension.
+  if (*the_current_index != (*the_current_limit) - 1 )
+  {
+    // Increment.
+    *the_current_index = *the_current_index + 1;
+  }
+  else
+  {
+    // Set back to the start.
+    *the_current_index = 0;
+    
+    // Sort out the other dimensions.
+    if (dimension!=0)
+      this->increment(dimension-1);
+  }
 }
 
 void Mileometer::reset_final_dimension(size_t new_number_of_states)
@@ -209,4 +211,5 @@ void Mileometer::reset()
   {
     current_index[i] = 0;
   }
+}
 }

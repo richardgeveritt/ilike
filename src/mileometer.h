@@ -18,28 +18,30 @@ using namespace Rcpp;
 #include <vector>
 #include <stdexcept>
 
+namespace ilike
+{
 class Sequencer;
 class EnsembleSequencer;
 
 class Mileometer
 {
 public:
-
-	Mileometer();
-	virtual ~Mileometer();
-
-	Mileometer(const std::vector<size_t> &limitsin);
-
-	// Everything you need to copy the class.
-	Mileometer(const Mileometer &another);
-	Mileometer* duplicate() const;
+  
+  Mileometer();
+  virtual ~Mileometer();
+  
+  Mileometer(const std::vector<size_t> &limitsin);
+  
+  // Everything you need to copy the class.
+  Mileometer(const Mileometer &another);
+  Mileometer* duplicate() const;
   Mileometer& operator=(const Mileometer &another);
   
   Mileometer(Mileometer &&another);
   Mileometer& operator=(Mileometer &&another);
-
-	// Get the current index.
-	std::vector<size_t> get_current_index() const;
+  
+  // Get the current index.
+  std::vector<size_t> get_current_index() const;
   
   std::vector<double> get_current_values(const std::vector< std::vector<double> > &values) const;
   
@@ -53,31 +55,32 @@ public:
   size_t get_next_index() const;
   
   bool at_start() const;
-
-	// Increment current.
-	void increment();
+  
+  // Increment current.
+  void increment();
   
   void reset_final_dimension(size_t new_number_of_states);
   
   void reset();
-
+  
 protected: // Things that can be accessed in this class and subclasses.
-
+  
   friend Sequencer;
   friend EnsembleSequencer;
   
-	std::vector<size_t> current_index;
-
-	std::vector<size_t> limits;
-
-	// Increment current dimension.
-	void increment(size_t dimension);
+  std::vector<size_t> current_index;
+  
+  std::vector<size_t> limits;
+  
+  // Increment current dimension.
+  void increment(size_t dimension);
   
   void make_copy(const Mileometer &another);
   void make_copy(Mileometer &&another);
-
+  
 private: // Things that can be accessed only by this class.
-
+  
 };
+}
 
 #endif

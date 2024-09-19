@@ -4,6 +4,8 @@
 #include "smc_worker.h"
 #include "factors.h"
 
+namespace ilike
+{
 LikelihoodEstimator::LikelihoodEstimator()
 {
   this->factors = NULL;
@@ -44,7 +46,7 @@ void LikelihoodEstimator::operator=(const LikelihoodEstimator &another)
   
   if (this->factors!=NULL)
     delete this->factors;
-
+  
   this->make_copy(another);
 }
 
@@ -65,15 +67,15 @@ void LikelihoodEstimator::make_copy(const LikelihoodEstimator &another)
 }
 
 /*
-double LikelihoodEstimator::estimate()
-{
-  LikelihoodEstimatorOutput* output = this->initialise();
-  output->simulate();
-  output->evaluate();
-  double log_llhd = output->log_likelihood;
-  delete output;
-  return log_llhd;
-}
+ double LikelihoodEstimator::estimate()
+ {
+ LikelihoodEstimatorOutput* output = this->initialise();
+ output->simulate();
+ output->evaluate();
+ double log_llhd = output->log_likelihood;
+ delete output;
+ return log_llhd;
+ }
  */
 
 double LikelihoodEstimator::estimate(const Parameters &parameters)
@@ -117,4 +119,5 @@ Data* LikelihoodEstimator::get_current_data() const
 bool LikelihoodEstimator::get_smcfixed_flag() const
 {
   return this->smcfixed_flag;
+}
 }

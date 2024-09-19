@@ -1,14 +1,16 @@
 #include "se_mcmc_termination.h"
 #include "mcmc.h"
 
+namespace ilike
+{
 SEMCMCTermination::SEMCMCTermination()
-  :MCMCTermination()
+:MCMCTermination()
 {
 }
 
 SEMCMCTermination::SEMCMCTermination(double threshold_in,
                                      size_t max_number_of_iterations_in)
-  :MCMCTermination()
+:MCMCTermination()
 {
   this->threshold = threshold_in;
   this->max_number_of_iterations = max_number_of_iterations_in;
@@ -22,7 +24,7 @@ SEMCMCTermination::~SEMCMCTermination()
 
 //Copy constructor for the SEMCMCTermination class.
 SEMCMCTermination::SEMCMCTermination(const SEMCMCTermination &another)
-  :MCMCTermination(another)
+:MCMCTermination(another)
 {
   this->make_copy(another);
 }
@@ -65,4 +67,5 @@ bool SEMCMCTermination::terminate()
 void SEMCMCTermination::set_parameters(StandardMCMCOutput* mcmc_output)
 {
   this->counter = mcmc_output->get_iteration_counter_pointer();
+}
 }

@@ -3,8 +3,10 @@
 #include "unadjusted_mcmc.h"
 #include "mcmc_termination.h"
 
+namespace ilike
+{
 UnadjustedStandardMCMCOutput::UnadjustedStandardMCMCOutput()
-  :StandardMCMCOutput()
+:StandardMCMCOutput()
 {
   this->mcmc = NULL;
 }
@@ -24,7 +26,7 @@ UnadjustedStandardMCMCOutput::~UnadjustedStandardMCMCOutput()
 
 //Copy constructor for the UnadjustedStandardMCMCOutput class.
 UnadjustedStandardMCMCOutput::UnadjustedStandardMCMCOutput(const UnadjustedStandardMCMCOutput &another)
-  :StandardMCMCOutput(another)
+:StandardMCMCOutput(another)
 {
   this->make_copy(another);
 }
@@ -63,4 +65,5 @@ MCMC* UnadjustedStandardMCMCOutput::get_mcmc()
 const MCMC* UnadjustedStandardMCMCOutput::get_mcmc() const
 {
   return this->mcmc;
+}
 }

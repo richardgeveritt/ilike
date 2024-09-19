@@ -5,6 +5,8 @@
 #include "transform_component.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class CustomLeafRootTransformComponent : public TransformComponent
 {
 public:
@@ -43,6 +45,7 @@ protected: // Things that can be accessed in this class and subclasses.
   JacobianPtr inverse_jacobian_function;
   
 };
+}
 
 
 #endif

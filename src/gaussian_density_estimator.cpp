@@ -4,8 +4,10 @@
 #include "distributions.h"
 #include "gaussian_density_estimator_output.h"
 
+namespace ilike
+{
 GaussianDensityEstimator::GaussianDensityEstimator()
-  :DensityEstimator()
+:DensityEstimator()
 {
   this->unbiased = true;
 }
@@ -19,7 +21,7 @@ GaussianDensityEstimator::GaussianDensityEstimator(const std::vector<std::string
 
 GaussianDensityEstimator::GaussianDensityEstimator(const std::vector<std::string> &variables_in,
                                                    bool unbiased_in)
-  :DensityEstimator(variables_in)
+:DensityEstimator(variables_in)
 {
   this->unbiased = unbiased_in;
   //this->variables = variables_in;
@@ -39,7 +41,7 @@ GaussianDensityEstimator::~GaussianDensityEstimator()
 
 //Copy constructor for the GaussianDensityEstimator class.
 GaussianDensityEstimator::GaussianDensityEstimator(const GaussianDensityEstimator &another)
-  :DensityEstimator(another)
+:DensityEstimator(another)
 {
   this->make_copy(another);
 }
@@ -68,16 +70,16 @@ DensityEstimator* GaussianDensityEstimator::duplicate() const
 void GaussianDensityEstimator::make_copy(const GaussianDensityEstimator &another)
 {
   /*
-  if (another.mean_estimator!=NULL)
-    this->mean_estimator = another.mean_estimator->duplicate();
-  else
-    this->mean_estimator = NULL;
-  
-  if (another.covariance_estimator!=NULL)
-    this->covariance_estimator = another.covariance_estimator->duplicate();
-  else
-    this->covariance_estimator = NULL;
-  */
+   if (another.mean_estimator!=NULL)
+   this->mean_estimator = another.mean_estimator->duplicate();
+   else
+   this->mean_estimator = NULL;
+   
+   if (another.covariance_estimator!=NULL)
+   this->covariance_estimator = another.covariance_estimator->duplicate();
+   else
+   this->covariance_estimator = NULL;
+   */
   this->unbiased = another.unbiased;
   
 }
@@ -118,4 +120,5 @@ bool GaussianDensityEstimator::get_unbiased() const
  this->covariance_estimator->estimated));
  }
  }
-*/
+ */
+}

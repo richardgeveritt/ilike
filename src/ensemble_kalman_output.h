@@ -11,6 +11,8 @@ using namespace Rcpp;
 #include "ensemble.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class EnsembleKalman;
 class EnsembleKalmanFilter;
 class EnsembleSequencer;
@@ -19,9 +21,9 @@ class EnsembleKalmanMFDS;
 
 class EnsembleKalmanOutput : public LikelihoodEstimatorOutput
 {
-
+  
 public:
-
+  
   // unsure
   // copied from KF
   
@@ -31,11 +33,11 @@ public:
                        std::shared_ptr<Transform> transform_in,
                        const std::string &results_name_in);
   virtual ~EnsembleKalmanOutput();
-
+  
   EnsembleKalmanOutput(const EnsembleKalmanOutput &another);
   void operator=(const EnsembleKalmanOutput &another);
   LikelihoodEstimatorOutput* duplicate() const;
-
+  
   //Ensemble* add_ensemble();
   Ensemble* add_ensemble(EnsembleFactors* ensemble_factors);
   //void add_proposed_ensemble(const Ensemble &latest_proposals);
@@ -71,12 +73,12 @@ public:
   //double evaluate(const Parameters &parameters);
   
   /*
-  void evaluate_smcfixed_part();
-  void evaluate_smcadaptive_part_given_smcfixed();
-  
-  void subsample_evaluate_smcfixed_part();
-  void subsample_evaluate_smcadaptive_part_given_smcfixed();
-  */
+   void evaluate_smcfixed_part();
+   void evaluate_smcadaptive_part_given_smcfixed();
+   
+   void subsample_evaluate_smcfixed_part();
+   void subsample_evaluate_smcadaptive_part_given_smcfixed();
+   */
   
   
   void evaluate_smcfixed_part(const Parameters &conditioned_on_parameters);
@@ -107,26 +109,26 @@ public:
   void set_llhd(double llhd_in);
   
   /*
-  void set_current_predicted_statistics(const arma::colvec &latest_mean,
-                                        const arma::mat &latest_covariance);
-  void add_predicted_statistics();
-  
-  void set_current_posterior_statistics(const arma::colvec &latest_mean,
-                                        const arma::mat &latest_covariance);
-  void add_posterior_statistics();
-  
-  
-  arma::colvec predicted_mean_back() const;
-  arma::colvec posterior_mean_back() const;
-  arma::mat predicted_covariance_back() const;
-  arma::mat posterior_covariance_back() const;
-  
-  void set_current_predicted_to_be_current_posterior();
-  
-  size_t predicted_size() const;
-
-  void print(std::ostream &os) const;
-  */
+   void set_current_predicted_statistics(const arma::colvec &latest_mean,
+   const arma::mat &latest_covariance);
+   void add_predicted_statistics();
+   
+   void set_current_posterior_statistics(const arma::colvec &latest_mean,
+   const arma::mat &latest_covariance);
+   void add_posterior_statistics();
+   
+   
+   arma::colvec predicted_mean_back() const;
+   arma::colvec posterior_mean_back() const;
+   arma::mat predicted_covariance_back() const;
+   arma::mat posterior_covariance_back() const;
+   
+   void set_current_predicted_to_be_current_posterior();
+   
+   size_t predicted_size() const;
+   
+   void print(std::ostream &os) const;
+   */
   
   void forget_you_were_already_written_to_file();
   
@@ -135,7 +137,7 @@ public:
   void skip_to_end_of_sequence_if_points_are_gaussian(double significance_level);
   
   void close_ofstreams();
-
+  
 protected:
   
   friend EnsembleKalmanFilter;
@@ -164,7 +166,7 @@ protected:
   
   void write_to_file(const std::string &directory_name,
                      const std::string &index = "");
-
+  
   void make_copy(const EnsembleKalmanOutput &another);
   
   std::deque<Ensemble> all_ensembles;
@@ -177,7 +179,8 @@ protected:
   size_t output_lag;
   
   std::chrono::high_resolution_clock::time_point start_time;
-
+  
 };
+}
 
 #endif

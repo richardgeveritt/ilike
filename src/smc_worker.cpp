@@ -4,6 +4,8 @@
 #include "likelihood_estimator.h"
 #include "likelihood_estimator_output.h"
 
+namespace ilike
+{
 SMCWorker::SMCWorker()
 {
   //this->particle_simulator = NULL;
@@ -25,8 +27,8 @@ SMCWorker::SMCWorker(const SMCWorker &another)
 SMCWorker::~SMCWorker()
 {
   //for (std::vector< std::vector<LikelihoodEstimatorOutput*> >::iterator i=this->likelihood_estimator_outputs.begin();
-    //   i!=this->likelihood_estimator_outputs.end();
-    //   ++i)
+  //   i!=this->likelihood_estimator_outputs.end();
+  //   ++i)
   //{
   //  for (std::vector<LikelihoodEstimatorOutput*>::iterator j=i->begin();
   //       j!=i->end();
@@ -42,7 +44,7 @@ void SMCWorker::operator=(const SMCWorker &another)
 {
   if(this == &another)
     return;
-
+  
   this->make_copy(another);
 }
 
@@ -61,7 +63,7 @@ void SMCWorker::make_copy(const SMCWorker &another)
   //{
   //  std::vector<LikelihoodEstimatorOutput*> inner_vector;
   //  inner_vector.reserve(this->get_number_of_particles());
-    
+  
   //  for (std::vector<LikelihoodEstimatorOutput*>::const_iterator j=i->begin();
   //       j!=i->end();
   //       ++j)
@@ -78,7 +80,7 @@ void SMCWorker::make_copy(const SMCWorker &another)
 void SMCWorker::simulate(Particles* next_particles)
 {
   this->specific_simulate(next_particles);
-
+  
   this->set_seed(this->get_seed() + this->get_number_of_particles());
   
   // Initialise weight.
@@ -123,27 +125,27 @@ void SMCWorker::move(Particles* next_particles,
 }
 
 /*
-void SMCWorker::move(Particles* next_particles,
-                     const Particles* current_particles,
-                     const Parameters &conditioned_on_parameters)
-{
-  this->specific_move(next_particles,
-                      current_particles,
-                      conditioned_on_parameters);
-  this->set_seed(this->get_seed() + this->get_number_of_particles());
-  
-  // Simulate random numbers for resampling.
-  this->the_smc->rng->seed(this->get_seed(),this->get_number_of_particles());
-  next_particles->simulate_resampling_variables(*this->the_smc->rng);
-  this->set_seed(this->get_seed() + this->get_number_of_particles());
-}
-*/
+ void SMCWorker::move(Particles* next_particles,
+ const Particles* current_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ this->specific_move(next_particles,
+ current_particles,
+ conditioned_on_parameters);
+ this->set_seed(this->get_seed() + this->get_number_of_particles());
+ 
+ // Simulate random numbers for resampling.
+ this->the_smc->rng->seed(this->get_seed(),this->get_number_of_particles());
+ next_particles->simulate_resampling_variables(*this->the_smc->rng);
+ this->set_seed(this->get_seed() + this->get_number_of_particles());
+ }
+ */
 
 void SMCWorker::subsample_simulate(Particles* next_particles,
                                    const Parameters &conditioned_on_parameters)
 {
   this->subsample_specific_simulate(next_particles,
-                          conditioned_on_parameters);
+                                    conditioned_on_parameters);
   this->set_seed(this->get_seed() + this->get_number_of_particles());
   
   // Initialise weight.
@@ -170,21 +172,21 @@ void SMCWorker::subsample_move(Particles* next_particles,
 }
 
 /*
-void SMCWorker::subsample_move(Particles* next_particles,
-                               const Particles* current_particles,
-                               const Parameters &conditioned_on_parameters)
-{
-  this->subsample_specific_move(next_particles,
-                                current_particles,
-                                conditioned_on_parameters);
-  this->set_seed(this->get_seed() + this->get_number_of_particles());
-  
-  // Simulate random numbers for resampling.
-  this->the_smc->rng->seed(this->get_seed(),this->get_number_of_particles());
-  next_particles->simulate_resampling_variables(*this->the_smc->rng);
-  this->set_seed(this->get_seed() + this->get_number_of_particles());
-}
-*/
+ void SMCWorker::subsample_move(Particles* next_particles,
+ const Particles* current_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ this->subsample_specific_move(next_particles,
+ current_particles,
+ conditioned_on_parameters);
+ this->set_seed(this->get_seed() + this->get_number_of_particles());
+ 
+ // Simulate random numbers for resampling.
+ this->the_smc->rng->seed(this->get_seed(),this->get_number_of_particles());
+ next_particles->simulate_resampling_variables(*this->the_smc->rng);
+ this->set_seed(this->get_seed() + this->get_number_of_particles());
+ }
+ */
 
 //void SMCWorker::weight(const Parameters &conditioned_on_parameters)
 //{
@@ -215,4 +217,5 @@ size_t SMCWorker::get_seed() const
 void SMCWorker::set_seed(size_t seed_in)
 {
   *this->the_smc->seed = seed_in;
+}
 }

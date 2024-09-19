@@ -2,6 +2,8 @@
 #include "likelihood_estimator_output.h"
 #include "likelihood_estimator.h"
 
+namespace ilike
+{
 CustomNoParamsSymmetricProposalKernel::CustomNoParamsSymmetricProposalKernel()
   :SymmetricProposalKernel()
 {
@@ -204,4 +206,5 @@ bool CustomNoParamsSymmetricProposalKernel::can_be_evaluated() const
 void CustomNoParamsSymmetricProposalKernel::set_data(Data* data_in)
 {
   
+}
 }

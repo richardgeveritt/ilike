@@ -1,8 +1,10 @@
 #include "iterations_mcmc_termination.h"
 #include "mcmc.h"
 
+namespace ilike
+{
 IterationsMCMCTermination::IterationsMCMCTermination()
-  :MCMCTermination()
+:MCMCTermination()
 {
 }
 
@@ -20,7 +22,7 @@ IterationsMCMCTermination::~IterationsMCMCTermination()
 
 //Copy constructor for the IterationsMCMCTermination class.
 IterationsMCMCTermination::IterationsMCMCTermination(const IterationsMCMCTermination &another)
-  :MCMCTermination(another)
+:MCMCTermination(another)
 {
   this->make_copy(another);
 }
@@ -63,4 +65,5 @@ bool IterationsMCMCTermination::terminate()
 void IterationsMCMCTermination::set_parameters(StandardMCMCOutput* mcmc_output)
 {
   this->counter = mcmc_output->get_iteration_counter_pointer();
+}
 }

@@ -1,6 +1,8 @@
 #include "ensemble_factor_variables.h"
 #include "ensemble_factors.h"
 
+namespace ilike
+{
 EnsembleFactorVariables::EnsembleFactorVariables()
 {
   this->particle = NULL;
@@ -8,15 +10,15 @@ EnsembleFactorVariables::EnsembleFactorVariables()
 }
 
 /*
-EnsembleFactorVariables::EnsembleFactorVariables(EnsembleFactors* ensemble_factors_in)
-{
-  this->ensemble_factors = ensemble_factors_in;
-}
-*/
+ EnsembleFactorVariables::EnsembleFactorVariables(EnsembleFactors* ensemble_factors_in)
+ {
+ this->ensemble_factors = ensemble_factors_in;
+ }
+ */
 
 EnsembleFactorVariables::~EnsembleFactorVariables()
 {
-
+  
 }
 
 EnsembleFactorVariables::EnsembleFactorVariables(const EnsembleFactorVariables &another)
@@ -28,7 +30,7 @@ void EnsembleFactorVariables::operator=(const EnsembleFactorVariables &another)
 {
   if(this == &another)
     return;
-
+  
   this->make_copy(another);
 }
 
@@ -39,11 +41,11 @@ void EnsembleFactorVariables::make_copy(const EnsembleFactorVariables &another)
 }
 
 /*
-EnsembleFactors* EnsembleFactorVariables::get_ensemble_factors()
-{
-  return this->ensemble_factors;
-}
-*/
+ EnsembleFactors* EnsembleFactorVariables::get_ensemble_factors()
+ {
+ return this->ensemble_factors;
+ }
+ */
 
 void EnsembleFactorVariables::set_particle(Particle* particle_in)
 {
@@ -53,4 +55,5 @@ void EnsembleFactorVariables::set_particle(Particle* particle_in)
 Particle* EnsembleFactorVariables::get_particle()
 {
   return this->particle;
+}
 }

@@ -2,6 +2,8 @@
 #include "likelihood_estimator.h"
 #include "parameters.h"
 
+namespace ilike
+{
 LikelihoodEstimatorOutput::LikelihoodEstimatorOutput()
 {
   this->log_likelihood = 0.0;
@@ -11,7 +13,7 @@ LikelihoodEstimatorOutput::LikelihoodEstimatorOutput()
 
 LikelihoodEstimatorOutput::~LikelihoodEstimatorOutput()
 {
-
+  
 }
 
 // void LikelihoodEstimatorOutput::simulate(const Parameters &parameters)
@@ -28,7 +30,7 @@ void LikelihoodEstimatorOutput::operator=(const LikelihoodEstimatorOutput &anoth
 {
   if(this == &another)
     return;
-
+  
   this->make_copy(another);
 }
 
@@ -77,4 +79,5 @@ std::ostream& operator<<(std::ostream& os, const LikelihoodEstimatorOutput &outp
 
 void LikelihoodEstimatorOutput::print(std::ostream &os) const
 {
+}
 }

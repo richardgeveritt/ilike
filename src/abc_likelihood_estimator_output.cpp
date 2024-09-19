@@ -2,13 +2,16 @@
 #include "abc_likelihood_estimator.h"
 #include "filesystem.h"
 
+namespace ilike
+{
+
 ABCLikelihoodEstimatorOutput::ABCLikelihoodEstimatorOutput()
-  :LikelihoodEstimatorOutput()
+:LikelihoodEstimatorOutput()
 {
 }
 
 ABCLikelihoodEstimatorOutput::ABCLikelihoodEstimatorOutput(ABCLikelihoodEstimator* estimator_in)
-  :LikelihoodEstimatorOutput()
+:LikelihoodEstimatorOutput()
 {
   this->estimator = estimator_in;
 }
@@ -19,7 +22,7 @@ ABCLikelihoodEstimatorOutput::~ABCLikelihoodEstimatorOutput()
 
 //Copy constructor for the ABCLikelihoodEstimatorOutput class.
 ABCLikelihoodEstimatorOutput::ABCLikelihoodEstimatorOutput(const ABCLikelihoodEstimatorOutput &another)
-  :LikelihoodEstimatorOutput(another)
+:LikelihoodEstimatorOutput(another)
 {
   this->make_copy(another);
 }
@@ -29,7 +32,7 @@ void ABCLikelihoodEstimatorOutput::operator=(const ABCLikelihoodEstimatorOutput 
   if(this == &another){ //if a==a
     return;
   }
-
+  
   LikelihoodEstimatorOutput::operator=(another);
   this->make_copy(another);
 }
@@ -120,14 +123,14 @@ arma::mat ABCLikelihoodEstimatorOutput::get_gradient_of_log(const std::string &v
 }
 
 arma::mat ABCLikelihoodEstimatorOutput::subsample_get_gradient_of_log(const std::string &variable,
-                                                                 const Parameters &x)
+                                                                      const Parameters &x)
 {
   Rcpp::stop("ABCLikelihoodEstimatorOutput::get_gradient_of_log - not written yet.");
 }
 
 void ABCLikelihoodEstimatorOutput::print(std::ostream &os) const
 {
-
+  
 }
 
 void ABCLikelihoodEstimatorOutput::write_to_file(const std::string &dir_name,
@@ -165,4 +168,6 @@ void ABCLikelihoodEstimatorOutput::forget_you_were_already_written_to_file()
 void ABCLikelihoodEstimatorOutput::close_ofstreams()
 {
   this->estimator->log_likelihood_file_stream.close();
+}
+
 }

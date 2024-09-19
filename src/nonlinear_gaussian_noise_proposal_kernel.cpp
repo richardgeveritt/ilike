@@ -4,6 +4,8 @@
 #include "likelihood_estimator.h"
 #include "distributions.h"
 
+namespace ilike
+{
 NonLinearGaussianNoiseProposalKernel::NonLinearGaussianNoiseProposalKernel()
 :GaussianNoiseProposalKernel()
 {
@@ -306,4 +308,5 @@ void NonLinearGaussianNoiseProposalKernel::set_index(Index* index_in)
 
 void NonLinearGaussianNoiseProposalKernel::set_index_if_null(Index* index_in)
 {
+}
 }

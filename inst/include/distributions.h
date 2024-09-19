@@ -1,14 +1,15 @@
+/**
+ * @file distributions.h
+ * @brief Global functions for simulation from, and evaluating the pdf/pmf of distributions.
+ */
+
 #ifndef SIMULATION
 #define SIMULATION
 
 #include <RcppArmadillo.h>
 
-//#include <random>
-//#include <boost/random/binomial_distribution.hpp>
-//#include <boost/random/mersenne_twister.hpp>
-//#include <boost/random/normal_distribution.hpp>
+#include <chrono>
 #include <math.h>
-//#include <stdexcept>
 #include <dqrng_distribution.h>
 #include <dqrng_generator.h>
 #include <boost/random/uniform_real_distribution.hpp>
@@ -18,6 +19,7 @@
 #include <boost/random/discrete_distribution.hpp>
 #include <boost/random/normal_distribution.hpp>
 #include <boost/random/poisson_distribution.hpp>
+#include <boost/math/special_functions/gamma.hpp>
 
 //save compiler switches
 #pragma GCC diagnostic push
@@ -26,50 +28,49 @@
 //restore compiler switches
 #pragma GCC diagnostic pop
 
-//#include <boost/math/distributions/gamma.hpp>
-//#include <boost/math/distributions/normal.hpp>
-#include <boost/math/special_functions/gamma.hpp>
-
-//#include <pcg_random.hpp>
-//#include <xoshiro.h>
-
 #define BOOST_DISABLE_ASSERTS 1
 
-//using RandomNumberGenerator = dqrng::random_64bit_wrapper<dqrng::xoshiro256plus>;
+using namespace std;
+
+namespace ilike
+{
+
+/*!
+A typedef for a random number generator, using objects from dqrng.
+*/
 typedef dqrng::random_64bit_wrapper<dqrng::xoshiro256plus> RandomNumberGenerator;
 
-//typedef std::mt19937 RandomNumberGenerator;
-//using Binomial = boost::random::binomial_distribution<int>;
-
-
-//using Gamma = boost::math::gamma_distribution<double>;
-//using RNG = dqrng::xoshiro256plus;
-
-//inline size_t rdtsc(){
-//  size_t lo,hi;
-//  __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
-//  return ((size_t)hi << 32) | lo;
-//}
-
-#include <chrono>
-
-inline size_t rdtsc() {
+/*!
+A function to read the time stamp counter that works across platforms.
+*/
+inline size_t rdtsc()
+{
   return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
 
+/*!
+Generates a random number from the uniform distribution between 0 and 1.
+*/
 inline double runif(RandomNumberGenerator &rng)
 {
   boost::random::uniform_real_distribution<double> my_uniform;
   return my_uniform(rng);
-  //return dqrng::uniform01(rng);
 }
 
-inline double runif(RandomNumberGenerator &rng, double min, double max)
+/*!
+Generates a random number from the uniform distribution between `lower` and `upper`.
+*/
+inline double runif(RandomNumberGenerator &rng,
+                    double lower,
+                    double upper)
 {
-  boost::random::uniform_real_distribution<double> my_uniform(min, max);
+  boost::random::uniform_real_distribution<double> my_uniform(lower, upper);
   return my_uniform(rng);
 }
 
+/*!
+Generates a matrix of random numbers, where the $(i,j)$th element is drawn from the uniform distribution between the $(i,j)$th element of `lower` and the $(i,j)$th element of `upper`.
+*/
 inline arma::mat runif(RandomNumberGenerator &rng,
                        const arma::mat &lower,
                        const arma::mat &upper)
@@ -87,35 +88,57 @@ inline arma::mat runif(RandomNumberGenerator &rng,
   return output;
 }
 
-inline double dunif(double point,
-                    double lower_bound,
-                    double upper_bound)
+/*!
+Evaluates the log of the uniform density between 0 and 1 at `x`.
+*/
+inline double dunif(double x)
 {
-  if ( (point<lower_bound) || (point>upper_bound) )
+  if ( (x<0.0) || (x>1.0) )
     return -arma::datum::inf;
   else
   {
-    return -log(upper_bound-lower_bound);
+    return 0.0;
   }
 }
 
-inline double dunif(const arma::mat &point,
-                    const arma::mat &lower_bounds,
-                    const arma::mat &upper_bounds)
+/*!
+Evaluates the log of the uniform density between `lower` and `upper` at `x`.
+*/
+inline double dunif(double x,
+                    double lower,
+                    double upper)
+{
+  if ( (x<lower) || (x>upper) )
+    return -arma::datum::inf;
+  else
+  {
+    return -log(upper-lower);
+  }
+}
+
+/*!
+For the $(i,j)$th element of `x`, evaluate the log of the uniform density between the $(i,j)$th element of `lower` and the $(i,j)$th element of `upper`, then take the sum of the result (i.e. the product of independent uniform densities).
+*/
+inline double dunif(const arma::mat &x,
+                    const arma::mat &lower,
+                    const arma::mat &upper)
 {
   double output = 0.0;
-  for (size_t j=0; j<point.n_cols; ++j)
+  for (size_t j=0; j<x.n_cols; ++j)
   {
-    for (size_t i=0; i<point.n_rows; ++i)
+    for (size_t i=0; i<x.n_rows; ++i)
     {
-      output = output + dunif(point.at(i,j),
-                              lower_bounds.at(i,j),
-                              upper_bounds.at(i,j));
+      output = output + dunif(x.at(i,j),
+                              lower.at(i,j),
+                              upper.at(i,j));
     }
   }
   return output;
 }
 
+/*!
+Generates `n` random numbers from the uniform distribution between 0 and 1, and stores them in a row vector.
+*/
 inline arma::rowvec multiple_runif(RandomNumberGenerator &rng,
                                    size_t n)
 {
@@ -130,12 +153,15 @@ inline arma::rowvec multiple_runif(RandomNumberGenerator &rng,
   return output;
 }
 
+/*!
+Generates `n` random numbers from the uniform distribution between `lower` and `upper`, and stores them in a row vector.
+*/
 inline arma::rowvec multiple_runif(RandomNumberGenerator &rng,
                                    size_t n,
-                                   double min,
-                                   double max)
+                                   double lower,
+                                   double upper)
 {
-  boost::random::uniform_real_distribution<double> my_uniform(min, max);
+  boost::random::uniform_real_distribution<double> my_uniform(lower, upper);
   arma::rowvec output(n);
   for (auto i=output.begin();
        i!=output.end();
@@ -146,6 +172,9 @@ inline arma::rowvec multiple_runif(RandomNumberGenerator &rng,
   return output;
 }
 
+/*!
+Generates a random number from the discrete distribution taking values [0,n), with probabilities given by the vector `probabilities`, and `n` being taken to be the length of this vector. The vector `probabilities` need not be normalised.
+*/
 inline size_t rdis(RandomNumberGenerator &rng,
                    const arma::colvec &probabilities)
 {
@@ -153,6 +182,9 @@ inline size_t rdis(RandomNumberGenerator &rng,
   return my_discrete(rng);
 }
 
+/*!
+Generates `n` random numbers from the discrete distribution taking values [0,n), with probabilities given by the vector `probabilities`, and `n` being taken to be the length of this vector. The vector `probabilities` need not be normalised.
+*/
 inline arma::uvec multiple_rdis(RandomNumberGenerator &rng,
                                 size_t n,
                                 const arma::colvec &probabilities)
@@ -168,12 +200,18 @@ inline arma::uvec multiple_rdis(RandomNumberGenerator &rng,
   return output;
 }
 
+/*!
+Generates a random number from the exponential distribution with rate `rate`.
+*/
 inline double rexp(RandomNumberGenerator &rng, double rate)
 {
   boost::random::exponential_distribution<double> my_exponential(rate);
   return my_exponential(rng);
 }
 
+/*!
+Generates `n` random numbers from the exponential distribution with rate `rate`.
+*/
 inline arma::colvec rexp(RandomNumberGenerator &rng, size_t n, double rate)
 {
   boost::random::exponential_distribution<double> my_exponential(rate);
@@ -185,6 +223,9 @@ inline arma::colvec rexp(RandomNumberGenerator &rng, size_t n, double rate)
   return output;
 }
 
+/*!
+Evaluates the log of the exponential density with rate `rate` at the point `x`.
+*/
 inline double dexp(double x, double rate)
 {
   if ( (rate<=0) )
@@ -194,38 +235,18 @@ inline double dexp(double x, double rate)
   return log(rate) - rate*x;
 }
 
-inline int rpois(RandomNumberGenerator &rng, double rate)
-{
-  boost::random::poisson_distribution<int> my_poisson(rate);
-  return my_poisson(rng);
-}
-
-inline arma::colvec rpois(RandomNumberGenerator &rng, size_t n, double rate)
-{
-  boost::random::poisson_distribution<int> my_poisson(rate);
-  arma::colvec output(n);
-  for (size_t i=0; i<n; ++i)
-  {
-    output(i) = my_poisson(rng);
-  }
-  return output;
-}
-
-inline double dpois(double x, double rate)
-{
-  if ( (rate<=0) )
-    return double(NAN);
-  if (x<0)
-    return -arma::datum::inf;
-  return x*log(rate) - rate - std::lgamma(x+1);
-}
-
+/*!
+Generates a random number from the translated (by `min`) exponential distribution with rate `rate`.
+*/
 inline double rtranslatedexp(RandomNumberGenerator &rng, double rate, double min)
 {
   boost::random::exponential_distribution<double> my_exponential(rate);
   return my_exponential(rng)+min;
 }
 
+/*!
+Generates `n` random numbers from the translated (by `min`) exponential distribution with rate `rate`.
+*/
 inline arma::colvec rtranslatedexp(RandomNumberGenerator &rng, size_t n, double rate, double min)
 {
   boost::random::exponential_distribution<double> my_exponential(rate);
@@ -237,6 +258,9 @@ inline arma::colvec rtranslatedexp(RandomNumberGenerator &rng, size_t n, double 
   return output;
 }
 
+/*!
+Evaluates the log of the translated exponential (by `min`) density with rate `rate` at the point `x`.
+*/
 inline double dtranslatedexp(double x, double rate, double min)
 {
   if ( (rate<=0) )
@@ -246,12 +270,53 @@ inline double dtranslatedexp(double x, double rate, double min)
   return log(rate) - rate*(x-min);
 }
 
+/*!
+Generates a random number from the Poisson distribution with rate `rate`.
+*/
+inline int rpois(RandomNumberGenerator &rng, double rate)
+{
+  boost::random::poisson_distribution<int> my_poisson(rate);
+  return my_poisson(rng);
+}
+
+/*!
+Generates `n` random numbers from the Poisson distribution with rate `rate`.
+*/
+inline arma::colvec rpois(RandomNumberGenerator &rng, size_t n, double rate)
+{
+  boost::random::poisson_distribution<int> my_poisson(rate);
+  arma::colvec output(n);
+  for (size_t i=0; i<n; ++i)
+  {
+    output(i) = my_poisson(rng);
+  }
+  return output;
+}
+
+/*!
+Evaluates the log of the Poisson mass function with rate `rate` at the point `x`.
+*/
+inline double dpois(double x, double rate)
+{
+  if ( (rate<=0) )
+    return double(NAN);
+  if (x<0)
+    return -arma::datum::inf;
+  return x*log(rate) - rate - std::lgamma(x+1);
+}
+
+/*!
+Generates a random number from the standard normal distribution.
+*/
 inline double rnorm(RandomNumberGenerator &rng)
 {
   boost::random::normal_distribution<double> my_normal(0.0,1.0);
   return my_normal(rng);
 }
 
+/*!
+ Generates a matrix (of dimension given by `dimensions`) of random numbers from the standard normal distribution.
+ */
 inline arma::mat rnorm(RandomNumberGenerator &rng,
                        std::pair<size_t,size_t> dimensions)
 {
@@ -267,6 +332,9 @@ inline arma::mat rnorm(RandomNumberGenerator &rng,
   return output;
 }
 
+/*!
+ Generates a matrix (of dimension given by `dimensions`) of random numbers from the normal distribution with mean `mean` and standard deviation `sd`.
+*/
 inline arma::mat rnorm(RandomNumberGenerator &rng,
                        std::pair<size_t,size_t> dimensions,
                        double mean,
@@ -284,6 +352,9 @@ inline arma::mat rnorm(RandomNumberGenerator &rng,
   return output;
 }
 
+/*!
+Generates `n` random numbers from the standard normal distribution.
+*/
 inline arma::mat rnorm(RandomNumberGenerator &rng,
                        size_t n)
 {
@@ -296,6 +367,9 @@ inline arma::mat rnorm(RandomNumberGenerator &rng,
   return output;
 }
 
+/*!
+Generates `n` random numbers from the normal distribution with mean `mean` and standard deviation `sd`.
+*/
 inline arma::mat rnorm(RandomNumberGenerator &rng,
                        size_t n,
                        double mean,
@@ -310,17 +384,26 @@ inline arma::mat rnorm(RandomNumberGenerator &rng,
   return output;
 }
 
+/*!
+Generates a random number from the normal distribution with mean `mean` and standard deviation `sd`.
+*/
 inline double rnorm(RandomNumberGenerator &rng, double mean, double sd)
 {
   boost::random::normal_distribution<double> my_normal(mean, sd);
   return my_normal(rng);
 }
 
+/*!
+Evaluates the log of the standard normal density at the point `x`.
+*/
 inline double dnorm(double x)
 {
-  return - 0.5*log(2.0*M_PI) - 0.5*pow(x,2.0);
+  return - 0.5*log(2.0*M_PI) - 0.5*std::pow(x,2.0);
 }
 
+/*!
+ Evaluates the log of the normal density with mean `mean` and standard deviation `sd` at the point `x`.
+*/
 inline double dnorm(double x, double mean, double sd)
 {
   if (sd<0)
@@ -334,14 +417,17 @@ inline double dnorm(double x, double mean, double sd)
     else
       return -arma::datum::inf;
   }
-  return -log(sd) - 0.5*log(2.0*M_PI) - 0.5*pow((x-mean)/sd,2.0);
+  return -log(sd) - 0.5*log(2.0*M_PI) - 0.5*std::pow((x-mean)/sd,2.0);
 }
 
+/*!
+Evaluates the log of the normal density with mean `mean` and standard deviation `sd` at the vector of points `x`, returning a vector. If `mean` and/or `sd` are a `double`, the same mean/sd is used for all dimensions; if a vector the corresponding entry in that vector is used for each dimension.
+*/
 inline arma::colvec dnorm(const arma::colvec &x, double mean, double sd)
 {
   size_t n = x.size();
   arma::colvec result(n);
-
+  
   if (sd<0)
   {
     for (size_t i = 0; i<n; ++i)
@@ -363,13 +449,16 @@ inline arma::colvec dnorm(const arma::colvec &x, double mean, double sd)
     }
     return result;
   }
-
+  
   for (size_t i = 0; i<n; ++i)
-    result[i] = -log(sd) - 0.5*log(2.0*M_PI) - 0.5*pow((x[i]-mean)/sd,2.0);
+    result[i] = -log(sd) - 0.5*log(2.0*M_PI) - 0.5*std::pow((x[i]-mean)/sd,2.0);
   return result;
-
+  
 }
 
+/*!
+Evaluates the log of the normal density with mean `mean` and standard deviation `sd` at the vector of points `x`, returning a vector. If `mean` and/or `sd` are a `double`, the same mean/sd is used for all dimensions; if a vector the corresponding entry in that vector is used for each dimension.
+*/
 inline arma::colvec dnorm(const arma::colvec &x, const arma::colvec &mean, double sd)
 {
   size_t n = x.size();
@@ -398,16 +487,90 @@ inline arma::colvec dnorm(const arma::colvec &x, const arma::colvec &mean, doubl
   }
   
   for (size_t i = 0; i<n; ++i)
-    result[i] = -log(sd) - 0.5*log(2.0*M_PI) - 0.5*pow((x[i]-mean[i])/sd,2.0);
+    result[i] = -log(sd) - 0.5*log(2.0*M_PI) - 0.5*std::pow((x[i]-mean[i])/sd,2.0);
   return result;
   
 }
 
+/*!
+Evaluates the log of the normal density with mean `mean` and standard deviation `sd` at the vector of points `x`, returning a vector. If `mean` and/or `sd` are a `double`, the same mean/sd is used for all dimensions; if a vector the corresponding entry in that vector is used for each dimension.
+*/
+inline arma::colvec dnorm(const arma::colvec &x, double mean, const arma::colvec &sd)
+{
+  size_t n = x.size();
+  arma::colvec result(n);
+  
+  for (size_t i=0; i<n; ++i)
+  {
+    if (sd[i]<0)
+    {
+      result[i] = NAN;
+    }
+    else if (sd[i]==0)
+    {
+      if (x[i]==mean)
+      {
+        result[i] = arma::datum::inf;
+      }
+      else
+      {
+        result[i] = -arma::datum::inf;
+      }
+    }
+    else
+    {
+      result[i] = -log(sd[i]) - 0.5*log(2.0*M_PI) - 0.5*std::pow((x[i]-mean)/sd[i],2.0);
+    }
+  }
+  
+  return result;
+}
+
+/*!
+Evaluates the log of the normal density with mean `mean` and standard deviation `sd` at the vector of points `x`, returning a vector. If `mean` and/or `sd` are a `double`, the same mean/sd is used for all dimensions; if a vector the corresponding entry in that vector is used for each dimension.
+*/
+inline arma::colvec dnorm(const arma::colvec &x, const arma::colvec &mean, const arma::colvec &sd)
+{
+  size_t n = x.size();
+  arma::colvec result(n);
+  
+  for (size_t i=0; i<n; ++i)
+  {
+    if (sd[i]<0)
+    {
+      result[i] = NAN;
+    }
+    else if (sd[i]==0)
+    {
+      if (x[i]==mean[i])
+      {
+        result[i] = arma::datum::inf;
+      }
+      else
+      {
+        result[i] = -arma::datum::inf;
+      }
+    }
+    else
+    {
+      result[i] = -log(sd[i]) - 0.5*log(2.0*M_PI) - 0.5*std::pow((x[i]-mean[i])/sd[i],2.0);
+    }
+  }
+  
+  return result;
+}
+
+/*!
+Evaluates the cdf of the normal distribution with mean `mean` and standard deviation `sd` at the point.
+*/
 inline double pnorm(double x, double mean, double sd)
 {
   return 0.5*(1.0 + erf((x-mean)/(sd*sqrt(2.0))));
 }
 
+/*!
+Generates a random number from the standard truncated normal distribution, with bounds given by `min` and `max`.
+*/
 inline double rtnorm(RandomNumberGenerator &rng,
                      double min,
                      double max)
@@ -423,7 +586,7 @@ inline double rtnorm(RandomNumberGenerator &rng,
   {
     return -arma::datum::inf;
   }
-    
+  
   if ( (min==-arma::datum::inf) && (max==arma::datum::inf) )
   {
     return rnorm(rng);
@@ -446,7 +609,7 @@ inline double rtnorm(RandomNumberGenerator &rng,
       while (true)
       {
         double z = rtranslatedexp(rng,alpha_star,min);
-        double varrho = exp(-pow(z-alpha_star,2.0)/2.0);
+        double varrho = exp(-std::pow(z-alpha_star,2.0)/2.0);
         if (runif(rng)<=varrho)
           return z;
       }
@@ -471,7 +634,7 @@ inline double rtnorm(RandomNumberGenerator &rng,
       while (true)
       {
         double z = rtranslatedexp(rng,alpha_star,minus_max);
-        double varrho = exp(-pow(z-alpha_star,2.0)/2.0);
+        double varrho = exp(-std::pow(z-alpha_star,2.0)/2.0);
         if (runif(rng)<=varrho)
           return -z;
       }
@@ -501,6 +664,9 @@ inline double rtnorm(RandomNumberGenerator &rng,
   }
 }
 
+/*!
+Generates a matrix (of dimension given by `dimensions`) of random numbers from the standard truncated normal distribution, with bounds given by `min` and `max`.
+*/
 inline arma::mat rtnorm(RandomNumberGenerator &rng,
                         std::pair<size_t,size_t> dimensions,
                         double min,
@@ -517,6 +683,9 @@ inline arma::mat rtnorm(RandomNumberGenerator &rng,
   return output;
 }
 
+/*!
+ Generates a matrix (of dimension given by `dimensions`) of random numbers from the truncated normal distribution with mean `mean` and standard deviation `sd`, with bounds given by `min` and `max`.
+*/
 inline arma::mat rtnorm(RandomNumberGenerator &rng,
                         std::pair<size_t,size_t> dimensions,
                         double mean,
@@ -535,6 +704,9 @@ inline arma::mat rtnorm(RandomNumberGenerator &rng,
   return output;
 }
 
+/*!
+Generates `n` random numbers from the standard truncated normal distribution, with bounds given by `min` and `max`.
+*/
 inline arma::mat rtnorm(RandomNumberGenerator &rng,
                         size_t n,
                         double min,
@@ -548,6 +720,9 @@ inline arma::mat rtnorm(RandomNumberGenerator &rng,
   return output;
 }
 
+/*!
+Generates a random number from the truncated normal distribution with mean `mean` and standard deviation `sd`, with bounds given by `min` and `max`.
+*/
 inline double rtnorm(RandomNumberGenerator &rng,
                      double mean,
                      double sd,
@@ -564,6 +739,9 @@ inline double rtnorm(RandomNumberGenerator &rng,
   }
 }
 
+/*!
+Generates `n` random numbers from the truncated normal distribution with mean `mean` and standard deviation `sd`, with bounds given by `min` and `max`.
+*/
 inline arma::mat rtnorm(RandomNumberGenerator &rng,
                         size_t n,
                         double mean,
@@ -579,6 +757,9 @@ inline arma::mat rtnorm(RandomNumberGenerator &rng,
   return output;
 }
 
+/*!
+Evaluates the log of the standard truncated normal density, with bounds given by `min` and `max`, at the point `x`.
+*/
 inline double dtnorm(double x,
                      double min,
                      double max)
@@ -589,10 +770,13 @@ inline double dtnorm(double x,
     return -arma::datum::inf;
   else
   {
-    return - 0.5*log(2.0*M_PI) - 0.5*pow(x,2.0) - log(erf(max) - erf(min));
+    return - 0.5*log(2.0*M_PI) - 0.5*std::pow(x,2.0) - log(erf(max) - erf(min));
   }
 }
 
+/*!
+Evaluates the log of the truncated normal density with mean `mean` and standard deviation `sd`, with bounds given by `min` and `max`, at the point `x`.
+*/
 inline double dtnorm(double x,
                      double mean,
                      double sd,
@@ -616,10 +800,13 @@ inline double dtnorm(double x,
       else
         return -arma::datum::inf;
     }
-    return -log(sd) - 0.5*log(2.0*M_PI) - 0.5*pow((x-mean)/sd,2.0) - log(erf((max-mean)/sd) - erf((min-mean)/sd));
+    return -log(sd) - 0.5*log(2.0*M_PI) - 0.5*std::pow((x-mean)/sd,2.0) - log(erf((max-mean)/sd) - erf((min-mean)/sd));
   }
 }
 
+/*!
+Evaluates the log of the truncated normal density with mean `mean` and standard deviation `sd`, with bounds given by `min` and `max`, at the vector of points `x`, returning a vector.
+*/
 inline arma::colvec dtnorm(const arma::colvec &x,
                            double mean,
                            double sd,
@@ -667,38 +854,37 @@ inline arma::colvec dtnorm(const arma::colvec &x,
     else if (x[i]>max)
       result[i] = -arma::datum::inf;
     else
-      result[i] = -log(sd) - 0.5*log(2.0*M_PI) - 0.5*pow((x[i]-mean)/sd,2.0) + erf_part;
+      result[i] = -log(sd) - 0.5*log(2.0*M_PI) - 0.5*std::pow((x[i]-mean)/sd,2.0) + erf_part;
   }
   return result;
   
 }
 
+/*!
+Converts the Cholesky decomposition of a matrix to its inverse.
+*/
 inline arma::mat chol2inv(const arma::mat &chol)
 {
   arma::mat inv_chol = arma::inv(chol);
   return inv_chol*arma::trans(inv_chol);
 }
 
+/*!
+Converts the Cholesky decomposition of a matrix to its log determinant.
+*/
 inline double chol2logdet(const arma::mat &chol)
 {
   return 2.0*trace(log(chol));
 }
 
-// rmvnorm from https://gallery.rcpp.org/articles/simulate-multivariate-normal/
-
+/*!
+Generates a random vector from the multivariate normal distribution with mean `mu` and Cholesky decomposition `chol` of the covariance.
+*/
 inline arma::colvec rmvnorm_using_chol(RandomNumberGenerator &rng,
                                        const arma::colvec &mu,
                                        const arma::mat &chol)
 {
-  //size_t n = 1;
-  //int ncols = sigma.n_cols;
-  //arma::mat Y = rnorm(rng,
-  //                    std::pair<size_t,size_t>(ncols,n));
-  //if (sigma_is_chol)
-  //  return (arma::repmat(mu, n, 1) + sigma*Y).as_col();
-  //else
-  //  return (arma::repmat(mu, n, 1) + arma::chol(sigma)*Y).as_col();
-  
+  // rmvnorm from https://gallery.rcpp.org/articles/simulate-multivariate-normal/
   size_t n = 1;
   int ncols = chol.n_cols;
   arma::mat Y = rnorm(rng,
@@ -706,19 +892,13 @@ inline arma::colvec rmvnorm_using_chol(RandomNumberGenerator &rng,
   return (mu + chol*Y);
 }
 
+/*!
+Generates a random vector from the multivariate normal distribution with mean `mu` and covariance `Sigma`.
+*/
 inline arma::colvec rmvnorm(RandomNumberGenerator &rng,
                             const arma::colvec &mu,
                             const arma::mat &Sigma)
 {
-  //size_t n = 1;
-  //int ncols = sigma.n_cols;
-  //arma::mat Y = rnorm(rng,
-  //                    std::pair<size_t,size_t>(ncols,n));
-  //if (sigma_is_chol)
-  //  return (arma::repmat(mu, n, 1) + sigma*Y).as_col();
-  //else
-  //  return (arma::repmat(mu, n, 1) + arma::chol(sigma)*Y).as_col();
-  
   size_t n = 1;
   int ncols = Sigma.n_cols;
   arma::mat Y = rnorm(rng,
@@ -726,20 +906,14 @@ inline arma::colvec rmvnorm(RandomNumberGenerator &rng,
   return (mu + arma::chol(Sigma)*Y);
 }
 
+/*!
+Generates `n` random vectors from the multivariate normal distribution with mean `mu` and covariance `Sigma`, stored in a $d\times n$ matrix, where $d$ is the dimension of the multivariate Gaussian (determined by the size of the inputted mean and covariance).
+*/
 inline arma::mat rmvnorm(RandomNumberGenerator &rng,
                          size_t n,
                          const arma::colvec &mu,
                          const arma::mat &Sigma)
 {
-  //size_t n = 1;
-  //int ncols = sigma.n_cols;
-  //arma::mat Y = rnorm(rng,
-  //                    std::pair<size_t,size_t>(ncols,n));
-  //if (sigma_is_chol)
-  //  return (arma::repmat(mu, n, 1) + sigma*Y).as_col();
-  //else
-  //  return (arma::repmat(mu, n, 1) + arma::chol(sigma)*Y).as_col();
-  
   int ncols = Sigma.n_cols;
   arma::mat Y = rnorm(rng,
                       std::pair<size_t,size_t>(ncols,n));
@@ -748,6 +922,9 @@ inline arma::mat rmvnorm(RandomNumberGenerator &rng,
   return (prod);
 }
 
+/*!
+Evaluates the log of the multivariate normal density with mean `mu` and covariance `Sigma` at the vector `x`. This function does not require the covariance as an argument: instead it takes the inverse of the covariance `inv_Sigma` and the log of the determinant of the covariance (`log_det`). This is designed for cases where the density needs to be evaluated at a number of points using the same covariance; using this function avoids performing the most expensive parts of the computation more than once.
+*/
 inline double dmvnorm_using_precomp(const arma::colvec &x,
                                     const arma::colvec &mu,
                                     const arma::mat &inv_Sigma,
@@ -755,58 +932,29 @@ inline double dmvnorm_using_precomp(const arma::colvec &x,
 {
   arma::colvec x_minus_mean = x-mu;
   double result = -((arma::size(inv_Sigma)[0]/2.0) * log(2.0*M_PI)) - 0.5*log_det;
-  //double thing = double(x_minus_mean.t()*arma::inv_sympd(c)*x_minus_mean(0,0));
   arma::mat b = x_minus_mean.t()*inv_Sigma*x_minus_mean;
   return result - 0.5*b(0,0);
 }
 
+/*!
+Evaluates the log of the multivariate normal density with mean `mu` and covariance `Sigma` at the vector `x`.
+*/
 inline double dmvnorm(const arma::colvec &x,
                       const arma::colvec &mu,
                       const arma::mat &Sigma)
 {
   double result;
   arma::colvec x_minus_mean = x-mu;
-  //try
-  //{
   result = -((arma::size(Sigma)[0]/2.0) * log(2.0*M_PI)) - 0.5*arma::log_det_sympd(Sigma);
-  //double thing = double(x_minus_mean.t()*arma::inv_sympd(c)*x_minus_mean(0,0));
+  
   arma::mat b = x_minus_mean.t()*arma::inv_sympd(Sigma)*x_minus_mean;
   result = result - 0.5*b(0,0);
-  //}
-  //catch (std::exception)
-  //{
-  //  Rcpp::stop("mvnormal_logpdf - covariance is not positive definite.");
-  //  //Rcpp::stop("mvnormal_logpdf - covariance is not positive definite.");
-  //}
   return result;
 }
 
-// Robust to numerical issues with the Sigma matrix.
-/*
-inline double dmvnorm_without_sympd(const arma::colvec &x,
-                                    const arma::colvec &mu,
-                                    const arma::mat &Sigma)
-{
-  double result;
-  arma::colvec x_minus_mean = x-mu;
-  //try
-  //{
-  result = -((arma::size(Sigma)[0]/2.0) * log(2.0*M_PI)) - 0.5*arma::log_det(Sigma).real();
-  //double thing = double(x_minus_mean.t()*arma::inv_sympd(c)*x_minus_mean(0,0));
-  arma::mat b = x_minus_mean.t()*arma::inv(Sigma)*x_minus_mean;
-  result = result - 0.5*b(0,0);
-  //}
-  //catch (std::exception)
-  //{
-  //  Rcpp::stop("mvnormal_logpdf - covariance is not positive definite.");
-  //  //Rcpp::stop("mvnormal_logpdf - covariance is not positive definite.");
-  //}
-  return result;
-}
+/*!
+Generates a random vector from the truncated multivariate normal distribution with mean `mu` and Cholesky decomposition `chol` of the covariance., with bounds given by `min` and `max`. A simple rejection sampler is used for the implementation.
 */
-
-// rmvnorm from https://gallery.rcpp.org/articles/simulate-multivariate-normal/
-
 inline arma::colvec rtmvnorm_using_chol(RandomNumberGenerator &rng,
                                         const arma::colvec &mu,
                                         const arma::mat &chol,
@@ -821,6 +969,9 @@ inline arma::colvec rtmvnorm_using_chol(RandomNumberGenerator &rng,
   }
 }
 
+/*!
+Generates a random vector from the truncated multivariate normal distribution with mean `mu` and covariance `Sigma`, with bounds given by `min` and `max`. A simple rejection sampler is used for the implementation.
+*/
 inline arma::colvec rtmvnorm(RandomNumberGenerator &rng,
                              const arma::colvec &mu,
                              const arma::mat &Sigma,
@@ -835,6 +986,9 @@ inline arma::colvec rtmvnorm(RandomNumberGenerator &rng,
   }
 }
 
+/*!
+Generates `n` random vectors from the truncated multivariate normal distribution with mean `mu` and covariance `Sigma`, with bounds given by `min` and `max`, stored in a $d\times n$ matrix, where $d$ is the dimension of the multivariate Gaussian (determined by the size of the inputted mean and covariance).
+*/
 inline arma::mat rtmvnorm(RandomNumberGenerator &rng,
                           size_t n,
                           const arma::colvec &mu,
@@ -851,68 +1005,9 @@ inline arma::mat rtmvnorm(RandomNumberGenerator &rng,
   return Y;
 }
 
-/*
-// dmvnorm from https://gallery.rcpp.org/articles/dmvnorm_arma/
-static double const log2pi = std::log(2.0 * M_PI);
-
-inline void inplace_tri_mat_mult(arma::rowvec &x, arma::mat const &trimat){
-  arma::uword const n = trimat.n_cols;
-  
-  for(unsigned j = n; j-- > 0;){
-    double tmp(0.);
-    for(unsigned i = 0; i <= j; ++i)
-      tmp += trimat.at(i, j) * x[i];
-    x[j] = tmp;
-  }
-}
-
-inline arma::vec dmvnorm(const arma::rowvec &x,
-                  const arma::rowvec &mean,
-                  const arma::mat &sigma)
-{
-  using arma::uword;
-  uword const n = x.n_rows,
-  xdim = x.n_cols;
-  arma::vec out(n);
-  arma::mat const rooti = arma::inv(trimatu(arma::chol(sigma)));
-  double const rootisum = arma::sum(log(rooti.diag())),
-  constants = -(double)xdim/2.0 * log2pi,
-  other_terms = rootisum + constants;
-  
-  arma::rowvec z;
-  for (uword i = 0; i < n; i++) {
-    z = (x.row(i) - mean);
-    inplace_tri_mat_mult(z, rooti);
-    out(i) = other_terms - 0.5 * arma::dot(z, z);
-  }
-  
-  return out;
-}
-
-inline arma::vec dmvnorm(const arma::mat &x,
-                  const arma::rowvec &mean,
-                  const arma::mat &sigma) {
-  using arma::uword;
-  uword const n = x.n_rows,
-  xdim = x.n_cols;
-  arma::vec out(n);
-  arma::mat const rooti = arma::inv(trimatu(arma::chol(sigma)));
-  double const rootisum = arma::sum(log(rooti.diag())),
-  constants = -(double)xdim/2.0 * log2pi,
-  other_terms = rootisum + constants;
-  
-  arma::rowvec z;
-  for (uword i = 0; i < n; i++) {
-    z = (x.row(i) - mean);
-    inplace_tri_mat_mult(z, rooti);
-    out(i) = other_terms - 0.5 * arma::dot(z, z);
-  }
-  
-  return out;
-}
+/*!
+Calculation of "c", as used in unbiased estimation of a Gaussian density from an estimated mean and covariance, from Ghurye, S. G. and Olkin, I. (1969). Unbiased Estimation of Some Multivariate Probability Densities and Related Functions. The Annals of Mathematical Statistics 40(4), 1261–1271.
 */
-
-
 inline double log_c(size_t k, size_t nu)
 {
   double num = -(double(k*nu)/2.0)*log(2.0) - (double(k*(k-1))/4.0)*log(M_PI);
@@ -924,14 +1019,15 @@ inline double log_c(size_t k, size_t nu)
   return(num - denom);
 }
 
+/*!
+Unbiased estimation of a Gaussian density from an estimated mean and covariance (from `n` points), from Ghurye, S. G. and Olkin, I. (1969). Unbiased Estimation of Some Multivariate Probability Densities and Related Functions. The Annals of Mathematical Statistics 40(4), 1261–1271.
+*/
 inline double dmvnorm_estimated_params(const arma::colvec &x,
                                        const arma::colvec &estimated_mean,
                                        const arma::mat &estimated_covariance,
                                        size_t n)
 {
   size_t d = estimated_mean.n_rows;
-  //try
-  //{
   double cormac = -(double(d)/2.0)*log(2.0*M_PI) + log_c(d,n-2) - log_c(d,n-1) - (double(d)/2.0)*log(1.0-(1.0/double(n))) - (double(n-d-2)/2.0)*arma::log_det_sympd(double(n-1)*estimated_covariance);
   arma::colvec x_minus_mean = x-estimated_mean;
   arma::mat inner_bracket = double(n-1)*estimated_covariance - x_minus_mean*x_minus_mean.t()/(1.0-(1.0/double(n)));
@@ -947,53 +1043,20 @@ inline double dmvnorm_estimated_params(const arma::colvec &x,
   double mclaggen = (double(n-d-3)/2.0)*log_phi;
   
   return(cormac + mclaggen);
-  //}
-  //catch(std::exception)
-  //{
-  //  Rcpp::stop("mvnormal_logpdf_unbiased_with_estimated_params - it might be that n<=d-3.");
-  //}
-
 }
 
-/*
-inline double dmvnorm_estimated_params_without_sympd(const arma::colvec &x,
-                                                     const arma::colvec &estimated_mean,
-                                                     const arma::mat &estimated_covariance,
-                                                     size_t n)
-{
-  size_t d = estimated_mean.n_rows;
-  //try
-  //{
-  double cormac = -(double(d)/2.0)*log(2.0*M_PI) + log_c(d,n-2) - log_c(d,n-1) - (double(d)/2.0)*log(1.0-(1.0/double(n))) - (double(n-d-2)/2.0)*arma::log_det(double(n-1)*estimated_covariance).real();
-  arma::colvec x_minus_mean = x-estimated_mean;
-  arma::mat inner_bracket = double(n-1)*estimated_covariance - x_minus_mean*x_minus_mean.t()/(1.0-(1.0/double(n)));
-  double log_phi;
-  if (inner_bracket.is_sympd())
-  {
-    log_phi = arma::log_det_sympd(inner_bracket);
-  }
-  else
-  {
-    log_phi = arma::log_det(inner_bracket).real();//-arma::datum::inf;
-  }
-  double mclaggen = (double(n-d-3)/2.0)*log_phi;
-  
-  return(cormac + mclaggen);
-  //}
-  //catch(std::exception)
-  //{
-  //  Rcpp::stop("mvnormal_logpdf_unbiased_with_estimated_params - it might be that n<=d-3.");
-  //}
-  
-}
+/*!
+Generates a random number from the gamma distribution with shape `shape` and rate `rate`.
 */
-
 inline double rgamma(RandomNumberGenerator &rng, double shape, double rate)
 {
   boost::random::gamma_distribution<double> my_gamma(shape, 1.0/rate);
   return my_gamma(rng);
 }
 
+/*!
+ Generates `n` random numbers from the gamma distribution with shape `shape` and rate `rate`.
+*/
 inline arma::colvec rgamma(RandomNumberGenerator &rng, size_t n, double shape, double rate)
 {
   boost::random::gamma_distribution<double> my_gamma(shape, 1.0/rate);
@@ -1005,6 +1068,9 @@ inline arma::colvec rgamma(RandomNumberGenerator &rng, size_t n, double shape, d
   return output;
 }
 
+/*!
+Evaluates the log of the gamma density with shape `shape` and rate `rate` at the point `x`.
+*/
 inline double dgamma(double x, double shape, double rate)
 {
   if ( (shape<=0) || (rate<=0) )
@@ -1014,12 +1080,18 @@ inline double dgamma(double x, double shape, double rate)
   return -boost::math::lgamma<double>(shape) + shape*log(rate) + (rate-1.0)*log(x) - rate*x;
 }
 
+/*!
+Generates a random number from the log-normal distribution with mean of the log of the variable `meanlog` and standard deviation of the log of the variable `sdlog`.
+*/
 inline double rlnorm(RandomNumberGenerator &rng, double meanlog, double sdlog)
 {
   boost::random::lognormal_distribution<double> my_gamma(meanlog, sdlog);
   return my_gamma(rng);
 }
 
+/*!
+Generates `n` random numbers from the log-normal distribution with mean of the log of the variable `meanlog` and standard deviation of the log of the variable `sdlog`.
+*/
 inline arma::colvec rlnorm(RandomNumberGenerator &rng, size_t n, double meanlog, double sdlog)
 {
   boost::random::lognormal_distribution<double> my_lognormal(meanlog, sdlog);
@@ -1031,6 +1103,9 @@ inline arma::colvec rlnorm(RandomNumberGenerator &rng, size_t n, double meanlog,
   return output;
 }
 
+/*!
+Evaluates the log of the log-normal density with mean of the log of the variable `meanlog` and standard deviation of the log of the variable `sdlog` at the point `x`.
+*/
 inline double dlnorm(double x, double meanlog, double sdlog)
 {
   if (sdlog<0)
@@ -1044,46 +1119,40 @@ inline double dlnorm(double x, double meanlog, double sdlog)
     else
       return -arma::datum::inf;
   }
-  return - log(x) - log(sdlog) - 0.5*log(2.0*M_PI) - 0.5*pow((log(x)-meanlog)/sdlog,2.0);
+  return - log(x) - log(sdlog) - 0.5*log(2.0*M_PI) - 0.5*std::pow((log(x)-meanlog)/sdlog,2.0);
 }
 
+/*!
+Evaluates the cdf of the log-normal distribution with mean `mean` and standard deviation `sd` at the point.
+*/
 inline double plnorm(double x, double meanlog, double sdlog)
 {
   return 0.5*(1.0 + erf((log(x)-meanlog)/(sdlog*sqrt(2.0))));
 }
 
+/*!
+Generates a random number from the multivariate log-normal distribution with mean of the log of the variable `meanlog` and the Cholesky decomposition `chollog` of the covariance of the log of the variable.
+*/
 inline arma::colvec rmvlnorm_using_chol(RandomNumberGenerator &rng,
                                         const arma::colvec &mulog,
                                         const arma::mat &chollog)
 {
-  //size_t n = 1;
-  //int ncols = sigma.n_cols;
-  //arma::mat Y = rnorm(rng,
-  //                    std::pair<size_t,size_t>(ncols,n));
-  //if (sigma_is_chol)
-  //  return (arma::repmat(mu, n, 1) + sigma*Y).as_col();
-  //else
-  //  return (arma::repmat(mu, n, 1) + arma::chol(sigma)*Y).as_col();
-  
   return exp(rmvnorm_using_chol(rng,mulog,chollog));
 }
 
+/*!
+ Generates a random number from the multivariate log-normal distribution with mean of the log of the variable `meanlog` and covariance of the log of the variable `Sigmalog`.
+*/
 inline arma::colvec rmvlnorm(RandomNumberGenerator &rng,
                              const arma::colvec &mulog,
                              const arma::mat &Sigmalog)
 {
-  //size_t n = 1;
-  //int ncols = sigma.n_cols;
-  //arma::mat Y = rnorm(rng,
-  //                    std::pair<size_t,size_t>(ncols,n));
-  //if (sigma_is_chol)
-  //  return (arma::repmat(mu, n, 1) + sigma*Y).as_col();
-  //else
-  //  return (arma::repmat(mu, n, 1) + arma::chol(sigma)*Y).as_col();
-  
   return exp(rmvnorm(rng,mulog,Sigmalog));
 }
 
+/*!
+Evaluates the log of the multivaratie log-normal density with mean of the log of the variable `meanlog` and covariance of the log of the variable `Sigmalog` at the point `x`. This function does not require the covariance as an argument: instead it takes the inverse of the covariance `inv_Sigma` and the log of the determinant of the covariance (`log_det`). This is designed for cases where the density needs to be evaluated at a number of points using the same covariance; using this function avoids performing the most expensive parts of the computation more than once.
+*/
 inline double dmvlnorm_using_precomp(const arma::colvec &x,
                                      const arma::colvec &mulog,
                                      const arma::mat &inv_Sigmalog,
@@ -1091,248 +1160,25 @@ inline double dmvlnorm_using_precomp(const arma::colvec &x,
 {
   arma::colvec x_minus_mean = log(x)-mulog;
   double result = -((arma::size(inv_Sigmalog)[0]/2.0) * log(2.0*M_PI)) - 0.5*log_det;
-  //double thing = double(x_minus_mean.t()*arma::inv_sympd(c)*x_minus_mean(0,0));
   arma::mat b = x_minus_mean.t()*inv_Sigmalog*x_minus_mean;
-  //arma::colvec ones;
-  //ones.ones();
   return result + sum(log(1.0/x)) - 0.5*b(0,0);
 }
 
+/*!
+Evaluates the log of the multivaratie log-normal density with mean of the log of the variable `meanlog` and covariance of the log of the variable `Sigmalog` at the point `x`.
+*/
 inline double dmvlnorm(const arma::colvec &x,
                        const arma::colvec &mulog,
                        const arma::mat &Sigmalog)
 {
   double result;
   arma::colvec x_minus_mean = x-mulog;
-  //try
-  //{
   result = -((arma::size(Sigmalog)[0]/2.0) * log(2.0*M_PI)) - 0.5*arma::log_det_sympd(Sigmalog);
-  //double thing = double(x_minus_mean.t()*arma::inv_sympd(c)*x_minus_mean(0,0));
   arma::mat b = x_minus_mean.t()*arma::inv_sympd(Sigmalog)*x_minus_mean;
   result = result + sum(log(1.0/x)) - 0.5*b(0,0);
-  //}
-  //catch (std::exception)
-  //{
-  //  Rcpp::stop("mvnormal_logpdf - covariance is not positive definite.");
-  //  //Rcpp::stop("mvnormal_logpdf - covariance is not positive definite.");
-  //}
   return result;
 }
 
-// namespace Rcpp {
-//   SEXP wrap(const RNG& rng);
-//   RNG& as(SEXP ptr_RNG);
-// }
-
-//RCPP_EXPOSED_CLASS(pcg64);
-
-// namespace Rcpp {
-//
-//   inline SEXP wrap(RNG& rng) {
-//     return Rcpp::XPtr<RNG>(new RNG(&rng));
-//   }
-//
-//   inline RNG& as(SEXP ptr_RNG) {
-//     Rcpp::XPtr<RNG> ptr(ptr_RNG);
-//     RNG& rng = *ptr;
-//     return rng;
-//   }
-// }
-
-// #include <array>
-// #include <mystdint.h>
-// #include <functional>
-// #include <algorithm>
-// #include <type_traits>
-//
-// //template<size_t N, int_fast8_t A, int_fast8_t B, int_fast8_t C>
-// class MyRNG {
-//
-// public:
-//
-//   //using result_type = uint64_t;
-//
-// private:
-//
-//   // int_fast8_t A;
-//   // int_fast8_t B;
-//   // int_fast8_t C;
-//   //
-//   // std::array<uint64_t, 4> state;
-//   //
-//   // struct SplitMix {
-//   //   SplitMix(const uint64_t& k) : state(k) {}
-//   //
-//   //   uint64_t operator() () {
-//   //     uint64_t z = (state += 0x9e3779b97f4a7c15ULL);
-//   //     z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9ULL;
-//   //     z = (z ^ (z >> 27)) * 0x94d049bb133111ebULL;
-//   //     return z ^ (z >> 31);
-//   //   }
-//   //
-//   // private:
-//   //   uint64_t state;
-//   // };
-//   //
-//   // uint64_t rotl(const uint64_t x, int k);
-//   //
-//   // uint64_t next();
-//
-// public:
-//   // inline static constexpr uint64_t min() {return 0.0;};
-//   // inline static constexpr uint64_t max() {return UINT64_MAX;};
-//
-//   MyRNG();
-//   virtual ~MyRNG();
-//   //xoshiro256plus(uint64_t _seed = 0x85c6ea9eb065ebeeULL);
-//
-//   // void seed(std::function<uint64_t(void)> rng);
-//   //
-//   // void seed(uint64_t _seed);
-//   //
-//   // uint64_t operator() ();
-//   //
-//   // void jump();
-//   // void jump(uint64_t n);
-//   // void long_jump();
-//   // void long_jump(uint64_t n);
-// };
-//
-// RCPP_EXPOSED_WRAP(MyRNG);
-//
-//
-//
-// // inline uint64_t xoshiro256plus::rotl(const uint64_t x, int k) {
-// //   return (x << k) | (x >> (64 - k));
-// // }
-// //
-// // inline uint64_t xoshiro256plus::next() {
-// //   size_t N_ = 4;
-// //   const uint64_t result = state[0] + state[N_ - 1];
-// //
-// //   const uint64_t t = state[1] << A;
-// //
-// //   state[2] ^= state[0];
-// //   state[3] ^= state[1];
-// //   state[1] ^= state[2];
-// //   state[0] ^= state[3];
-// //
-// //   state[2] ^= t;
-// //
-// //   state[3] = rotl(state[3], B);
-// //
-// //   return result;
-// // }
-//
-// inline MyRNG::MyRNG()
-// {
-//   //seed(_seed);
-//   //this->A = 17;
-//   //this->B = 45;
-//   //this->C = 0;
-// }
-//
-// inline MyRNG::~MyRNG()
-// {
-//   //seed(_seed);
-//   //this->A = 17;
-//   //this->B = 45;
-//   //this->C = 0;
-// }
-//
-// // inline xoshiro256plus::xoshiro256plus(uint64_t _seed) {
-// //   //seed(_seed);
-// //   //this->A = 17;
-// //   //this->B = 45;
-// //   //this->C = 0;
-// // }
-//
-// // inline void xoshiro256plus::seed(std::function<uint64_t(void)> rng) {
-// //   std::generate(state.begin(), state.end(), rng);
-// // }
-// //
-// // inline void xoshiro256plus::seed(uint64_t _seed) {
-// //   seed(SplitMix(_seed));
-// // }
-// //
-// // inline uint64_t xoshiro256plus::operator() () {
-// //   return next();
-// // }
-// //
-// // inline void xoshiro256plus::jump(uint64_t n) {
-// //   for( ; n > 0; --n) jump();
-// // }
-// //
-// // inline void xoshiro256plus::long_jump(uint64_t n) {
-// //   for( ; n > 0; --n) long_jump();
-// // }
-// //
-// // /* This is xoshiro256+ 1.0, our best and fastest generator for floating-point
-// //  numbers. We suggest to use its upper bits for floating-point
-// //  generation, as it is slightly faster than xoshiro256**. It passes all
-// //  tests we are aware of except for the lowest three bits, which might
-// //  fail linearity tests (and just those), so if low linear complexity is
-// //  not considered an issue (as it is usually the case) it can be used to
-// //  generate 64-bit outputs, too.
-// //  We suggest to use a sign test to extract a random Boolean value, and
-// //  right shifts to extract subsets of bits.
-// //  The state must be seeded so that it is not everywhere zero. If you have
-// //  a 64-bit seed, we suggest to seed a splitmix64 generator and use its
-// //  output to fill s. */
-// //
-// // /* This is the jump function for the generator. It is equivalent
-// //  to 2^128 calls to next(); it can be used to generate 2^128
-// //  non-overlapping subsequences for parallel computations. */
-// // inline void xoshiro256plus::jump() {
-// //   static const uint64_t JUMP[] = { 0x180ec6d33cfd0aba, 0xd5a61266f0c9392c, 0xa9582618e03fc9aa, 0x39abdc4529b1661c };
-// //
-// //   uint64_t s0 = 0;
-// //   uint64_t s1 = 0;
-// //   uint64_t s2 = 0;
-// //   uint64_t s3 = 0;
-// //   for(unsigned int i = 0; i < sizeof JUMP / sizeof *JUMP; i++)
-// //     for(unsigned int b = 0; b < 64; b++) {
-// //       if (JUMP[i] & uint64_t(1) << b) {
-// //         s0 ^= state[0];
-// //         s1 ^= state[1];
-// //         s2 ^= state[2];
-// //         s3 ^= state[3];
-// //       }
-// //       operator()();
-// //     }
-// //
-// //     state[0] = s0;
-// //   state[1] = s1;
-// //   state[2] = s2;
-// //   state[3] = s3;
-// // }
-// //
-// // /* This is the long-jump function for the generator. It is equivalent to
-// //  2^192 calls to next(); it can be used to generate 2^64 starting points,
-// //  from each of which jump() will generate 2^64 non-overlapping
-// //  subsequences for parallel distributed computations. */
-// // inline void xoshiro256plus::long_jump(void) {
-// //   static const uint64_t LONG_JUMP[] = { 0x76e15d3efefdcbbf, 0xc5004e441c522fb3, 0x77710069854ee241, 0x39109bb02acbe635 };
-// //
-// //   uint64_t s0 = 0;
-// //   uint64_t s1 = 0;
-// //   uint64_t s2 = 0;
-// //   uint64_t s3 = 0;
-// //   for(unsigned int i = 0; i < sizeof LONG_JUMP / sizeof *LONG_JUMP; i++)
-// //     for(unsigned int b = 0; b < 64; b++) {
-// //       if (LONG_JUMP[i] & uint64_t(1) << b) {
-// //         s0 ^= state[0];
-// //         s1 ^= state[1];
-// //         s2 ^= state[2];
-// //         s3 ^= state[3];
-// //       }
-// //       operator()();
-// //     }
-// //
-// //     state[0] = s0;
-// //   state[1] = s1;
-// //   state[2] = s2;
-// //   state[3] = s3;
-// // }
+}
 
 #endif

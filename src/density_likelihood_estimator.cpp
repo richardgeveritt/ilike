@@ -7,8 +7,10 @@
 #include "independent_proposal_kernel.h"
 //#include "transform.h"
 
+namespace ilike
+{
 DensityLikelihoodEstimator::DensityLikelihoodEstimator()
-  :LikelihoodEstimator()
+:LikelihoodEstimator()
 {
   //this->transform = NULL;
 }
@@ -39,10 +41,10 @@ DensityLikelihoodEstimator::DensityLikelihoodEstimator(RandomNumberGenerator* rn
   
   this->store_output = store_output_in;
   //this->transform = NULL;
-
+  
   if (parallel_in==TRUE)
   {
-      //this->the_worker = new RcppParallelDensityLikelihoodEstimatorWorker(this);
+    //this->the_worker = new RcppParallelDensityLikelihoodEstimatorWorker(this);
   }
   else
   {
@@ -73,7 +75,7 @@ DensityLikelihoodEstimator::~DensityLikelihoodEstimator()
 
 //Copy constructor for the DensityLikelihoodEstimator class.
 DensityLikelihoodEstimator::DensityLikelihoodEstimator(const DensityLikelihoodEstimator &another)
-  :LikelihoodEstimator(another)
+:LikelihoodEstimator(another)
 {
   this->make_copy(another);
 }
@@ -141,11 +143,11 @@ void DensityLikelihoodEstimator::make_copy(const DensityLikelihoodEstimator &ano
   this->store_output = another.store_output;
   
   /*
-  if (another.transform!=NULL)
-    this->transform = another.transform->duplicate();
-  else
-    this->transform = NULL;
-  */
+   if (another.transform!=NULL)
+   this->transform = another.transform->duplicate();
+   else
+   this->transform = NULL;
+   */
   
   //this->simulate_distribution = another.simulate_distribution;
   
@@ -182,23 +184,23 @@ void DensityLikelihoodEstimator::setup()
 {
   this->variables = this->proposal->independent_simulate(*this->rng).get_vector_variables();
   /*
-  if (this->transform==NULL)
-    this->variables = this->proposal->independent_simulate(*this->rng).get_vector_variables();
-  else
-    this->variables = this->transform->transform(this->proposal->independent_simulate(*this->rng)).get_vector_variables();
-  */
+   if (this->transform==NULL)
+   this->variables = this->proposal->independent_simulate(*this->rng).get_vector_variables();
+   else
+   this->variables = this->transform->transform(this->proposal->independent_simulate(*this->rng)).get_vector_variables();
+   */
 }
 
 void DensityLikelihoodEstimator::setup(const Parameters &parameters)
 {
   /*
-  if (this->transform==NULL)
-    this->variables = this->proposal->independent_simulate(*this->rng,
-                                                           parameters).get_vector_variables();
-  else
-    this->variables = this->transform->transform(this->proposal->independent_simulate(*this->rng,
-                                                                                      parameters)).get_vector_variables();
-  */
+   if (this->transform==NULL)
+   this->variables = this->proposal->independent_simulate(*this->rng,
+   parameters).get_vector_variables();
+   else
+   this->variables = this->transform->transform(this->proposal->independent_simulate(*this->rng,
+   parameters)).get_vector_variables();
+   */
   this->variables = this->proposal->independent_simulate(*this->rng,
                                                          parameters).get_vector_variables();
 }
@@ -216,4 +218,5 @@ void DensityLikelihoodEstimator::setup(const Parameters &parameters)
 
 void DensityLikelihoodEstimator::specific_change_data(Data* new_data)
 {
+}
 }

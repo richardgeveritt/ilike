@@ -5,8 +5,10 @@
 #include "ensemble_factors.h"
 #include "transform.h"
 
+namespace ilike
+{
 SinglePointMoveOutput::SinglePointMoveOutput()
-  :MoveOutput()
+:MoveOutput()
 {
 }
 
@@ -22,7 +24,7 @@ SinglePointMoveOutput::SinglePointMoveOutput(const Parameters &parameters_in,
                                              const EnsembleFactors* factors_in)
 : output(parameters_in,factors_in)
 {
-
+  
 }
 
 SinglePointMoveOutput::SinglePointMoveOutput(const Particle &particle_in)
@@ -57,7 +59,7 @@ SinglePointMoveOutput::~SinglePointMoveOutput()
 
 //Copy constructor for the SinglePointMoveOutput class.
 SinglePointMoveOutput::SinglePointMoveOutput(const SinglePointMoveOutput &another)
-  :MoveOutput(another)
+:MoveOutput(another)
 {
   this->make_copy(another);
 }
@@ -132,7 +134,7 @@ void SinglePointMoveOutput::write_vector_points(const std::vector<std::string> &
 void SinglePointMoveOutput::write_any_points(const std::vector<std::string> &variables,
                                              std::ofstream &file_stream) const
 {
-
+  
 }
 
 void SinglePointMoveOutput::write_factors(const std::string &directory_name,
@@ -177,3 +179,5 @@ Parameters SinglePointMoveOutput::get_current_algorithm_parameters() const
 {
   return this->algorithm_parameters;
 }
+}
+

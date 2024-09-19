@@ -1,6 +1,8 @@
 // Include the class definition.
 #include "custom_transform_component.h"
 
+namespace ilike
+{
 // Include other class definitions that are needed.
 
 // Public functions //
@@ -117,4 +119,5 @@ void CustomTransformComponent::set_child(TransformComponent* new_child)
 void CustomTransformComponent::set_parent(TransformComponent* new_parent)
 {
   this->parent = new_parent;
+}
 }

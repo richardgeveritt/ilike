@@ -9,28 +9,30 @@ using namespace Rcpp;
 #include "parameters.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class MCMCTermination;
 class MCMC;
 
 class StandardMCMCOutput : public MoveOutput
 {
-
+  
 public:
-
+  
   //StandardMCMCOutput(const Parameters &parameter_in);
   StandardMCMCOutput();
   
   StandardMCMCOutput(MCMCTermination* termination_in);
-
+  
   virtual ~StandardMCMCOutput();
-
+  
   StandardMCMCOutput(const StandardMCMCOutput &another);
-
+  
   void operator=(const StandardMCMCOutput &another);
   //MoveOutput* duplicate() const;
   
   void push_back(const Particle &particle_in);
-
+  
   Particle& back();
   Particle back() const;
   
@@ -86,7 +88,8 @@ protected:
   std::deque<Particle> output;
   
   std::deque<Parameters> algorithm_parameters;
-
+  
 };
+}
 
 #endif

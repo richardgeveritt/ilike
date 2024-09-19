@@ -2,8 +2,10 @@
 #include "gaussian_measurement_covariance_estimator.h"
 #include "distributions.h"
 
+namespace ilike
+{
 GaussianMeasurementCovarianceEstimatorOutput::GaussianMeasurementCovarianceEstimatorOutput()
-  :MeasurementCovarianceEstimatorOutput()
+:MeasurementCovarianceEstimatorOutput()
 {
 }
 
@@ -12,7 +14,7 @@ GaussianMeasurementCovarianceEstimatorOutput::~GaussianMeasurementCovarianceEsti
 }
 
 GaussianMeasurementCovarianceEstimatorOutput::GaussianMeasurementCovarianceEstimatorOutput(const GaussianMeasurementCovarianceEstimatorOutput &another)
-  :MeasurementCovarianceEstimatorOutput(another)
+:MeasurementCovarianceEstimatorOutput(another)
 {
   this->make_copy(another);
 }
@@ -21,7 +23,7 @@ void GaussianMeasurementCovarianceEstimatorOutput::operator=(const GaussianMeasu
 {
   if(this == &another)
     return;
-
+  
   MeasurementCovarianceEstimatorOutput::operator=(another);
   this->make_copy(another);
 }
@@ -58,15 +60,15 @@ double GaussianMeasurementCovarianceEstimatorOutput::evaluate_ensemble_likelihoo
 }
 
 /*
-double GaussianMeasurementCovarianceEstimatorOutput::evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
-                                                                                        const Parameters &conditioned_on_parameters)
-{
-  // parameters of covariance should already be set at this point, so second argument does nothing
-  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
-                 this->measurement_state,
-                 inverse_incremental_temperature*this->get_gaussian_estimator()->get_measurement_covariance());
-}
-*/
+ double GaussianMeasurementCovarianceEstimatorOutput::evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
+ const Parameters &conditioned_on_parameters)
+ {
+ // parameters of covariance should already be set at this point, so second argument does nothing
+ return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
+ this->measurement_state,
+ inverse_incremental_temperature*this->get_gaussian_estimator()->get_measurement_covariance());
+ }
+ */
 
 double GaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
                                                                                                   const arma::mat &inv_sigma_precomp,
@@ -84,15 +86,15 @@ double GaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble
 }
 
 /*
-double GaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
-                                                                                                  const Parameters &conditioned_on_parameters)
-{
-  // parameters of covariance should already be set at this point, so second argument does nothing
-  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
-                 this->measurement_state,
-                 inverse_incremental_temperature*this->get_gaussian_estimator()->get_measurement_covariance());
-}
-*/
+ double GaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
+ const Parameters &conditioned_on_parameters)
+ {
+ // parameters of covariance should already be set at this point, so second argument does nothing
+ return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
+ this->measurement_state,
+ inverse_incremental_temperature*this->get_gaussian_estimator()->get_measurement_covariance());
+ }
+ */
 
 double GaussianMeasurementCovarianceEstimatorOutput::evaluate_likelihood()
 {
@@ -102,13 +104,13 @@ double GaussianMeasurementCovarianceEstimatorOutput::evaluate_likelihood()
 }
 
 /*
-double GaussianMeasurementCovarianceEstimatorOutput::evaluate_likelihood(const Parameters &conditioned_on_parameters)
-{
-  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
-                 this->measurement_state,
-                 this->get_gaussian_estimator()->get_measurement_covariance());
-}
-*/
+ double GaussianMeasurementCovarianceEstimatorOutput::evaluate_likelihood(const Parameters &conditioned_on_parameters)
+ {
+ return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
+ this->measurement_state,
+ this->get_gaussian_estimator()->get_measurement_covariance());
+ }
+ */
 
 double GaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_likelihood()
 {
@@ -118,13 +120,13 @@ double GaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_likeliho
 }
 
 /*
-double GaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_likelihood(const Parameters &conditioned_on_parameters)
-{
-  return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
-                 this->measurement_state,
-                 this->get_gaussian_estimator()->get_measurement_covariance());
-}
-*/
+ double GaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_likelihood(const Parameters &conditioned_on_parameters)
+ {
+ return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
+ this->measurement_state,
+ this->get_gaussian_estimator()->get_measurement_covariance());
+ }
+ */
 
 void GaussianMeasurementCovarianceEstimatorOutput::write_to_file(const std::string &directory_name,
                                                                  const std::string &index)
@@ -135,4 +137,6 @@ void GaussianMeasurementCovarianceEstimatorOutput::write_to_file(const std::stri
 void GaussianMeasurementCovarianceEstimatorOutput::close_ofstreams()
 {
   
+}
+
 }

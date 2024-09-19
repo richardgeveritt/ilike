@@ -5,6 +5,8 @@
 #include "transform_component.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class CustomRootTransformComponent : public TransformComponent
 {
 public:
@@ -40,6 +42,6 @@ protected: // Things that can be accessed in this class and subclasses.
   TransformComponent* child;
   
 };
-
+}
 
 #endif

@@ -4,8 +4,10 @@
 #include "filesystem.h"
 #include "utils.h"
 
+namespace ilike
+{
 EnsembleKalmanOutput::EnsembleKalmanOutput()
-  :LikelihoodEstimatorOutput()
+:LikelihoodEstimatorOutput()
 {
   this->log_likelihood_smcfixed_part = 0.0;
   this->subsample_log_likelihood_smcfixed_part = 0.0;
@@ -22,7 +24,7 @@ EnsembleKalmanOutput::EnsembleKalmanOutput(EnsembleKalman* estimator_in,
                                            size_t lag_in,
                                            std::shared_ptr<Transform> transform_in,
                                            const std::string &results_name_in)
-  :LikelihoodEstimatorOutput()
+:LikelihoodEstimatorOutput()
 {
   this->estimator = estimator_in->ensemble_kalman_duplicate();
   this->log_likelihood_smcfixed_part = 0.0;
@@ -52,7 +54,7 @@ EnsembleKalmanOutput::~EnsembleKalmanOutput()
 
 //Copy constructor for the EnsembleKalmanOutput class.
 EnsembleKalmanOutput::EnsembleKalmanOutput(const EnsembleKalmanOutput &another)
-  :LikelihoodEstimatorOutput(another)
+:LikelihoodEstimatorOutput(another)
 {
   this->make_copy(another);
 }
@@ -65,7 +67,7 @@ void EnsembleKalmanOutput::operator=(const EnsembleKalmanOutput &another)
   
   if (this->estimator!=NULL)
     delete this->estimator;
-
+  
   LikelihoodEstimatorOutput::operator=(another);
   this->make_copy(another);
 }
@@ -97,18 +99,18 @@ void EnsembleKalmanOutput::make_copy(const EnsembleKalmanOutput &another)
 }
 
 /*
-Ensemble* EnsembleKalmanOutput::add_ensemble()
-{
-  size_t num_to_pop_front = std::max<int>(0,this->all_ensembles.size()-this->lag+1);
-  for (size_t i=0; i<num_to_pop_front; ++i)
-  {
-    this->all_ensembles.pop_front();
-  }
-  this->all_ensembles.push_back(Ensemble());
-  this->all_ensembles.back().reserve(this->estimator->number_of_ensemble_members);
-  return &this->all_ensembles.back();
-}
-*/
+ Ensemble* EnsembleKalmanOutput::add_ensemble()
+ {
+ size_t num_to_pop_front = std::max<int>(0,this->all_ensembles.size()-this->lag+1);
+ for (size_t i=0; i<num_to_pop_front; ++i)
+ {
+ this->all_ensembles.pop_front();
+ }
+ this->all_ensembles.push_back(Ensemble());
+ this->all_ensembles.back().reserve(this->estimator->number_of_ensemble_members);
+ return &this->all_ensembles.back();
+ }
+ */
 
 Ensemble* EnsembleKalmanOutput::add_ensemble(EnsembleFactors* ensemble_factors)
 {
@@ -221,30 +223,30 @@ void EnsembleKalmanOutput::simulate(const Parameters &parameters)
 }
 
 /*
-void EnsembleKalmanOutput::evaluate_smcfixed_part()
-{
-  if (this->estimator->smcfixed_flag)
-  {
-    this->estimator->ensemble_kalman_evaluate(this);
-    //this->log_likelihood_smcfixed_part = std::accumulate(this->log_normalising_constant_ratios.begin(),
-    //this->log_normalising_constant_ratios.end(),
-    //1.0);
-  }
-  else
-  {
-    this->estimator->ensemble_kalman_evaluate_smcfixed_part(this);
-  }
-}
-
-void EnsembleKalmanOutput::evaluate_smcadaptive_part_given_smcfixed()
-{
-  if (!this->estimator->smcfixed_flag)
-  {
-    this->estimator->ensemble_kalman_evaluate_smcadaptive_part_given_smcfixed(this);
-  }
-  
-}
-*/
+ void EnsembleKalmanOutput::evaluate_smcfixed_part()
+ {
+ if (this->estimator->smcfixed_flag)
+ {
+ this->estimator->ensemble_kalman_evaluate(this);
+ //this->log_likelihood_smcfixed_part = std::accumulate(this->log_normalising_constant_ratios.begin(),
+ //this->log_normalising_constant_ratios.end(),
+ //1.0);
+ }
+ else
+ {
+ this->estimator->ensemble_kalman_evaluate_smcfixed_part(this);
+ }
+ }
+ 
+ void EnsembleKalmanOutput::evaluate_smcadaptive_part_given_smcfixed()
+ {
+ if (!this->estimator->smcfixed_flag)
+ {
+ this->estimator->ensemble_kalman_evaluate_smcadaptive_part_given_smcfixed(this);
+ }
+ 
+ }
+ */
 
 void EnsembleKalmanOutput::evaluate_smcfixed_part(const Parameters &conditioned_on_parameters)
 {
@@ -281,30 +283,30 @@ void EnsembleKalmanOutput::subsample_simulate(const Parameters &parameters)
 }
 
 /*
-void EnsembleKalmanOutput::subsample_evaluate_smcfixed_part()
-{
-  if (this->estimator->smcfixed_flag)
-  {
-    this->estimator->ensemble_kalman_subsample_evaluate(this);
-    //this->log_likelihood_smcfixed_part = std::accumulate(this->log_normalising_constant_ratios.begin(),
-    //this->log_normalising_constant_ratios.end(),
-    //1.0);
-  }
-  else
-  {
-    this->estimator->ensemble_kalman_subsample_evaluate_smcfixed_part(this);
-  }
-}
-
-void EnsembleKalmanOutput::subsample_evaluate_smcadaptive_part_given_smcfixed()
-{
-  if (!this->estimator->smcfixed_flag)
-  {
-    this->estimator->ensemble_kalman_subsample_evaluate_smcadaptive_part_given_smcfixed(this);
-  }
-  
-}
-*/
+ void EnsembleKalmanOutput::subsample_evaluate_smcfixed_part()
+ {
+ if (this->estimator->smcfixed_flag)
+ {
+ this->estimator->ensemble_kalman_subsample_evaluate(this);
+ //this->log_likelihood_smcfixed_part = std::accumulate(this->log_normalising_constant_ratios.begin(),
+ //this->log_normalising_constant_ratios.end(),
+ //1.0);
+ }
+ else
+ {
+ this->estimator->ensemble_kalman_subsample_evaluate_smcfixed_part(this);
+ }
+ }
+ 
+ void EnsembleKalmanOutput::subsample_evaluate_smcadaptive_part_given_smcfixed()
+ {
+ if (!this->estimator->smcfixed_flag)
+ {
+ this->estimator->ensemble_kalman_subsample_evaluate_smcadaptive_part_given_smcfixed(this);
+ }
+ 
+ }
+ */
 
 void EnsembleKalmanOutput::subsample_evaluate_smcfixed_part(const Parameters &conditioned_on_parameters)
 {
@@ -417,7 +419,7 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
                                          const std::string &index)
 {
   std::string directory_name = dir_name + "_enk";
-   
+  
   //if (index!="")
   //  directory_name = directory_name + "_" + index;
   
@@ -699,93 +701,94 @@ void EnsembleKalmanOutput::close_ofstreams(size_t deque_index)
 }
 
 /*
-void EnsembleKalmanOutput::set_current_predicted_statistics(const arma::colvec &latest_mean,
-                                                          const arma::mat &latest_covariance)
-{
-  // unsure
-  // copied from KF
-  this->current_predicted_mean = latest_mean;
-  this->current_predicted_covariance = latest_covariance;
+ void EnsembleKalmanOutput::set_current_predicted_statistics(const arma::colvec &latest_mean,
+ const arma::mat &latest_covariance)
+ {
+ // unsure
+ // copied from KF
+ this->current_predicted_mean = latest_mean;
+ this->current_predicted_covariance = latest_covariance;
+ }
+ 
+ void EnsembleKalmanOutput::set_current_posterior_statistics(const arma::colvec &latest_mean,
+ const arma::mat &latest_covariance)
+ {
+ // unsure
+ // copied from KF
+ this->current_posterior_mean = latest_mean;
+ this->current_posterior_covariance = latest_covariance;
+ }
+ 
+ void EnsembleKalmanOutput::add_predicted_statistics()
+ {
+ // unsure
+ // copied from KF
+ size_t num_to_pop_front = std::max<int>(0,this->predicted_means.size()-this->lag+1);
+ for (size_t i=0; i<num_to_pop_front; ++i)
+ {
+ this->predicted_means.pop_front();
+ }
+ this->predicted_means.push_back(this->current_predicted_mean);
+ for (size_t i=0; i<num_to_pop_front; ++i)
+ {
+ this->predicted_covariances.pop_front();
+ }
+ this->predicted_covariances.push_back(this->current_predicted_covariance);
+ }
+ 
+ void EnsembleKalmanOutput::add_posterior_statistics()
+ {
+ // unsure
+ // copied from KF
+ size_t num_to_pop_front = std::max<int>(0,this->posterior_means.size()-this->lag+1);
+ for (size_t i=0; i<num_to_pop_front; ++i)
+ {
+ this->posterior_means.pop_front();
+ }
+ this->posterior_means.push_back(this->current_posterior_mean);
+ for (size_t i=0; i<num_to_pop_front; ++i)
+ {
+ this->posterior_covariances.pop_front();
+ }
+ this->posterior_covariances.push_back(this->current_posterior_covariance);
+ }
+ 
+ void EnsembleKalmanOutput::set_current_predicted_to_be_current_posterior()
+ {
+ // unsure
+ // copied from KF
+ this->current_predicted_mean = this->current_posterior_mean;
+ this->current_predicted_covariance = this->current_posterior_covariance;
+ }
+ 
+ arma::colvec EnsembleKalmanOutput::predicted_mean_back() const
+ {
+ return this->predicted_means.back();
+ }
+ 
+ arma::colvec EnsembleKalmanOutput::posterior_mean_back() const
+ {
+ return this->posterior_means.back();
+ }
+ 
+ arma::mat EnsembleKalmanOutput::predicted_covariance_back() const
+ {
+ return this->predicted_covariances.back();
+ }
+ 
+ arma::mat EnsembleKalmanOutput::posterior_covariance_back() const
+ {
+ return this->posterior_covariances.back();
+ }
+ 
+ size_t EnsembleKalmanOutput::predicted_size() const
+ {
+ return this->predicted_means.size();
+ }
+ 
+ void EnsembleKalmanOutput::print(std::ostream &os) const
+ {
+ 
+ }
+ */
 }
-
-void EnsembleKalmanOutput::set_current_posterior_statistics(const arma::colvec &latest_mean,
-                                                          const arma::mat &latest_covariance)
-{
-  // unsure
-  // copied from KF
-  this->current_posterior_mean = latest_mean;
-  this->current_posterior_covariance = latest_covariance;
-}
-
-void EnsembleKalmanOutput::add_predicted_statistics()
-{
-  // unsure
-  // copied from KF
-  size_t num_to_pop_front = std::max<int>(0,this->predicted_means.size()-this->lag+1);
-  for (size_t i=0; i<num_to_pop_front; ++i)
-  {
-    this->predicted_means.pop_front();
-  }
-  this->predicted_means.push_back(this->current_predicted_mean);
-  for (size_t i=0; i<num_to_pop_front; ++i)
-  {
-    this->predicted_covariances.pop_front();
-  }
-  this->predicted_covariances.push_back(this->current_predicted_covariance);
-}
-
-void EnsembleKalmanOutput::add_posterior_statistics()
-{
-  // unsure
-  // copied from KF
-  size_t num_to_pop_front = std::max<int>(0,this->posterior_means.size()-this->lag+1);
-  for (size_t i=0; i<num_to_pop_front; ++i)
-  {
-    this->posterior_means.pop_front();
-  }
-  this->posterior_means.push_back(this->current_posterior_mean);
-  for (size_t i=0; i<num_to_pop_front; ++i)
-  {
-    this->posterior_covariances.pop_front();
-  }
-  this->posterior_covariances.push_back(this->current_posterior_covariance);
-}
-
-void EnsembleKalmanOutput::set_current_predicted_to_be_current_posterior()
-{
-  // unsure
-  // copied from KF
-  this->current_predicted_mean = this->current_posterior_mean;
-  this->current_predicted_covariance = this->current_posterior_covariance;
-}
-
-arma::colvec EnsembleKalmanOutput::predicted_mean_back() const
-{
-  return this->predicted_means.back();
-}
-
-arma::colvec EnsembleKalmanOutput::posterior_mean_back() const
-{
-  return this->posterior_means.back();
-}
-
-arma::mat EnsembleKalmanOutput::predicted_covariance_back() const
-{
-  return this->predicted_covariances.back();
-}
-
-arma::mat EnsembleKalmanOutput::posterior_covariance_back() const
-{
-  return this->posterior_covariances.back();
-}
-
-size_t EnsembleKalmanOutput::predicted_size() const
-{
-  return this->predicted_means.size();
-}
-
-void EnsembleKalmanOutput::print(std::ostream &os) const
-{
-
-}
-*/

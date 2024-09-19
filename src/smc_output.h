@@ -11,6 +11,8 @@ using namespace Rcpp;
 #include "particles.h"
 #include "sequencer.h"
 
+namespace ilike
+{
 class SMC;
 class ImportanceSampler;
 class SMCMCMCMove;
@@ -20,22 +22,22 @@ class ParticleFilter;
 
 class SMCOutput : public LikelihoodEstimatorOutput
 {
-
+  
 public:
-
+  
   SMCOutput();
   virtual ~SMCOutput();
-
+  
   SMCOutput(SMC* estimator_in,
             size_t lag_in,
             size_t lag_proposed_in,
             const std::string &results_name_in);
-
+  
   SMCOutput(const SMCOutput &another);
   void operator=(const SMCOutput &another);
   LikelihoodEstimatorOutput* duplicate() const;
   SMCOutput* smc_duplicate() const;
-
+  
   // Additional functions compared to some other LikelihoodEstimators, since we often run SMC without it simply being to estimate a likelihood.
   void simulate();
   void evaluate_smcfixed_part();
@@ -87,13 +89,13 @@ public:
   void set_llhd(double llhd_in);
   
   void set_time_and_reset_start();
-
+  
   void print(std::ostream &os) const;
   
   double log_likelihood_pre_last_step;
   
   void close_ofstreams();
-
+  
   void forget_you_were_already_written_to_file();
   
   void terminate();
@@ -101,7 +103,7 @@ public:
   std::deque<double> times;
   
   std::deque<double> llhds;
-
+  
 protected:
   
   //friend ImportanceSampler;
@@ -114,14 +116,14 @@ protected:
   
   // Stored in ModelAndAlgorithm or in main.
   SMC* estimator;
-
+  
   std::deque<Particles> all_particles;
-
+  
   std::deque<Particles> all_proposed;
-
+  
   size_t lag;
   size_t output_lag;
-
+  
   size_t lag_proposed;
   
   size_t smc_iteration;
@@ -136,9 +138,10 @@ protected:
                      const std::string &index = "");
   
   void close_ofstreams(size_t deque_index);
-
+  
   void make_copy(const SMCOutput &another);
-
+  
 };
+}
 
 #endif

@@ -12,6 +12,9 @@ using namespace Rcpp;
 
 // typedefs for function pointers
 
+namespace ilike
+{
+
 typedef double (*EvaluateLogDistributionPtr)(const Parameters &parameters);
 
 typedef Parameters (*SimulateDistributionPtr)(RandomNumberGenerator &rng);
@@ -130,7 +133,7 @@ typedef Parameters (*GetSimulateMeasurementKernelPtr)(const Parameters &current_
                                                       const Parameters &conditioned_on_parameters);
 
 typedef double (*PowerFunctionPtr)(const Parameters &current_state,
-                                const std::string &power_variable);
+                                   const std::string &power_variable);
 
 
 
@@ -143,8 +146,8 @@ typedef List (*SimulateAuxiliaryVariablesPtr)(const List &inputs, const List &ob
 typedef XPtr<EstimateLogLikelihoodPtr> (*SetupLikelihoodEstimatorPtr)(const List &inputs, const List &auxiliary_variables);
 
 typedef double (*EvaluateLogABCKernelPtr)(const arma::colvec &simulated_stats,
-                const arma::colvec &observed_stats,
-                const double &abc_tolerance);
+                                          const arma::colvec &observed_stats,
+                                          const double &abc_tolerance);
 
 //typedef arma::colvec (*SummaryStatisticsPtr)(const List &observed_data);
 
@@ -158,60 +161,60 @@ typedef std::string (*StringPtr)();
 
 
 /*
-EvaluateLogDistributionPtr load_evaluate_log_distribution(const SEXP &evaluate_log_distribution_SEXP);
-
-SimulateDistributionPtr load_simulate_distribution(const SEXP &simulate_distribution_SEXP);
-
-EvaluateLogGuidedDistributionPtr load_evaluate_log_guided_distribution(const SEXP &evaluate_log_guided_distribution_SEXP);
-
-SimulateGuidedDistributionPtr load_simulate_guided_distribution(const SEXP &simulate_guided_distribution_SEXP);
-
-EvaluateLogIndependentProposalPtr load_evaluate_log_independent_proposal(const SEXP &evaluate_log_independent_proposal_SEXP);
-
-SimulateIndependentProposalPtr load_simulate_independent_proposal(const SEXP &simulate_independent_proposal_SEXP);
-
-EvaluateLogGuidedIndependentProposalPtr load_evaluate_log_guided_independent_proposal(const SEXP &evaluate_log_guided_independent_proposal_SEXP);
-
-SimulateGuidedIndependentProposalPtr load_simulate_guided_independent_proposal(const SEXP &simulate_guided_independent_proposal_SEXP);
-
-EvaluateLogNoParamsMCMCProposalPtr load_evaluate_log_no_params_mcmc_proposal(const SEXP &evaluate_log_no_params_mcmc_proposal_SEXP);
-
-SimulateNoParamsMCMCProposalPtr load_simulate_no_params_mcmc_proposal(const SEXP &simulate_no_params_mcmc_proposal_SEXP);
-
-EvaluateLogGuidedNoParamsMCMCProposalPtr load_evaluate_log_guided_no_params_mcmc_proposal(const SEXP &evaluate_log_guided_no_params_mcmc_proposal_SEXP);
-
-SimulateGuidedNoParamsMCMCProposalPtr load_simulate_guided_no_params_mcmc_proposal(const SEXP &simulate_guided_no_params_mcmc_proposal_SEXP);
-
-EvaluateLogMCMCProposalPtr load_evaluate_log_mcmc_proposal(const SEXP &evaluate_log_mcmc_proposal_SEXP);
-
-SimulateMCMCProposalPtr load_simulate_mcmc_proposal(const SEXP &simulate_mcmc_proposal_SEXP);
-
-EvaluateLogGuidedMCMCProposalPtr load_evaluate_log_guided_mcmc_proposal(const SEXP &evaluate_log_guided_mcmc_proposal_SEXP);
-
-SimulateGuidedMCMCProposalPtr load_simulate_guided_mcmc_proposal(const SEXP &simulate_mcmc_guided_proposal_SEXP);
-
-EvaluateLogLikelihoodPtr load_evaluate_log_likelihood(const SEXP &evaluate_log_likelihood_SEXP);
-
-SimulateModelPtr load_simulate_data_model(const SEXP &simulate_data_model_SEXP);
-
-SimulateAuxiliaryVariablesPtr load_simulate_auxiliary_variables(const SEXP &simulate_auxiliary_variables_SEXP);
-
-SetupLikelihoodEstimatorPtr load_setup_likelihood_estimator(const SEXP &setup_likelihood_estimator_SEXP);
-
-EvaluateLogABCKernelPtr load_evaluate_log_abc_kernel(const SEXP &evaluate_log_abc_kernel_SEXP);
-
-SummaryStatisticsPtr load_summary_statistics(const SEXP &summary_statistic_SEXP);
-
-GetDataFromSimulationPtr load_get_data_from_simulation(const SEXP &get_data_from_simulation_SEXP);
-
-//Data load_observed_data(const SEXP &observed_data_SEXP);
-
-NumericVector load_mcmc_weights(const SEXP &mcmc_weights_SEXP);
-
-Data load_data(const SEXP &data_SEXP);
-
-DataPtr load_data_function(const SEXP &data_SEXP);
-*/
+ EvaluateLogDistributionPtr load_evaluate_log_distribution(const SEXP &evaluate_log_distribution_SEXP);
+ 
+ SimulateDistributionPtr load_simulate_distribution(const SEXP &simulate_distribution_SEXP);
+ 
+ EvaluateLogGuidedDistributionPtr load_evaluate_log_guided_distribution(const SEXP &evaluate_log_guided_distribution_SEXP);
+ 
+ SimulateGuidedDistributionPtr load_simulate_guided_distribution(const SEXP &simulate_guided_distribution_SEXP);
+ 
+ EvaluateLogIndependentProposalPtr load_evaluate_log_independent_proposal(const SEXP &evaluate_log_independent_proposal_SEXP);
+ 
+ SimulateIndependentProposalPtr load_simulate_independent_proposal(const SEXP &simulate_independent_proposal_SEXP);
+ 
+ EvaluateLogGuidedIndependentProposalPtr load_evaluate_log_guided_independent_proposal(const SEXP &evaluate_log_guided_independent_proposal_SEXP);
+ 
+ SimulateGuidedIndependentProposalPtr load_simulate_guided_independent_proposal(const SEXP &simulate_guided_independent_proposal_SEXP);
+ 
+ EvaluateLogNoParamsMCMCProposalPtr load_evaluate_log_no_params_mcmc_proposal(const SEXP &evaluate_log_no_params_mcmc_proposal_SEXP);
+ 
+ SimulateNoParamsMCMCProposalPtr load_simulate_no_params_mcmc_proposal(const SEXP &simulate_no_params_mcmc_proposal_SEXP);
+ 
+ EvaluateLogGuidedNoParamsMCMCProposalPtr load_evaluate_log_guided_no_params_mcmc_proposal(const SEXP &evaluate_log_guided_no_params_mcmc_proposal_SEXP);
+ 
+ SimulateGuidedNoParamsMCMCProposalPtr load_simulate_guided_no_params_mcmc_proposal(const SEXP &simulate_guided_no_params_mcmc_proposal_SEXP);
+ 
+ EvaluateLogMCMCProposalPtr load_evaluate_log_mcmc_proposal(const SEXP &evaluate_log_mcmc_proposal_SEXP);
+ 
+ SimulateMCMCProposalPtr load_simulate_mcmc_proposal(const SEXP &simulate_mcmc_proposal_SEXP);
+ 
+ EvaluateLogGuidedMCMCProposalPtr load_evaluate_log_guided_mcmc_proposal(const SEXP &evaluate_log_guided_mcmc_proposal_SEXP);
+ 
+ SimulateGuidedMCMCProposalPtr load_simulate_guided_mcmc_proposal(const SEXP &simulate_mcmc_guided_proposal_SEXP);
+ 
+ EvaluateLogLikelihoodPtr load_evaluate_log_likelihood(const SEXP &evaluate_log_likelihood_SEXP);
+ 
+ SimulateModelPtr load_simulate_data_model(const SEXP &simulate_data_model_SEXP);
+ 
+ SimulateAuxiliaryVariablesPtr load_simulate_auxiliary_variables(const SEXP &simulate_auxiliary_variables_SEXP);
+ 
+ SetupLikelihoodEstimatorPtr load_setup_likelihood_estimator(const SEXP &setup_likelihood_estimator_SEXP);
+ 
+ EvaluateLogABCKernelPtr load_evaluate_log_abc_kernel(const SEXP &evaluate_log_abc_kernel_SEXP);
+ 
+ SummaryStatisticsPtr load_summary_statistics(const SEXP &summary_statistic_SEXP);
+ 
+ GetDataFromSimulationPtr load_get_data_from_simulation(const SEXP &get_data_from_simulation_SEXP);
+ 
+ //Data load_observed_data(const SEXP &observed_data_SEXP);
+ 
+ NumericVector load_mcmc_weights(const SEXP &mcmc_weights_SEXP);
+ 
+ Data load_data(const SEXP &data_SEXP);
+ 
+ DataPtr load_data_function(const SEXP &data_SEXP);
+ */
 
 // List simulate_distribution_cpp(const SEXP &simulate_distribution_SEXP);
 //
@@ -538,5 +541,5 @@ inline std::string load_string(const SEXP &string_SEXP)
 //   return get_data_from_simulation(simulation);
 // }
 
-
+}
 #endif

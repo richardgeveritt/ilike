@@ -9,15 +9,17 @@ using namespace Rcpp;
 #include "likelihood_estimator_output.h"
 #include "particles.h"
 
+namespace ilike
+{
 class DensityLikelihoodEstimator;
 class DensityEstimator;
 class DensityEstimatorOutput;
 
 class DensityLikelihoodEstimatorOutput : public LikelihoodEstimatorOutput
 {
-
+  
 public:
-
+  
   DensityLikelihoodEstimatorOutput();
   DensityLikelihoodEstimatorOutput(DensityLikelihoodEstimator* estimator_in,
                                    DensityEstimator* density_estimator_in,
@@ -26,11 +28,11 @@ public:
   //DensityLikelihoodEstimatorOutput(DensityLikelihoodEstimator* estimator_in,
   //                                 const Parameters &conditioned_on_parameters);
   virtual ~DensityLikelihoodEstimatorOutput();
-
+  
   DensityLikelihoodEstimatorOutput(const DensityLikelihoodEstimatorOutput &another);
   void operator=(const DensityLikelihoodEstimatorOutput &another);
   LikelihoodEstimatorOutput* duplicate() const;
-
+  
   void simulate();
   
   void simulate(const Parameters &conditioned_on_parameters);
@@ -47,19 +49,19 @@ public:
   arma::mat get_gradient_of_log(const std::string &variable,
                                 const Parameters &x);
   arma::mat subsample_get_gradient_of_log(const std::string &variable,
-                                const Parameters &x);
+                                          const Parameters &x);
   
   void fit(const std::vector<Parameters> &points);
   void subsample_fit(const std::vector<Parameters> &points);
-
+  
   void forget_you_were_already_written_to_file();
   
   void close_ofstreams();
   
   void print(std::ostream &os) const;
-
+  
 protected:
-
+  
   // Stored in ModelAndAlgorithm.
   DensityLikelihoodEstimator* estimator;
   
@@ -85,9 +87,10 @@ protected:
   //std::string results_name;
   
   std::chrono::high_resolution_clock::time_point start_time;
-
+  
   void make_copy(const DensityLikelihoodEstimatorOutput &another);
-
+  
 };
+}
 
 #endif

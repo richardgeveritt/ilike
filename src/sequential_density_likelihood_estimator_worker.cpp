@@ -6,20 +6,22 @@
 #include "transform.h"
 #include "density_likelihood_estimator_output.h"
 
+namespace ilike
+{
 //Default constructor.
 SequentialDensityLikelihoodEstimatorWorker::SequentialDensityLikelihoodEstimatorWorker()
-  :DensityLikelihoodEstimatorWorker()
+:DensityLikelihoodEstimatorWorker()
 {
 }
 
 SequentialDensityLikelihoodEstimatorWorker::SequentialDensityLikelihoodEstimatorWorker(DensityLikelihoodEstimator* the_dle_in)
-  :DensityLikelihoodEstimatorWorker(the_dle_in)
+:DensityLikelihoodEstimatorWorker(the_dle_in)
 {
 }
 
 //Copy constructor for the SequentialDensityLikelihoodEstimatorWorker class.
 SequentialDensityLikelihoodEstimatorWorker::SequentialDensityLikelihoodEstimatorWorker(const SequentialDensityLikelihoodEstimatorWorker &another)
-  :DensityLikelihoodEstimatorWorker(another)
+:DensityLikelihoodEstimatorWorker(another)
 {
   this->make_copy(another);
 }
@@ -34,7 +36,7 @@ void SequentialDensityLikelihoodEstimatorWorker::operator=(const SequentialDensi
   if(this == &another){ //if a==a
     return;
   }
-
+  
   DensityLikelihoodEstimatorWorker::operator=(another);
   this->make_copy(another);
 }
@@ -70,21 +72,21 @@ void SequentialDensityLikelihoodEstimatorWorker::specific_simulate(DensityLikeli
   output->fit(this->points);
   
   /*
-  if (this->the_dle->transform==NULL)
-  {
-    for (size_t i = 0; i < this->get_number_of_points(); ++i)
-    {
-      this->points.push_back(this->the_dle->proposal->independent_simulate(local_rng));
-    }
-  }
-  else
-  {
-    for (size_t i = 0; i < this->get_number_of_points(); ++i)
-    {
-      this->points.push_back(this->the_dle->transform->transform(this->the_dle->proposal->independent_simulate(local_rng)));
-    }
-  }
-  */
+   if (this->the_dle->transform==NULL)
+   {
+   for (size_t i = 0; i < this->get_number_of_points(); ++i)
+   {
+   this->points.push_back(this->the_dle->proposal->independent_simulate(local_rng));
+   }
+   }
+   else
+   {
+   for (size_t i = 0; i < this->get_number_of_points(); ++i)
+   {
+   this->points.push_back(this->the_dle->transform->transform(this->the_dle->proposal->independent_simulate(local_rng)));
+   }
+   }
+   */
 }
 
 void SequentialDensityLikelihoodEstimatorWorker::specific_simulate(DensityLikelihoodEstimatorOutput* output,
@@ -105,23 +107,23 @@ void SequentialDensityLikelihoodEstimatorWorker::specific_simulate(DensityLikeli
   output->fit(this->points);
   
   /*
-  if (this->the_dle->transform==NULL)
-  {
-    for (size_t i = 0; i < this->get_number_of_points(); ++i)
-    {
-      this->points.push_back(this->the_dle->proposal->independent_simulate(local_rng,
-                                                                           conditioned_on_parameters));
-    }
-  }
-  else
-  {
-    for (size_t i = 0; i < this->get_number_of_points(); ++i)
-    {
-      this->points.push_back(this->the_dle->transform->transform(this->the_dle->proposal->independent_simulate(local_rng,
-                                                                                                               conditioned_on_parameters)));
-    }
-  }
-  */
+   if (this->the_dle->transform==NULL)
+   {
+   for (size_t i = 0; i < this->get_number_of_points(); ++i)
+   {
+   this->points.push_back(this->the_dle->proposal->independent_simulate(local_rng,
+   conditioned_on_parameters));
+   }
+   }
+   else
+   {
+   for (size_t i = 0; i < this->get_number_of_points(); ++i)
+   {
+   this->points.push_back(this->the_dle->transform->transform(this->the_dle->proposal->independent_simulate(local_rng,
+   conditioned_on_parameters)));
+   }
+   }
+   */
 }
 
 void SequentialDensityLikelihoodEstimatorWorker::subsample_specific_simulate(DensityLikelihoodEstimatorOutput* output)
@@ -140,18 +142,18 @@ void SequentialDensityLikelihoodEstimatorWorker::subsample_specific_simulate(Den
   output->subsample_fit(this->points);
   
   /*
-  if (this->the_dle->transform==NULL)
-  {
-    
-  }
-  else
-  {
-    for (size_t i = 0; i < this->get_number_of_points(); ++i)
-    {
-      this->points.push_back(this->the_dle->transform->transform(this->the_dle->proposal->subsample_independent_simulate(local_rng)));
-    }
-  }
-  */
+   if (this->the_dle->transform==NULL)
+   {
+   
+   }
+   else
+   {
+   for (size_t i = 0; i < this->get_number_of_points(); ++i)
+   {
+   this->points.push_back(this->the_dle->transform->transform(this->the_dle->proposal->subsample_independent_simulate(local_rng)));
+   }
+   }
+   */
 }
 
 void SequentialDensityLikelihoodEstimatorWorker::subsample_specific_simulate(DensityLikelihoodEstimatorOutput* output,
@@ -172,17 +174,18 @@ void SequentialDensityLikelihoodEstimatorWorker::subsample_specific_simulate(Den
   output->subsample_fit(this->points);
   
   /*
-  if (this->the_dle->transform==NULL)
-  {
-    
-  }
-  else
-  {
-    for (size_t i = 0; i < this->get_number_of_points(); ++i)
-    {
-      this->points.push_back(this->the_dle->transform->transform(this->the_dle->proposal->subsample_independent_simulate(local_rng,
-                                                                                                                         conditioned_on_parameters)));
-    }
-  }
-  */
+   if (this->the_dle->transform==NULL)
+   {
+   
+   }
+   else
+   {
+   for (size_t i = 0; i < this->get_number_of_points(); ++i)
+   {
+   this->points.push_back(this->the_dle->transform->transform(this->the_dle->proposal->subsample_independent_simulate(local_rng,
+   conditioned_on_parameters)));
+   }
+   }
+   */
+}
 }

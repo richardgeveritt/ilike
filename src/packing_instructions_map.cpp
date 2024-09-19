@@ -6,6 +6,8 @@
 //
 #include "packing_instructions_map.h"
 
+namespace ilike
+{
 PackingInstructionsMap::PackingInstructionsMap()
 {
   
@@ -60,4 +62,5 @@ std::pair<size_t,size_t> PackingInstructionsMap::operator[](const std::string &v
     return(found->second);
   else
     return std::pair<size_t,size_t>();
+}
 }

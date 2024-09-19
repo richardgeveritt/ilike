@@ -2,6 +2,8 @@
 #include "measurement_covariance_estimator_output.h"
 #include "parameters.h"
 
+namespace ilike
+{
 MeasurementCovarianceEstimator::MeasurementCovarianceEstimator()
 {
   this->transform = NULL;
@@ -38,7 +40,7 @@ void MeasurementCovarianceEstimator::operator=(const MeasurementCovarianceEstima
 {
   if(this == &another)
     return;
-
+  
   this->make_copy(another);
 }
 
@@ -87,4 +89,6 @@ const arma::colvec* MeasurementCovarianceEstimator::get_measurement_pointer() co
 std::vector<std::string> MeasurementCovarianceEstimator::get_measurement_variables() const
 {
   return this->measurement_variables;
+}
+
 }

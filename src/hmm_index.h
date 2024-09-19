@@ -7,11 +7,13 @@ using namespace Rcpp;
 #include <vector>
 #include "index.h"
 
+namespace ilike
+{
 class HMMIndex : public Index
 {
-
+  
 public:
-
+  
   HMMIndex();
   HMMIndex(const std::vector<size_t> &factor_indices_time_zero_in,
            //bool evaluate_prior_in,
@@ -19,11 +21,11 @@ public:
            bool evaluate_transition_model_in,
            size_t first_time_index_in);
   //HMMIndex(size_t single_index_in);
-
+  
   virtual ~HMMIndex();
-
+  
   HMMIndex(const HMMIndex &another);
-
+  
   void operator=(const HMMIndex &another);
   Index* duplicate() const;
   HMMIndex* hmm_index_duplicate() const;
@@ -44,9 +46,9 @@ public:
   bool get_transition_model() const;
   
   //void add_index(const size_t &number);
-
+  
 protected:
-
+  
   void make_copy(const HMMIndex &another);
   
   size_t time_index;
@@ -59,7 +61,8 @@ protected:
   // If time is not zero, which parts of HMMFactors are we evaluating?
   std::vector<size_t> likelihood_indices_time_not_zero;
   bool evaluate_transition_model;
-
+  
 };
+}
 
 #endif

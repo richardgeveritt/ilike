@@ -8,26 +8,29 @@ using namespace Rcpp;
 #include "scale.h"
 #include "recursive_parameter_estimator.h"
 
+namespace ilike
+{
 class ScaleRecursiveParameterEstimator : public RecursiveParameterEstimator
 {
-
+  
 public:
-
+  
   ScaleRecursiveParameterEstimator();
-
+  
   virtual ~ScaleRecursiveParameterEstimator();
-
+  
   ScaleRecursiveParameterEstimator(const ScaleRecursiveParameterEstimator &another);
-
+  
   void operator=(const ScaleRecursiveParameterEstimator &another);
   virtual ScaleRecursiveParameterEstimator* scale_duplicate() const=0;
   
   Scale estimated;
   
 protected:
-
+  
   void make_copy(const ScaleRecursiveParameterEstimator &another);
-
+  
 };
+}
 
 #endif

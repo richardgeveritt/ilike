@@ -7,6 +7,8 @@
 #include "single_point_move_output.h"
 #include "utils.h"
 
+namespace ilike
+{
 // Include other class definitions that are needed.
 
 // Public functions //
@@ -16,7 +18,7 @@
 // Comment about function.
 Ensemble::Ensemble()
 {
-	// Set all the pointers owned by this class to be something (possibly NULL).
+  // Set all the pointers owned by this class to be something (possibly NULL).
   //this->packing_instructions = NULL;
   this->ensemble_factors = NULL;
   this->log_normalising_constant_ratio = 0.0;
@@ -25,7 +27,7 @@ Ensemble::Ensemble()
 // Comment about function.
 Ensemble::~Ensemble()
 {
-	// Delete all the pointers owned by this class.
+  // Delete all the pointers owned by this class.
   for (std::vector<MoveOutput*>::iterator i=this->members.begin();
        i!=this->members.end();
        ++i)
@@ -115,7 +117,7 @@ void Ensemble::setup(std::vector<Parameters> &initial_values_in,
 // The copy constructor.
 Ensemble::Ensemble(const Ensemble &another)
 {
-	this->make_copy(another);
+  this->make_copy(another);
 }
 
 Ensemble::Ensemble(Ensemble &&another)
@@ -126,13 +128,13 @@ Ensemble::Ensemble(Ensemble &&another)
 // Returns a pointer to a base class of type Ensemble.
 Ensemble* Ensemble::duplicate() const
 {
-	return new Ensemble(*this);
+  return new Ensemble(*this);
 }
 
 // Copy all the members of the class.
 void Ensemble::make_copy(const Ensemble &another)
 {
-	// Copy all members, duplicating the memory where appropriate.
+  // Copy all members, duplicating the memory where appropriate.
   
   this->members.resize(0);
   this->members.reserve(another.members.size());
@@ -242,7 +244,7 @@ void Ensemble::make_copy(Ensemble &&another)
   //this->partially_packed_measurement_random_shifts = another.partially_packed_measurement_random_shifts;
   
   another.members = std::vector<MoveOutput*>();
-
+  
   //another.members = another.members;
   another.packed_members = arma::mat();
   another.predicted_members = std::vector<MoveOutput*>();
@@ -272,8 +274,8 @@ void Ensemble::make_copy(Ensemble &&another)
 // The = operator.
 Ensemble& Ensemble::operator=(const Ensemble &another)
 {
-	if(this==&another)//a==a
-		return *this;
+  if(this==&another)//a==a
+    return *this;
   
   for (std::vector<MoveOutput*>::iterator i=this->members.begin();
        i!=this->members.end();
@@ -294,8 +296,8 @@ Ensemble& Ensemble::operator=(const Ensemble &another)
   
   this->members.clear();
   this->predicted_members.clear();
-	
-	this->make_copy(another);
+  
+  this->make_copy(another);
   
   return *this;
 }
@@ -410,7 +412,7 @@ double Ensemble::calculate_inversion_log_normalising_constant(double inverse_inc
 double Ensemble::calculate_unbiased_inversion_log_normalising_constant(double inverse_incremental_temperature)
 {
   this->log_normalising_constant_ratio = this->ensemble_factors->get_unbiased_inversion_incremental_likelihood(this,
-                                                                                                      inverse_incremental_temperature);
+                                                                                                               inverse_incremental_temperature);
   this->ess = exp(2.0*log_sum_exp(this->unnormalised_log_weights) - log_sum_exp(2.0*this->unnormalised_log_weights));
   return this->log_normalising_constant_ratio;
 }
@@ -513,11 +515,11 @@ void Ensemble::find_measurement_covariances(const Parameters &conditioned_on_par
 }
 
 /*
-void Ensemble::pack_measurements()
-{
-  this->measurements = this->ensemble_factors->pack_measurements();
-}
-*/
+ void Ensemble::pack_measurements()
+ {
+ this->measurements = this->ensemble_factors->pack_measurements();
+ }
+ */
 
 void Ensemble::set_temperature(double temperature_in)
 {
@@ -556,27 +558,28 @@ void Ensemble::close_ofstreams()
 }
 
 /*
-void Ensemble::set_previous_target_evaluated_to_target_evaluated()
-{
-  for (std::vector<MoveOutput*>::iterator i = this->members.begin();
-       i != this->members.end();
-       ++i)
-  {
-    (*i)->back().previous_target_evaluated = (*i)->back().target_evaluated;
-    (*i)->back().previous_ensemble_target_evaluated = (*i)->back().ensemble_target_evaluated;
-    //(*i)->back().previous_target_gradients_of_log = (*i)->back().target_gradients_of_log;
-  }
+ void Ensemble::set_previous_target_evaluated_to_target_evaluated()
+ {
+ for (std::vector<MoveOutput*>::iterator i = this->members.begin();
+ i != this->members.end();
+ ++i)
+ {
+ (*i)->back().previous_target_evaluated = (*i)->back().target_evaluated;
+ (*i)->back().previous_ensemble_target_evaluated = (*i)->back().ensemble_target_evaluated;
+ //(*i)->back().previous_target_gradients_of_log = (*i)->back().target_gradients_of_log;
+ }
+ }
+ 
+ void Ensemble::subsample_set_previous_target_evaluated_to_target_evaluated()
+ {
+ for (std::vector<MoveOutput*>::iterator i = this->members.begin();
+ i != this->members.end();
+ ++i)
+ {
+ (*i)->back().subsample_previous_target_evaluated = (*i)->back().subsample_target_evaluated;
+ (*i)->back().subsample_previous_ensemble_target_evaluated = (*i)->back().subsample_ensemble_target_evaluated;
+ //(*i)->back().subsample_previous_target_gradients_of_log = (*i)->back().subsample_target_gradients_of_log;
+ }
+ }
+ */
 }
-
-void Ensemble::subsample_set_previous_target_evaluated_to_target_evaluated()
-{
-  for (std::vector<MoveOutput*>::iterator i = this->members.begin();
-       i != this->members.end();
-       ++i)
-  {
-    (*i)->back().subsample_previous_target_evaluated = (*i)->back().subsample_target_evaluated;
-    (*i)->back().subsample_previous_ensemble_target_evaluated = (*i)->back().subsample_ensemble_target_evaluated;
-    //(*i)->back().subsample_previous_target_gradients_of_log = (*i)->back().subsample_target_gradients_of_log;
-  }
-}
-*/

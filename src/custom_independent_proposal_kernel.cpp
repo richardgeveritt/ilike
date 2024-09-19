@@ -2,8 +2,10 @@
 #include "likelihood_estimator_output.h"
 #include "likelihood_estimator.h"
 
+namespace ilike
+{
 CustomIndependentProposalKernel::CustomIndependentProposalKernel()
-  :IndependentProposalKernel()
+:IndependentProposalKernel()
 {
   this->proposal_evaluate = NULL;
   this->proposal_simulate = NULL;
@@ -32,19 +34,19 @@ CustomIndependentProposalKernel::CustomIndependentProposalKernel(SimulateIndepen
 }
 
 /*
-CustomIndependentProposalKernel::CustomIndependentProposalKernel(SimulateIndependentProposalPtr proposal_simulate_in,
-                                                                 EvaluateLogIndependentProposalPtr proposal_evaluate_in,
-                                                                 Parameters* proposal_parameters_in)
-  :IndependentProposalKernel()
-{
-  this->proposal_evaluate = proposal_evaluate_in;
-  this->proposal_simulate = proposal_simulate_in;
-  this->proposal_parameters = proposal_parameters_in;
-}
-*/
+ CustomIndependentProposalKernel::CustomIndependentProposalKernel(SimulateIndependentProposalPtr proposal_simulate_in,
+ EvaluateLogIndependentProposalPtr proposal_evaluate_in,
+ Parameters* proposal_parameters_in)
+ :IndependentProposalKernel()
+ {
+ this->proposal_evaluate = proposal_evaluate_in;
+ this->proposal_simulate = proposal_simulate_in;
+ this->proposal_parameters = proposal_parameters_in;
+ }
+ */
 
 CustomIndependentProposalKernel::CustomIndependentProposalKernel(const CustomIndependentProposalKernel &another)
-  :IndependentProposalKernel(another)
+:IndependentProposalKernel(another)
 {
   this->make_copy(another);
 }
@@ -53,7 +55,7 @@ void CustomIndependentProposalKernel::operator=(const CustomIndependentProposalK
 {
   if(this == &another)
     return;
-
+  
   IndependentProposalKernel::operator=(another);
   this->make_copy(another);
 }
@@ -99,13 +101,13 @@ double CustomIndependentProposalKernel::evaluate_independent_kernel(const Parame
 }
 
 /*
-double CustomIndependentProposalKernel::evaluate_independent_kernel(const Parameters &proposed_particle,
-                                                                    const Parameters &conditioned_on_parameters) const
-{
-  return this->proposal_evaluate(proposed_particle.merge(conditioned_on_parameters),
-                                 this->proposal_parameters);
-}
-*/
+ double CustomIndependentProposalKernel::evaluate_independent_kernel(const Parameters &proposed_particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ return this->proposal_evaluate(proposed_particle.merge(conditioned_on_parameters),
+ this->proposal_parameters);
+ }
+ */
 
 double CustomIndependentProposalKernel::subsample_evaluate_independent_kernel(const Parameters &proposed_particle) const
 {
@@ -203,13 +205,13 @@ arma::mat CustomIndependentProposalKernel::independent_gradient_of_log(const std
 }
 
 /*
-arma::mat CustomIndependentProposalKernel::independent_gradient_of_log(const std::string &variable,
-                                                                       Variables* proposed_particle,
-                                                                       const Parameters &conditioned_on_parameters)
-{
-  Rcpp::stop("CustomIndependentProposalKernel::independent_gradient_of_log - not written yet.");
-}
-*/
+ arma::mat CustomIndependentProposalKernel::independent_gradient_of_log(const std::string &variable,
+ Variables* proposed_particle,
+ const Parameters &conditioned_on_parameters)
+ {
+ Rcpp::stop("CustomIndependentProposalKernel::independent_gradient_of_log - not written yet.");
+ }
+ */
 
 arma::mat CustomIndependentProposalKernel::subsample_independent_gradient_of_log(const std::string &variable,
                                                                                  const Parameters &proposed_particle)
@@ -218,13 +220,13 @@ arma::mat CustomIndependentProposalKernel::subsample_independent_gradient_of_log
 }
 
 /*
-arma::mat CustomIndependentProposalKernel::subsample_independent_gradient_of_log(const std::string &variable,
-                                             Variables* proposed_particle,
-                                             const Parameters &conditioned_on_parameters)
-{
-  Rcpp::stop("CustomIndependentProposalKernel::subsample_independent_gradient_of_log - not written yet.");
-}
-*/
+ arma::mat CustomIndependentProposalKernel::subsample_independent_gradient_of_log(const std::string &variable,
+ Variables* proposed_particle,
+ const Parameters &conditioned_on_parameters)
+ {
+ Rcpp::stop("CustomIndependentProposalKernel::subsample_independent_gradient_of_log - not written yet.");
+ }
+ */
 
 GradientEstimatorOutput* CustomIndependentProposalKernel::simulate_gradient_estimator_output() const
 {
@@ -257,4 +259,5 @@ bool CustomIndependentProposalKernel::can_be_evaluated() const
 void CustomIndependentProposalKernel::set_data(Data* data_in)
 {
   
+}
 }

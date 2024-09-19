@@ -8,13 +8,15 @@ using namespace Rcpp;
 #include "kalman_updater.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class KalmanFilterOutput;
 
 class UnscentedKalmanUpdater : public KalmanUpdater
 {
-
+  
 public:
-
+  
   UnscentedKalmanUpdater();
   
   UnscentedKalmanUpdater(const std::string &state_variable_in,
@@ -28,14 +30,14 @@ public:
                          MatrixSimulateMeasurementKernelPtr measurement_kernel_in,
                          const arma::mat &measurement_noise_in,
                          double w0_in = 1.0/3.0);
-
+  
   virtual ~UnscentedKalmanUpdater();
-
+  
   UnscentedKalmanUpdater(const UnscentedKalmanUpdater &another);
-
+  
   void operator=(const UnscentedKalmanUpdater &another);
   KalmanUpdater* duplicate() const;
-
+  
   void update(KalmanFilterOutput* current_state,
               const arma::colvec &current_measurement);
   
@@ -56,7 +58,8 @@ protected:
   // or these
   MatrixSimulateMeasurementKernelPtr measurement_kernel;
   arma::mat measurement_noise;
-
+  
 };
+}
 
 #endif

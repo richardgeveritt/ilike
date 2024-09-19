@@ -9,19 +9,22 @@ using namespace Rcpp;
 #include "parameters.h"
 #include "distributions.h"
 
+namespace ilike
+{
+
 class DataSubsetter;
 class IIDDataSubsetter;
 
 class DataSubsampler
 {
-
+  
 public:
-
+  
   DataSubsampler();
   virtual ~DataSubsampler();
-
+  
   DataSubsampler(const DataSubsampler &another);
-
+  
   void operator=(const DataSubsampler &another);
   virtual DataSubsampler* duplicate() const=0;
   
@@ -40,20 +43,21 @@ public:
   Data* small_data;
   
   double ratio;
-
+  
 protected:
   
   friend IIDDataSubsetter;
   // Not stored here. Stored in "main'.
   RandomNumberGenerator* rng;
-
+  
   void make_copy(const DataSubsampler &another);
   
   std::vector<std::string> variables;
   
   // Stored here.
   std::vector<DataSubsetter*> subsetters;
-
+  
 };
+}
 
 #endif

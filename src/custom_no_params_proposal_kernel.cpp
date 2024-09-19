@@ -2,8 +2,10 @@
 #include "likelihood_estimator_output.h"
 #include "likelihood_estimator.h"
 
+namespace ilike
+{
 CustomNoParamsProposalKernel::CustomNoParamsProposalKernel()
-  :ProposalKernel()
+:ProposalKernel()
 {
   this->proposal_evaluate = NULL;
 }
@@ -21,14 +23,14 @@ CustomNoParamsProposalKernel::CustomNoParamsProposalKernel(SimulateNoParamsMCMCP
 
 CustomNoParamsProposalKernel::CustomNoParamsProposalKernel(SimulateNoParamsMCMCProposalPtr proposal_simulate_in,
                                                            EvaluateLogNoParamsMCMCProposalPtr proposal_evaluate_in)
-  :ProposalKernel()
+:ProposalKernel()
 {
   this->proposal_evaluate = proposal_evaluate_in;
   this->proposal_simulate = proposal_simulate_in;
 }
 
 CustomNoParamsProposalKernel::CustomNoParamsProposalKernel(const CustomNoParamsProposalKernel &another)
-  :ProposalKernel(another)
+:ProposalKernel(another)
 {
   this->make_copy(another);
 }
@@ -37,7 +39,7 @@ void CustomNoParamsProposalKernel::operator=(const CustomNoParamsProposalKernel 
 {
   if(this == &another)
     return;
-
+  
   ProposalKernel::operator=(another);
   this->make_copy(another);
 }
@@ -73,15 +75,15 @@ double CustomNoParamsProposalKernel::specific_evaluate_kernel(const Particle &pr
 }
 
 /*
-double CustomNoParamsProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
-                                                      Particle &old_particle,
-                                                      const Parameters &conditioned_on_parameters) const
-{
-  return this->proposal_evaluate(proposed_particle.move_parameters->merge(conditioned_on_parameters),
-                                 old_particle.move_parameters->merge(conditioned_on_parameters),
-                                 this->proposal_parameters);
-}
-*/
+ double CustomNoParamsProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
+ Particle &old_particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ return this->proposal_evaluate(proposed_particle.move_parameters->merge(conditioned_on_parameters),
+ old_particle.move_parameters->merge(conditioned_on_parameters),
+ this->proposal_parameters);
+ }
+ */
 
 double CustomNoParamsProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
                                                                         const Particle &old_particle) const
@@ -91,14 +93,14 @@ double CustomNoParamsProposalKernel::specific_subsample_evaluate_kernel(const Pa
 }
 
 /*
-double CustomNoParamsProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                                                Particle &old_particle,
-                                                                const Parameters &conditioned_on_parameters) const
-{
-  // no difference since size of data set does not impact on proposal
-  return this->specific_evaluate_kernel(proposed_particle, old_particle, conditioned_on_parameters);
-}
-*/
+ double CustomNoParamsProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
+ Particle &old_particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ // no difference since size of data set does not impact on proposal
+ return this->specific_evaluate_kernel(proposed_particle, old_particle, conditioned_on_parameters);
+ }
+ */
 
 Parameters CustomNoParamsProposalKernel::simulate(RandomNumberGenerator &rng,
                                                   const Particle &particle) const
@@ -108,15 +110,15 @@ Parameters CustomNoParamsProposalKernel::simulate(RandomNumberGenerator &rng,
 }
 
 /*
-Parameters CustomNoParamsProposalKernel::simulate(RandomNumberGenerator &rng,
-                                          Particle &particle,
-                                          const Parameters &conditioned_on_parameters) const
-{
-  return this->proposal_simulate(rng,
-                                 particle.move_parameters->merge(conditioned_on_parameters),
-                                 this->proposal_parameters);
-}
-*/
+ Parameters CustomNoParamsProposalKernel::simulate(RandomNumberGenerator &rng,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ return this->proposal_simulate(rng,
+ particle.move_parameters->merge(conditioned_on_parameters),
+ this->proposal_parameters);
+ }
+ */
 
 Parameters CustomNoParamsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                             const Particle &particle) const
@@ -126,14 +128,14 @@ Parameters CustomNoParamsProposalKernel::subsample_simulate(RandomNumberGenerato
 }
 
 /*
-Parameters CustomNoParamsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                    Particle &particle,
-                                                    const Parameters &conditioned_on_parameters) const
-{
-  // no difference since size of data set does not impact on proposal
-  return this->simulate(rng, particle, conditioned_on_parameters);
-}
-*/
+ Parameters CustomNoParamsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ // no difference since size of data set does not impact on proposal
+ return this->simulate(rng, particle, conditioned_on_parameters);
+ }
+ */
 
 Parameters CustomNoParamsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                             const std::string &variable,
@@ -144,15 +146,15 @@ Parameters CustomNoParamsProposalKernel::subsample_simulate(RandomNumberGenerato
 }
 
 /*
-Parameters CustomNoParamsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                    const std::string &variable,
-                                                    Particle &particle,
-                                                    const Parameters &conditioned_on_parameters) const
-{
-  // no difference since size of data set does not impact on proposal
-  Rcpp::stop("CustomNoParamsProposalKernel::subsample_simulate - not implemented.");
-}
-*/
+ Parameters CustomNoParamsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
+ const std::string &variable,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ // no difference since size of data set does not impact on proposal
+ Rcpp::stop("CustomNoParamsProposalKernel::subsample_simulate - not implemented.");
+ }
+ */
 
 arma::mat CustomNoParamsProposalKernel::specific_gradient_of_log(const std::string &variable,
                                                                  const Particle &proposed_particle,
@@ -162,14 +164,14 @@ arma::mat CustomNoParamsProposalKernel::specific_gradient_of_log(const std::stri
 }
 
 /*
-arma::mat CustomNoParamsProposalKernel::specific_gradient_of_log(const std::string &variable,
-                                                           Particle &proposed_particle,
-                                                           Particle &old_particle,
-                                                           const Parameters &conditioned_on_parameters)
-{
-  Rcpp::stop("CustomNoParamsProposalKernel::specific_gradient_of_log - not written yet.");
-}
-*/
+ arma::mat CustomNoParamsProposalKernel::specific_gradient_of_log(const std::string &variable,
+ Particle &proposed_particle,
+ Particle &old_particle,
+ const Parameters &conditioned_on_parameters)
+ {
+ Rcpp::stop("CustomNoParamsProposalKernel::specific_gradient_of_log - not written yet.");
+ }
+ */
 
 arma::mat CustomNoParamsProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
                                                                            const Particle &proposed_particle,
@@ -180,7 +182,7 @@ arma::mat CustomNoParamsProposalKernel::specific_subsample_gradient_of_log(const
 
 void CustomNoParamsProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
 {
-
+  
 }
 
 GradientEstimatorOutput* CustomNoParamsProposalKernel::simulate_gradient_estimator_output() const
@@ -214,4 +216,5 @@ bool CustomNoParamsProposalKernel::can_be_evaluated() const
 void CustomNoParamsProposalKernel::set_data(Data* data_in)
 {
   
+}
 }

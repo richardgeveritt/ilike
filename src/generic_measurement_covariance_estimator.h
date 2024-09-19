@@ -8,14 +8,16 @@ using namespace Rcpp;
 #include "ilike_header.h"
 #include "gaussian_independent_proposal_kernel.h"
 
+namespace ilike
+{
 class MeasurementCovarianceEstimatorOutput;
 class GenericMeasurementCovarianceEstimatorOutput;
 
 class GenericMeasurementCovarianceEstimator : public MeasurementCovarianceEstimator
 {
-
+  
 public:
-
+  
   GenericMeasurementCovarianceEstimator();
   
   GenericMeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
@@ -27,9 +29,9 @@ public:
                                         const std::vector<std::string> &measurement_variables_in);
   
   virtual ~GenericMeasurementCovarianceEstimator();
-
+  
   GenericMeasurementCovarianceEstimator(const GenericMeasurementCovarianceEstimator &another);
-
+  
   void operator=(const GenericMeasurementCovarianceEstimator &another);
   MeasurementCovarianceEstimator* duplicate() const;
   
@@ -72,7 +74,7 @@ public:
   void precompute_gaussian_covariance(double inverse_incremental_temperature,
                                       arma::mat &inv_sigma_precomp,
                                       double &log_det_precomp);
-
+  
 protected:
   
   friend GenericMeasurementCovarianceEstimatorOutput;
@@ -82,7 +84,7 @@ protected:
   
   void setup_measurement_variables();
   void setup_measurement_variables(const Parameters &conditioned_on_parameters);
-
+  
   void make_copy(const GenericMeasurementCovarianceEstimator &another);
   
   // not stored here
@@ -103,5 +105,6 @@ protected:
   arma::mat Cygivenx;
   
 };
+}
 
 #endif

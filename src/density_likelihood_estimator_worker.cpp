@@ -3,6 +3,8 @@
 #include "likelihood_estimator_output.h"
 #include "density_likelihood_estimator.h"
 
+namespace ilike
+{
 DensityLikelihoodEstimatorWorker::DensityLikelihoodEstimatorWorker()
 {
 }
@@ -26,7 +28,7 @@ void DensityLikelihoodEstimatorWorker::operator=(const DensityLikelihoodEstimato
 {
   if(this == &another)
     return;
-
+  
   this->make_copy(another);
 }
 
@@ -43,7 +45,7 @@ void DensityLikelihoodEstimatorWorker::make_copy(const DensityLikelihoodEstimato
   //{
   //  std::vector<LikelihoodEstimatorOutput*> inner_vector;
   //  inner_vector.reserve(this->get_number_of_particles());
-    
+  
   //  for (std::vector<LikelihoodEstimatorOutput*>::const_iterator j=i->begin();
   //       j!=i->end();
   //       ++j)
@@ -103,4 +105,5 @@ size_t DensityLikelihoodEstimatorWorker::get_seed() const
 void DensityLikelihoodEstimatorWorker::set_seed(size_t seed_in)
 {
   *this->the_dle->seed = seed_in;
+}
 }

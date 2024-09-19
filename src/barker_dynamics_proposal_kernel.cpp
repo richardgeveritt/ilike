@@ -8,8 +8,10 @@
 #include "independent_proposal_kernel.h"
 #include "gradient_estimator_output.h"
 
+namespace ilike
+{
 BarkerDynamicsProposalKernel::BarkerDynamicsProposalKernel()
-  :ProposalKernel()
+:ProposalKernel()
 {
   this->gradient_estimator = NULL;
   this->proposal_simulate = NULL;
@@ -90,7 +92,7 @@ BarkerDynamicsProposalKernel::BarkerDynamicsProposalKernel(const std::string &va
 }
 
 BarkerDynamicsProposalKernel::BarkerDynamicsProposalKernel(const BarkerDynamicsProposalKernel &another)
-  :ProposalKernel(another)
+:ProposalKernel(another)
 {
   this->make_copy(another);
 }
@@ -108,7 +110,7 @@ void BarkerDynamicsProposalKernel::operator=(const BarkerDynamicsProposalKernel 
   
   if (this->index!=NULL)
     delete index;
-
+  
   ProposalKernel::operator=(another);
   this->make_copy(another);
 }
@@ -140,7 +142,7 @@ void BarkerDynamicsProposalKernel::make_copy(const BarkerDynamicsProposalKernel 
     this->index = another.index->duplicate();
   else
     this->index = NULL;
-
+  
 }
 
 double BarkerDynamicsProposalKernel::specific_evaluate_kernel(const Particle &proposed_particle,
@@ -169,33 +171,33 @@ double BarkerDynamicsProposalKernel::specific_evaluate_kernel(const Particle &pr
 }
 
 /*
-double BarkerDynamicsProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
-                                                              Particle &old_particle,
-                                                              const Parameters &conditioned_on_parameters) const
-{
-  GradientEstimatorOutput* estimator = old_particle.initialise_gradient_estimator_output(this,
-                                                                                         this->gradient_estimator);
-  
-  double output = 0.0;
-  for (auto i=this->proposal_info.begin();
-       i!=this->proposal_info.end();
-       ++i)
-  {
-    arma::colvec current_chol_gradient_prod = sqrt(i->second.get_double_scale())*i->second.get_chol() * arma::vectorise(estimator->get_gradient_of_log(i->first,this->index,old_particle,conditioned_on_parameters));
-    
-    arma::mat proposed_mat = proposed_particle.parameters[i->first];
-    arma::mat old_mat = old_particle.parameters[i->first];
-    arma::colvec current_proposed = arma::vectorise(proposed_mat);
-    arma::rowvec z = (current_proposed - arma::vectorise(old_mat))*i->second.get_inv_chol();
-    
-    for (size_t j=0; j<current_proposed.size(); ++j)
-    {
-      output = output - log1p(exp(-z[j]*current_chol_gradient_prod[j]));
-    }
-  }
-  return output;
-}
-*/
+ double BarkerDynamicsProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
+ Particle &old_particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ GradientEstimatorOutput* estimator = old_particle.initialise_gradient_estimator_output(this,
+ this->gradient_estimator);
+ 
+ double output = 0.0;
+ for (auto i=this->proposal_info.begin();
+ i!=this->proposal_info.end();
+ ++i)
+ {
+ arma::colvec current_chol_gradient_prod = sqrt(i->second.get_double_scale())*i->second.get_chol() * arma::vectorise(estimator->get_gradient_of_log(i->first,this->index,old_particle,conditioned_on_parameters));
+ 
+ arma::mat proposed_mat = proposed_particle.parameters[i->first];
+ arma::mat old_mat = old_particle.parameters[i->first];
+ arma::colvec current_proposed = arma::vectorise(proposed_mat);
+ arma::rowvec z = (current_proposed - arma::vectorise(old_mat))*i->second.get_inv_chol();
+ 
+ for (size_t j=0; j<current_proposed.size(); ++j)
+ {
+ output = output - log1p(exp(-z[j]*current_chol_gradient_prod[j]));
+ }
+ }
+ return output;
+ }
+ */
 
 double BarkerDynamicsProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
                                                                         const Particle &old_particle) const
@@ -223,33 +225,33 @@ double BarkerDynamicsProposalKernel::specific_subsample_evaluate_kernel(const Pa
 }
 
 /*
-double BarkerDynamicsProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                                                        Particle &old_particle,
-                                                                        const Parameters &conditioned_on_parameters) const
-{
-  GradientEstimatorOutput* estimator = old_particle.initialise_gradient_estimator_output(this,
-                                                                                         this->gradient_estimator);
-  
-  double output = 0.0;
-  for (auto i=this->proposal_info.begin();
-       i!=this->proposal_info.end();
-       ++i)
-  {
-    arma::colvec current_chol_gradient_prod = sqrt(i->second.get_double_scale())*i->second.get_chol() * arma::vectorise(estimator->subsample_get_gradient_of_log(i->first,this->index,old_particle));
-    
-    arma::mat proposed_mat = proposed_particle.parameters[i->first];
-    arma::mat old_mat = old_particle.parameters[i->first];
-    arma::colvec current_proposed = arma::vectorise(proposed_mat);
-    arma::rowvec z = (current_proposed - arma::vectorise(old_mat))*i->second.get_inv_chol();
-    
-    for (size_t j=0; j<current_proposed.size(); ++j)
-    {
-      output = output - log1p(exp(-z[j]*current_chol_gradient_prod[j]));
-    }
-  }
-  return output;
-}
-*/
+ double BarkerDynamicsProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
+ Particle &old_particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ GradientEstimatorOutput* estimator = old_particle.initialise_gradient_estimator_output(this,
+ this->gradient_estimator);
+ 
+ double output = 0.0;
+ for (auto i=this->proposal_info.begin();
+ i!=this->proposal_info.end();
+ ++i)
+ {
+ arma::colvec current_chol_gradient_prod = sqrt(i->second.get_double_scale())*i->second.get_chol() * arma::vectorise(estimator->subsample_get_gradient_of_log(i->first,this->index,old_particle));
+ 
+ arma::mat proposed_mat = proposed_particle.parameters[i->first];
+ arma::mat old_mat = old_particle.parameters[i->first];
+ arma::colvec current_proposed = arma::vectorise(proposed_mat);
+ arma::rowvec z = (current_proposed - arma::vectorise(old_mat))*i->second.get_inv_chol();
+ 
+ for (size_t j=0; j<current_proposed.size(); ++j)
+ {
+ output = output - log1p(exp(-z[j]*current_chol_gradient_prod[j]));
+ }
+ }
+ return output;
+ }
+ */
 
 Parameters BarkerDynamicsProposalKernel::simulate(RandomNumberGenerator &rng,
                                                   const Particle &current_particle) const
@@ -286,122 +288,122 @@ Parameters BarkerDynamicsProposalKernel::simulate(RandomNumberGenerator &rng,
 }
 
 /*
-Parameters BarkerDynamicsProposalKernel::simulate(RandomNumberGenerator &rng,
-                                                  Particle &particle,
-                                                  const Parameters &conditioned_on_parameters) const
-{
-  GradientEstimatorOutput* estimator = particle.initialise_gradient_estimator_output(this,
-                                                                                     this->gradient_estimator);
-  
-  Parameters proposed = this->proposal_simulate->simulate(rng,
-                                                          particle,
-                                                          conditioned_on_parameters);
-  
-  for (auto i=this->proposal_info.begin();
-       i!=this->proposal_info.end();
-       ++i)
-  {
-    arma::colvec current_chol_gradient_prod = sqrt(i->second.get_double_scale())*i->second.get_chol() * arma::vectorise(estimator->get_gradient_of_log(i->first,this->index,particle,conditioned_on_parameters));
-    
-    arma::mat initial_proposed = proposed[i->first];
-    arma::rowvec current_proposed = arma::vectorise(initial_proposed);
-    
-    arma::rowvec log_unifs = log(multiple_runif(rng,current_proposed.size()));
-    for (size_t j=0; j<current_proposed.size(); ++j)
-    {
-      double log_prob = -log1p(exp(-current_proposed[j]*current_chol_gradient_prod[j]));
-      if (log_unifs[j]>log_prob)
-      {
-        current_proposed[j] = -current_proposed[j];
-      }
-    }
-    proposed[i->first] = particle.parameters[i->first] + arma::reshape(current_proposed * sqrt(i->second.get_double_scale())*i->second.get_chol(),initial_proposed.n_rows,initial_proposed.n_cols);
-  }
-  return proposed;
-}
-*/
+ Parameters BarkerDynamicsProposalKernel::simulate(RandomNumberGenerator &rng,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ GradientEstimatorOutput* estimator = particle.initialise_gradient_estimator_output(this,
+ this->gradient_estimator);
+ 
+ Parameters proposed = this->proposal_simulate->simulate(rng,
+ particle,
+ conditioned_on_parameters);
+ 
+ for (auto i=this->proposal_info.begin();
+ i!=this->proposal_info.end();
+ ++i)
+ {
+ arma::colvec current_chol_gradient_prod = sqrt(i->second.get_double_scale())*i->second.get_chol() * arma::vectorise(estimator->get_gradient_of_log(i->first,this->index,particle,conditioned_on_parameters));
+ 
+ arma::mat initial_proposed = proposed[i->first];
+ arma::rowvec current_proposed = arma::vectorise(initial_proposed);
+ 
+ arma::rowvec log_unifs = log(multiple_runif(rng,current_proposed.size()));
+ for (size_t j=0; j<current_proposed.size(); ++j)
+ {
+ double log_prob = -log1p(exp(-current_proposed[j]*current_chol_gradient_prod[j]));
+ if (log_unifs[j]>log_prob)
+ {
+ current_proposed[j] = -current_proposed[j];
+ }
+ }
+ proposed[i->first] = particle.parameters[i->first] + arma::reshape(current_proposed * sqrt(i->second.get_double_scale())*i->second.get_chol(),initial_proposed.n_rows,initial_proposed.n_cols);
+ }
+ return proposed;
+ }
+ */
 
 Parameters BarkerDynamicsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                             const Particle &particle) const
 {
   Rcpp::stop("BarkerDynamicsProposalKernel::subsample_simulate - not written yet.");
   /*
-  Parameters proposed = this->proposal_simulate->subsample_simulate(rng,
-                                                particle);
-  
-  for (auto i=this->proposal_info.begin();
-       i!=this->proposal_info.end();
-       ++i)
-  {
-    arma::colvec current_chol_gradient_prod = i->second.chol * arma::vectorise(this->subsample_gradient_estimator->get_gradient_of_log(i->first,particle));
-    
-    arma::mat initial_proposed = proposed[i->first];
-    arma::rowvec current_proposed = arma::vectorise(initial_proposed);
-    
-    arma::rowvec log_unifs = log(runif(rng,current_proposed.size()));
-    for (size_t j=0; j<current_proposed.size(); ++j)
-    {
-      double log_prob = -log1p(exp(-current_proposed[j]*current_chol_gradient_prod[j]));
-      if (log_unifs[j]>log_prob)
-      {
-        current_proposed[j] = -current_proposed[j];
-      }
-    }
-    proposed[i->first] = particle.parameters[i->first] + arma::reshape(current_proposed * i->second.chol,initial_proposed.n_rows,initial_proposed.n_cols);
-  }
-  return proposed;
-  */
+   Parameters proposed = this->proposal_simulate->subsample_simulate(rng,
+   particle);
+   
+   for (auto i=this->proposal_info.begin();
+   i!=this->proposal_info.end();
+   ++i)
+   {
+   arma::colvec current_chol_gradient_prod = i->second.chol * arma::vectorise(this->subsample_gradient_estimator->get_gradient_of_log(i->first,particle));
+   
+   arma::mat initial_proposed = proposed[i->first];
+   arma::rowvec current_proposed = arma::vectorise(initial_proposed);
+   
+   arma::rowvec log_unifs = log(runif(rng,current_proposed.size()));
+   for (size_t j=0; j<current_proposed.size(); ++j)
+   {
+   double log_prob = -log1p(exp(-current_proposed[j]*current_chol_gradient_prod[j]));
+   if (log_unifs[j]>log_prob)
+   {
+   current_proposed[j] = -current_proposed[j];
+   }
+   }
+   proposed[i->first] = particle.parameters[i->first] + arma::reshape(current_proposed * i->second.chol,initial_proposed.n_rows,initial_proposed.n_cols);
+   }
+   return proposed;
+   */
 }
-     
+
 /*
-Parameters BarkerDynamicsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                            Particle &particle,
-                                                            const Parameters &conditioned_on_parameters) const
-{
-  Rcpp::stop("BarkerDynamicsProposalKernel::subsample_simulate - not written yet.");
-}
-*/
+ Parameters BarkerDynamicsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ Rcpp::stop("BarkerDynamicsProposalKernel::subsample_simulate - not written yet.");
+ }
+ */
 
 Parameters BarkerDynamicsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                      const std::string &variable,
-                                                      const Particle &proposed_particle) const
+                                                            const std::string &variable,
+                                                            const Particle &proposed_particle) const
 {
   Rcpp::stop("BarkerDynamicsProposalKernel::subsample_simulate - not written yet.");
   /*
-  Parameters proposed = this->proposal_simulate->subsample_simulate(rng,
-                                                          variable,
-                                                          particle);
-  
-  auto found = this->proposal_info.find(variable);
-  
-  arma::colvec current_chol_gradient_prod = found->second.chol * arma::vectorise(this->subsample_gradient_estimator->get_gradient_of_log(found->first,particle));
-  
-  arma::mat initial_proposed = proposed[found->first];
-  arma::rowvec current_proposed = arma::vectorise(initial_proposed);
-  
-  arma::rowvec log_unifs = log(runif(rng,current_proposed.size()));
-  for (size_t j=0; j<current_proposed.size(); ++j)
-  {
-    double log_prob = -log1p(exp(-current_proposed[j]*current_chol_gradient_prod[j]));
-    if (log_unifs[j]>log_prob)
-    {
-      current_proposed[j] = -current_proposed[j];
-    }
-  }
-  proposed[found->first] = particle.parameters[found->first] + arma::reshape(current_proposed * found->second.chol,initial_proposed.n_rows,initial_proposed.n_cols);
-  return proposed;
-  */
+   Parameters proposed = this->proposal_simulate->subsample_simulate(rng,
+   variable,
+   particle);
+   
+   auto found = this->proposal_info.find(variable);
+   
+   arma::colvec current_chol_gradient_prod = found->second.chol * arma::vectorise(this->subsample_gradient_estimator->get_gradient_of_log(found->first,particle));
+   
+   arma::mat initial_proposed = proposed[found->first];
+   arma::rowvec current_proposed = arma::vectorise(initial_proposed);
+   
+   arma::rowvec log_unifs = log(runif(rng,current_proposed.size()));
+   for (size_t j=0; j<current_proposed.size(); ++j)
+   {
+   double log_prob = -log1p(exp(-current_proposed[j]*current_chol_gradient_prod[j]));
+   if (log_unifs[j]>log_prob)
+   {
+   current_proposed[j] = -current_proposed[j];
+   }
+   }
+   proposed[found->first] = particle.parameters[found->first] + arma::reshape(current_proposed * found->second.chol,initial_proposed.n_rows,initial_proposed.n_cols);
+   return proposed;
+   */
 }
 
 /*
-Parameters BarkerDynamicsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                            const std::string &variable,
-                                                       Particle &particle,
-                                                       const Parameters &conditioned_on_parameters) const
-{
-  Rcpp::stop("BarkerDynamicsProposalKernel::subsample_simulate - not written yet.");
-}
-*/
+ Parameters BarkerDynamicsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
+ const std::string &variable,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ Rcpp::stop("BarkerDynamicsProposalKernel::subsample_simulate - not written yet.");
+ }
+ */
 
 arma::mat BarkerDynamicsProposalKernel::specific_gradient_of_log(const std::string &variable,
                                                                  const Particle &proposed_particle,
@@ -418,28 +420,28 @@ arma::mat BarkerDynamicsProposalKernel::specific_subsample_gradient_of_log(const
 }
 
 /*
-arma::mat BarkerDynamicsProposalKernel::specific_gradient_of_log(const std::string &variable,
-                                   Particle &proposed_particle,
-                                   Particle &old_particle,
-                                   const Parameters &conditioned_on_parameters)
-{
-  Rcpp::stop("BarkerDynamicsProposalKernel::specific_gradient_of_log - not written yet.");
-}
-*/
+ arma::mat BarkerDynamicsProposalKernel::specific_gradient_of_log(const std::string &variable,
+ Particle &proposed_particle,
+ Particle &old_particle,
+ const Parameters &conditioned_on_parameters)
+ {
+ Rcpp::stop("BarkerDynamicsProposalKernel::specific_gradient_of_log - not written yet.");
+ }
+ */
 
 //virtual arma::mat specific_subsample_gradient_of_log(const std::string &variable,
 //                                                     Particle &proposed_particle,
 //                                                     Particle &old_particle)=0;
 
 /*
-arma::mat BarkerDynamicsProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
-                                             Particle &proposed_particle,
-                                             Particle &old_particle,
-                                             const Parameters &conditioned_on_parameters)
-{
-  Rcpp::stop("BarkerDynamicsProposalKernel::specific_gradient_of_log - not written yet.");
-}
-*/
+ arma::mat BarkerDynamicsProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
+ Particle &proposed_particle,
+ Particle &old_particle,
+ const Parameters &conditioned_on_parameters)
+ {
+ Rcpp::stop("BarkerDynamicsProposalKernel::specific_gradient_of_log - not written yet.");
+ }
+ */
 
 void BarkerDynamicsProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
 {
@@ -478,5 +480,6 @@ bool BarkerDynamicsProposalKernel::can_be_evaluated() const
 
 void BarkerDynamicsProposalKernel::set_data(Data* data_in)
 {
-
+  
+}
 }

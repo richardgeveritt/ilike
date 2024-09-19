@@ -1,8 +1,10 @@
 #include "annealed_likelihood_estimator.h"
 #include "annealed_likelihood_estimator_output.h"
 
+namespace ilike
+{
 AnnealedLikelihoodEstimator::AnnealedLikelihoodEstimator()
-  :LikelihoodEstimator()
+:LikelihoodEstimator()
 {
 }
 
@@ -49,7 +51,7 @@ AnnealedLikelihoodEstimator::~AnnealedLikelihoodEstimator()
 
 //Copy constructor for the AnnealedLikelihoodEstimator class.
 AnnealedLikelihoodEstimator::AnnealedLikelihoodEstimator(const AnnealedLikelihoodEstimator &another)
-  :LikelihoodEstimator(another)
+:LikelihoodEstimator(another)
 {
   this->make_copy(another);
 }
@@ -62,7 +64,7 @@ void AnnealedLikelihoodEstimator::operator=(const AnnealedLikelihoodEstimator &a
   
   if (this->estimator!=NULL)
     delete this->estimator;
-
+  
   LikelihoodEstimator::operator=(another);
   this->make_copy(another);
 }
@@ -123,3 +125,5 @@ void AnnealedLikelihoodEstimator::specific_change_data(Data* new_data)
 {
   this->estimator->change_data_with_raw_pointer(new_data);
 }
+}
+

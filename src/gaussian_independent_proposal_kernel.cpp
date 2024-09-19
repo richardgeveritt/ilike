@@ -5,8 +5,10 @@
 #include "likelihood_estimator.h"
 #include "mcmc_adaptor.h"
 
+namespace ilike
+{
 GaussianIndependentProposalKernel::GaussianIndependentProposalKernel()
-  :IndependentProposalKernel()
+:IndependentProposalKernel()
 {
 }
 
@@ -16,7 +18,7 @@ GaussianIndependentProposalKernel::~GaussianIndependentProposalKernel()
 
 // find mean and cov adaptively
 GaussianIndependentProposalKernel::GaussianIndependentProposalKernel(const std::vector<std::string> &variable_names_in)
-  :IndependentProposalKernel()
+:IndependentProposalKernel()
 {
   for (auto i=variable_names_in.begin();
        i!=variable_names_in.end();
@@ -29,7 +31,7 @@ GaussianIndependentProposalKernel::GaussianIndependentProposalKernel(const std::
 // find cov adaptively
 GaussianIndependentProposalKernel::GaussianIndependentProposalKernel(const std::vector<std::string> &variable_names_in,
                                                                      const std::vector<arma::colvec> &means_in)
-  :IndependentProposalKernel()
+:IndependentProposalKernel()
 {
   for (size_t i=0;
        i<variable_names_in.size();
@@ -42,7 +44,7 @@ GaussianIndependentProposalKernel::GaussianIndependentProposalKernel(const std::
 // find mean adaptively
 GaussianIndependentProposalKernel::GaussianIndependentProposalKernel(const std::vector<std::string> &variable_names_in,
                                                                      const std::vector<arma::mat> &covariances_in)
-  :IndependentProposalKernel()
+:IndependentProposalKernel()
 {
   for (size_t i=0;
        i<variable_names_in.size();
@@ -70,7 +72,7 @@ GaussianIndependentProposalKernel::GaussianIndependentProposalKernel(const std::
 GaussianIndependentProposalKernel::GaussianIndependentProposalKernel(const std::vector<std::string> &variable_names_in,
                                                                      const std::vector<arma::colvec> &means_in,
                                                                      const std::vector<arma::mat> &covariances_in)
-  :IndependentProposalKernel()
+:IndependentProposalKernel()
 {
   for (size_t i=0;
        i<variable_names_in.size();
@@ -81,7 +83,7 @@ GaussianIndependentProposalKernel::GaussianIndependentProposalKernel(const std::
 }
 
 GaussianIndependentProposalKernel::GaussianIndependentProposalKernel(const GaussianIndependentProposalKernel &another)
-  :IndependentProposalKernel(another)
+:IndependentProposalKernel(another)
 {
   this->make_copy(another);
 }
@@ -90,7 +92,7 @@ void GaussianIndependentProposalKernel::operator=(const GaussianIndependentPropo
 {
   if(this == &another)
     return;
-
+  
   IndependentProposalKernel::operator=(another);
   this->make_copy(another);
 }
@@ -192,12 +194,12 @@ double GaussianIndependentProposalKernel::evaluate_independent_kernel(const Para
 }
 
 /*
-double GaussianIndependentProposalKernel::evaluate_independent_kernel(Variables* proposed_particle,
-                                                                      const Parameters &conditioned_on_parameters) const
-{
-  return this->evaluate_independent_kernel(proposed_particle);
-}
-*/
+ double GaussianIndependentProposalKernel::evaluate_independent_kernel(Variables* proposed_particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ return this->evaluate_independent_kernel(proposed_particle);
+ }
+ */
 
 double GaussianIndependentProposalKernel::subsample_evaluate_independent_kernel(const Parameters &proposed_particle) const
 {
@@ -323,4 +325,5 @@ bool GaussianIndependentProposalKernel::can_be_evaluated() const
 void GaussianIndependentProposalKernel::set_data(Data* data_in)
 {
   
+}
 }

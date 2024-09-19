@@ -1,12 +1,14 @@
 #include "smc_criterion.h"
 
+namespace ilike
+{
 SMCCriterion::SMCCriterion()
 {
 }
 
 SMCCriterion::~SMCCriterion()
 {
-
+  
 }
 
 SMCCriterion::SMCCriterion(double desired_criterion_in)
@@ -24,11 +26,12 @@ void SMCCriterion::operator=(const SMCCriterion &another)
 {
   if(this == &another)
     return;
-
+  
   this->make_copy(another);
 }
 
 void SMCCriterion::make_copy(const SMCCriterion &another)
 {
   this->desired_criterion = another.desired_criterion;
+}
 }

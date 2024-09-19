@@ -3,6 +3,8 @@
 #include "metropolis_hastings_mcmc.h"
 #include "mcmc_termination.h"
 
+namespace ilike
+{
 MetropolisHastingsStandardMCMCOutput::MetropolisHastingsStandardMCMCOutput()
 :StandardMCMCOutput()
 {
@@ -56,26 +58,26 @@ void MetropolisHastingsStandardMCMCOutput::make_copy(const MetropolisHastingsSta
 }
 
 /*
-void MetropolisHastingsStandardMCMCOutput::specific_mcmc_adapt()
-{
-  this->mcmc->mcmc_adapt(this->output.back(),
-                         this->iteration_counter);
-}
-*/
+ void MetropolisHastingsStandardMCMCOutput::specific_mcmc_adapt()
+ {
+ this->mcmc->mcmc_adapt(this->output.back(),
+ this->iteration_counter);
+ }
+ */
 
 /*
-Particle MetropolisHastingsStandardMCMCOutput::move(RandomNumberGenerator &rng,
-                                                    const Particle &particle) const
-{
-  return this->mcmc->move(rng, particle);
-}
-
-Particle MetropolisHastingsStandardMCMCOutput::subsample_move(RandomNumberGenerator &rng,
-                                                              const Particle &particle) const
-{
-  return this->mcmc->subsample_move(rng, particle);
-}
-*/
+ Particle MetropolisHastingsStandardMCMCOutput::move(RandomNumberGenerator &rng,
+ const Particle &particle) const
+ {
+ return this->mcmc->move(rng, particle);
+ }
+ 
+ Particle MetropolisHastingsStandardMCMCOutput::subsample_move(RandomNumberGenerator &rng,
+ const Particle &particle) const
+ {
+ return this->mcmc->subsample_move(rng, particle);
+ }
+ */
 
 MCMC* MetropolisHastingsStandardMCMCOutput::get_mcmc()
 {
@@ -85,4 +87,5 @@ MCMC* MetropolisHastingsStandardMCMCOutput::get_mcmc()
 const MCMC* MetropolisHastingsStandardMCMCOutput::get_mcmc() const
 {
   return this->mcmc;
+}
 }

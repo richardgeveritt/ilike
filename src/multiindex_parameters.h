@@ -1,7 +1,7 @@
 #ifndef MULTIINDEXPARAMETERS_H
 #define MULTIINDEXPARAMETERS_H
 
-#include <RcppArmadilloForward.h>
+#include <RcppArmadillo.h>
 #include <RcppCommon.h>
 
 #include <iostream>
@@ -14,6 +14,8 @@
 // At some point, we might need a more flexible container for data and/or parameters.
 // At this point, make another class that includes this one.
 
+namespace ilike
+{
 class MultiIndexParameters;
 
 typedef boost::unordered_map< std::string, arma::mat>::iterator vector_parameter_iterator;
@@ -25,20 +27,20 @@ RCPP_EXPOSED_CLASS(MultiIndexParameters)
 
 class MultiIndexParameters
 {
-
+  
 public:
-
+  
   MultiIndexParameters();
-
+  
   virtual ~MultiIndexParameters();
-
+  
   arma::mat& operator[](const std::string &variable);
   arma::mat operator[](const std::string &variable) const;
   arma::mat operator[](const std::vector<std::string> &variables) const;
   
   boost::spirit::hold_any& operator()(const std::string &variable);
   boost::spirit::hold_any operator()(const std::string &variable) const;
-
+  
   MultiIndexParameters(const MultiIndexParameters &another);
   void operator=(const MultiIndexParameters &another);
   MultiIndexParameters* duplicate() const;
@@ -70,17 +72,17 @@ public:
   
   size_t vector_size() const;
   size_t any_size() const;
-
+  
   friend std::ostream& operator<<(std::ostream& os, const MultiIndexParameters &p);
-
+  
 protected:
-
+  
   boost::unordered_map< std::string, arma::mat> vector_parameters;
   
   boost::unordered_map< std::string, boost::spirit::hold_any> any_parameters;
-
+  
   void make_copy(const MultiIndexParameters &another);
-
+  
 };
 
 //typedef MultiIndexParameters Data;
@@ -97,7 +99,7 @@ inline MultiIndexParameters::MultiIndexParameters()
 
 inline MultiIndexParameters::~MultiIndexParameters()
 {
-
+  
 }
 
 //Copy constructor for the MultiIndexParameters class.
@@ -111,7 +113,7 @@ inline void MultiIndexParameters::operator=(const MultiIndexParameters &another)
   if(this == &another){ //if a==a
     return;
   }
-
+  
   this->make_copy(another);
 }
 
@@ -129,33 +131,33 @@ inline bool MultiIndexParameters::is_empty() const
 }
 
 /*
-inline bool MultiIndexParameters::operator==(const MultiIndexParameters &another) const
-{
-  if ((*this)!=another)
-  {
-    return false;
-  }
-  else
-  {
-    return true;
-  }
-}
-
-inline bool MultiIndexParameters::operator!=(const MultiIndexParameters &another) const
-{
-  if (this->vector_parameters != another.vector_parameters)
-  {
-    return true;
-  }
-  
-  if (this->any_parameters != another.any_parameters)
-  {
-    return true;
-  }
-  
-  return false;
-}
-*/
+ inline bool MultiIndexParameters::operator==(const MultiIndexParameters &another) const
+ {
+ if ((*this)!=another)
+ {
+ return false;
+ }
+ else
+ {
+ return true;
+ }
+ }
+ 
+ inline bool MultiIndexParameters::operator!=(const MultiIndexParameters &another) const
+ {
+ if (this->vector_parameters != another.vector_parameters)
+ {
+ return true;
+ }
+ 
+ if (this->any_parameters != another.any_parameters)
+ {
+ return true;
+ }
+ 
+ return false;
+ }
+ */
 
 inline arma::colvec MultiIndexParameters::get_vector() const
 {
@@ -222,7 +224,7 @@ inline arma::mat& MultiIndexParameters::operator[](const std::string &variable)
 inline arma::mat MultiIndexParameters::operator[](const std::string &variable) const
 {
   boost::unordered_map< std::string, arma::mat>::const_iterator found =  this->vector_parameters.find(variable);
-
+  
   if (found != this->vector_parameters.end())
     return(found->second);
   else
@@ -264,7 +266,7 @@ inline boost::spirit::hold_any& MultiIndexParameters::operator()(const std::stri
 inline boost::spirit::hold_any MultiIndexParameters::operator()(const std::string &variable) const
 {
   boost::unordered_map< std::string, boost::spirit::hold_any>::const_iterator found = this->any_parameters.find(variable);
-
+  
   if (found != this->any_parameters.end())
     return(found->second);
   else
@@ -335,7 +337,7 @@ inline size_t MultiIndexParameters::any_size() const
 inline std::ostream& operator<<(std::ostream& os, const MultiIndexParameters &p)
 {
   boost::unordered_map< std::string, arma::mat>::const_iterator it;
-
+  
   for (it=p.vector_parameters.begin();it!=p.vector_parameters.end();++it)
   {
     os << it->first << ":";
@@ -350,15 +352,16 @@ inline std::ostream& operator<<(std::ostream& os, const MultiIndexParameters &p)
   }
   
   boost::unordered_map< std::string, boost::spirit::hold_any>::const_iterator it2;
-
+  
   for (it2=p.any_parameters.begin();it2!=p.any_parameters.end();++it2)
   {
     os << it2->first << ":";
     os << it2->second;
     os << std::endl;
   }
-
+  
   return os;
+}
 }
 
 #endif

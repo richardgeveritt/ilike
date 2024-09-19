@@ -1,8 +1,10 @@
 #include <iterator>
 #include "custom_distribution_factor.h"
 
+namespace ilike
+{
 CustomDistributionFactor::CustomDistributionFactor()
-  :DistributionFactor()
+:DistributionFactor()
 {
   this->distribution = NULL;
   this->distribution_gradient = NULL;
@@ -28,7 +30,7 @@ CustomDistributionFactor::~CustomDistributionFactor()
 }
 
 CustomDistributionFactor::CustomDistributionFactor(const CustomDistributionFactor &another)
-  :DistributionFactor(another)
+:DistributionFactor(another)
 {
   this->make_copy(another);
 }
@@ -37,7 +39,7 @@ void CustomDistributionFactor::operator=(const CustomDistributionFactor &another
 {
   if(this == &another)
     return;
-
+  
   DistributionFactor::operator=(another);
   this->make_copy(another);
 }
@@ -74,4 +76,5 @@ arma::mat CustomDistributionFactor::distribution_evaluate_gradient(const std::st
   {
     Rcpp::stop("CustomDistributionFactor::distribution_evaluate_gradient - gradient not set.");
   }
+}
 }

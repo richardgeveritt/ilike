@@ -11,6 +11,8 @@ using namespace Rcpp;
 #include "distributions.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class CustomGuidedProposalKernel : public ProposalKernel
 {
 
@@ -93,5 +95,6 @@ protected:
   
   Data* data;
 };
+}
 
 #endif

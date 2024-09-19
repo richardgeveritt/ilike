@@ -2,6 +2,8 @@
 #include "likelihood_estimator_output.h"
 #include "likelihood_estimator.h"
 
+namespace ilike
+{
 CustomDistributionProposalKernel::CustomDistributionProposalKernel()
   :IndependentProposalKernel()
 {
@@ -314,5 +316,7 @@ bool CustomDistributionProposalKernel::can_be_evaluated() const
 
 void CustomDistributionProposalKernel::set_data(Data* data_in)
 {
+
+}
 
 }

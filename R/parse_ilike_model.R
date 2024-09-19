@@ -6177,6 +6177,7 @@ compile <- function(filename,
               '\n',
               'using namespace Rcpp;',
               '#include <ilike.h>',
+              'using namespace ilike;',
               '\n'),
               fileConn)
 

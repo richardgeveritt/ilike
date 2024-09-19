@@ -4,6 +4,8 @@
 #include "likelihood_estimator.h"
 #include "likelihood_estimator_output.h"
 
+namespace ilike
+{
 EnsembleKalmanWorker::EnsembleKalmanWorker()
 {
   //this->particle_simulator = NULL;
@@ -23,8 +25,8 @@ EnsembleKalmanWorker::EnsembleKalmanWorker(const EnsembleKalmanWorker &another)
 EnsembleKalmanWorker::~EnsembleKalmanWorker()
 {
   //for (std::vector< std::vector<LikelihoodEstimatorOutput*> >::iterator i=this->likelihood_estimator_outputs.begin();
-    //   i!=this->likelihood_estimator_outputs.end();
-    //   ++i)
+  //   i!=this->likelihood_estimator_outputs.end();
+  //   ++i)
   //{
   //  for (std::vector<LikelihoodEstimatorOutput*>::iterator j=i->begin();
   //       j!=i->end();
@@ -40,7 +42,7 @@ void EnsembleKalmanWorker::operator=(const EnsembleKalmanWorker &another)
 {
   if(this == &another)
     return;
-
+  
   this->make_copy(another);
 }
 
@@ -59,7 +61,7 @@ void EnsembleKalmanWorker::make_copy(const EnsembleKalmanWorker &another)
   //{
   //  std::vector<LikelihoodEstimatorOutput*> inner_vector;
   //  inner_vector.reserve(this->get_number_of_particles());
-    
+  
   //  for (std::vector<LikelihoodEstimatorOutput*>::const_iterator j=i->begin();
   //       j!=i->end();
   //       ++j)
@@ -115,16 +117,16 @@ void EnsembleKalmanWorker::move(Ensemble* next_particles,
 }
 
 /*
-void EnsembleKalmanWorker::move(Ensemble* next_particles,
-                                Ensemble* current_particles,
-                                const Parameters &conditioned_on_parameters)
-{
-  this->specific_move(next_particles,
-                      current_particles,
-                      conditioned_on_parameters);
-  this->set_seed(this->get_seed() + this->get_number_of_ensemble_members());
-}
-*/
+ void EnsembleKalmanWorker::move(Ensemble* next_particles,
+ Ensemble* current_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ this->specific_move(next_particles,
+ current_particles,
+ conditioned_on_parameters);
+ this->set_seed(this->get_seed() + this->get_number_of_ensemble_members());
+ }
+ */
 
 void EnsembleKalmanWorker::subsample_move(Ensemble* next_particles,
                                           Ensemble* current_particles)
@@ -135,45 +137,45 @@ void EnsembleKalmanWorker::subsample_move(Ensemble* next_particles,
 }
 
 /*
-void EnsembleKalmanWorker::subsample_move(Ensemble* next_particles,
-                                          Ensemble* current_particles,
-                                          const Parameters &conditioned_on_parameters)
-{
-  this->subsample_specific_move(next_particles,
-                                current_particles,
-                                conditioned_on_parameters);
-  this->set_seed(this->get_seed() + this->get_number_of_ensemble_members());
-}
-*/
+ void EnsembleKalmanWorker::subsample_move(Ensemble* next_particles,
+ Ensemble* current_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ this->subsample_specific_move(next_particles,
+ current_particles,
+ conditioned_on_parameters);
+ this->set_seed(this->get_seed() + this->get_number_of_ensemble_members());
+ }
+ */
 
 /*
-void EnsembleKalmanWorker::subsample_simulate(Particles* next_particles,
-                                   const Parameters &conditioned_on_parameters)
-{
-  this->subsample_specific_simulate(next_particles,
-                          conditioned_on_parameters);
-  this->set_seed(this->get_seed() + this->get_number_of_particles());
-  
-  // Initialise weight.
-  //this->simulated_particles().initialise_weights();
-  
-  // Simulate random numbers for resampling.
-  this->the_enk->rng->seed(this->get_seed(),this->get_number_of_particles());
-  next_particles->simulate_resampling_variables(*this->the_enk->rng);
-  this->set_seed(this->get_seed() + this->get_number_of_particles());
-  
-}
-
-void EnsembleKalmanWorker::subsample_move(Particles* next_particles,
-                               const Particles* current_particles,
-                               const Parameters &conditioned_on_parameters)
-{
-  this->subsample_specific_move(next_particles,
-                                current_particles,
-                                conditioned_on_parameters);
-  this->set_seed(this->get_seed() + this->get_number_of_particles());
-}
-*/
+ void EnsembleKalmanWorker::subsample_simulate(Particles* next_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ this->subsample_specific_simulate(next_particles,
+ conditioned_on_parameters);
+ this->set_seed(this->get_seed() + this->get_number_of_particles());
+ 
+ // Initialise weight.
+ //this->simulated_particles().initialise_weights();
+ 
+ // Simulate random numbers for resampling.
+ this->the_enk->rng->seed(this->get_seed(),this->get_number_of_particles());
+ next_particles->simulate_resampling_variables(*this->the_enk->rng);
+ this->set_seed(this->get_seed() + this->get_number_of_particles());
+ 
+ }
+ 
+ void EnsembleKalmanWorker::subsample_move(Particles* next_particles,
+ const Particles* current_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ this->subsample_specific_move(next_particles,
+ current_particles,
+ conditioned_on_parameters);
+ this->set_seed(this->get_seed() + this->get_number_of_particles());
+ }
+ */
 
 //void EnsembleKalmanWorker::weight(const Parameters &conditioned_on_parameters)
 //{
@@ -209,4 +211,5 @@ void EnsembleKalmanWorker::set_seed(size_t seed_in)
 void EnsembleKalmanWorker::set_enk(EnsembleKalman* the_enk_in)
 {
   this->the_enk = the_enk_in;
+}
 }

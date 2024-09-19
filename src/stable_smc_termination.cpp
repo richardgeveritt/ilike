@@ -1,8 +1,10 @@
 #include "stable_smc_termination.h"
 #include "utils.h"
 
+namespace ilike
+{
 StableSMCTermination::StableSMCTermination()
-  :SMCTermination()
+:SMCTermination()
 {
 }
 
@@ -22,7 +24,7 @@ StableSMCTermination::~StableSMCTermination()
 
 //Copy constructor for the StableSMCTermination class.
 StableSMCTermination::StableSMCTermination(const StableSMCTermination &another)
-  :SMCTermination(another)
+:SMCTermination(another)
 {
   this->make_copy(another);
 }
@@ -60,4 +62,5 @@ bool StableSMCTermination::terminate(double score)
     return TRUE;
   else
     return FALSE;
+}
 }

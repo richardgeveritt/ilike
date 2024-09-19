@@ -12,11 +12,13 @@ using namespace Rcpp;
 #include "distributions.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class UniformRandomWalkProposalKernel : public SymmetricProposalKernel
 {
-
+  
 public:
-
+  
   UniformRandomWalkProposalKernel();
   virtual ~UniformRandomWalkProposalKernel();
   
@@ -29,15 +31,15 @@ public:
   
   UniformRandomWalkProposalKernel(const std::string &variable_name_in,
                                   const double &halfwidth_in);
-
+  
   UniformRandomWalkProposalKernel(const std::string &variable_name_in,
                                   const arma::colvec &halfwidth_in);
   
   UniformRandomWalkProposalKernel(const std::string &variable_name_in,
                                   const arma::mat &halfwidth_in);
-
+  
   UniformRandomWalkProposalKernel(const UniformRandomWalkProposalKernel &another);
-
+  
   void operator=(const UniformRandomWalkProposalKernel &another);
   Kernel* duplicate() const;
   ProposalKernel* proposal_kernel_duplicate() const;
@@ -56,28 +58,28 @@ public:
   
   void set_data(Data* data_in);
   
-// Mh has its own parameters.
+  // Mh has its own parameters.
   // Stochastic has some weights.
   // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.
   // Proposal needs to call simulate in all llhdoutputs
-
+  
 protected:
   
   double specific_evaluate_kernel(const Particle &proposed_particle,
                                   const Particle &old_particle) const;
   /*
-  double specific_evaluate_kernel(Particle &proposed_particle,
-                                  Particle &old_particle,
-                                  const Parameters &conditioned_on_parameters) const;
-  */
+   double specific_evaluate_kernel(Particle &proposed_particle,
+   Particle &old_particle,
+   const Parameters &conditioned_on_parameters) const;
+   */
   double specific_subsample_evaluate_kernel(const Particle &proposed_particle,
                                             const Particle &old_particle) const;
   
   /*
-  double specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                            Particle &old_particle,
-                                            const Parameters &conditioned_on_parameters) const;
-  */
+   double specific_subsample_evaluate_kernel(Particle &proposed_particle,
+   Particle &old_particle,
+   const Parameters &conditioned_on_parameters) const;
+   */
   
   Parameters simulate(RandomNumberGenerator &rng,
                       const Particle &particle) const;
@@ -107,30 +109,31 @@ protected:
                                      const Particle &old_particle);
   
   /*
-  arma::mat specific_gradient_of_log(const std::string &variable,
-                                     Particle &proposed_particle,
-                                     Particle &old_particle,
-                                     const Parameters &conditioned_on_parameters);
-  */
+   arma::mat specific_gradient_of_log(const std::string &variable,
+   Particle &proposed_particle,
+   Particle &old_particle,
+   const Parameters &conditioned_on_parameters);
+   */
   
   arma::mat specific_subsample_gradient_of_log(const std::string &variable,
                                                const Particle &proposed_particle,
                                                const Particle &old_particle);
   
   /*
-  arma::mat specific_subsample_gradient_of_log(const std::string &variable,
-                                               Particle &proposed_particle,
-                                               Particle &old_particle,
-                                               const Parameters &conditioned_on_parameters);
-  */
-
+   arma::mat specific_subsample_gradient_of_log(const std::string &variable,
+   Particle &proposed_particle,
+   Particle &old_particle,
+   const Parameters &conditioned_on_parameters);
+   */
+  
   void make_copy(const UniformRandomWalkProposalKernel &another);
   
   //bool unused_variables_kept;
   
   // store the half widths for every variable
   boost::unordered_map< std::string, arma::mat> proposal_info;
-
+  
 };
+}
 
 #endif

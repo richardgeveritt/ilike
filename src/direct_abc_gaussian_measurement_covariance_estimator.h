@@ -11,13 +11,15 @@ using namespace Rcpp;
 
 //class DirectGaussianMeasurementCovarianceEstimatorOutput;
 
+namespace ilike
+{
 class DirectABCGaussianMeasurementCovarianceEstimator : public DirectGaussianMeasurementCovarianceEstimator
 {
-
+  
 public:
-
+  
   DirectABCGaussianMeasurementCovarianceEstimator();
-
+  
   
   DirectABCGaussianMeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
                                                   size_t* seed_in,
@@ -28,11 +30,11 @@ public:
                                                   //const std::string &tempering_variable_in,
                                                   const std::string &scale_variable_in,
                                                   const std::vector<std::string> &measurement_variables_in);
-
+  
   virtual ~DirectABCGaussianMeasurementCovarianceEstimator();
-
+  
   DirectABCGaussianMeasurementCovarianceEstimator(const DirectABCGaussianMeasurementCovarianceEstimator &another);
-
+  
   void operator=(const DirectABCGaussianMeasurementCovarianceEstimator &another);
   MeasurementCovarianceEstimator* duplicate() const;
   GaussianMeasurementCovarianceEstimator* gaussian_duplicate() const;
@@ -62,7 +64,7 @@ public:
   
   //void setup();
   //void setup(const Parameters &parameters);
-
+  
 protected:
   
   //friend DirectGaussianMeasurementCovarianceEstimatorOutput;
@@ -72,7 +74,7 @@ protected:
   
   void setup_measurement_variables();
   void setup_measurement_variables(const Parameters &conditioned_on_parameters);
-
+  
   void make_copy(const DirectABCGaussianMeasurementCovarianceEstimator &another);
   
   //Parameters conditioned_on_parameters;
@@ -86,7 +88,8 @@ protected:
   
   //std::string tempering_variable;
   std::string scale_variable;
-
+  
 };
+}
 
 #endif

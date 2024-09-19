@@ -4,8 +4,10 @@
 #include "likelihood_estimator.h"
 #include "smc_adaptor.h"
 
+namespace ilike
+{
 GaussianNoiseProposalKernel::GaussianNoiseProposalKernel()
-  :ProposalKernel()
+:ProposalKernel()
 {
 }
 
@@ -14,7 +16,7 @@ GaussianNoiseProposalKernel::~GaussianNoiseProposalKernel()
 }
 
 GaussianNoiseProposalKernel::GaussianNoiseProposalKernel(const GaussianNoiseProposalKernel &another)
-  :ProposalKernel(another)
+:ProposalKernel(another)
 {
   this->make_copy(another);
 }
@@ -23,7 +25,7 @@ void GaussianNoiseProposalKernel::operator=(const GaussianNoiseProposalKernel &a
 {
   if(this == &another)
     return;
-
+  
   ProposalKernel::operator=(another);
   this->make_copy(another);
 }
@@ -40,4 +42,6 @@ bool GaussianNoiseProposalKernel::can_be_evaluated() const
 void GaussianNoiseProposalKernel::set_data(Data* data_in)
 {
   
+}
+
 }

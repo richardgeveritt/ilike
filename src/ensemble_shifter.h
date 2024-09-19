@@ -7,19 +7,21 @@ using namespace Rcpp;
 #include <vector>
 //#include "ensemble_member.h"
 
+namespace ilike
+{
 class Ensemble;
 class EnsembleFactorVariables;
 
 class EnsembleShifter
 {
-
+  
 public:
-
+  
   EnsembleShifter();
   virtual ~EnsembleShifter();
-
+  
   EnsembleShifter(const EnsembleShifter &another);
-
+  
   void operator=(const EnsembleShifter &another);
   virtual EnsembleShifter* duplicate() const=0;
   
@@ -32,11 +34,12 @@ public:
                      const std::vector<arma::mat> &kalman_gains,
                      const std::vector<arma::colvec> &myys,
                      double inverse_incremental_temperature) const=0;
-
+  
 protected:
-
+  
   void make_copy(const EnsembleShifter &another);
-
+  
 };
+}
 
 #endif

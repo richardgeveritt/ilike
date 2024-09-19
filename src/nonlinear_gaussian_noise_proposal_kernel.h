@@ -14,6 +14,8 @@ using namespace Rcpp;
 #include "gaussian_proposal_info.h"
 #include "transform.h"
 
+namespace ilike
+{
 class NonLinearGaussianNoiseProposalKernel : public GaussianNoiseProposalKernel
 {
   
@@ -147,5 +149,6 @@ protected:
   std::shared_ptr<Transform> transform;
   
 };
+}
 
 #endif

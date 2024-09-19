@@ -5,8 +5,10 @@
 #include "vector_recursive_parameter_estimator.h"
 #include "scale_recursive_parameter_estimator.h"
 
+namespace ilike
+{
 GaussianMCMCAdaptor::GaussianMCMCAdaptor()
-  :MCMCAdaptor()
+:MCMCAdaptor()
 {
 }
 
@@ -38,7 +40,7 @@ GaussianMCMCAdaptor::~GaussianMCMCAdaptor()
 }
 
 GaussianMCMCAdaptor::GaussianMCMCAdaptor(const GaussianMCMCAdaptor &another)
-  :MCMCAdaptor(another)
+:MCMCAdaptor(another)
 {
   this->make_copy(another);
 }
@@ -47,7 +49,7 @@ void GaussianMCMCAdaptor::operator=(const GaussianMCMCAdaptor &another)
 {
   if(this == &another)
     return;
-
+  
   for (std::vector<VectorRecursiveParameterEstimator*>::iterator i=this->mean_estimators.begin();
        i!=this->mean_estimators.end();
        ++i)
@@ -182,4 +184,5 @@ void GaussianMCMCAdaptor::specific_mcmc_adapt(const Particle &latest_particle,
   // needs sorting
   // Set specified variable in parameter_to_adapt to have scaled covariance.
   //parameter_to_adapt[this->variance_name] = this->scale(dimension)*sample_covariance;
+}
 }

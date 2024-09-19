@@ -7,6 +7,8 @@ using namespace Rcpp;
 #include <vector>
 #include "ensemble_factors.h"
 
+namespace ilike
+{
 class MeasurementCovarianceEstimator;
 class EnsembleFactorVariables;
 class ProposalKernel;
@@ -15,18 +17,18 @@ class Ensemble;
 
 class HMMEnsembleFactors : public EnsembleFactors
 {
-
+  
 public:
-
+  
   HMMEnsembleFactors();
   
   HMMEnsembleFactors(ProposalKernel* transition_kernel_in,
                      const std::vector<MeasurementCovarianceEstimator*> &measurement_covariance_estimators_in);
-
+  
   virtual ~HMMEnsembleFactors();
-
+  
   HMMEnsembleFactors(const HMMEnsembleFactors &another);
-
+  
   void operator=(const HMMEnsembleFactors &another);
   EnsembleFactors* duplicate() const;
   
@@ -37,14 +39,14 @@ public:
   
   EnsembleFactorVariables* simulate_ensemble_factor_variables(const Parameters &simulated_parameters) const;
   /*
-  EnsembleFactorVariables* simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
-                                                              const Parameters &conditioned_on_parameters);
-  */
+   EnsembleFactorVariables* simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
+   const Parameters &conditioned_on_parameters);
+   */
   EnsembleFactorVariables* subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters) const;
   /*
-  EnsembleFactorVariables* subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
-                                                                        const Parameters &conditioned_on_parameters);
-  */
+   EnsembleFactorVariables* subsample_simulate_ensemble_factor_variables(const Parameters &simulated_parameters,
+   const Parameters &conditioned_on_parameters);
+   */
   
   //std::vector<arma::mat> get_measurement_covariances();
   //std::vector<arma::mat> get_measurement_covariances(const Parameters &conditioned_on_parameters);
@@ -90,7 +92,7 @@ public:
                                       std::vector<double> &log_det_precomps) const;
   
 protected:
-
+  
   void make_copy(const HMMEnsembleFactors &another);
   
   // stored here
@@ -103,7 +105,8 @@ protected:
   // data temporarily used in a likelihood estimator
   // set up to be a vector of Data* - to allow one for each llhd_estimator, but not using this funtionality at the moment - will always be one element - the same for all llhd_estimators
   std::vector< std::shared_ptr<Data> > measurement_covariance_estimator_temp_data;
-
+  
 };
+}
 
 #endif

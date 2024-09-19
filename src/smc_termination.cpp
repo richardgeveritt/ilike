@@ -1,12 +1,14 @@
 #include "smc_termination.h"
 
+namespace ilike
+{
 SMCTermination::SMCTermination()
 {
 }
 
 SMCTermination::~SMCTermination()
 {
-
+  
 }
 
 SMCTermination::SMCTermination(const SMCTermination &another)
@@ -18,10 +20,11 @@ void SMCTermination::operator=(const SMCTermination &another)
 {
   if(this == &another)
     return;
-
+  
   this->make_copy(another);
 }
 
 void SMCTermination::make_copy(const SMCTermination &another)
 {
+}
 }

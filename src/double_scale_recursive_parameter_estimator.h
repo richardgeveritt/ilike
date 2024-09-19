@@ -8,19 +8,21 @@ using namespace Rcpp;
 #include "particle.h"
 #include "scale_recursive_parameter_estimator.h"
 
+namespace ilike
+{
 class DoubleRecursiveParameterEstimator;
 
 class DoubleScaleRecursiveParameterEstimator : public ScaleRecursiveParameterEstimator
 {
-
+  
 public:
-
+  
   DoubleScaleRecursiveParameterEstimator();
-
+  
   virtual ~DoubleScaleRecursiveParameterEstimator();
-
+  
   DoubleScaleRecursiveParameterEstimator(const DoubleScaleRecursiveParameterEstimator &another);
-
+  
   void operator=(const DoubleScaleRecursiveParameterEstimator &another);
   RecursiveParameterEstimator* duplicate() const;
   ScaleRecursiveParameterEstimator* scale_duplicate() const;
@@ -34,9 +36,10 @@ protected:
   
   // stored here
   DoubleRecursiveParameterEstimator* recursive_estimator;
-
+  
   void make_copy(const DoubleScaleRecursiveParameterEstimator &another);
-
+  
 };
+}
 
 #endif

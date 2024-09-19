@@ -9,6 +9,8 @@ using namespace Rcpp;
 #include "particles.h"
 #include "mileometer.h"
 
+namespace ilike
+{
 class SMCCriterion;
 class SMCTermination;
 class SMCWorker;
@@ -18,12 +20,12 @@ class Index;
 class Sequencer
 {
 public:
-
+  
   Sequencer();
   virtual ~Sequencer();
   
   //Sequencer(const std::vector<double> &schedule_in,
-            //const std::string &variable_in);
+  //const std::string &variable_in);
   
   Sequencer(SMCWorker* the_worker_in,
             const std::vector<double> &schedule_in,
@@ -33,7 +35,7 @@ public:
             SMCTermination* termination_in = NULL);
   
   //Sequencer(const std::vector< std::vector<double> > &schedules_in,
-            //const std::vector<std::string> &variable_names_in);
+  //const std::vector<std::string> &variable_names_in);
   
   Sequencer(SMCWorker* the_worker_in,
             const std::vector< std::vector<double> > &schedules_in,
@@ -41,7 +43,7 @@ public:
             size_t number_of_bisections_in,
             SMCCriterion* criterion_in = NULL,
             SMCTermination* termination_in = NULL);
-
+  
   Sequencer(const Sequencer &another);
   Sequencer& operator=(const Sequencer &another);
   
@@ -65,30 +67,30 @@ public:
                                            const Index* index);
   
   /*
-  void find_desired_criterion(SMCOutput* current_state,
-                              const Parameters &conditioned_on_parameters);
-  
-  void subsample_find_desired_criterion(SMCOutput* current_state,
-                                        const Parameters &conditioned_on_parameters);
-  */
+   void find_desired_criterion(SMCOutput* current_state,
+   const Parameters &conditioned_on_parameters);
+   
+   void subsample_find_desired_criterion(SMCOutput* current_state,
+   const Parameters &conditioned_on_parameters);
+   */
   
   /*
-  void find_next_target_bisection(SMCOutput* current_state,
-                                  const Index* index,
-                                  const Parameters &conditioned_on_parameters);
-  
-  void find_next_target_quantile(SMCOutput* current_state,
-                                 const Index* index,
-                                 const Parameters &conditioned_on_parameters);
-  
-  void subsample_find_next_target_bisection(SMCOutput* current_state,
-                                            const Index* index,
-                                            const Parameters &conditioned_on_parameters);
-  
-  void subsample_find_next_target_quantile(SMCOutput* current_state,
-                                           const Index* index,
-                                           const Parameters &conditioned_on_parameters);
-  */
+   void find_next_target_bisection(SMCOutput* current_state,
+   const Index* index,
+   const Parameters &conditioned_on_parameters);
+   
+   void find_next_target_quantile(SMCOutput* current_state,
+   const Index* index,
+   const Parameters &conditioned_on_parameters);
+   
+   void subsample_find_next_target_bisection(SMCOutput* current_state,
+   const Index* index,
+   const Parameters &conditioned_on_parameters);
+   
+   void subsample_find_next_target_quantile(SMCOutput* current_state,
+   const Index* index,
+   const Parameters &conditioned_on_parameters);
+   */
   
   //void find_next_target_quantile(SMCOutput* current_state, const Parameters &conditioned_on_parameters);
   
@@ -99,7 +101,7 @@ public:
   Parameters schedule_parameters;
   
   void reset();
-
+  
 protected:
   
   void setup(SMCWorker* the_worker_in,
@@ -111,7 +113,7 @@ protected:
   
   void set_initial_schedule_parameters();
   void set_schedule_parameters();
-
+  
   void make_copy(const Sequencer &another);
   void make_copy(Sequencer &&another);
   
@@ -143,7 +145,8 @@ protected:
   // stored here
   SMCCriterion* criterion;
   SMCTermination* termination;
-
+  
 };
+}
 
 #endif

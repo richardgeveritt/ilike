@@ -2,8 +2,10 @@
 #include "likelihood_estimator_output.h"
 #include "likelihood_estimator.h"
 
+namespace ilike
+{
 CustomGuidedNoParamsSymmetricProposalKernel::CustomGuidedNoParamsSymmetricProposalKernel()
-  :SymmetricProposalKernel()
+:SymmetricProposalKernel()
 {
   this->proposal_evaluate = NULL;
   this->data = NULL;
@@ -14,8 +16,8 @@ CustomGuidedNoParamsSymmetricProposalKernel::~CustomGuidedNoParamsSymmetricPropo
 }
 
 CustomGuidedNoParamsSymmetricProposalKernel::CustomGuidedNoParamsSymmetricProposalKernel(SimulateGuidedNoParamsMCMCProposalPtr proposal_simulate_in,
-                                                                       Data* data_in)
-  :SymmetricProposalKernel()
+                                                                                         Data* data_in)
+:SymmetricProposalKernel()
 {
   this->proposal_evaluate = NULL;
   this->proposal_simulate = proposal_simulate_in;
@@ -23,7 +25,7 @@ CustomGuidedNoParamsSymmetricProposalKernel::CustomGuidedNoParamsSymmetricPropos
 }
 
 CustomGuidedNoParamsSymmetricProposalKernel::CustomGuidedNoParamsSymmetricProposalKernel(const CustomGuidedNoParamsSymmetricProposalKernel &another)
-  :SymmetricProposalKernel(another)
+:SymmetricProposalKernel(another)
 {
   this->make_copy(another);
 }
@@ -32,7 +34,7 @@ void CustomGuidedNoParamsSymmetricProposalKernel::operator=(const CustomGuidedNo
 {
   if(this == &another)
     return;
-
+  
   SymmetricProposalKernel::operator=(another);
   this->make_copy(another);
 }
@@ -75,15 +77,15 @@ double CustomGuidedNoParamsSymmetricProposalKernel::specific_evaluate_kernel(con
 }
 
 /*
-double CustomGuidedNoParamsSymmetricProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
-                                                      Particle &old_particle,
-                                                      const Parameters &conditioned_on_parameters) const
-{
-  return this->proposal_evaluate(proposed_particle.move_parameters->merge(conditioned_on_parameters),
-                                 old_particle.move_parameters->merge(conditioned_on_parameters),
-                                 this->proposal_parameters);
-}
-*/
+ double CustomGuidedNoParamsSymmetricProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
+ Particle &old_particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ return this->proposal_evaluate(proposed_particle.move_parameters->merge(conditioned_on_parameters),
+ old_particle.move_parameters->merge(conditioned_on_parameters),
+ this->proposal_parameters);
+ }
+ */
 
 double CustomGuidedNoParamsSymmetricProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
                                                                                        const Particle &old_particle) const
@@ -94,14 +96,14 @@ double CustomGuidedNoParamsSymmetricProposalKernel::specific_subsample_evaluate_
 }
 
 /*
-double CustomGuidedNoParamsSymmetricProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                                                Particle &old_particle,
-                                                                const Parameters &conditioned_on_parameters) const
-{
-  // no difference since size of data set does not impact on proposal
-  return this->specific_evaluate_kernel(proposed_particle, old_particle, conditioned_on_parameters);
-}
-*/
+ double CustomGuidedNoParamsSymmetricProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
+ Particle &old_particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ // no difference since size of data set does not impact on proposal
+ return this->specific_evaluate_kernel(proposed_particle, old_particle, conditioned_on_parameters);
+ }
+ */
 
 Parameters CustomGuidedNoParamsSymmetricProposalKernel::simulate(RandomNumberGenerator &rng,
                                                                  const Particle &particle) const
@@ -119,15 +121,15 @@ Parameters CustomGuidedNoParamsSymmetricProposalKernel::simulate(RandomNumberGen
 }
 
 /*
-Parameters CustomGuidedNoParamsSymmetricProposalKernel::simulate(RandomNumberGenerator &rng,
-                                          Particle &particle,
-                                          const Parameters &conditioned_on_parameters) const
-{
-  return this->proposal_simulate(rng,
-                                 particle.move_parameters->merge(conditioned_on_parameters),
-                                 this->proposal_parameters);
-}
-*/
+ Parameters CustomGuidedNoParamsSymmetricProposalKernel::simulate(RandomNumberGenerator &rng,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ return this->proposal_simulate(rng,
+ particle.move_parameters->merge(conditioned_on_parameters),
+ this->proposal_parameters);
+ }
+ */
 
 Parameters CustomGuidedNoParamsSymmetricProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                                            const Particle &particle) const
@@ -137,14 +139,14 @@ Parameters CustomGuidedNoParamsSymmetricProposalKernel::subsample_simulate(Rando
 }
 
 /*
-Parameters CustomGuidedNoParamsSymmetricProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                    Particle &particle,
-                                                    const Parameters &conditioned_on_parameters) const
-{
-  // no difference since size of data set does not impact on proposal
-  return this->simulate(rng, particle, conditioned_on_parameters);
-}
-*/
+ Parameters CustomGuidedNoParamsSymmetricProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ // no difference since size of data set does not impact on proposal
+ return this->simulate(rng, particle, conditioned_on_parameters);
+ }
+ */
 
 Parameters CustomGuidedNoParamsSymmetricProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                                            const std::string &variable,
@@ -155,15 +157,15 @@ Parameters CustomGuidedNoParamsSymmetricProposalKernel::subsample_simulate(Rando
 }
 
 /*
-Parameters CustomGuidedNoParamsSymmetricProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                    const std::string &variable,
-                                                    Particle &particle,
-                                                    const Parameters &conditioned_on_parameters) const
-{
-  // no difference since size of data set does not impact on proposal
-  Rcpp::stop("CustomGuidedNoParamsSymmetricProposalKernel::subsample_simulate - not implemented.");
-}
-*/
+ Parameters CustomGuidedNoParamsSymmetricProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
+ const std::string &variable,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters) const
+ {
+ // no difference since size of data set does not impact on proposal
+ Rcpp::stop("CustomGuidedNoParamsSymmetricProposalKernel::subsample_simulate - not implemented.");
+ }
+ */
 
 arma::mat CustomGuidedNoParamsSymmetricProposalKernel::specific_gradient_of_log(const std::string &variable,
                                                                                 const Particle &proposed_particle,
@@ -173,14 +175,14 @@ arma::mat CustomGuidedNoParamsSymmetricProposalKernel::specific_gradient_of_log(
 }
 
 /*
-arma::mat CustomGuidedNoParamsSymmetricProposalKernel::specific_gradient_of_log(const std::string &variable,
-                                                           Particle &proposed_particle,
-                                                           Particle &old_particle,
-                                                           const Parameters &conditioned_on_parameters)
-{
-  Rcpp::stop("CustomGuidedNoParamsSymmetricProposalKernel::specific_gradient_of_log - not written yet.");
-}
-*/
+ arma::mat CustomGuidedNoParamsSymmetricProposalKernel::specific_gradient_of_log(const std::string &variable,
+ Particle &proposed_particle,
+ Particle &old_particle,
+ const Parameters &conditioned_on_parameters)
+ {
+ Rcpp::stop("CustomGuidedNoParamsSymmetricProposalKernel::specific_gradient_of_log - not written yet.");
+ }
+ */
 
 arma::mat CustomGuidedNoParamsSymmetricProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
                                                                                           const Particle &proposed_particle,
@@ -191,7 +193,7 @@ arma::mat CustomGuidedNoParamsSymmetricProposalKernel::specific_subsample_gradie
 
 void CustomGuidedNoParamsSymmetricProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
 {
-
+  
 }
 
 GradientEstimatorOutput* CustomGuidedNoParamsSymmetricProposalKernel::simulate_gradient_estimator_output() const
@@ -225,4 +227,5 @@ bool CustomGuidedNoParamsSymmetricProposalKernel::can_be_evaluated() const
 void CustomGuidedNoParamsSymmetricProposalKernel::set_data(Data* data_in)
 {
   this->data = data_in;
+}
 }

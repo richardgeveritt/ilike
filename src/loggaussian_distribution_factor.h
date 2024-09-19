@@ -9,6 +9,8 @@ using namespace Rcpp;
 #include "ilike_header.h"
 #include "gaussian_proposal_info.h"
 
+namespace ilike
+{
 class LogGaussianDistributionFactor : public DistributionFactor
 {
   
@@ -48,5 +50,7 @@ protected:
   boost::unordered_map< std::string, GaussianProposalInfo> proposal_info;
   
 };
+
+}
 
 #endif

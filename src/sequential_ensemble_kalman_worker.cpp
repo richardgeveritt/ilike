@@ -12,14 +12,16 @@
 #include "factor_variables.h"
 #include "single_point_move_output.h"
 
+namespace ilike
+{
 //Default constructor.
 SequentialEnsembleKalmanWorker::SequentialEnsembleKalmanWorker(void)
-  :EnsembleKalmanWorker()
+:EnsembleKalmanWorker()
 {
 }
 
 SequentialEnsembleKalmanWorker::SequentialEnsembleKalmanWorker(EnsembleKalman* the_enk_in)
-  :EnsembleKalmanWorker(the_enk_in)
+:EnsembleKalmanWorker(the_enk_in)
 {
   //this->particles = NULL;
   this->log_unnormalised_incremental_weights = std::vector<double>(this->get_number_of_ensemble_members());
@@ -27,7 +29,7 @@ SequentialEnsembleKalmanWorker::SequentialEnsembleKalmanWorker(EnsembleKalman* t
 
 //Copy constructor for the SequentialEnsembleKalmanWorker class.
 SequentialEnsembleKalmanWorker::SequentialEnsembleKalmanWorker(const SequentialEnsembleKalmanWorker &another)
-  :EnsembleKalmanWorker(another)
+:EnsembleKalmanWorker(another)
 {
   this->make_copy(another);
 }
@@ -44,7 +46,7 @@ void SequentialEnsembleKalmanWorker::operator=(const SequentialEnsembleKalmanWor
   }
   
   //this->particles.clear();
-
+  
   EnsembleKalmanWorker::operator=(another);
   this->make_copy(another);
 }
@@ -55,16 +57,16 @@ EnsembleKalmanWorker* SequentialEnsembleKalmanWorker::duplicate() const
 }
 
 /*
-EnsembleKalman SequentialEnsembleKalmanWorker::simulated_particles() const
-{
-  return this->particles;
-}
-
-EnsembleKalman& SequentialEnsembleKalmanWorker::simulated_particles()
-{
-  return this->particles;
-}
-*/
+ EnsembleKalman SequentialEnsembleKalmanWorker::simulated_particles() const
+ {
+ return this->particles;
+ }
+ 
+ EnsembleKalman& SequentialEnsembleKalmanWorker::simulated_particles()
+ {
+ return this->particles;
+ }
+ */
 
 void SequentialEnsembleKalmanWorker::make_copy(const SequentialEnsembleKalmanWorker &another)
 {
@@ -167,7 +169,7 @@ void SequentialEnsembleKalmanWorker::unpack(Ensemble* ensemble)
          ++j)
     {
       ensemble->members[i]->back().parameters[this->the_enk->packing_instructions.states_names[j]] = ensemble->partially_packed_members_col[i](arma::span(this->the_enk->packing_instructions.states_start_and_end[j].first,
-                                                                                                                                                      this->the_enk->packing_instructions.states_start_and_end[j].second));
+                                                                                                                                                          this->the_enk->packing_instructions.states_start_and_end[j].second));
     }
   }
   
@@ -198,7 +200,7 @@ void SequentialEnsembleKalmanWorker::unpack_with_predicted(Ensemble* ensemble)
       //ensemble->predicted_members[i]->back().
       
       new_parameters[this->the_enk->packing_instructions.states_names[j]] = ensemble->partially_packed_predicted_members_col[i](arma::span(this->the_enk->packing_instructions.states_start_and_end[j].first,
-                                                                                                                                                                              this->the_enk->packing_instructions.states_start_and_end[j].second));
+                                                                                                                                           this->the_enk->packing_instructions.states_start_and_end[j].second));
     }
     
     ensemble->predicted_members.push_back(new SinglePointMoveOutput(new_parameters,ensemble->members[i]->back().ensemble_factor_variables->get_ensemble_factors()));
@@ -221,19 +223,19 @@ void SequentialEnsembleKalmanWorker::weight(Ensemble* ensemble,
 }
 
 /*
-void SequentialEnsembleKalmanWorker::weight(Ensemble* ensemble,
-                                            const Index* index,
-                                            double inverse_incremental_temperature,
-                                            const Parameters &conditioned_on_parameters)
-{
-  for (size_t i = 0; i < ensemble->size(); ++i)
-  {
-    this->log_unnormalised_incremental_weights[i] = (*ensemble)[i]->back().evaluate_ensemble_likelihood_ratios(index,
-                                                                                                               inverse_incremental_temperature,
-                                                                                                    conditioned_on_parameters);
-  }
-}
-*/
+ void SequentialEnsembleKalmanWorker::weight(Ensemble* ensemble,
+ const Index* index,
+ double inverse_incremental_temperature,
+ const Parameters &conditioned_on_parameters)
+ {
+ for (size_t i = 0; i < ensemble->size(); ++i)
+ {
+ this->log_unnormalised_incremental_weights[i] = (*ensemble)[i]->back().evaluate_ensemble_likelihood_ratios(index,
+ inverse_incremental_temperature,
+ conditioned_on_parameters);
+ }
+ }
+ */
 
 void SequentialEnsembleKalmanWorker::subsample_weight(Ensemble* ensemble,
                                                       const Index* index,
@@ -250,19 +252,19 @@ void SequentialEnsembleKalmanWorker::subsample_weight(Ensemble* ensemble,
 }
 
 /*
-void SequentialEnsembleKalmanWorker::subsample_weight(Ensemble* ensemble,
-                                                      const Index* index,
-                                                      double inverse_incremental_temperature,
-                                                      const Parameters &conditioned_on_parameters)
-{
-  for (size_t i = 0; i < ensemble->size(); ++i)
-  {
-    this->log_unnormalised_incremental_weights[i] = (*ensemble)[i]->back().subsample_evaluate_ensemble_likelihood_ratios(index,
-                                                                                                                                                 inverse_incremental_temperature,
-                                                                                                                          conditioned_on_parameters);
-  }
-}
-*/
+ void SequentialEnsembleKalmanWorker::subsample_weight(Ensemble* ensemble,
+ const Index* index,
+ double inverse_incremental_temperature,
+ const Parameters &conditioned_on_parameters)
+ {
+ for (size_t i = 0; i < ensemble->size(); ++i)
+ {
+ this->log_unnormalised_incremental_weights[i] = (*ensemble)[i]->back().subsample_evaluate_ensemble_likelihood_ratios(index,
+ inverse_incremental_temperature,
+ conditioned_on_parameters);
+ }
+ }
+ */
 
 arma::colvec SequentialEnsembleKalmanWorker::get_unnormalised_log_incremental_weights() const
 {
@@ -270,11 +272,11 @@ arma::colvec SequentialEnsembleKalmanWorker::get_unnormalised_log_incremental_we
 }
 
 /*
-arma::colvec SequentialEnsembleKalmanWorker::get_unnormalised_log_incremental_weights() const
-{
-  return this->log_unnormalised_incremental_weights;
-}
-*/
+ arma::colvec SequentialEnsembleKalmanWorker::get_unnormalised_log_incremental_weights() const
+ {
+ return this->log_unnormalised_incremental_weights;
+ }
+ */
 
 void SequentialEnsembleKalmanWorker::specific_simulate(Ensemble* next_ensemble,
                                                        const Index* index)
@@ -326,251 +328,251 @@ void SequentialEnsembleKalmanWorker::specific_simulate(Ensemble* next_ensemble,
 }
 
 /*
-void SequentialEnsembleKalmanWorker::subsample_specific_simulate(EnsembleKalman* next_particles,
-                                                      const Parameters &conditioned_on_parameters)
-{
-  RandomNumberGenerator local_rng(*this->get_rng());
-  local_rng.seed(this->get_seed(),this->get_number_of_particles());
-  
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    next_particles->push_back(this->particle_simulator->subsample_simulate(local_rng,
-                                                                           conditioned_on_parameters));
-    
-    if (this->the_enk->evaluate_log_proposal!=NULL)
-    {
-      (*next_particles)[i]->back().previous_target_evaluated = this->the_enk->evaluate_log_proposal((*next_particles)[i]->back().parameters);
-    }
-    
-  }
-  
-  //this->output = EnsembleKalman(this->particles);
-}
-
-void SequentialEnsembleKalmanWorker::weight(EnsembleKalman &current_particles)
-{
-  
-  //std::vector<LikelihoodEstimatorOutput*> inner_likelihood_estimator_outputs;
-  //inner_likelihood_estimator_outputs.resize(this->get_number_of_particles());
-  
-  //likelihood_estimator_outputs.reserve(likelihood_estimators.size());
-  //for (size_t j = 0; j < this->likelihood_estimators.size(); ++j)
-  //{
-  //  likelihood_estimator_outputs.push_back(inner_likelihood_estimator_outputs);
-  //}
-  
-  
-  
-  // Set up likelihood estimators with all particles.
-  //for (std::vector< std::vector<LikelihoodEstimatorOutput*> >::const_iterator l = this->likelihood_estimator_outputs.begin();
-  //     l!=this->likelihood_estimator_outputs.end();
-  //     ++l)
-  //{
-  //  // Set up each estimator.
-  //  // Not done yet.
-  //}
-  
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods() - current_particles[i]->back().previous_target_evaluated;
-  }
-  
-  //for (std::vector< std::vector<LikelihoodEstimatorOutput*> >::iterator l_out = this->likelihood_estimator_outputs.begin();
-  //     l_out!=likelihood_estimator_outputs.end();
-  //     ++l_out)
-  //{
-  //  for (size_t l_in = 0;
-  //       l_in!=this->get_number_of_particles();
-  //        ++l_in)
-  //   {
-  //     (*l_out)[l_in]->estimate(this->particles[l_in].parameters);
-  //     this->log_unnormalised_incremental_weights[l_in] = this->log_unnormalised_incremental_weights[l_in] + (*l_out)[l_in]->log_likelihood;
-  //   }
-  //}
-  
-}
-
-void SequentialEnsembleKalmanWorker::pf_initial_weight(EnsembleKalman &current_particles)
-{
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods(&VectorIndex(0)) - current_particles[i]->back().previous_target_evaluated;
-  }
-}
-
-void SequentialEnsembleKalmanWorker::weight(EnsembleKalman &current_particles,
-                                 const Parameters &conditioned_on_parameters)
-{
-
-  //std::vector<LikelihoodEstimatorOutput*> inner_likelihood_estimator_outputs;
-  //inner_likelihood_estimator_outputs.resize(this->get_number_of_particles());
-  
-  //likelihood_estimator_outputs.reserve(likelihood_estimators.size());
-  //for (size_t j = 0; j < this->likelihood_estimators.size(); ++j)
-  //{
-  //  likelihood_estimator_outputs.push_back(inner_likelihood_estimator_outputs);
-  //}
-  
-  // Set up likelihood estimators with all particles.
-  //for (std::vector< std::vector<LikelihoodEstimatorOutput*> >::const_iterator l = this->likelihood_estimator_outputs.begin();
-  //     l!=this->likelihood_estimator_outputs.end();
-  //     ++l)
-  //{
-  //  // Set up each estimator.
-  //  // Not done yet.
-  //}
-  
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods(conditioned_on_parameters) - current_particles[i]->back().previous_target_evaluated;
-  }
-  
-  //for (std::vector< std::vector<LikelihoodEstimatorOutput*> >::iterator l_out = this->likelihood_estimator_outputs.begin();
-  //     l_out!=likelihood_estimator_outputs.end();
-  //     ++l_out)
-  //{
-  //  for (size_t l_in = 0;
-  //       l_in!=this->get_number_of_particles();
-  //        ++l_in)
-  //   {
-  //     (*l_out)[l_in]->estimate(this->particles[l_in].parameters);
-  //     this->log_unnormalised_incremental_weights[l_in] = this->log_unnormalised_incremental_weights[l_in] + (*l_out)[l_in]->log_likelihood;
-  //   }
-  //}
-
-}
-
-void SequentialEnsembleKalmanWorker::pf_initial_weight(EnsembleKalman &current_particles,
-                                            const Parameters &conditioned_on_parameters)
-{
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods(conditioned_on_parameters) - current_particles[i]->back().previous_target_evaluated;
-  }
-}
-
-void SequentialEnsembleKalmanWorker::subsample_weight(EnsembleKalman &current_particles,
-                                           const Parameters &conditioned_on_parameters)
-{
-  
-  //std::vector<LikelihoodEstimatorOutput*> inner_likelihood_estimator_outputs;
-  //inner_likelihood_estimator_outputs.resize(this->get_number_of_particles());
-  
-  //likelihood_estimator_outputs.reserve(likelihood_estimators.size());
-  //for (size_t j = 0; j < this->likelihood_estimators.size(); ++j)
-  //{
-  //  likelihood_estimator_outputs.push_back(inner_likelihood_estimator_outputs);
-  //}
-  
-  
-  
-  // Set up likelihood estimators with all particles.
-  //for (std::vector< std::vector<LikelihoodEstimatorOutput*> >::const_iterator l = this->likelihood_estimator_outputs.begin();
-  //     l!=this->likelihood_estimator_outputs.end();
-  //     ++l)
-  //{
-  //  // Set up each estimator.
-  //  // Not done yet.
-  //}
-  
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().subsample_evaluate_likelihoods(conditioned_on_parameters) - current_particles[i]->back().subsample_previous_target_evaluated;
-  }
-  
-  //for (std::vector< std::vector<LikelihoodEstimatorOutput*> >::iterator l_out = this->likelihood_estimator_outputs.begin();
-  //     l_out!=likelihood_estimator_outputs.end();
-  //     ++l_out)
-  //{
-  //  for (size_t l_in = 0;
-  //       l_in!=this->get_number_of_particles();
-  //        ++l_in)
-  //   {
-  //     (*l_out)[l_in]->estimate(this->particles[l_in].parameters);
-  //     this->log_unnormalised_incremental_weights[l_in] = this->log_unnormalised_incremental_weights[l_in] + (*l_out)[l_in]->log_likelihood;
-  //   }
-  //}
-  
-}
-
-void SequentialEnsembleKalmanWorker::smcfixed_weight(EnsembleKalman &current_particles)
-{
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    current_particles[i]->back().evaluate_smcfixed_part_of_likelihoods();
-  }
-}
-
-void SequentialEnsembleKalmanWorker::smcadaptive_given_smcfixed_weight(EnsembleKalman &current_particles)
-{
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_smcadaptive_part_given_smcfixed_likelihoods() - current_particles[i]->back().previous_target_evaluated;
-  }
-}
-
-void SequentialEnsembleKalmanWorker::smcadaptive_given_smcfixed_evaluate_target(EnsembleKalman &current_particles)
-{
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_smcadaptive_part_given_smcfixed_likelihoods();
-    
-  }
-}
-
-void SequentialEnsembleKalmanWorker::marginal_weight(EnsembleKalman &current_particles,
-                                          EnsembleKalman &previous_particles,
-                                          ProposalKernel* proposal_kernel)
-{
-  arma::colvec terms(this->get_number_of_particles());
-  
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    // If proposal is Gaussian, might be able to use the fast Gauss transform in low-dim
-    for (size_t j = 0; j < this->get_number_of_particles(); ++j)
-    {
-      terms[j] = previous_particles.normalised_log_weights[j] + proposal_kernel->evaluate_kernel(current_particles[i]->back(),
-                                                                                                 previous_particles[j]->back());
-    }
-    
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods() - log_sum_exp(terms);
-    
-  }
-}
-
-void SequentialEnsembleKalmanWorker::generic_weight(EnsembleKalman &current_particles,
-                                         EnsembleKalman &previous_particles,
-                                         ProposalKernel* proposal_kernel,
-                                         ProposalKernel* L_kernel)
-{
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods()
-    + L_kernel->evaluate_kernel(previous_particles[i]->back(),
-                               current_particles[i]->back())
-    - previous_particles[i]->back().target_evaluated
-    - proposal_kernel->evaluate_kernel(current_particles[i]->back(),
-                                      previous_particles[i]->back());
-    
-  }
-}
-
-void SequentialEnsembleKalmanWorker::pf_weight(EnsembleKalman &current_particles,
-                                    EnsembleKalman &previous_particles,
-                                    ProposalKernel* proposal_kernel)
-{
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods();
-    if (proposal_kernel!=NULL)
-      this->log_unnormalised_incremental_weights[i] = this->log_unnormalised_incremental_weights[i] - proposal_kernel->evaluate_kernel(current_particles[i]->back(),
-                                       previous_particles[i]->back());
-    
-  }
-}
-*/
+ void SequentialEnsembleKalmanWorker::subsample_specific_simulate(EnsembleKalman* next_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ RandomNumberGenerator local_rng(*this->get_rng());
+ local_rng.seed(this->get_seed(),this->get_number_of_particles());
+ 
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ next_particles->push_back(this->particle_simulator->subsample_simulate(local_rng,
+ conditioned_on_parameters));
+ 
+ if (this->the_enk->evaluate_log_proposal!=NULL)
+ {
+ (*next_particles)[i]->back().previous_target_evaluated = this->the_enk->evaluate_log_proposal((*next_particles)[i]->back().parameters);
+ }
+ 
+ }
+ 
+ //this->output = EnsembleKalman(this->particles);
+ }
+ 
+ void SequentialEnsembleKalmanWorker::weight(EnsembleKalman &current_particles)
+ {
+ 
+ //std::vector<LikelihoodEstimatorOutput*> inner_likelihood_estimator_outputs;
+ //inner_likelihood_estimator_outputs.resize(this->get_number_of_particles());
+ 
+ //likelihood_estimator_outputs.reserve(likelihood_estimators.size());
+ //for (size_t j = 0; j < this->likelihood_estimators.size(); ++j)
+ //{
+ //  likelihood_estimator_outputs.push_back(inner_likelihood_estimator_outputs);
+ //}
+ 
+ 
+ 
+ // Set up likelihood estimators with all particles.
+ //for (std::vector< std::vector<LikelihoodEstimatorOutput*> >::const_iterator l = this->likelihood_estimator_outputs.begin();
+ //     l!=this->likelihood_estimator_outputs.end();
+ //     ++l)
+ //{
+ //  // Set up each estimator.
+ //  // Not done yet.
+ //}
+ 
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods() - current_particles[i]->back().previous_target_evaluated;
+ }
+ 
+ //for (std::vector< std::vector<LikelihoodEstimatorOutput*> >::iterator l_out = this->likelihood_estimator_outputs.begin();
+ //     l_out!=likelihood_estimator_outputs.end();
+ //     ++l_out)
+ //{
+ //  for (size_t l_in = 0;
+ //       l_in!=this->get_number_of_particles();
+ //        ++l_in)
+ //   {
+ //     (*l_out)[l_in]->estimate(this->particles[l_in].parameters);
+ //     this->log_unnormalised_incremental_weights[l_in] = this->log_unnormalised_incremental_weights[l_in] + (*l_out)[l_in]->log_likelihood;
+ //   }
+ //}
+ 
+ }
+ 
+ void SequentialEnsembleKalmanWorker::pf_initial_weight(EnsembleKalman &current_particles)
+ {
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods(&VectorIndex(0)) - current_particles[i]->back().previous_target_evaluated;
+ }
+ }
+ 
+ void SequentialEnsembleKalmanWorker::weight(EnsembleKalman &current_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ 
+ //std::vector<LikelihoodEstimatorOutput*> inner_likelihood_estimator_outputs;
+ //inner_likelihood_estimator_outputs.resize(this->get_number_of_particles());
+ 
+ //likelihood_estimator_outputs.reserve(likelihood_estimators.size());
+ //for (size_t j = 0; j < this->likelihood_estimators.size(); ++j)
+ //{
+ //  likelihood_estimator_outputs.push_back(inner_likelihood_estimator_outputs);
+ //}
+ 
+ // Set up likelihood estimators with all particles.
+ //for (std::vector< std::vector<LikelihoodEstimatorOutput*> >::const_iterator l = this->likelihood_estimator_outputs.begin();
+ //     l!=this->likelihood_estimator_outputs.end();
+ //     ++l)
+ //{
+ //  // Set up each estimator.
+ //  // Not done yet.
+ //}
+ 
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods(conditioned_on_parameters) - current_particles[i]->back().previous_target_evaluated;
+ }
+ 
+ //for (std::vector< std::vector<LikelihoodEstimatorOutput*> >::iterator l_out = this->likelihood_estimator_outputs.begin();
+ //     l_out!=likelihood_estimator_outputs.end();
+ //     ++l_out)
+ //{
+ //  for (size_t l_in = 0;
+ //       l_in!=this->get_number_of_particles();
+ //        ++l_in)
+ //   {
+ //     (*l_out)[l_in]->estimate(this->particles[l_in].parameters);
+ //     this->log_unnormalised_incremental_weights[l_in] = this->log_unnormalised_incremental_weights[l_in] + (*l_out)[l_in]->log_likelihood;
+ //   }
+ //}
+ 
+ }
+ 
+ void SequentialEnsembleKalmanWorker::pf_initial_weight(EnsembleKalman &current_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods(conditioned_on_parameters) - current_particles[i]->back().previous_target_evaluated;
+ }
+ }
+ 
+ void SequentialEnsembleKalmanWorker::subsample_weight(EnsembleKalman &current_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ 
+ //std::vector<LikelihoodEstimatorOutput*> inner_likelihood_estimator_outputs;
+ //inner_likelihood_estimator_outputs.resize(this->get_number_of_particles());
+ 
+ //likelihood_estimator_outputs.reserve(likelihood_estimators.size());
+ //for (size_t j = 0; j < this->likelihood_estimators.size(); ++j)
+ //{
+ //  likelihood_estimator_outputs.push_back(inner_likelihood_estimator_outputs);
+ //}
+ 
+ 
+ 
+ // Set up likelihood estimators with all particles.
+ //for (std::vector< std::vector<LikelihoodEstimatorOutput*> >::const_iterator l = this->likelihood_estimator_outputs.begin();
+ //     l!=this->likelihood_estimator_outputs.end();
+ //     ++l)
+ //{
+ //  // Set up each estimator.
+ //  // Not done yet.
+ //}
+ 
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().subsample_evaluate_likelihoods(conditioned_on_parameters) - current_particles[i]->back().subsample_previous_target_evaluated;
+ }
+ 
+ //for (std::vector< std::vector<LikelihoodEstimatorOutput*> >::iterator l_out = this->likelihood_estimator_outputs.begin();
+ //     l_out!=likelihood_estimator_outputs.end();
+ //     ++l_out)
+ //{
+ //  for (size_t l_in = 0;
+ //       l_in!=this->get_number_of_particles();
+ //        ++l_in)
+ //   {
+ //     (*l_out)[l_in]->estimate(this->particles[l_in].parameters);
+ //     this->log_unnormalised_incremental_weights[l_in] = this->log_unnormalised_incremental_weights[l_in] + (*l_out)[l_in]->log_likelihood;
+ //   }
+ //}
+ 
+ }
+ 
+ void SequentialEnsembleKalmanWorker::smcfixed_weight(EnsembleKalman &current_particles)
+ {
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ current_particles[i]->back().evaluate_smcfixed_part_of_likelihoods();
+ }
+ }
+ 
+ void SequentialEnsembleKalmanWorker::smcadaptive_given_smcfixed_weight(EnsembleKalman &current_particles)
+ {
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_smcadaptive_part_given_smcfixed_likelihoods() - current_particles[i]->back().previous_target_evaluated;
+ }
+ }
+ 
+ void SequentialEnsembleKalmanWorker::smcadaptive_given_smcfixed_evaluate_target(EnsembleKalman &current_particles)
+ {
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_smcadaptive_part_given_smcfixed_likelihoods();
+ 
+ }
+ }
+ 
+ void SequentialEnsembleKalmanWorker::marginal_weight(EnsembleKalman &current_particles,
+ EnsembleKalman &previous_particles,
+ ProposalKernel* proposal_kernel)
+ {
+ arma::colvec terms(this->get_number_of_particles());
+ 
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ // If proposal is Gaussian, might be able to use the fast Gauss transform in low-dim
+ for (size_t j = 0; j < this->get_number_of_particles(); ++j)
+ {
+ terms[j] = previous_particles.normalised_log_weights[j] + proposal_kernel->evaluate_kernel(current_particles[i]->back(),
+ previous_particles[j]->back());
+ }
+ 
+ this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods() - log_sum_exp(terms);
+ 
+ }
+ }
+ 
+ void SequentialEnsembleKalmanWorker::generic_weight(EnsembleKalman &current_particles,
+ EnsembleKalman &previous_particles,
+ ProposalKernel* proposal_kernel,
+ ProposalKernel* L_kernel)
+ {
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ 
+ this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods()
+ + L_kernel->evaluate_kernel(previous_particles[i]->back(),
+ current_particles[i]->back())
+ - previous_particles[i]->back().target_evaluated
+ - proposal_kernel->evaluate_kernel(current_particles[i]->back(),
+ previous_particles[i]->back());
+ 
+ }
+ }
+ 
+ void SequentialEnsembleKalmanWorker::pf_weight(EnsembleKalman &current_particles,
+ EnsembleKalman &previous_particles,
+ ProposalKernel* proposal_kernel)
+ {
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ 
+ this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods();
+ if (proposal_kernel!=NULL)
+ this->log_unnormalised_incremental_weights[i] = this->log_unnormalised_incremental_weights[i] - proposal_kernel->evaluate_kernel(current_particles[i]->back(),
+ previous_particles[i]->back());
+ 
+ }
+ }
+ */
 
 void SequentialEnsembleKalmanWorker::specific_move(Ensemble* next_particles,
                                                    Ensemble* current_particles)
@@ -587,22 +589,22 @@ void SequentialEnsembleKalmanWorker::specific_move(Ensemble* next_particles,
 }
 
 /*
-void SequentialEnsembleKalmanWorker::specific_move(Ensemble* next_particles,
-                                                   Ensemble* current_particles,
-                                                   const Parameters &conditioned_on_parameters)
-{
-  RandomNumberGenerator local_rng(*this->get_rng());
-  local_rng.seed(this->get_seed(),this->get_number_of_ensemble_members());
-  
-  for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
-  {
-    next_particles->push_back(this->the_enk->move(local_rng,
-                                                  (*current_particles)[i]->back(),
-                                                  conditioned_on_parameters));
-    
-  }
-}
-*/
+ void SequentialEnsembleKalmanWorker::specific_move(Ensemble* next_particles,
+ Ensemble* current_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ RandomNumberGenerator local_rng(*this->get_rng());
+ local_rng.seed(this->get_seed(),this->get_number_of_ensemble_members());
+ 
+ for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
+ {
+ next_particles->push_back(this->the_enk->move(local_rng,
+ (*current_particles)[i]->back(),
+ conditioned_on_parameters));
+ 
+ }
+ }
+ */
 
 void SequentialEnsembleKalmanWorker::subsample_specific_move(Ensemble* next_particles,
                                                              Ensemble* current_particles)
@@ -619,238 +621,238 @@ void SequentialEnsembleKalmanWorker::subsample_specific_move(Ensemble* next_part
 }
 
 /*
-void SequentialEnsembleKalmanWorker::subsample_specific_move(Ensemble* next_particles,
-                                                             Ensemble* current_particles,
-                                                             const Parameters &conditioned_on_parameters)
-{
-  RandomNumberGenerator local_rng(*this->get_rng());
-  local_rng.seed(this->get_seed(),this->get_number_of_ensemble_members());
-  
-  for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
-  {
-    next_particles->push_back(this->the_enk->move(local_rng,
-                                                  (*current_particles)[i]->back(),
-                                                  conditioned_on_parameters));
-    
-  }
-}
-*/
+ void SequentialEnsembleKalmanWorker::subsample_specific_move(Ensemble* next_particles,
+ Ensemble* current_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ RandomNumberGenerator local_rng(*this->get_rng());
+ local_rng.seed(this->get_seed(),this->get_number_of_ensemble_members());
+ 
+ for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
+ {
+ next_particles->push_back(this->the_enk->move(local_rng,
+ (*current_particles)[i]->back(),
+ conditioned_on_parameters));
+ 
+ }
+ }
+ */
 
 /*
-void SequentialEnsembleKalmanWorker::smcfixed_weight(EnsembleKalman &current_particles,
-                                          const Parameters &conditioned_on_parameters)
-{
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    current_particles[i]->back().evaluate_smcfixed_part_of_likelihoods(conditioned_on_parameters);
-  }
-}
-
-void SequentialEnsembleKalmanWorker::smcadaptive_given_smcfixed_weight(EnsembleKalman &current_particles,
-                                                            const Parameters &conditioned_on_parameters)
-{
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_smcadaptive_part_given_smcfixed_likelihoods(conditioned_on_parameters) - current_particles[i]->back().previous_target_evaluated;
-    
-  }
-}
-
-void SequentialEnsembleKalmanWorker::smcadaptive_given_smcfixed_evaluate_target(EnsembleKalman &current_particles,
-                                                                     const Parameters &conditioned_on_parameters)
-{
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_smcadaptive_part_given_smcfixed_likelihoods(conditioned_on_parameters);
-    
-  }
-}
-
-void SequentialEnsembleKalmanWorker::marginal_weight(EnsembleKalman &current_particles,
-                                          EnsembleKalman &previous_particles,
-                                          ProposalKernel* proposal_kernel,
-                                          const Parameters &conditioned_on_parameters)
-{
-  arma::colvec terms(this->get_number_of_particles());
-  
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    // If proposal is Gaussian, might be able to use the fast Gauss transform in low-dim
-    for (size_t j = 0; j < this->get_number_of_particles(); ++j)
-    {
-      terms[j] = previous_particles.normalised_log_weights[j] + proposal_kernel->evaluate_kernel(current_particles[i]->back(),
-                                                 previous_particles[j]->back(),
-                                                 conditioned_on_parameters);
-    }
-    
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods(conditioned_on_parameters) - log_sum_exp(terms);
-    
-  }
-}
-
-void SequentialEnsembleKalmanWorker::generic_weight(EnsembleKalman &current_particles,
-                                         EnsembleKalman &previous_particles,
-                                         ProposalKernel* proposal_kernel,
-                                         ProposalKernel* L_kernel,
-                                         const Parameters &conditioned_on_parameters)
-{
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods(conditioned_on_parameters)
-    + L_kernel->evaluate_kernel(previous_particles[i]->back(),
-                               current_particles[i]->back(),
-                               conditioned_on_parameters)
-    - previous_particles[i]->back().target_evaluated
-    - proposal_kernel->evaluate_kernel(current_particles[i]->back(),
-                                      previous_particles[i]->back(),
-                                      conditioned_on_parameters);
-    
-  }
-}
-
-void SequentialEnsembleKalmanWorker::pf_weight(EnsembleKalman &current_particles,
-                                    EnsembleKalman &previous_particles,
-                                    ProposalKernel* proposal_kernel,
-                                    const Parameters &conditioned_on_parameters)
-{
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods(conditioned_on_parameters);
-    if (proposal_kernel!=NULL)
-      this->log_unnormalised_incremental_weights[i] = this->log_unnormalised_incremental_weights[i] - proposal_kernel->evaluate_kernel(current_particles[i]->back(),
-                                                                                                                                       previous_particles[i]->back(),
-                                                                                                                                       conditioned_on_parameters);
-    
-  }
-}
-
-void SequentialEnsembleKalmanWorker::subsample_specific_move(EnsembleKalman* next_particles,
-                                                  const EnsembleKalman* current_particles,
-                                                  const Parameters &conditioned_on_parameters)
-{
-  RandomNumberGenerator local_rng(*this->get_rng());
-  local_rng.seed(this->get_seed(),this->get_number_of_particles());
-  
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    next_particles->push_back(this->the_enk->subsample_move(local_rng,
-                                                            (*current_particles)[i]->back(),
-                                                            conditioned_on_parameters));
-    
-  }
-}
-
-void SequentialEnsembleKalmanWorker::subsample_smcfixed_weight(EnsembleKalman &current_particles,
-                                          const Parameters &conditioned_on_parameters)
-{
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    current_particles[i]->back().subsample_evaluate_smcfixed_part_of_likelihoods(conditioned_on_parameters);
-  }
-}
-
-void SequentialEnsembleKalmanWorker::subsample_smcadaptive_given_smcfixed_weight(EnsembleKalman &current_particles,
-                                                            const Parameters &conditioned_on_parameters)
-{
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(conditioned_on_parameters) - current_particles[i]->back().subsample_previous_target_evaluated;
-    
-  }
-}
-
-void SequentialEnsembleKalmanWorker::subsample_smcadaptive_given_smcfixed_evaluate_target(EnsembleKalman &current_particles,
-                                                                     const Parameters &conditioned_on_parameters)
-{
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(conditioned_on_parameters);
-    
-  }
-}
-
-void SequentialEnsembleKalmanWorker::subsample_marginal_weight(EnsembleKalman &current_particles,
-                                          EnsembleKalman &previous_particles,
-                                          ProposalKernel* proposal_kernel,
-                                          const Parameters &conditioned_on_parameters)
-{
-  arma::colvec terms(this->get_number_of_particles());
-  
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    // If proposal is Gaussian, might be able to use the fast Gauss transform in low-dim
-    for (size_t j = 0; j < this->get_number_of_particles(); ++j)
-    {
-      terms[j] = previous_particles.normalised_log_weights[j] + proposal_kernel->evaluate_kernel(current_particles[i]->back(),
-                                                                                                 previous_particles[j]->back(),
-                                                                                                 conditioned_on_parameters);
-    }
-    
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().subsample_evaluate_likelihoods(conditioned_on_parameters) - log_sum_exp(terms);
-    
-  }
-}
-
-void SequentialEnsembleKalmanWorker::subsample_generic_weight(EnsembleKalman &current_particles,
-                                         EnsembleKalman &previous_particles,
-                                         ProposalKernel* proposal_kernel,
-                                         ProposalKernel* L_kernel,
-                                         const Parameters &conditioned_on_parameters)
-{
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().subsample_evaluate_likelihoods(conditioned_on_parameters)
-    + L_kernel->subsample_evaluate_kernel(previous_particles[i]->back(),
-                                          current_particles[i]->back(),
-                                          conditioned_on_parameters)
-    - previous_particles[i]->back().subsample_target_evaluated
-    - proposal_kernel->subsample_evaluate_kernel(current_particles[i]->back(),
-                                                 previous_particles[i]->back(),
-                                                 conditioned_on_parameters);
-    
-  }
-}
-
-void SequentialEnsembleKalmanWorker::subsample_pf_weight(EnsembleKalman &current_particles,
-                                              EnsembleKalman &previous_particles,
-                                              ProposalKernel* proposal_kernel,
-                                              const Parameters &conditioned_on_parameters)
-{
-  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
-  {
-    
-    this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().subsample_evaluate_likelihoods(conditioned_on_parameters);
-    if (proposal_kernel!=NULL)
-      this->log_unnormalised_incremental_weights[i] = this->log_unnormalised_incremental_weights[i] - proposal_kernel->subsample_evaluate_kernel(current_particles[i]->back(),
-                                                                                                                                       previous_particles[i]->back(),
-                                                                                                                                       conditioned_on_parameters);
-    
-  }
-}
-*/
+ void SequentialEnsembleKalmanWorker::smcfixed_weight(EnsembleKalman &current_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ current_particles[i]->back().evaluate_smcfixed_part_of_likelihoods(conditioned_on_parameters);
+ }
+ }
+ 
+ void SequentialEnsembleKalmanWorker::smcadaptive_given_smcfixed_weight(EnsembleKalman &current_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_smcadaptive_part_given_smcfixed_likelihoods(conditioned_on_parameters) - current_particles[i]->back().previous_target_evaluated;
+ 
+ }
+ }
+ 
+ void SequentialEnsembleKalmanWorker::smcadaptive_given_smcfixed_evaluate_target(EnsembleKalman &current_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_smcadaptive_part_given_smcfixed_likelihoods(conditioned_on_parameters);
+ 
+ }
+ }
+ 
+ void SequentialEnsembleKalmanWorker::marginal_weight(EnsembleKalman &current_particles,
+ EnsembleKalman &previous_particles,
+ ProposalKernel* proposal_kernel,
+ const Parameters &conditioned_on_parameters)
+ {
+ arma::colvec terms(this->get_number_of_particles());
+ 
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ // If proposal is Gaussian, might be able to use the fast Gauss transform in low-dim
+ for (size_t j = 0; j < this->get_number_of_particles(); ++j)
+ {
+ terms[j] = previous_particles.normalised_log_weights[j] + proposal_kernel->evaluate_kernel(current_particles[i]->back(),
+ previous_particles[j]->back(),
+ conditioned_on_parameters);
+ }
+ 
+ this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods(conditioned_on_parameters) - log_sum_exp(terms);
+ 
+ }
+ }
+ 
+ void SequentialEnsembleKalmanWorker::generic_weight(EnsembleKalman &current_particles,
+ EnsembleKalman &previous_particles,
+ ProposalKernel* proposal_kernel,
+ ProposalKernel* L_kernel,
+ const Parameters &conditioned_on_parameters)
+ {
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ 
+ this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods(conditioned_on_parameters)
+ + L_kernel->evaluate_kernel(previous_particles[i]->back(),
+ current_particles[i]->back(),
+ conditioned_on_parameters)
+ - previous_particles[i]->back().target_evaluated
+ - proposal_kernel->evaluate_kernel(current_particles[i]->back(),
+ previous_particles[i]->back(),
+ conditioned_on_parameters);
+ 
+ }
+ }
+ 
+ void SequentialEnsembleKalmanWorker::pf_weight(EnsembleKalman &current_particles,
+ EnsembleKalman &previous_particles,
+ ProposalKernel* proposal_kernel,
+ const Parameters &conditioned_on_parameters)
+ {
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ 
+ this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().evaluate_likelihoods(conditioned_on_parameters);
+ if (proposal_kernel!=NULL)
+ this->log_unnormalised_incremental_weights[i] = this->log_unnormalised_incremental_weights[i] - proposal_kernel->evaluate_kernel(current_particles[i]->back(),
+ previous_particles[i]->back(),
+ conditioned_on_parameters);
+ 
+ }
+ }
+ 
+ void SequentialEnsembleKalmanWorker::subsample_specific_move(EnsembleKalman* next_particles,
+ const EnsembleKalman* current_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ RandomNumberGenerator local_rng(*this->get_rng());
+ local_rng.seed(this->get_seed(),this->get_number_of_particles());
+ 
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ next_particles->push_back(this->the_enk->subsample_move(local_rng,
+ (*current_particles)[i]->back(),
+ conditioned_on_parameters));
+ 
+ }
+ }
+ 
+ void SequentialEnsembleKalmanWorker::subsample_smcfixed_weight(EnsembleKalman &current_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ current_particles[i]->back().subsample_evaluate_smcfixed_part_of_likelihoods(conditioned_on_parameters);
+ }
+ }
+ 
+ void SequentialEnsembleKalmanWorker::subsample_smcadaptive_given_smcfixed_weight(EnsembleKalman &current_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(conditioned_on_parameters) - current_particles[i]->back().subsample_previous_target_evaluated;
+ 
+ }
+ }
+ 
+ void SequentialEnsembleKalmanWorker::subsample_smcadaptive_given_smcfixed_evaluate_target(EnsembleKalman &current_particles,
+ const Parameters &conditioned_on_parameters)
+ {
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(conditioned_on_parameters);
+ 
+ }
+ }
+ 
+ void SequentialEnsembleKalmanWorker::subsample_marginal_weight(EnsembleKalman &current_particles,
+ EnsembleKalman &previous_particles,
+ ProposalKernel* proposal_kernel,
+ const Parameters &conditioned_on_parameters)
+ {
+ arma::colvec terms(this->get_number_of_particles());
+ 
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ // If proposal is Gaussian, might be able to use the fast Gauss transform in low-dim
+ for (size_t j = 0; j < this->get_number_of_particles(); ++j)
+ {
+ terms[j] = previous_particles.normalised_log_weights[j] + proposal_kernel->evaluate_kernel(current_particles[i]->back(),
+ previous_particles[j]->back(),
+ conditioned_on_parameters);
+ }
+ 
+ this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().subsample_evaluate_likelihoods(conditioned_on_parameters) - log_sum_exp(terms);
+ 
+ }
+ }
+ 
+ void SequentialEnsembleKalmanWorker::subsample_generic_weight(EnsembleKalman &current_particles,
+ EnsembleKalman &previous_particles,
+ ProposalKernel* proposal_kernel,
+ ProposalKernel* L_kernel,
+ const Parameters &conditioned_on_parameters)
+ {
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ 
+ this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().subsample_evaluate_likelihoods(conditioned_on_parameters)
+ + L_kernel->subsample_evaluate_kernel(previous_particles[i]->back(),
+ current_particles[i]->back(),
+ conditioned_on_parameters)
+ - previous_particles[i]->back().subsample_target_evaluated
+ - proposal_kernel->subsample_evaluate_kernel(current_particles[i]->back(),
+ previous_particles[i]->back(),
+ conditioned_on_parameters);
+ 
+ }
+ }
+ 
+ void SequentialEnsembleKalmanWorker::subsample_pf_weight(EnsembleKalman &current_particles,
+ EnsembleKalman &previous_particles,
+ ProposalKernel* proposal_kernel,
+ const Parameters &conditioned_on_parameters)
+ {
+ for (size_t i = 0; i < this->get_number_of_particles(); ++i)
+ {
+ 
+ this->log_unnormalised_incremental_weights[i] = current_particles[i]->back().subsample_evaluate_likelihoods(conditioned_on_parameters);
+ if (proposal_kernel!=NULL)
+ this->log_unnormalised_incremental_weights[i] = this->log_unnormalised_incremental_weights[i] - proposal_kernel->subsample_evaluate_kernel(current_particles[i]->back(),
+ previous_particles[i]->back(),
+ conditioned_on_parameters);
+ 
+ }
+ }
+ */
 
 //void SequentialEnsembleKalmanWorker::specific_simulate_and_weight()
 //{
 //  RandomNumberGenerator local_rng(*this->get_rng());
 //  local_rng.seed(this->get_seed(),this->get_number_of_particles());
-  
+
 //  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
 //  {
 //    this->particles[i] = (*this->particle_simulator)(local_rng);
 //  }
-  
-  //std::vector<LikelihoodEstimatorOutput*> inner_likelihood_estimator_outputs;
-  //inner_likelihood_estimator_outputs.resize(this->get_number_of_particles());
-  
-  //likelihood_estimator_outputs.reserve(likelihood_estimators.size());
-  //for (size_t j = 0; j < this->likelihood_estimators.size(); ++j)
-  //{
-  //  likelihood_estimator_outputs.push_back(inner_likelihood_estimator_outputs);
-  //}
-  
+
+//std::vector<LikelihoodEstimatorOutput*> inner_likelihood_estimator_outputs;
+//inner_likelihood_estimator_outputs.resize(this->get_number_of_particles());
+
+//likelihood_estimator_outputs.reserve(likelihood_estimators.size());
+//for (size_t j = 0; j < this->likelihood_estimators.size(); ++j)
+//{
+//  likelihood_estimator_outputs.push_back(inner_likelihood_estimator_outputs);
+//}
+
 //  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
 //  {
 //    this->log_unnormalised_incremental_weights[i] = 0.0;
@@ -860,52 +862,53 @@ void SequentialEnsembleKalmanWorker::subsample_pf_weight(EnsembleKalman &current
 //    {
 //      this->log_unnormalised_incremental_weights[i] = this->log_unnormalised_incremental_weights[i] + (*p)(this->particles[i].parameters);
 //    }
-    
+
 //    for (std::vector<EvaluateLogDistributionPtr>::const_iterator p = this->proposal_evaluates.begin();
 //         p!=proposal_evaluates.end();
 //         ++p)
 //    {
 //      this->log_unnormalised_incremental_weights[i] = this->log_unnormalised_incremental_weights[i] - (*p)(this->particles[i].parameters);
 //    }
-    
-    //size_t j = 0;
-    //std::vector<LikelihoodEstimatorOutput*> outputs;
-    //outputs.reserve(likelihood_estimators.size());
-    //for (std::vector<LikelihoodEstimator*>::const_iterator l = this->likelihood_estimators.begin();
-    //     l!=likelihood_estimators.end();
-    //     ++l)
-    //{
-    //  outputs.push_back((*l)->initial_simulate(this->particles[i].parameters));
-    //}
-    
+
+//size_t j = 0;
+//std::vector<LikelihoodEstimatorOutput*> outputs;
+//outputs.reserve(likelihood_estimators.size());
+//for (std::vector<LikelihoodEstimator*>::const_iterator l = this->likelihood_estimators.begin();
+//     l!=likelihood_estimators.end();
+//     ++l)
+//{
+//  outputs.push_back((*l)->initial_simulate(this->particles[i].parameters));
+//}
+
 //  }
-  
-  // Set up likelihood estimators with all particles.
-  //for (std::vector< std::vector<LikelihoodEstimatorOutput*> >::const_iterator l = this->likelihood_estimator_outputs.begin();
-  //     l!=this->likelihood_estimator_outputs.end();
-  //     ++l)
-  //{
-  //  // Set up each estimator.
-  //  // Not done yet.
-  //}
-  
+
+// Set up likelihood estimators with all particles.
+//for (std::vector< std::vector<LikelihoodEstimatorOutput*> >::const_iterator l = this->likelihood_estimator_outputs.begin();
+//     l!=this->likelihood_estimator_outputs.end();
+//     ++l)
+//{
+//  // Set up each estimator.
+//  // Not done yet.
+//}
+
 //  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
 //  {
 //    this->particles[i].estimate_likelihoods();
 //    this->log_unnormalised_incremental_weights[i] = this->log_unnormalised_incremental_weights[i] + this->particles[i].get_log_likelihood();
 //  }
-  
-  //for (std::vector< std::vector<LikelihoodEstimatorOutput*> >::iterator l_out = this->likelihood_estimator_outputs.begin();
-  //     l_out!=likelihood_estimator_outputs.end();
-  //     ++l_out)
-  //{
-  //  for (size_t l_in = 0;
-  //       l_in!=this->get_number_of_particles();
-  //        ++l_in)
-  //   {
-  //     (*l_out)[l_in]->estimate(this->particles[l_in].parameters);
-  //     this->log_unnormalised_incremental_weights[l_in] = this->log_unnormalised_incremental_weights[l_in] + (*l_out)[l_in]->log_likelihood;
-  //   }
-  //}
+
+//for (std::vector< std::vector<LikelihoodEstimatorOutput*> >::iterator l_out = this->likelihood_estimator_outputs.begin();
+//     l_out!=likelihood_estimator_outputs.end();
+//     ++l_out)
+//{
+//  for (size_t l_in = 0;
+//       l_in!=this->get_number_of_particles();
+//        ++l_in)
+//   {
+//     (*l_out)[l_in]->estimate(this->particles[l_in].parameters);
+//     this->log_unnormalised_incremental_weights[l_in] = this->log_unnormalised_incremental_weights[l_in] + (*l_out)[l_in]->log_likelihood;
+//   }
+//}
 
 //}
+}

@@ -7,14 +7,16 @@
 #include "deterministic_scan_mcmc.h"
 #include "index.h"
 
+namespace ilike
+{
 MCMC::MCMC()
-  :Kernel()
+:Kernel()
 {
   this->termination = NULL;
 }
 
 MCMC::MCMC(size_t number_of_iterations_in)
-  :Kernel()
+:Kernel()
 {
   this->termination = new IterationsMCMCTermination(number_of_iterations_in);
   //this->termination->set_parameters(this);
@@ -37,7 +39,7 @@ MCMC::~MCMC()
 }
 
 MCMC::MCMC(const MCMC &another)
-  :Kernel(another)
+:Kernel(another)
 {
   this->make_copy(another);
 }
@@ -52,7 +54,7 @@ void MCMC::operator=(const MCMC &another)
   
   //if (this->adaptor!=NULL)
   //  delete this->adaptor;
-
+  
   Kernel::operator=(another);
   this->make_copy(another);
 }
@@ -93,26 +95,26 @@ MoveOutput* MCMC::run(RandomNumberGenerator &rng,
 }
 
 /*
-MoveOutput* MCMC::run(RandomNumberGenerator &rng,
-                      Particle &particle,
-                      const Parameters &conditioned_on_parameters)
-
-{
-  StandardMCMCOutput* mcmc_output = new StandardMCMCOutput();
-  Particle current_particle = particle;
-  while (!this->termination->terminate())
-  {
-    current_particle = this->move(rng,
-                                  current_particle,
-                                  conditioned_on_parameters);
-    this->iteration_counter = this->iteration_counter + 1;
-    this->mcmc_adapt(current_particle,
-                     this->iteration_counter);
-    mcmc_output->push_back(current_particle);
-  }
-  return mcmc_output;
-}
-*/
+ MoveOutput* MCMC::run(RandomNumberGenerator &rng,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters)
+ 
+ {
+ StandardMCMCOutput* mcmc_output = new StandardMCMCOutput();
+ Particle current_particle = particle;
+ while (!this->termination->terminate())
+ {
+ current_particle = this->move(rng,
+ current_particle,
+ conditioned_on_parameters);
+ this->iteration_counter = this->iteration_counter + 1;
+ this->mcmc_adapt(current_particle,
+ this->iteration_counter);
+ mcmc_output->push_back(current_particle);
+ }
+ return mcmc_output;
+ }
+ */
 
 MoveOutput* MCMC::subsample_run(RandomNumberGenerator &rng,
                                 const Particle &particle) const
@@ -154,80 +156,81 @@ MCMCTermination* MCMC::get_duplicated_termination() const
 }
 
 /*
-MoveOutput* MCMC::subsample_run(RandomNumberGenerator &rng,
-                                Particle &particle,
-                                const Parameters &conditioned_on_parameters)
-
-{
-  StandardMCMCOutput* mcmc_output = new StandardMCMCOutput();
-  Particle current_particle = particle;
-  while (!this->termination->terminate())
-  {
-    current_particle = this->subsample_move(rng,
-                                            current_particle,
-                                            conditioned_on_parameters);
-    this->mcmc_adapt(current_particle,
-                     this->iteration_counter);
-    this->iteration_counter = this->iteration_counter + 1;
-    mcmc_output->push_back(current_particle);
-  }
-  return mcmc_output;
-}
-*/
+ MoveOutput* MCMC::subsample_run(RandomNumberGenerator &rng,
+ Particle &particle,
+ const Parameters &conditioned_on_parameters)
+ 
+ {
+ StandardMCMCOutput* mcmc_output = new StandardMCMCOutput();
+ Particle current_particle = particle;
+ while (!this->termination->terminate())
+ {
+ current_particle = this->subsample_move(rng,
+ current_particle,
+ conditioned_on_parameters);
+ this->mcmc_adapt(current_particle,
+ this->iteration_counter);
+ this->iteration_counter = this->iteration_counter + 1;
+ mcmc_output->push_back(current_particle);
+ }
+ return mcmc_output;
+ }
+ */
 
 /*
-EnsembleMember MCMC::run(RandomNumberGenerator &rng,
-                         EnsembleMember &particle)
-
-{
-  StandardMCMCOutput* mcmc_output = new StandardMCMCOutput();
-  EnsembleMember current_particle = particle;
-  while (!this->termination->terminate())
-  {
-    current_particle = this->move(rng,
-                                  current_particle);
-    this->iteration_counter = this->iteration_counter + 1;
-    this->mcmc_adapt(&current_particle,
-                     this->iteration_counter);
-  }
-  return current_particle;
+ EnsembleMember MCMC::run(RandomNumberGenerator &rng,
+ EnsembleMember &particle)
+ 
+ {
+ StandardMCMCOutput* mcmc_output = new StandardMCMCOutput();
+ EnsembleMember current_particle = particle;
+ while (!this->termination->terminate())
+ {
+ current_particle = this->move(rng,
+ current_particle);
+ this->iteration_counter = this->iteration_counter + 1;
+ this->mcmc_adapt(&current_particle,
+ this->iteration_counter);
+ }
+ return current_particle;
+ }
+ 
+ EnsembleMember MCMC::run(RandomNumberGenerator &rng,
+ EnsembleMember &particle,
+ const Parameters &conditioned_on_parameters)
+ 
+ {
+ StandardMCMCOutput* mcmc_output = new StandardMCMCOutput();
+ EnsembleMember current_particle = particle;
+ while (!this->termination->terminate())
+ {
+ current_particle = this->move(rng,
+ current_particle,
+ conditioned_on_parameters);
+ this->iteration_counter = this->iteration_counter + 1;
+ this->mcmc_adapt(&current_particle,
+ this->iteration_counter);
+ }
+ return current_particle;
+ }
+ 
+ EnsembleMember MCMC::subsample_run(RandomNumberGenerator &rng,
+ EnsembleMember &particle,
+ const Parameters &conditioned_on_parameters)
+ 
+ {
+ StandardMCMCOutput* mcmc_output = new StandardMCMCOutput();
+ EnsembleMember current_particle = particle;
+ while (!this->termination->terminate())
+ {
+ current_particle = this->subsample_move(rng,
+ current_particle,
+ conditioned_on_parameters);
+ this->mcmc_adapt(&current_particle,
+ this->iteration_counter);
+ this->iteration_counter = this->iteration_counter + 1;
+ }
+ return current_particle;
+ }
+ */
 }
-
-EnsembleMember MCMC::run(RandomNumberGenerator &rng,
-                         EnsembleMember &particle,
-                         const Parameters &conditioned_on_parameters)
-
-{
-  StandardMCMCOutput* mcmc_output = new StandardMCMCOutput();
-  EnsembleMember current_particle = particle;
-  while (!this->termination->terminate())
-  {
-    current_particle = this->move(rng,
-                                  current_particle,
-                                  conditioned_on_parameters);
-    this->iteration_counter = this->iteration_counter + 1;
-    this->mcmc_adapt(&current_particle,
-                     this->iteration_counter);
-  }
-  return current_particle;
-}
-
-EnsembleMember MCMC::subsample_run(RandomNumberGenerator &rng,
-                                   EnsembleMember &particle,
-                                   const Parameters &conditioned_on_parameters)
-
-{
-  StandardMCMCOutput* mcmc_output = new StandardMCMCOutput();
-  EnsembleMember current_particle = particle;
-  while (!this->termination->terminate())
-  {
-    current_particle = this->subsample_move(rng,
-                                            current_particle,
-                                            conditioned_on_parameters);
-    this->mcmc_adapt(&current_particle,
-                     this->iteration_counter);
-    this->iteration_counter = this->iteration_counter + 1;
-  }
-  return current_particle;
-}
-*/

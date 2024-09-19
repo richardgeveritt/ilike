@@ -6,17 +6,19 @@ using namespace Rcpp;
 
 #include "ensemble_shifter.h"
 
+namespace ilike
+{
 class SquareRootEnsembleShifter : public EnsembleShifter
 {
-
+  
 public:
-
+  
   SquareRootEnsembleShifter();
   
   virtual ~SquareRootEnsembleShifter();
-
+  
   SquareRootEnsembleShifter(const SquareRootEnsembleShifter &another);
-
+  
   void operator=(const SquareRootEnsembleShifter &another);
   EnsembleShifter* duplicate() const;
   
@@ -29,7 +31,7 @@ public:
              const std::vector<arma::mat> &kalman_gains,
              const std::vector<arma::colvec> &myys,
              double inverse_incremental_temperature) const;
-
+  
 protected:
   
   std::vector<arma::mat> As;
@@ -47,9 +49,10 @@ protected:
   //arma::mat Vtranspose;
   //arma::mat Dhathalf;
   //std::vector<arma::mat> Yhats;
-
+  
   void make_copy(const SquareRootEnsembleShifter &another);
-
+  
 };
+}
 
 #endif

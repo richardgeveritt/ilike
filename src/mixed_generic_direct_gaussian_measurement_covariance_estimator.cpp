@@ -6,18 +6,20 @@
 
 //boost::copy_range<std::vector<std::string>>(boost::join(prior_measurement_variables_in,data_measurement_variables_in))
 
+namespace ilike
+{
 MixedGenericDirectGaussianMeasurementCovarianceEstimator::MixedGenericDirectGaussianMeasurementCovarianceEstimator()
-  :MeasurementCovarianceEstimator()
+:MeasurementCovarianceEstimator()
 {
 }
 
 MixedGenericDirectGaussianMeasurementCovarianceEstimator::MixedGenericDirectGaussianMeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
-                                                                             size_t* seed_in,
-                                                                             Data* data_in,
+                                                                                                                   size_t* seed_in,
+                                                                                                                   Data* data_in,
                                                                                                                    std::shared_ptr<Transform> transform_in,
                                                                                                                    std::shared_ptr<Transform> summary_statistics_in,
                                                                                                                    Data* prior_data_in,
-                                                                             SimulateModelPtr simulator_in,
+                                                                                                                   SimulateModelPtr simulator_in,
                                                                                                                    const std::vector<std::string> &prior_measurement_variables_in,
                                                                                                                    const std::vector<arma::mat> &prior_measurement_noises_in,
                                                                                                                    const std::vector<std::string> &data_measurement_variables_in)
@@ -50,7 +52,7 @@ MixedGenericDirectGaussianMeasurementCovarianceEstimator::~MixedGenericDirectGau
 }
 
 MixedGenericDirectGaussianMeasurementCovarianceEstimator::MixedGenericDirectGaussianMeasurementCovarianceEstimator(const MixedGenericDirectGaussianMeasurementCovarianceEstimator &another)
-  :MeasurementCovarianceEstimator(another)
+:MeasurementCovarianceEstimator(another)
 {
   this->make_copy(another);
 }
@@ -59,7 +61,7 @@ void MixedGenericDirectGaussianMeasurementCovarianceEstimator::operator=(const M
 {
   if(this == &another)
     return;
-
+  
   MeasurementCovarianceEstimator::operator=(another);
   this->make_copy(another);
 }
@@ -155,13 +157,13 @@ void MixedGenericDirectGaussianMeasurementCovarianceEstimator::setup_measurement
 }
 
 /*
-arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_measurement_covariance() const
-{
-  arma::mat measurement_noise;
-  measurement_noise.zeros(this->measurement_dimension,this->measurement_dimension);
-  return measurement_noise;
-}
-*/
+ arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_measurement_covariance() const
+ {
+ arma::mat measurement_noise;
+ measurement_noise.zeros(this->measurement_dimension,this->measurement_dimension);
+ return measurement_noise;
+ }
+ */
 
 arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_Cygivenx() const
 {
@@ -223,28 +225,28 @@ arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_sqrt_adj
 }
 
 /*
-arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_adjustment(const arma::mat &Zf,
-                                                                                   const arma::mat &Ginv,
-                                                                                   const arma::mat &Ftranspose,
-                                                                                   const arma::mat &V,
-                                                                                   double inverse_incremental_temperature)
-{
-  // follows https://arxiv.org/abs/2006.02941
-  arma::mat for_eig = V*((inverse_incremental_temperature-1.0)*this->Cygivenx + inverse_incremental_temperature*this->get_prior_measurement_covariance_embedded_in_full_space())*V.t();
-  
-  arma::mat C;
-  arma::vec diagGamma;
-  arma::mat Ctrans;
-  arma::svd(C,diagGamma,Ctrans,for_eig);
-  
-  arma::mat Gamma(diagGamma.n_elem,diagGamma.n_elem);
-  Gamma.diag() = diagGamma;
-  arma::mat I;
-  I.eye(diagGamma.n_elem,diagGamma.n_elem);
-  
-  return Zf*C*arma::sqrtmat_sympd(arma::inv_sympd(I+Gamma))*Ginv*Ftranspose;
-}
-*/
+ arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_adjustment(const arma::mat &Zf,
+ const arma::mat &Ginv,
+ const arma::mat &Ftranspose,
+ const arma::mat &V,
+ double inverse_incremental_temperature)
+ {
+ // follows https://arxiv.org/abs/2006.02941
+ arma::mat for_eig = V*((inverse_incremental_temperature-1.0)*this->Cygivenx + inverse_incremental_temperature*this->get_prior_measurement_covariance_embedded_in_full_space())*V.t();
+ 
+ arma::mat C;
+ arma::vec diagGamma;
+ arma::mat Ctrans;
+ arma::svd(C,diagGamma,Ctrans,for_eig);
+ 
+ arma::mat Gamma(diagGamma.n_elem,diagGamma.n_elem);
+ Gamma.diag() = diagGamma;
+ arma::mat I;
+ I.eye(diagGamma.n_elem,diagGamma.n_elem);
+ 
+ return Zf*C*arma::sqrtmat_sympd(arma::inv_sympd(I+Gamma))*Ginv*Ftranspose;
+ }
+ */
 
 void MixedGenericDirectGaussianMeasurementCovarianceEstimator::set_parameters(const Parameters &conditioned_on_parameters_in)
 {
@@ -267,13 +269,13 @@ bool MixedGenericDirectGaussianMeasurementCovarianceEstimator::need_Cxx() const
 }
 
 /*
-void MixedGenericDirectGaussianMeasurementCovarianceEstimator::find_partial_Cygivenx(const arma::mat &Cxy,
-                                                                                     const arma::mat &Cyy,
-                                                                                     const arma::mat &packed_members)
-{
-  
-}
-*/
+ void MixedGenericDirectGaussianMeasurementCovarianceEstimator::find_partial_Cygivenx(const arma::mat &Cxy,
+ const arma::mat &Cyy,
+ const arma::mat &packed_members)
+ {
+ 
+ }
+ */
 
 void MixedGenericDirectGaussianMeasurementCovarianceEstimator::find_Cygivenx(const arma::mat &inv_Cxx,
                                                                              const arma::mat &Cxy,
@@ -393,4 +395,5 @@ void MixedGenericDirectGaussianMeasurementCovarianceEstimator::precompute_gaussi
   arma::mat for_precomp = this->get_measurement_covariance_for_likelihood_ratio(inverse_incremental_temperature);
   inv_sigma_precomp = arma::inv_sympd(for_precomp);
   log_det_precomp = arma::log_det_sympd(for_precomp);
+}
 }

@@ -1,7 +1,9 @@
 #include "scale_recursive_parameter_estimator.h"
 
+namespace ilike
+{
 ScaleRecursiveParameterEstimator::ScaleRecursiveParameterEstimator()
-  :RecursiveParameterEstimator()
+:RecursiveParameterEstimator()
 {
 }
 
@@ -12,7 +14,7 @@ ScaleRecursiveParameterEstimator::~ScaleRecursiveParameterEstimator()
 
 //Copy constructor for the ScaleRecursiveParameterEstimator class.
 ScaleRecursiveParameterEstimator::ScaleRecursiveParameterEstimator(const ScaleRecursiveParameterEstimator &another)
-  :RecursiveParameterEstimator(another)
+:RecursiveParameterEstimator(another)
 {
   this->make_copy(another);
 }
@@ -30,4 +32,5 @@ void ScaleRecursiveParameterEstimator::operator=(const ScaleRecursiveParameterEs
 void ScaleRecursiveParameterEstimator::make_copy(const ScaleRecursiveParameterEstimator &another)
 {
   this->estimated = another.estimated;
+}
 }

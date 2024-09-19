@@ -9,6 +9,8 @@ using namespace Rcpp;
 #include "particle.h"
 #include "distributions.h"
 
+namespace ilike
+{
 class Scale
 {
 public:
@@ -43,5 +45,6 @@ private:
   bool divide_by_dimension;
   double dimension;
 };
+}
 
 #endif

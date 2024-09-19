@@ -1,5 +1,7 @@
 #include "density_estimator.h"
 
+namespace ilike
+{
 DensityEstimator::DensityEstimator()
 {
   //this->n = 0;
@@ -13,7 +15,7 @@ DensityEstimator::DensityEstimator(const std::vector<std::string> &variables_in)
 
 DensityEstimator::~DensityEstimator()
 {
-
+  
 }
 
 DensityEstimator::DensityEstimator(const DensityEstimator &another)
@@ -25,7 +27,7 @@ void DensityEstimator::operator=(const DensityEstimator &another)
 {
   if(this == &another)
     return;
-
+  
   this->make_copy(another);
 }
 
@@ -41,9 +43,10 @@ std::vector<std::string> DensityEstimator::get_variables() const
 }
 
 /*
-void DensityEstimator::fit(const std::vector<Parameters> &points)
-{
-  arma::colvec normalised_log_weights(points.size(),arma::fill::value(-log(double(points.size()))));
-  this->fit(points, normalised_log_weights);
+ void DensityEstimator::fit(const std::vector<Parameters> &points)
+ {
+ arma::colvec normalised_log_weights(points.size(),arma::fill::value(-log(double(points.size()))));
+ this->fit(points, normalised_log_weights);
+ }
+ */
 }
-*/

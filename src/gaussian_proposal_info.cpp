@@ -1,6 +1,8 @@
 #include "gaussian_proposal_info.h"
 #include "utils.h"
 
+namespace ilike
+{
 GaussianProposalInfo::GaussianProposalInfo()
 : scale(1.0)
 {
@@ -251,4 +253,5 @@ arma::mat& GaussianProposalInfo::get_inv_chol()
 double& GaussianProposalInfo::get_logdet()
 {
   return this->logdet;
+}
 }

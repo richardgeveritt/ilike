@@ -13,6 +13,8 @@ using namespace Rcpp;
 #include "ilike_header.h"
 #include "gaussian_proposal_functions_info.h"
 
+namespace ilike
+{
 class LinearGaussianNoiseFunctionProposalKernel : public GaussianNoiseProposalKernel
 {
   
@@ -40,12 +42,12 @@ public:
   GaussianNoiseProposalKernel* gaussian_noise_proposal_kernel_duplicate() const;
   
   /*
-  void set_covariance(const std::string &variable,
-                      const arma::mat &covariance_in);
-  
-  arma::mat get_inverse_covariance(const std::string &variable);
-  arma::mat get_covariance(const std::string &variable);
-  */
+   void set_covariance(const std::string &variable,
+   const arma::mat &covariance_in);
+   
+   arma::mat get_inverse_covariance(const std::string &variable);
+   arma::mat get_covariance(const std::string &variable);
+   */
   
   void set_proposal_parameters(Parameters* proposal_parameters_in);
   
@@ -140,5 +142,6 @@ protected:
   boost::unordered_map< std::string, GaussianProposalFunctionsInfo> proposal_info;
   std::vector<std::string> conditioned_on_variable_names;
 };
+}
 
 #endif

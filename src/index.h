@@ -4,16 +4,18 @@
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 
+namespace ilike
+{
 class Index
 {
-
+  
 public:
-
+  
   Index();
   virtual ~Index();
-
+  
   Index(const Index &another);
-
+  
   void operator=(const Index &another);
   virtual Index* duplicate() const=0;
   
@@ -26,11 +28,12 @@ public:
   virtual arma::uvec get_uvec() const=0;
   
   virtual bool get_transition_model() const=0;
-
+  
 protected:
   
   void make_copy(const Index &another);
-
+  
 };
+}
 
 #endif

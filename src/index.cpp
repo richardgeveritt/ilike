@@ -1,5 +1,7 @@
 #include "index.h"
 
+namespace ilike
+{
 Index::Index()
 {
 }
@@ -17,11 +19,12 @@ void Index::operator=(const Index &another)
 {
   if(this == &another)
     return;
-
+  
   this->make_copy(another);
 }
 
 void Index::make_copy(const Index &another)
 {
   
+}
 }

@@ -3,15 +3,17 @@
 #include "utils.h"
 #include "filesystem.h"
 
+namespace ilike
+{
 ExactLikelihoodEstimatorOutput::ExactLikelihoodEstimatorOutput()
-  :LikelihoodEstimatorOutput()
+:LikelihoodEstimatorOutput()
 {
   this->log_likelihood_smcfixed_part = 0.0;
   this->subsample_log_likelihood_smcfixed_part = 0.0;
 }
 
 ExactLikelihoodEstimatorOutput::ExactLikelihoodEstimatorOutput(ExactLikelihoodEstimator* estimator_in)
-  :LikelihoodEstimatorOutput()
+:LikelihoodEstimatorOutput()
 {
   this->estimator = estimator_in;
   this->log_likelihood_smcfixed_part = 0.0;
@@ -20,12 +22,12 @@ ExactLikelihoodEstimatorOutput::ExactLikelihoodEstimatorOutput(ExactLikelihoodEs
 
 ExactLikelihoodEstimatorOutput::~ExactLikelihoodEstimatorOutput()
 {
-
+  
 }
 
 //Copy constructor for the ExactLikelihoodEstimatorOutput class.
 ExactLikelihoodEstimatorOutput::ExactLikelihoodEstimatorOutput(const ExactLikelihoodEstimatorOutput &another)
-  :LikelihoodEstimatorOutput(another)
+:LikelihoodEstimatorOutput(another)
 {
   this->make_copy(another);
 }
@@ -35,7 +37,7 @@ void ExactLikelihoodEstimatorOutput::operator=(const ExactLikelihoodEstimatorOut
   if(this == &another){ //if a==a
     return;
   }
-
+  
   LikelihoodEstimatorOutput::operator=(another);
   this->make_copy(another);
 }
@@ -111,7 +113,7 @@ arma::mat ExactLikelihoodEstimatorOutput::subsample_get_gradient_of_log(const st
 
 void ExactLikelihoodEstimatorOutput::print(std::ostream &os) const
 {
-
+  
 }
 
 void ExactLikelihoodEstimatorOutput::write_to_file(const std::string &dir_name,
@@ -149,4 +151,5 @@ void ExactLikelihoodEstimatorOutput::forget_you_were_already_written_to_file()
 void ExactLikelihoodEstimatorOutput::close_ofstreams()
 {
   this->estimator->log_likelihood_file_stream.close();
+}
 }

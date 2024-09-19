@@ -14,6 +14,8 @@ using namespace Rcpp;
 #include "gaussian_proposal_functions_info.h"
 #include "transform.h"
 
+namespace ilike
+{
 class NonLinearGaussianNoiseFunctionProposalKernel : public GaussianNoiseProposalKernel
 {
   
@@ -34,12 +36,12 @@ public:
   GaussianNoiseProposalKernel* gaussian_noise_proposal_kernel_duplicate() const;
   
   /*
-  void set_covariance(const std::string &variable,
-                      const arma::mat &covariance_in);
-  
-  arma::mat get_inverse_covariance(const std::string &variable);
-  arma::mat get_covariance(const std::string &variable);
-  */
+   void set_covariance(const std::string &variable,
+   const arma::mat &covariance_in);
+   
+   arma::mat get_inverse_covariance(const std::string &variable);
+   arma::mat get_covariance(const std::string &variable);
+   */
   
   void set_proposal_parameters(Parameters* proposal_parameters_in);
   
@@ -135,5 +137,6 @@ protected:
   std::shared_ptr<Transform> transform;
   
 };
+}
 
 #endif

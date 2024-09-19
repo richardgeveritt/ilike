@@ -11,6 +11,8 @@ using namespace Rcpp;
 #include "distributions.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class CustomDistributionProposalKernel : public IndependentProposalKernel
 {
 
@@ -122,5 +124,6 @@ protected:
   //Parameters proposal_parameters;
   
 };
+}
 
 #endif

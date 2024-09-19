@@ -1,5 +1,7 @@
 #include "parameter_estimator.h"
 
+namespace ilike
+{
 ParameterEstimator::ParameterEstimator()
 {
 }
@@ -17,10 +19,11 @@ void ParameterEstimator::operator=(const ParameterEstimator &another)
 {
   if(this == &another)
     return;
-
+  
   this->make_copy(another);
 }
 
 void ParameterEstimator::make_copy(const ParameterEstimator &another)
 {
+}
 }

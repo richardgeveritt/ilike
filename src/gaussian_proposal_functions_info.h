@@ -7,17 +7,19 @@ using namespace Rcpp;
 #include "scale.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class GaussianProposalFunctionsInfo
 {
-
+  
 public:
-
+  
   GaussianProposalFunctionsInfo();
-
+  
   virtual ~GaussianProposalFunctionsInfo();
   
   GaussianProposalFunctionsInfo(const GaussianProposalFunctionsInfo &another);
-
+  
   GaussianProposalFunctionsInfo& operator=(const GaussianProposalFunctionsInfo &another);
   GaussianProposalFunctionsInfo* duplicate() const;
   
@@ -41,9 +43,9 @@ public:
   
   double& get_double_scale();
   Scale& get_scale();
-
+  
 protected:
-
+  
   void make_copy(const GaussianProposalFunctionsInfo &another);
   
   void make_copy(GaussianProposalFunctionsInfo &&another);
@@ -54,7 +56,8 @@ protected:
   Scale scale;
   
   arma::mat chol;
-
+  
 };
+}
 
 #endif

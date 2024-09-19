@@ -1,7 +1,9 @@
 #include "double_recursive_parameter_estimator.h"
 
+namespace ilike
+{
 DoubleRecursiveParameterEstimator::DoubleRecursiveParameterEstimator()
-  :RecursiveParameterEstimator()
+:RecursiveParameterEstimator()
 {
 }
 
@@ -17,7 +19,7 @@ DoubleRecursiveParameterEstimator::~DoubleRecursiveParameterEstimator()
 
 //Copy constructor for the DoubleRecursiveParameterEstimator class.
 DoubleRecursiveParameterEstimator::DoubleRecursiveParameterEstimator(const DoubleRecursiveParameterEstimator &another)
-  :RecursiveParameterEstimator(another)
+:RecursiveParameterEstimator(another)
 {
   this->make_copy(another);
 }
@@ -35,4 +37,5 @@ void DoubleRecursiveParameterEstimator::operator=(const DoubleRecursiveParameter
 void DoubleRecursiveParameterEstimator::make_copy(const DoubleRecursiveParameterEstimator &another)
 {
   this->estimated = another.estimated;
+}
 }

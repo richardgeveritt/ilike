@@ -2,6 +2,8 @@
 #include "kalman_filter_output.h"
 #include "kalman_filter.h"
 
+namespace ilike
+{
 KalmanUpdater::KalmanUpdater()
 {
   
@@ -16,7 +18,7 @@ KalmanUpdater::KalmanUpdater(const std::string &state_variable_in,
 
 KalmanUpdater::~KalmanUpdater()
 {
-
+  
 }
 
 KalmanUpdater::KalmanUpdater(const KalmanUpdater &another)
@@ -28,7 +30,7 @@ void KalmanUpdater::operator=(const KalmanUpdater &another)
 {
   if(this == &another)
     return;
-
+  
   this->make_copy(another);
 }
 
@@ -49,4 +51,5 @@ std::string KalmanUpdater::get_state_variable() const
 std::string KalmanUpdater::get_measurement_variable() const
 {
   return this->measurement_variable;
+}
 }

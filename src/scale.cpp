@@ -1,5 +1,7 @@
 #include "scale.h"
 
+namespace ilike
+{
 Scale::Scale()
 {
 }
@@ -22,17 +24,17 @@ Scale::Scale(double constant_in,
   this->divide_by_dimension = true;
   this->dimension = double(dimension_in);
 }
-  
+
 Scale::Scale(const Scale &another)
 {
   this->make_copy(another);
 }
-  
+
 Scale& Scale::operator=(const Scale &another)
 {
   if(this == &another)
     return *this;
-
+  
   this->make_copy(another);
   return *this;
 }
@@ -88,11 +90,12 @@ double& Scale::get_constant()
 }
 
 /*
-double Scale::operator()(size_t dimension)
-{
-  if (this->divide_by_dimension)
-    return this->constant/double(dimension);
-  else
-    return this->constant;
+ double Scale::operator()(size_t dimension)
+ {
+ if (this->divide_by_dimension)
+ return this->constant/double(dimension);
+ else
+ return this->constant;
+ }
+ */
 }
-*/

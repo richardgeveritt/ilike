@@ -7,6 +7,8 @@ using namespace Rcpp;
 //#include <vector>
 #include "density_estimator.h"
 
+namespace ilike
+{
 class VectorParameterEstimator;
 class MatrixParameterEstimator;
 class DensityEstimatorOutput;
@@ -52,5 +54,6 @@ protected:
   void make_copy(const GaussianDensityEstimator &another);
 
 };
+}
 
 #endif

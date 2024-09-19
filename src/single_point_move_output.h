@@ -10,13 +10,15 @@ using namespace Rcpp;
 #include "particle.h"
 #include "ilike_header.h"
 
+namespace ilike
+{
 class Factors;
 
 class SinglePointMoveOutput : public MoveOutput
 {
-
+  
 public:
-
+  
   SinglePointMoveOutput(const Parameters &parameter_in,
                         const Factors* factors_in,
                         const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
@@ -34,14 +36,14 @@ public:
   SinglePointMoveOutput(const Particle &particle_in);
   SinglePointMoveOutput(Particle &&particle_in);
   SinglePointMoveOutput();
-
+  
   virtual ~SinglePointMoveOutput();
-
+  
   SinglePointMoveOutput(const SinglePointMoveOutput &another);
-
+  
   void operator=(const SinglePointMoveOutput &another);
   MoveOutput* duplicate() const;
-
+  
   Particle& back();
   Particle back() const;
   
@@ -65,13 +67,14 @@ public:
   Parameters get_current_algorithm_parameters() const;
   
 protected:
-
+  
   void make_copy(const SinglePointMoveOutput &another);
   
   Particle output;
   
   Parameters algorithm_parameters;
-
+  
 };
+}
 
 #endif

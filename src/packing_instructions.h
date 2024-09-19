@@ -10,6 +10,8 @@
 
 #include "parameters.h"
 
+namespace ilike
+{
 class PackingInstructions
 {
 public:
@@ -23,9 +25,10 @@ public:
   
   void set_info(const Parameters &parameters,
                 const std::vector<std::string> &variables);
-
+  
   std::vector<std::string> states_names;
   std::vector<std::pair<size_t,size_t>> states_start_and_end;
 };
+}
 
 #endif /* packing_instructions_h */

@@ -162,35 +162,35 @@ inline Parameters::Parameters(const std::string &variable_in,
 }
 
 /*
-inline Parameters::Parameters(const Rcpp::List &list_in)
-{
-  Rcpp::CharacterVector names = list_in.names();
-  
-  for (size_t i=0; i<names.size(); ++i)
-  {
-    for (size_t i=0; i<names.size(); ++i)
-    {
-      try
-      {
-        (*this)[Rcpp::as<std::string>(names[i])] = Rcpp::as<arma::mat>(list_in[i]);
-      }
-      catch (const std::runtime_error& re)
-      {
-        (*this)(Rcpp::as<std::string>(names[i])) = list_in[i];
-      }
-      catch(const std::exception& ex)
-      {
-        (*this)(Rcpp::as<std::string>(names[i]))= list_in[i];
-      }
-      catch(...)
-      {
-        std::cerr << "Parameters::Parameters(const Rcpp::List &list_in) - cannot read this element into Parameters." << std::endl;
-      }
-      
-    }
-  }
-}
-*/
+ inline Parameters::Parameters(const Rcpp::List &list_in)
+ {
+ Rcpp::CharacterVector names = list_in.names();
+ 
+ for (size_t i=0; i<names.size(); ++i)
+ {
+ for (size_t i=0; i<names.size(); ++i)
+ {
+ try
+ {
+ (*this)[Rcpp::as<std::string>(names[i])] = Rcpp::as<arma::mat>(list_in[i]);
+ }
+ catch (const std::runtime_error& re)
+ {
+ (*this)(Rcpp::as<std::string>(names[i])) = list_in[i];
+ }
+ catch(const std::exception& ex)
+ {
+ (*this)(Rcpp::as<std::string>(names[i]))= list_in[i];
+ }
+ catch(...)
+ {
+ std::cerr << "Parameters::Parameters(const Rcpp::List &list_in) - cannot read this element into Parameters." << std::endl;
+ }
+ 
+ }
+ }
+ }
+ */
 
 inline Parameters::~Parameters()
 {
@@ -272,21 +272,21 @@ inline bool Parameters::is_empty() const
  */
 
 /*
-inline arma::colvec Parameters::get_vector() const
-{
-  arma::colvec concatenated_vector;
-  for (vector_parameter_const_iterator i=this->vector_begin();
-       i!=this->vector_end();
-       ++i)
-  {
-    if (i==this->vector_begin())
-      concatenated_vector = arma::vectorise(this->vector_begin()->second);
-    else
-      concatenated_vector = join_rows(concatenated_vector,arma::vectorise(i->second));
-  }
-  return concatenated_vector;
-}
-*/
+ inline arma::colvec Parameters::get_vector() const
+ {
+ arma::colvec concatenated_vector;
+ for (vector_parameter_const_iterator i=this->vector_begin();
+ i!=this->vector_end();
+ ++i)
+ {
+ if (i==this->vector_begin())
+ concatenated_vector = arma::vectorise(this->vector_begin()->second);
+ else
+ concatenated_vector = join_rows(concatenated_vector,arma::vectorise(i->second));
+ }
+ return concatenated_vector;
+ }
+ */
 
 inline arma::colvec Parameters::get_colvec(const std::string &variable) const
 {
@@ -426,29 +426,29 @@ inline arma::mat& Parameters::operator[](const std::string &variable)
   // First try.
   
   /*
-  auto found = this->vector_parameters.find(variable);
-  
-  // if doesn't yet exist, make shared pointer, and set to be not fixed
-  if (found==this->vector_parameters.end())
-  {
-    std::pair<std::shared_ptr<arma::mat>,bool>& new_element = this->vector_parameters["variable"];
-    new_element = std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(),false);
-    return *new_element.first;
-  }
-  else
-  {
-    if (found->second.second==false)
-    {
-      // if does exist, and is not fixed, just pass reference to memory that the shard pointer points to
-      return *found->second.first;
-    }
-    else
-    {
-      // if does exist, and is fixed, throw error
-      Rcpp::stop("Parameters::operator[] - parameter is fixed and cannot be changed.");
-    }
-  }
-  */
+   auto found = this->vector_parameters.find(variable);
+   
+   // if doesn't yet exist, make shared pointer, and set to be not fixed
+   if (found==this->vector_parameters.end())
+   {
+   std::pair<std::shared_ptr<arma::mat>,bool>& new_element = this->vector_parameters["variable"];
+   new_element = std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(),false);
+   return *new_element.first;
+   }
+   else
+   {
+   if (found->second.second==false)
+   {
+   // if does exist, and is not fixed, just pass reference to memory that the shard pointer points to
+   return *found->second.first;
+   }
+   else
+   {
+   // if does exist, and is fixed, throw error
+   Rcpp::stop("Parameters::operator[] - parameter is fixed and cannot be changed.");
+   }
+   }
+   */
   
   // Second try. 18
   
@@ -482,91 +482,91 @@ inline arma::mat& Parameters::operator[](const std::string &variable)
   // Third try. 22.1
   
   /*
-  auto new_element_result = this->vector_parameters.insert({variable,std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(),false)});
-  
-  // if doesn't yet exist, make shared pointer, and set to be not fixed
-  if (new_element_result.second)
-  {
-    return *new_element_result.first->second.first;// .first->second.first;
-    
-    //std::pair<std::shared_ptr<arma::mat>,bool>& new_element = this->vector_parameters["variable"];
-    //new_element = std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(),false);
-    //return *new_element.first;
-  }
-  else
-  {
-    auto found = this->vector_parameters.find(variable);
-    if (found->second.second==false)
-    {
-      // if does exist, and is not fixed, just pass reference to memory that the shard pointer points to
-      return *found->second.first;
-    }
-    else
-    {
-      // if does exist, and is fixed, throw error
-      Rcpp::stop("Parameters::operator[] - parameter is fixed and cannot be changed.");
-    }
-  }
-  */
+   auto new_element_result = this->vector_parameters.insert({variable,std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(),false)});
+   
+   // if doesn't yet exist, make shared pointer, and set to be not fixed
+   if (new_element_result.second)
+   {
+   return *new_element_result.first->second.first;// .first->second.first;
+   
+   //std::pair<std::shared_ptr<arma::mat>,bool>& new_element = this->vector_parameters["variable"];
+   //new_element = std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(),false);
+   //return *new_element.first;
+   }
+   else
+   {
+   auto found = this->vector_parameters.find(variable);
+   if (found->second.second==false)
+   {
+   // if does exist, and is not fixed, just pass reference to memory that the shard pointer points to
+   return *found->second.first;
+   }
+   else
+   {
+   // if does exist, and is fixed, throw error
+   Rcpp::stop("Parameters::operator[] - parameter is fixed and cannot be changed.");
+   }
+   }
+   */
   
   // Fourth try. 19.0
   /*
-  auto found = this->vector_parameters.find(variable);
-
-  // if doesn't yet exist, make shared pointer, and set to be not fixed
-  if (found==this->vector_parameters.end())
-  {
-    return *this->vector_parameters.emplace(variable,std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(),false)).first->second.first;
-
-  //std::pair<std::shared_ptr<arma::mat>,bool>& new_element = this->vector_parameters["variable"];
-  //new_element = std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(),false);
-  //return *new_element.first;
-  }
-  else
-  {
-    if (found->second.second==false)
-    {
-      // if does exist, and is not fixed, just pass reference to memory that the shard pointer points to
-      return *found->second.first;
-    }
-    else
-    {
-      // if does exist, and is fixed, throw error
-      Rcpp::stop("Parameters::operator[] - parameter is fixed and cannot be changed.");
-    }
-  }
-  */
+   auto found = this->vector_parameters.find(variable);
+   
+   // if doesn't yet exist, make shared pointer, and set to be not fixed
+   if (found==this->vector_parameters.end())
+   {
+   return *this->vector_parameters.emplace(variable,std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(),false)).first->second.first;
+   
+   //std::pair<std::shared_ptr<arma::mat>,bool>& new_element = this->vector_parameters["variable"];
+   //new_element = std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(),false);
+   //return *new_element.first;
+   }
+   else
+   {
+   if (found->second.second==false)
+   {
+   // if does exist, and is not fixed, just pass reference to memory that the shard pointer points to
+   return *found->second.first;
+   }
+   else
+   {
+   // if does exist, and is fixed, throw error
+   Rcpp::stop("Parameters::operator[] - parameter is fixed and cannot be changed.");
+   }
+   }
+   */
   
   // Fifth try. 22.6
   
   /*
-  auto new_element_result = this->vector_parameters.emplace(variable,std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(),false));
+   auto new_element_result = this->vector_parameters.emplace(variable,std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(),false));
+   
+   // if doesn't yet exist, make shared pointer, and set to be not fixed
+   if (new_element_result.second)
+   {
+   return *new_element_result.first->second.first;// .first->second.first;
+   
+   //std::pair<std::shared_ptr<arma::mat>,bool>& new_element = this->vector_parameters["variable"];
+   //new_element = std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(),false);
+   //return *new_element.first;
+   }
+   else
+   {
+   auto found = this->vector_parameters.find(variable);
+   if (found->second.second==false)
+   {
+   // if does exist, and is not fixed, just pass reference to memory that the shard pointer points to
+   return *found->second.first;
+   }
+   else
+   {
+   // if does exist, and is fixed, throw error
+   Rcpp::stop("Parameters::operator[] - parameter is fixed and cannot be changed.");
+   }
+   }
+   */
   
-  // if doesn't yet exist, make shared pointer, and set to be not fixed
-  if (new_element_result.second)
-  {
-    return *new_element_result.first->second.first;// .first->second.first;
-    
-    //std::pair<std::shared_ptr<arma::mat>,bool>& new_element = this->vector_parameters["variable"];
-    //new_element = std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(),false);
-    //return *new_element.first;
-  }
-  else
-  {
-    auto found = this->vector_parameters.find(variable);
-    if (found->second.second==false)
-    {
-      // if does exist, and is not fixed, just pass reference to memory that the shard pointer points to
-      return *found->second.first;
-    }
-    else
-    {
-      // if does exist, and is fixed, throw error
-      Rcpp::stop("Parameters::operator[] - parameter is fixed and cannot be changed.");
-    }
-  }
-  */
-    
 }
 
 inline arma::mat Parameters::operator[](const std::string &variable) const
@@ -606,34 +606,34 @@ inline arma::colvec Parameters::operator[](const std::vector<std::string> &varia
 }
 
 /*
-inline std::shared_ptr<arma::mat> Parameters::get_vector_pointer(const std::string &variable)
-{
-  auto found = this->vector_parameters.find(variable);
-  
-  // if doesn't yet exist, make shared pointer, and set to be not fixed
-  if (found==this->vector_parameters.end())
-  {
-    return this->vector_parameters.insert({variable,std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(),false)}).first->second.first;
-    
-    //std::pair<std::shared_ptr<arma::mat>,bool>& new_element = this->vector_parameters["variable"];
-    //new_element = std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(),false);
-    //return *new_element.first;
-  }
-  else
-  {
-    if (found->second.second==false)
-    {
-      // if does exist, and is not fixed, just pass reference to memory that the shard pointer points to
-      return found->second.first;
-    }
-    else
-    {
-      // if does exist, and is fixed, throw error
-      Rcpp::stop("Parameters::operator[] - parameter is fixed and cannot be changed.");
-    }
-  }
-}
-*/
+ inline std::shared_ptr<arma::mat> Parameters::get_vector_pointer(const std::string &variable)
+ {
+ auto found = this->vector_parameters.find(variable);
+ 
+ // if doesn't yet exist, make shared pointer, and set to be not fixed
+ if (found==this->vector_parameters.end())
+ {
+ return this->vector_parameters.insert({variable,std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(),false)}).first->second.first;
+ 
+ //std::pair<std::shared_ptr<arma::mat>,bool>& new_element = this->vector_parameters["variable"];
+ //new_element = std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(),false);
+ //return *new_element.first;
+ }
+ else
+ {
+ if (found->second.second==false)
+ {
+ // if does exist, and is not fixed, just pass reference to memory that the shard pointer points to
+ return found->second.first;
+ }
+ else
+ {
+ // if does exist, and is fixed, throw error
+ Rcpp::stop("Parameters::operator[] - parameter is fixed and cannot be changed.");
+ }
+ }
+ }
+ */
 
 inline boost::any& Parameters::operator()(const std::string &variable)
 {
@@ -674,36 +674,36 @@ inline boost::any Parameters::operator()(const std::string &variable) const
 }
 
 /*
-inline std::shared_ptr<boost::any> Parameters::get_any_pointer(const std::string &variable)
-{
-  auto new_element_result = this->any_parameters.emplace(variable,std::pair<std::shared_ptr<boost::any>,bool>(std::make_shared<boost::any>(),false));
-  
-  // if doesn't yet exist, make shared pointer, and set to be not fixed
-  if (new_element_result.second)
-  {
-    return new_element_result.first->second.first;// .first->second.first;
-    
-    //std::pair<std::shared_ptr<arma::mat>,bool>& new_element = this->vector_parameters["variable"];
-    //new_element = std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(),false);
-    //return *new_element.first;
-  }
-  else
-  {
-    auto found = this->any_parameters.find(variable);
-    if (found->second.second==false)
-    {
-      // if does exist, and is not fixed, just pass reference to memory that the shard pointer points to
-      return found->second.first;
-    }
-    else
-    {
-      // if does exist, and is fixed, throw error
-      Rcpp::stop("Parameters::operator[] - parameter is fixed and cannot be changed.");
-      Rcpp::stop("Parameters::operator[] - parameter is fixed and cannot be changed.");
-    }
-  }
-}
-*/
+ inline std::shared_ptr<boost::any> Parameters::get_any_pointer(const std::string &variable)
+ {
+ auto new_element_result = this->any_parameters.emplace(variable,std::pair<std::shared_ptr<boost::any>,bool>(std::make_shared<boost::any>(),false));
+ 
+ // if doesn't yet exist, make shared pointer, and set to be not fixed
+ if (new_element_result.second)
+ {
+ return new_element_result.first->second.first;// .first->second.first;
+ 
+ //std::pair<std::shared_ptr<arma::mat>,bool>& new_element = this->vector_parameters["variable"];
+ //new_element = std::pair<std::shared_ptr<arma::mat>,bool>(std::make_shared<arma::mat>(),false);
+ //return *new_element.first;
+ }
+ else
+ {
+ auto found = this->any_parameters.find(variable);
+ if (found->second.second==false)
+ {
+ // if does exist, and is not fixed, just pass reference to memory that the shard pointer points to
+ return found->second.first;
+ }
+ else
+ {
+ // if does exist, and is fixed, throw error
+ Rcpp::stop("Parameters::operator[] - parameter is fixed and cannot be changed.");
+ Rcpp::stop("Parameters::operator[] - parameter is fixed and cannot be changed.");
+ }
+ }
+ }
+ */
 
 inline Parameters Parameters::merge(const Parameters &another) const
 {
@@ -827,19 +827,19 @@ inline void Parameters::self_deep_copy_nonfixed()
 }
 
 /*
-inline void Parameters::overwrite_with_variables_in_argument(const Parameters &new_parameters)
-{
-  for (auto i=new_parameters.vector_begin(); i!=new_parameters.vector_end(); ++i)
-  {
-    this->get_vector_pointer(i->first) = i->second.first; // need similar function that takes ptr, not mat
-  }
-  
-  for (auto i=new_parameters.any_begin(); i!=new_parameters.any_end(); ++i)
-  {
-    this->get_any_pointer(i->first) = i->second.first;
-  }
-}
-*/
+ inline void Parameters::overwrite_with_variables_in_argument(const Parameters &new_parameters)
+ {
+ for (auto i=new_parameters.vector_begin(); i!=new_parameters.vector_end(); ++i)
+ {
+ this->get_vector_pointer(i->first) = i->second.first; // need similar function that takes ptr, not mat
+ }
+ 
+ for (auto i=new_parameters.any_begin(); i!=new_parameters.any_end(); ++i)
+ {
+ this->get_any_pointer(i->first) = i->second.first;
+ }
+ }
+ */
 
 inline void Parameters::deep_overwrite_with_variables_in_argument(const Parameters &new_parameters)
 {
@@ -907,25 +907,25 @@ inline void Parameters::deep_overwrite_with_variables_in_argument(const Paramete
 }
 
 /*
-inline void Parameters::add_parameters(const Parameters &another)
-{
-  this->vector_parameters.insert(another.vector_parameters.begin(), another.vector_parameters.end());
-  this->any_parameters.insert(another.any_parameters.begin(), another.any_parameters.end());
-}
-
-inline void Parameters::add_parameters_overwrite(const Parameters &another)
-{
-  for (auto i=another.vector_begin(); i!=another.vector_end(); ++i)
-  {
-    this->vector_parameters[i->first] = i->second;
-  }
-  
-  for (auto i=another.any_begin(); i!=another.any_end(); ++i)
-  {
-    this->any_parameters[i->first] = i->second;
-  }
-}
-*/
+ inline void Parameters::add_parameters(const Parameters &another)
+ {
+ this->vector_parameters.insert(another.vector_parameters.begin(), another.vector_parameters.end());
+ this->any_parameters.insert(another.any_parameters.begin(), another.any_parameters.end());
+ }
+ 
+ inline void Parameters::add_parameters_overwrite(const Parameters &another)
+ {
+ for (auto i=another.vector_begin(); i!=another.vector_end(); ++i)
+ {
+ this->vector_parameters[i->first] = i->second;
+ }
+ 
+ for (auto i=another.any_begin(); i!=another.any_end(); ++i)
+ {
+ this->any_parameters[i->first] = i->second;
+ }
+ }
+ */
 
 inline vector_parameter_iterator Parameters::vector_begin()
 {
@@ -1031,25 +1031,25 @@ inline std::vector<size_t> Parameters::get_variable_n_elems(const std::vector<st
 }
 
 /*
-inline Rcpp::List Parameters::as_list() const
-{
-  Rcpp::List output;
-  
-  for (auto it=this->vector_parameters.begin();it!=this->vector_parameters.end();++it)
-  {
-    output[it->first] = *it->second.first;
-  }
-  
-  
-  for (auto it2=this->any_parameters.begin();it2!=this->any_parameters.end();++it2)
-  {
-    output[it2->first] = boost::any_cast<SEXP>(*it2->second.first);
-  }
-  
-  
-  return output;
-}
-*/
+ inline Rcpp::List Parameters::as_list() const
+ {
+ Rcpp::List output;
+ 
+ for (auto it=this->vector_parameters.begin();it!=this->vector_parameters.end();++it)
+ {
+ output[it->first] = *it->second.first;
+ }
+ 
+ 
+ for (auto it2=this->any_parameters.begin();it2!=this->any_parameters.end();++it2)
+ {
+ output[it2->first] = boost::any_cast<SEXP>(*it2->second.first);
+ }
+ 
+ 
+ return output;
+ }
+ */
 
 inline Parameters pow(const Parameters &p, double power)
 {
@@ -1089,7 +1089,7 @@ inline std::ostream& operator<<(std::ostream& os, const Parameters &p)
       os << ";";
     }
   }
-
+  
   for (auto it2=p.any_parameters.begin();it2!=p.any_parameters.end();++it2)
   {
     if (it2->first!="")
