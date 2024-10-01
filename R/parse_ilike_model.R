@@ -3372,54 +3372,54 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           for (i in 1:length(R_function_arguments))
           {
-            split_at_dot = strsplit(R_function_arguments[i],"\\.")[[1]]
+            split_at_dollar = strsplit(R_function_arguments[i],"\\$")[[1]]
 
             any_lists = FALSE
 
-            if (split_at_dot[1]=="proposed_parameters")
+            if (split_at_dollar[1]=="proposed_parameters")
             {
               which_proposed_parameters[i] = 1
               any_lists = TRUE
             }
 
-            if (split_at_dot[1]=="parameters")
+            if (split_at_dollar[1]=="parameters")
             {
               which_parameters[i] = 1
               any_lists = TRUE
             }
 
-            if (split_at_dot[1]=="proposal_parameters")
+            if (split_at_dollar[1]=="proposal_parameters")
             {
               which_proposal_parameters[i] = 1
               any_lists = TRUE
             }
 
-            if (split_at_dot[1]=="data")
+            if (split_at_dollar[1]=="data")
             {
               which_data[i] = 1
               any_lists = TRUE
             }
 
-            if (length(split_at_dot)==0)
+            if (length(split_at_dollar)==0)
             {
               stop(paste("Block ",block_name,", line number ",line_counter,": argument is of size zero.",sep=""))
             }
-            else if (length(split_at_dot)==1)
+            else if (length(split_at_dollar)==1)
             {
               if (any_lists)
               {
-                cpp_function_arguments_string = paste(cpp_function_arguments_string,',parameters_to_list(',split_at_dot[1],')',sep="")
+                cpp_function_arguments_string = paste(cpp_function_arguments_string,',parameters_to_list(',split_at_dollar[1],')',sep="")
               }
               else
               {
-                cpp_function_arguments_string = paste(cpp_function_arguments_string,split_at_dot[1],sep=",")
+                cpp_function_arguments_string = paste(cpp_function_arguments_string,split_at_dollar[1],sep=",")
               }
-              R_function_arguments_string = paste(R_function_arguments_string,split_at_dot[1],sep=",")
+              R_function_arguments_string = paste(R_function_arguments_string,split_at_dollar[1],sep=",")
             }
-            else if (length(split_at_dot)>=2)
+            else if (length(split_at_dollar)>=2)
             {
-              cpp_function_arguments_string = paste(cpp_function_arguments_string,',',split_at_dot[1],'["',paste(split_at_dot[2:length(split_at_dot)],collapse=""),'"]',sep="")
-              R_function_arguments_string = paste(R_function_arguments_string,',',split_at_dot[1],'$',paste(split_at_dot[2:length(split_at_dot)],collapse=""),sep="")
+              cpp_function_arguments_string = paste(cpp_function_arguments_string,',',split_at_dollar[1],'["',paste(split_at_dollar[2:length(split_at_dollar)],collapse=""),'"]',sep="")
+              R_function_arguments_string = paste(R_function_arguments_string,',',split_at_dollar[1],'$',paste(split_at_dollar[2:length(split_at_dollar)],collapse=""),sep="")
             }
           }
 
