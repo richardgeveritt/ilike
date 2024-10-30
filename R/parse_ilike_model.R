@@ -903,7 +903,7 @@ transition_proposal_processing = function(transition_proposal_number,blocks,bloc
 
       if (block_name=="transition_proposal")
       {
-        stop(paste("Invalid file: line ",line_counter,', transition_proposal specified, but previous importance proposal block is incomplete (did you specify both evaluate_log_transition_proposal and simulate_transition_proposal?)',sep=""))
+        stop(paste("Invalid file: line ",line_counter,', transition_proposal specified, but previous transition proposal block is incomplete (did you specify both evaluate_log_transition_proposal and simulate_transition_proposal?)',sep=""))
       }
 
     }
@@ -1216,7 +1216,7 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
   sbi_likelihood_function_types = c("simulate_data_model","sbi_likelihood","summary_statistics","data_variable")
   linear_gaussian_data_model_types = c("linear_gaussian_data_model","linear_gaussian_data_matrix","linear_gaussian_data_covariance","linear_gaussian_data_variable","linear_gaussian_data_state_variable")
   nonlinear_gaussian_data_model_types = c("nonlinear_gaussian_data_model","nonlinear_gaussian_data_function","nonlinear_gaussian_data_covariance","nonlinear_gaussian_data_variable")
-  other_likelihood_function_types = c("likelihood")
+  other_likelihood_function_types = c("algorithmic_likelihood")
   factor_function_types = c(prior_function_types,custom_likelihood_function_types,sbi_likelihood_function_types,linear_gaussian_data_model_types,nonlinear_gaussian_data_model_types,other_likelihood_function_types)
   ilike_transition_model_types = c("transition_model")
   linear_gaussian_transition_model_types = c("linear_gaussian_transition_model","linear_gaussian_transition_matrix","linear_gaussian_transition_covariance","linear_gaussian_transition_variable")
@@ -3288,7 +3288,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
 
         }
-        else if (block_name=="likelihood")
+        else if (block_name=="algorithmic_likelihood")
         {
           split_arg_string = split_string_at_comma_ignoring_parentheses(arg_string)
 
@@ -4804,7 +4804,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           arguments[1] = "const Parameters &proposed_parameters"
           arguments[2] = "const Parameters &parameters"
           #args_for_typedef = "const Parameters&"
-          R_args = "proposed_paramters,parameters"
+          R_args = "proposed_parameters,parameters"
 
           function_body = get_double_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
@@ -6056,7 +6056,7 @@ strip_out_xptr_stuff <- function(blocks)
 #' @param R_functions (optional) If TRUE, returns R functions. If FALSE, returns C++ functions.
 #' @param external_packages (optional) A vector of names of other R packages the functions rely on.
 #' @param julia_bin_dir (optional) The directory containing the Julia bin file - only needed if Julia functions are used.
-#' @param julia_required_libraries (optional) Vector of strings, each of which is a Julia packge that will be installed and loaded.
+#' @param julia_required_libraries (optional) Vector of strings, each of which is a Julia package that will be installed and loaded.
 #' @param verify_cpp_function_types (optional) If TRUE, check the types of the parameters of user-defined .cpp functions. If FALSE (default), types are not checked.
 #' @param keep_temporary_model_code (optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE, this file is left in the working directory.
 #' @param nesting_level (optional) The level of nesting of the current call to compile. A user should always use the default of 1.

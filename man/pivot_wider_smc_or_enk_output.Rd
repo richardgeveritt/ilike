@@ -2,7 +2,7 @@
 % Please edit documentation in R/load_output.R
 \name{pivot_wider_smc_or_enk_output}
 \alias{pivot_wider_smc_or_enk_output}
-\title{Take output from the functions load_smc_output or load_enk_output and convert it to a standard (non-tidy format with one column per dimension).}
+\title{Take output from the functions load_smc_output or load_enk_output and convert it to a more standard format (non-tidy format with one column per dimension).}
 \usage{
 pivot_wider_smc_or_enk_output(output, variables = NULL)
 }
@@ -12,5 +12,5 @@ pivot_wider_smc_or_enk_output(output, variables = NULL)
 \item{variables}{(optional) Variables to include in the output (default is all).}
 }
 \description{
-Take output from the functions load_smc_output or load_enk_output and convert it to a standard (non-tidy format with one column per dimension).
+Take output from the functions load_smc_output or load_enk_output and convert it to a more standard format (non-tidy format with one column per dimension).
 }

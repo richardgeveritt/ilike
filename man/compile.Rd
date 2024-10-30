@@ -27,7 +27,7 @@ compile(
 
 \item{julia_bin_dir}{(optional) The directory containing the Julia bin file - only needed if Julia functions are used.}
 
-\item{julia_required_libraries}{(optional) Vector of strings, each of which is a Julia packge that will be installed and loaded.}
+\item{julia_required_libraries}{(optional) Vector of strings, each of which is a Julia package that will be installed and loaded.}
 
 \item{verify_cpp_function_types}{(optional) If TRUE, check the types of the parameters of user-defined .cpp functions. If FALSE (default), types are not checked.}
 
