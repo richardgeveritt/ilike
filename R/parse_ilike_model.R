@@ -775,55 +775,55 @@ unadjusted_proposal_processing = function(unadjusted_proposal_number,blocks,bloc
   return(unadjusted_proposal_number)
 }
 
-independent_mh_proposal_processing = function(independent_mh_proposal_number,blocks,block_name,line_counter)
+imh_proposal_processing = function(imh_proposal_number,blocks,block_name,line_counter)
 {
-  # Is this a continuation of the current independent_mh_proposal, or a new one?
+  # Is this a continuation of the current imh_proposal, or a new one?
 
-  # Get the current independent_mh_proposal info.
-  if ("independent_mh_proposal" %in% names(blocks))
+  # Get the current imh_proposal info.
+  if ("imh_proposal" %in% names(blocks))
   {
-    current_independent_mh_proposal_info = blocks[["independent_mh_proposal"]][[independent_mh_proposal_number]]
+    current_imh_proposal_info = blocks[["imh_proposal"]][[imh_proposal_number]]
 
-    if ("independent_mh_proposal" %in% names(current_independent_mh_proposal_info))
+    if ("imh_proposal" %in% names(current_imh_proposal_info))
     {
-      # independent_mh_proposal is complete
-      print_independent_mh_proposal_info(independent_mh_proposal_number,blocks,line_counter-1)
-      independent_mh_proposal_number = independent_mh_proposal_number + 1
+      # imh_proposal is complete
+      print_imh_proposal_info(imh_proposal_number,blocks,line_counter-1)
+      imh_proposal_number = imh_proposal_number + 1
     }
-    else if ( ("evaluate_log_independent_mh_proposal" %in% names(current_independent_mh_proposal_info)) || ("simulate_independent_mh_proposal" %in% names(current_independent_mh_proposal_info)) || ("independent_mh_transform" %in% names(current_mh_independent_proposal_info)) || ("independent_mh_inverse_transform" %in% names(current_mh_independent_proposal_info)) || ("independent_mh_transform_jacobian_matrix" %in% names(current_mh_independent_proposal_info)) )
+    else if ( ("evaluate_log_imh_proposal" %in% names(current_imh_proposal_info)) || ("simulate_imh_proposal" %in% names(current_imh_proposal_info)) || ("imh_transform" %in% names(current_mh_independent_proposal_info)) || ("imh_inverse_transform" %in% names(current_mh_independent_proposal_info)) || ("imh_transform_jacobian_matrix" %in% names(current_mh_independent_proposal_info)) )
     {
-      if ( ("independent_mh_transform" %in% names(current_independent_mh_proposal_info)) || ("independent_mh_inverse_transform" %in% names(current_independent_mh_proposal_info)) || ("independent_mh_transform_jacobian_matrix" %in% names(current_independent_mh_proposal_info)) )
+      if ( ("imh_transform" %in% names(current_imh_proposal_info)) || ("imh_inverse_transform" %in% names(current_imh_proposal_info)) || ("imh_transform_jacobian_matrix" %in% names(current_imh_proposal_info)) )
       {
-        # independent_mh_proposal is complete
-        if ( ("evaluate_log_independent_mh_proposal" %in% names(current_independent_mh_proposal_info)) && ("simulate_independent_mh_proposal" %in% names(current_independent_mh_proposal_info)) && ("independent_mh_transform" %in% names(current_independent_mh_proposal_info)) && ("independent_mh_inverse_transform" %in% names(current_independent_mh_proposal_info)) && ("independent_mh_transform_jacobian_matrix" %in% names(current_independent_mh_proposal_info)) )
+        # imh_proposal is complete
+        if ( ("evaluate_log_imh_proposal" %in% names(current_imh_proposal_info)) && ("simulate_imh_proposal" %in% names(current_imh_proposal_info)) && ("imh_transform" %in% names(current_imh_proposal_info)) && ("imh_inverse_transform" %in% names(current_imh_proposal_info)) && ("imh_transform_jacobian_matrix" %in% names(current_imh_proposal_info)) )
         {
-          print_independent_mh_proposal_info(independent_mh_proposal_number,blocks,line_counter-1)
-          independent_mh_proposal_number = independent_mh_proposal_number + 1
+          print_imh_proposal_info(imh_proposal_number,blocks,line_counter-1)
+          imh_proposal_number = imh_proposal_number + 1
         }
       }
       else
       {
-        # independent_mh_proposal is complete
-        if ( ("evaluate_log_independent_mh_proposal" %in% names(current_independent_mh_proposal_info)) && ("simulate_independent_mh_proposal" %in% names(current_independent_mh_proposal_info)) )
+        # imh_proposal is complete
+        if ( ("evaluate_log_imh_proposal" %in% names(current_imh_proposal_info)) && ("simulate_imh_proposal" %in% names(current_imh_proposal_info)) )
         {
-          print_independent_mh_proposal_info(independent_mh_proposal_number,blocks,line_counter-1)
-          independent_mh_proposal_number = independent_mh_proposal_number + 1
+          print_imh_proposal_info(imh_proposal_number,blocks,line_counter-1)
+          imh_proposal_number = imh_proposal_number + 1
         }
       }
 
-      if (block_name=="independent_mh_proposal")
+      if (block_name=="imh_proposal")
       {
-        stop(paste("Invalid file: line ",line_counter,', independent_mh_proposal specified, but previous importance proposal block is incomplete (did you specify both evaluate_log_independent_mh_proposal and simulate_independent_mh_proposaland if proposing on a transformed space, the transform, inverse transform and jacobian_matrix?)',sep=""))
+        stop(paste("Invalid file: line ",line_counter,', imh_proposal specified, but previous importance proposal block is incomplete (did you specify both evaluate_log_imh_proposal and simulate_imh_proposaland if proposing on a transformed space, the transform, inverse transform and jacobian_matrix?)',sep=""))
       }
 
     }
   }
   else
   {
-    independent_mh_proposal_number = independent_mh_proposal_number + 1
+    imh_proposal_number = imh_proposal_number + 1
   }
 
-  return(independent_mh_proposal_number)
+  return(imh_proposal_number)
 }
 
 m_proposal_processing = function(m_proposal_number,blocks,block_name,line_counter)
@@ -1079,20 +1079,20 @@ print_unadjusted_proposal_info = function(unadjusted_proposal_index,blocks,line_
   print(paste('unadjusted_proposal ends on line ',line_counter,'. Contains ',unadjusted_proposal_info_string,'.',sep = ""))
 }
 
-print_independent_mh_proposal_info = function(independent_mh_proposal_index,blocks,line_counter)
+print_imh_proposal_info = function(imh_proposal_index,blocks,line_counter)
 {
-  independent_mh_proposal_info_string = ""
-  last_independent_mh_proposal_names = names(blocks[["independent_mh_proposal"]][[independent_mh_proposal_index]])
-  for (j in 1:length(last_independent_mh_proposal_names))
+  imh_proposal_info_string = ""
+  last_imh_proposal_names = names(blocks[["imh_proposal"]][[imh_proposal_index]])
+  for (j in 1:length(last_imh_proposal_names))
   {
-    if (!grepl("XPtr",last_independent_mh_proposal_names[j]))
-      independent_mh_proposal_info_string = paste(independent_mh_proposal_info_string,last_independent_mh_proposal_names[j],sep=", ")
+    if (!grepl("XPtr",last_imh_proposal_names[j]))
+      imh_proposal_info_string = paste(imh_proposal_info_string,last_imh_proposal_names[j],sep=", ")
   }
-  if (nchar(independent_mh_proposal_info_string)>2)
+  if (nchar(imh_proposal_info_string)>2)
   {
-    independent_mh_proposal_info_string = substr(independent_mh_proposal_info_string,3,nchar(independent_mh_proposal_info_string))
+    imh_proposal_info_string = substr(imh_proposal_info_string,3,nchar(imh_proposal_info_string))
   }
-  print(paste('independent_mh_proposal ends on line ',line_counter,'. Contains ',independent_mh_proposal_info_string,'.',sep = ""))
+  print(paste('imh_proposal ends on line ',line_counter,'. Contains ',imh_proposal_info_string,'.',sep = ""))
 }
 
 print_m_proposal_info = function(m_proposal_index,blocks,line_counter)
@@ -1191,7 +1191,7 @@ print_data_info = function(data_index,blocks,line_counter)
   print(paste('data ends on line ',line_counter,'. Contains ',data_info_string,'.',sep = ""))
 }
 
-determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,potential_function_number,importance_proposal_number,mh_proposal_number,unadjusted_proposal_number,independent_mh_proposal_number,m_proposal_number,enk_transform_number,transition_proposal_number,data_number,method_number)
+determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,potential_function_number,importance_proposal_number,mh_proposal_number,unadjusted_proposal_number,imh_proposal_number,m_proposal_number,enk_transform_number,transition_proposal_number,data_number,method_number)
 {
   if (length(split_block_name)==1)
   {
@@ -1230,7 +1230,7 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
   importance_proposal_types = c("simulate_importance_proposal","evaluate_log_importance_proposal","importance_proposal")
   mh_proposal_types = c("simulate_mh_proposal","evaluate_log_mh_proposal","mh_proposal","mh_transform","mh_inverse_transform","mh_transform_jacobian_matrix","mh_factor_index")
   unadjusted_proposal_types = c("simulate_unadjusted_proposal","unadjusted_proposal","unadjusted_transform","unadjusted_inverse_transform","unadjusted_transform_jacobian_matrix","unadjusted_factor_index")
-  independent_mh_proposal_types = c("simulate_independent_mh_proposal","evaluate_log_independent_mh_proposal","independent_mh_proposal","independent_mh_transform","independent_mh_inverse_transform","independent_mh_transform_jacobian_matrix","independent_mh_factor_index")
+  imh_proposal_types = c("simulate_imh_proposal","evaluate_log_imh_proposal","imh_proposal","imh_transform","imh_inverse_transform","imh_transform_jacobian_matrix","imh_factor_index")
   m_proposal_types = c("simulate_m_proposal","m_proposal","m_transform","m_inverse_transform","m_transform_jacobian_matrix","m_factor_index")
   transition_proposal_types = c("simulate_transition_proposal","evaluate_log_transition_proposal")
   enk_transform_types = c("enk_transform","enk_inverse_transform")
@@ -1280,11 +1280,11 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
     unadjusted_proposal_number = unadjusted_proposal_processing(unadjusted_proposal_number,blocks,block_name,line_counter)
     number_to_pass_to_extract_block = unadjusted_proposal_number
   }
-  else if (block_name %in% independent_mh_proposal_types)
+  else if (block_name %in% imh_proposal_types)
   {
-    block_type = "independent_mh_proposal"
-    independent_mh_proposal_number = independent_mh_proposal_processing(independent_mh_proposal_number,blocks,block_name,line_counter)
-    number_to_pass_to_extract_block = independent_mh_proposal_number
+    block_type = "imh_proposal"
+    imh_proposal_number = imh_proposal_processing(imh_proposal_number,blocks,block_name,line_counter)
+    number_to_pass_to_extract_block = imh_proposal_number
   }
   else if (block_name %in% m_proposal_types)
   {
@@ -1332,7 +1332,7 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
               importance_proposal_number,
               mh_proposal_number,
               unadjusted_proposal_number,
-              independent_mh_proposal_number,
+              imh_proposal_number,
               m_proposal_number,
               enk_transform_number,
               transition_proposal_number,
@@ -1877,7 +1877,7 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
     }
     else
     {
-      stop(paste("Block ",block_name,", line number ",line_counter,": no parameters used, should this have been specified as simulate_independent_mh_proposal?",sep=""))
+      stop(paste("Block ",block_name,", line number ",line_counter,": no parameters used, should this have been specified as simulate_imh_proposal?",sep=""))
     }
   }
   else if (block_name=="simulate_unadjusted_proposal")
@@ -1935,10 +1935,10 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
     }
     else
     {
-      stop(paste("Block ",block_name,", line number ",line_counter,": no parameters used, should this have been specified as simulate_independent_mh_proposal?",sep=""))
+      stop(paste("Block ",block_name,", line number ",line_counter,": no parameters used, should this have been specified as simulate_imh_proposal?",sep=""))
     }
   }
-  else if (block_name=="evaluate_log_independent_mh_proposal")
+  else if (block_name=="evaluate_log_imh_proposal")
   {
     if (sum(which_parameters)>0)
     {
@@ -1986,7 +1986,7 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
       proposal_type = 1
     }
   }
-  else if (block_name=="simulate_independent_mh_proposal")
+  else if (block_name=="simulate_imh_proposal")
   {
     if (sum(which_proposed_parameters)>0)
     {
@@ -2149,7 +2149,7 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
     return_type = "NumericVector"
     arguments = c()
   }
-  else if ( (block_name=="m_factor_index") || (block_name=="mh_factor_index") || (block_name=="independent_mh_factor_index") || (block_name=="unadjusted_factor_index") )
+  else if ( (block_name=="m_factor_index") || (block_name=="mh_factor_index") || (block_name=="imh_factor_index") || (block_name=="unadjusted_factor_index") )
   {
     if (sum(which_parameters)>0)
     {
@@ -2994,7 +2994,7 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
     R_args = "parameters"
 
   }
-  else if (block_name=="independent_mh_transform")
+  else if (block_name=="imh_transform")
   {
     if (sum(which_data)>0)
     {
@@ -3018,7 +3018,7 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
     R_args = "parameters"
 
   }
-  else if (block_name=="independent_mh_inverse_transform")
+  else if (block_name=="imh_inverse_transform")
   {
 
     if (sum(which_data)>0)
@@ -3043,7 +3043,7 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
     R_args = "parameters"
 
   }
-  else if (block_name=="independent_mh_transform_jacobian_matrix")
+  else if (block_name=="imh_transform_jacobian_matrix")
   {
     if (sum(which_data)>0)
     {
@@ -3088,7 +3088,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 {
 
   # Get information about the order in which MCMC moves are included.
-  if ( (block_type=="mh_proposal") || (block_type=="unadjusted_proposal") || (block_type=="independent_mh_proposal") || (block_type=="m_proposal") )
+  if ( (block_type=="mh_proposal") || (block_type=="unadjusted_proposal") || (block_type=="imh_proposal") || (block_type=="m_proposal") )
   {
     # Are we adding to an existing block? If we are not, then we need to add in the information about the order of the new MCMC move.
     if (factor_number>length(blocks[[block_type]]))
@@ -3098,7 +3098,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
         blocks[["order_of_mcmc"]] = c(blocks[["order_of_mcmc"]],1)
       }
 
-      if (block_type=="independent_mh_proposal")
+      if (block_type=="imh_proposal")
       {
         blocks[["order_of_mcmc"]] = c(blocks[["order_of_mcmc"]],2)
       }
@@ -3223,7 +3223,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
       if (is_like_function==TRUE)
       {
-        if ( (block_name=="prior") || (block_name=="importance_proposal") || (block_name=="independent_mh_proposal") || (block_name=="mh_proposal") || (block_name=="unadjusted_proposal") || (block_name=="m_proposal") || (block_name=="smc_sequence") || (block_name=="linear_gaussian_transition_model") || (block_name=="nonlinear_gaussian_transition_model") || (block_name=="linear_gaussian_data_model") || (block_name=="nonlinear_gaussian_data_model") )
+        if ( (block_name=="prior") || (block_name=="importance_proposal") || (block_name=="imh_proposal") || (block_name=="mh_proposal") || (block_name=="unadjusted_proposal") || (block_name=="m_proposal") || (block_name=="smc_sequence") || (block_name=="linear_gaussian_transition_model") || (block_name=="nonlinear_gaussian_transition_model") || (block_name=="linear_gaussian_data_model") || (block_name=="nonlinear_gaussian_data_model") )
         {
           split_arg_string = split_string_at_comma_ignoring_parentheses(arg_string)
 
@@ -3875,7 +3875,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
           else
           {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no parameters used, should this have been specified as simulate_independent_mh_proposal?",sep=""))
+            stop(paste("Block ",block_name,", line number ",line_counter,": no parameters used, should this have been specified as simulate_imh_proposal?",sep=""))
           }
 
           function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
@@ -3937,13 +3937,13 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
           else
           {
-            stop(paste("Block ",block_name,", line number ",line_counter,": no parameters used, should this have been specified as simulate_independent_mh_proposal?",sep=""))
+            stop(paste("Block ",block_name,", line number ",line_counter,": no parameters used, should this have been specified as simulate_imh_proposal?",sep=""))
           }
 
           function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
-        else if (block_name=="evaluate_log_independent_mh_proposal")
+        else if (block_name=="evaluate_log_imh_proposal")
         {
           if (sum(which_parameters)>0)
           {
@@ -3994,7 +3994,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           function_body = get_double_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
-        else if (block_name=="simulate_independent_mh_proposal")
+        else if (block_name=="simulate_imh_proposal")
         {
           if (sum(which_proposed_parameters)>0)
           {
@@ -4183,7 +4183,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
 
         }
-        else if ( (block_name=="m_factor_index") || (block_name=="mh_factor_index") || (block_name=="independent_mh_factor_index") || (block_name=="unadjusted_factor_index") )
+        else if ( (block_name=="m_factor_index") || (block_name=="mh_factor_index") || (block_name=="imh_factor_index") || (block_name=="unadjusted_factor_index") )
         {
           if (sum(which_parameters)>0)
           {
@@ -5079,7 +5079,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
-        else if (block_name=="independent_mh_transform")
+        else if (block_name=="imh_transform")
         {
           if (sum(which_data)>0)
           {
@@ -5105,7 +5105,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
-        else if (block_name=="independent_mh_inverse_transform")
+        else if (block_name=="imh_inverse_transform")
         {
           if (sum(which_data)>0)
           {
@@ -5131,7 +5131,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
-        else if (block_name=="independent_mh_transform_jacobian_matrix")
+        else if (block_name=="imh_transform_jacobian_matrix")
         {
           if (sum(which_data)>0)
           {
@@ -5683,13 +5683,13 @@ check_types = function(blocks)
 
   }
 
-  for (i in 1:length(blocks[["independent_mh_proposal"]]))
+  for (i in 1:length(blocks[["imh_proposal"]]))
   {
-    current_factor = blocks[["independent_mh_proposal"]][[i]]
+    current_factor = blocks[["imh_proposal"]][[i]]
 
-    if ("evaluate_log_independent_mh_proposal" %in% names(current_factor))
+    if ("evaluate_log_imh_proposal" %in% names(current_factor))
     {
-      which_index = which(names(current_factor) == "evaluate_log_independent_mh_proposal")
+      which_index = which(names(current_factor) == "evaluate_log_imh_proposal")
       for (j in 1:length(which_index))
       {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
@@ -5710,17 +5710,17 @@ check_types = function(blocks)
 
         if (length(which(proposal_type==TRUE))==0)
         {
-          stop("No valid independent_mh proposal specified.")
+          stop("No valid imh proposal specified.")
         }
 
-        blocks[["independent_mh_proposal"]][[i]][["type"]] = which(proposal_type)[1]
+        blocks[["imh_proposal"]][[i]][["type"]] = which(proposal_type)[1]
       }
       }
     }
 
-    if ("simulate_independent_mh_proposal" %in% names(current_factor))
+    if ("simulate_imh_proposal" %in% names(current_factor))
     {
-      which_index = which(names(current_factor) == "simulate_independent_mh_proposal")
+      which_index = which(names(current_factor) == "simulate_imh_proposal")
       for (j in 1:length(which_index))
       {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
@@ -5744,16 +5744,16 @@ check_types = function(blocks)
           stop("No valid independent mh proposal specified.")
         }
 
-        if ("type" %in% names(blocks[["independent_mh_proposal"]][[i]]))
+        if ("type" %in% names(blocks[["imh_proposal"]][[i]]))
         {
-          if (blocks[["independent_mh_proposal"]][[i]][["type"]]!=which(proposal_type)[1])
+          if (blocks[["imh_proposal"]][[i]][["type"]]!=which(proposal_type)[1])
           {
-            stop("evaluate_log_independent_mh_proposal and simulate_independent_mh_proposal are incompatible.")
+            stop("evaluate_log_imh_proposal and simulate_imh_proposal are incompatible.")
           }
         }
         else
         {
-          stop("Need to specify both evaluate_log_independent_mh_proposal and simulate_independent_mh_proposal.")
+          stop("Need to specify both evaluate_log_imh_proposal and simulate_imh_proposal.")
         }
       }
       }
@@ -6127,7 +6127,7 @@ compile <- function(filename,
   importance_proposal_number = 0
   mh_proposal_number = 0
   unadjusted_proposal_number = 0
-  independent_mh_proposal_number = 0
+  imh_proposal_number = 0
   m_proposal_number = 0
   enk_transform_number = 0
   transition_proposal_number = 0
@@ -6208,7 +6208,7 @@ compile <- function(filename,
             stop(paste("Invalid file: line ",line_counter,", new section of file needs a name: use /***name***/.",sep=""))
           }
           split_block_name = split_string_at_comma_ignoring_parentheses(unparsed_block_name)
-          new_block_info = determine_block_type(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,potential_function_number,importance_proposal_number,mh_proposal_number,unadjusted_proposal_number,independent_mh_proposal_number,m_proposal_number,enk_transform_number,transition_proposal_number,data_number,method_number)
+          new_block_info = determine_block_type(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,potential_function_number,importance_proposal_number,mh_proposal_number,unadjusted_proposal_number,imh_proposal_number,m_proposal_number,enk_transform_number,transition_proposal_number,data_number,method_number)
 
           # expect input for each block in one of the following forms:
           # (a) /***evaluate_log_prior***/, followed by a C++ function
@@ -6233,7 +6233,7 @@ compile <- function(filename,
           importance_proposal_number = new_block_info[[9]]
           mh_proposal_number = new_block_info[[10]]
           unadjusted_proposal_number = new_block_info[[11]]
-          independent_mh_proposal_number = new_block_info[[12]]
+          imh_proposal_number = new_block_info[[12]]
           m_proposal_number = new_block_info[[13]]
           enk_transform_number = new_block_info[[14]]
           transition_proposal_number = new_block_info[[15]]
@@ -6287,9 +6287,9 @@ compile <- function(filename,
       {
         print_unadjusted_proposal_info(length(blocks[["unadjusted_proposal"]]),blocks,line_counter)
       }
-      if ( (independent_mh_proposal_number!=0) && independent_mh_proposal_number==length(blocks[["independent_mh_proposal"]]))
+      if ( (imh_proposal_number!=0) && imh_proposal_number==length(blocks[["imh_proposal"]]))
       {
-        print_independent_mh_proposal_info(length(blocks[["independent_mh_proposal"]]),blocks,line_counter)
+        print_imh_proposal_info(length(blocks[["imh_proposal"]]),blocks,line_counter)
       }
       if ( (m_proposal_number!=0) && m_proposal_number==length(blocks[["m_proposal"]]))
       {
