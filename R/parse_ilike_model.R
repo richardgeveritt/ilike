@@ -634,43 +634,43 @@ data_processing = function(data_number,line_counter)
   return(data_number)
 }
 
-importance_proposal_processing = function(importance_proposal_number,blocks,block_name,line_counter)
+is_proposal_processing = function(is_proposal_number,blocks,block_name,line_counter)
 {
-  # Is this a continuation of the current importance_proposal, or a new one?
+  # Is this a continuation of the current is_proposal, or a new one?
 
-  # Get the current importance_proposal info.
-  if ("importance_proposal" %in% names(blocks))
+  # Get the current is_proposal info.
+  if ("is_proposal" %in% names(blocks))
   {
-    current_importance_proposal_info = blocks[["importance_proposal"]][[importance_proposal_number]]
+    current_is_proposal_info = blocks[["is_proposal"]][[is_proposal_number]]
 
-    if ("importance_proposal" %in% names(current_importance_proposal_info))
+    if ("is_proposal" %in% names(current_is_proposal_info))
     {
-      # importance_proposal is complete
-      print_importance_proposal_info(importance_proposal_number,blocks,line_counter-1)
-      importance_proposal_number = importance_proposal_number + 1
+      # is_proposal is complete
+      print_is_proposal_info(is_proposal_number,blocks,line_counter-1)
+      is_proposal_number = is_proposal_number + 1
     }
-    else if ( ("evaluate_log_importance_proposal" %in% names(current_importance_proposal_info)) || ("simulate_importance_proposal" %in% names(current_importance_proposal_info)) )
+    else if ( ("evaluate_log_is_proposal" %in% names(current_is_proposal_info)) || ("simulate_is_proposal" %in% names(current_is_proposal_info)) )
     {
-      # importance_proposal is complete
-      if ( ("evaluate_log_importance_proposal" %in% names(current_importance_proposal_info)) && ("simulate_importance_proposal" %in% names(current_importance_proposal_info)) )
+      # is_proposal is complete
+      if ( ("evaluate_log_is_proposal" %in% names(current_is_proposal_info)) && ("simulate_is_proposal" %in% names(current_is_proposal_info)) )
       {
-        print_importance_proposal_info(importance_proposal_number,blocks,line_counter-1)
-        importance_proposal_number = importance_proposal_number + 1
+        print_is_proposal_info(is_proposal_number,blocks,line_counter-1)
+        is_proposal_number = is_proposal_number + 1
       }
 
-      if (block_name=="importance_proposal")
+      if (block_name=="is_proposal")
       {
-        stop(paste("Invalid file: line ",line_counter,', importance_proposal specified, but previous importance proposal block is incomplete (did you specify both evaluate_log_importance_proposal and simulate_importance_proposal?)',sep=""))
+        stop(paste("Invalid file: line ",line_counter,', is_proposal specified, but previous importance proposal block is incomplete (did you specify both evaluate_log_is_proposal and simulate_is_proposal?)',sep=""))
       }
 
     }
   }
   else
   {
-    importance_proposal_number = importance_proposal_number + 1
+    is_proposal_number = is_proposal_number + 1
   }
 
-  return(importance_proposal_number)
+  return(is_proposal_number)
 }
 
 mh_proposal_processing = function(mh_proposal_number,blocks,block_name,line_counter)
@@ -1031,20 +1031,20 @@ print_potential_function_info = function(potential_function_index,blocks,line_co
   print(paste('Potential function ends on line ',line_counter,'. Contains ',potential_function_info_string,'.',sep = ""))
 }
 
-print_importance_proposal_info = function(importance_proposal_index,blocks,line_counter)
+print_is_proposal_info = function(is_proposal_index,blocks,line_counter)
 {
-  importance_proposal_info_string = ""
-  last_importance_proposal_names = names(blocks[["importance_proposal"]][[importance_proposal_index]])
-  for (j in 1:length(last_importance_proposal_names))
+  is_proposal_info_string = ""
+  last_is_proposal_names = names(blocks[["is_proposal"]][[is_proposal_index]])
+  for (j in 1:length(last_is_proposal_names))
   {
-    if (!grepl("XPtr",last_importance_proposal_names[j]))
-      importance_proposal_info_string = paste(importance_proposal_info_string,last_importance_proposal_names[j],sep=", ")
+    if (!grepl("XPtr",last_is_proposal_names[j]))
+      is_proposal_info_string = paste(is_proposal_info_string,last_is_proposal_names[j],sep=", ")
   }
-  if (nchar(importance_proposal_info_string)>2)
+  if (nchar(is_proposal_info_string)>2)
   {
-    importance_proposal_info_string = substr(importance_proposal_info_string,3,nchar(importance_proposal_info_string))
+    is_proposal_info_string = substr(is_proposal_info_string,3,nchar(is_proposal_info_string))
   }
-  print(paste('Importance_proposal ends on line ',line_counter,'. Contains ',importance_proposal_info_string,'.',sep = ""))
+  print(paste('is_proposal ends on line ',line_counter,'. Contains ',is_proposal_info_string,'.',sep = ""))
 }
 
 print_mh_proposal_info = function(mh_proposal_index,blocks,line_counter)
@@ -1191,7 +1191,7 @@ print_data_info = function(data_index,blocks,line_counter)
   print(paste('data ends on line ',line_counter,'. Contains ',data_info_string,'.',sep = ""))
 }
 
-determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,potential_function_number,importance_proposal_number,mh_proposal_number,unadjusted_proposal_number,imh_proposal_number,m_proposal_number,enk_transform_number,transition_proposal_number,data_number,method_number)
+determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,potential_function_number,is_proposal_number,mh_proposal_number,unadjusted_proposal_number,imh_proposal_number,m_proposal_number,enk_transform_number,transition_proposal_number,data_number,method_number)
 {
   if (length(split_block_name)==1)
   {
@@ -1227,7 +1227,7 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
   ilike_potential_function_types = c("potential_function")
   potential_function_types = c(custom_potential_function_types,ilike_potential_function_types)
   data_function_types = c("data")
-  importance_proposal_types = c("simulate_importance_proposal","evaluate_log_importance_proposal","importance_proposal")
+  is_proposal_types = c("simulate_is_proposal","evaluate_log_is_proposal","is_proposal")
   mh_proposal_types = c("simulate_mh_proposal","evaluate_log_mh_proposal","mh_proposal","mh_transform","mh_inverse_transform","mh_transform_jacobian_matrix","mh_factor_index")
   unadjusted_proposal_types = c("simulate_unadjusted_proposal","unadjusted_proposal","unadjusted_transform","unadjusted_inverse_transform","unadjusted_transform_jacobian_matrix","unadjusted_factor_index")
   imh_proposal_types = c("simulate_imh_proposal","evaluate_log_imh_proposal","imh_proposal","imh_transform","imh_inverse_transform","imh_transform_jacobian_matrix","imh_factor_index")
@@ -1235,7 +1235,7 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
   transition_proposal_types = c("simulate_transition_proposal","evaluate_log_transition_proposal")
   enk_transform_types = c("enk_transform","enk_inverse_transform")
   #reinforce_gradient = c("reinforce_gradient")
-  method_function_types = c("mcmc_weights","mcmc_termination","adaptive_resampling","adaptive_target","smc_termination","smc_sequence","reinforce_gradient","enk_likelihood_index","enk_shifter","filter")
+  method_function_types = c("mcmc_weights","mcmc_termination","adaptive_resampling","adaptive_target","smc_termination","smc_sequence","reinforce_gradient","enk_likelihood_index","enk_shifter","ssm")
 
   # distinguish between factor, data, etc
   if (block_name %in% factor_function_types)
@@ -1262,11 +1262,11 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
     data_number = data_processing(data_number,line_counter)
     number_to_pass_to_extract_block = data_number
   }
-  else if (block_name %in% importance_proposal_types)
+  else if (block_name %in% is_proposal_types)
   {
-    block_type = "importance_proposal"
-    importance_proposal_number = importance_proposal_processing(importance_proposal_number,blocks,block_name,line_counter)
-    number_to_pass_to_extract_block = importance_proposal_number
+    block_type = "is_proposal"
+    is_proposal_number = is_proposal_processing(is_proposal_number,blocks,block_name,line_counter)
+    number_to_pass_to_extract_block = is_proposal_number
   }
   else if (block_name %in% mh_proposal_types)
   {
@@ -1329,7 +1329,7 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
               factor_number,
               transition_model_number,
               potential_function_number,
-              importance_proposal_number,
+              is_proposal_number,
               mh_proposal_number,
               unadjusted_proposal_number,
               imh_proposal_number,
@@ -1674,7 +1674,7 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
     R_args = ""
 
   }
-  else if (block_name=="evaluate_log_importance_proposal")
+  else if (block_name=="evaluate_log_is_proposal")
   {
 
     if ( (sum(which_data)>0) && (sum(which_proposal_parameters)>0)  )
@@ -1718,7 +1718,7 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
       proposal_type = 1
     }
   }
-  else if (block_name=="simulate_importance_proposal")
+  else if (block_name=="simulate_is_proposal")
   {
 
     if (sum(which_proposed_parameters)>0)
@@ -3223,7 +3223,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
       if (is_like_function==TRUE)
       {
-        if ( (block_name=="prior") || (block_name=="importance_proposal") || (block_name=="imh_proposal") || (block_name=="mh_proposal") || (block_name=="unadjusted_proposal") || (block_name=="m_proposal") || (block_name=="smc_sequence") || (block_name=="linear_gaussian_transition_model") || (block_name=="nonlinear_gaussian_transition_model") || (block_name=="linear_gaussian_data_model") || (block_name=="nonlinear_gaussian_data_model") )
+        if ( (block_name=="prior") || (block_name=="is_proposal") || (block_name=="imh_proposal") || (block_name=="mh_proposal") || (block_name=="unadjusted_proposal") || (block_name=="m_proposal") || (block_name=="smc_sequence") || (block_name=="linear_gaussian_transition_model") || (block_name=="nonlinear_gaussian_transition_model") || (block_name=="linear_gaussian_data_model") || (block_name=="nonlinear_gaussian_data_model") )
         {
           split_arg_string = split_string_at_comma_ignoring_parentheses(arg_string)
 
@@ -3257,7 +3257,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
 
         }
-        else if ( (block_name=="mcmc_termination") || (block_name=="adaptive_resampling") || (block_name=="adaptive_target") || (block_name=="smc_termination") || (block_name=="reinforce_gradient") || (block_name=="enk_likelihood_index") || (block_name=="enk_shifter") || (block_name=="filter") || (block_name=="sbi_likelihood") )
+        else if ( (block_name=="mcmc_termination") || (block_name=="adaptive_resampling") || (block_name=="adaptive_target") || (block_name=="smc_termination") || (block_name=="reinforce_gradient") || (block_name=="enk_likelihood_index") || (block_name=="enk_shifter") || (block_name=="ssm") || (block_name=="sbi_likelihood") )
         {
           split_arg_string = split_string_at_comma_ignoring_parentheses(arg_string)
 
@@ -3654,7 +3654,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           function_body = get_parameters_output_function_body(output_variable,R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
-        else if (block_name=="evaluate_log_importance_proposal")
+        else if (block_name=="evaluate_log_is_proposal")
         {
 
           if (sum(which_parameters)>0)
@@ -3706,7 +3706,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           function_body = get_double_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
         }
-        else if (block_name=="simulate_importance_proposal")
+        else if (block_name=="simulate_is_proposal")
         {
           # if (output_variable=="")
           # {
@@ -5492,13 +5492,13 @@ check_types = function(blocks)
 
   }
 
-  for (i in 1:length(blocks[["importance_proposal"]]))
+  for (i in 1:length(blocks[["is_proposal"]]))
   {
-    current_factor = blocks[["importance_proposal"]][[i]]
+    current_factor = blocks[["is_proposal"]][[i]]
 
-    if ("evaluate_log_importance_proposal" %in% names(current_factor))
+    if ("evaluate_log_is_proposal" %in% names(current_factor))
     {
-      which_index = which(names(current_factor) == "evaluate_log_importance_proposal")
+      which_index = which(names(current_factor) == "evaluate_log_is_proposal")
       for (j in 1:length(which_index))
       {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
@@ -5522,14 +5522,14 @@ check_types = function(blocks)
           stop("No valid importance proposal specified.")
         }
 
-        #blocks[["importance_proposal"]][[i]][["type"]] = which(proposal_type)[1]
+        #blocks[["is_proposal"]][[i]][["type"]] = which(proposal_type)[1]
       }
       }
     }
 
-    if ("simulate_importance_proposal" %in% names(current_factor))
+    if ("simulate_is_proposal" %in% names(current_factor))
     {
-      which_index = which(names(current_factor) == "simulate_importance_proposal")
+      which_index = which(names(current_factor) == "simulate_is_proposal")
       for (j in 1:length(which_index))
       {
       if (inherits(current_factor[[paste("verify_",current_factor[[1]],sep="")]],"XPtr"))
@@ -5553,16 +5553,16 @@ check_types = function(blocks)
           stop("No valid importance proposal specified.")
         }
 
-        if ("type" %in% names(blocks[["importance_proposal"]][[i]]))
+        if ("type" %in% names(blocks[["is_proposal"]][[i]]))
         {
-          if (blocks[["importance_proposal"]][[i]][["type"]]!=which(proposal_type)[1])
+          if (blocks[["is_proposal"]][[i]][["type"]]!=which(proposal_type)[1])
           {
-            stop("evaluate_log_importance_proposal and simulate_importance_proposal are incompatible.")
+            stop("evaluate_log_is_proposal and simulate_is_proposal are incompatible.")
           }
         }
         else
         {
-          stop("Need to specify both evaluate_log_importance_proposal and simulate_importance_proposal.")
+          stop("Need to specify both evaluate_log_is_proposal and simulate_is_proposal.")
         }
       }
       }
@@ -6124,7 +6124,7 @@ compile <- function(filename,
   factor_number = 0
   transition_model_number = 0
   potential_function_number = 0
-  importance_proposal_number = 0
+  is_proposal_number = 0
   mh_proposal_number = 0
   unadjusted_proposal_number = 0
   imh_proposal_number = 0
@@ -6208,7 +6208,7 @@ compile <- function(filename,
             stop(paste("Invalid file: line ",line_counter,", new section of file needs a name: use /***name***/.",sep=""))
           }
           split_block_name = split_string_at_comma_ignoring_parentheses(unparsed_block_name)
-          new_block_info = determine_block_type(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,potential_function_number,importance_proposal_number,mh_proposal_number,unadjusted_proposal_number,imh_proposal_number,m_proposal_number,enk_transform_number,transition_proposal_number,data_number,method_number)
+          new_block_info = determine_block_type(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,potential_function_number,is_proposal_number,mh_proposal_number,unadjusted_proposal_number,imh_proposal_number,m_proposal_number,enk_transform_number,transition_proposal_number,data_number,method_number)
 
           # expect input for each block in one of the following forms:
           # (a) /***evaluate_log_prior***/, followed by a C++ function
@@ -6230,7 +6230,7 @@ compile <- function(filename,
           factor_number = new_block_info[[6]]
           transition_model_number = new_block_info[[7]]
           potential_function_number = new_block_info[[8]]
-          importance_proposal_number = new_block_info[[9]]
+          is_proposal_number = new_block_info[[9]]
           mh_proposal_number = new_block_info[[10]]
           unadjusted_proposal_number = new_block_info[[11]]
           imh_proposal_number = new_block_info[[12]]
@@ -6275,9 +6275,9 @@ compile <- function(filename,
       {
         print_potential_function_info(length(blocks[["potential_function"]]),blocks,line_counter)
       }
-      if ( (importance_proposal_number!=0) && importance_proposal_number==length(blocks[["importance_proposal"]]))
+      if ( (is_proposal_number!=0) && is_proposal_number==length(blocks[["is_proposal"]]))
       {
-        print_importance_proposal_info(length(blocks[["importance_proposal"]]),blocks,line_counter)
+        print_is_proposal_info(length(blocks[["is_proposal"]]),blocks,line_counter)
       }
       if ( (mh_proposal_number!=0) && mh_proposal_number==length(blocks[["mh_proposal"]]))
       {
