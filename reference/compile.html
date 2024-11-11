@@ -51,7 +51,8 @@
 <span>  julia_required_libraries <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  verify_cpp_function_types <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  keep_temporary_model_code <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  nesting_level <span class="op">=</span> <span class="fl">1</span></span>
+<span>  nesting_level <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  print_block_ends <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -93,6 +94,10 @@
 
 <dt id="arg-nesting-level">nesting_level<a class="anchor" aria-label="anchor" href="#arg-nesting-level"></a></dt>
 <dd><p>(optional) The level of nesting of the current call to compile. A user should always use the default of 1.</p></dd>
+
+
+<dt id="arg-print-block-ends">print_block_ends<a class="anchor" aria-label="anchor" href="#arg-print-block-ends"></a></dt>
+<dd><p>(optional) If TRUE, print the end of each block of code. If FALSE (default), do not print the end of each block of code.</p></dd>
 
 </dl></div>
     <div class="section level2">
