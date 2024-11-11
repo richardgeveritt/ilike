@@ -13,7 +13,8 @@ compile(
   julia_required_libraries = c(),
   verify_cpp_function_types = FALSE,
   keep_temporary_model_code = FALSE,
-  nesting_level = 1
+  nesting_level = 1,
+  print_block_ends = FALSE
 )
 }
 \arguments{
@@ -34,6 +35,8 @@ compile(
 \item{keep_temporary_model_code}{(optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE, this file is left in the working directory.}
 
 \item{nesting_level}{(optional) The level of nesting of the current call to compile. A user should always use the default of 1.}
+
+\item{print_block_ends}{(optional) If TRUE, print the end of each block of code. If FALSE (default), do not print the end of each block of code.}
 }
 \value{
 A list containing the model details.
