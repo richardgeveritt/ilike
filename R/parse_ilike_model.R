@@ -160,7 +160,7 @@ ilike_parse <- function(input,
   return(list(result_function_text,required_args))
 }
 
-factor_processing = function(factor_number,blocks,block_name,prior_function_types,custom_likelihood_function_types,sbi_likelihood_function_types,linear_gaussian_data_model_types,nonlinear_gaussian_data_model_types,other_likelihood_function_types,line_counter)
+factor_processing = function(factor_number,blocks,block_name,prior_function_types,custom_likelihood_function_types,sbi_likelihood_function_types,linear_gaussian_data_model_types,nonlinear_gaussian_data_model_types,other_likelihood_function_types,line_counter,print_block_ends)
 {
   # Is this a continuation of the current factor, or a new one?
 
@@ -178,7 +178,10 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
       if ("prior" %in% names(current_factor_info))
       {
         # factor is complete
-        print_factor_info(factor_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+        }
         factor_number = factor_number + 1
       }
       else if ( ("evaluate_log_prior" %in% names(current_factor_info)) || ("simulate_prior" %in% names(current_factor_info)) || ("evaluate_gradient_log_prior" %in% names(current_factor_info)) || ("evaluate_second_gradient_log_prior" %in% names(current_factor_info)) )
@@ -186,22 +189,34 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
         # factor is complete
         if ( ("evaluate_log_prior" %in% names(current_factor_info)) && (block_name=="evaluate_log_prior") )
         {
-          print_factor_info(factor_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_factor_info(factor_number,blocks,line_counter-1)
+          }
           factor_number = factor_number + 1
         }
         else if ( ("simulate_prior" %in% names(current_factor_info)) && (block_name=="simulate_prior") )
         {
-          print_factor_info(factor_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_factor_info(factor_number,blocks,line_counter-1)
+          }
           factor_number = factor_number + 1
         }
         else if ( ("evaluate_gradient_log_prior" %in% names(current_factor_info)) && (block_name=="evaluate_gradient_log_prior") )
         {
-          print_factor_info(factor_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_factor_info(factor_number,blocks,line_counter-1)
+          }
           factor_number = factor_number + 1
         }
         else if ( ("evaluate_second_gradient_log_prior" %in% names(current_factor_info)) && (block_name=="evaluate_second_gradient_log_prior") )
         {
-          print_factor_info(factor_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_factor_info(factor_number,blocks,line_counter-1)
+          }
           factor_number = factor_number + 1
         }
       }
@@ -212,7 +227,10 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
       {
         if ( current_factor_names[i] %in% all_other_names)
         {
-          print_factor_info(factor_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_factor_info(factor_number,blocks,line_counter-1)
+          }
           factor_number = factor_number + 1
           break
         }
@@ -223,17 +241,26 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
       # factor is complete
       if ( ("evaluate_log_likelihood" %in% names(current_factor_info)) && (block_name=="evaluate_log_likelihood") )
       {
-        print_factor_info(factor_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+        }
         factor_number = factor_number + 1
       }
       else if ( ("evaluate_gradient_log_likelihood" %in% names(current_factor_info)) && (block_name=="evaluate_gradient_log_likelihood") )
       {
-        print_factor_info(factor_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+        }
         factor_number = factor_number + 1
       }
       else if ( ("evaluate_second_gradient_log_likelihood" %in% names(current_factor_info)) && (block_name=="evaluate_second_gradient_log_likelihood") )
       {
-        print_factor_info(factor_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+        }
         factor_number = factor_number + 1
       }
 
@@ -243,7 +270,10 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
       {
         if ( current_factor_names[i] %in% all_other_names)
         {
-          print_factor_info(factor_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_factor_info(factor_number,blocks,line_counter-1)
+          }
           factor_number = factor_number + 1
           break
         }
@@ -280,22 +310,34 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
       # factor is complete
       if ( ("simulate_data_model" %in% names(current_factor_info)) && (block_name=="simulate_data_model") )
       {
-        print_factor_info(factor_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+        }
         factor_number = factor_number + 1
       }
       else if ( ("sbi_likelihood" %in% names(current_factor_info)) && (block_name=="sbi_likelihood") )
       {
-        print_factor_info(factor_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+        }
         factor_number = factor_number + 1
       }
       else if ( ("summary_statistics" %in% names(current_factor_info)) && (block_name=="summary_statistics") )
       {
-        print_factor_info(factor_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+        }
         factor_number = factor_number + 1
       }
       else if ( ("data_variable" %in% names(current_factor_info)) && (block_name=="data_variable") )
       {
-        print_factor_info(factor_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+        }
         factor_number = factor_number + 1
       }
 
@@ -305,7 +347,10 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
       {
         if ( current_factor_names[i] %in% all_other_names)
         {
-          print_factor_info(factor_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_factor_info(factor_number,blocks,line_counter-1)
+          }
           factor_number = factor_number + 1
           break
         }
@@ -316,27 +361,42 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
       # factor is complete
       if ( ("linear_gaussian_data_model" %in% names(current_factor_info)) && (block_name=="linear_gaussian_data_model") )
       {
-        print_factor_info(factor_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+        }
         factor_number = factor_number + 1
       }
       else if ( ("linear_gaussian_data_matrix" %in% names(current_factor_info)) && (block_name=="linear_gaussian_data_matrix") )
       {
-        print_factor_info(factor_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+        }
         factor_number = factor_number + 1
       }
       else if ( ("linear_gaussian_data_covariance" %in% names(current_factor_info)) && (block_name=="linear_gaussian_data_covariance") )
       {
-        print_factor_info(factor_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+        }
         factor_number = factor_number + 1
       }
       else if ( ("linear_gaussian_data_variable" %in% names(current_factor_info)) && (block_name=="linear_gaussian_data_variable") )
       {
-        print_factor_info(factor_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+        }
         factor_number = factor_number + 1
       }
       else if ( ("linear_gaussian_data_state_variable" %in% names(current_factor_info)) && (block_name=="linear_gaussian_data_state_variable") )
       {
-        print_factor_info(factor_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+        }
         factor_number = factor_number + 1
       }
 
@@ -346,7 +406,10 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
       {
         if ( current_factor_names[i] %in% all_other_names)
         {
-          print_factor_info(factor_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_factor_info(factor_number,blocks,line_counter-1)
+          }
           factor_number = factor_number + 1
           break
         }
@@ -357,22 +420,34 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
       # factor is complete
       if ( ("nonlinear_gaussian_data_model" %in% names(current_factor_info)) && (block_name=="nonlinear_gaussian_data_model") )
       {
-        print_factor_info(factor_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+        }
         factor_number = factor_number + 1
       }
       else if ( ("nonlinear_gaussian_data_function" %in% names(current_factor_info)) && (block_name=="nonlinear_gaussian_data_function") )
       {
-        print_factor_info(factor_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+        }
         factor_number = factor_number + 1
       }
       else if ( ("nonlinear_gaussian_data_covariance" %in% names(current_factor_info)) && (block_name=="nonlinear_gaussian_data_covariance") )
       {
-        print_factor_info(factor_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+        }
         factor_number = factor_number + 1
       }
       else if ( ("nonlinear_gaussian_data_variable" %in% names(current_factor_info)) && (block_name=="nonlinear_gaussian_data_variable") )
       {
-        print_factor_info(factor_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_factor_info(factor_number,blocks,line_counter-1)
+        }
         factor_number = factor_number + 1
       }
 
@@ -382,7 +457,10 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
       {
         if ( current_factor_names[i] %in% all_other_names)
         {
-          print_factor_info(factor_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_factor_info(factor_number,blocks,line_counter-1)
+          }
           factor_number = factor_number + 1
           break
         }
@@ -390,7 +468,10 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
     }
     else if (block_name %in% other_likelihood_function_types)
     {
-      print_factor_info(factor_number,blocks,line_counter-1)
+      if (print_block_ends)
+      {
+        print_factor_info(factor_number,blocks,line_counter-1)
+      }
       factor_number = factor_number + 1
     }
     else
@@ -406,7 +487,7 @@ factor_processing = function(factor_number,blocks,block_name,prior_function_type
   return(factor_number)
 }
 
-transition_model_processing = function(transition_model_number,blocks,block_name,ilike_transition_model_types,linear_gaussian_transition_model_types,nonlinear_gaussian_transition_model_types,custom_transition_model_types,line_counter)
+transition_model_processing = function(transition_model_number,blocks,block_name,ilike_transition_model_types,linear_gaussian_transition_model_types,nonlinear_gaussian_transition_model_types,custom_transition_model_types,line_counter,print_block_ends)
 {
   # Is this a continuation of the current transition_model, or a new one?
 
@@ -424,7 +505,10 @@ transition_model_processing = function(transition_model_number,blocks,block_name
       # transition_model is complete
       if ( ("transition_model" %in% names(current_transition_model_info)) && (block_name=="transition_model") )
       {
-        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        }
         transition_model_number = transition_model_number + 1
       }
 
@@ -434,7 +518,10 @@ transition_model_processing = function(transition_model_number,blocks,block_name
       {
         if ( current_transition_model_names[i] %in% all_other_names)
         {
-          print_transition_model_info(transition_model_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_transition_model_info(transition_model_number,blocks,line_counter-1)
+          }
           transition_model_number = transition_model_number + 1
           break
         }
@@ -445,12 +532,18 @@ transition_model_processing = function(transition_model_number,blocks,block_name
       # transition_model is complete
       if ( ("evaluate_log_transition_model" %in% names(current_transition_model_info)) && (block_name=="evaluate_log_transition_model") )
       {
-        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        }
         transition_model_number = transition_model_number + 1
       }
       else if ( ("simulate_transition_model" %in% names(current_transition_model_info)) && (block_name=="simulate_transition_model") )
       {
-        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        }
         transition_model_number = transition_model_number + 1
       }
 
@@ -460,7 +553,10 @@ transition_model_processing = function(transition_model_number,blocks,block_name
       {
         if ( current_transition_model_names[i] %in% all_other_names)
         {
-          print_transition_model_info(transition_model_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_transition_model_info(transition_model_number,blocks,line_counter-1)
+          }
           transition_model_number = transition_model_number + 1
           break
         }
@@ -471,22 +567,34 @@ transition_model_processing = function(transition_model_number,blocks,block_name
       # transition_model is complete
       if ( ("linear_gaussian_transition_model" %in% names(current_transition_model_info)) && (block_name=="linear_gaussian_transition_model") )
       {
-        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        }
         transition_model_number = transition_model_number + 1
       }
       else if ( ("linear_gaussian_transition_matrix" %in% names(current_transition_model_info)) && (block_name=="linear_gaussian_transition_matrix") )
       {
-        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        }
         transition_model_number = transition_model_number + 1
       }
       else if ( ("linear_gaussian_transition_covariance" %in% names(current_transition_model_info)) && (block_name=="linear_gaussian_transition_covariance") )
       {
-        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        }
         transition_model_number = transition_model_number + 1
       }
       else if ( ("linear_gaussian_transition_variable" %in% names(current_transition_model_info)) && (block_name=="linear_gaussian_transition_variable") )
       {
-        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        }
         transition_model_number = transition_model_number + 1
       }
 
@@ -496,7 +604,10 @@ transition_model_processing = function(transition_model_number,blocks,block_name
       {
         if ( current_transition_model_names[i] %in% all_other_names)
         {
-          print_transition_model_info(transition_model_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_transition_model_info(transition_model_number,blocks,line_counter-1)
+          }
           transition_model_number = transition_model_number + 1
           break
         }
@@ -507,22 +618,34 @@ transition_model_processing = function(transition_model_number,blocks,block_name
       # transition_model is complete
       if ( ("nonlinear_gaussian_transition_model" %in% names(current_transition_model_info)) && (block_name=="nonlinear_gaussian_transition_model") )
       {
-        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        }
         transition_model_number = transition_model_number + 1
       }
       else if ( ("nonlinear_gaussian_transition_function" %in% names(current_transition_model_info)) && (block_name=="nonlinear_gaussian_transition_function") )
       {
-        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        }
         transition_model_number = transition_model_number + 1
       }
       else if ( ("nonlinear_gaussian_transition_variable" %in% names(current_transition_model_info)) && (block_name=="nonlinear_gaussian_transition_variable") )
       {
-        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        }
         transition_model_number = transition_model_number + 1
       }
       else if ( ("nonlinear_gaussian_transition_covariance" %in% names(current_transition_model_info)) && (block_name=="nonlinear_gaussian_transition_covariance") )
       {
-        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_transition_model_info(transition_model_number,blocks,line_counter-1)
+        }
         transition_model_number = transition_model_number + 1
       }
 
@@ -532,7 +655,10 @@ transition_model_processing = function(transition_model_number,blocks,block_name
       {
         if ( current_transition_model_names[i] %in% all_other_names)
         {
-          print_transition_model_info(transition_model_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_transition_model_info(transition_model_number,blocks,line_counter-1)
+          }
           transition_model_number = transition_model_number + 1
           break
         }
@@ -540,7 +666,10 @@ transition_model_processing = function(transition_model_number,blocks,block_name
     }
     else if (block_name %in% other_likelihood_function_types)
     {
-      print_transition_model_info(transition_model_number,blocks,line_counter-1)
+      if (print_block_ends)
+      {
+        print_transition_model_info(transition_model_number,blocks,line_counter-1)
+      }
       transition_model_number = transition_model_number + 1
     }
     else
@@ -556,7 +685,7 @@ transition_model_processing = function(transition_model_number,blocks,block_name
   return(transition_model_number)
 }
 
-potential_function_processing = function(transition_model_number,blocks,block_name,custom_potential_function_types,ilike_potential_function_types,line_counter)
+potential_function_processing = function(transition_model_number,blocks,block_name,custom_potential_function_types,ilike_potential_function_types,line_counter,print_block_ends)
 {
   # Is this a continuation of the current potential_function, or a new one?
 
@@ -574,7 +703,10 @@ potential_function_processing = function(transition_model_number,blocks,block_na
       # potential_function is complete
       if ( ("potential_function" %in% names(current_potential_function_info)) && (block_name=="potential_function") )
       {
-        print_potential_function_info(potential_function_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_potential_function_info(potential_function_number,blocks,line_counter-1)
+        }
         potential_function_number = potential_function_number + 1
       }
 
@@ -584,7 +716,10 @@ potential_function_processing = function(transition_model_number,blocks,block_na
       {
         if ( current_potential_function_names[i] %in% all_other_names)
         {
-          print_potential_function_info(potential_function_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_potential_function_info(potential_function_number,blocks,line_counter-1)
+          }
           potential_function_number = potential_function_number + 1
           break
         }
@@ -595,7 +730,10 @@ potential_function_processing = function(transition_model_number,blocks,block_na
       # potential_function is complete
       if ( ("evaluate_log_potential_function" %in% names(current_potential_function_info)) && (block_name=="evaluate_log_potential_function") )
       {
-        print_potential_function_info(potential_function_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_potential_function_info(potential_function_number,blocks,line_counter-1)
+        }
         potential_function_number = potential_function_number + 1
       }
 
@@ -605,7 +743,10 @@ potential_function_processing = function(transition_model_number,blocks,block_na
       {
         if ( current_potential_function_names[i] %in% all_other_names)
         {
-          print_potential_function_info(potential_function_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_potential_function_info(potential_function_number,blocks,line_counter-1)
+          }
           potential_function_number = potential_function_number + 1
           break
         }
@@ -624,7 +765,7 @@ potential_function_processing = function(transition_model_number,blocks,block_na
   return(potential_function_number)
 }
 
-data_processing = function(data_number,line_counter)
+data_processing = function(data_number,line_counter,print_block_ends)
 {
   if (data_number!=0)
   {
@@ -634,7 +775,7 @@ data_processing = function(data_number,line_counter)
   return(data_number)
 }
 
-is_proposal_processing = function(is_proposal_number,blocks,block_name,line_counter)
+is_proposal_processing = function(is_proposal_number,blocks,block_name,line_counter,print_block_ends)
 {
   # Is this a continuation of the current is_proposal, or a new one?
 
@@ -646,6 +787,10 @@ is_proposal_processing = function(is_proposal_number,blocks,block_name,line_coun
     if ("is_proposal" %in% names(current_is_proposal_info))
     {
       # is_proposal is complete
+      if (print_block_ends)
+      {
+        print_is_proposal_info(is_proposal_number,blocks,line_counter-1)
+      }
       print_is_proposal_info(is_proposal_number,blocks,line_counter-1)
       is_proposal_number = is_proposal_number + 1
     }
@@ -654,7 +799,10 @@ is_proposal_processing = function(is_proposal_number,blocks,block_name,line_coun
       # is_proposal is complete
       if ( ("evaluate_log_is_proposal" %in% names(current_is_proposal_info)) && ("simulate_is_proposal" %in% names(current_is_proposal_info)) )
       {
-        print_is_proposal_info(is_proposal_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_is_proposal_info(is_proposal_number,blocks,line_counter-1)
+        }
         is_proposal_number = is_proposal_number + 1
       }
 
@@ -673,7 +821,7 @@ is_proposal_processing = function(is_proposal_number,blocks,block_name,line_coun
   return(is_proposal_number)
 }
 
-mh_proposal_processing = function(mh_proposal_number,blocks,block_name,line_counter)
+mh_proposal_processing = function(mh_proposal_number,blocks,block_name,line_counter,print_block_ends)
 {
   # Is this a continuation of the current mh_proposal, or a new one?
 
@@ -685,7 +833,10 @@ mh_proposal_processing = function(mh_proposal_number,blocks,block_name,line_coun
     if ("mh_proposal" %in% names(current_mh_proposal_info))
     {
       # mh_proposal is complete
-      print_mh_proposal_info(mh_proposal_number,blocks,line_counter-1)
+      if (print_block_ends)
+      {
+        print_mh_proposal_info(mh_proposal_number,blocks,line_counter-1)
+      }
       mh_proposal_number = mh_proposal_number + 1
     }
     else if ( ("evaluate_log_mh_proposal" %in% names(current_mh_proposal_info)) || ("simulate_mh_proposal" %in% names(current_mh_proposal_info)) || ("mh_transform" %in% names(current_mh_proposal_info)) || ("mh_inverse_transform" %in% names(current_mh_proposal_info)) || ("mh_transform_jacobian_matrix" %in% names(current_mh_proposal_info)) )
@@ -695,7 +846,10 @@ mh_proposal_processing = function(mh_proposal_number,blocks,block_name,line_coun
         # mh_proposal is complete
         if ( ("evaluate_log_mh_proposal" %in% names(current_mh_proposal_info)) && ("simulate_mh_proposal" %in% names(current_mh_proposal_info)) && ("mh_transform" %in% names(current_mh_proposal_info)) && ("mh_inverse_transform" %in% names(current_mh_proposal_info)) && ("mh_transform_jacobian_matrix" %in% names(current_mh_proposal_info)) )
         {
-          print_mh_proposal_info(mh_proposal_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_mh_proposal_info(mh_proposal_number,blocks,line_counter-1)
+          }
           mh_proposal_number = mh_proposal_number + 1
         }
       }
@@ -704,7 +858,10 @@ mh_proposal_processing = function(mh_proposal_number,blocks,block_name,line_coun
         # mh_proposal is complete
         if ( ("evaluate_log_mh_proposal" %in% names(current_mh_proposal_info)) && ("simulate_mh_proposal" %in% names(current_mh_proposal_info)) )
         {
-          print_mh_proposal_info(mh_proposal_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_mh_proposal_info(mh_proposal_number,blocks,line_counter-1)
+          }
           mh_proposal_number = mh_proposal_number + 1
         }
       }
@@ -724,7 +881,7 @@ mh_proposal_processing = function(mh_proposal_number,blocks,block_name,line_coun
   return(mh_proposal_number)
 }
 
-unadjusted_proposal_processing = function(unadjusted_proposal_number,blocks,block_name,line_counter)
+unadjusted_proposal_processing = function(unadjusted_proposal_number,blocks,block_name,line_counter,print_block_ends)
 {
   # Is this a continuation of the current unadjusted_proposal, or a new one?
 
@@ -736,7 +893,12 @@ unadjusted_proposal_processing = function(unadjusted_proposal_number,blocks,bloc
     if ("unadjusted_proposal" %in% names(current_unadjusted_proposal_info))
     {
       # unadjusted_proposal is complete
-      print_unadjusted_proposal_info(unadjusted_proposal_number,blocks,line_counter-1)
+
+      if (print_block_ends)
+      {
+        print_unadjusted_proposal_info(unadjusted_proposal_number,blocks,line_counter-1)
+      }
+
       unadjusted_proposal_number = unadjusted_proposal_number + 1
     }
     else if ( ("simulate_unadjusted_proposal" %in% names(current_unadjusted_proposal_info)) || ("unadjusted_transform" %in% names(current_unadjusted_proposal_info)) || ("unadjusted_inverse_transform" %in% names(current_unadjusted_proposal_info)) || ("unadjusted_transform_jacobian_matrix" %in% names(current_unadjusted_proposal_info)) )
@@ -746,7 +908,10 @@ unadjusted_proposal_processing = function(unadjusted_proposal_number,blocks,bloc
         # unadjusted_proposal is complete
         if ( ("simulate_unadjusted_proposal" %in% names(current_unadjusted_proposal_info)) && ("unadjusted_transform" %in% names(current_unadjusted_proposal_info)) && ("unadjusted_inverse_transform" %in% names(current_unadjusted_proposal_info)) && ("unadjusted_transform_jacobian_matrix" %in% names(current_unadjusted_proposal_info)) )
         {
-          print_unadjusted_proposal_info(unadjusted_proposal_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_unadjusted_proposal_info(unadjusted_proposal_number,blocks,line_counter-1)
+          }
           unadjusted_proposal_number = unadjusted_proposal_number + 1
         }
       }
@@ -755,7 +920,10 @@ unadjusted_proposal_processing = function(unadjusted_proposal_number,blocks,bloc
         # unadjusted_proposal is complete
         if ( ("simulate_unadjusted_proposal" %in% names(current_unadjusted_proposal_info)) )
         {
-          print_unadjusted_proposal_info(unadjusted_proposal_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_unadjusted_proposal_info(unadjusted_proposal_number,blocks,line_counter-1)
+          }
           unadjusted_proposal_number = unadjusted_proposal_number + 1
         }
       }
@@ -775,7 +943,7 @@ unadjusted_proposal_processing = function(unadjusted_proposal_number,blocks,bloc
   return(unadjusted_proposal_number)
 }
 
-imh_proposal_processing = function(imh_proposal_number,blocks,block_name,line_counter)
+imh_proposal_processing = function(imh_proposal_number,blocks,block_name,line_counter,print_block_ends)
 {
   # Is this a continuation of the current imh_proposal, or a new one?
 
@@ -787,7 +955,10 @@ imh_proposal_processing = function(imh_proposal_number,blocks,block_name,line_co
     if ("imh_proposal" %in% names(current_imh_proposal_info))
     {
       # imh_proposal is complete
-      print_imh_proposal_info(imh_proposal_number,blocks,line_counter-1)
+      if (print_block_ends)
+      {
+        print_imh_proposal_info(imh_proposal_number,blocks,line_counter-1)
+      }
       imh_proposal_number = imh_proposal_number + 1
     }
     else if ( ("evaluate_log_imh_proposal" %in% names(current_imh_proposal_info)) || ("simulate_imh_proposal" %in% names(current_imh_proposal_info)) || ("imh_transform" %in% names(current_mh_independent_proposal_info)) || ("imh_inverse_transform" %in% names(current_mh_independent_proposal_info)) || ("imh_transform_jacobian_matrix" %in% names(current_mh_independent_proposal_info)) )
@@ -797,7 +968,10 @@ imh_proposal_processing = function(imh_proposal_number,blocks,block_name,line_co
         # imh_proposal is complete
         if ( ("evaluate_log_imh_proposal" %in% names(current_imh_proposal_info)) && ("simulate_imh_proposal" %in% names(current_imh_proposal_info)) && ("imh_transform" %in% names(current_imh_proposal_info)) && ("imh_inverse_transform" %in% names(current_imh_proposal_info)) && ("imh_transform_jacobian_matrix" %in% names(current_imh_proposal_info)) )
         {
-          print_imh_proposal_info(imh_proposal_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_imh_proposal_info(imh_proposal_number,blocks,line_counter-1)
+          }
           imh_proposal_number = imh_proposal_number + 1
         }
       }
@@ -806,7 +980,10 @@ imh_proposal_processing = function(imh_proposal_number,blocks,block_name,line_co
         # imh_proposal is complete
         if ( ("evaluate_log_imh_proposal" %in% names(current_imh_proposal_info)) && ("simulate_imh_proposal" %in% names(current_imh_proposal_info)) )
         {
-          print_imh_proposal_info(imh_proposal_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_imh_proposal_info(imh_proposal_number,blocks,line_counter-1)
+          }
           imh_proposal_number = imh_proposal_number + 1
         }
       }
@@ -826,7 +1003,7 @@ imh_proposal_processing = function(imh_proposal_number,blocks,block_name,line_co
   return(imh_proposal_number)
 }
 
-m_proposal_processing = function(m_proposal_number,blocks,block_name,line_counter)
+m_proposal_processing = function(m_proposal_number,blocks,block_name,line_counter,print_block_ends)
 {
   # Is this a continuation of the current m_proposal, or a new one?
 
@@ -838,7 +1015,10 @@ m_proposal_processing = function(m_proposal_number,blocks,block_name,line_counte
     if ("m_proposal" %in% names(current_m_proposal_info))
     {
       # m_proposal is complete
-      print_m_proposal_info(m_proposal_number,blocks,line_counter-1)
+      if (print_block_ends)
+      {
+        print_m_proposal_info(m_proposal_number,blocks,line_counter-1)
+      }
       m_proposal_number = m_proposal_number + 1
     }
     else if ( ("simulate_m_proposal" %in% names(current_m_proposal_info)) || ("m_transform" %in% names(current_m_proposal_info)) || ("m_inverse_transform" %in% names(current_m_proposal_info)) || ("m_transform_jacobian_matrix" %in% names(current_m_proposal_info)) )
@@ -848,7 +1028,10 @@ m_proposal_processing = function(m_proposal_number,blocks,block_name,line_counte
         # m_proposal is complete
         if ( ("simulate_m_proposal" %in% names(current_m_proposal_info)) && ("m_transform" %in% names(current_m_proposal_info)) && ("m_inverse_transform" %in% names(current_m_proposal_info)) && ("m_transform_jacobian_matrix" %in% names(current_m_proposal_info)) )
         {
-          print_m_proposal_info(m_proposal_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_m_proposal_info(m_proposal_number,blocks,line_counter-1)
+          }
           m_proposal_number = m_proposal_number + 1
         }
       }
@@ -857,7 +1040,10 @@ m_proposal_processing = function(m_proposal_number,blocks,block_name,line_counte
         # m_proposal is complete
         if ( ("simulate_m_proposal" %in% names(current_m_proposal_info)) )
         {
-          print_m_proposal_info(m_proposal_number,blocks,line_counter-1)
+          if (print_block_ends)
+          {
+            print_m_proposal_info(m_proposal_number,blocks,line_counter-1)
+          }
           m_proposal_number = m_proposal_number + 1
         }
       }
@@ -877,7 +1063,7 @@ m_proposal_processing = function(m_proposal_number,blocks,block_name,line_counte
   return(m_proposal_number)
 }
 
-transition_proposal_processing = function(transition_proposal_number,blocks,block_name,line_counter)
+transition_proposal_processing = function(transition_proposal_number,blocks,block_name,line_counter,print_block_ends)
 {
   # Is this a continuation of the current transition_proposal, or a new one?
 
@@ -889,7 +1075,10 @@ transition_proposal_processing = function(transition_proposal_number,blocks,bloc
     if ("transition_proposal" %in% names(current_transition_proposal_info))
     {
       # transition_proposal is complete
-      print_transition_proposal_info(transition_proposal_number,blocks,line_counter-1)
+      if (print_block_ends)
+      {
+        print_transition_proposal_info(transition_proposal_number,blocks,line_counter-1)
+      }
       transition_proposal_number = transition_proposal_number + 1
     }
     else if ( ("evaluate_log_transition_proposal" %in% names(current_transition_proposal_info)) || ("simulate_transition_proposal" %in% names(current_transition_proposal_info)) )
@@ -897,7 +1086,10 @@ transition_proposal_processing = function(transition_proposal_number,blocks,bloc
       # transition_proposal is complete
       if ( ("evaluate_log_transition_proposal" %in% names(current_transition_proposal_info)) && ("simulate_transition_proposal" %in% names(current_transition_proposal_info)) )
       {
-        print_transition_proposal_info(transition_proposal_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_transition_proposal_info(transition_proposal_number,blocks,line_counter-1)
+        }
         transition_proposal_number = transition_proposal_number + 1
       }
 
@@ -916,7 +1108,7 @@ transition_proposal_processing = function(transition_proposal_number,blocks,bloc
   return(transition_proposal_number)
 }
 
-enk_transform_processing = function(enk_transform_number,blocks,block_name,line_counter)
+enk_transform_processing = function(enk_transform_number,blocks,block_name,line_counter,print_block_ends)
 {
   # Is this a continuation of the current enk_transform, or a new one?
 
@@ -928,7 +1120,10 @@ enk_transform_processing = function(enk_transform_number,blocks,block_name,line_
     if ("enk_transform" %in% names(current_enk_transform_info))
     {
       # enk_transform is complete
-      print_enk_transform_info(enk_transform_number,blocks,line_counter-1)
+      if (print_block_ends)
+      {
+        print_enk_transform_info(enk_transform_number,blocks,line_counter-1)
+      }
       enk_transform_number = enk_transform_number + 1
     }
     else if ( ("enk_transform" %in% names(current_enk_transform_info)) || ("enk_inverse_transform" %in% names(current_enk_transform_info)) )
@@ -936,7 +1131,10 @@ enk_transform_processing = function(enk_transform_number,blocks,block_name,line_
       # enk_transform is complete
       if ( ("enk_transform" %in% names(current_enk_transform_info)) && ("enk_inverse_transform" %in% names(current_enk_transform_info)) )
       {
-        print_enk_transform_info(enk_transform_number,blocks,line_counter-1)
+        if (print_block_ends)
+        {
+          print_enk_transform_info(enk_transform_number,blocks,line_counter-1)
+        }
         enk_transform_number = enk_transform_number + 1
       }
 
@@ -955,7 +1153,7 @@ enk_transform_processing = function(enk_transform_number,blocks,block_name,line_
   return(enk_transform_number)
 }
 
-reinforce_gradient_processing = function(reinforce_gradient_number,blocks,block_name,line_counter)
+reinforce_gradient_processing = function(reinforce_gradient_number,blocks,block_name,line_counter,print_block_ends)
 {
   # if (reinforce_gradient_number!=0)
   # {
@@ -963,13 +1161,16 @@ reinforce_gradient_processing = function(reinforce_gradient_number,blocks,block_
   # }
   if (reinforce_gradient_number>0)
   {
-    print_reinforce_gradient_info(reinforce_gradient_number,blocks,line_counter-1)
+    if (print_block_ends)
+    {
+      print_reinforce_gradient_info(reinforce_gradient_number,blocks,line_counter-1)
+    }
   }
   reinforce_gradient_number = reinforce_gradient_number + 1
   return(reinforce_gradient_number)
 }
 
-method_processing = function(method_number,blocks,block_name,line_counter)
+method_processing = function(method_number,blocks,block_name,line_counter,print_block_ends)
 {
   # if (method_number!=0)
   # {
@@ -977,7 +1178,10 @@ method_processing = function(method_number,blocks,block_name,line_counter)
   # }
   if (method_number>0)
   {
-    print_method_info(method_number,blocks,line_counter-1)
+    if (print_block_ends)
+    {
+      print_method_info(method_number,blocks,line_counter-1)
+    }
   }
   method_number = method_number + 1
   return(method_number)
@@ -996,7 +1200,7 @@ print_factor_info = function(factor_index,blocks,line_counter)
   {
     factor_info_string = substr(factor_info_string,3,nchar(factor_info_string))
   }
-  print(paste('Factor ends on line ',line_counter,'. Contains ',factor_info_string,'.',sep = ""))
+  message(paste('Factor ends on line ',line_counter,'. Contains ',factor_info_string,'.',sep = ""))
 }
 
 print_transition_model_info = function(transition_model_index,blocks,line_counter)
@@ -1012,7 +1216,7 @@ print_transition_model_info = function(transition_model_index,blocks,line_counte
   {
     transition_model_info_string = substr(transition_model_info_string,3,nchar(transition_model_info_string))
   }
-  print(paste('Transition model ends on line ',line_counter,'. Contains ',transition_model_info_string,'.',sep = ""))
+  message(paste('Transition model ends on line ',line_counter,'. Contains ',transition_model_info_string,'.',sep = ""))
 }
 
 print_potential_function_info = function(potential_function_index,blocks,line_counter)
@@ -1028,7 +1232,7 @@ print_potential_function_info = function(potential_function_index,blocks,line_co
   {
     potential_function_info_string = substr(potential_function_info_string,3,nchar(potential_function_info_string))
   }
-  print(paste('Potential function ends on line ',line_counter,'. Contains ',potential_function_info_string,'.',sep = ""))
+  message(paste('Potential function ends on line ',line_counter,'. Contains ',potential_function_info_string,'.',sep = ""))
 }
 
 print_is_proposal_info = function(is_proposal_index,blocks,line_counter)
@@ -1044,7 +1248,7 @@ print_is_proposal_info = function(is_proposal_index,blocks,line_counter)
   {
     is_proposal_info_string = substr(is_proposal_info_string,3,nchar(is_proposal_info_string))
   }
-  print(paste('is_proposal ends on line ',line_counter,'. Contains ',is_proposal_info_string,'.',sep = ""))
+  message(paste('is_proposal ends on line ',line_counter,'. Contains ',is_proposal_info_string,'.',sep = ""))
 }
 
 print_mh_proposal_info = function(mh_proposal_index,blocks,line_counter)
@@ -1060,7 +1264,7 @@ print_mh_proposal_info = function(mh_proposal_index,blocks,line_counter)
   {
     mh_proposal_info_string = substr(mh_proposal_info_string,3,nchar(mh_proposal_info_string))
   }
-  print(paste('mh_proposal ends on line ',line_counter,'. Contains ',mh_proposal_info_string,'.',sep = ""))
+  message(paste('mh_proposal ends on line ',line_counter,'. Contains ',mh_proposal_info_string,'.',sep = ""))
 }
 
 print_unadjusted_proposal_info = function(unadjusted_proposal_index,blocks,line_counter)
@@ -1076,7 +1280,7 @@ print_unadjusted_proposal_info = function(unadjusted_proposal_index,blocks,line_
   {
     unadjusted_proposal_info_string = substr(unadjusted_proposal_info_string,3,nchar(unadjusted_proposal_info_string))
   }
-  print(paste('unadjusted_proposal ends on line ',line_counter,'. Contains ',unadjusted_proposal_info_string,'.',sep = ""))
+  message(paste('unadjusted_proposal ends on line ',line_counter,'. Contains ',unadjusted_proposal_info_string,'.',sep = ""))
 }
 
 print_imh_proposal_info = function(imh_proposal_index,blocks,line_counter)
@@ -1092,7 +1296,7 @@ print_imh_proposal_info = function(imh_proposal_index,blocks,line_counter)
   {
     imh_proposal_info_string = substr(imh_proposal_info_string,3,nchar(imh_proposal_info_string))
   }
-  print(paste('imh_proposal ends on line ',line_counter,'. Contains ',imh_proposal_info_string,'.',sep = ""))
+  message(paste('imh_proposal ends on line ',line_counter,'. Contains ',imh_proposal_info_string,'.',sep = ""))
 }
 
 print_m_proposal_info = function(m_proposal_index,blocks,line_counter)
@@ -1108,7 +1312,7 @@ print_m_proposal_info = function(m_proposal_index,blocks,line_counter)
   {
     m_proposal_info_string = substr(m_proposal_info_string,3,nchar(m_proposal_info_string))
   }
-  print(paste('m_proposal ends on line ',line_counter,'. Contains ',m_proposal_info_string,'.',sep = ""))
+  message(paste('m_proposal ends on line ',line_counter,'. Contains ',m_proposal_info_string,'.',sep = ""))
 }
 
 print_transition_proposal_info = function(transition_proposal_index,blocks,line_counter)
@@ -1124,7 +1328,7 @@ print_transition_proposal_info = function(transition_proposal_index,blocks,line_
   {
     transition_proposal_info_string = substr(transition_proposal_info_string,3,nchar(transition_proposal_info_string))
   }
-  print(paste('transition_proposal ends on line ',line_counter,'. Contains ',transition_proposal_info_string,'.',sep = ""))
+  message(paste('transition_proposal ends on line ',line_counter,'. Contains ',transition_proposal_info_string,'.',sep = ""))
 }
 
 print_enk_transform_info = function(enk_transform_index,blocks,line_counter)
@@ -1140,7 +1344,7 @@ print_enk_transform_info = function(enk_transform_index,blocks,line_counter)
   {
     enk_transform_info_string = substr(enk_transform_info_string,3,nchar(enk_transform_info_string))
   }
-  print(paste('enk_transform ends on line ',line_counter,'. Contains ',enk_transform_info_string,'.',sep = ""))
+  message(paste('enk_transform ends on line ',line_counter,'. Contains ',enk_transform_info_string,'.',sep = ""))
 }
 
 print_reinforce_gradient_info = function(reinforce_gradient_index,blocks,line_counter)
@@ -1156,7 +1360,7 @@ print_reinforce_gradient_info = function(reinforce_gradient_index,blocks,line_co
   {
     reinforce_gradient_info_string = substr(reinforce_gradient_info_string,3,nchar(reinforce_gradient_info_string))
   }
-  print(paste('reinforce_gradient ends on line ',line_counter,'. Contains ',reinforce_gradient_info_string,'.',sep = ""))
+  message(paste('reinforce_gradient ends on line ',line_counter,'. Contains ',reinforce_gradient_info_string,'.',sep = ""))
 }
 
 print_method_info = function(method_index,blocks,line_counter)
@@ -1172,7 +1376,7 @@ print_method_info = function(method_index,blocks,line_counter)
   {
     method_info_string = substr(method_info_string,3,nchar(method_info_string))
   }
-  print(paste('Method ends on line ',line_counter,'. Contains ',method_info_string,'.',sep = ""))
+  message(paste('Method ends on line ',line_counter,'. Contains ',method_info_string,'.',sep = ""))
 }
 
 print_data_info = function(data_index,blocks,line_counter)
@@ -1188,7 +1392,7 @@ print_data_info = function(data_index,blocks,line_counter)
   {
     data_info_string = substr(data_info_string,3,nchar(data_info_string))
   }
-  print(paste('data ends on line ',line_counter,'. Contains ',data_info_string,'.',sep = ""))
+  message(paste('data ends on line ',line_counter,'. Contains ',data_info_string,'.',sep = ""))
 }
 
 determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,potential_function_number,is_proposal_number,mh_proposal_number,unadjusted_proposal_number,imh_proposal_number,m_proposal_number,enk_transform_number,transition_proposal_number,data_number,method_number)
@@ -1241,79 +1445,79 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
   if (block_name %in% factor_function_types)
   {
     block_type = "factor"
-    factor_number = factor_processing(factor_number,blocks,block_name,prior_function_types,custom_likelihood_function_types,sbi_likelihood_function_types,linear_gaussian_data_model_types,nonlinear_gaussian_data_model_types,other_likelihood_function_types,line_counter)
+    factor_number = factor_processing(factor_number,blocks,block_name,prior_function_types,custom_likelihood_function_types,sbi_likelihood_function_types,linear_gaussian_data_model_types,nonlinear_gaussian_data_model_types,other_likelihood_function_types,line_counter,print_block_ends)
     number_to_pass_to_extract_block = factor_number
   }
   else if (block_name %in% transition_model_types)
   {
     block_type = "transition_model"
-    transition_model_number = transition_model_processing(transition_model_number,blocks,block_name,ilike_transition_model_types,linear_gaussian_transition_model_types,nonlinear_gaussian_transition_model_types,custom_transition_model_types,line_counter)
+    transition_model_number = transition_model_processing(transition_model_number,blocks,block_name,ilike_transition_model_types,linear_gaussian_transition_model_types,nonlinear_gaussian_transition_model_types,custom_transition_model_types,line_counter,print_block_ends)
     number_to_pass_to_extract_block = transition_model_number
   }
   else if (block_name %in% potential_function_types)
   {
     block_type = "potential_function"
-    potential_function_number = potential_function_processing(potential_function_number,blocks,block_name,custom_potential_function_types,ilike_potential_function_types,line_counter)
+    potential_function_number = potential_function_processing(potential_function_number,blocks,block_name,custom_potential_function_types,ilike_potential_function_types,line_counter,print_block_ends)
     number_to_pass_to_extract_block = potential_function_number
   }
   else if (block_name %in% data_function_types)
   {
     block_type = "data"
-    data_number = data_processing(data_number,line_counter)
+    data_number = data_processing(data_number,line_counter,print_block_ends)
     number_to_pass_to_extract_block = data_number
   }
   else if (block_name %in% is_proposal_types)
   {
     block_type = "is_proposal"
-    is_proposal_number = is_proposal_processing(is_proposal_number,blocks,block_name,line_counter)
+    is_proposal_number = is_proposal_processing(is_proposal_number,blocks,block_name,line_counter,print_block_ends)
     number_to_pass_to_extract_block = is_proposal_number
   }
   else if (block_name %in% mh_proposal_types)
   {
     block_type = "mh_proposal"
-    mh_proposal_number = mh_proposal_processing(mh_proposal_number,blocks,block_name,line_counter)
+    mh_proposal_number = mh_proposal_processing(mh_proposal_number,blocks,block_name,line_counter,print_block_ends)
     number_to_pass_to_extract_block = mh_proposal_number
   }
   else if (block_name %in% unadjusted_proposal_types)
   {
     block_type = "unadjusted_proposal"
-    unadjusted_proposal_number = unadjusted_proposal_processing(unadjusted_proposal_number,blocks,block_name,line_counter)
+    unadjusted_proposal_number = unadjusted_proposal_processing(unadjusted_proposal_number,blocks,block_name,line_counter,print_block_ends)
     number_to_pass_to_extract_block = unadjusted_proposal_number
   }
   else if (block_name %in% imh_proposal_types)
   {
     block_type = "imh_proposal"
-    imh_proposal_number = imh_proposal_processing(imh_proposal_number,blocks,block_name,line_counter)
+    imh_proposal_number = imh_proposal_processing(imh_proposal_number,blocks,block_name,line_counter,print_block_ends)
     number_to_pass_to_extract_block = imh_proposal_number
   }
   else if (block_name %in% m_proposal_types)
   {
     block_type = "m_proposal"
-    m_proposal_number = m_proposal_processing(m_proposal_number,blocks,block_name,line_counter)
+    m_proposal_number = m_proposal_processing(m_proposal_number,blocks,block_name,line_counter,print_block_ends)
     number_to_pass_to_extract_block = m_proposal_number
   }
   else if (block_name %in% enk_transform_types)
   {
     block_type = "enk_transform"
-    enk_transform_number = enk_transform_processing(enk_transform_number,blocks,block_name,line_counter)
+    enk_transform_number = enk_transform_processing(enk_transform_number,blocks,block_name,line_counter,print_block_ends)
     number_to_pass_to_extract_block = enk_transform_number
   }
   else if (block_name %in% transition_proposal_types)
   {
     block_type = "transition_proposal"
-    transition_proposal_number = transition_proposal_processing(transition_proposal_number,blocks,block_name,line_counter)
+    transition_proposal_number = transition_proposal_processing(transition_proposal_number,blocks,block_name,line_counter,print_block_ends)
     number_to_pass_to_extract_block = transition_proposal_number
   }
   #else if (block_name %in% reinforce_gradient_types)
   #{
   #  block_type = "reinforce_gradient"
-  #  reinforce_gradient_number = reinforce_gradient_processing(reinforce_gradient_number,blocks,block_name,line_counter)
+  #  reinforce_gradient_number = reinforce_gradient_processing(reinforce_gradient_number,blocks,block_name,line_counter,print_block_ends)
   #  number_to_pass_to_extract_block = reinforce_gradient_number
   #}
   else if (block_name %in% method_function_types)
   {
     block_type = "method"
-    method_number = method_processing(method_number,blocks,block_name,line_counter)
+    method_number = method_processing(method_number,blocks,block_name,line_counter,print_block_ends)
     number_to_pass_to_extract_block = method_number
   }
   else
@@ -3084,7 +3288,7 @@ function_name_for_cpp <- function(block_code)
   return(split_at_space[length(split_at_space)])
 }
 
-extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_model_code)
+extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_model_code,print_block_ends)
 {
 
   # Get information about the order in which MCMC moves are included.
@@ -3308,7 +3512,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           sub_filename = gsub('"', '', sub_filename)
           sub_filename = gsub("'", '', sub_filename)
           my_list = list(list(type=ilike_type,
-                              model=ilike::compile(filename=sub_filename,model_parameter_list=model_parameter_list,external_packages=external_packages,julia_bin_dir=julia_bin_dir,julia_required_libraries=julia_required_libraries,verify_cpp_function_types=verify_cpp_function_types,keep_temporary_model_code=keep_temporary_model_code,nesting_level=sub_nesting_level),
+                              model=ilike::compile(filename=sub_filename,model_parameter_list=model_parameter_list,external_packages=external_packages,julia_bin_dir=julia_bin_dir,julia_required_libraries=julia_required_libraries,verify_cpp_function_types=verify_cpp_function_types,keep_temporary_model_code=keep_temporary_model_code,nesting_level=sub_nesting_level,print_block_ends=print_block_ends),
                               parameters=parameters))
           names(my_list) = c(block_name)
 
@@ -6060,6 +6264,7 @@ strip_out_xptr_stuff <- function(blocks)
 #' @param verify_cpp_function_types (optional) If TRUE, check the types of the parameters of user-defined .cpp functions. If FALSE (default), types are not checked.
 #' @param keep_temporary_model_code (optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE, this file is left in the working directory.
 #' @param nesting_level (optional) The level of nesting of the current call to compile. A user should always use the default of 1.
+#' @param print_block_ends (optional) If TRUE, print the end of each block of code. If FALSE (default), do not print the end of each block of code.
 #' @return A list containing the model details.
 #' @export
 compile <- function(filename,
@@ -6070,7 +6275,8 @@ compile <- function(filename,
                     julia_required_libraries=c(),
                     verify_cpp_function_types=FALSE,
                     keep_temporary_model_code=FALSE,
-                    nesting_level=1)
+                    nesting_level=1,
+                    print_block_ends=FALSE)
 {
   basename = tools::file_path_sans_ext(filename)
 
@@ -6152,7 +6358,7 @@ compile <- function(filename,
 
     if ( (nchar(line)>=3) && (substr(line, 1, 3)=="//#") )
     {
-      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_model_code)
+      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_model_code,print_block_ends)
       in_block = FALSE
       starting_block_flag = TRUE
       is_custom = FALSE
@@ -6196,7 +6402,7 @@ compile <- function(filename,
           }
           else # end current block
           {
-            blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_model_code)
+            blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_model_code,print_block_ends)
             is_custom = FALSE
             block_code = ""
           }
@@ -6262,58 +6468,62 @@ compile <- function(filename,
     # ignore block if block number is not positive
     if (number_to_pass_to_extract_block>0)
     {
-      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_model_code)
-      if ( (factor_number!=0) && (factor_number==length(blocks[["factor"]])) )
+      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_model_code,print_block_ends)
+
+      if (print_block_ends==TRUE)
       {
-        print_factor_info(length(blocks[["factor"]]),blocks,line_counter)
-      }
-      if ( (transition_model_number!=0) && (transition_model_number==length(blocks[["transition_model"]])) )
-      {
-        print_transition_model_info(length(blocks[["transition_model"]]),blocks,line_counter)
-      }
-      if ( (potential_function_number!=0) && (potential_function_number==length(blocks[["potential_function"]])) )
-      {
-        print_potential_function_info(length(blocks[["potential_function"]]),blocks,line_counter)
-      }
-      if ( (is_proposal_number!=0) && is_proposal_number==length(blocks[["is_proposal"]]))
-      {
-        print_is_proposal_info(length(blocks[["is_proposal"]]),blocks,line_counter)
-      }
-      if ( (mh_proposal_number!=0) && mh_proposal_number==length(blocks[["mh_proposal"]]))
-      {
-        print_mh_proposal_info(length(blocks[["mh_proposal"]]),blocks,line_counter)
-      }
-      if ( (unadjusted_proposal_number!=0) && unadjusted_proposal_number==length(blocks[["unadjusted_proposal"]]))
-      {
-        print_unadjusted_proposal_info(length(blocks[["unadjusted_proposal"]]),blocks,line_counter)
-      }
-      if ( (imh_proposal_number!=0) && imh_proposal_number==length(blocks[["imh_proposal"]]))
-      {
-        print_imh_proposal_info(length(blocks[["imh_proposal"]]),blocks,line_counter)
-      }
-      if ( (m_proposal_number!=0) && m_proposal_number==length(blocks[["m_proposal"]]))
-      {
-        print_m_proposal_info(length(blocks[["m_proposal"]]),blocks,line_counter)
-      }
-      if ( (enk_transform_number!=0) && (enk_transform_number==length(blocks[["enk_transform"]])) )
-      {
-        print_enk_transform_info(length(blocks[["enk_transform"]]),blocks,line_counter)
-      }
-      if ( (transition_proposal_number!=0) && (transition_proposal_number==length(blocks[["transition_proposal"]])) )
-      {
-        print_transition_proposal_info(length(blocks[["transition_proposal"]]),blocks,line_counter)
-      }
-      if ( (data_number!=0) && (data_number==length(blocks[["data"]])) )
-      {
-        print_data_info(length(blocks[["data"]]),blocks,line_counter)
-      }
-      #if ( (reinforce_gradient_number!=0) && (reinforce_gradient_number==length(blocks[["reinforce_gradient"]])) )
-      #{
-      #  print_reinforce_gradient_info(length(blocks[["reinforce_gradient"]]),blocks,line_counter)
-      #}
-      if ( (method_number!=0) && (method_number==length(blocks[["method"]])) )
-      {
-        print_method_info(length(blocks[["method"]]),blocks,line_counter)
+        if ( (factor_number!=0) && (factor_number==length(blocks[["factor"]])) )
+        {
+          print_factor_info(length(blocks[["factor"]]),blocks,line_counter)
+        }
+        if ( (transition_model_number!=0) && (transition_model_number==length(blocks[["transition_model"]])) )
+        {
+          print_transition_model_info(length(blocks[["transition_model"]]),blocks,line_counter)
+        }
+        if ( (potential_function_number!=0) && (potential_function_number==length(blocks[["potential_function"]])) )
+        {
+          print_potential_function_info(length(blocks[["potential_function"]]),blocks,line_counter)
+        }
+        if ( (is_proposal_number!=0) && is_proposal_number==length(blocks[["is_proposal"]]))
+        {
+          print_is_proposal_info(length(blocks[["is_proposal"]]),blocks,line_counter)
+        }
+        if ( (mh_proposal_number!=0) && mh_proposal_number==length(blocks[["mh_proposal"]]))
+        {
+          print_mh_proposal_info(length(blocks[["mh_proposal"]]),blocks,line_counter)
+        }
+        if ( (unadjusted_proposal_number!=0) && unadjusted_proposal_number==length(blocks[["unadjusted_proposal"]]))
+        {
+          print_unadjusted_proposal_info(length(blocks[["unadjusted_proposal"]]),blocks,line_counter)
+        }
+        if ( (imh_proposal_number!=0) && imh_proposal_number==length(blocks[["imh_proposal"]]))
+        {
+          print_imh_proposal_info(length(blocks[["imh_proposal"]]),blocks,line_counter)
+        }
+        if ( (m_proposal_number!=0) && m_proposal_number==length(blocks[["m_proposal"]]))
+        {
+          print_m_proposal_info(length(blocks[["m_proposal"]]),blocks,line_counter)
+        }
+        if ( (enk_transform_number!=0) && (enk_transform_number==length(blocks[["enk_transform"]])) )
+        {
+          print_enk_transform_info(length(blocks[["enk_transform"]]),blocks,line_counter)
+        }
+        if ( (transition_proposal_number!=0) && (transition_proposal_number==length(blocks[["transition_proposal"]])) )
+        {
+          print_transition_proposal_info(length(blocks[["transition_proposal"]]),blocks,line_counter)
+        }
+        if ( (data_number!=0) && (data_number==length(blocks[["data"]])) )
+        {
+          print_data_info(length(blocks[["data"]]),blocks,line_counter)
+        }
+        #if ( (reinforce_gradient_number!=0) && (reinforce_gradient_number==length(blocks[["reinforce_gradient"]])) )
+        #{
+        #  print_reinforce_gradient_info(length(blocks[["reinforce_gradient"]]),blocks,line_counter)
+        #}
+        if ( (method_number!=0) && (method_number==length(blocks[["method"]])) )
+        {
+          print_method_info(length(blocks[["method"]]),blocks,line_counter)
+        }
       }
 
     }
