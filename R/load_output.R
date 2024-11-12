@@ -37,13 +37,13 @@ get_directory_numbers <- function(all_dirs)
   return(numbers)
 }
 
-#' Take output from the functions load_smc_output or load_enk_output and convert it to a more standard format (non-tidy format with one column per dimension).
+#' Take output from the functions load_mcmc_output, load_smc_output or load_enk_output and convert it to a more standard format (non-tidy format with one column per dimension).
 #'
-#' @param output Output from the functions load_smc_output or load_enk_output.
+#' @param output Output from the functions load_mcmc_output, load_smc_output or load_enk_output.
 #' @param variables (optional) Variables to include in the output (default is all).
 #' @export
-pivot_wider_smc_or_enk_output <- function(output,
-                                          variables=NULL)
+ilike_pivot_wider <- function(output,
+                                     variables=NULL)
 {
   if (!is.null(variables))
   {
@@ -613,23 +613,23 @@ load_smc_output = function(results_directory,
 
   if ( (ggmcmc==TRUE) && (as.mcmc==TRUE) )
   {
-    new_variable_names = mapply(FUN = function(a,b) { paste(a,"_",b,sep="") },output$ParameterName,output$Dimension)
-    output = subset(output,select = -c(ParameterName,Dimension))
-    output$Parameter = new_variable_names
+    new_variable_names = mapply(FUN = function(a,b) { paste(a,"_",b,sep="") },all_output$ParameterName,all_output$Dimension)
+    all_output = subset(all_output,select = -c(ParameterName,Dimension))
+    all_output$Parameter = new_variable_names
 
-    attr(output,"nChains") = length(output_lengths[[k]])
-    attr(output,"nParameters") = length(unique(new_variable_names))
-    attr(output,"nIterations") = max(output_lengths[[k]])
-    attr(output,"nBurnin") = 0
-    attr(output,"nThin") = 1
-    attr(output,"description") = description
+    attr(all_output,"nChains") = length(output_lengths[[k]])
+    attr(all_output,"nParameters") = length(unique(new_variable_names))
+    attr(all_output,"nIterations") = max(output_lengths[[k]])
+    attr(all_output,"nBurnin") = 0
+    attr(all_output,"nThin") = 1
+    attr(all_output,"description") = description
 
-    return(output)
+    return(all_output)
   }
 
   if ( (ggsmc==FALSE) && (ilike.output==FALSE) )
   {
-    all_output = pivot_wider_smc_or_enk_output(output)
+    all_output = ilike_pivot_wider(all_output)
   }
 
   return(all_output)
