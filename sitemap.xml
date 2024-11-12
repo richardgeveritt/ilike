@@ -12,6 +12,7 @@
 <url><loc>https://richardgeveritt.github.io/ilike/reference/enki.html</loc></url>
 <url><loc>https://richardgeveritt.github.io/ilike/reference/gaussian.html</loc></url>
 <url><loc>https://richardgeveritt.github.io/ilike/reference/ilike.html</loc></url>
+<url><loc>https://richardgeveritt.github.io/ilike/reference/ilike_pivot_wider.html</loc></url>
 <url><loc>https://richardgeveritt.github.io/ilike/reference/importance_sample.html</loc></url>
 <url><loc>https://richardgeveritt.github.io/ilike/reference/index.html</loc></url>
 <url><loc>https://richardgeveritt.github.io/ilike/reference/kf.html</loc></url>
@@ -20,7 +21,6 @@
 <url><loc>https://richardgeveritt.github.io/ilike/reference/load_smc_output.html</loc></url>
 <url><loc>https://richardgeveritt.github.io/ilike/reference/mcmc.html</loc></url>
 <url><loc>https://richardgeveritt.github.io/ilike/reference/pf.html</loc></url>
-<url><loc>https://richardgeveritt.github.io/ilike/reference/pivot_wider_smc_or_enk_output.html</loc></url>
 <url><loc>https://richardgeveritt.github.io/ilike/reference/rdtsc_seed.html</loc></url>
 <url><loc>https://richardgeveritt.github.io/ilike/reference/smc_mcmc_move.html</loc></url>
 <url><loc>https://richardgeveritt.github.io/ilike/reference/toy_model_rwm_ggmcmc.html</loc></url>
