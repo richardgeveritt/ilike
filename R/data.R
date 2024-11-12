@@ -14,3 +14,13 @@
 #'
 #' @format A 10000*1 matrix.
 "constant_velocity_y"
+
+#' 100000 points simulated from a two-dimensional posterior using MCMC, in the format required by the ilike.output and ggsmc packages.
+#'
+#' @format A 200000 row data frame.
+"toy_model_rwm_ilike"
+
+#' 100000 points simulated from a two-dimensional posterior using MCMC, in the format required by the ggmcmc package.
+#'
+#' @format A 200000 row data frame.
+"toy_model_rwm_ggmcmc"
