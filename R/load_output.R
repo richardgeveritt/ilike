@@ -638,8 +638,8 @@ load_smc_output = function(results_directory,
 #' Loading MCMC output into R memory.
 #'
 #' @param results_directory The folder in which the results are stored.
-#' @param ggmcmc (optional) Output in tidy format for plotting in ggmcmc package (default is TRUE).
-#' @param ilike.output (optional) Output can be processed by ilike,output package (default is FALSE). Choosing TRUE for this argument is incompatiable with ggmcmc=TRUE, since the two packages require different formatting of the output.
+#' @param ggmcmc (optional) Output in tidy format for plotting in ggmcmc package (default is FALSE if ilike.output is set to TRUE or not set and TRUE otherwise).
+#' @param ilike.output (optional) Output can be processed by ilike,output package (default is TRUE if ggmcmc is set to FALSE or is not set and FALSE otherwise). Choosing TRUE for this argument is incompatible with ggmcmc=TRUE, since the two packages require different formatting of the output.
 #' @return A list containing the MCMC chains.
 #' @export
 load_mcmc_output = function(results_directory,
@@ -648,8 +648,8 @@ load_mcmc_output = function(results_directory,
 {
   if (is.null(ggmcmc) && is.null(ilike.output))
   {
-    ggmcmc = TRUE
-    ilike.output = FALSE
+    ggmcmc = FALSE
+    ilike.output = TRUE
   }
   else if (!is.null(ggmcmc) && is.null(ilike.output))
   {
