@@ -43,7 +43,7 @@ get_directory_numbers <- function(all_dirs)
 #' @param variables (optional) Variables to include in the output (default is all).
 #' @export
 ilike_pivot_wider <- function(output,
-                                     variables=NULL)
+                              variables=NULL)
 {
   if (!is.null(variables))
   {
