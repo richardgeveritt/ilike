@@ -37,6 +37,11 @@ public:
                        const arma::colvec &mean_in,
                        const arma::mat &covariance_in);
   
+  MirrorProposalKernel(const std::string &variable_name_in,
+                       const arma::colvec &mean_in,
+                       const arma::mat &covariance_in,
+                       double scale_in);
+  
   MirrorProposalKernel(const std::vector<std::string> &variable_names_in,
                        const std::vector<arma::colvec> &means_in,
                        const std::vector<arma::mat> &covariances_in);

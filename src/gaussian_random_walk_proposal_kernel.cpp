@@ -57,6 +57,16 @@ GaussianRandomWalkProposalKernel::GaussianRandomWalkProposalKernel(const std::st
   this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in);
 }
 
+GaussianRandomWalkProposalKernel::GaussianRandomWalkProposalKernel(const std::string &variable_name_in,
+                                                                   const arma::mat &covariance_in,
+                                                                   double scale_in)
+:SymmetricProposalKernel()
+{
+  //this->unused_variables_kept = true;
+  this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in,
+                                                               scale_in);
+}
+
 GaussianRandomWalkProposalKernel::GaussianRandomWalkProposalKernel(const GaussianRandomWalkProposalKernel &another)
 :SymmetricProposalKernel(another)
 {

@@ -30,6 +30,13 @@ GaussianProposalInfo::GaussianProposalInfo(const arma::mat &covariance_in)
   this->set_covariance(covariance_in);
 }
 
+GaussianProposalInfo::GaussianProposalInfo(const arma::mat &covariance_in,
+                                           double scale_in)
+{
+  this->set_covariance(covariance_in);
+  this->scale = scale_in;
+}
+
 GaussianProposalInfo::GaussianProposalInfo(const arma::colvec &mean_in)
 : scale(1.0)
 {
@@ -42,6 +49,15 @@ GaussianProposalInfo::GaussianProposalInfo(const arma::colvec &mean_in,
 {
   this->mean = mean_in;
   this->set_covariance(covariance_in);
+}
+
+GaussianProposalInfo::GaussianProposalInfo(const arma::colvec &mean_in,
+                                           const arma::mat &covariance_in,
+                                           double scale_in)
+{
+  this->mean = mean_in;
+  this->set_covariance(covariance_in);
+  this->scale = scale_in;
 }
 
 GaussianProposalInfo::~GaussianProposalInfo()

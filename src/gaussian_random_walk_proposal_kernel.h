@@ -35,6 +35,10 @@ public:
                                    const arma::mat &covariance_in);
   
   GaussianRandomWalkProposalKernel(const std::string &variable_name_in,
+                                   const arma::mat &covariance_in,
+                                   double scale_in);
+  
+  GaussianRandomWalkProposalKernel(const std::string &variable_name_in,
                                    const double &sd_in);
   
   GaussianRandomWalkProposalKernel(const GaussianRandomWalkProposalKernel &another);

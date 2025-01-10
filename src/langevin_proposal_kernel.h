@@ -40,6 +40,11 @@ public:
                          GradientEstimator* gradient_estimator_in);
   
   LangevinProposalKernel(const std::string &variable_name_in,
+                         const arma::mat &covariance_in,
+                         double scale_in,
+                         GradientEstimator* gradient_estimator_in);
+  
+  LangevinProposalKernel(const std::string &variable_name_in,
                          const double &sd_in,
                          GradientEstimator* gradient_estimator_in);
   

@@ -673,6 +673,74 @@ List get_single_variable_vector_and_matrix_parameter_info(const List &model_para
   return List::create(variable_names[0], first_param, second_param);
 }
 
+List get_single_variable_matrix_and_double_parameter_info(const List &model_parameters,
+                                                          const List &current_distribution,
+                                                          const std::string &distribution_name)
+{
+  std::string augmented_variable_names = current_distribution["variables"];
+
+  // split string in ;
+  std::vector<std::string> variable_names = split(augmented_variable_names, ';');
+
+  // throw error if more than one variable
+  if (variable_names.size() != 1)
+    Rcpp::stop("Only one variable allowed for " + distribution_name + ".");
+
+  if (!current_distribution.containsElementNamed("parameters"))
+    Rcpp::stop("Missing parameters for " + distribution_name + " (two parameters required).");
+
+  List parameters = current_distribution["parameters"];
+
+  if (parameters.size() != 2)
+    Rcpp::stop("Two parameters required for " + distribution_name + ".");
+
+  arma::colvec first_param = extract_matrix_parameter(parameters,
+                                                      model_parameters,
+                                                      0);
+
+  double second_param = extract_double_parameter(parameters,
+                                                 model_parameters,
+                                                 1);
+
+  return List::create(variable_names[0], first_param, second_param);
+}
+
+List get_single_variable_vector_and_matrix_and_double_parameter_info(const List &model_parameters,
+                                                                     const List &current_distribution,
+                                                                     const std::string &distribution_name)
+{
+  std::string augmented_variable_names = current_distribution["variables"];
+
+  // split string in ;
+  std::vector<std::string> variable_names = split(augmented_variable_names, ';');
+
+  // throw error if more than one variable
+  if (variable_names.size() != 1)
+    Rcpp::stop("Only one variable allowed for " + distribution_name + ".");
+
+  if (!current_distribution.containsElementNamed("parameters"))
+    Rcpp::stop("Missing parameters for " + distribution_name + " (two parameters required).");
+
+  List parameters = current_distribution["parameters"];
+
+  if (parameters.size() != 3)
+    Rcpp::stop("Three parameters required for " + distribution_name + ".");
+
+  arma::colvec first_param = extract_vector_parameter(parameters,
+                                                      model_parameters,
+                                                      0);
+
+  arma::mat second_param = extract_matrix_parameter(parameters,
+                                                    model_parameters,
+                                                    1);
+
+  double third_param = extract_double_parameter(parameters,
+                                                model_parameters,
+                                                2);
+
+  return List::create(variable_names[0], first_param, second_param, third_param);
+}
+
 List get_abc_euclidean_uniform_parameter_info(const List &model_parameters,
                                               const List &current_sbi,
                                               const std::string &sbi_name)
@@ -1229,8 +1297,8 @@ std::vector<size_t> get_enk_likelihood_indices(const List &model,
   return enk_likelihood_indices;
 }
 
-List get_filtering_info(const List &model,
-                        const List &model_parameters)
+List get_ssm_info(const List &model,
+                  const List &model_parameters)
 {
   // std::string index_name_in = filtering_info["variables"];
 
@@ -1248,9 +1316,9 @@ List get_filtering_info(const List &model,
     for (size_t i = 0; i < method_info.size(); ++i)
     {
       List current_method = method_info[i];
-      if (current_method.containsElementNamed("filter"))
+      if (current_method.containsElementNamed("ssm"))
       {
-        List filtering_info = current_method["filter"];
+        List filtering_info = current_method["ssm"];
         if (filtering_info.containsElementNamed("parameters"))
         {
           if (Rf_isNewList(filtering_info["parameters"]))
@@ -1321,12 +1389,12 @@ List get_filtering_info(const List &model,
           }
           else
           {
-            stop("Error in filter method.");
+            stop("Error in SSM specification.");
           }
         }
         else
         {
-          stop("Error in filter method.");
+          stop("Error in SSM specification.");
         }
       }
     }
@@ -1336,7 +1404,7 @@ List get_filtering_info(const List &model,
     stop("Method not found in model.");
   }
 
-  stop("Filter not found in model.");
+  stop("SSM not found in model.");
 }
 
 std::vector<LikelihoodEstimator *> get_likelihood_estimators(RandomNumberGenerator *rng_in,
@@ -2378,25 +2446,25 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(RandomNumberGenerat
             likelihood_estimators.push_back(new_likelihood_estimator);
           }
         }
-        else if (current_factor.containsElementNamed("likelihood"))
+        else if (current_factor.containsElementNamed("algorithmic_likelihood"))
         {
-          if (Rf_isNewList(current_factor["likelihood"]))
+          if (Rf_isNewList(current_factor["algorithmic_likelihood"]))
           {
-            List llhd_details = current_factor["likelihood"];
+            List llhd_details = current_factor["algorithmic_likelihood"];
 
             if (!llhd_details.containsElementNamed("type"))
             {
-              stop("likelihood must contain a type.");
+              stop("algorithmic_likelihood must contain a type.");
             }
 
             if (!llhd_details.containsElementNamed("model"))
             {
-              stop("likelihood must contain a model.");
+              stop("algorithmic_likelihood must contain a model.");
             }
 
             if (!llhd_details.containsElementNamed("parameters"))
             {
-              stop("likelihood must contain parameters.");
+              stop("algorithmic_likelihood must contain parameters.");
             }
 
             std::string llhd_type = llhd_details["type"];
@@ -3644,18 +3712,18 @@ IndependentProposalKernel *get_proposal(const List &model,
   IndependentProposalKernel *proposal = NULL;
   std::vector<IndependentProposalKernel *> proposals;
 
-  if (model.containsElementNamed("importance_proposal"))
+  if (model.containsElementNamed("is_proposal"))
   {
-    List importance_proposals = model["importance_proposal"];
+    List is_proposals = model["is_proposal"];
 
-    for (size_t i = 0; i < importance_proposals.size(); ++i)
+    for (size_t i = 0; i < is_proposals.size(); ++i)
     {
-      if (Rf_isNewList(importance_proposals[i]))
+      if (Rf_isNewList(is_proposals[i]))
       {
-        List current_proposal = importance_proposals[i];
-        if (current_proposal.containsElementNamed("importance_proposal"))
+        List current_proposal = is_proposals[i];
+        if (current_proposal.containsElementNamed("is_proposal"))
         {
-          List proposal_info = current_proposal["importance_proposal"];
+          List proposal_info = current_proposal["is_proposal"];
 
           if (Rf_isNewList(proposal_info))
           {
@@ -3748,30 +3816,30 @@ IndependentProposalKernel *get_proposal(const List &model,
             stop("Error in proposal section of model file.");
           }
         }
-        else if (current_proposal.containsElementNamed("evaluate_log_importance_proposal") && current_proposal.containsElementNamed("simulate_importance_proposal") && current_proposal.containsElementNamed("type"))
+        else if (current_proposal.containsElementNamed("evaluate_log_is_proposal") && current_proposal.containsElementNamed("simulate_is_proposal") && current_proposal.containsElementNamed("type"))
         {
-          SEXP evaluate_log_importance_proposal_SEXP = current_proposal["evaluate_log_importance_proposal"];
-          SEXP simulate_importance_proposal_SEXP = current_proposal["simulate_importance_proposal"];
+          SEXP evaluate_log_is_proposal_SEXP = current_proposal["evaluate_log_is_proposal"];
+          SEXP simulate_is_proposal_SEXP = current_proposal["simulate_is_proposal"];
           size_t type = current_proposal["type"];
           if (type == 1)
           {
-            proposal = new CustomDistributionProposalKernel(load_simulate_distribution(simulate_importance_proposal_SEXP),
-                                                            load_evaluate_log_distribution(evaluate_log_importance_proposal_SEXP));
+            proposal = new CustomDistributionProposalKernel(load_simulate_distribution(simulate_is_proposal_SEXP),
+                                                            load_evaluate_log_distribution(evaluate_log_is_proposal_SEXP));
           }
           else if (type == 2)
           {
-            proposal = new CustomIndependentProposalKernel(load_simulate_independent_proposal(simulate_importance_proposal_SEXP),
-                                                           load_evaluate_log_independent_proposal(evaluate_log_importance_proposal_SEXP));
+            proposal = new CustomIndependentProposalKernel(load_simulate_independent_proposal(simulate_is_proposal_SEXP),
+                                                           load_evaluate_log_independent_proposal(evaluate_log_is_proposal_SEXP));
           }
           else if (type == 3)
           {
-            proposal = new CustomGuidedDistributionProposalKernel(load_simulate_guided_distribution(simulate_importance_proposal_SEXP),
-                                                                  load_evaluate_log_guided_distribution(evaluate_log_importance_proposal_SEXP), data);
+            proposal = new CustomGuidedDistributionProposalKernel(load_simulate_guided_distribution(simulate_is_proposal_SEXP),
+                                                                  load_evaluate_log_guided_distribution(evaluate_log_is_proposal_SEXP), data);
           }
           else if (type == 4)
           {
-            proposal = new CustomGuidedIndependentProposalKernel(load_simulate_guided_independent_proposal(simulate_importance_proposal_SEXP),
-                                                                 load_evaluate_log_guided_independent_proposal(evaluate_log_importance_proposal_SEXP), data);
+            proposal = new CustomGuidedIndependentProposalKernel(load_simulate_guided_independent_proposal(simulate_is_proposal_SEXP),
+                                                                 load_evaluate_log_guided_independent_proposal(evaluate_log_is_proposal_SEXP), data);
           }
           else
           {
@@ -4181,15 +4249,17 @@ ProposalKernel *get_mh_proposal(const List &current_proposal,
         }
         else if (type == "mvnorm_rw")
         {
-          List info = get_single_variable_matrix_parameter_info(model_parameters,
-                                                                proposal_info,
-                                                                type);
+          List info = get_single_variable_matrix_and_double_parameter_info(model_parameters,
+                                                                           proposal_info,
+                                                                           type);
 
           std::string variable = info[0];
           arma::mat cov = info[1];
+          double scale = info[2];
 
           proposal = new GaussianRandomWalkProposalKernel(variable,
-                                                          cov);
+                                                          cov,
+                                                          scale);
         }
         if (type == "unif_rw")
         {
@@ -4217,18 +4287,20 @@ ProposalKernel *get_mh_proposal(const List &current_proposal,
         }
         else if (type == "langevin")
         {
-          List info = get_single_variable_matrix_parameter_info(model_parameters,
-                                                                proposal_info,
-                                                                type);
+          List info = get_single_variable_matrix_and_double_parameter_info(model_parameters,
+                                                                           proposal_info,
+                                                                           type);
 
           std::string variable = info[0];
           arma::mat cov = info[1];
+          double scale = info[2];
 
           proposal = new LangevinProposalKernel(variable,
                                                 cov,
+                                                scale,
                                                 new DirectGradientEstimator());
         }
-        else if (type == "hmc")
+        else if (type == "hamiltonian")
         {
           List info = get_single_variable_matrix_parameter_info(model_parameters,
                                                                 proposal_info,
@@ -4241,32 +4313,36 @@ ProposalKernel *get_mh_proposal(const List &current_proposal,
                                            cov,
                                            new DirectGradientEstimator());
         }
-        else if (type == "barker_dynamics")
+        else if (type == "barker")
         {
-          List info = get_single_variable_matrix_parameter_info(model_parameters,
-                                                                proposal_info,
-                                                                type);
-
-          std::string variable = info[0];
-          arma::mat cov = info[1];
-
-          proposal = new BarkerDynamicsProposalKernel(variable,
-                                                      cov,
-                                                      new DirectGradientEstimator());
-        }
-        else if (type == "mirror")
-        {
-          List info = get_single_variable_vector_and_matrix_parameter_info(model_parameters,
+          List info = get_single_variable_matrix_and_double_parameter_info(model_parameters,
                                                                            proposal_info,
                                                                            type);
 
           std::string variable = info[0];
+          arma::mat cov = info[1];
+          double scale = info[2];
+
+          proposal = new BarkerDynamicsProposalKernel(variable,
+                                                      cov,
+                                                      scale,
+                                                      new DirectGradientEstimator());
+        }
+        else if (type == "mirror")
+        {
+          List info = get_single_variable_vector_and_matrix_and_double_parameter_info(model_parameters,
+                                                                                      proposal_info,
+                                                                                      type);
+
+          std::string variable = info[0];
           arma::colvec mean = info[1];
           arma::mat cov = info[2];
+          double scale = info[3];
 
           proposal = new MirrorProposalKernel(variable,
                                               mean,
-                                              cov);
+                                              cov,
+                                              scale);
         }
         else
         {
@@ -4357,15 +4433,17 @@ ProposalKernel *get_unadjusted_proposal(const List &current_proposal,
         }
         else if (type == "mvnorm_rw")
         {
-          List info = get_single_variable_matrix_parameter_info(model_parameters,
-                                                                proposal_info,
-                                                                type);
+          List info = get_single_variable_matrix_and_double_parameter_info(model_parameters,
+                                                                           proposal_info,
+                                                                           type);
 
           std::string variable = info[0];
           arma::mat cov = info[1];
+          double scale = info[2];
 
           proposal = new GaussianRandomWalkProposalKernel(variable,
-                                                          cov);
+                                                          cov,
+                                                          scale);
         }
         else if (type == "unif_rw")
         {
@@ -4393,18 +4471,20 @@ ProposalKernel *get_unadjusted_proposal(const List &current_proposal,
         }
         else if (type == "langevin")
         {
-          List info = get_single_variable_matrix_parameter_info(model_parameters,
-                                                                proposal_info,
-                                                                type);
+          List info = get_single_variable_matrix_and_double_parameter_info(model_parameters,
+                                                                           proposal_info,
+                                                                           type);
 
           std::string variable = info[0];
           arma::mat cov = info[1];
+          double scale = info[2];
 
           proposal = new LangevinProposalKernel(variable,
                                                 cov,
+                                                scale,
                                                 new DirectGradientEstimator());
         }
-        else if (type == "hmc")
+        else if (type == "hamiltonian")
         {
           List info = get_single_variable_matrix_parameter_info(model_parameters,
                                                                 proposal_info,
@@ -4417,32 +4497,36 @@ ProposalKernel *get_unadjusted_proposal(const List &current_proposal,
                                            cov,
                                            new DirectGradientEstimator());
         }
-        else if (type == "barker_dynamics")
+        else if (type == "barker")
         {
-          List info = get_single_variable_matrix_parameter_info(model_parameters,
-                                                                proposal_info,
-                                                                type);
-
-          std::string variable = info[0];
-          arma::mat cov = info[1];
-
-          proposal = new BarkerDynamicsProposalKernel(variable,
-                                                      cov,
-                                                      new DirectGradientEstimator());
-        }
-        else if (type == "mirror")
-        {
-          List info = get_single_variable_vector_and_matrix_parameter_info(model_parameters,
+          List info = get_single_variable_matrix_and_double_parameter_info(model_parameters,
                                                                            proposal_info,
                                                                            type);
 
           std::string variable = info[0];
+          arma::mat cov = info[1];
+          double scale = info[2];
+
+          proposal = new BarkerDynamicsProposalKernel(variable,
+                                                      cov,
+                                                      scale,
+                                                      new DirectGradientEstimator());
+        }
+        else if (type == "mirror")
+        {
+          List info = get_single_variable_vector_and_matrix_and_double_parameter_info(model_parameters,
+                                                                                      proposal_info,
+                                                                                      type);
+
+          std::string variable = info[0];
           arma::colvec mean = info[1];
           arma::mat cov = info[2];
+          double scale = info[3];
 
           proposal = new MirrorProposalKernel(variable,
                                               mean,
-                                              cov);
+                                              cov,
+                                              scale);
         }
         else
         {
@@ -4502,14 +4586,14 @@ ProposalKernel *get_unadjusted_proposal(const List &current_proposal,
   }
 }
 
-IndependentProposalKernel *get_independent_mh_proposal(const List &current_proposal,
-                                                       const List &model_parameters,
-                                                       Data *data)
+IndependentProposalKernel *get_imh_proposal(const List &current_proposal,
+                                            const List &model_parameters,
+                                            Data *data)
 {
   IndependentProposalKernel *proposal;
-  if (current_proposal.containsElementNamed("independent_mh_proposal"))
+  if (current_proposal.containsElementNamed("imh_proposal"))
   {
-    List proposal_info = current_proposal["independent_mh_proposal"];
+    List proposal_info = current_proposal["imh_proposal"];
 
     if (Rf_isNewList(proposal_info))
     {
@@ -4602,30 +4686,30 @@ IndependentProposalKernel *get_independent_mh_proposal(const List &current_propo
       stop("Error in proposal section of model file.");
     }
   }
-  else if (current_proposal.containsElementNamed("evaluate_log_independent_mh_proposal") && current_proposal.containsElementNamed("simulate_independent_mh_proposal") && current_proposal.containsElementNamed("type"))
+  else if (current_proposal.containsElementNamed("evaluate_log_imh_proposal") && current_proposal.containsElementNamed("simulate_imh_proposal") && current_proposal.containsElementNamed("type"))
   {
-    SEXP evaluate_log_independent_mh_proposal_SEXP = current_proposal["evaluate_log_independent_mh_proposal"];
-    SEXP simulate_independent_mh_proposal_SEXP = current_proposal["simulate_independent_mh_proposal"];
+    SEXP evaluate_log_imh_proposal_SEXP = current_proposal["evaluate_log_imh_proposal"];
+    SEXP simulate_imh_proposal_SEXP = current_proposal["simulate_imh_proposal"];
     size_t type = current_proposal["type"];
     if (type == 1)
     {
-      proposal = new CustomDistributionProposalKernel(load_simulate_distribution(simulate_independent_mh_proposal_SEXP),
-                                                      load_evaluate_log_distribution(evaluate_log_independent_mh_proposal_SEXP));
+      proposal = new CustomDistributionProposalKernel(load_simulate_distribution(simulate_imh_proposal_SEXP),
+                                                      load_evaluate_log_distribution(evaluate_log_imh_proposal_SEXP));
     }
     else if (type == 2)
     {
-      proposal = new CustomIndependentProposalKernel(load_simulate_independent_proposal(simulate_independent_mh_proposal_SEXP),
-                                                     load_evaluate_log_independent_proposal(evaluate_log_independent_mh_proposal_SEXP));
+      proposal = new CustomIndependentProposalKernel(load_simulate_independent_proposal(simulate_imh_proposal_SEXP),
+                                                     load_evaluate_log_independent_proposal(evaluate_log_imh_proposal_SEXP));
     }
     else if (type == 3)
     {
-      proposal = new CustomGuidedDistributionProposalKernel(load_simulate_guided_distribution(simulate_independent_mh_proposal_SEXP),
-                                                            load_evaluate_log_guided_distribution(evaluate_log_independent_mh_proposal_SEXP), data);
+      proposal = new CustomGuidedDistributionProposalKernel(load_simulate_guided_distribution(simulate_imh_proposal_SEXP),
+                                                            load_evaluate_log_guided_distribution(evaluate_log_imh_proposal_SEXP), data);
     }
     else if (type == 4)
     {
-      proposal = new CustomGuidedIndependentProposalKernel(load_simulate_guided_independent_proposal(simulate_independent_mh_proposal_SEXP),
-                                                           load_evaluate_log_guided_independent_proposal(evaluate_log_independent_mh_proposal_SEXP), data);
+      proposal = new CustomGuidedIndependentProposalKernel(load_simulate_guided_independent_proposal(simulate_imh_proposal_SEXP),
+                                                           load_evaluate_log_guided_independent_proposal(evaluate_log_imh_proposal_SEXP), data);
     }
     else
     {
@@ -4634,7 +4718,7 @@ IndependentProposalKernel *get_independent_mh_proposal(const List &current_propo
   }
   else
   {
-    stop("Invalid independent_mh proposal. Maybe you specified a method to simulate from the proposal, but no method to evaluate it?");
+    stop("Invalid imh proposal. Maybe you specified a method to simulate from the proposal, but no method to evaluate it?");
   }
 
   if (proposal == NULL)
@@ -4880,7 +4964,7 @@ MCMC *make_mcmc(const List &model,
 
     size_t simulate_mh_proposal_index = 0;
     size_t simulate_unadjusted_proposal_index = 0;
-    size_t simulate_independent_mh_proposal_index = 0;
+    size_t simulate_imh_proposal_index = 0;
     size_t simulate_m_proposal_index = 0;
 
     for (auto i = order_of_mcmc.begin();
@@ -4940,15 +5024,15 @@ MCMC *make_mcmc(const List &model,
       {
         IndependentProposalKernel *proposal;
 
-        if (model.containsElementNamed("independent_mh_proposal"))
+        if (model.containsElementNamed("imh_proposal"))
         {
-          List proposal_infos = model["independent_mh_proposal"];
+          List proposal_infos = model["imh_proposal"];
 
-          if (Rf_isNewList(proposal_infos[simulate_independent_mh_proposal_index]))
+          if (Rf_isNewList(proposal_infos[simulate_imh_proposal_index]))
           {
-            proposal = get_independent_mh_proposal(proposal_infos[simulate_independent_mh_proposal_index],
-                                                   model_parameters,
-                                                   data);
+            proposal = get_imh_proposal(proposal_infos[simulate_imh_proposal_index],
+                                        model_parameters,
+                                        data);
           }
           else
           {
@@ -4966,9 +5050,9 @@ MCMC *make_mcmc(const List &model,
                                               proposal);
           }
 
-          if (proposal_infos.containsElementNamed("independent_mh_factor_index"))
+          if (proposal_infos.containsElementNamed("imh_factor_index"))
           {
-            SEXP index_SEXP = proposal_infos["independent_mh_factor_index"];
+            SEXP index_SEXP = proposal_infos["imh_factor_index"];
             NumericVector index = load_numeric_vector(index_SEXP);
             std::vector<size_t> indices_in;
             for (size_t k = 0; k < index.length(); ++k)
@@ -4978,11 +5062,11 @@ MCMC *make_mcmc(const List &model,
             mcmc->set_index_if_null(new VectorIndex(indices_in));
           }
 
-          simulate_independent_mh_proposal_index = simulate_independent_mh_proposal_index + 1;
+          simulate_imh_proposal_index = simulate_imh_proposal_index + 1;
         }
         else
         {
-          stop("No independent_mh_proposal found.");
+          stop("No imh_proposal found.");
         }
       }
       else if ((*i) == 3)
@@ -5712,7 +5796,7 @@ ImportanceSampler *get_importance_sampler(RandomNumberGenerator *rng,
   VectorIndex *full_index = NULL;
   bool any_annealing = false;
 
-  if (model.containsElementNamed("importance_proposal"))
+  if (model.containsElementNamed("is_proposal"))
   {
 
     proposal_in = get_proposal(model,
@@ -6229,7 +6313,7 @@ SMCMCMCMove *get_smc_mcmc_move(RandomNumberGenerator *rng,
 
   bool any_annealing = false;
 
-  if (model.containsElementNamed("importance_proposal"))
+  if (model.containsElementNamed("is_proposal"))
   {
     proposal_in = get_proposal(model,
                                parameters,
@@ -6714,7 +6798,7 @@ double do_enkmfds(const List &model,
 
   bool any_annealing = false;
 
-  if (model.containsElementNamed("importance_proposal"))
+  if (model.containsElementNamed("is_proposal"))
   {
     proposal_in = get_proposal(model,
                                parameters,
@@ -6905,7 +6989,7 @@ KalmanFilter *get_kalman_filter(Data *the_data,
   std::vector<KalmanUpdater *> updaters_in = get_kalman_updaters(model,
                                                                  parameters);
 
-  List filtering_info = get_filtering_info(model, parameters);
+  List filtering_info = get_ssm_info(model, parameters);
 
   std::string index_name_in = filtering_info[0];
   size_t first_index_in = filtering_info[1];
@@ -7074,7 +7158,7 @@ EnsembleKalmanFilter *get_ensemble_kalman_filter(RandomNumberGenerator *rng,
 
   bool smcfixed_flag = true;
 
-  List filtering_info = get_filtering_info(model, parameters);
+  List filtering_info = get_ssm_info(model, parameters);
 
   std::string index_name_in = filtering_info[0];
   size_t first_index_in = filtering_info[1];
@@ -7330,7 +7414,7 @@ ParticleFilter *get_particle_filter(RandomNumberGenerator *rng,
 
   bool any_annealing;
 
-  if (model.containsElementNamed("importance_proposal"))
+  if (model.containsElementNamed("is_proposal"))
   {
 
     proposal_in = get_proposal(model,
@@ -7394,7 +7478,7 @@ ParticleFilter *get_particle_filter(RandomNumberGenerator *rng,
                                                              parameters,
                                                              number_of_particles);
 
-  List filtering_info = get_filtering_info(model, parameters);
+  List filtering_info = get_ssm_info(model, parameters);
 
   std::string index_name_in = filtering_info[0];
   size_t first_index_in = filtering_info[1];

@@ -59,6 +59,22 @@ LangevinProposalKernel::LangevinProposalKernel(const std::string &variable_name_
 }
 
 LangevinProposalKernel::LangevinProposalKernel(const std::string &variable_name_in,
+                                               const arma::mat &covariance_in,
+                                               double scale_in,
+                                               GradientEstimator* gradient_estimator_in)
+:ProposalKernel()
+{
+  //this->unused_variables_kept = true;
+  
+  this->gradient_estimator = gradient_estimator_in;
+  this->gradient_estimator->set_proposal(this);
+  this->index = NULL;
+  
+  this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in,
+                                                               scale_in);
+}
+
+LangevinProposalKernel::LangevinProposalKernel(const std::string &variable_name_in,
                                                const double &sd_in,
                                                GradientEstimator* gradient_estimator_in)
 :ProposalKernel()

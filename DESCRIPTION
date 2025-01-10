@@ -1,6 +1,6 @@
 Package: ilike
 Type: Package
-Title: Methods for Bayesian Computation when the Likelihood is Intractable
+Title: Inference for Intractable Likelihoods
 Version: 0.0.2.3
 Authors@R: 
     person(given = c("Richard","G"),

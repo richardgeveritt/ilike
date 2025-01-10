@@ -24,8 +24,13 @@ public:
   
   GaussianProposalInfo(const arma::colvec &mean_in);
   GaussianProposalInfo(const arma::mat &covariance_in);
+  GaussianProposalInfo(const arma::mat &covariance_in,
+                       double scale_in);
   GaussianProposalInfo(const arma::colvec &mean_in,
                        const arma::mat &covariance_in);
+  GaussianProposalInfo(const arma::colvec &mean_in,
+                       const arma::mat &covariance_in,
+                       double scale_in);
   
   GaussianProposalInfo(const GaussianProposalInfo &another);
   

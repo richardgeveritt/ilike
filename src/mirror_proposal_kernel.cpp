@@ -61,6 +61,15 @@ MirrorProposalKernel::MirrorProposalKernel(const std::string &variable_name_in,
   this->proposal_info[variable_name_in] = GaussianProposalInfo(mean_in,covariance_in);
 }
 
+MirrorProposalKernel::MirrorProposalKernel(const std::string &variable_name_in,
+                                           const arma::colvec &mean_in,
+                                           const arma::mat &covariance_in,
+                                           double scale_in)
+:SymmetricProposalKernel()
+{
+  this->proposal_info[variable_name_in] = GaussianProposalInfo(mean_in,covariance_in);
+}
+
 MirrorProposalKernel::MirrorProposalKernel(const std::vector<std::string> &variable_names_in,
                                            const std::vector<arma::colvec> &means_in,
                                            const std::vector<arma::mat> &covariances_in)
