@@ -19,7 +19,7 @@
 #' @param grain_size (optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).
 #' @return Estimate of the marginal likelihood.
 #' @export
-enkf = function(model,
+ENKF = function(model,
                                   results_name,
                                   results_path = getwd(),
                                   number_of_ensemble_members,

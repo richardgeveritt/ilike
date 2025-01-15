@@ -1395,7 +1395,7 @@ print_data_info = function(data_index,blocks,line_counter)
   message(paste('data ends on line ',line_counter,'. Contains ',data_info_string,'.',sep = ""))
 }
 
-determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,potential_function_number,is_proposal_number,mh_proposal_number,unadjusted_proposal_number,imh_proposal_number,m_proposal_number,enk_transform_number,transition_proposal_number,data_number,method_number)
+determine_block_type = function(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,potential_function_number,is_proposal_number,mh_proposal_number,unadjusted_proposal_number,imh_proposal_number,m_proposal_number,enk_transform_number,transition_proposal_number,data_number,method_number,print_block_ends)
 {
   if (length(split_block_name)==1)
   {
@@ -6414,7 +6414,7 @@ compile <- function(filename,
             stop(paste("Invalid file: line ",line_counter,", new section of file needs a name: use /***name***/.",sep=""))
           }
           split_block_name = split_string_at_comma_ignoring_parentheses(unparsed_block_name)
-          new_block_info = determine_block_type(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,potential_function_number,is_proposal_number,mh_proposal_number,unadjusted_proposal_number,imh_proposal_number,m_proposal_number,enk_transform_number,transition_proposal_number,data_number,method_number)
+          new_block_info = determine_block_type(split_block_name,blocks,line_counter,block_type,block_name,factor_number,transition_model_number,potential_function_number,is_proposal_number,mh_proposal_number,unadjusted_proposal_number,imh_proposal_number,m_proposal_number,enk_transform_number,transition_proposal_number,data_number,method_number,print_block_ends)
 
           # expect input for each block in one of the following forms:
           # (a) /***evaluate_log_prior***/, followed by a C++ function

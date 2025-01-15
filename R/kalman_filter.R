@@ -14,7 +14,7 @@
 #' @param keep_temporary_model_code (optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE,
 #' @return Estimate of the marginal likelihood.
 #' @export
-kf = function(model,
+KF = function(model,
                          results_name,
                          results_path = getwd(),
                          kf_iterations_to_store = 2,

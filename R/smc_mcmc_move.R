@@ -18,7 +18,7 @@
 #' @param grain_size (optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).
 #' @return Estimate of the marginal likelihood.
 #' @export
-smc_mcmc_move = function(model,
+SMC_with_MCMC = function(model,
                          results_name,
                          results_path = getwd(),
                          number_of_particles,
