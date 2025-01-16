@@ -3576,54 +3576,54 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           for (i in 1:length(R_function_arguments))
           {
-            split_at_dollar = strsplit(R_function_arguments[i],"\\$")[[1]]
+            split_at_dot = strsplit(R_function_arguments[i],"\\.")[[1]]
 
             any_lists = FALSE
 
-            if (split_at_dollar[1]=="proposed_parameters")
+            if (split_at_dot[1]=="proposed_parameters")
             {
               which_proposed_parameters[i] = 1
               any_lists = TRUE
             }
 
-            if (split_at_dollar[1]=="parameters")
+            if (split_at_dot[1]=="parameters")
             {
               which_parameters[i] = 1
               any_lists = TRUE
             }
 
-            if (split_at_dollar[1]=="proposal_parameters")
+            if (split_at_dot[1]=="proposal_parameters")
             {
               which_proposal_parameters[i] = 1
               any_lists = TRUE
             }
 
-            if (split_at_dollar[1]=="data")
+            if (split_at_dot[1]=="data")
             {
               which_data[i] = 1
               any_lists = TRUE
             }
 
-            if (length(split_at_dollar)==0)
+            if (length(split_at_dot)==0)
             {
               stop(paste("Block ",block_name,", line number ",line_counter,": argument is of size zero.",sep=""))
             }
-            else if (length(split_at_dollar)==1)
+            else if (length(split_at_dot)==1)
             {
               if (any_lists)
               {
-                cpp_function_arguments_string = paste(cpp_function_arguments_string,',parameters_to_list(',split_at_dollar[1],')',sep="")
+                cpp_function_arguments_string = paste(cpp_function_arguments_string,',parameters_to_list(',split_at_dot[1],')',sep="")
               }
               else
               {
-                cpp_function_arguments_string = paste(cpp_function_arguments_string,split_at_dollar[1],sep=",")
+                cpp_function_arguments_string = paste(cpp_function_arguments_string,split_at_dot[1],sep=",")
               }
-              R_function_arguments_string = paste(R_function_arguments_string,split_at_dollar[1],sep=",")
+              R_function_arguments_string = paste(R_function_arguments_string,split_at_dot[1],sep=",")
             }
-            else if (length(split_at_dollar)>=2)
+            else if (length(split_at_dot)>=2)
             {
-              cpp_function_arguments_string = paste(cpp_function_arguments_string,',',split_at_dollar[1],'["',paste(split_at_dollar[2:length(split_at_dollar)],collapse=""),'"]',sep="")
-              R_function_arguments_string = paste(R_function_arguments_string,',',split_at_dollar[1],'$',paste(split_at_dollar[2:length(split_at_dollar)],collapse=""),sep="")
+              cpp_function_arguments_string = paste(cpp_function_arguments_string,',',split_at_dot[1],'["',paste(split_at_dot[2:length(split_at_dot)],collapse=""),'"]',sep="")
+              R_function_arguments_string = paste(R_function_arguments_string,',',split_at_dot[1],'$',paste(split_at_dot[2:length(split_at_dot)],collapse=""),sep="")
             }
           }
 
@@ -6255,7 +6255,7 @@ strip_out_xptr_stuff <- function(blocks)
 
 #' Parse .ilike file to give ilike model.
 #'
-#' @param filename The name (and path) of the .ilike file containing the model.
+#' @param filenames The name (and path) of the .ilike files containing the model, stored in a vector if there is more than one.
 #' @param model_parameter_list (optional) A list containing parameters for the model.
 #' @param R_functions (optional) If TRUE, returns R functions. If FALSE, returns C++ functions.
 #' @param external_packages (optional) A vector of names of other R packages the functions rely on.
@@ -6267,7 +6267,7 @@ strip_out_xptr_stuff <- function(blocks)
 #' @param print_block_ends (optional) If TRUE, print the end of each block of code. If FALSE (default), do not print the end of each block of code.
 #' @return A list containing the model details.
 #' @export
-compile <- function(filename,
+compile <- function(filenames,
                     model_parameter_list = list(),
                     R_functions = FALSE,
                     external_packages = c(),
@@ -6278,43 +6278,137 @@ compile <- function(filename,
                     nesting_level=1,
                     print_block_ends=FALSE)
 {
-  basename = tools::file_path_sans_ext(filename)
 
-  # Check if there is a file with a .py extension.
-  if (file.exists(paste(basename,".py",sep="")))
-  {
-    reticulate::source_python(paste(basename,".py",sep=""),envir=globalenv())
-  }
+  if (length(filenames)==0)
+    stop("No filenames provided.")
 
-  # Check if there is a file with a .jl extension.
-  if (file.exists(paste(basename,".jl",sep="")))
+  for (i in 1:length(filenames))
   {
-    if (julia_bin_dir!="")
+    if (!file.exists(filenames[i]))
     {
-      JuliaCall::julia_setup(julia_bin_dir)
-      #Sys.setenv(JULIA_BINDIR = julia_bin_dir)
-      output = my_julia_source(paste(basename,".jl",sep=""),julia_required_libraries)
-      list2env(output, .GlobalEnv)
+      stop(paste("File",filenames[i],"does not exist."))
     }
-    else
-    {
-      stop("Julia binary directory needs to be specified to use Julia functions.")
-    }
-    #JuliaCall::julia_source(paste(basename,".jl",sep=""))
-
-    # Split julia file into lots of little files, and call mystring <- read_file("my_rnorm(n).jl"); my_rnorm <- JuliaCall::julia_eval(mystring) on each one
   }
 
-  # Check if there is a file with a .R extension.
-  if (file.exists(paste(basename,".R",sep="")))
+  for (i in 1:length(filenames))
   {
-    source(paste(basename,".R",sep=""))
+    filename = filenames[i]
+    basename = tools::file_path_sans_ext(filename)
+
+    # Check if there is a file with a .py extension.
+    if (file.exists(paste(basename,".py",sep="")))
+    {
+      reticulate::source_python(paste(basename,".py",sep=""),envir=globalenv())
+    }
+
+    # Check if there is a file with a .jl extension.
+    if (file.exists(paste(basename,".jl",sep="")))
+    {
+      if (julia_bin_dir!="")
+      {
+        JuliaCall::julia_setup(julia_bin_dir)
+        #Sys.setenv(JULIA_BINDIR = julia_bin_dir)
+        output = my_julia_source(paste(basename,".jl",sep=""),julia_required_libraries)
+        list2env(output, .GlobalEnv)
+      }
+      else
+      {
+        stop("Julia binary directory needs to be specified to use Julia functions.")
+      }
+      #JuliaCall::julia_source(paste(basename,".jl",sep=""))
+
+      # Split julia file into lots of little files, and call mystring <- read_file("my_rnorm(n).jl"); my_rnorm <- JuliaCall::julia_eval(mystring) on each one
+    }
+
+    # Check if there is a file with a .R extension.
+    if (file.exists(paste(basename,".R",sep="")))
+    {
+      source(paste(basename,".R",sep=""))
+    }
   }
 
+  if (length(filenames)>1)
+  {
+    temporary_stacked_ilike_filename = paste("temporary_ilike_file",nesting_level,"_",ceiling(stats::runif(1, 0, 10^7)),".ilike",sep="")
+    ilikefileConn<-file(temporary_stacked_ilike_filename,open="w")
+
+
+    # Make temporary concatenation of all files, dealing with header matter first
+    for (i in 1:length(filenames))
+    {
+      filename = filenames[i]
+      the_file = file(filename,open="r")
+      while (TRUE)
+      {
+
+        line = readLines(the_file, n = 1)
+
+        if (length(line) == 0) {
+          break
+        }
+
+        if (substr(line, 1, 4)=="/***")
+        {
+          if (substr(line, nchar(line) - 4 + 1, nchar(line))=="***/")
+          {
+            break
+          }
+        }
+
+        writeLines(line, ilikefileConn)
+      }
+      close(the_file)
+    }
+
+
+    for (i in 1:length(filenames))
+    {
+      filename = filenames[i]
+      the_file = file(filename,open="r")
+      in_header = TRUE
+      while (TRUE)
+      {
+
+        line = readLines(the_file, n = 1)
+
+        if (length(line) == 0) {
+          break
+        }
+
+        if (in_header==TRUE)
+        {
+          if (substr(line, 1, 4)=="/***")
+          {
+            if (substr(line, nchar(line) - 4 + 1, nchar(line))=="***/")
+            {
+              in_header = FALSE
+            }
+          }
+        }
+
+        if (in_header==FALSE)
+        {
+          writeLines(line, ilikefileConn)
+        }
+      }
+      close(the_file)
+    }
+
+    close(ilikefileConn)
+  }
+
+  # Setup .cpp to be written to.
   model_for_compilation_name = paste("model_for_compilation",nesting_level,"_",ceiling(stats::runif(1, 0, 10^7)),".cpp",sep="")
   fileConn<-file(model_for_compilation_name,open="w")
 
-  the_file = file(filename,open="r")
+  if (length(filenames)>1)
+  {
+    the_file = file(temporary_stacked_ilike_filename,open="r")
+  }
+  else
+  {
+    the_file = file(filenames,open="r")
+  }
 
   in_block = FALSE
   blocks = list(order_of_mcmc=c())
@@ -6546,6 +6640,11 @@ compile <- function(filename,
   if (keep_temporary_model_code==FALSE)
   {
     file.remove(model_for_compilation_name)
+  }
+
+  if ( (length(filenames)>1) && (keep_temporary_model_code==FALSE) )
+  {
+    file.remove(temporary_stacked_ilike_filename)
   }
 
   for (i in 1:length(blocks))
