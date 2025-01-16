@@ -3,7 +3,7 @@ pkgdown: 2.1.1
 pkgdown_sha: ~
 articles:
   gaussian_precision: gaussian_precision.html
-last_built: 2025-01-15T22:51Z
+last_built: 2025-01-16T09:42Z
 urls:
   reference: https://richardgeveritt.github.io/ilike/reference
   article: https://richardgeveritt.github.io/ilike/articles
