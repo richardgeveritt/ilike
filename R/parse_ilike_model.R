@@ -6357,6 +6357,8 @@ compile <- function(filenames,
 
         writeLines(line, ilikefileConn)
       }
+
+      writeLines("\n", ilikefileConn)
       close(the_file)
     }
 
@@ -6391,6 +6393,8 @@ compile <- function(filenames,
           writeLines(line, ilikefileConn)
         }
       }
+
+      writeLines("\n", ilikefileConn)
       close(the_file)
     }
 

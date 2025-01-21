@@ -5,7 +5,7 @@
 \title{Parse .ilike file to give ilike model.}
 \usage{
 compile(
-  filename,
+  filenames,
   model_parameter_list = list(),
   R_functions = FALSE,
   external_packages = c(),
@@ -18,7 +18,7 @@ compile(
 )
 }
 \arguments{
-\item{filename}{The name (and path) of the .ilike file containing the model.}
+\item{filenames}{The name (and path) of the .ilike files containing the model, stored in a vector if there is more than one.}
 
 \item{model_parameter_list}{(optional) A list containing parameters for the model.}
 

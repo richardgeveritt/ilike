@@ -1,0 +1,70 @@
+{
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "C/C++: clang++ build shared objects",
+            "command": "/Users/richard/Dropbox/projects/ilike_cpp/ilike_cpp/build_all.sh",
+            "args": [],
+            "options": {
+                "cwd": "/Users/richard/Dropbox/projects/ilike_cpp/ilike_cpp"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "detail": "Task to build all other .cpp files into .o files."
+        },
+        {
+            "type": "shell",
+            "label": "C/C++: clang++ build main",
+            "command": "/usr/bin/clang++",
+            "args": [
+                "-fcolor-diagnostics",
+                "--std=c++14",
+                "-fansi-escape-codes",
+                "-g",
+                "/Users/richard/Dropbox/projects/ilike_cpp/ilike_cpp/main.cpp",
+                "-o",
+                "/Users/richard/Dropbox/projects/ilike_cpp/ilike_cpp/ilike.out",
+                "-I/Library/Frameworks/R.framework/Headers",
+                "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/sitmo/include",
+                "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/BH/include",
+                "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/BH/include/boost/random",
+                "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/dqrng/include",
+                "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/BH/include/boost/math/special_functions",
+                "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/BH/include/boost/math",
+                "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/RcppEigen/include",
+                "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/RcppParallel/include",
+                "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/RcppArmadillo/include",
+                "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/Rcpp/include",
+                "-I/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/RInside/include",
+                "-L/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/RcppParallel/lib",
+                "-L/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/RcppArmadillo/libs",
+                "-L/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/Rcpp/libs",
+                "-L/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/library/RInside/lib",
+                "-L/Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib",
+                "-llapack",
+                "-lblas",
+                "-lR",
+                "-lRInside",
+                "-framework", "Accelerate",
+                "*.o" // Link all object files
+            ],
+            "options": {
+                "cwd": "/Users/richard/Dropbox/projects/ilike_cpp/ilike_cpp"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "Task to build main.cpp into ilike.out."
+        }
+    ],
+    "version": "2.0.0"
+}

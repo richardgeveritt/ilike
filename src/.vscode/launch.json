@@ -1,0 +1,18 @@
+{
+  "configurations": [
+    {
+      "name": "C/C++: clang++ build main",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/ilike.out",
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "${fileDirname}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "lldb",
+      "preLaunchTask": "C/C++: clang++ build shared objects"
+    }
+  ],
+  "version": "2.0.0"
+}
