@@ -846,6 +846,10 @@ int enki_number_of_bisections = extract_int_parameter(parameters,
   size_t number_of_targets_in =
       extract_int_parameter(parameters, model_parameters, 5);
 
+  if (number_of_targets_in == 0) {
+    Rcpp::stop("Error getting EnKI-ABC number of targets: must be at least 1.");
+  }
+
   double significance_level;
   if (parameters.size() > 6) {
     significance_level =
