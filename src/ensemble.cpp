@@ -401,6 +401,14 @@ double Ensemble::calculate_log_normalising_constant()
   return this->log_normalising_constant_ratio;
 }
 
+double Ensemble::calculate_mc_inversion_log_normalising_constant(const arma::colvec &unnormalised_log_weights,
+                                                                 double inverse_incremental_temperature)
+{
+  this->log_normalising_constant_ratio = log_sum_exp(unnormalised_log_weights) - log(unnormalised_log_weights.size());
+  this->ess = exp(2.0*log_sum_exp(unnormalised_log_weights) - log_sum_exp(2.0*unnormalised_log_weights));
+  return this->log_normalising_constant_ratio;
+}
+
 double Ensemble::calculate_inversion_log_normalising_constant(double inverse_incremental_temperature)
 {
   this->log_normalising_constant_ratio = this->ensemble_factors->get_inversion_incremental_likelihood(this,

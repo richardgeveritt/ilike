@@ -1707,7 +1707,15 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                   // If epsilon is equal to 0, then use the synthetic
                   // likelihood.
 
-                  if ((epsilon == 0.0) && (estimator_type_in == 1)) {
+                  if ((epsilon == 0.0) && (estimator_type_in == 0)) {
+                    new_likelihood_estimator = make_sl_likelihood(
+                                                                  rng_in, seed_in,
+                                                                  &data_created_in_get_likelihood_estimators.back(),
+                                                                  data_variables_in, simulate_data_model_in,
+                                                                  std::make_shared<Transform>(summary_stats),
+                                                                  number_of_points, false, false, parallel, grain_size);
+                  }
+                  else if ((epsilon == 0.0) && (estimator_type_in == 1)) {
                     new_likelihood_estimator = make_sl_likelihood(
                         rng_in, seed_in,
                         &data_created_in_get_likelihood_estimators.back(),
@@ -1740,7 +1748,13 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                 }
               } else {
                 if (adaptive == false) {
-                  if ((epsilon == 0.0) && (estimator_type_in == 1)) {
+                  if ((epsilon == 0.0) && (estimator_type_in == 0)) {
+                    new_likelihood_estimator = make_sl_likelihood(
+                                                                  rng_in, seed_in, data_in, data_variables_in,
+                                                                  simulate_data_model_in, number_of_points, false, false,
+                                                                  parallel, grain_size);
+                  }
+                  else if ((epsilon == 0.0) && (estimator_type_in == 1)) {
                     new_likelihood_estimator = make_sl_likelihood(
                         rng_in, seed_in, data_in, data_variables_in,
                         simulate_data_model_in, number_of_points, false, false,

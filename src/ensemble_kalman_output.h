@@ -48,6 +48,8 @@ public:
   Ensemble& back();
   
   double calculate_latest_log_normalising_constant_ratio();
+  double calculate_mc_inversion_latest_log_normalising_constant_ratio(const Index* index,
+                                                                      double inverse_incremental_temperature);
   double calculate_inversion_latest_log_normalising_constant_ratio(double inverse_incremental_temperature);
   double calculate_unbiased_inversion_latest_log_normalising_constant_ratio(double inverse_incremental_temperature);
   double calculate_path1_inversion_latest_log_normalising_constant_ratio(const std::vector<double> &previous_log_measurement_likelihood_means,

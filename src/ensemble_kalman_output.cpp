@@ -1,5 +1,6 @@
 #include "ensemble_kalman_output.h"
 #include "ensemble_kalman.h"
+#include "ensemble_kalman_worker.h"
 #include "move_output.h"
 #include "filesystem.h"
 #include "utils.h"
@@ -137,6 +138,15 @@ Ensemble& EnsembleKalmanOutput::back()
 double EnsembleKalmanOutput::calculate_latest_log_normalising_constant_ratio()
 {
   return this->all_ensembles.back().calculate_log_normalising_constant();
+}
+
+double EnsembleKalmanOutput::calculate_mc_inversion_latest_log_normalising_constant_ratio(const Index* index,
+                                                                                          double inverse_incremental_temperature)
+{
+  this->estimator->the_worker->weight(&this->back(),
+                                      index,
+                                      inverse_incremental_temperature);
+  return this->all_ensembles.back().calculate_mc_inversion_log_normalising_constant(this->estimator->the_worker->get_unnormalised_log_incremental_weights(),inverse_incremental_temperature);
 }
 
 double EnsembleKalmanOutput::calculate_inversion_latest_log_normalising_constant_ratio(double inverse_incremental_temperature)

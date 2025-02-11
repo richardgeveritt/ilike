@@ -5,7 +5,7 @@
 \title{Importance sampler.}
 \usage{
 IS(
-  model,
+  recipe,
   results_name,
   results_path = getwd(),
   number_of_importance_points,
@@ -17,13 +17,13 @@ IS(
   julia_bin_dir = "",
   julia_required_libraries = c(),
   verify_cpp_function_types = FALSE,
-  keep_temporary_model_code = FALSE,
+  keep_temporary_recipe_code = FALSE,
   seed = NULL,
   grain_size = 1e+05
 )
 }
 \arguments{
-\item{model}{A file containing the model, or a pre-compiled model list.}
+\item{recipe}{A pre-compiled ilike recipe, or an ilike file, or a vector of ilike files.}
 
 \item{results_name}{The name of the directory to which results will be written.}
 
@@ -47,7 +47,7 @@ IS(
 
 \item{verify_cpp_function_types}{(optional) If TRUE, check the types of the parameters of user-defined .cpp functions. If FALSE (default), types are not checked.}
 
-\item{keep_temporary_model_code}{(optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE,}
+\item{keep_temporary_recipe_code}{(optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE,}
 
 \item{seed}{(optional) The seed for the random number generator.}
 

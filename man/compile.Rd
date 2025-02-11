@@ -2,7 +2,7 @@
 % Please edit documentation in R/parse_ilike_model.R
 \name{compile}
 \alias{compile}
-\title{Parse .ilike file to give ilike model.}
+\title{Parse .ilike file to give a compiled ilike "recipe".}
 \usage{
 compile(
   filenames,
@@ -12,15 +12,15 @@ compile(
   julia_bin_dir = "",
   julia_required_libraries = c(),
   verify_cpp_function_types = FALSE,
-  keep_temporary_model_code = FALSE,
+  keep_temporary_recipe_code = FALSE,
   nesting_level = 1,
   print_block_ends = FALSE
 )
 }
 \arguments{
-\item{filenames}{The name (and path) of the .ilike files containing the model, stored in a vector if there is more than one.}
+\item{filenames}{The name (and path) of the .ilike files containing the recipe, stored in a vector if there is more than one.}
 
-\item{model_parameter_list}{(optional) A list containing parameters for the model.}
+\item{model_parameter_list}{(optional) A list containing parameters for the recipe.}
 
 \item{R_functions}{(optional) If TRUE, returns R functions. If FALSE, returns C++ functions.}
 
@@ -32,15 +32,15 @@ compile(
 
 \item{verify_cpp_function_types}{(optional) If TRUE, check the types of the parameters of user-defined .cpp functions. If FALSE (default), types are not checked.}
 
-\item{keep_temporary_model_code}{(optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE, this file is left in the working directory.}
+\item{keep_temporary_recipe_code}{(optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE, this file is left in the working directory.}
 
 \item{nesting_level}{(optional) The level of nesting of the current call to compile. A user should always use the default of 1.}
 
 \item{print_block_ends}{(optional) If TRUE, print the end of each block of code. If FALSE (default), do not print the end of each block of code.}
 }
 \value{
-A list containing the model details.
+A list containing the recipe.
 }
 \description{
-Parse .ilike file to give ilike model.
+Parse .ilike file to give a compiled ilike "recipe".
 }

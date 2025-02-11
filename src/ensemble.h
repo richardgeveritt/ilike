@@ -80,6 +80,8 @@ public:
   void update_weights(const arma::colvec &latest_unnormalised_log_incremental_weights);
   
   double calculate_log_normalising_constant();
+  double calculate_mc_inversion_log_normalising_constant(const arma::colvec &unnormalised_log_weights,
+                                                         double inverse_incremental_temperature);
   double calculate_inversion_log_normalising_constant(double inverse_incremental_temperature);
   double calculate_unbiased_inversion_log_normalising_constant(double inverse_incremental_temperature);
   void calculate_path1_inversion_log_normalising_constant(std::vector<double> &log_measurement_likelihood_means,

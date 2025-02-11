@@ -46,6 +46,11 @@ split_string_at_comma_ignoring_parentheses <- function(input_string)
   return(result)
 }
 
+convert_dollar <- function(input_string)
+{
+  gsub("\\$", ".", input_string)
+}
+
 my_julia_source = function(filename,
                            julia_required_libraries=c())
 {
@@ -3288,7 +3293,7 @@ function_name_for_cpp <- function(block_code)
   return(split_at_space[length(split_at_space)])
 }
 
-extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_model_code,print_block_ends)
+extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_recipe_code,print_block_ends)
 {
 
   # Get information about the order in which MCMC moves are included.
@@ -3512,7 +3517,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           sub_filename = gsub('"', '', sub_filename)
           sub_filename = gsub("'", '', sub_filename)
           my_list = list(list(type=ilike_type,
-                              model=ilike::compile(filename=sub_filename,model_parameter_list=model_parameter_list,external_packages=external_packages,julia_bin_dir=julia_bin_dir,julia_required_libraries=julia_required_libraries,verify_cpp_function_types=verify_cpp_function_types,keep_temporary_model_code=keep_temporary_model_code,nesting_level=sub_nesting_level,print_block_ends=print_block_ends),
+                              model=ilike::compile(filename=sub_filename,model_parameter_list=model_parameter_list,external_packages=external_packages,julia_bin_dir=julia_bin_dir,julia_required_libraries=julia_required_libraries,verify_cpp_function_types=verify_cpp_function_types,keep_temporary_recipe_code=keep_temporary_recipe_code,nesting_level=sub_nesting_level,print_block_ends=print_block_ends),
                               parameters=parameters))
           names(my_list) = c(block_name)
 
@@ -6253,19 +6258,19 @@ strip_out_xptr_stuff <- function(blocks)
   return(blocks)
 }
 
-#' Parse .ilike file to give ilike model.
+#' Parse .ilike file to give a compiled ilike "recipe".
 #'
-#' @param filenames The name (and path) of the .ilike files containing the model, stored in a vector if there is more than one.
-#' @param model_parameter_list (optional) A list containing parameters for the model.
+#' @param filenames The name (and path) of the .ilike files containing the recipe, stored in a vector if there is more than one.
+#' @param model_parameter_list (optional) A list containing parameters for the recipe.
 #' @param R_functions (optional) If TRUE, returns R functions. If FALSE, returns C++ functions.
 #' @param external_packages (optional) A vector of names of other R packages the functions rely on.
 #' @param julia_bin_dir (optional) The directory containing the Julia bin file - only needed if Julia functions are used.
 #' @param julia_required_libraries (optional) Vector of strings, each of which is a Julia package that will be installed and loaded.
 #' @param verify_cpp_function_types (optional) If TRUE, check the types of the parameters of user-defined .cpp functions. If FALSE (default), types are not checked.
-#' @param keep_temporary_model_code (optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE, this file is left in the working directory.
+#' @param keep_temporary_recipe_code (optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE, this file is left in the working directory.
 #' @param nesting_level (optional) The level of nesting of the current call to compile. A user should always use the default of 1.
 #' @param print_block_ends (optional) If TRUE, print the end of each block of code. If FALSE (default), do not print the end of each block of code.
-#' @return A list containing the model details.
+#' @return A list containing the recipe.
 #' @export
 compile <- function(filenames,
                     model_parameter_list = list(),
@@ -6274,7 +6279,7 @@ compile <- function(filenames,
                     julia_bin_dir="",
                     julia_required_libraries=c(),
                     verify_cpp_function_types=FALSE,
-                    keep_temporary_model_code=FALSE,
+                    keep_temporary_recipe_code=FALSE,
                     nesting_level=1,
                     print_block_ends=FALSE)
 {
@@ -6456,7 +6461,7 @@ compile <- function(filenames,
 
     if ( (nchar(line)>=3) && (substr(line, 1, 3)=="//#") )
     {
-      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_model_code,print_block_ends)
+      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_recipe_code,print_block_ends)
       in_block = FALSE
       starting_block_flag = TRUE
       is_custom = FALSE
@@ -6500,7 +6505,7 @@ compile <- function(filenames,
           }
           else # end current block
           {
-            blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_model_code,print_block_ends)
+            blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_recipe_code,print_block_ends)
             is_custom = FALSE
             block_code = ""
           }
@@ -6566,7 +6571,7 @@ compile <- function(filenames,
     # ignore block if block number is not positive
     if (number_to_pass_to_extract_block>0)
     {
-      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_model_code,print_block_ends)
+      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_recipe_code,print_block_ends)
 
       if (print_block_ends==TRUE)
       {
@@ -6641,12 +6646,12 @@ compile <- function(filenames,
     Rcpp::sourceCpp(model_for_compilation_name)
   }
 
-  if (keep_temporary_model_code==FALSE)
+  if (keep_temporary_recipe_code==FALSE)
   {
     file.remove(model_for_compilation_name)
   }
 
-  if ( (length(filenames)>1) && (keep_temporary_model_code==FALSE) )
+  if ( (length(filenames)>1) && (keep_temporary_recipe_code==FALSE) )
   {
     file.remove(temporary_stacked_ilike_filename)
   }

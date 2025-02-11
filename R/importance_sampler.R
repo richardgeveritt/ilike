@@ -1,6 +1,6 @@
 #' Importance sampler.
 #'
-#' @param model A file containing the model, or a pre-compiled model list.
+#' @param recipe A pre-compiled ilike recipe, or an ilike file, or a vector of ilike files.
 #' @param results_name The name of the directory to which results will be written.
 #' @param results_path (optional) The path in which the results folder will be created (current working directory is the default).
 #' @param number_of_importance_points The number of importance points.
@@ -12,12 +12,12 @@
 #' @param julia_bin_dir (optional) The directory containing the Julia bin file - only needed if Julia functions are used.
 #' @param julia_required_libraries (optional) Vector of strings, each of which is a Julia packge that will be installed and loaded.
 #' @param verify_cpp_function_types (optional) If TRUE, check the types of the parameters of user-defined .cpp functions. If FALSE (default), types are not checked.
-#' @param keep_temporary_model_code (optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE,
+#' @param keep_temporary_recipe_code (optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE,
 #' @param seed (optional) The seed for the random number generator.
 #' @param grain_size (optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).
 #' @return Estimate of the marginal likelihood.
 #' @export
-IS = function(model,
+IS = function(recipe,
                              results_name,
                              results_path = getwd(),
                              number_of_importance_points,
@@ -29,18 +29,20 @@ IS = function(model,
                              julia_bin_dir="",
                              julia_required_libraries=c(),
                              verify_cpp_function_types=FALSE,
-                             keep_temporary_model_code=FALSE,
+                             keep_temporary_recipe_code=FALSE,
                              seed = NULL,
                              grain_size = 100000)
 {
-  if ((is.character(model)) && (length(model) == 1))
-    model = compile(filename = model,
-                    model_parameter_list = model_parameter_list,
-                    external_packages = external_packages,
-                    julia_bin_dir = julia_bin_dir,
-                    julia_required_libraries = julia_required_libraries,
-                    verify_cpp_function_types = verify_cpp_function_types,
-                    keep_temporary_model_code = keep_temporary_model_code)
+  if (is.character(recipe))
+    recipe = compile(filenames = recipe,
+                     model_parameter_list = model_parameter_list,
+                     external_packages = external_packages,
+                     julia_bin_dir = julia_bin_dir,
+                     julia_required_libraries = julia_required_libraries,
+                     verify_cpp_function_types = verify_cpp_function_types,
+                     keep_temporary_recipe_code = keep_temporary_recipe_code)
+  else if (!is.list(recipe))
+    stop('"Receipe" argument must be either a compiled ilike recipe, the filename of an ilike file, or a vector of filenames of ilike files.')
 
   results_directory = make_results_directory(results_name,results_path)
 
@@ -53,7 +55,7 @@ IS = function(model,
 
   if (length(fixed_parameter_list)==0)
   {
-    return(do_importance_sampler(model,
+    return(do_importance_sampler(recipe,
                                  model_parameter_list,
                                  algorithm_parameter_list,
                                  number_of_importance_points,
@@ -64,7 +66,7 @@ IS = function(model,
   }
   else
   {
-    return(do_importance_sampler_with_fixed_params(model,
+    return(do_importance_sampler_with_fixed_params(recipe,
                                  model_parameter_list,
                                  algorithm_parameter_list,
                                  fixed_parameter_list,

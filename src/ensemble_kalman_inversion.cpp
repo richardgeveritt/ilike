@@ -37,7 +37,7 @@ namespace ilike
   {
     this->mcmc = NULL;
     this->index = NULL;
-    this->estimator_type = 1;
+    this->estimator_type = 0;
   }
 
   EnsembleKalmanInversion::EnsembleKalmanInversion(RandomNumberGenerator *rng_in,
@@ -921,7 +921,12 @@ namespace ilike
       // Kalman gains are calculated as a part of this step, since (for options 1 and 2) the unconditional measurement covariance needs to be be computed here. The ESS is also computed here.
       std::vector<double> initial_log_measurement_likelihood_means;
       std::vector<double> initial_log_measurement_likelihood_variances;
-      if (this->estimator_type == 1)
+      if (this->estimator_type == 0)
+      {
+        current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_mc_inversion_latest_log_normalising_constant_ratio(this->index,
+                                                                                                                                                    1.0 / this->sequencer.schedule_difference);
+      }
+      else if (this->estimator_type == 1)
       {
         current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_inversion_latest_log_normalising_constant_ratio(1.0 / this->sequencer.schedule_difference);
       }
@@ -1208,7 +1213,11 @@ namespace ilike
       // Kalman gains are calculated as a part of this step, since (for options 1 and 2) the unconditional measurement covariance needs to be be computed here. The ESS is also computed here.
       std::vector<double> initial_log_measurement_likelihood_means;
       std::vector<double> initial_log_measurement_likelihood_variances;
-      if (this->estimator_type == 1)
+      if (this->estimator_type == 0)
+      {
+        current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_mc_inversion_latest_log_normalising_constant_ratio(this->index,1.0 / this->sequencer.schedule_difference);
+      }
+      else if (this->estimator_type == 1)
       {
         current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_inversion_latest_log_normalising_constant_ratio(1.0 / this->sequencer.schedule_difference);
       }
@@ -1482,7 +1491,12 @@ namespace ilike
       // Kalman gains are calculated as a part of this step, since (for options 1 and 2) the unconditional measurement covariance needs to be be computed here. The ESS is also computed here.
       std::vector<double> initial_log_measurement_likelihood_means;
       std::vector<double> initial_log_measurement_likelihood_variances;
-      if (this->estimator_type == 1)
+      if (this->estimator_type == 0)
+      {
+        current_state->subsample_log_likelihood = current_state->subsample_log_likelihood + current_state->calculate_mc_inversion_latest_log_normalising_constant_ratio(this->index,
+                                                                                                                                                                        1.0 / this->sequencer.schedule_difference);
+      }
+      else if (this->estimator_type == 1)
       {
         current_state->subsample_log_likelihood = current_state->subsample_log_likelihood + current_state->calculate_inversion_latest_log_normalising_constant_ratio(1.0 / this->sequencer.schedule_difference);
       }
