@@ -3561,6 +3561,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           stop(paste("Block ",block_name,", line number ",line_counter,": can have a maximum of one equals sign in it.",sep=""))
         }
 
+        function_to_use = convert_dollar(function_to_use)
         function_info = ilike_parse(function_to_use,
                                     model_parameter_list)
 
