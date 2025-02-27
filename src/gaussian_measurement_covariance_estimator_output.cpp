@@ -53,7 +53,9 @@ double GaussianMeasurementCovarianceEstimatorOutput::evaluate_ensemble_likelihoo
                                                                                         const arma::mat &inv_sigma_precomp,
                                                                                         double log_det_precomp) const
 {
-  return dmvnorm_using_precomp(*this->get_gaussian_estimator()->get_measurement_pointer(),
+  //double c = (double(inv_sigma_precomp.n_rows)/2.0)*(1.0/inverse_incremental_temperature)*log(inverse_incremental_temperature) + (double(inv_sigma_precomp.n_rows)/2.0)*(1.0-(1.0/inverse_incremental_temperature))*log(2.0*M_PI) + (1.0/2.0)*(1.0-(1.0/inverse_incremental_temperature))*log_det_precomp;
+  double c = (double(inv_sigma_precomp.n_rows)/2.0)*(1.0/inverse_incremental_temperature)*log(inverse_incremental_temperature) + (double(inv_sigma_precomp.n_rows)/2.0)*(1.0-(1.0/inverse_incremental_temperature))*log(2.0*M_PI) + (1.0/2.0)*(1.0-(1.0/inverse_incremental_temperature))*log_det_precomp;
+  return c + dmvnorm_using_precomp(*this->get_gaussian_estimator()->get_measurement_pointer(),
                                this->measurement_state,
                                inv_sigma_precomp,
                                log_det_precomp);
@@ -78,8 +80,8 @@ double GaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble
   //return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
   //               this->measurement_state,
   //               inverse_incremental_temperature*this->get_gaussian_estimator()->get_measurement_covariance());
-  
-  return dmvnorm_using_precomp(*this->get_gaussian_estimator()->get_measurement_pointer(),
+  double c = (double(inv_sigma_precomp.n_rows)/2.0)*(1.0/inverse_incremental_temperature)*log(inverse_incremental_temperature) + (double(inv_sigma_precomp.n_rows)/2.0)*(1.0-(1.0/inverse_incremental_temperature))*log(2.0*M_PI) + (1.0/2.0)*(1.0-(1.0/inverse_incremental_temperature))*log_det_precomp;
+  return c + dmvnorm_using_precomp(*this->get_gaussian_estimator()->get_measurement_pointer(),
                                this->measurement_state,
                                inv_sigma_precomp,
                                log_det_precomp);

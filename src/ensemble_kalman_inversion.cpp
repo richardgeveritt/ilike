@@ -1216,6 +1216,7 @@ namespace ilike
       if (this->estimator_type == 0)
       {
         current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_mc_inversion_latest_log_normalising_constant_ratio(this->index,1.0 / this->sequencer.schedule_difference);
+        current_state->calculate_kalman_gains(1.0 / this->sequencer.schedule_difference);
       }
       else if (this->estimator_type == 1)
       {

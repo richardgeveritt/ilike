@@ -41,11 +41,11 @@ KF = function(recipe,
   results_directory = make_results_directory(results_name,results_path)
 
   # Sort filter method.
-  filter_method = get_method(recipe,"filter")
+  filter_method = get_method(recipe,"ssm")
 
   if (is.null(filter_method))
   {
-    stop("No filter method provided: Kalman filter failed.")
+    stop("No ssm provided: Kalman filter failed.")
   }
 
   #filter_method = list()

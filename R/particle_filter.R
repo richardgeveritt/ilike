@@ -58,11 +58,11 @@ PF = function(recipe,
   set.seed(as.numeric(substr(as.character(seed),1,9)))
 
   # Sort filter method.
-  filter_method = get_method(recipe,"filter")
+  filter_method = get_method(recipe,"ssm")
 
   if (is.null(filter_method))
   {
-    stop("No filter method provided: Kalman filter failed.")
+    stop("No ssm provided: particle filter failed.")
   }
 
   # # Adaptive resampling method.

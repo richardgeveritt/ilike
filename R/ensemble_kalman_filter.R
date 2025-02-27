@@ -19,7 +19,7 @@
 #' @param grain_size (optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).
 #' @return Estimate of the marginal likelihood.
 #' @export
-ENKF = function(recipe,
+EnKF = function(recipe,
                                   results_name,
                                   results_path = getwd(),
                                   number_of_ensemble_members,
@@ -58,11 +58,11 @@ ENKF = function(recipe,
   set.seed(as.numeric(substr(as.character(seed),1,9)))
 
   # Sort filter method.
-  filter_method = get_method(recipe,"filter")
+  filter_method = get_method(recipe,"ssm")
 
   if (is.null(filter_method))
   {
-    stop("No filter method provided: Kalman filter failed.")
+    stop("No ssm provided: ensemble Kalman filter failed.")
   }
 
   # # The indices of the factors used as likelihoods in the EnK method.

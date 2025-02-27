@@ -69,6 +69,8 @@ public:
                                               double inverse_incremental_temperature) const;
   
   double get_incremental_likelihood(Ensemble* ensemble) const;
+  double get_mc_inversion_incremental_likelihood(Ensemble* ensemble,
+                                              double inverse_incremental_temperature) const;
   double get_inversion_incremental_likelihood(Ensemble* ensemble,
                                               double inverse_incremental_temperature) const;
   double get_unbiased_inversion_incremental_likelihood(Ensemble* ensemble,

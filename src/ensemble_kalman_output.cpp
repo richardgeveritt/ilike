@@ -147,6 +147,8 @@ double EnsembleKalmanOutput::calculate_mc_inversion_latest_log_normalising_const
                                       index,
                                       inverse_incremental_temperature);
   return this->all_ensembles.back().calculate_mc_inversion_log_normalising_constant(this->estimator->the_worker->get_unnormalised_log_incremental_weights(),inverse_incremental_temperature);
+
+  //return this->all_ensembles.back().calculate_mc_inversion_log_normalising_constant(inverse_incremental_temperature);
 }
 
 double EnsembleKalmanOutput::calculate_inversion_latest_log_normalising_constant_ratio(double inverse_incremental_temperature)

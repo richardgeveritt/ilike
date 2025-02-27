@@ -132,7 +132,8 @@ double MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::evaluate_
                                                                                                           const double log_det_precomp) const
 
 {
-  return dmvnorm_using_precomp(*this->estimator->get_measurement_pointer(),
+  double c = (double(inv_sigma_precomp.n_rows)/2.0)*(1.0/inverse_incremental_temperature)*log(inverse_incremental_temperature) + (double(inv_sigma_precomp.n_rows)/2.0)*(1.0-(1.0/inverse_incremental_temperature))*log(2.0*M_PI) + (1.0/2.0)*(1.0-(1.0/inverse_incremental_temperature))*log_det_precomp;
+  return c + dmvnorm_using_precomp(*this->estimator->get_measurement_pointer(),
                                arma::join_cols(this->likelihood_measurement_state,this->prior_measurement_state),
                                inv_sigma_precomp,
                                log_det_precomp);
@@ -153,8 +154,9 @@ double MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::subsample
                                                                                                                     const arma::mat &inv_sigma_precomp,
                                                                                                                     double log_det_precomp) const
 {
+  double c = (double(inv_sigma_precomp.n_rows)/2.0)*(1.0/inverse_incremental_temperature)*log(inverse_incremental_temperature) + (double(inv_sigma_precomp.n_rows)/2.0)*(1.0-(1.0/inverse_incremental_temperature))*log(2.0*M_PI) + (1.0/2.0)*(1.0-(1.0/inverse_incremental_temperature))*log_det_precomp;
   // parameters of covariance should already be set at this point, so second argument does nothing
-  return dmvnorm(*this->estimator->get_measurement_pointer(),
+  return c + dmvnorm(*this->estimator->get_measurement_pointer(),
                  arma::join_cols(this->likelihood_measurement_state,this->prior_measurement_state),
                  this->estimator->get_measurement_covariance_for_likelihood_ratio(inverse_incremental_temperature));
 }
