@@ -421,12 +421,6 @@ double VectorEnsembleFactors::get_inversion_incremental_likelihood(Ensemble* ens
     ensemble->kalman_gains.push_back(ensemble->Cxys[i]*unconditional_measurement_covariance.i());
 
     double c = (d/2.0)*log(inverse_incremental_temperature) + (d/2.0)*(1.0-(1.0/inverse_incremental_temperature))*log(2.0*M_PI) + (1.0/2.0)*(1.0-(1.0/inverse_incremental_temperature))*arma::log_det_sympd(Cygivenx);
-    
-    std::cout << "c" << std::endl;
-    std::cout << c << std::endl;
-
-    std::cout << "cov" << std::endl;
-    std::cout << Cygivenx << std::endl;
 
     // _without_sympd version used to due possible numerical isses with Sigma matrices for bad parameters
     llhd = llhd + c + dmvnorm(*this->measurement_covariance_estimators[i]->get_measurement_pointer(),ensemble->myys[i],unconditional_measurement_covariance);

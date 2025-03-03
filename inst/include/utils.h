@@ -104,13 +104,13 @@ inline arma::mat vector_of_parameters_to_mat(const std::vector<std::string> &var
   if (param_vec.size()==0)
     return arma::mat(0,0);
   
-  arma::rowvec first_vector = param_vec.begin()->get_rowvec(variables);
+  arma::rowvec first_vector = arma::conv_to<arma::rowvec>::from(param_vec.begin()->get_rowvec(variables));
   
   arma::mat output(param_vec.size(),first_vector.n_cols);
   output.row(0) = first_vector;
   for (size_t i=1; i<param_vec.size(); ++i)
   {
-    output.row(i) = param_vec[i].get_rowvec(variables);
+    output.row(i) = arma::conv_to<arma::rowvec>::from(param_vec[i].get_colvec(variables));
   }
   return output;
 }
@@ -124,13 +124,13 @@ inline arma::mat vector_of_parameters_to_mat(const std::string &variable,
   if (param_vec.size()==0)
     return arma::mat(0,0);
   
-  arma::rowvec first_vector = param_vec.begin()->get_rowvec(variable);
+  arma::rowvec first_vector = arma::conv_to<arma::rowvec>::from(param_vec.begin()->get_colvec(variable));
   
   arma::mat output(param_vec.size(),first_vector.n_rows);
   output.row(0) = first_vector;
   for (size_t i=1; i<param_vec.size(); ++i)
   {
-    output.row(i) = param_vec[i].get_rowvec(variable);
+    output.row(i) = arma::conv_to<arma::rowvec>::from(param_vec[i].get_colvec(variable));
   }
   return output;
 }

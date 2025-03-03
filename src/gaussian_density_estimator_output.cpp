@@ -96,6 +96,7 @@ double GaussianDensityEstimatorOutput::evaluate(const Data &point) const
   }
   else
   {
+
     return(dmvnorm(point.get_colvec(this->estimator->get_variables()),
                    this->mean_estimator->estimated,
                    this->covariance_estimator->estimated));

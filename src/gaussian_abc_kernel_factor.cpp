@@ -111,6 +111,7 @@ void GaussianABCKernelFactor::find_distance(const Parameters &input,
     scale.fill(1.0);
     scale_constant = 0.0;
   }
+
   distance = arma::sum(arma::pow((input.get_colvec(this->data_variables)-this->data_colvec)/scale,2.0));
 }
 

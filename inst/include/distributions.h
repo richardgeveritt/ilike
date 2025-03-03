@@ -820,10 +820,12 @@ inline double dmvnorm(const arma::colvec &x, const arma::colvec &mu,
                       const arma::mat &Sigma) {
   double result;
   arma::colvec x_minus_mean = x - mu;
+  
   result = -((arma::size(Sigma)[0] / 2.0) * log(2.0 * M_PI)) -
            0.5 * arma::log_det_sympd(Sigma);
 
   arma::mat b = x_minus_mean.t() * arma::inv_sympd(Sigma) * x_minus_mean;
+
   result = result - 0.5 * b(0, 0);
   return result;
 }
