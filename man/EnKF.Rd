@@ -6,7 +6,7 @@
 \usage{
 EnKF(
   recipe,
-  results_name,
+  results_name = "",
   results_path = getwd(),
   number_of_ensemble_members,
   parallel = FALSE,
@@ -27,7 +27,7 @@ EnKF(
 \arguments{
 \item{recipe}{A pre-compiled ilike recipe, or an ilike file, or a vector of ilike files.}
 
-\item{results_name}{The name of the directory to which results will be written.}
+\item{results_name}{(optional) The name of the directory to which results will be written (default is to not write output to file).}
 
 \item{results_path}{(optional) The path in which the results folder will be created (current working directory is the default).}
 

@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "filesystem.h"
 #include "algorithm_interface.h"
 #include "custom_no_params_proposal_kernel.h"
 #include "custom_proposal_kernel.h"
@@ -80,6 +81,8 @@
 #include "uniform_random_walk_proposal_kernel.h"
 #include "utils.h"
 #include "vector_index.h"
+#include "vector_factors.h"
+#include "factor_variables.h"
 
 // Case insensitive string comparison
 // From
@@ -1073,9 +1076,7 @@ std::vector<size_t> get_enk_likelihood_indices(const List &model,
 
         enk_likelihood_indices.reserve(indices.size());
         for (size_t j = 0; j < indices.size(); ++j) {
-          // std::cout << "addng index" << std::endl;
-          // std::cout << j << std::endl;
-          enk_likelihood_indices.push_back(j);
+          enk_likelihood_indices.push_back(indices[j]-1);
         }
 
         return enk_likelihood_indices;
@@ -1233,7 +1234,7 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
 
       bool factor_is_fixed_in_smc = true;
       for (size_t j = 0; j < factors_affected_by_smc_sequence.size(); ++j) {
-        if (i + 1 == factors_affected_by_smc_sequence[j])
+        if (i == factors_affected_by_smc_sequence[j])
           factor_is_fixed_in_smc = false;
       }
 
@@ -1309,10 +1310,10 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                   new ExactLikelihoodEstimator(rng_in, seed_in, data_in,
                                                new_factor, true);
 
-              full_index_vector.push_back(likelihood_estimators.size());
+              full_index_vector.push_back(likelihood_estimators.size()-1);
               if (include_priors) {
                 without_cancelled_index_vector.push_back(
-                    likelihood_estimators.size());
+                    likelihood_estimators.size()-1);
 
                 if (any_annealing) {
                   likelihood_estimators.push_back(
@@ -4093,7 +4094,7 @@ MCMC *make_mcmc(const List &model, const List &model_parameters, Data *data,
             NumericVector index = load_numeric_vector(index_SEXP);
             std::vector<size_t> indices_in;
             for (size_t k = 0; k < index.length(); ++k) {
-              indices_in.push_back(size_t(index[k]));
+              indices_in.push_back(size_t(index[k])-1);
             }
             mcmc->set_index_if_null(new VectorIndex(indices_in));
           }
@@ -4127,7 +4128,7 @@ MCMC *make_mcmc(const List &model, const List &model_parameters, Data *data,
             NumericVector index = load_numeric_vector(index_SEXP);
             std::vector<size_t> indices_in;
             for (size_t k = 0; k < index.length(); ++k) {
-              indices_in.push_back(size_t(index[k]));
+              indices_in.push_back(size_t(index[k])-1);
             }
             mcmc->set_index_if_null(new VectorIndex(indices_in));
           }
@@ -4160,7 +4161,7 @@ MCMC *make_mcmc(const List &model, const List &model_parameters, Data *data,
             NumericVector index = load_numeric_vector(index_SEXP);
             std::vector<size_t> indices_in;
             for (size_t k = 0; k < index.length(); ++k) {
-              indices_in.push_back(size_t(index[k]));
+              indices_in.push_back(size_t(index[k])-1);
             }
             mcmc->set_index_if_null(new VectorIndex(indices_in));
           }
@@ -4194,7 +4195,7 @@ MCMC *make_mcmc(const List &model, const List &model_parameters, Data *data,
             NumericVector index = load_numeric_vector(index_SEXP);
             std::vector<size_t> indices_in;
             for (size_t k = 0; k < index.length(); ++k) {
-              indices_in.push_back(size_t(index[k]));
+              indices_in.push_back(size_t(index[k])-1);
             }
             mcmc->set_index_if_null(new VectorIndex(indices_in));
           }
@@ -4704,6 +4705,7 @@ ImportanceSampler *get_importance_sampler(
   std::vector<int> factors_affected_by_smc_sequence;
   if (sequencer_info.length() == 5) {
     NumericVector factors_affected_by_smc_sequence_temp = sequencer_info[4];
+    factors_affected_by_smc_sequence_temp = factors_affected_by_smc_sequence_temp - 1;
     factors_affected_by_smc_sequence =
         as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
   }
@@ -4847,6 +4849,7 @@ void do_mcmc(const List &model, const List &parameters,
   std::vector<int> factors_affected_by_smc_sequence;
   if (sequencer_info.length() == 5) {
     NumericVector factors_affected_by_smc_sequence_temp = sequencer_info[4];
+    factors_affected_by_smc_sequence_temp = factors_affected_by_smc_sequence_temp - 1;
     factors_affected_by_smc_sequence =
         as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
   }
@@ -4960,6 +4963,7 @@ void do_mcmc_with_fixed_params(
   std::vector<int> factors_affected_by_smc_sequence;
   if (sequencer_info.length() == 5) {
     NumericVector factors_affected_by_smc_sequence_temp = sequencer_info[4];
+    factors_affected_by_smc_sequence_temp = factors_affected_by_smc_sequence_temp - 1;
     factors_affected_by_smc_sequence =
         as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
   }
@@ -5061,6 +5065,7 @@ SMCMCMCMove *get_smc_mcmc_move(
   std::vector<int> factors_affected_by_smc_sequence;
   if (sequencer_info.length() == 5) {
     NumericVector factors_affected_by_smc_sequence_temp = sequencer_info[4];
+    factors_affected_by_smc_sequence_temp = factors_affected_by_smc_sequence_temp - 1;
     factors_affected_by_smc_sequence =
         as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
   }
@@ -5190,6 +5195,46 @@ double do_smc_mcmc_move(
   return log_likelihood;
 }
 
+// [[Rcpp::export]]
+double do_smc_mcmc_move_with_fixed_params(
+                        const List &model, const List &parameters,
+                        const List &algorithm_parameter_list, const List &fixed_parameter_list, size_t number_of_particles,
+                        const List &mcmc_termination_method, const List &mcmc_weights_method,
+                        const List &smc_sequencer_method, const List &adaptive_target_method,
+                        const List &smc_termination_method, size_t smc_iterations_to_store,
+                        bool write_to_file_at_each_iteration, bool parallel_in,
+                        size_t grain_size_in, const String &results_name_in, size_t seed) {
+
+  RandomNumberGenerator rng;
+
+  Data the_data = get_data(model);
+  std::vector<Data> data_created_in_get_likelihood_estimators;
+  std::vector<Data> data_created_in_get_measurement_covariance_estimators;
+
+  SMCMCMCMove *alg = get_smc_mcmc_move(
+                                       &rng, &the_data, model, parameters, algorithm_parameter_list,
+                                       number_of_particles, mcmc_termination_method, mcmc_weights_method,
+                                       smc_sequencer_method, adaptive_target_method, smc_termination_method,
+                                       smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in,
+                                       grain_size_in, results_name_in, &seed,
+                                       data_created_in_get_likelihood_estimators,
+                                       data_created_in_get_measurement_covariance_estimators);
+
+  SMCOutput *output = alg->run(list_to_parameters(fixed_parameter_list));
+
+  if (!write_to_file_at_each_iteration) {
+    if (strcmp(results_name_in.get_cstring(), "") != 0)
+      output->write(results_name_in.get_cstring());
+  }
+
+  double log_likelihood = output->log_likelihood;
+
+  delete output;
+  delete alg;
+
+  return log_likelihood;
+}
+
 EnsembleKalmanInversion *get_enki(
     RandomNumberGenerator *rng, Data *the_data, const List &model,
     const List &parameters, const List &algorithm_parameter_list,
@@ -5214,6 +5259,7 @@ EnsembleKalmanInversion *get_enki(
   std::vector<int> factors_affected_by_smc_sequence;
   if (sequencer_info.length() == 5) {
     NumericVector factors_affected_by_smc_sequence_temp = sequencer_info[4];
+    factors_affected_by_smc_sequence_temp = factors_affected_by_smc_sequence_temp - 1;
     factors_affected_by_smc_sequence =
         as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
   }
@@ -5370,6 +5416,7 @@ do_enkmfds(const List &model, const List &parameters,
   std::vector<int> factors_affected_by_smc_sequence;
   if (sequencer_info.length() == 5) {
     NumericVector factors_affected_by_smc_sequence_temp = sequencer_info[4];
+    factors_affected_by_smc_sequence_temp = factors_affected_by_smc_sequence_temp - 1;
     factors_affected_by_smc_sequence =
         as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
   }
@@ -5997,4 +6044,256 @@ double do_particle_filter_with_fixed_params(
   delete alg;
 
   return log_likelihood;
+}
+
+
+// [[Rcpp::export]]
+double do_evaluate_log(const List &model,
+                       const List &model_parameters,
+                       const List &algorithm_parameter_list,
+                       const List &parameters_in,
+                       const IntegerVector &index_in,
+                       const String &results_name_in,
+                       size_t seed)
+{
+
+  Parameters parameters = list_to_parameters(parameters_in);
+
+  RandomNumberGenerator rng;
+  Data the_data = get_data(model);
+  std::vector<Data> data_created_in_get_likelihood_estimators;
+  std::vector<Data> data_created_in_get_measurement_covariance_estimators;
+
+  std::vector<std::string> sequencer_types;
+  std::vector<std::string> sequencer_variables;
+  std::vector<std::vector<double>> sequencer_schedules;
+
+  std::vector<int> factors_affected_by_smc_sequence;
+
+  VectorIndex *without_cancelled_index = NULL;
+  VectorIndex *without_priors_index = NULL;
+  VectorIndex *full_index = NULL;
+  bool any_annealing = false;
+
+  std::vector<LikelihoodEstimator *> likelihood_estimators;
+  likelihood_estimators = get_likelihood_estimators(
+      &rng, &seed, &the_data, model, model_parameters, algorithm_parameter_list, true,
+      sequencer_types, sequencer_variables, sequencer_schedules, NULL,
+      without_cancelled_index, without_priors_index, full_index, any_annealing,
+      factors_affected_by_smc_sequence,
+      data_created_in_get_likelihood_estimators,
+      data_created_in_get_measurement_covariance_estimators);
+
+  Parameters algorithm_parameters =
+      make_algorithm_parameters(algorithm_parameter_list);
+
+  Factors* factors = new VectorFactors(likelihood_estimators);
+
+  Index* index;
+  if (index_in.size() == 0) {
+    index = full_index;
+  }
+  else
+  {
+    std::vector<size_t> indices_in;
+    for (size_t k = 0; k < index_in.size(); ++k) {
+      indices_in.push_back(size_t(index_in[k]));
+    }
+    index = new VectorIndex(indices_in);
+  }
+
+  factors->setup(parameters);
+
+  // augment with conditioned on...
+  //parameters.merge_with_fixed(conditioned_on_parameters);
+
+  std::chrono::high_resolution_clock::time_point start_time = std::chrono::high_resolution_clock::now();
+
+  const std::vector<const ProposalKernel*>* proposals_to_transform_for_in = NULL;
+  const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in = NULL;
+  Particle particle(parameters,
+                    factors,
+                    proposals_to_transform_for_in,
+                    proposals_to_find_gradient_for_in);
+
+  particle.evaluate_smcfixed_part_of_likelihoods(index);
+  double output = particle.evaluate_smcadaptive_part_given_smcfixed_likelihoods(index);
+
+  std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed_time = end_time - start_time;
+
+  if (strcmp(results_name_in.get_cstring(), "") != 0)
+  {
+    std::string directory_name_in = results_name_in.get_cstring();
+    std::string directory_name = directory_name_in + "_evaluate";
+
+    if (!directory_exists(directory_name))
+    {
+      make_directory(directory_name);
+    }
+
+    std::ofstream log_likelihood_file_stream;
+    std::ofstream time_file_stream;
+
+    if (!log_likelihood_file_stream.is_open())
+    {
+      log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
+    }
+    if (log_likelihood_file_stream.is_open())
+    {
+      log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << output << std::endl;
+    }
+    else
+    {
+      Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + "cannot be opened.");
+    }
+
+    if (!time_file_stream.is_open())
+    {
+      time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
+    }
+    if (time_file_stream.is_open())
+    {
+      time_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << elapsed_time.count() << std::endl;
+    }
+    else
+    {
+      Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
+    }
+
+    std::string smc_iteration_directory = directory_name + "/iteration" + std::to_string(1);
+
+    particle.factor_variables->write_to_file(smc_iteration_directory,0);
+
+    log_likelihood_file_stream.close();
+    time_file_stream.close();
+
+  }
+
+  return output;
+}
+
+// [[Rcpp::export]]
+double do_evaluate_log_with_fixed_params(const List &model,
+                       const List &model_parameters,
+                       const List &algorithm_parameter_list,
+                       const List &fixed_parameter_list,
+                       const List &parameters_in,
+                       const IntegerVector &index_in,
+                       const String &results_name_in,
+                       size_t seed)
+{
+  RandomNumberGenerator rng;
+  Data the_data = get_data(model);
+  std::vector<Data> data_created_in_get_likelihood_estimators;
+  std::vector<Data> data_created_in_get_measurement_covariance_estimators;
+
+  std::vector<std::string> sequencer_types;
+  std::vector<std::string> sequencer_variables;
+  std::vector<std::vector<double>> sequencer_schedules;
+
+  std::vector<int> factors_affected_by_smc_sequence;
+
+  VectorIndex *without_cancelled_index = NULL;
+  VectorIndex *without_priors_index = NULL;
+  VectorIndex *full_index = NULL;
+  bool any_annealing = false;
+
+  std::vector<LikelihoodEstimator *> likelihood_estimators;
+  likelihood_estimators = get_likelihood_estimators(
+                                                    &rng, &seed, &the_data, model, model_parameters, algorithm_parameter_list, true,
+                                                    sequencer_types, sequencer_variables, sequencer_schedules, NULL,
+                                                    without_cancelled_index, without_priors_index, full_index, any_annealing,
+                                                    factors_affected_by_smc_sequence,
+                                                    data_created_in_get_likelihood_estimators,
+                                                    data_created_in_get_measurement_covariance_estimators);
+
+  Parameters algorithm_parameters =
+  make_algorithm_parameters(algorithm_parameter_list);
+
+  Factors* factors = new VectorFactors(likelihood_estimators);
+
+  Index* index;
+  if (index_in.size() == 0) {
+    index = full_index;
+  }
+  else
+  {
+    std::vector<size_t> indices_in;
+    for (size_t k = 0; k < index_in.size(); ++k) {
+      indices_in.push_back(size_t(index_in[k]));
+    }
+    index = new VectorIndex(indices_in);
+  }
+
+  Parameters parameters = list_to_parameters(parameters_in);
+  factors->setup(parameters);
+
+  // augment with conditioned on...
+  parameters.merge_with_fixed(list_to_parameters(fixed_parameter_list));
+
+  std::chrono::high_resolution_clock::time_point start_time = std::chrono::high_resolution_clock::now();
+
+  const std::vector<const ProposalKernel*>* proposals_to_transform_for_in = NULL;
+  const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in = NULL;
+  Particle particle(parameters,
+                    factors,
+                    proposals_to_transform_for_in,
+                    proposals_to_find_gradient_for_in);
+
+  particle.evaluate_smcfixed_part_of_likelihoods(index);
+  double output = particle.evaluate_smcadaptive_part_given_smcfixed_likelihoods(index);
+
+  std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed_time = end_time - start_time;
+
+  if (strcmp(results_name_in.get_cstring(), "") != 0)
+  {
+    std::string directory_name_in = results_name_in.get_cstring();
+    std::string directory_name = directory_name_in + "_evaluate";
+
+    if (!directory_exists(directory_name))
+    {
+      make_directory(directory_name);
+    }
+
+    std::ofstream log_likelihood_file_stream;
+    std::ofstream time_file_stream;
+
+    if (!log_likelihood_file_stream.is_open())
+    {
+      log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
+    }
+    if (log_likelihood_file_stream.is_open())
+    {
+      log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << output << std::endl;
+    }
+    else
+    {
+      Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + "cannot be opened.");
+    }
+
+    if (!time_file_stream.is_open())
+    {
+      time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
+    }
+    if (time_file_stream.is_open())
+    {
+      time_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << elapsed_time.count() << std::endl;
+    }
+    else
+    {
+      Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
+    }
+
+    std::string smc_iteration_directory = directory_name + "/iteration" + std::to_string(1);
+
+    particle.factor_variables->write_to_file(smc_iteration_directory,0);
+
+    log_likelihood_file_stream.close();
+    time_file_stream.close();
+
+  }
+
+  return output;
 }

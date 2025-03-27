@@ -6,7 +6,7 @@
 \usage{
 SMC_with_MCMC(
   recipe,
-  results_name,
+  results_name = "",
   results_path = getwd(),
   number_of_particles,
   parallel = FALSE,
@@ -14,6 +14,7 @@ SMC_with_MCMC(
   write_to_file_at_each_iteration = TRUE,
   model_parameter_list = list(),
   algorithm_parameter_list = list(),
+  fixed_parameter_list = list(),
   external_packages = c(),
   julia_bin_dir = "",
   julia_required_libraries = c(),
@@ -26,7 +27,7 @@ SMC_with_MCMC(
 \arguments{
 \item{recipe}{A pre-compiled ilike recipe, or an ilike file, or a vector of ilike files.}
 
-\item{results_name}{The name of the directory to which results will be written.}
+\item{results_name}{(optional) The name of the directory to which results will be written (default is to not write output to file).}
 
 \item{results_path}{(optional) The path in which the results folder will be created (current working directory is the default).}
 
@@ -41,6 +42,8 @@ SMC_with_MCMC(
 \item{model_parameter_list}{(optional) A list containing parameters for the model.}
 
 \item{algorithm_parameter_list}{(optional) A list containing named parameters for the algorithm.}
+
+\item{fixed_parameter_list}{(optional) A list containing parameters to condition on.}
 
 \item{external_packages}{(optional) A vector of names of other R packages the functions rely on.}
 

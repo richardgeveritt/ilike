@@ -8,6 +8,9 @@
 #ifndef FILESYSTEM_H
 #define FILESYSTEM_H
 
+#include <RcppArmadillo.h>
+using namespace Rcpp;
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>

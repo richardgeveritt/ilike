@@ -1,7 +1,7 @@
 #' SMC with an MCMC move
 #'
 #' @param recipe A pre-compiled ilike recipe, or an ilike file, or a vector of ilike files.
-#' @param results_name The name of the directory to which results will be written.
+#' @param results_name (optional) The name of the directory to which results will be written (default is to not write output to file).
 #' @param results_path (optional) The path in which the results folder will be created (current working directory is the default).
 #' @param number_of_particles The number of particles.
 #' @param parallel (optional) Set to true to perform the importance sampling in parallel, false for serial.
@@ -9,6 +9,7 @@
 #' @param write_to_file_at_each_iteration (optional) Do we write the algorithm output to file at each SMC step (TRUE/FALSE)?
 #' @param model_parameter_list (optional) A list containing parameters for the model.
 #' @param algorithm_parameter_list (optional) A list containing named parameters for the algorithm.
+#' @param fixed_parameter_list (optional) A list containing parameters to condition on.
 #' @param external_packages (optional) A vector of names of other R packages the functions rely on.
 #' @param julia_bin_dir (optional) The directory containing the Julia bin file - only needed if Julia functions are used.
 #' @param julia_required_libraries (optional) Vector of strings, each of which is a Julia packge that will be installed and loaded.
@@ -19,7 +20,7 @@
 #' @return Estimate of the marginal likelihood.
 #' @export
 SMC_with_MCMC = function(recipe,
-                         results_name,
+                         results_name = "",
                          results_path = getwd(),
                          number_of_particles,
                          parallel = FALSE,
@@ -27,6 +28,7 @@ SMC_with_MCMC = function(recipe,
                          write_to_file_at_each_iteration = TRUE,
                          model_parameter_list = list(),
                          algorithm_parameter_list = list(),
+                         fixed_parameter_list = list(),
                          external_packages = c(),
                          julia_bin_dir="",
                          julia_required_libraries=c(),
@@ -47,7 +49,10 @@ SMC_with_MCMC = function(recipe,
   else if (!is.list(recipe))
     stop('"Receipe" argument must be either a compiled ilike recipe, the filename of an ilike file, or a vector of filenames of ilike files.')
 
-  results_directory = make_results_directory(results_name,results_path)
+  if (!results_name == "")
+    results_directory = make_results_directory(results_name,results_path)
+  else
+    results_directory = ""
 
   if (is.null(seed))
   {
@@ -108,19 +113,41 @@ SMC_with_MCMC = function(recipe,
     mcmc_weights_method = list()
   }
 
-  return(do_smc_mcmc_move(recipe,
-                          model_parameter_list,
-                          algorithm_parameter_list,
-                          number_of_particles,
-                          mcmc_termination_method,
-                          mcmc_weights_method,
-                          smc_sequencer_method,
-                          adaptive_target_method,
-                          smc_termination_method,
-                          smc_iterations_to_store,
-                          write_to_file_at_each_iteration,
-                          parallel,
-                          grain_size,
-                          results_directory,
-                          seed))
+  if (length(fixed_parameter_list)==0)
+  {
+    return(do_smc_mcmc_move(recipe,
+                            model_parameter_list,
+                            algorithm_parameter_list,
+                            number_of_particles,
+                            mcmc_termination_method,
+                            mcmc_weights_method,
+                            smc_sequencer_method,
+                            adaptive_target_method,
+                            smc_termination_method,
+                            smc_iterations_to_store,
+                            write_to_file_at_each_iteration,
+                            parallel,
+                            grain_size,
+                            results_directory,
+                            seed))
+  }
+  else
+  {
+    return(do_smc_mcmc_move_with_fixed_params(recipe,
+                            model_parameter_list,
+                            algorithm_parameter_list,
+                            fixed_parameter_list,
+                            number_of_particles,
+                            mcmc_termination_method,
+                            mcmc_weights_method,
+                            smc_sequencer_method,
+                            adaptive_target_method,
+                            smc_termination_method,
+                            smc_iterations_to_store,
+                            write_to_file_at_each_iteration,
+                            parallel,
+                            grain_size,
+                            results_directory,
+                            seed))
+  }
 }

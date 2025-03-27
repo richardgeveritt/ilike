@@ -1,7 +1,7 @@
 #' Particle filter
 #'
 #' @param recipe A pre-compiled ilike recipe, or an ilike file, or a vector of ilike files.
-#' @param results_name The name of the directory to which results will be written.
+#' @param results_name (optional) The name of the directory to which results will be written (default is to not write output to file).
 #' @param results_path (optional) The path in which the results folder will be created (current working directory is the default).
 #' @param number_of_particles The number of particles.
 #' @param parallel (optional) Set to true to perform the importance sampling in parallel, false for serial.
@@ -20,7 +20,7 @@
 #' @return Estimate of the marginal likelihood.
 #' @export
 PF = function(recipe,
-                           results_name,
+                           results_name = "",
                            results_path = getwd(),
                            number_of_particles,
                            parallel = FALSE,
@@ -48,7 +48,10 @@ PF = function(recipe,
   else if (!is.list(recipe))
     stop('"Receipe" argument must be either a compiled ilike recipe, the filename of an ilike file, or a vector of filenames of ilike files.')
 
-  results_directory = make_results_directory(results_name,results_path)
+  if (!results_name == "")
+    results_directory = make_results_directory(results_name,results_path)
+  else
+    results_directory = ""
 
   if (is.null(seed))
   {

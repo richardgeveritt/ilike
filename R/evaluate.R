@@ -1,10 +1,10 @@
-#' Importance sampler.
+#' Evaluate a model specified in a recipe.
 #'
 #' @param recipe A pre-compiled ilike recipe, or an ilike file, or a vector of ilike files.
 #' @param results_name (optional) The name of the directory to which results will be written (default is to not write output to file).
 #' @param results_path (optional) The path in which the results folder will be created (current working directory is the default).
-#' @param number_of_importance_points The number of importance points.
-#' @param parallel (optional) Set to true to perform the importance sampling in parallel, false for serial.
+#' @param parameters A list containing the parameters at which to evaluate the model.
+#' @param index (optional) The index of the factors to evaluate, where the indexing starts at 1 (default is to evaluate all factors).
 #' @param model_parameter_list (optional) A list containing parameters for the model.
 #' @param algorithm_parameter_list (optional) A list containing named parameters for the algorithm.
 #' @param fixed_parameter_list (optional) A list containing parameters to condition on.
@@ -17,22 +17,23 @@
 #' @param grain_size (optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).
 #' @return Estimate of the marginal likelihood.
 #' @export
-IS = function(recipe,
-                             results_name = "",
-                             results_path = getwd(),
-                             number_of_importance_points,
-                             parallel = FALSE,
-                             model_parameter_list = list(),
-                             algorithm_parameter_list = list(),
-                             fixed_parameter_list = list(),
-                             external_packages = c(),
-                             julia_bin_dir="",
-                             julia_required_libraries=c(),
-                             verify_cpp_function_types=FALSE,
-                             keep_temporary_recipe_code=FALSE,
-                             seed = NULL,
-                             grain_size = 100000)
+evaluate_log = function(recipe,
+                         results_name = "",
+                         results_path = getwd(),
+                    parameters,
+                    index = matrix(0,0,0),
+                         model_parameter_list = list(),
+                         algorithm_parameter_list = list(),
+                    fixed_parameter_list = list(),
+                         external_packages = c(),
+                         julia_bin_dir="",
+                         julia_required_libraries=c(),
+                         verify_cpp_function_types=FALSE,
+                         keep_temporary_recipe_code=FALSE,
+                         seed = NULL,
+                         grain_size = 100000)
 {
+
   if (is.character(recipe))
     recipe = compile(filenames = recipe,
                      model_parameter_list = model_parameter_list,
@@ -58,26 +59,23 @@ IS = function(recipe,
 
   if (length(fixed_parameter_list)==0)
   {
-    return(do_importance_sampler(recipe,
-                                 model_parameter_list,
-                                 algorithm_parameter_list,
-                                 number_of_importance_points,
-                                 parallel,
-                                 grain_size,
-                                 results_directory,
-                                 seed))
+    return(do_evaluate_log(recipe,
+                            model_parameter_list,
+                            algorithm_parameter_list,
+                            parameters,
+                            index,
+                            results_directory,
+                            seed))
   }
   else
   {
-    return(do_importance_sampler_with_fixed_params(recipe,
+    return(do_evaluate_log_with_fixed_params(recipe,
                                  model_parameter_list,
                                  algorithm_parameter_list,
                                  fixed_parameter_list,
-                                 number_of_importance_points,
-                                 parallel,
-                                 grain_size,
+                                 parameters,
+                                 index,
                                  results_directory,
                                  seed))
   }
-
 }
