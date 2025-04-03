@@ -241,7 +241,7 @@ Data get_data(const List &model) {
 
     // return load_data(data_SEXP);
   } else {
-    Rcpp::stop("data not found in model specification.");
+    return Data();
   }
 }
 
