@@ -1,0 +1,5 @@
+
+/***evaluate_log_prior***/
+double evaluate_norm(const Parameters &parameters) {
+  return dnorm(parameters["x"][0], 0.0, 1.0);
+}
