@@ -6479,7 +6479,7 @@ compile <- function(filenames,
           if (pre_blocks==TRUE)
           {
             writeLines(c('#include <RcppArmadillo.h>',
-              '// [[Rcpp::depends(RcppArmadillo)]]',
+            #  '// [[Rcpp::depends(RcppArmadillo)]]',
               '// [[Rcpp::depends(ilike)]]',
               '// [[Rcpp::depends(BH)]]',
               '// [[Rcpp::depends(dqrng)]]',
