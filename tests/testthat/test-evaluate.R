@@ -11,7 +11,20 @@ test_that("evaluate_log works for various priors", {
   output = evaluate_log(recipe,
                         parameters = list(x=0.5))
 
-  expect_equal(signif(output, digits = 7), signif(dnorm(0.5,0,1,log=TRUE), digits = 7))
+  x = 0.5
+  truth = 0
+  truth = truth + dunif(x,log=TRUE)
+  truth = truth + dunif(x,-2,2,log=TRUE)
+
+  x2 = matrix(0.5,2,1)
+  #truth = truth + dunif(x2,matrix(-2,2,1),matrix(2,2,1),log=TRUE)
+
+
+
+  truth = truth + dnorm(x,0,1,log=TRUE)
+
+
+  expect_equal(signif(output, digits = 7), signif(truth, digits = 7))
 
   # data("gaussian")
   #
