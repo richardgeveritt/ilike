@@ -1,5 +1,9 @@
 test_that("evaluate_log works for various priors", {
 
+  skip_on_cran()
+
+  Sys.setenv(PKG_CPPFLAGS = paste0("-I", system.file("include", package = "ilike")))
+
   filename = system.file("extdata", "evaluate_priors.ilike", package = "ilike")
 
   recipe = compile(filename)

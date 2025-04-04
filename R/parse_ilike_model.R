@@ -6478,12 +6478,12 @@ compile <- function(filenames,
           # Write initial lines to file.
           if (pre_blocks==TRUE)
           {
-            writeLines(c('#include <RcppArmadillo.h>',
-            #  '// [[Rcpp::depends(RcppArmadillo)]]',
+            writeLines(c('// [[Rcpp::depends(RcppArmadillo)]]',
               '// [[Rcpp::depends(ilike)]]',
-            #  '// [[Rcpp::depends(BH)]]',
-            #  '// [[Rcpp::depends(dqrng)]]',
-            #  '// [[Rcpp::depends(sitmo)]]',
+              '// [[Rcpp::depends(BH)]]',
+              '// [[Rcpp::depends(dqrng)]]',
+              '// [[Rcpp::depends(sitmo)]]',
+              '#include <RcppArmadillo.h>',
               '\n',
               'using namespace Rcpp;',
               '#include <ilike.h>',
