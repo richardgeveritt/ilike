@@ -1,0 +1,15 @@
+double proposal_sd = 1.0;
+
+/***simulate_unadjusted_proposal***/
+Parameters simulate_langevin_proposal(RandomNumberGenerator &rng,
+                                      const Parameters &parameters) {
+  arma::colvec theta(1, 1);
+  theta[0] = rnorm(rng,
+                   parameters["theta"][0] + (proposal_sd * proposal_sd / 2.0) *
+                                                (-2.0) *
+                                                (parameters["theta"][0] - 1.0),
+                   sqrt(proposal_sd * proposal_sd));
+  return Parameters("theta", theta);
+}
+
+/***mcmc_termination,ilike::iterations(500000)***/

@@ -1,0 +1,3 @@
+/***simulate_mh_proposal,ilike::mirror(theta,1,1,1)***/
+
+/***mcmc_termination,ilike::iterations(500000)***/

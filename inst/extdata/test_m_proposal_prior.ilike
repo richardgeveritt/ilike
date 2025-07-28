@@ -1,0 +1,18 @@
+double proposal_sd = 1.0;
+
+/***simulate_m_proposal***/
+Parameters simulate_m_proposal(RandomNumberGenerator &rng,
+                               const Parameters &parameters) {
+  arma::colvec theta(1, 1);
+  theta[0] = rnorm(rng, parameters["theta"][0], proposal_sd);
+  return Parameters("theta", theta);
+}
+
+/***m_factor_index***/
+NumericVector m_factor_index() {
+  NumericVector factor_index =
+      NumericVector::create(1); // example where factor 1 is used
+  return factor_index;
+}
+
+/***mcmc_termination,ilike::iterations(500000)***/
