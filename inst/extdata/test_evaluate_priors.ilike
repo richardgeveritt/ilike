@@ -1,0 +1,138 @@
+
+/***evaluate_log_prior***/
+double evaluate_unif1(const Parameters &parameters) {
+  return dunif(parameters["x"][0]);
+}
+
+/***evaluate_log_prior***/
+double evaluate_unif2(const Parameters &parameters) {
+  return dunif(parameters["x"][0], -2.0, 2.0);
+}
+
+/***evaluate_log_prior***/
+double evaluate_unif3(const Parameters &parameters) {
+  arma::colvec x(2);
+  x(0) = parameters["x"][0];
+  x(1) = parameters["x"][0];
+  arma::mat lower(2, 1);
+  lower.fill(-2.0);
+  arma::mat upper(2, 1);
+  upper.fill(2.0);
+  return dunif(x, lower, upper);
+}
+
+/***evaluate_log_prior***/
+double evaluate_exp(const Parameters &parameters) {
+  return dexp(parameters["x"][0], 2.0);
+}
+
+/***evaluate_log_prior***/
+double evaluate_transexp(const Parameters &parameters) {
+  return dtranslatedexp(parameters["x"][0], 2.0, 0.2);
+}
+
+/***evaluate_log_prior***/
+double evaluate_poisson(const Parameters &parameters) {
+  return dpois(parameters["x"][0], 2.0);
+}
+
+/***evaluate_log_prior***/
+double evaluate_norm1(const Parameters &parameters) {
+  return dnorm(parameters["x"][0]);
+}
+
+/***evaluate_log_prior***/
+double evaluate_norm2(const Parameters &parameters) {
+  return dnorm(parameters["x"][0], 3.0, 2.0);
+}
+
+/***evaluate_log_prior***/
+double evaluate_norm3(const Parameters &parameters) {
+  arma::colvec x(2);
+  x(0) = parameters["x"][0];
+  x(1) = parameters["x"][0];
+  return sum(dnorm(x, 3.0, 2.0));
+}
+
+/***evaluate_log_prior***/
+double evaluate_norm4(const Parameters &parameters) {
+  arma::colvec x(2);
+  x(0) = parameters["x"][0];
+  x(1) = parameters["x"][0];
+  arma::colvec mean(2);
+  mean(0) = 3.0;
+  mean(1) = 3.0;
+  return sum(dnorm(x, mean, 2.0));
+}
+
+/***evaluate_log_prior***/
+double evaluate_norm5(const Parameters &parameters) {
+  arma::colvec x(2);
+  x(0) = parameters["x"][0];
+  x(1) = parameters["x"][0];
+  arma::colvec sd(2);
+  sd(0) = 2.0;
+  sd(1) = 2.0;
+  return sum(dnorm(x, 3.0, sd));
+}
+
+/***evaluate_log_prior***/
+double evaluate_norm6(const Parameters &parameters) {
+  arma::colvec x(2);
+  x(0) = parameters["x"][0];
+  x(1) = parameters["x"][0];
+  arma::colvec mean(2);
+  mean(0) = 3.0;
+  mean(1) = 3.0;
+  arma::colvec sd(2);
+  sd(0) = 2.0;
+  sd(1) = 2.0;
+  return sum(dnorm(x, mean, sd));
+}
+
+/***evaluate_log_prior***/
+double evaluate_tnorm1(const Parameters &parameters) {
+  return dtnorm(parameters["x"][0], 0.5, 2.0);
+}
+
+/***evaluate_log_prior***/
+double evaluate_tnorm2(const Parameters &parameters) {
+  return dtnorm(parameters["x"][0], 3.0, 2.0, 0.5, 2.0);
+}
+
+/***evaluate_log_prior***/
+double evaluate_tnorm3(const Parameters &parameters) {
+  arma::colvec x(2);
+  x(0) = parameters["x"][0];
+  x(1) = parameters["x"][0];
+  return sum(dtnorm(x, 3.0, 2.0, 0.5, 2.0));
+}
+
+/***evaluate_log_prior***/
+double evaluate_mvnorm(const Parameters &parameters) {
+  arma::colvec x(2);
+  x(0) = parameters["x"][0];
+  x(1) = parameters["x"][0];
+  arma::colvec mean(2);
+  mean(0) = 3.0;
+  mean(1) = 3.0;
+  arma::mat cov(2, 2);
+  cov(0, 0) = 2.0;
+  cov(1, 1) = 2.0;
+  return dmvnorm(x, mean, cov);
+}
+
+/***evaluate_log_prior***/
+double evaluate_gamma(const Parameters &parameters) {
+  return dgamma(parameters["x"][0], 3.0, 2.0);
+}
+
+/***evaluate_log_prior***/
+double evaluate_lnorm(const Parameters &parameters) {
+  return dlnorm(parameters["x"][0], 3.0, 2.0);
+}
+
+/***evaluate_log_prior***/
+double plnorm(const Parameters &parameters) {
+  return plnorm(parameters["x"][0], 3.0, 2.0);
+}

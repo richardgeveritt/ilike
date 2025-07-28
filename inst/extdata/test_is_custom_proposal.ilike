@@ -1,0 +1,26 @@
+/***data***/
+Data set_data() {
+  arma::colvec x(1);
+  x(0) = 1.0;
+  return Data("x", x);
+}
+
+/***simulate_is_proposal***/
+Parameters simulate_prior(RandomNumberGenerator &rng) {
+  return Parameters("theta", rnorm(rng, 1.0, 3.0));
+}
+
+/***evaluate_log_is_proposal***/
+double evaluate_log_prop(const Parameters &params) {
+  return dnorm(params["theta"][0], 1.0, 3.0);
+}
+
+/***evaluate_log_prior***/
+double evaluate_log_prior(const Parameters &params) {
+  return dnorm(params["theta"][0], 1.0, 2.0);
+}
+
+/***evaluate_log_likelihood***/
+double evaluate_likelihood(const Parameters &params, const Data &data) {
+  return dnorm(data["x"][0], params["theta"][0], 0.5);
+}

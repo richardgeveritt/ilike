@@ -654,13 +654,14 @@ Evaluates the log of the standard truncated normal density, with bounds given by
 `min` and `max`, at the point `x`.
 */
 inline double dtnorm(double x, double min, double max) {
+
   if (x < min)
     return -arma::datum::inf;
   else if (x > max)
     return -arma::datum::inf;
   else {
-    return -0.5 * log(2.0 * M_PI) - 0.5 * std::pow(x, 2.0) -
-           log(erf(max) - erf(min));
+    return -0.5 * log(2.0 * M_PI) - 0.5 * std::pow(x, 2.0) + log(2.0) -
+           log(erf(max / sqrt(2.0)) - erf(min / sqrt(2.0)));
   }
 }
 
@@ -669,6 +670,7 @@ Evaluates the log of the truncated normal density with mean `mean` and standard
 deviation `sd`, with bounds given by `min` and `max`, at the point `x`.
 */
 inline double dtnorm(double x, double mean, double sd, double min, double max) {
+
   if (x < min)
     return -arma::datum::inf;
   else if (x > max)
@@ -684,8 +686,9 @@ inline double dtnorm(double x, double mean, double sd, double min, double max) {
         return -arma::datum::inf;
     }
     return -log(sd) - 0.5 * log(2.0 * M_PI) -
-           0.5 * std::pow((x - mean) / sd, 2.0) -
-           log(erf((max - mean) / sd) - erf((min - mean) / sd));
+           0.5 * std::pow((x - mean) / sd, 2.0) + log(2.0) -
+           log(erf((max - mean) / (sd * sqrt(2.0))) -
+               erf((min - mean) / (sd * sqrt(2.0))));
   }
 }
 
@@ -721,7 +724,8 @@ inline arma::colvec dtnorm(const arma::colvec &x, double mean, double sd,
     return result;
   }
 
-  double erf_part = -log(erf((max - mean) / sd) - erf((min - mean) / sd));
+  double erf_part = log(2.0) - log(erf((max - mean) / (sd * sqrt(2.0))) -
+                                   erf((min - mean) / (sd * sqrt(2.0))));
 
   for (size_t i = 0; i < n; ++i) {
     if (x[i] < min)
@@ -820,12 +824,10 @@ inline double dmvnorm(const arma::colvec &x, const arma::colvec &mu,
                       const arma::mat &Sigma) {
   double result;
   arma::colvec x_minus_mean = x - mu;
-  
   result = -((arma::size(Sigma)[0] / 2.0) * log(2.0 * M_PI)) -
            0.5 * arma::log_det_sympd(Sigma);
 
   arma::mat b = x_minus_mean.t() * arma::inv_sympd(Sigma) * x_minus_mean;
-
   result = result - 0.5 * b(0, 0);
   return result;
 }
