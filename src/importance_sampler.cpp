@@ -219,6 +219,7 @@ namespace ilike
                                        const std::string &target_variable_in,
                                        const std::vector<LikelihoodEstimator *> &likelihood_estimators_in,
                                        IndependentProposalKernel *proposal_in,
+                                       Index* without_cancelled_index,
                                        bool proposal_is_evaluated_in,
                                        bool store_output,
                                        bool smcfixed_flag_in,
@@ -232,11 +233,12 @@ namespace ilike
     proposal_in->set_proposal_parameters(&this->algorithm_parameters);
 
     // Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
-    std::vector<size_t> indices;
-    indices.reserve(likelihood_estimators_in.size());
-    for (size_t i = 0; i < likelihood_estimators_in.size(); ++i)
-      indices.push_back(i);
-    this->index = new VectorIndex(indices);
+    //std::vector<size_t> indices;
+    //indices.reserve(likelihood_estimators_in.size());
+    //for (size_t i = 0; i < likelihood_estimators_in.size(); ++i)
+    //  indices.push_back(i);
+    //this->index = new VectorIndex(indices);
+    this->index = without_cancelled_index;
 
     this->factors = new VectorFactors(likelihood_estimators_in);
 
@@ -286,6 +288,7 @@ namespace ilike
                                        double target_value_in,
                                        const std::vector<LikelihoodEstimator *> &likelihood_estimators_in,
                                        IndependentProposalKernel *proposal_in,
+                                       Index* without_cancelled_index,
                                        bool proposal_is_evaluated_in,
                                        bool store_output,
                                        bool smcfixed_flag_in,
@@ -299,11 +302,12 @@ namespace ilike
     proposal_in->set_proposal_parameters(&this->algorithm_parameters);
 
     // Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
-    std::vector<size_t> indices;
-    indices.reserve(likelihood_estimators_in.size());
-    for (size_t i = 0; i < likelihood_estimators_in.size(); ++i)
-      indices.push_back(i);
-    this->index = new VectorIndex(indices);
+    //std::vector<size_t> indices;
+    //indices.reserve(likelihood_estimators_in.size());
+    //for (size_t i = 0; i < likelihood_estimators_in.size(); ++i)
+    //  indices.push_back(i);
+    //this->index = new VectorIndex(indices);
+    this->index = without_cancelled_index;
 
     this->factors = new VectorFactors(likelihood_estimators_in);
 

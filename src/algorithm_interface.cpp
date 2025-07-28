@@ -4750,7 +4750,7 @@ ImportanceSampler *get_importance_sampler(
 
   return new ImportanceSampler(
       rng, seed, the_data, algorithm_parameters, number_of_importance_points,
-      "", likelihood_estimators, proposal_in, proposal_is_evaluated_in, true,
+      "", likelihood_estimators, proposal_in, without_cancelled_index, proposal_is_evaluated_in, true,
       true, true, false, parallel_in, grain_size_in, "");
 }
 

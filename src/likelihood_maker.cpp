@@ -866,6 +866,9 @@ namespace ilike
                                                                           abc_parallel_in,
                                                                           abc_grain_size_in));
 
+    std::vector<size_t> indices;
+    indices.push_back(0);
+    Index* index = new VectorIndex(indices);
     return new ImportanceSampler(rng_in,
                                  seed_in,
                                  data_in,
@@ -875,6 +878,7 @@ namespace ilike
                                  epsilon_in,
                                  abc_likelihood,
                                  prior_in,
+                                 index,
                                  false,
                                  is_store_output_in,
                                  true,
@@ -924,6 +928,9 @@ namespace ilike
                                                                           abc_parallel_in,
                                                                           abc_grain_size_in));
 
+    std::vector<size_t> indices;
+    indices.push_back(0);
+    Index* index = new VectorIndex(indices);
     return new ImportanceSampler(rng_in,
                                  seed_in,
                                  summary_data_in,
@@ -933,6 +940,7 @@ namespace ilike
                                  epsilon_in,
                                  abc_likelihood,
                                  prior_in,
+                                 index,
                                  false,
                                  is_store_output_in,
                                  true,
@@ -978,6 +986,9 @@ namespace ilike
                                                                         abc_parallel_in,
                                                                         abc_grain_size_in));
 
+    std::vector<size_t> indices;
+    indices.push_back(0);
+    Index* index = new VectorIndex(indices);
     return new ImportanceSampler(rng_in,
                                  seed_in,
                                  data_in,
@@ -987,6 +998,7 @@ namespace ilike
                                  epsilon_in,
                                  abc_likelihood,
                                  prior_in,
+                                 index,
                                  false,
                                  is_store_output_in,
                                  true,
@@ -1051,6 +1063,9 @@ namespace ilike
                                                                     abc_parallel_in,
                                                                     abc_grain_size_in));
 
+    std::vector<size_t> indices;
+    indices.push_back(0);
+    Index* index = new VectorIndex(indices);
     return new ImportanceSampler(rng_in,
                                  seed_in,
                                  data_in,
@@ -1060,6 +1075,7 @@ namespace ilike
                                  epsilon_in,
                                  abc_likelihood,
                                  prior_in,
+                                 index,
                                  false,
                                  is_store_output_in,
                                  true,
@@ -1128,6 +1144,9 @@ namespace ilike
                                                                     abc_parallel_in,
                                                                     abc_grain_size_in));
 
+    std::vector<size_t> indices;
+    indices.push_back(0);
+    Index* index = new VectorIndex(indices);
     return new ImportanceSampler(rng_in,
                                  seed_in,
                                  summary_data_in,
@@ -1137,6 +1156,7 @@ namespace ilike
                                  min_epsilon,
                                  abc_likelihood,
                                  prior_in,
+                                 index,
                                  false,
                                  is_store_output_in,
                                  true,
@@ -1349,6 +1369,9 @@ namespace ilike
                                                                         abc_parallel_in,
                                                                         abc_grain_size_in));
 
+    std::vector<size_t> indices;
+    indices.push_back(0);
+    Index* index = new VectorIndex(indices);
     return new ImportanceSampler(rng_in,
                                  seed_in,
                                  summary_data_in,
@@ -1358,6 +1381,7 @@ namespace ilike
                                  epsilon_in,
                                  abc_likelihood,
                                  prior_in,
+                                 index,
                                  false,
                                  is_store_output_in,
                                  true,
@@ -1987,6 +2011,9 @@ namespace ilike
                                                sl_parallel_in,
                                                sl_grain_size_in));
 
+    std::vector<size_t> indices;
+    indices.push_back(0);
+    Index* index = new VectorIndex(indices);
     return new ImportanceSampler(rng_in,
                                  seed_in,
                                  summary_data_in,
@@ -1995,6 +2022,7 @@ namespace ilike
                                  "",
                                  sl_likelihood,
                                  prior_in,
+                                 index,
                                  false,
                                  is_store_output_in,
                                  true,
