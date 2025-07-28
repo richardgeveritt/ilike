@@ -1,10 +1,11 @@
-proposal_sd = 1.0;
+double proposal_sd = 1.0;
 
 /***simulate_m_proposal***/
-Parameters simulate_m_proposal(RandomNumberGenerator &rng) {
+Parameters simulate_m_proposal(RandomNumberGenerator &rng,
+                               const Parameters &parameters) {
   arma::colvec theta(1, 1);
   theta[0] = rnorm(rng, parameters["theta"][0], proposal_sd);
   return Parameters("theta", theta);
 }
 
-/***mcmc_termination,ilike::iterations(100000)***/
+/***mcmc_termination,ilike::iterations(500000)***/
