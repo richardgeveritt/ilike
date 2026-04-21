@@ -16,6 +16,7 @@ DensityEstimateAdaptor::~DensityEstimateAdaptor()
 DensityEstimateAdaptor::DensityEstimateAdaptor(const DensityEstimateAdaptor &another)
 :SMCAdaptor(another)
 {
+  // copy
   this->make_copy(another);
 }
 
@@ -23,7 +24,7 @@ void DensityEstimateAdaptor::operator=(const DensityEstimateAdaptor &another)
 {
   if(this == &another)
     return;
-  
+
   SMCAdaptor::operator=(another);
   this->make_copy(another);
 }

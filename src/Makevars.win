@@ -6,3 +6,4 @@ PKG_LIBS += $(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript.exe" \
 
 PKG_CPPFLAGS += -I../inst/include/
 PKG_CPPFLAGS += -DBOOST_DISABLE_ASSERTS
+MAKEFLAGS += -j$(NUMBER_OF_PROCESSORS)

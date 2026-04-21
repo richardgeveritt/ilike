@@ -2,6 +2,7 @@
 % Please edit documentation in R/ilike-package.R
 \docType{package}
 \name{ilike}
+\alias{ilike-package}
 \alias{ilike}
 \title{ilike: Methods for Bayesian computation when the likelihood is intractable.}
 \description{
@@ -12,3 +13,16 @@ It contains some really useful stuff.
 Some functions.
 }
 
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/richardgeveritt/ilike}
+  \item \url{https://richardgeveritt.github.io/ilike/}
+  \item Report bugs at \url{https://github.com/richardgeveritt/ilike/issues}
+}
+
+}
+\author{
+\strong{Maintainer}: Richard G Everitt \email{richard.g.everitt@gmail.com} (\href{https://orcid.org/0000-0002-0822-5648}{ORCID})
+
+}
