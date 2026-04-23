@@ -6,3 +6,4 @@
 ^pkgdown$
 ^\.vscode$
 ^debug$
+^LICENSE\.md$

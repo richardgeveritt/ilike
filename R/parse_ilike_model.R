@@ -518,7 +518,7 @@ transition_model_processing = function(transition_model_number,blocks,block_name
       }
 
       # If any of the existing parts of the transition_model are of a completely different type to the block_name then make a new transition_model.
-      all_other_names = setdiff(all_names,ilike_likelihood_function_types)
+      all_other_names = setdiff(all_names,ilike_transition_model_types)
       for (i in 1:length(current_transition_model_names))
       {
         if ( current_transition_model_names[i] %in% all_other_names)
@@ -553,7 +553,7 @@ transition_model_processing = function(transition_model_number,blocks,block_name
       }
 
       # If any of the existing parts of the transition_model are of a completely different type to the block_name then make a new transition_model.
-      all_other_names = setdiff(all_names,custom_likelihood_function_types)
+      all_other_names = setdiff(all_names,custom_transition_model_types)
       for (i in 1:length(current_transition_model_names))
       {
         if ( current_transition_model_names[i] %in% all_other_names)
@@ -669,14 +669,6 @@ transition_model_processing = function(transition_model_number,blocks,block_name
         }
       }
     }
-    else if (block_name %in% other_likelihood_function_types)
-    {
-      if (print_block_ends)
-      {
-        print_transition_model_info(transition_model_number,blocks,line_counter-1)
-      }
-      transition_model_number = transition_model_number + 1
-    }
     else
     {
       stop(paste("Invalid block: ",block_name,'.',sep=""))
@@ -690,7 +682,7 @@ transition_model_processing = function(transition_model_number,blocks,block_name
   return(transition_model_number)
 }
 
-potential_function_processing = function(transition_model_number,blocks,block_name,custom_potential_function_types,ilike_potential_function_types,line_counter,print_block_ends)
+potential_function_processing = function(potential_function_number,blocks,block_name,custom_potential_function_types,ilike_potential_function_types,line_counter,print_block_ends)
 {
   # Is this a continuation of the current potential_function, or a new one?
 
@@ -703,7 +695,7 @@ potential_function_processing = function(transition_model_number,blocks,block_na
 
     current_potential_function_names = names(current_potential_function_info)
 
-    if (block_name %in% ilike_potential_function_function_types)
+    if (block_name %in% ilike_potential_function_types)
     {
       # potential_function is complete
       if ( ("potential_function" %in% names(current_potential_function_info)) && (block_name=="potential_function") )
@@ -716,7 +708,7 @@ potential_function_processing = function(transition_model_number,blocks,block_na
       }
 
       # If any of the existing parts of the potential_function are of a completely different type to the block_name then make a new potential_function.
-      all_other_names = setdiff(all_names,ilike_likelihood_function_types)
+      all_other_names = setdiff(all_names,ilike_potential_function_types)
       for (i in 1:length(current_potential_function_names))
       {
         if ( current_potential_function_names[i] %in% all_other_names)
@@ -730,7 +722,7 @@ potential_function_processing = function(transition_model_number,blocks,block_na
         }
       }
     }
-    if (block_name %in% custom_potential_function_function_types)
+    else if (block_name %in% custom_potential_function_types)
     {
       # potential_function is complete
       if ( ("evaluate_log_potential_function" %in% names(current_potential_function_info)) && (block_name=="evaluate_log_potential_function") )
@@ -743,7 +735,7 @@ potential_function_processing = function(transition_model_number,blocks,block_na
       }
 
       # If any of the existing parts of the potential_function are of a completely different type to the block_name then make a new potential_function.
-      all_other_names = setdiff(all_names,custom_likelihood_function_types)
+      all_other_names = setdiff(all_names,custom_potential_function_types)
       for (i in 1:length(current_potential_function_names))
       {
         if ( current_potential_function_names[i] %in% all_other_names)
@@ -796,7 +788,6 @@ is_proposal_processing = function(is_proposal_number,blocks,block_name,line_coun
       {
         print_is_proposal_info(is_proposal_number,blocks,line_counter-1)
       }
-      print_is_proposal_info(is_proposal_number,blocks,line_counter-1)
       is_proposal_number = is_proposal_number + 1
     }
     else if ( ("evaluate_log_is_proposal" %in% names(current_is_proposal_info)) || ("simulate_is_proposal" %in% names(current_is_proposal_info)) )
@@ -966,7 +957,7 @@ imh_proposal_processing = function(imh_proposal_number,blocks,block_name,line_co
       }
       imh_proposal_number = imh_proposal_number + 1
     }
-    else if ( ("evaluate_log_imh_proposal" %in% names(current_imh_proposal_info)) || ("simulate_imh_proposal" %in% names(current_imh_proposal_info)) || ("imh_transform" %in% names(current_mh_independent_proposal_info)) || ("imh_inverse_transform" %in% names(current_mh_independent_proposal_info)) || ("imh_transform_jacobian_matrix" %in% names(current_mh_independent_proposal_info)) )
+    else if ( ("evaluate_log_imh_proposal" %in% names(current_imh_proposal_info)) || ("simulate_imh_proposal" %in% names(current_imh_proposal_info)) || ("imh_transform" %in% names(current_imh_proposal_info)) || ("imh_inverse_transform" %in% names(current_imh_proposal_info)) || ("imh_transform_jacobian_matrix" %in% names(current_imh_proposal_info)) )
     {
       if ( ("imh_transform" %in% names(current_imh_proposal_info)) || ("imh_inverse_transform" %in% names(current_imh_proposal_info)) || ("imh_transform_jacobian_matrix" %in% names(current_imh_proposal_info)) )
       {
