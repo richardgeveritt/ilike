@@ -22,11 +22,11 @@
 #include <math.h>
 
 // save compiler switches
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
+//#pragma GCC diagnostic push
+//#pragma GCC diagnostic ignored "-Wpedantic"
 #include <boost/math/distributions.hpp>
 // restore compiler switches
-#pragma GCC diagnostic pop
+//#pragma GCC diagnostic pop
 
 #define BOOST_DISABLE_ASSERTS 1
 
