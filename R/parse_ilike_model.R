@@ -6681,7 +6681,10 @@ compile <- function(filenames,
         include_flags = c(include_flags, paste0("-I", inc))
       if (pkg == "RcppArmadillo")
       {
-        ld = tryCatch(RcppArmadillo::RcppArmadilloLdFlags(), error = function(e) "")
+        ld = tryCatch(
+          getExportedValue("RcppArmadillo", "RcppArmadilloLdFlags")(),
+          error = function(e) ""
+        )
         if (nchar(ld) > 0)
           lib_flags = c(lib_flags, ld)
       }
