@@ -6649,21 +6649,24 @@ compile <- function(filenames,
       # normally-installed packages (include) correctly.
       inc = system.file("include", package = pkg)
       if (nchar(inc) > 0 && dir.exists(inc)) return(inc)
-      # Direct filesystem fallback: on R CMD check, all LinkingTo deps are
-      # installed alongside ilike in libname, which may not be on .libPaths().
-      search_libs = unique(c(
+      # Rcpp is in Imports so find.package("Rcpp") always succeeds.  Its
+      # parent directory is the lib that contains ALL sibling packages
+      # (RcppArmadillo, BH, …), even when R CMD check has stripped .libPaths()
+      # back to just the check lib and .Library.
+      rcpp_lib = tryCatch(dirname(find.package("Rcpp")), error = function(e) "")
+      search_libs = unique(Filter(function(x) !is.na(x) && nchar(x) > 0, c(
         .ilike_env$libname,
+        rcpp_lib,
+        .libPaths(),
         .Library,
         .Library.site,
         strsplit(Sys.getenv("R_LIBS",      ""), .Platform$path.sep)[[1]],
         strsplit(Sys.getenv("R_LIBS_USER", ""), .Platform$path.sep)[[1]],
         strsplit(Sys.getenv("R_LIBS_SITE", ""), .Platform$path.sep)[[1]]
-      ))
+      )))
       for (lib in search_libs) {
-        if (!is.na(lib) && nchar(lib) > 0) {
-          candidate = file.path(lib, pkg, "include")
-          if (dir.exists(candidate)) return(candidate)
-        }
+        candidate = file.path(lib, pkg, "include")
+        if (dir.exists(candidate)) return(candidate)
       }
       return("")
     }
