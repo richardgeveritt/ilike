@@ -21,7 +21,7 @@ PKG_CXXFLAGS += -include pch.h
 $(OBJECTS): pch.h.gch
 
 pch.h.gch: pch.h
-    $(CXX) $(PCH_FLAGS) -x c++-header -o $@ $<
+	$(CXX) $(PCH_FLAGS) -x c++-header -o $@ $<
 
 PKG_CXXFLAGS += -include pch.h
 
