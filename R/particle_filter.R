@@ -17,7 +17,7 @@
 #' @param keep_temporary_recipe_code (optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE,
 #' @param seed (optional) The seed for the random number generator.
 #' @param grain_size (optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).
-#' @return Estimate of the marginal likelihood
+#' @return Estimate of the marginal likelihood.
 #' @export
 PF = function(recipe,
                            results_name = "",
