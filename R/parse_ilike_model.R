@@ -6639,41 +6639,68 @@ compile <- function(filenames,
 
   if (file.exists(model_for_compilation_name))
   {
-    # sourceCpp processes // [[Rcpp::depends(pkg)]] via find.package(), which
-    # requires each dep to be on .libPaths().  On R CMD check, LinkingTo-only
-    # packages may not be on .libPaths() during the test phase, so temporarily
-    # extend it with every library directory we can find.
-    extra_libs = unique(c(
-      .ilike_env$libname,
-      .Library,
-      .Library.site,
-      strsplit(Sys.getenv("R_LIBS",      ""), .Platform$path.sep)[[1]],
-      strsplit(Sys.getenv("R_LIBS_USER", ""), .Platform$path.sep)[[1]],
-      strsplit(Sys.getenv("R_LIBS_SITE", ""), .Platform$path.sep)[[1]]
-    ))
-    extra_libs = extra_libs[!is.na(extra_libs) & nchar(extra_libs) > 0 &
-                            dir.exists(extra_libs) & !(extra_libs %in% .libPaths())]
-    if (length(extra_libs) > 0)
-    {
-      old_libpaths = .libPaths()
-      on.exit(.libPaths(old_libpaths), add = TRUE)
-      .libPaths(c(.libPaths(), extra_libs))
+    # Strip ALL // [[Rcpp::depends(...)]] annotations so sourceCpp never calls
+    # find.package() or Rcpp:::.validatePackages() for any of them — both of
+    # which fail when LinkingTo-only packages are not on .libPaths() (R CMD
+    # check test phase).  Resolve every include path directly via the
+    # filesystem, without relying on find.package().
+    find_pkg_include = function(pkg) {
+      # system.file handles devtools-loaded packages (inst/include) and
+      # normally-installed packages (include) correctly.
+      inc = system.file("include", package = pkg)
+      if (nchar(inc) > 0 && dir.exists(inc)) return(inc)
+      # Direct filesystem fallback: on R CMD check, all LinkingTo deps are
+      # installed alongside ilike in libname, which may not be on .libPaths().
+      search_libs = unique(c(
+        .ilike_env$libname,
+        .Library,
+        .Library.site,
+        strsplit(Sys.getenv("R_LIBS",      ""), .Platform$path.sep)[[1]],
+        strsplit(Sys.getenv("R_LIBS_USER", ""), .Platform$path.sep)[[1]],
+        strsplit(Sys.getenv("R_LIBS_SITE", ""), .Platform$path.sep)[[1]]
+      ))
+      for (lib in search_libs) {
+        if (!is.na(lib) && nchar(lib) > 0) {
+          candidate = file.path(lib, pkg, "include")
+          if (dir.exists(candidate)) return(candidate)
+        }
+      }
+      return("")
     }
 
-    # // [[Rcpp::depends(ilike)]] cannot be resolved by sourceCpp when the
-    # package is devtools-loaded (headers are in inst/include/, not include/).
-    # Strip that annotation and supply the path explicitly via PKG_CPPFLAGS
-    # using system.file(), which handles both installed and devtools cases.
-    ilike_inc = system.file("include", package = "ilike")
+    depends_pkgs = c("ilike", "Rcpp", "RcppArmadillo", "BH", "dqrng", "sitmo")
+    include_flags = character(0)
+    lib_flags = character(0)
+    for (pkg in depends_pkgs)
+    {
+      inc = find_pkg_include(pkg)
+      if (nchar(inc) > 0)
+        include_flags = c(include_flags, paste0("-I", inc))
+      if (pkg == "RcppArmadillo")
+      {
+        ld = tryCatch(RcppArmadillo::RcppArmadilloLdFlags(), error = function(e) "")
+        if (nchar(ld) > 0)
+          lib_flags = c(lib_flags, ld)
+      }
+    }
+
     src_lines = readLines(model_for_compilation_name)
-    src_lines = src_lines[!grepl("^// *\\[\\[Rcpp::depends\\(ilike\\)", src_lines)]
+    src_lines = src_lines[!grepl("^// *\\[\\[Rcpp::depends", src_lines)]
+    if (!any(grepl("Rcpp::plugins", src_lines)))
+      src_lines = c("// [[Rcpp::plugins(cpp14)]]", src_lines)
     writeLines(src_lines, model_for_compilation_name)
 
     old_cppflags = Sys.getenv("PKG_CPPFLAGS")
-    new_cppflags = if (nchar(ilike_inc) > 0) paste0("-I", ilike_inc) else ""
+    old_libs     = Sys.getenv("PKG_LIBS")
+    new_cppflags = paste(include_flags, collapse = " ")
     if (nchar(old_cppflags) > 0) new_cppflags = paste(new_cppflags, old_cppflags)
-    Sys.setenv(PKG_CPPFLAGS = new_cppflags)
-    on.exit(Sys.setenv(PKG_CPPFLAGS = old_cppflags), add = TRUE)
+    new_libs = paste(lib_flags, collapse = " ")
+    if (nchar(old_libs) > 0) new_libs = paste(new_libs, old_libs)
+    Sys.setenv(PKG_CPPFLAGS = new_cppflags, PKG_LIBS = new_libs)
+    on.exit({
+      Sys.setenv(PKG_CPPFLAGS = old_cppflags)
+      Sys.setenv(PKG_LIBS = old_libs)
+    }, add = TRUE)
 
     Rcpp::sourceCpp(model_for_compilation_name)
   }
