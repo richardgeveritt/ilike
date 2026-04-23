@@ -6639,28 +6639,12 @@ compile <- function(filenames,
 
   if (file.exists(model_for_compilation_name))
   {
-    # Build include paths manually for all Rcpp::depends packages, then strip
-    # the annotations so sourceCpp does not call find.package() internally —
-    # which can fail on CI environments where LinkingTo packages are only
-    # present in the build-time library, not the test-time library path.
-    # Use system.file("include", package=pkg) for all deps — it handles both
-    # installed packages and devtools-loaded packages correctly, and returns ""
-    # when the directory does not exist (unlike find.package + file.path).
-    depends_pkgs = c("ilike", "Rcpp", "RcppArmadillo", "BH", "dqrng", "sitmo")
-    include_flags = character(0)
-    lib_flags = character(0)
-    for (pkg in depends_pkgs)
-    {
-      inc = system.file("include", package = pkg)
-      if (nchar(inc) > 0)
-        include_flags = c(include_flags, paste0("-I", inc))
-      if (pkg == "RcppArmadillo")
-      {
-        ld = tryCatch(RcppArmadillo::RcppArmadilloLdFlags(), error = function(e) "")
-        if (nchar(ld) > 0)
-          lib_flags = c(lib_flags, ld)
-      }
-    }
+    # Use include/lib flags captured at package load time (.onLoad in zzz.R),
+    # when all LinkingTo deps are guaranteed to be on .libPaths().
+    # This is robust to CI environments where LinkingTo-only packages are not
+    # on .libPaths() during the test phase.
+    new_cppflags_base = .ilike_env$sourcecpp_cppflags
+    lib_flags_base = .ilike_env$sourcecpp_libs
 
     # Strip Rcpp::depends annotations and add cpp14 plugin so sourceCpp does
     # not attempt its own find.package() resolution.
@@ -6672,9 +6656,9 @@ compile <- function(filenames,
 
     old_cppflags = Sys.getenv("PKG_CPPFLAGS")
     old_libs     = Sys.getenv("PKG_LIBS")
-    new_cppflags = paste(include_flags, collapse = " ")
+    new_cppflags = new_cppflags_base
     if (nchar(old_cppflags) > 0) new_cppflags = paste(new_cppflags, old_cppflags)
-    new_libs = paste(lib_flags, collapse = " ")
+    new_libs = lib_flags_base
     if (nchar(old_libs) > 0) new_libs = paste(new_libs, old_libs)
     Sys.setenv(PKG_CPPFLAGS = new_cppflags, PKG_LIBS = new_libs)
     on.exit({
