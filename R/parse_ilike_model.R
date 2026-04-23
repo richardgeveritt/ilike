@@ -6643,28 +6643,22 @@ compile <- function(filenames,
     # the annotations so sourceCpp does not call find.package() internally —
     # which can fail on CI environments where LinkingTo packages are only
     # present in the build-time library, not the test-time library path.
-    depends_pkgs = c("Rcpp", "RcppArmadillo", "BH", "dqrng", "sitmo")
+    # Use system.file("include", package=pkg) for all deps — it handles both
+    # installed packages and devtools-loaded packages correctly, and returns ""
+    # when the directory does not exist (unlike find.package + file.path).
+    depends_pkgs = c("ilike", "Rcpp", "RcppArmadillo", "BH", "dqrng", "sitmo")
     include_flags = character(0)
     lib_flags = character(0)
-    # ilike headers: system.file handles both installed ("include/") and
-    # devtools-loaded ("inst/include/") correctly.
-    ilike_inc = system.file("include", package = "ilike")
-    if (nchar(ilike_inc) > 0)
-      include_flags = c(include_flags, paste0("-I", ilike_inc))
     for (pkg in depends_pkgs)
     {
-      pkg_path = tryCatch(find.package(pkg, quiet = TRUE), error = function(e) character(0))
-      if (length(pkg_path) > 0 && nchar(pkg_path[1]) > 0)
+      inc = system.file("include", package = pkg)
+      if (nchar(inc) > 0)
+        include_flags = c(include_flags, paste0("-I", inc))
+      if (pkg == "RcppArmadillo")
       {
-        inc = file.path(pkg_path[1], "include")
-        if (dir.exists(inc))
-          include_flags = c(include_flags, paste0("-I", inc))
-        if (pkg == "RcppArmadillo")
-        {
-          ld = tryCatch(RcppArmadillo::RcppArmadilloLdFlags(), error = function(e) "")
-          if (nchar(ld) > 0)
-            lib_flags = c(lib_flags, ld)
-        }
+        ld = tryCatch(RcppArmadillo::RcppArmadilloLdFlags(), error = function(e) "")
+        if (nchar(ld) > 0)
+          lib_flags = c(lib_flags, ld)
       }
     }
 
