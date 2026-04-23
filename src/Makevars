@@ -3,3 +3,15 @@ PKG_LIBS += $(shell ${R_HOME}/bin/Rscript -e "RcppParallel::RcppParallelLibs()")
 PKG_CPPFLAGS += -I../inst/include/
 PKG_CPPFLAGS += -DBOOST_DISABLE_ASSERTS
 MAKEFLAGS += -j$(shell sysctl -n hw.logicalcpu)
+
+PCH_FLAGS = $(ALL_CPPFLAGS) $(ALL_CXXFLAGS)
+
+.PHONY: all
+all: $(SHLIB)
+
+pch.h.gch: pch.h
+	$(CXX) $(PCH_FLAGS) -x c++-header -o $@ $<
+
+PKG_CXXFLAGS += -include pch.h
+
+$(OBJECTS): pch.h.gch
