@@ -1,3 +1,5 @@
+utils::globalVariables(c("ParameterName", "Dimension"))
+
 #' Gets a seed for random number generation by using the processor time stamp (calling rdtsc in C).
 #'
 #' @return An integer.
