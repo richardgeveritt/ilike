@@ -6635,7 +6635,20 @@ compile <- function(filenames,
 
   if (file.exists(model_for_compilation_name))
   {
-    Rcpp::sourceCpp(model_for_compilation_name)
+    ilike_include_path = system.file("include", package = "ilike")
+    if (nchar(ilike_include_path) > 0)
+    {
+      old_flags = Sys.getenv("PKG_CPPFLAGS")
+      new_flags = paste0("-I", ilike_include_path)
+      if (nchar(old_flags) > 0) new_flags = paste(new_flags, old_flags)
+      Sys.setenv(PKG_CPPFLAGS = new_flags)
+      on.exit(Sys.setenv(PKG_CPPFLAGS = old_flags), add = TRUE)
+      Rcpp::sourceCpp(model_for_compilation_name)
+    }
+    else
+    {
+      Rcpp::sourceCpp(model_for_compilation_name)
+    }
   }
 
   if (keep_temporary_recipe_code==FALSE)
