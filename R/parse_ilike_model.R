@@ -6326,7 +6326,9 @@ compile <- function(filenames,
 
   if (length(filenames)>1)
   {
-    temporary_stacked_ilike_filename = paste("temporary_ilike_file",nesting_level,"_",ceiling(stats::runif(1, 0, 10^7)),".ilike",sep="")
+    temporary_stacked_ilike_filename = file.path(tempdir(), paste("temporary_ilike_file",nesting_level,"_",ceiling(stats::runif(1, 0, 10^7)),".ilike",sep=""))
+    if (keep_temporary_recipe_code==FALSE)
+      on.exit(unlink(temporary_stacked_ilike_filename), add = TRUE)
     ilikefileConn<-file(temporary_stacked_ilike_filename,open="w")
 
 
@@ -6399,7 +6401,9 @@ compile <- function(filenames,
   }
 
   # Setup .cpp to be written to.
-  model_for_compilation_name = paste("model_for_compilation",nesting_level,"_",ceiling(stats::runif(1, 0, 10^7)),".cpp",sep="")
+  model_for_compilation_name = file.path(tempdir(), paste("model_for_compilation",nesting_level,"_",ceiling(stats::runif(1, 0, 10^7)),".cpp",sep=""))
+  if (keep_temporary_recipe_code==FALSE)
+    on.exit(unlink(model_for_compilation_name), add = TRUE)
   fileConn<-file(model_for_compilation_name,open="w")
 
   if (length(filenames)>1)
@@ -6635,31 +6639,59 @@ compile <- function(filenames,
 
   if (file.exists(model_for_compilation_name))
   {
-    ilike_include_path = system.file("include", package = "ilike")
-    if (nchar(ilike_include_path) > 0)
+    # Build include paths manually for all Rcpp::depends packages, then strip
+    # the annotations so sourceCpp does not call find.package() internally —
+    # which can fail on CI environments where LinkingTo packages are only
+    # present in the build-time library, not the test-time library path.
+    depends_pkgs = c("Rcpp", "RcppArmadillo", "BH", "dqrng", "sitmo")
+    include_flags = character(0)
+    lib_flags = character(0)
+    # ilike headers: system.file handles both installed ("include/") and
+    # devtools-loaded ("inst/include/") correctly.
+    ilike_inc = system.file("include", package = "ilike")
+    if (nchar(ilike_inc) > 0)
+      include_flags = c(include_flags, paste0("-I", ilike_inc))
+    for (pkg in depends_pkgs)
     {
-      old_flags = Sys.getenv("PKG_CPPFLAGS")
-      new_flags = paste0("-I", ilike_include_path)
-      if (nchar(old_flags) > 0) new_flags = paste(new_flags, old_flags)
-      Sys.setenv(PKG_CPPFLAGS = new_flags)
-      on.exit(Sys.setenv(PKG_CPPFLAGS = old_flags), add = TRUE)
-      Rcpp::sourceCpp(model_for_compilation_name)
+      pkg_path = tryCatch(find.package(pkg, quiet = TRUE), error = function(e) character(0))
+      if (length(pkg_path) > 0 && nchar(pkg_path[1]) > 0)
+      {
+        inc = file.path(pkg_path[1], "include")
+        if (dir.exists(inc))
+          include_flags = c(include_flags, paste0("-I", inc))
+        if (pkg == "RcppArmadillo")
+        {
+          ld = tryCatch(RcppArmadillo::RcppArmadilloLdFlags(), error = function(e) "")
+          if (nchar(ld) > 0)
+            lib_flags = c(lib_flags, ld)
+        }
+      }
     }
-    else
-    {
-      Rcpp::sourceCpp(model_for_compilation_name)
-    }
+
+    # Strip Rcpp::depends annotations and add cpp14 plugin so sourceCpp does
+    # not attempt its own find.package() resolution.
+    src_lines = readLines(model_for_compilation_name)
+    src_lines = src_lines[!grepl("^// *\\[\\[Rcpp::depends", src_lines)]
+    if (!any(grepl("Rcpp::plugins", src_lines)))
+      src_lines = c("// [[Rcpp::plugins(cpp14)]]", src_lines)
+    writeLines(src_lines, model_for_compilation_name)
+
+    old_cppflags = Sys.getenv("PKG_CPPFLAGS")
+    old_libs     = Sys.getenv("PKG_LIBS")
+    new_cppflags = paste(include_flags, collapse = " ")
+    if (nchar(old_cppflags) > 0) new_cppflags = paste(new_cppflags, old_cppflags)
+    new_libs = paste(lib_flags, collapse = " ")
+    if (nchar(old_libs) > 0) new_libs = paste(new_libs, old_libs)
+    Sys.setenv(PKG_CPPFLAGS = new_cppflags, PKG_LIBS = new_libs)
+    on.exit({
+      Sys.setenv(PKG_CPPFLAGS = old_cppflags)
+      Sys.setenv(PKG_LIBS = old_libs)
+    }, add = TRUE)
+
+    Rcpp::sourceCpp(model_for_compilation_name)
   }
 
-  if (keep_temporary_recipe_code==FALSE)
-  {
-    file.remove(model_for_compilation_name)
-  }
-
-  if ( (length(filenames)>1) && (keep_temporary_recipe_code==FALSE) )
-  {
-    file.remove(temporary_stacked_ilike_filename)
-  }
+  # Cleanup of temporary files is handled by on.exit() registered at creation.
 
   for (i in 1:length(blocks))
   {
