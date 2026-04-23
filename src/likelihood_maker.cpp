@@ -1950,7 +1950,7 @@ namespace ilike
 
     std::vector<double> sequence_values = schedule_in;
 
-    std::cout << "need to read in lag if we ever use this function for something other than testing." << std::endl;
+    //std::cout << "need to read in lag if we ever use this function for something other than testing." << std::endl;
 
     return new SMCMCMCMove(rng_in,
                            seed_in,

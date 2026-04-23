@@ -92,7 +92,7 @@ void VectorFactorVariables::evaluate_smcfixed_part_of_likelihoods(const Index* i
 {
   if (index==NULL)
   {
-    std::cout << "Index is NULL." << std::endl;
+    //std::cout << "Index is NULL." << std::endl;
   }
   else
   {
