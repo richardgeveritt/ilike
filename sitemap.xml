@@ -1,6 +1,7 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://richardgeveritt.github.io/ilike/404.html</loc></url>
 <url><loc>https://richardgeveritt.github.io/ilike/LICENSE-text.html</loc></url>
+<url><loc>https://richardgeveritt.github.io/ilike/LICENSE.html</loc></url>
 <url><loc>https://richardgeveritt.github.io/ilike/articles/gaussian_precision.html</loc></url>
 <url><loc>https://richardgeveritt.github.io/ilike/articles/index.html</loc></url>
 <url><loc>https://richardgeveritt.github.io/ilike/authors.html</loc></url>
@@ -17,7 +18,6 @@
 <url><loc>https://richardgeveritt.github.io/ilike/reference/constant_velocity_y.html</loc></url>
 <url><loc>https://richardgeveritt.github.io/ilike/reference/evaluate_log.html</loc></url>
 <url><loc>https://richardgeveritt.github.io/ilike/reference/gaussian.html</loc></url>
-<url><loc>https://richardgeveritt.github.io/ilike/reference/ilike.html</loc></url>
 <url><loc>https://richardgeveritt.github.io/ilike/reference/ilike_pivot_wider.html</loc></url>
 <url><loc>https://richardgeveritt.github.io/ilike/reference/index.html</loc></url>
 <url><loc>https://richardgeveritt.github.io/ilike/reference/load_enk_output.html</loc></url>
