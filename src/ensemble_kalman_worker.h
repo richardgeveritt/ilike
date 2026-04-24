@@ -12,6 +12,18 @@ using namespace Rcpp;
 
 namespace ilike
 {
+  /**
+   * @file ensemble_kalman_worker.h
+   * @brief Defines the EnsembleKalman class.
+   *
+   * An Ensemble Kalman method implementation. Performs ensemble-based data assimilation using Kalman-type updates.
+   *
+   * @namespace ilike
+   * @class EnsembleKalman
+   * @brief The ensemble kalman class.
+   */
+
+
 class EnsembleKalman;
 class ParticleSimulator;
 class LikelihoodEstimator;
@@ -21,21 +33,74 @@ class EnsembleKalmanWorker
 {
 public:
   
+  /**
+   * @brief Performs the ensemblekalmanworker operation.
+   */
   EnsembleKalmanWorker();
   
+  /**
+   * @brief Performs the ensemblekalmanworker operation.
+   *
+   * @param the_smc_in The the smc.
+   */
   EnsembleKalmanWorker(EnsembleKalman* the_smc_in);
   
+  /**
+   * @brief Performs the ~ensemblekalmanworker operation.
+   *
+   * @param void The void.
+   */
   virtual ~EnsembleKalmanWorker(void);
   
+  /**
+   * @brief Performs the ensemblekalmanworker operation.
+   *
+   * @param another The EnsembleKalman instance to copy from.
+   */
   EnsembleKalmanWorker(const EnsembleKalmanWorker &another);
+  /**
+   * @brief Assignment operator for EnsembleKalman.
+   *
+   * @param another The EnsembleKalman instance to copy from.
+   */
   void operator=(const EnsembleKalmanWorker &another);
+  /**
+   * @brief Creates a deep copy of this EnsembleKalman object.
+   *
+   * @return The result.
+   */
   virtual EnsembleKalmanWorker* duplicate() const=0;
   
+  /**
+   * @brief Returns the number of ensemble members.
+   *
+   * @return The result.
+   */
   size_t get_number_of_ensemble_members() const;
+  /**
+   * @brief Returns the rng.
+   *
+   * @return The result.
+   */
   RandomNumberGenerator* get_rng();
+  /**
+   * @brief Returns the seed.
+   *
+   * @return The result.
+   */
   size_t get_seed() const;
+  /**
+   * @brief Sets the seed.
+   *
+   * @param seed_in The seed.
+   */
   void set_seed(size_t seed_in);
   
+  /**
+   * @brief Sets the enk.
+   *
+   * @param the_enk_in The the enk.
+   */
   void set_enk(EnsembleKalman* the_enk_in);
   
   void simulate(Ensemble* next_ensemble,
@@ -65,8 +130,23 @@ public:
   virtual void shift(Ensemble* ensemble,
                      double inverse_incremental_temperature)=0;
   
+  /**
+   * @brief Performs the pack operation.
+   *
+   * @param ensemble The ensemble.
+   */
   virtual void pack(Ensemble* ensemble)=0;
+  /**
+   * @brief Performs the unpack operation.
+   *
+   * @param ensemble The ensemble.
+   */
   virtual void unpack(Ensemble* ensemble)=0;
+  /**
+   * @brief Performs the unpack with predicted operation.
+   *
+   * @param ensemble The ensemble.
+   */
   virtual void unpack_with_predicted(Ensemble* ensemble)=0;
   
   virtual void weight(Ensemble* ensemble,
@@ -214,6 +294,7 @@ protected:
   void make_copy(const EnsembleKalmanWorker &another);
   
   friend Sequencer;
+  /** @brief The the enk. */
   EnsembleKalman* the_enk; // not stored here
   
   // stored in model_and_algorithm

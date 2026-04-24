@@ -16,12 +16,30 @@ using namespace Rcpp;
 
 namespace ilike
 {
+  /**
+   * @file nonlinear_gaussian_noise_proposal_kernel.h
+   * @brief Defines the NonLinearGaussianNoiseProposalKernel class.
+   *
+   * A non linear gaussian noise proposal kernel. Proposes new parameter values during MCMC or SMC moves using a non linear gaussian noise distribution centred on the current state.
+   *
+   * @namespace ilike
+   * @class NonLinearGaussianNoiseProposalKernel
+   * @brief A non linear gaussian noise proposal kernel derived from GaussianNoiseProposalKernel.
+   */
+
+
 class NonLinearGaussianNoiseProposalKernel : public GaussianNoiseProposalKernel
 {
   
 public:
   
+  /**
+   * @brief Default constructor for NonLinearGaussianNoiseProposalKernel.
+   */
   NonLinearGaussianNoiseProposalKernel();
+  /**
+   * @brief Destructor for NonLinearGaussianNoiseProposalKernel.
+   */
   virtual ~NonLinearGaussianNoiseProposalKernel();
   
   // make cov_names from var_names and find cov adaptively
@@ -42,28 +60,97 @@ public:
                                        std::shared_ptr<Transform> transform_in,
                                        const double &sd_in);
   
+  /**
+   * @brief Copy constructor for NonLinearGaussianNoiseProposalKernel.
+   *
+   * @param another The NonLinearGaussianNoiseProposalKernel instance to copy from.
+   */
   NonLinearGaussianNoiseProposalKernel(const NonLinearGaussianNoiseProposalKernel &another);
   
+  /**
+   * @brief Assignment operator for NonLinearGaussianNoiseProposalKernel.
+   *
+   * @param another The NonLinearGaussianNoiseProposalKernel instance to copy from.
+   */
   void operator=(const NonLinearGaussianNoiseProposalKernel &another);
+  /**
+   * @brief Creates a deep copy of this NonLinearGaussianNoiseProposalKernel object.
+   *
+   * @return The result.
+   */
   Kernel* duplicate() const;
+  /**
+   * @brief Creates a deep copy and returns it as a proposal_kernel pointer.
+   *
+   * @return The result.
+   */
   ProposalKernel* proposal_kernel_duplicate() const;
+  /**
+   * @brief Creates a deep copy and returns it as a gaussian_noise_proposal_kernel pointer.
+   *
+   * @return The result.
+   */
   GaussianNoiseProposalKernel* gaussian_noise_proposal_kernel_duplicate() const;
   
   void set_covariance(const std::string &variable,
                       const arma::mat &covariance_in);
   
+  /**
+   * @brief Returns the inverse covariance.
+   *
+   * @param variable The variable.
+   *
+   * @return The result.
+   */
   arma::mat get_inverse_covariance(const std::string &variable);
+  /**
+   * @brief Returns the covariance.
+   *
+   * @param variable The variable.
+   *
+   * @return The result.
+   */
   arma::mat get_covariance(const std::string &variable);
   
+  /**
+   * @brief Sets the proposal parameters.
+   *
+   * @param proposal_parameters_in The proposal parameters.
+   */
   void set_proposal_parameters(Parameters* proposal_parameters_in);
   
+  /**
+   * @brief Returns the variables.
+   *
+   * @return The result.
+   */
   std::vector<std::string> get_variables() const;
   
+  /**
+   * @brief Simulates gradient estimator output.
+   *
+   * @return The result.
+   */
   GradientEstimatorOutput* simulate_gradient_estimator_output() const;
   
+  /**
+   * @brief Returns the proposals.
+   *
+   * @return The result.
+   */
   std::vector<const ProposalKernel*> get_proposals() const;
   
+  /**
+   * @brief Sets the index.
+   *
+   * @param index_in The index.
+   */
   void set_index(Index* index_in);
+  /**
+   * @brief Sets the index if null.
+   *
+   * @param index_in The index.
+   */
   void set_index_if_null(Index* index_in);
   
   // Mh has its own parameters.
@@ -146,6 +233,7 @@ protected:
   void make_copy(const NonLinearGaussianNoiseProposalKernel &another);
   
   boost::unordered_map< std::string, GaussianProposalInfo> proposal_info;
+  /** @brief The transform. */
   std::shared_ptr<Transform> transform;
   
 };

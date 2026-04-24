@@ -11,6 +11,18 @@ using namespace Rcpp;
 
 namespace ilike
 {
+  /**
+   * @file mcmc_adaptor.h
+   * @brief Defines the MCMCOutput class.
+   *
+   * Stores and manages the output produced by MCMC. Holds results such as log-likelihood estimates, samples, or diagnostics returned after running the associated algorithm.
+   *
+   * @namespace ilike
+   * @class MCMCOutput
+   * @brief The mcmc output class.
+   */
+
+
 class MCMCOutput;
 
 class MCMCAdaptor
@@ -18,12 +30,33 @@ class MCMCAdaptor
   
 public:
   
+  /**
+   * @brief Performs the mcmcadaptor operation.
+   */
   MCMCAdaptor();
+  /**
+   * @brief Performs the ~mcmcadaptor operation.
+   */
   virtual ~MCMCAdaptor();
   
+  /**
+   * @brief Performs the mcmcadaptor operation.
+   *
+   * @param another The MCMCOutput instance to copy from.
+   */
   MCMCAdaptor(const MCMCAdaptor &another);
   
+  /**
+   * @brief Assignment operator for MCMCOutput.
+   *
+   * @param another The MCMCOutput instance to copy from.
+   */
   void operator=(const MCMCAdaptor &another);
+  /**
+   * @brief Creates a deep copy of this MCMCOutput object.
+   *
+   * @return The result.
+   */
   virtual MCMCAdaptor* duplicate() const=0;
   
   void mcmc_adapt(const Particle &latest_particle,
@@ -40,8 +73,14 @@ protected:
                                    size_t iteration_counter)=0;
   
   // not stored here
+  /** @brief The proposal. */
   ProposalKernel* proposal;
   
+  /**
+   * @brief Copies the state of another MCMCOutput into this object.
+   *
+   * @param another The MCMCOutput instance to copy from.
+   */
   void make_copy(const MCMCAdaptor &another);
   
 };

@@ -9,6 +9,18 @@
 
 namespace ilike
 {
+  /**
+   * @file importance_sampler.h
+   * @brief Defines the SMCOutput class.
+   *
+   * Stores and manages the output produced by SMC. Holds results such as log-likelihood estimates, samples, or diagnostics returned after running the associated algorithm.
+   *
+   * @namespace ilike
+   * @class SMCOutput
+   * @brief The smc output class.
+   */
+
+
   class SMCOutput;
   class MoveOutput;
   class IndependentProposalKernel;
@@ -16,6 +28,9 @@ namespace ilike
   class ImportanceSampler : public SMC
   {
   public:
+    /**
+     * @brief Performs the importancesampler operation.
+     */
     ImportanceSampler();
     ImportanceSampler(RandomNumberGenerator *rng_in,
                       size_t *seed_in,
@@ -142,9 +157,22 @@ namespace ilike
                       size_t grain_size_in,
                       const std::string &results_name_in);
 
+    /**
+     * @brief Performs the importancesampler operation.
+     *
+     * @param another The SMCOutput instance to copy from.
+     */
     ImportanceSampler(const ImportanceSampler &another);
+    /**
+     * @brief Performs the ~importancesampler operation.
+     */
     virtual ~ImportanceSampler();
 
+    /**
+     * @brief Assignment operator for SMCOutput.
+     *
+     * @param another The SMCOutput instance to copy from.
+     */
     void operator=(const ImportanceSampler &another);
     SMC *smc_duplicate() const;
     LikelihoodEstimator *duplicate() const;
@@ -191,9 +219,29 @@ namespace ilike
 
     SMCOutput *specific_initialise_smc();
 
+    /**
+     * @brief Simulates smc.
+     *
+     * @param simulation The simulation.
+     */
     void simulate_smc(SMCOutput *simulation);
+    /**
+     * @brief Evaluates the smc.
+     *
+     * @param simulation The simulation.
+     */
     void evaluate_smc(SMCOutput *simulation);
+    /**
+     * @brief Evaluates the smcfixed part smc.
+     *
+     * @param simulation The simulation.
+     */
     void evaluate_smcfixed_part_smc(SMCOutput *simulation);
+    /**
+     * @brief Evaluates the smcadaptive part given smcfixed smc.
+     *
+     * @param simulation The simulation.
+     */
     void evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput *simulation);
 
     SMCOutput *specific_run(const Parameters &conditioned_on_parameters);
@@ -212,10 +260,30 @@ namespace ilike
     void evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput *simulation,
                                                       const Parameters &conditioned_on_parameters);
 
+    /**
+     * @brief Performs the subsample simulate smc operation.
+     *
+     * @param simulation The simulation.
+     */
     void subsample_simulate_smc(SMCOutput *simulation);
 
+    /**
+     * @brief Performs the subsample evaluate smc operation.
+     *
+     * @param simulation The simulation.
+     */
     void subsample_evaluate_smc(SMCOutput *simulation);
+    /**
+     * @brief Performs the subsample evaluate smcfixed part smc operation.
+     *
+     * @param simulation The simulation.
+     */
     void subsample_evaluate_smcfixed_part_smc(SMCOutput *simulation);
+    /**
+     * @brief Performs the subsample evaluate smcadaptive part given smcfixed smc operation.
+     *
+     * @param simulation The simulation.
+     */
     void subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput *simulation);
 
     void subsample_simulate_smc(SMCOutput *simulation,
@@ -228,6 +296,11 @@ namespace ilike
                                                                 const Parameters &conditioned_on_parameters);
 
     // This sets the scale of the abc kernel: function could be generalised to do other types of adaptation once the points are simulated
+    /**
+     * @brief Sets the abc scale.
+     *
+     * @param particles The particles.
+     */
     void set_abc_scale(Particles* particles);
 
     /*
@@ -243,6 +316,11 @@ namespace ilike
     // void smc_simulate(SMCOutput* current_state);
     // void smc_weight(SMCOutput* current_state);
 
+    /**
+     * @brief Copies the state of another SMCOutput into this object.
+     *
+     * @param another The SMCOutput instance to copy from.
+     */
     void make_copy(const ImportanceSampler &another);
 
     // stored here

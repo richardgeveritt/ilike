@@ -13,12 +13,30 @@ using namespace Rcpp;
 
 namespace ilike
 {
+  /**
+   * @file hmc_proposal_kernel.h
+   * @brief Defines the HMCProposalKernel class.
+   *
+   * A hmc proposal kernel. Proposes new parameter values during MCMC or SMC moves using a hmc distribution centred on the current state.
+   *
+   * @namespace ilike
+   * @class HMCProposalKernel
+   * @brief A hmc proposal kernel derived from ProposalKernel.
+   */
+
+
 class HMCProposalKernel : public ProposalKernel
 {
   
 public:
   
+  /**
+   * @brief Default constructor for HMCProposalKernel.
+   */
   HMCProposalKernel();
+  /**
+   * @brief Destructor for HMCProposalKernel.
+   */
   virtual ~HMCProposalKernel();
   
   // make cov_names from var_names and find cov adaptively
@@ -48,23 +66,78 @@ public:
                     const std::vector<arma::mat> &covariances_in,
                     GradientEstimator* gradient_estimator_in);
   
+  /**
+   * @brief Copy constructor for HMCProposalKernel.
+   *
+   * @param another The HMCProposalKernel instance to copy from.
+   */
   HMCProposalKernel(const HMCProposalKernel &another);
   
+  /**
+   * @brief Assignment operator for HMCProposalKernel.
+   *
+   * @param another The HMCProposalKernel instance to copy from.
+   */
   void operator=(const HMCProposalKernel &another);
+  /**
+   * @brief Creates a deep copy of this HMCProposalKernel object.
+   *
+   * @return The result.
+   */
   Kernel* duplicate() const;
+  /**
+   * @brief Creates a deep copy and returns it as a proposal_kernel pointer.
+   *
+   * @return The result.
+   */
   ProposalKernel* proposal_kernel_duplicate() const;
   
+  /**
+   * @brief Sets the proposal parameters.
+   *
+   * @param proposal_parameters_in The proposal parameters.
+   */
   void set_proposal_parameters(Parameters* proposal_parameters_in);
   
+  /**
+   * @brief Simulates gradient estimator output.
+   *
+   * @return The result.
+   */
   GradientEstimatorOutput* simulate_gradient_estimator_output() const;
   
+  /**
+   * @brief Returns the proposals.
+   *
+   * @return The result.
+   */
   std::vector<const ProposalKernel*> get_proposals() const;
   
+  /**
+   * @brief Sets the index.
+   *
+   * @param index_in The index.
+   */
   void set_index(Index* index_in);
+  /**
+   * @brief Sets the index if null.
+   *
+   * @param index_in The index.
+   */
   void set_index_if_null(Index* index_in);
   
+  /**
+   * @brief Performs the can be evaluated operation.
+   *
+   * @return The result.
+   */
   bool can_be_evaluated() const;
   
+  /**
+   * @brief Sets the data.
+   *
+   * @param data_in The data.
+   */
   void set_data(Data* data_in);
   
   // Mh has its own parameters.
@@ -150,7 +223,9 @@ protected:
   
   //bool unused_variables_kept;
   
+  /** @brief The variable names. */
   std::vector<std::string> variable_names;
+  /** @brief The covariance names. */
   std::vector<std::string> covariance_names;
   
 };

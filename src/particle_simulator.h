@@ -11,18 +11,56 @@ using namespace Rcpp;
 
 namespace ilike
 {
+  /**
+   * @file particle_simulator.h
+   * @brief Defines the Factors class.
+   *
+   * Provides factors functionality.
+   *
+   * @namespace ilike
+   * @class Factors
+   * @brief The factors class.
+   */
+
+
 class Factors;
 
 class ParticleSimulator
 {
 public:
   
+  /**
+   * @brief Performs the particlesimulator operation.
+   */
   ParticleSimulator();
+  /**
+   * @brief Performs the particlesimulator operation.
+   *
+   * @param resample_variable_name_in The resample variable name.
+   */
   ParticleSimulator(const std::string &resample_variable_name_in);
+  /**
+   * @brief Performs the particlesimulator operation.
+   *
+   * @param another The Factors instance to copy from.
+   */
   ParticleSimulator(const ParticleSimulator &another);
+  /**
+   * @brief Performs the ~particlesimulator operation.
+   */
   virtual ~ParticleSimulator();
   
+  /**
+   * @brief Assignment operator for Factors.
+   *
+   * @param another The Factors instance to copy from.
+   */
   void operator=(const ParticleSimulator &another);
+  /**
+   * @brief Creates a deep copy of this Factors object.
+   *
+   * @return The result.
+   */
   virtual ParticleSimulator* duplicate() const=0;
   
   virtual Particle simulate(RandomNumberGenerator &rng,
@@ -83,6 +121,13 @@ public:
    */
   
   virtual double evaluate(const Particle &input) const=0;
+  /**
+   * @brief Performs the subsample evaluate operation.
+   *
+   * @param input The input.
+   *
+   * @return The result.
+   */
   virtual double subsample_evaluate(const Particle &input) const=0;
   
   /*
@@ -95,8 +140,14 @@ public:
   
 protected:
   
+  /** @brief The resample variable name. */
   std::string resample_variable_name;
   
+  /**
+   * @brief Copies the state of another Factors into this object.
+   *
+   * @param another The Factors instance to copy from.
+   */
   void make_copy(const ParticleSimulator &another);
   
 };

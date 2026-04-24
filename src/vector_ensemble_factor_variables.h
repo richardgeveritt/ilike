@@ -9,6 +9,18 @@ using namespace Rcpp;
 
 namespace ilike
 {
+  /**
+   * @file vector_ensemble_factor_variables.h
+   * @brief Defines the MeasurementCovarianceEstimatorOutput class.
+   *
+   * Stores the output of a measurement covariance estimator evaluation. Provides access to log-likelihood values, simulated summaries, and gradient information computed during likelihood estimation.
+   *
+   * @namespace ilike
+   * @class MeasurementCovarianceEstimatorOutput
+   * @brief The measurement covariance estimator output class.
+   */
+
+
 class MeasurementCovarianceEstimatorOutput;
 class EnsembleFactorVariables;
 class VectorEnsembleFactors;
@@ -18,25 +30,68 @@ class VectorEnsembleFactorVariables : public EnsembleFactorVariables
   
 public:
   
+  /**
+   * @brief Performs the vectorensemblefactorvariables operation.
+   */
   VectorEnsembleFactorVariables();
   
   VectorEnsembleFactorVariables(const VectorEnsembleFactors* ensemble_factors_in,
                                 const std::vector<MeasurementCovarianceEstimatorOutput*> &measurement_covariance_estimator_outputs_in);
   
+  /**
+   * @brief Performs the ~vectorensemblefactorvariables operation.
+   */
   virtual ~VectorEnsembleFactorVariables();
   
   //VectorEnsembleFactorVariables(std::vector<MeasurementCovarianceEstimatorOutput*> measurement_covariance_estimator_outputs_in);
   
+  /**
+   * @brief Performs the vectorensemblefactorvariables operation.
+   *
+   * @param another The MeasurementCovarianceEstimatorOutput instance to copy from.
+   */
   VectorEnsembleFactorVariables(const VectorEnsembleFactorVariables &another);
   
+  /**
+   * @brief Assignment operator for MeasurementCovarianceEstimatorOutput.
+   *
+   * @param another The MeasurementCovarianceEstimatorOutput instance to copy from.
+   */
   void operator=(const VectorEnsembleFactorVariables &another);
+  /**
+   * @brief Creates a deep copy of this MeasurementCovarianceEstimatorOutput object.
+   *
+   * @return The result.
+   */
   EnsembleFactorVariables* duplicate() const;
   
+  /**
+   * @brief Returns the measurement states for covariance.
+   *
+   * @return The result.
+   */
   std::vector<arma::rowvec> get_measurement_states_for_covariance() const;
+  /**
+   * @brief Returns the shifts.
+   *
+   * @param inverse_incremental_temperature The inverse incremental temperature.
+   *
+   * @return The result.
+   */
   std::vector<arma::colvec> get_shifts(double inverse_incremental_temperature) const;
+  /**
+   * @brief Returns the deterministic shifts.
+   *
+   * @return The result.
+   */
   std::vector<arma::colvec> get_deterministic_shifts() const;
   //std::vector<arma::mat> get_unconditional_measurement_covariances(const std::vector<arma::mat> &Cyys,
   //                                                                 double inverse_incremental_temperature) const;
+  /**
+   * @brief Returns the measurements.
+   *
+   * @return The result.
+   */
   std::vector<arma::colvec*> get_measurements() const;
   
   double evaluate_ensemble_likelihood_ratios(const Index* index,
@@ -77,8 +132,14 @@ public:
   void write_to_file(const std::string &directory_name,
                      const std::string &index) const;
   
+  /**
+   * @brief Performs the forget you were already written to file operation.
+   */
   void forget_you_were_already_written_to_file();
   
+  /**
+   * @brief Closes any open file streams.
+   */
   void close_ofstreams();
   
   /*
@@ -123,11 +184,18 @@ public:
 protected:
   
   // Stored in likelihood_estimator.
+  /** @brief The vector ensemble factors. */
   const VectorEnsembleFactors* vector_ensemble_factors;
   
+  /**
+   * @brief Copies the state of another MeasurementCovarianceEstimatorOutput into this object.
+   *
+   * @param another The MeasurementCovarianceEstimatorOutput instance to copy from.
+   */
   void make_copy(const VectorEnsembleFactorVariables &another);
   
   // stored here
+  /** @brief The measurement covariance estimator outputs. */
   std::vector<MeasurementCovarianceEstimatorOutput*> measurement_covariance_estimator_outputs;
   
 };

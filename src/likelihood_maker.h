@@ -9,6 +9,18 @@ using namespace Rcpp;
 
 namespace ilike
 {
+  /**
+   * @file likelihood_maker.h
+   * @brief Defines the ABCLikelihoodEstimator class.
+   *
+   * Estimates the abc likelihood for a given set of parameters. Implements the estimator interface for use inside SMC, MCMC, or importance-sampling algorithms.
+   *
+   * @namespace ilike
+   * @class ABCLikelihoodEstimator
+   * @brief The abc likelihood estimator class.
+   */
+
+
 
     class ABCLikelihoodEstimator;
     class DensityLikelihoodEstimator;

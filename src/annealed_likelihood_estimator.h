@@ -12,6 +12,18 @@ using namespace Rcpp;
 
 namespace ilike
 {
+  /**
+   * @file annealed_likelihood_estimator.h
+   * @brief Defines the AnnealedLikelihoodEstimatorOutput class.
+   *
+   * Stores the output of a annealed likelihood estimator evaluation. Provides access to log-likelihood values, simulated summaries, and gradient information computed during likelihood estimation.
+   *
+   * @namespace ilike
+   * @class AnnealedLikelihoodEstimatorOutput
+   * @brief The annealed likelihood estimator output class.
+   */
+
+
 class AnnealedLikelihoodEstimatorOutput;
 class IndependentProposalKernel;
 
@@ -81,6 +93,9 @@ class AnnealedLikelihoodEstimator : public LikelihoodEstimator
   
 public:
   
+  /**
+   * @brief Performs the annealedlikelihoodestimator operation.
+   */
   AnnealedLikelihoodEstimator();
   
   AnnealedLikelihoodEstimator(RandomNumberGenerator* rng_in,
@@ -98,20 +113,58 @@ public:
                               double constant_power_in,
                               bool smcfixed_flag_in);
   
+  /**
+   * @brief Performs the ~annealedlikelihoodestimator operation.
+   */
   virtual ~AnnealedLikelihoodEstimator();
   
+  /**
+   * @brief Performs the annealedlikelihoodestimator operation.
+   *
+   * @param another The AnnealedLikelihoodEstimatorOutput instance to copy from.
+   */
   AnnealedLikelihoodEstimator(const AnnealedLikelihoodEstimator &another);
   
+  /**
+   * @brief Assignment operator for AnnealedLikelihoodEstimatorOutput.
+   *
+   * @param another The AnnealedLikelihoodEstimatorOutput instance to copy from.
+   */
   void operator=(const AnnealedLikelihoodEstimator &another);
+  /**
+   * @brief Creates a deep copy of this AnnealedLikelihoodEstimatorOutput object.
+   *
+   * @return The result.
+   */
   LikelihoodEstimator* duplicate() const;
   
   // double estimate_log_likelihood(const List &inputs,
   //                                const List &auxiliary_variables) const;
   
+  /**
+   * @brief Initialises the estimator and returns an output object.
+   *
+   * @return The result.
+   */
   LikelihoodEstimatorOutput* initialise();
+  /**
+   * @brief Initialises the estimator with given parameters and returns an output object.
+   *
+   * @param parameters The parameters.
+   *
+   * @return The result.
+   */
   LikelihoodEstimatorOutput* initialise(const Parameters &parameters);
   
+  /**
+   * @brief Performs any setup required before running the algorithm.
+   */
   void setup();
+  /**
+   * @brief Performs setup given the supplied parameters.
+   *
+   * @param parameters The parameters.
+   */
   void setup(const Parameters &parameters);
   
   // void is_setup_likelihood_estimator(const std::vector<List> &all_points,
@@ -119,23 +172,39 @@ public:
   
 protected:
   
+  /**
+   * @brief Class-specific implementation for change data.
+   *
+   * @param new_data The new data.
+   */
   void specific_change_data(Data* new_data);
   
   friend AnnealedLikelihoodEstimatorOutput;
   
+  /** @brief The function power. */
   PowerFunctionPtr function_power;
+  /** @brief The power variable. */
   std::string power_variable;
+  /** @brief The constant power. */
   double constant_power;
+  /** @brief The use constant. */
   bool use_constant;
   
   // Stored here.
+  /** @brief The estimator. */
   LikelihoodEstimator* estimator;
   
+  /** @brief The log likelihood file stream. */
   std::ofstream log_likelihood_file_stream;
   
   // Stored here.
   //AnnealedLikelihoodEstimatorOutput* output;
   
+  /**
+   * @brief Copies the state of another AnnealedLikelihoodEstimatorOutput into this object.
+   *
+   * @param another The AnnealedLikelihoodEstimatorOutput instance to copy from.
+   */
   void make_copy(const AnnealedLikelihoodEstimator &another);
   
 };

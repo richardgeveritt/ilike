@@ -10,6 +10,18 @@ using namespace Rcpp;
 
 namespace ilike
 {
+  /**
+   * @file direct_gradient_estimator.h
+   * @brief Defines the GradientEstimatorOutput class.
+   *
+   * Stores the output of a gradient estimator evaluation. Provides access to log-likelihood values, simulated summaries, and gradient information computed during likelihood estimation.
+   *
+   * @namespace ilike
+   * @class GradientEstimatorOutput
+   * @brief The gradient estimator output class.
+   */
+
+
 class GradientEstimatorOutput;
 
 class DirectGradientEstimator : public GradientEstimator
@@ -17,15 +29,41 @@ class DirectGradientEstimator : public GradientEstimator
   
 public:
   
+  /**
+   * @brief Performs the directgradientestimator operation.
+   */
   DirectGradientEstimator();
   
+  /**
+   * @brief Performs the ~directgradientestimator operation.
+   */
   virtual ~DirectGradientEstimator();
   
+  /**
+   * @brief Performs the directgradientestimator operation.
+   *
+   * @param another The GradientEstimatorOutput instance to copy from.
+   */
   DirectGradientEstimator(const DirectGradientEstimator &another);
   
+  /**
+   * @brief Assignment operator for GradientEstimatorOutput.
+   *
+   * @param another The GradientEstimatorOutput instance to copy from.
+   */
   void operator=(const DirectGradientEstimator &another);
+  /**
+   * @brief Creates a deep copy of this GradientEstimatorOutput object.
+   *
+   * @return The result.
+   */
   GradientEstimator* duplicate() const;
   
+  /**
+   * @brief Initialises the estimator and returns an output object.
+   *
+   * @return The result.
+   */
   GradientEstimatorOutput* initialise();
   
   //GradientEstimatorOutput* generate_new_gradient_estimator_output(ProposalKernel* proposal,
@@ -55,6 +93,11 @@ public:
   
 protected:
   
+  /**
+   * @brief Copies the state of another GradientEstimatorOutput into this object.
+   *
+   * @param another The GradientEstimatorOutput instance to copy from.
+   */
   void make_copy(const DirectGradientEstimator &another);
   
 };

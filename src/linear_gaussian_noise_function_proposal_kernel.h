@@ -15,12 +15,30 @@ using namespace Rcpp;
 
 namespace ilike
 {
+  /**
+   * @file linear_gaussian_noise_function_proposal_kernel.h
+   * @brief Defines the LinearGaussianNoiseFunctionProposalKernel class.
+   *
+   * A linear gaussian noise function proposal kernel. Proposes new parameter values during MCMC or SMC moves using a linear gaussian noise function distribution centred on the current state.
+   *
+   * @namespace ilike
+   * @class LinearGaussianNoiseFunctionProposalKernel
+   * @brief A linear gaussian noise function proposal kernel derived from GaussianNoiseProposalKernel.
+   */
+
+
 class LinearGaussianNoiseFunctionProposalKernel : public GaussianNoiseProposalKernel
 {
   
 public:
   
+  /**
+   * @brief Default constructor for LinearGaussianNoiseFunctionProposalKernel.
+   */
   LinearGaussianNoiseFunctionProposalKernel();
+  /**
+   * @brief Destructor for LinearGaussianNoiseFunctionProposalKernel.
+   */
   virtual ~LinearGaussianNoiseFunctionProposalKernel();
   
   // make cov_names from var_names
@@ -34,11 +52,36 @@ public:
                                             const GetMatrixPtr &A_in,
                                             const GetMatrixPtr &covariance_in);
   
+  /**
+   * @brief Copy constructor for LinearGaussianNoiseFunctionProposalKernel.
+   *
+   * @param another The LinearGaussianNoiseFunctionProposalKernel instance to copy from.
+   */
   LinearGaussianNoiseFunctionProposalKernel(const LinearGaussianNoiseFunctionProposalKernel &another);
   
+  /**
+   * @brief Assignment operator for LinearGaussianNoiseFunctionProposalKernel.
+   *
+   * @param another The LinearGaussianNoiseFunctionProposalKernel instance to copy from.
+   */
   void operator=(const LinearGaussianNoiseFunctionProposalKernel &another);
+  /**
+   * @brief Creates a deep copy of this LinearGaussianNoiseFunctionProposalKernel object.
+   *
+   * @return The result.
+   */
   Kernel* duplicate() const;
+  /**
+   * @brief Creates a deep copy and returns it as a proposal_kernel pointer.
+   *
+   * @return The result.
+   */
   ProposalKernel* proposal_kernel_duplicate() const;
+  /**
+   * @brief Creates a deep copy and returns it as a gaussian_noise_proposal_kernel pointer.
+   *
+   * @return The result.
+   */
   GaussianNoiseProposalKernel* gaussian_noise_proposal_kernel_duplicate() const;
   
   /*
@@ -51,13 +94,38 @@ public:
   
   void set_proposal_parameters(Parameters* proposal_parameters_in);
   
+  /**
+   * @brief Returns the variables.
+   *
+   * @return The result.
+   */
   std::vector<std::string> get_variables() const;
   
+  /**
+   * @brief Simulates gradient estimator output.
+   *
+   * @return The result.
+   */
   GradientEstimatorOutput* simulate_gradient_estimator_output() const;
   
+  /**
+   * @brief Returns the proposals.
+   *
+   * @return The result.
+   */
   std::vector<const ProposalKernel*> get_proposals() const;
   
+  /**
+   * @brief Sets the index.
+   *
+   * @param index_in The index.
+   */
   void set_index(Index* index_in);
+  /**
+   * @brief Sets the index if null.
+   *
+   * @param index_in The index.
+   */
   void set_index_if_null(Index* index_in);
   
   // Mh has its own parameters.
@@ -140,6 +208,7 @@ protected:
   void make_copy(const LinearGaussianNoiseFunctionProposalKernel &another);
   
   boost::unordered_map< std::string, GaussianProposalFunctionsInfo> proposal_info;
+  /** @brief The conditioned on variable names. */
   std::vector<std::string> conditioned_on_variable_names;
 };
 }

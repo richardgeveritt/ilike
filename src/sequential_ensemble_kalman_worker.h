@@ -9,24 +9,77 @@
 
 namespace ilike
 {
+  /**
+   * @file sequential_ensemble_kalman_worker.h
+   * @brief Defines the SequentialEnsembleKalmanWorker class.
+   *
+   * An Ensemble Kalman sequential worker implementation. Performs ensemble-based data assimilation using Kalman-type updates.
+   *
+   * @namespace ilike
+   * @class SequentialEnsembleKalmanWorker
+   * @brief A sequential ensemble kalman worker derived from EnsembleKalmanWorker.
+   */
+
+
 class SequentialEnsembleKalmanWorker : public EnsembleKalmanWorker
 {
 public:
   
+  /**
+   * @brief Default constructor for SequentialEnsembleKalmanWorker.
+   */
   SequentialEnsembleKalmanWorker();
+  /**
+   * @brief Destructor for SequentialEnsembleKalmanWorker.
+   */
   virtual ~SequentialEnsembleKalmanWorker();
   
+  /**
+   * @brief Constructs a SequentialEnsembleKalmanWorker object.
+   *
+   * @param the_enk_in The the enk.
+   */
   SequentialEnsembleKalmanWorker(EnsembleKalman* the_enk_in);
   
+  /**
+   * @brief Copy constructor for SequentialEnsembleKalmanWorker.
+   *
+   * @param another The SequentialEnsembleKalmanWorker instance to copy from.
+   */
   SequentialEnsembleKalmanWorker(const SequentialEnsembleKalmanWorker &another);
+  /**
+   * @brief Assignment operator for SequentialEnsembleKalmanWorker.
+   *
+   * @param another The SequentialEnsembleKalmanWorker instance to copy from.
+   */
   void operator=(const SequentialEnsembleKalmanWorker &another);
+  /**
+   * @brief Creates a deep copy of this SequentialEnsembleKalmanWorker object.
+   *
+   * @return The result.
+   */
   EnsembleKalmanWorker* duplicate() const;
   
   void shift(Ensemble* ensemble,
              double inverse_incremental_temperature);
   
+  /**
+   * @brief Performs the pack operation.
+   *
+   * @param ensemble The ensemble.
+   */
   void pack(Ensemble* ensemble);
+  /**
+   * @brief Performs the unpack operation.
+   *
+   * @param ensemble The ensemble.
+   */
   void unpack(Ensemble* ensemble);
+  /**
+   * @brief Performs the unpack with predicted operation.
+   *
+   * @param ensemble The ensemble.
+   */
   void unpack_with_predicted(Ensemble* ensemble);
   
   void weight(Ensemble* ensemble,
@@ -148,8 +201,14 @@ protected:
   //void pack(Ensemble &next_ensemble_kalman);
   //void unpack(Ensemble &next_ensemble_kalman);
   
+  /**
+   * @brief Copies the state of another SequentialEnsembleKalmanWorker into this object.
+   *
+   * @param another The SequentialEnsembleKalmanWorker instance to copy from.
+   */
   void make_copy(const SequentialEnsembleKalmanWorker &another);
   
+  /** @brief The log unnormalised incremental weights. */
   arma::colvec log_unnormalised_incremental_weights;
   
   /*

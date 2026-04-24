@@ -6,6 +6,18 @@
 
 namespace ilike
 {
+  /**
+   * @file ensemble_kalman_inversion.h
+   * @brief Defines the EnsembleKalmanOutput class.
+   *
+   * Stores and manages the output produced by EnsembleKalman. Holds results such as log-likelihood estimates, samples, or diagnostics returned after running the associated algorithm.
+   *
+   * @namespace ilike
+   * @class EnsembleKalmanOutput
+   * @brief The ensemble kalman output class.
+   */
+
+
 class EnsembleKalmanOutput;
 class MCMC;
 class MoveOutput;
@@ -15,6 +27,9 @@ class EnsembleKalmanInversion : public EnsembleKalman
 {
 public:
   
+  /**
+   * @brief Performs the ensemblekalmaninversion operation.
+   */
   EnsembleKalmanInversion();
   
   // single move from start to end
@@ -148,14 +163,42 @@ public:
                           size_t grain_size_in,
                           const std::string &results_name_in);
   
+  /**
+   * @brief Performs the ensemblekalmaninversion operation.
+   *
+   * @param another The EnsembleKalmanOutput instance to copy from.
+   */
   EnsembleKalmanInversion(const EnsembleKalmanInversion &another);
   
+  /**
+   * @brief Performs the ~ensemblekalmaninversion operation.
+   */
   virtual ~EnsembleKalmanInversion();
   
+  /**
+   * @brief Assignment operator for EnsembleKalmanOutput.
+   *
+   * @param another The EnsembleKalmanOutput instance to copy from.
+   */
   void operator=(const EnsembleKalmanInversion &another);
+  /**
+   * @brief Creates a deep copy and returns it as a ensemble_kalman pointer.
+   *
+   * @return The result.
+   */
   EnsembleKalman* ensemble_kalman_duplicate() const;
+  /**
+   * @brief Creates a deep copy of this EnsembleKalmanOutput object.
+   *
+   * @return The result.
+   */
   LikelihoodEstimator* duplicate() const;
   
+  /**
+   * @brief Sets the abc schedule.
+   *
+   * @param current_state The current state.
+   */
   void set_abc_schedule(EnsembleKalmanOutput* current_state);
   
   MoveOutput* move(RandomNumberGenerator &rng,
@@ -187,16 +230,60 @@ public:
   
 protected:
   
+  /**
+   * @brief Class-specific implementation for run.
+   *
+   * @return The result.
+   */
   EnsembleKalmanOutput* specific_run();
   
+  /**
+   * @brief Class-specific implementation for ensemble kalman initialise.
+   *
+   * @return The result.
+   */
   EnsembleKalmanOutput* specific_ensemble_kalman_initialise();
+  /**
+   * @brief Performs the ensemble kalman simulate operation.
+   *
+   * @param simulation The simulation.
+   */
   void ensemble_kalman_simulate(EnsembleKalmanOutput* simulation);
+  /**
+   * @brief Performs the ensemble kalman evaluate operation.
+   *
+   * @param simulation The simulation.
+   */
   void ensemble_kalman_evaluate(EnsembleKalmanOutput* simulation);
+  /**
+   * @brief Performs the ensemble kalman evaluate smcfixed part operation.
+   *
+   * @param simulation The simulation.
+   */
   void ensemble_kalman_evaluate_smcfixed_part(EnsembleKalmanOutput* simulation);
+  /**
+   * @brief Performs the ensemble kalman evaluate smcadaptive part given smcfixed operation.
+   *
+   * @param simulation The simulation.
+   */
   void ensemble_kalman_evaluate_smcadaptive_part_given_smcfixed(EnsembleKalmanOutput* simulation);
   
+  /**
+   * @brief Class-specific implementation for run.
+   *
+   * @param parameters The parameters.
+   *
+   * @return The result.
+   */
   EnsembleKalmanOutput* specific_run(const Parameters &parameters);
   
+  /**
+   * @brief Class-specific implementation for ensemble kalman initialise.
+   *
+   * @param parameters The parameters.
+   *
+   * @return The result.
+   */
   EnsembleKalmanOutput* specific_ensemble_kalman_initialise(const Parameters &parameters);
   void ensemble_kalman_simulate(EnsembleKalmanOutput* simulation,
                                 const Parameters &conditioned_on_parameters);
@@ -208,6 +295,11 @@ protected:
   void ensemble_kalman_evaluate_smcadaptive_part_given_smcfixed(EnsembleKalmanOutput* simulation,
                                                                 const Parameters &conditioned_on_parameters);
   
+  /**
+   * @brief Performs the ensemble kalman subsample simulate operation.
+   *
+   * @param simulation The simulation.
+   */
   void ensemble_kalman_subsample_simulate(EnsembleKalmanOutput* simulation);
   
   void ensemble_kalman_subsample_simulate(EnsembleKalmanOutput* simulation,
@@ -224,19 +316,28 @@ protected:
   
   //void setup_variables();
   
+  /**
+   * @brief Copies the state of another EnsembleKalmanOutput into this object.
+   *
+   * @param another The EnsembleKalmanOutput instance to copy from.
+   */
   void make_copy(const EnsembleKalmanInversion &another);
   
   // Stored here.
+  /** @brief The mcmc. */
   MCMC* mcmc;
   
   //bool sequencer_limit_is_fixed;
   
   // stored here
+  /** @brief The index. */
   Index* index;
   
   // If this is not 1.0, then check to see if we think the current ensemble is Gaussian, then skip to the end of the sequence if it is.
+  /** @brief The significance level. */
   double significance_level;
   
+  /** @brief The estimator type. */
   size_t estimator_type;
   
   //void smc_step();

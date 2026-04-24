@@ -14,6 +14,18 @@ using namespace Rcpp;
 
 namespace ilike
 {
+  /**
+   * @file langevin_proposal_kernel.h
+   * @brief Defines the GradientEstimator class.
+   *
+   * Estimates the gradient for a given set of parameters. Implements the estimator interface for use inside SMC, MCMC, or importance-sampling algorithms.
+   *
+   * @namespace ilike
+   * @class GradientEstimator
+   * @brief The gradient estimator class.
+   */
+
+
 
 class GradientEstimator;
 class Index;
@@ -23,7 +35,13 @@ class LangevinProposalKernel : public ProposalKernel
   
 public:
   
+  /**
+   * @brief Performs the langevinproposalkernel operation.
+   */
   LangevinProposalKernel();
+  /**
+   * @brief Performs the ~langevinproposalkernel operation.
+   */
   virtual ~LangevinProposalKernel();
   
   // make cov_names from var_names and find cov adaptively
@@ -48,23 +66,78 @@ public:
                          const double &sd_in,
                          GradientEstimator* gradient_estimator_in);
   
+  /**
+   * @brief Performs the langevinproposalkernel operation.
+   *
+   * @param another The GradientEstimator instance to copy from.
+   */
   LangevinProposalKernel(const LangevinProposalKernel &another);
   
+  /**
+   * @brief Assignment operator for GradientEstimator.
+   *
+   * @param another The GradientEstimator instance to copy from.
+   */
   void operator=(const LangevinProposalKernel &another);
+  /**
+   * @brief Creates a deep copy of this GradientEstimator object.
+   *
+   * @return The result.
+   */
   Kernel* duplicate() const;
+  /**
+   * @brief Creates a deep copy and returns it as a proposal_kernel pointer.
+   *
+   * @return The result.
+   */
   ProposalKernel* proposal_kernel_duplicate() const;
   
+  /**
+   * @brief Sets the proposal parameters.
+   *
+   * @param proposal_parameters_in The proposal parameters.
+   */
   void set_proposal_parameters(Parameters* proposal_parameters_in);
   
+  /**
+   * @brief Simulates gradient estimator output.
+   *
+   * @return The result.
+   */
   GradientEstimatorOutput* simulate_gradient_estimator_output() const;
   
+  /**
+   * @brief Returns the proposals.
+   *
+   * @return The result.
+   */
   std::vector<const ProposalKernel*> get_proposals() const;
   
+  /**
+   * @brief Sets the index.
+   *
+   * @param index_in The index.
+   */
   void set_index(Index* index_in);
+  /**
+   * @brief Sets the index if null.
+   *
+   * @param index_in The index.
+   */
   void set_index_if_null(Index* index_in);
   
+  /**
+   * @brief Performs the can be evaluated operation.
+   *
+   * @return The result.
+   */
   bool can_be_evaluated() const;
   
+  /**
+   * @brief Sets the data.
+   *
+   * @param data_in The data.
+   */
   void set_data(Data* data_in);
   
   // Mh has its own parameters.
@@ -152,9 +225,11 @@ protected:
   //bool unused_variables_kept;
   
   // stored here
+  /** @brief The gradient estimator. */
   GradientEstimator* gradient_estimator;
   
   // stored here
+  /** @brief The index. */
   Index* index;
   
 };

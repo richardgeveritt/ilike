@@ -11,11 +11,26 @@ using namespace Rcpp;
 
 namespace ilike
 {
+  /**
+   * @file gaussian_distribution_factor.h
+   * @brief Defines the GaussianDistributionFactor class.
+   *
+   * A gaussian distribution factor. Evaluates the log-density of a gaussian prior as part of the overall model likelihood inside an ExactLikelihoodEstimator.
+   *
+   * @namespace ilike
+   * @class GaussianDistributionFactor
+   * @brief A gaussian distribution factor derived from DistributionFactor.
+   */
+
+
 class GaussianDistributionFactor : public DistributionFactor
 {
   
 public:
   
+  /**
+   * @brief Default constructor for GaussianDistributionFactor.
+   */
   GaussianDistributionFactor();
   
   GaussianDistributionFactor(const std::string &variable_in,
@@ -30,14 +45,44 @@ public:
                              const std::vector<arma::colvec> &means_in,
                              const std::vector<arma::mat> &covariances_in);
   
+  /**
+   * @brief Destructor for GaussianDistributionFactor.
+   */
   virtual ~GaussianDistributionFactor();
   
+  /**
+   * @brief Copy constructor for GaussianDistributionFactor.
+   *
+   * @param another The GaussianDistributionFactor instance to copy from.
+   */
   GaussianDistributionFactor(const GaussianDistributionFactor &another);
   
+  /**
+   * @brief Assignment operator for GaussianDistributionFactor.
+   *
+   * @param another The GaussianDistributionFactor instance to copy from.
+   */
   void operator=(const GaussianDistributionFactor &another);
+  /**
+   * @brief Creates a deep copy of this GaussianDistributionFactor object.
+   *
+   * @return The result.
+   */
   Factor* duplicate() const;
+  /**
+   * @brief Creates a deep copy and returns it as a distribution_factor pointer.
+   *
+   * @return The result.
+   */
   DistributionFactor* distribution_factor_duplicate() const;
   
+  /**
+   * @brief Performs the distribution evaluate operation.
+   *
+   * @param input The input.
+   *
+   * @return The result.
+   */
   double distribution_evaluate(const Parameters &input) const;
   
   arma::mat distribution_evaluate_gradient(const std::string &variable,
@@ -45,6 +90,11 @@ public:
   
 protected:
   
+  /**
+   * @brief Copies the state of another GaussianDistributionFactor into this object.
+   *
+   * @param another The GaussianDistributionFactor instance to copy from.
+   */
   void make_copy(const GaussianDistributionFactor &another);
   
   boost::unordered_map< std::string, GaussianProposalInfo> proposal_info;

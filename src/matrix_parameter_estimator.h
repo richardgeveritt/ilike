@@ -10,18 +10,51 @@ using namespace Rcpp;
 
 namespace ilike
 {
+  /**
+   * @file matrix_parameter_estimator.h
+   * @brief Defines the MatrixParameterEstimator class.
+   *
+   * Estimates matrix parameters from a particle set or ensemble. Used in adaptive algorithms to tune proposal or model parameters.
+   *
+   * @namespace ilike
+   * @class MatrixParameterEstimator
+   * @brief A matrix parameter estimator derived from ParameterEstimator.
+   */
+
+
 class MatrixParameterEstimator : public ParameterEstimator
 {
   
 public:
   
+  /**
+   * @brief Default constructor for MatrixParameterEstimator.
+   */
   MatrixParameterEstimator();
   
+  /**
+   * @brief Destructor for MatrixParameterEstimator.
+   */
   virtual ~MatrixParameterEstimator();
   
+  /**
+   * @brief Copy constructor for MatrixParameterEstimator.
+   *
+   * @param another The MatrixParameterEstimator instance to copy from.
+   */
   MatrixParameterEstimator(const MatrixParameterEstimator &another);
   
+  /**
+   * @brief Assignment operator for MatrixParameterEstimator.
+   *
+   * @param another The MatrixParameterEstimator instance to copy from.
+   */
   void operator=(const MatrixParameterEstimator &another);
+  /**
+   * @brief Creates a deep copy of this MatrixParameterEstimator object.
+   *
+   * @return The result.
+   */
   virtual MatrixParameterEstimator* duplicate() const=0;
   
   virtual void fit(const arma::mat &matrix_points,
@@ -43,6 +76,11 @@ public:
   
 protected:
   
+  /**
+   * @brief Copies the state of another MatrixParameterEstimator into this object.
+   *
+   * @param another The MatrixParameterEstimator instance to copy from.
+   */
   void make_copy(const MatrixParameterEstimator &another);
   
 };

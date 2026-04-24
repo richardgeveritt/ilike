@@ -14,6 +14,18 @@ using namespace Rcpp;
 
 namespace ilike
 {
+  /**
+   * @file proposal_kernel.h
+   * @brief Defines the MCMCAdaptor class.
+   *
+   * An adaptor for mcmc tuning. Adjusts algorithm parameters based on accumulated statistics.
+   *
+   * @namespace ilike
+   * @class MCMCAdaptor
+   * @brief The mcmc adaptor class.
+   */
+
+
 
 class MCMCAdaptor;
 class SMCAdaptor;
@@ -31,14 +43,40 @@ class ProposalKernel : public Kernel
   
 public:
   
+  /**
+   * @brief Performs the proposalkernel operation.
+   */
   ProposalKernel();
+  /**
+   * @brief Performs the ~proposalkernel operation.
+   */
   virtual ~ProposalKernel();
   
+  /**
+   * @brief Performs the proposalkernel operation.
+   *
+   * @param proposal_parameters_in The proposal parameters.
+   */
   ProposalKernel(const Parameters &proposal_parameters_in);
   
+  /**
+   * @brief Performs the proposalkernel operation.
+   *
+   * @param another The MCMCAdaptor instance to copy from.
+   */
   ProposalKernel(const ProposalKernel &another);
   
+  /**
+   * @brief Assignment operator for MCMCAdaptor.
+   *
+   * @param another The MCMCAdaptor instance to copy from.
+   */
   void operator=(const ProposalKernel &another);
+  /**
+   * @brief Creates a deep copy and returns it as a proposal_kernel pointer.
+   *
+   * @return The result.
+   */
   virtual ProposalKernel* proposal_kernel_duplicate() const=0;
   
   Particle move(RandomNumberGenerator &rng,
@@ -94,6 +132,11 @@ public:
   
   void ensemble_adapt(EnsembleKalmanOutput* current_state);
   
+  /**
+   * @brief Performs the smc adapt operation.
+   *
+   * @param current_state The current state.
+   */
   void smc_adapt(SMCOutput* current_state);
   
   void mcmc_adapt(const Particle &current_particle,
@@ -168,20 +211,60 @@ public:
   
   Transform* get_transform() const;
   
+  /**
+   * @brief Sets the proposal parameters.
+   *
+   * @param proposal_parameters_in The proposal parameters.
+   */
   virtual void set_proposal_parameters(Parameters* proposal_parameters_in)=0;
   
+  /**
+   * @brief Simulates gradient estimator output.
+   *
+   * @return The result.
+   */
   virtual GradientEstimatorOutput* simulate_gradient_estimator_output() const=0;
   
+  /**
+   * @brief Returns the proposals.
+   *
+   * @return The result.
+   */
   virtual std::vector<const ProposalKernel*> get_proposals() const=0;
   
+  /**
+   * @brief Sets the index.
+   *
+   * @param index_in The index.
+   */
   virtual void set_index(Index* index_in)=0;
   
+  /**
+   * @brief Sets the index if null.
+   *
+   * @param index_in The index.
+   */
   virtual void set_index_if_null(Index* index_in)=0;
   
+  /**
+   * @brief Returns the instance index.
+   *
+   * @return The result.
+   */
   int get_instance_index() const;
   
+  /**
+   * @brief Performs the can be evaluated operation.
+   *
+   * @return The result.
+   */
   virtual bool can_be_evaluated() const=0;
   
+  /**
+   * @brief Sets the data.
+   *
+   * @param data_in The data.
+   */
   virtual void set_data(Data* data_in)=0;
   
   // Mh has its own parameters.
@@ -243,15 +326,20 @@ protected:
   //SimulateMCMCProposalPtr proposal_simulate;
   
   // stored here
+  /** @brief The mcmc adaptor. */
   MCMCAdaptor* mcmc_adaptor;
   
   // stored here
+  /** @brief The smc adaptor. */
   SMCAdaptor* smc_adaptor;
   
   // stored here
+  /** @brief The transform. */
   Transform* transform;
   
+  /** @brief The instance counter. */
   static int instance_counter; // Static member variable to track instances
+  /** @brief The instance index. */
   int instance_index; // Instance-specific index
   
   //Parameters proposal_parameters;

@@ -7,6 +7,18 @@
 
 namespace ilike
 {
+  /**
+   * @file smc_mcmc_move.h
+   * @brief Defines the SMCOutput class.
+   *
+   * Stores and manages the output produced by SMC. Holds results such as log-likelihood estimates, samples, or diagnostics returned after running the associated algorithm.
+   *
+   * @namespace ilike
+   * @class SMCOutput
+   * @brief The smc output class.
+   */
+
+
 class SMCOutput;
 class MoveOutput;
 class Index;
@@ -15,6 +27,9 @@ class SMCMCMCMove : public SMC
 {
 public:
   
+  /**
+   * @brief Performs the smcmcmcmove operation.
+   */
   SMCMCMCMove();
   
   // Multiple MCMC chains.
@@ -185,12 +200,35 @@ public:
               size_t grain_size_in,
               const std::string &results_name_in);
   
+  /**
+   * @brief Performs the smcmcmcmove operation.
+   *
+   * @param another The SMCOutput instance to copy from.
+   */
   SMCMCMCMove(const SMCMCMCMove &another);
   
+  /**
+   * @brief Performs the ~smcmcmcmove operation.
+   */
   virtual ~SMCMCMCMove();
   
+  /**
+   * @brief Assignment operator for SMCOutput.
+   *
+   * @param another The SMCOutput instance to copy from.
+   */
   void operator=(const SMCMCMCMove &another);
+  /**
+   * @brief Creates a deep copy and returns it as a smc pointer.
+   *
+   * @return The result.
+   */
   SMC* smc_duplicate() const;
+  /**
+   * @brief Creates a deep copy of this SMCOutput object.
+   *
+   * @return The result.
+   */
   LikelihoodEstimator* duplicate() const;
   
   MoveOutput* move(RandomNumberGenerator &rng,
@@ -249,19 +287,63 @@ protected:
   
   //SMCOutput* specific_run(const std::string &directory_name);
   
+  /**
+   * @brief Class-specific implementation for initialise smc.
+   *
+   * @return The result.
+   */
   SMCOutput* specific_initialise_smc();
+  /**
+   * @brief Simulates smc.
+   *
+   * @param simulation The simulation.
+   */
   void simulate_smc(SMCOutput* simulation);
+  /**
+   * @brief Evaluates the smc.
+   *
+   * @param simulation The simulation.
+   */
   void evaluate_smc(SMCOutput* simulation);
+  /**
+   * @brief Evaluates the smcfixed part smc.
+   *
+   * @param simulation The simulation.
+   */
   void evaluate_smcfixed_part_smc(SMCOutput* simulation);
+  /**
+   * @brief Evaluates the smcadaptive part given smcfixed smc.
+   *
+   * @param simulation The simulation.
+   */
   void evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* simulation);
   
+  /**
+   * @brief Performs the mcmc move operation.
+   *
+   * @param current_state The current state.
+   */
   void mcmc_move(SMCOutput* current_state);
   
+  /**
+   * @brief Class-specific implementation for run.
+   *
+   * @param parameters The parameters.
+   *
+   * @return The result.
+   */
   SMCOutput* specific_run(const Parameters &parameters);
   
   //SMCOutput* specific_run(const std::string &directory_name,
   //                        const Parameters &parameters);
   
+  /**
+   * @brief Class-specific implementation for initialise smc.
+   *
+   * @param parameters The parameters.
+   *
+   * @return The result.
+   */
   SMCOutput* specific_initialise_smc(const Parameters &parameters);
   void simulate_smc(SMCOutput* simulation,
                     const Parameters &conditioned_on_parameters);
@@ -280,8 +362,23 @@ protected:
   
   void subsample_simulate_smc(SMCOutput* simulation);
   
+  /**
+   * @brief Performs the subsample evaluate smc operation.
+   *
+   * @param simulation The simulation.
+   */
   void subsample_evaluate_smc(SMCOutput* simulation);
+  /**
+   * @brief Performs the subsample evaluate smcfixed part smc operation.
+   *
+   * @param simulation The simulation.
+   */
   void subsample_evaluate_smcfixed_part_smc(SMCOutput* simulation);
+  /**
+   * @brief Performs the subsample evaluate smcadaptive part given smcfixed smc operation.
+   *
+   * @param simulation The simulation.
+   */
   void subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* simulation);
   
   void subsample_simulate_smc(SMCOutput* simulation,
@@ -296,14 +393,22 @@ protected:
   
   //void smc_update(SMCOutput* current_state);
   
+  /**
+   * @brief Copies the state of another SMCOutput into this object.
+   *
+   * @param another The SMCOutput instance to copy from.
+   */
   void make_copy(const SMCMCMCMove &another);
   
   // Stored here.
+  /** @brief The mcmc. */
   MCMC* mcmc;
   
   // stored here
+  /** @brief The index. */
   Index* index;
   
+  /** @brief The mcmc at last step. */
   bool mcmc_at_last_step;
   
   //void smc_step();

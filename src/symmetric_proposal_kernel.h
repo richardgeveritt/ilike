@@ -13,18 +13,51 @@ using namespace Rcpp;
 
 namespace ilike
 {
+  /**
+   * @file symmetric_proposal_kernel.h
+   * @brief Defines the SymmetricProposalKernel class.
+   *
+   * A symmetric proposal kernel. Proposes new parameter values during MCMC or SMC moves using a symmetric distribution centred on the current state.
+   *
+   * @namespace ilike
+   * @class SymmetricProposalKernel
+   * @brief A symmetric proposal kernel derived from ProposalKernel.
+   */
+
+
 class SymmetricProposalKernel : public ProposalKernel
 {
   
 public:
   
+  /**
+   * @brief Default constructor for SymmetricProposalKernel.
+   */
   SymmetricProposalKernel();
+  /**
+   * @brief Destructor for SymmetricProposalKernel.
+   */
   virtual ~SymmetricProposalKernel();
   
+  /**
+   * @brief Copy constructor for SymmetricProposalKernel.
+   *
+   * @param another The SymmetricProposalKernel instance to copy from.
+   */
   SymmetricProposalKernel(const SymmetricProposalKernel &another);
   
+  /**
+   * @brief Assignment operator for SymmetricProposalKernel.
+   *
+   * @param another The SymmetricProposalKernel instance to copy from.
+   */
   void operator=(const SymmetricProposalKernel &another);
   //Kernel* duplicate() const;
+  /**
+   * @brief Creates a deep copy and returns it as a symmetric_proposal_kernel pointer.
+   *
+   * @return The result.
+   */
   virtual SymmetricProposalKernel* symmetric_proposal_kernel_duplicate() const=0;
   
   // Mh has its own parameters.
@@ -34,6 +67,11 @@ public:
   
 protected:
   
+  /**
+   * @brief Copies the state of another SymmetricProposalKernel into this object.
+   *
+   * @param another The SymmetricProposalKernel instance to copy from.
+   */
   void make_copy(const SymmetricProposalKernel &another);
   
 };

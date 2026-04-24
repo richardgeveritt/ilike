@@ -14,11 +14,29 @@ using namespace Rcpp;
 #include "symmetric_proposal_kernel.h"
 
 namespace ilike {
+  /**
+   * @file truncated_gaussian_random_walk_proposal_kernel.h
+   * @brief Defines the TruncatedGaussianRandomWalkProposalKernel class.
+   *
+   * A truncated gaussian random walk proposal kernel. Proposes new parameter values during MCMC or SMC moves using a truncated gaussian random walk distribution centred on the current state.
+   *
+   * @namespace ilike
+   * @class TruncatedGaussianRandomWalkProposalKernel
+   * @brief A truncated gaussian random walk proposal kernel derived from SymmetricProposalKernel.
+   */
+
+
 class TruncatedGaussianRandomWalkProposalKernel
     : public SymmetricProposalKernel {
 
 public:
+  /**
+   * @brief Default constructor for TruncatedGaussianRandomWalkProposalKernel.
+   */
   TruncatedGaussianRandomWalkProposalKernel();
+  /**
+   * @brief Destructor for TruncatedGaussianRandomWalkProposalKernel.
+   */
   virtual ~TruncatedGaussianRandomWalkProposalKernel();
 
   // make cov_names from var_names and find cov adaptively
@@ -54,6 +72,11 @@ public:
   TruncatedGaussianRandomWalkProposalKernel(
       const TruncatedGaussianRandomWalkProposalKernel &another);
 
+  /**
+   * @brief Assignment operator for TruncatedGaussianRandomWalkProposalKernel.
+   *
+   * @param another The TruncatedGaussianRandomWalkProposalKernel instance to copy from.
+   */
   void operator=(const TruncatedGaussianRandomWalkProposalKernel &another);
   Kernel *duplicate() const;
   ProposalKernel *proposal_kernel_duplicate() const;
@@ -62,22 +85,71 @@ public:
   void set_covariance(const std::string &variable,
                       const arma::mat &covariance_in);
 
+  /**
+   * @brief Returns the inverse covariance.
+   *
+   * @param variable The variable.
+   *
+   * @return The result.
+   */
   arma::mat get_inverse_covariance(const std::string &variable);
+  /**
+   * @brief Returns the covariance.
+   *
+   * @param variable The variable.
+   *
+   * @return The result.
+   */
   arma::mat get_covariance(const std::string &variable);
 
+  /**
+   * @brief Sets the proposal parameters.
+   *
+   * @param proposal_parameters_in The proposal parameters.
+   */
   void set_proposal_parameters(Parameters *proposal_parameters_in);
 
+  /**
+   * @brief Returns the variables.
+   *
+   * @return The result.
+   */
   std::vector<std::string> get_variables() const;
 
   GradientEstimatorOutput *simulate_gradient_estimator_output() const;
 
+  /**
+   * @brief Returns the proposals.
+   *
+   * @return The result.
+   */
   std::vector<const ProposalKernel *> get_proposals() const;
 
+  /**
+   * @brief Sets the index.
+   *
+   * @param index_in The index.
+   */
   void set_index(Index *index_in);
+  /**
+   * @brief Sets the index if null.
+   *
+   * @param index_in The index.
+   */
   void set_index_if_null(Index *index_in);
 
+  /**
+   * @brief Performs the can be evaluated operation.
+   *
+   * @return The result.
+   */
   bool can_be_evaluated() const;
 
+  /**
+   * @brief Sets the data.
+   *
+   * @param data_in The data.
+   */
   void set_data(Data *data_in);
 
   // Mh has its own parameters.

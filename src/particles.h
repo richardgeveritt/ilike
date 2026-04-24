@@ -13,6 +13,18 @@ using namespace Rcpp;
 
 namespace ilike
 {
+  /**
+   * @file particles.h
+   * @brief Defines the SMC class.
+   *
+   * Provides smc functionality.
+   *
+   * @namespace ilike
+   * @class SMC
+   * @brief The smc class.
+   */
+
+
 class SMC;
 class SequentialSMCWorker;
 class MoveOutput;
@@ -22,8 +34,21 @@ class Particles
 {
 public:
   
+  /**
+   * @brief Performs the particles operation.
+   */
   Particles();
+  /**
+   * @brief Performs the particles operation.
+   *
+   * @param number_of_particles_in The number of particles.
+   */
   Particles(size_t number_of_particles_in);
+  /**
+   * @brief Performs the particles operation.
+   *
+   * @param particles_in The particles.
+   */
   Particles(const std::vector< MoveOutput* > &particles_in);
   /*
    Particles(std::vector<Parameters> &initial_values_in,
@@ -69,65 +94,192 @@ public:
              const Parameters &conditioned_on_parameters,
              const Parameters &sequencer_parameters);
   
+  /**
+   * @brief Performs the ~particles operation.
+   */
   virtual ~Particles();
   
+  /**
+   * @brief Performs the particles operation.
+   *
+   * @param another The SMC instance to copy from.
+   */
   Particles(const Particles &another);
+  /**
+   * @brief Assignment operator for SMC.
+   *
+   * @param another The SMC instance to copy from.
+   */
   Particles& operator=(const Particles &another);
   
+  /**
+   * @brief Performs the particles operation.
+   *
+   * @param another The SMC instance to copy from.
+   */
   Particles(Particles &&another);
+  /**
+   * @brief Assignment operator for SMC.
+   *
+   * @param another The SMC instance to copy from.
+   */
   Particles& operator=(Particles &&another);
   
+  /**
+   * @brief Performs the reserve operation.
+   *
+   * @param number_of_particles_in The number of particles.
+   */
   void reserve(size_t number_of_particles_in);
   //void push_back(const Parameters &parameters_in,
   //               Factors* factors_in);
   //void push_back(const Particle &particle_in);
+  /**
+   * @brief Performs the push back operation.
+   *
+   * @param move_output_in The move output.
+   */
   void push_back(MoveOutput* move_output_in);
   void push_back(Parameters &&parameters_in,
                  Factors* factors_in,
                  const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
                  const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
+  /**
+   * @brief Performs the push back operation.
+   *
+   * @param particle_in The particle.
+   */
   void push_back(Particle &&particle_in);
   void push_back(const Parameters &parameters_in,
                  Factors* factors_in,
                  const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
                  const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
+  /**
+   * @brief Performs the push back operation.
+   *
+   * @param particle_in The particle.
+   */
   void push_back(const Particle &particle_in);
   
+  /**
+   * @brief Performs the add particle operation.
+   *
+   * @return The result.
+   */
   Particle* add_particle();
   
+  /**
+   * @brief Simulates resampling variables.
+   *
+   * @param rng The rng.
+   */
   void simulate_resampling_variables(RandomNumberGenerator &rng);
   
   //arma::colvec get_resampling_variables() const;
   //void set_ancestor_variables(const std::vector<size_t> &ancestor_variables_in);
   
+  /**
+   * @brief Performs the initialise weights operation.
+   */
   void initialise_weights();
+  /**
+   * @brief Updates weights.
+   *
+   * @param latest_unnormalised_log_incremental_weights The latest unnormalised log incremental weights.
+   */
   void update_weights(const arma::colvec &latest_unnormalised_log_incremental_weights);
+  /**
+   * @brief Performs the calculate log normalising constant operation.
+   *
+   * @return The result.
+   */
   double calculate_log_normalising_constant();
+  /**
+   * @brief Performs the normalise weights operation.
+   */
   void normalise_weights();
+  /**
+   * @brief Resamples the particle population.
+   */
   void resample();
   
+  /**
+   * @brief Returns the output lengths.
+   *
+   * @return The result.
+   */
   arma::rowvec get_output_lengths() const;
   
+  /**
+   * @brief Sets the previous target evaluated to target evaluated.
+   */
   void set_previous_target_evaluated_to_target_evaluated();
+  /**
+   * @brief Performs the subsample set previous target evaluated to target evaluated operation.
+   */
   void subsample_set_previous_target_evaluated_to_target_evaluated();
   
+  /**
+   * @brief Returns the most recent matrix particles.
+   *
+   * @param vector_variables The vector variables.
+   *
+   * @return The result.
+   */
   arma::mat get_most_recent_matrix_particles(const std::vector<std::string> &vector_variables) const;
   
   //virtual List& operator[](int index)=0;
   //virtual List operator[](int index) const=0;
   
+  /**
+   * @brief Performs the operator<< operation.
+   *
+   * @param os The os.
+   * @param p The p.
+   *
+   * @return The result.
+   */
   friend std::ostream& operator<<(std::ostream& os, const Particles &p);
   
   // Access only elements in std::vector<Particle>.
   //double& operator[](const size_t &i);
   //double operator[](const size_t &i) const;
   
+  /**
+   * @brief Performs the operator[] operation.
+   *
+   * @param i The i.
+   *
+   * @return The result.
+   */
   MoveOutput* operator[](const size_t &i);
+  /**
+   * @brief Performs the operator[] operation.
+   *
+   * @param i The i.
+   *
+   * @return The result.
+   */
   MoveOutput* operator[](const size_t &i) const;
   
+  /**
+   * @brief Performs the back operation.
+   *
+   * @return The result.
+   */
   MoveOutput* back();
+  /**
+   * @brief Performs the back operation.
+   *
+   * @return The result.
+   */
   MoveOutput* back() const;
   
+  /**
+   * @brief Performs the size operation.
+   *
+   * @return The result.
+   */
   size_t size() const;
   
   // Outer vector is over particles, inner is stored here
@@ -154,14 +306,27 @@ public:
   
   double ess;
   
+  /**
+   * @brief Closes any open file streams.
+   */
   void close_ofstreams();
   
 protected:
   
   //friend SequentialSMCWorker;
   
+  /**
+   * @brief Copies the state of another SMC into this object.
+   *
+   * @param another The SMC instance to copy from.
+   */
   void make_copy(const Particles &another);
   
+  /**
+   * @brief Copies the state of another SMC into this object.
+   *
+   * @param another The SMC instance to copy from.
+   */
   void make_copy(Particles &&another);
   
   // Stored here. // moved to model_and_algorithm

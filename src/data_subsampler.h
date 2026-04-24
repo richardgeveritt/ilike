@@ -11,6 +11,18 @@ using namespace Rcpp;
 
 namespace ilike
 {
+  /**
+   * @file data_subsampler.h
+   * @brief Defines the DataSubsetter class.
+   *
+   * Provides data subsetter functionality.
+   *
+   * @namespace ilike
+   * @class DataSubsetter
+   * @brief The data subsetter class.
+   */
+
+
 
 class DataSubsetter;
 class IIDDataSubsetter;
@@ -20,14 +32,40 @@ class DataSubsampler
   
 public:
   
+  /**
+   * @brief Performs the datasubsampler operation.
+   */
   DataSubsampler();
+  /**
+   * @brief Performs the ~datasubsampler operation.
+   */
   virtual ~DataSubsampler();
   
+  /**
+   * @brief Performs the datasubsampler operation.
+   *
+   * @param another The DataSubsetter instance to copy from.
+   */
   DataSubsampler(const DataSubsampler &another);
   
+  /**
+   * @brief Assignment operator for DataSubsetter.
+   *
+   * @param another The DataSubsetter instance to copy from.
+   */
   void operator=(const DataSubsampler &another);
+  /**
+   * @brief Creates a deep copy of this DataSubsetter object.
+   *
+   * @return The result.
+   */
   virtual DataSubsampler* duplicate() const=0;
   
+  /**
+   * @brief Subsamples the data for use in the algorithm.
+   *
+   * @param num_pieces The num pieces.
+   */
   void subsample(size_t num_pieces);
   
   // not implemented at the moment
@@ -48,13 +86,21 @@ protected:
   
   friend IIDDataSubsetter;
   // Not stored here. Stored in "main'.
+  /** @brief The rng. */
   RandomNumberGenerator* rng;
   
+  /**
+   * @brief Copies the state of another DataSubsetter into this object.
+   *
+   * @param another The DataSubsetter instance to copy from.
+   */
   void make_copy(const DataSubsampler &another);
   
+  /** @brief The variables. */
   std::vector<std::string> variables;
   
   // Stored here.
+  /** @brief The subsetters. */
   std::vector<DataSubsetter*> subsetters;
   
 };

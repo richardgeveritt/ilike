@@ -8,6 +8,18 @@
 
 namespace ilike
 {
+  /**
+   * @file parameter_particle_simulator.h
+   * @brief Defines the IndependentProposalKernel class.
+   *
+   * An independent independent proposal kernel. Proposes new parameter values independently of the current state by sampling from a independent distribution.
+   *
+   * @namespace ilike
+   * @class IndependentProposalKernel
+   * @brief The independent proposal kernel class.
+   */
+
+
 class IndependentProposalKernel;
 class LikelihoodEstimator;
 
@@ -15,16 +27,37 @@ class ParameterParticleSimulator : public ParticleSimulator
 {
 public:
   
+  /**
+   * @brief Performs the parameterparticlesimulator operation.
+   */
   ParameterParticleSimulator();
   ParameterParticleSimulator(const IndependentProposalKernel* proposal_in,
                              const std::vector<LikelihoodEstimator*> &likelihood_estimators_in);
   //ParameterParticleSimulator(SimulateDistributionPtr simulate_parameters_in,
   //                           const std::vector<LikelihoodEstimator*> &likelihood_estimators_in,
   //                          const std::string &resample_variable_name_in);
+  /**
+   * @brief Performs the ~parameterparticlesimulator operation.
+   */
   virtual ~ParameterParticleSimulator();
   
+  /**
+   * @brief Performs the parameterparticlesimulator operation.
+   *
+   * @param another The IndependentProposalKernel instance to copy from.
+   */
   ParameterParticleSimulator(const ParameterParticleSimulator &another);
+  /**
+   * @brief Assignment operator for IndependentProposalKernel.
+   *
+   * @param another The IndependentProposalKernel instance to copy from.
+   */
   void operator=(const ParameterParticleSimulator &another);
+  /**
+   * @brief Creates a deep copy of this IndependentProposalKernel object.
+   *
+   * @return The result.
+   */
   ParticleSimulator* duplicate() const;
   
   Particle simulate(RandomNumberGenerator &rng,
@@ -87,6 +120,13 @@ public:
   
   double evaluate(const Particle &input) const;
   
+  /**
+   * @brief Performs the subsample evaluate operation.
+   *
+   * @param input The input.
+   *
+   * @return The result.
+   */
   double subsample_evaluate(const Particle &input) const;
   
   /*
@@ -99,14 +139,21 @@ public:
   
 protected:
   
+  /**
+   * @brief Copies the state of another IndependentProposalKernel into this object.
+   *
+   * @param another The IndependentProposalKernel instance to copy from.
+   */
   void make_copy(const ParameterParticleSimulator &another);
   
   //SimulateDistributionPtr simulate_parameters;
   
   // stored here
+  /** @brief The proposal. */
   const IndependentProposalKernel* proposal;
   
   // Not stored here.
+  /** @brief The likelihood estimators. */
   std::vector<LikelihoodEstimator*> likelihood_estimators;
 };
 }

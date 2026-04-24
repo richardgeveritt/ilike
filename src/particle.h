@@ -14,6 +14,18 @@ using namespace Rcpp;
 
 namespace ilike
 {
+  /**
+   * @file particle.h
+   * @brief Defines the ModelAndAlgorithm class.
+   *
+   * Provides model and algorithm functionality.
+   *
+   * @namespace ilike
+   * @class ModelAndAlgorithm
+   * @brief The model and algorithm class.
+   */
+
+
 class ModelAndAlgorithm;
 class LikelihoodEstimatorOutput;
 class Transform;
@@ -30,9 +42,17 @@ class Particle
   
 public:
   
+  /**
+   * @brief Performs the particle operation.
+   */
   Particle();
   //Particle(const Parameters &&parameters_in);
   
+  /**
+   * @brief Performs the particle operation.
+   *
+   * @param parameters_in The parameters.
+   */
   Particle(const Parameters &parameters_in);
   
   Particle(const Parameters &parameters_in,
@@ -76,6 +96,11 @@ public:
            EnsembleFactorVariables* ensemble_factor_variables_in);
   
   
+  /**
+   * @brief Performs the particle operation.
+   *
+   * @param parameters_in The parameters.
+   */
   Particle(Parameters &&parameters_in);
   
   Particle(Parameters &&parameters_in,
@@ -119,8 +144,16 @@ public:
            EnsembleFactorVariables* ensemble_factor_variables_in);
   
   
+  /**
+   * @brief Performs the ~particle operation.
+   */
   virtual ~Particle();
   
+  /**
+   * @brief Performs setup given the supplied parameters.
+   *
+   * @param factors_in The factors.
+   */
   void setup(Factors* factors_in);
   void setup(Factors* factors_in,
              const Parameters &conditioned_on_parameters);
@@ -146,17 +179,56 @@ public:
              const Parameters &conditioned_on_parameters,
              const Parameters &sequencer_parameters);
   
+  /**
+   * @brief Performs the copy without factor variables operation.
+   *
+   * @return The result.
+   */
   Particle copy_without_factor_variables() const;
   
+  /**
+   * @brief Performs the particle operation.
+   *
+   * @param another The ModelAndAlgorithm instance to copy from.
+   */
   Particle(const Particle &another);
+  /**
+   * @brief Assignment operator for ModelAndAlgorithm.
+   *
+   * @param another The ModelAndAlgorithm instance to copy from.
+   */
   Particle& operator=(const Particle &another);
   
+  /**
+   * @brief Performs the particle operation.
+   *
+   * @param another The ModelAndAlgorithm instance to copy from.
+   */
   Particle(Particle &&another);
+  /**
+   * @brief Assignment operator for ModelAndAlgorithm.
+   *
+   * @param another The ModelAndAlgorithm instance to copy from.
+   */
   Particle& operator=(Particle &&another);
   
+  /**
+   * @brief Performs the operator<< operation.
+   *
+   * @param os The os.
+   * @param p The p.
+   *
+   * @return The result.
+   */
   friend std::ostream& operator<<(std::ostream& os, const Particle &p);
   
+  /**
+   * @brief Simulates factor variables.
+   */
   void simulate_factor_variables();
+  /**
+   * @brief Simulates ensemble factor variables.
+   */
   void simulate_ensemble_factor_variables();
   void simulate_proposal_variables(const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
                                    const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
@@ -194,6 +266,13 @@ public:
    */
   
   void subsample_evaluate_smcfixed_part_of_likelihoods(const Index* index);
+  /**
+   * @brief Performs the subsample evaluate smcadaptive part given smcfixed likelihoods operation.
+   *
+   * @param index The index.
+   *
+   * @return The result.
+   */
   double subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index);
   
   /*
@@ -247,16 +326,58 @@ public:
   
   //arma::colvec get_vector() const;
   
+  /**
+   * @brief Returns the colvec.
+   *
+   * @param state_name The state name.
+   *
+   * @return The result.
+   */
   arma::colvec get_colvec(const std::string &state_name) const;
   
+  /**
+   * @brief Returns the rowvec.
+   *
+   * @param state_name The state name.
+   *
+   * @return The result.
+   */
   arma::rowvec get_rowvec(const std::string &state_name) const;
   
+  /**
+   * @brief Returns the colvec.
+   *
+   * @param state_names The state names.
+   *
+   * @return The result.
+   */
   arma::colvec get_colvec(const std::vector<std::string> &state_names) const;
   
+  /**
+   * @brief Returns the rowvec.
+   *
+   * @param state_names The state names.
+   *
+   * @return The result.
+   */
   arma::rowvec get_rowvec(const std::vector<std::string> &state_names) const;
   
+  /**
+   * @brief Returns the transformed parameters.
+   *
+   * @param proposal_in The proposal.
+   *
+   * @return The result.
+   */
   Parameters get_transformed_parameters(const ProposalKernel* proposal_in) const;
   
+  /**
+   * @brief Returns the gradient estimator output.
+   *
+   * @param proposal_in The proposal.
+   *
+   * @return The result.
+   */
   GradientEstimatorOutput* get_gradient_estimator_output(const ProposalKernel* proposal_in) const;
   /*
    void set_current_transformed_parameters(const ProposalKernel* proposal_in);
@@ -314,6 +435,9 @@ public:
   void set_acceptance(const ProposalKernel* proposal_in,
                       bool accepted_in);
   
+  /**
+   * @brief Performs the erase mcmc adaptation info operation.
+   */
   void erase_mcmc_adaptation_info();
   
   // What happened at the last target.
@@ -354,6 +478,11 @@ public:
   
   void simulate_factor_variables(const Factors* factors);
   
+  /**
+   * @brief Simulates ensemble factor variables.
+   *
+   * @param ensemble_factors The ensemble factors.
+   */
   void simulate_ensemble_factor_variables(const EnsembleFactors* ensemble_factors);
   
   /*
@@ -366,6 +495,11 @@ public:
   
   void subsample_simulate_factor_variables(const Factors* factors);
   
+  /**
+   * @brief Performs the subsample simulate ensemble factor variables operation.
+   *
+   * @param ensemble_factors The ensemble factors.
+   */
   void subsample_simulate_ensemble_factor_variables(const EnsembleFactors* ensemble_factors);
   
   /*
@@ -379,12 +513,25 @@ public:
   // not stored here
   const Particle* previous_self;
   
+  /**
+   * @brief Performs the tell factors to forget they were already written to file operation.
+   */
   void tell_factors_to_forget_they_were_already_written_to_file();
   
 protected:
   
+  /**
+   * @brief Copies the state of another ModelAndAlgorithm into this object.
+   *
+   * @param another The ModelAndAlgorithm instance to copy from.
+   */
   void make_copy(const Particle &another);
   
+  /**
+   * @brief Copies the state of another ModelAndAlgorithm into this object.
+   *
+   * @param another The ModelAndAlgorithm instance to copy from.
+   */
   void make_copy(Particle &&another);
   
 };
