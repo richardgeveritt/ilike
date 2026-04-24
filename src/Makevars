@@ -2,7 +2,6 @@ CXX_STD = CXX14
 PKG_LIBS += $(shell ${R_HOME}/bin/Rscript -e "RcppParallel::RcppParallelLibs()") $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
 PKG_CPPFLAGS += -I../inst/include/
 PKG_CPPFLAGS += -DBOOST_DISABLE_ASSERTS
-MAKEFLAGS += -j$(shell sysctl -n hw.logicalcpu)
 
 PCH_FLAGS = $(ALL_CPPFLAGS) $(ALL_CXXFLAGS)
 
