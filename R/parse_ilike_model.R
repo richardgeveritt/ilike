@@ -6681,18 +6681,33 @@ compile <- function(filenames,
         include_flags = c(include_flags, paste0("-I", inc))
       if (pkg == "RcppArmadillo")
       {
-        if (.Platform$OS.type == "windows") {
-          # On Windows, LAPACK/BLAS must be linked explicitly. Build the flags
-          # from R.home() directly — avoids loading the RcppArmadillo namespace,
-          # which may not be on .libPaths() during R CMD check.
-          bindir = file.path(R.home(), "bin", .Platform$r_arch)
-          ld = paste0("-L", shQuote(bindir), " -lRlapack -lRblas")
-        } else {
-          ld = tryCatch(
-            getExportedValue("RcppArmadillo", "RcppArmadilloLdFlags")(),
-            error = function(e) ""
-          )
-        }
+        ld = tryCatch(
+          getExportedValue("RcppArmadillo", "RcppArmadilloLdFlags")(),
+          error = function(e) {
+            # getExportedValue failed (namespace not on .libPaths()).
+            # On Windows, LAPACK/BLAS must be linked explicitly.
+            # Search for Rlapack.dll in the most likely locations.
+            if (.Platform$OS.type == "windows") {
+              rlapack_dir = ""
+              r_arch = .Platform$r_arch
+              for (candidate in unique(Filter(nchar, c(
+                if (nchar(r_arch) > 0) file.path(R.home("bin"), r_arch) else NULL,
+                file.path(R.home("bin"), "x64"),
+                R.home("bin")
+              )))) {
+                if (dir.exists(candidate) &&
+                    file.exists(file.path(candidate, "Rlapack.dll"))) {
+                  rlapack_dir = normalizePath(candidate, winslash = "/")
+                  break
+                }
+              }
+              if (nchar(rlapack_dir) > 0)
+                paste0("-L", shQuote(rlapack_dir), " -lRlapack -lRblas")
+              else
+                ""
+            } else ""
+          }
+        )
         if (nchar(ld) > 0)
           lib_flags = c(lib_flags, ld)
       }
