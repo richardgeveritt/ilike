@@ -15,6 +15,7 @@ PKG_CXXFLAGS += -include pch.h
 
 $(OBJECTS): pch.h.gch
 
+# Double-colon rule so this recipe runs in addition to R's own clean: target.
 .PHONY: clean
-clean:
+clean::
 	$(RM) *.o *.so *.dll *.dylib pch.h.gch
