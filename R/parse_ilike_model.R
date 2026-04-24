@@ -6681,10 +6681,18 @@ compile <- function(filenames,
         include_flags = c(include_flags, paste0("-I", inc))
       if (pkg == "RcppArmadillo")
       {
-        ld = tryCatch(
-          getExportedValue("RcppArmadillo", "RcppArmadilloLdFlags")(),
-          error = function(e) ""
-        )
+        if (.Platform$OS.type == "windows") {
+          # On Windows, LAPACK/BLAS must be linked explicitly. Build the flags
+          # from R.home() directly — avoids loading the RcppArmadillo namespace,
+          # which may not be on .libPaths() during R CMD check.
+          bindir = file.path(R.home(), "bin", .Platform$r_arch)
+          ld = paste0("-L", shQuote(bindir), " -lRlapack -lRblas")
+        } else {
+          ld = tryCatch(
+            getExportedValue("RcppArmadillo", "RcppArmadilloLdFlags")(),
+            error = function(e) ""
+          )
+        }
         if (nchar(ld) > 0)
           lib_flags = c(lib_flags, ld)
       }
