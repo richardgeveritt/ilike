@@ -6681,41 +6681,8 @@ compile <- function(filenames,
         include_flags = c(include_flags, paste0("-I", inc))
       if (pkg == "ilike")
       {
-        # On Linux/Windows, explicitly link against the ilike shared library so
-        # that vtables, typeinfo, and non-inline symbols are properly resolved.
-        ilike_pkg_dir = tryCatch(find.package("ilike"), error = function(e) "")
-        if (nchar(ilike_pkg_dir) > 0) {
-          ilike_libs_dir = file.path(ilike_pkg_dir, "libs")
-          r_arch = .Platform$r_arch
-          if (nchar(r_arch) > 0)
-            ilike_libs_dir_arch = file.path(ilike_libs_dir, r_arch)
-          else
-            ilike_libs_dir_arch = ilike_libs_dir
-          # Prefer arch-specific lib dir if it exists
-          if (dir.exists(ilike_libs_dir_arch))
-            ilike_lib_search = ilike_libs_dir_arch
-          else
-            ilike_lib_search = ilike_libs_dir
-          # Find the actual shared library file (ilike.so / ilike.dll / ilike.dylib)
-          so_ext = switch(.Platform$OS.type,
-                          windows = "dll",
-                          "so")
-          ilike_so = file.path(ilike_lib_search, paste0("ilike.", so_ext))
-          if (!file.exists(ilike_so) && so_ext == "so") {
-            # macOS may use .dylib
-            ilike_so_dy = file.path(ilike_lib_search, "ilike.dylib")
-            if (file.exists(ilike_so_dy)) ilike_so = ilike_so_dy
-          }
-          if (file.exists(ilike_so)) {
-            ilike_so_norm = normalizePath(ilike_so, mustWork=FALSE)
-            lib_flags = c(lib_flags, shQuote(ilike_so_norm))
-            if (.Platform$OS.type != "windows") {
-              lib_flags = c(lib_flags,
-                            paste0("-Wl,-rpath,",
-                                   shQuote(normalizePath(ilike_lib_search, mustWork=FALSE))))
-            }
-          }
-        }
+        # (ilike symbols are made globally visible at package load time in zzz.R
+        # so that user DLLs compiled by sourceCpp share the same vtables.)
       }
       if (pkg == "RcppArmadillo")
       {
