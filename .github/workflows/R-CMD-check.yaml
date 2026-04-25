@@ -51,7 +51,7 @@ jobs:
         with:
           upload-snapshots: true
           error-on: ' "error" '
-          args: 'c("--no-manual", "--as-cran", "--no-build-vignettes")'
+          args: 'c("--no-manual", "--as-cran")'
 
       - name: Upload R CMD check results
         if: always()
