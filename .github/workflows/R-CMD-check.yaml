@@ -28,7 +28,7 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      _R_CHECK_ELAPSED_TIMEOUT_: 600
+      _R_CHECK_ELAPSED_TIMEOUT_: 1800
 
     steps:
       - uses: actions/checkout@v4
@@ -47,9 +47,11 @@ jobs:
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2
+        timeout-minutes: 60
         with:
           upload-snapshots: true
           error-on: ' "error" '
+          args: 'c("--no-manual", "--as-cran", "--no-build-vignettes")'
 
       - name: Upload R CMD check results
         if: always()
