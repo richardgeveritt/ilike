@@ -6715,8 +6715,6 @@ compile <- function(filenames,
 
     src_lines = readLines(model_for_compilation_name)
     src_lines = src_lines[!grepl("^// *\\[\\[Rcpp::depends", src_lines)]
-    if (!any(grepl("Rcpp::plugins", src_lines)))
-      src_lines = c("// [[Rcpp::plugins(cpp14)]]", src_lines)
     writeLines(src_lines, model_for_compilation_name)
 
     old_cppflags = Sys.getenv("PKG_CPPFLAGS")
