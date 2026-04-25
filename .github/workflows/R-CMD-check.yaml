@@ -41,6 +41,19 @@ jobs:
           http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
 
+      - name: Get ilike compile-cache path
+        id: cache-path
+        shell: Rscript {0}
+        run: |
+          p <- tools::R_user_dir("ilike", "cache")
+          cat(sprintf("path=%s\n", p), file = Sys.getenv("GITHUB_OUTPUT"), append = TRUE)
+
+      - name: Restore ilike compile cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.cache-path.outputs.path }}
+          key: ilike-compile-cache-${{ matrix.config.os }}-${{ matrix.config.r }}-${{ hashFiles('R/parse_ilike_model.R', 'inst/extdata/*.ilike') }}
+
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           extra-packages: any::rcmdcheck

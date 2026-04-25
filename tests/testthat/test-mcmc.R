@@ -1,11 +1,11 @@
 test_that("MCMC works with all available proposals", {
 
   # # Test MCMC with custom Metropolis proposal
-  # run_mcmc_m_proposal()
-  # sampler_output = ilike::load_mcmc_output("mcmc_m_proposal")
-  # expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
-  # expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
-  # unlink("mcmc_m_proposal", recursive=TRUE)
+  run_mcmc_m_proposal()
+  sampler_output = ilike::load_mcmc_output("mcmc_m_proposal")
+  expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
+  expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
+  unlink("mcmc_m_proposal", recursive=TRUE)
 
   # # Test custom Metropolis proposal in MCMC where only the first factor (the prior) is used
   #

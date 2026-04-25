@@ -6714,16 +6714,24 @@ compile <- function(filenames,
     }
 
     src_lines = readLines(model_for_compilation_name)
-    src_lines = src_lines[!grepl("^// *\\[\\[Rcpp::depends", src_lines)]
+    # Strip Rcpp::depends annotations for LinkingTo-only packages (RcppArmadillo,
+    # BH, dqrng, sitmo) that are not on .libPaths() during R CMD check tests.
+    # KEEP ilike itself so sourceCpp links against the main package DLL — this
+    # is required on Linux/Windows where symbols are not resolved via flat namespace.
+    src_lines = src_lines[!grepl("^// *\\[\\[Rcpp::depends\\((?!ilike)", src_lines, perl = TRUE)]
     writeLines(src_lines, model_for_compilation_name)
 
     # Persistent compile cache: derive a stable file path from the content
     # hash so that sourceCpp finds the same source/DLL across R sessions and
     # skips recompilation when the generated code hasn't changed.
+    # Include the ilike package version so that upgrading ilike forces a fresh
+    # compilation (new headers may change the ABI of the resulting DLL).
     cache_dir  <- tools::R_user_dir("ilike", "cache")
-    dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
+    pkg_ver    <- as.character(utils::packageVersion("ilike"))
+    ver_dir    <- file.path(cache_dir, pkg_ver)
+    dir.create(ver_dir, recursive = TRUE, showWarnings = FALSE)
     content_hash <- tools::md5sum(model_for_compilation_name)[[1]]
-    cache_file   <- file.path(cache_dir, paste0("model_", content_hash, ".cpp"))
+    cache_file   <- file.path(ver_dir, paste0("model_", content_hash, ".cpp"))
     if (!file.exists(cache_file))
       file.copy(model_for_compilation_name, cache_file)
 
