@@ -6717,6 +6717,16 @@ compile <- function(filenames,
     src_lines = src_lines[!grepl("^// *\\[\\[Rcpp::depends", src_lines)]
     writeLines(src_lines, model_for_compilation_name)
 
+    # Persistent compile cache: derive a stable file path from the content
+    # hash so that sourceCpp finds the same source/DLL across R sessions and
+    # skips recompilation when the generated code hasn't changed.
+    cache_dir  <- tools::R_user_dir("ilike", "cache")
+    dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
+    content_hash <- tools::md5sum(model_for_compilation_name)[[1]]
+    cache_file   <- file.path(cache_dir, paste0("model_", content_hash, ".cpp"))
+    if (!file.exists(cache_file))
+      file.copy(model_for_compilation_name, cache_file)
+
     old_cppflags = Sys.getenv("PKG_CPPFLAGS")
     old_libs     = Sys.getenv("PKG_LIBS")
     new_cppflags = paste(include_flags, collapse = " ")
@@ -6729,7 +6739,7 @@ compile <- function(filenames,
       Sys.setenv(PKG_LIBS = old_libs)
     }, add = TRUE)
 
-    Rcpp::sourceCpp(model_for_compilation_name)
+    Rcpp::sourceCpp(cache_file)
   }
 
   # Cleanup of temporary files is handled by on.exit() registered at creation.
