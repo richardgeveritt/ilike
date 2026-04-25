@@ -84,7 +84,6 @@
 #include "vector_factors.h"
 #include "factor_variables.h"
 
-
 // Case insensitive string comparison
 // From
 // https://stackoverflow.com/questions/11635/case-insensitive-string-comparison-in-c
