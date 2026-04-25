@@ -24,7 +24,7 @@
  *
  * Public Methods:
  * - Constructors: Default, copy, move, and parameterized constructors.
- * - Destructor: Virtual destructor.
+ * - Destructor.
  * - Operator Overloads: [], (), =, <<, and arithmetic operators.
  * - Accessors: get_colvec, get_rowvec, get_matrices, row, col, rows, cols, min_n_rows, min_n_cols.
  * - Modifiers: merge, merge_with_fixed, deep_copy, deep_copy_nonfixed, self_deep_copy_nonfixed, deep_overwrite_with_variables_in_argument.
@@ -108,9 +108,9 @@ public:
              const arma::mat &value_in);
 
   /**
-   * @brief Default constructor.
+   * @brief Destructor.
    */
-  virtual ~Parameters();
+  ~Parameters();
 
   /**
    * @brief Accessor operator for non-const objects.
