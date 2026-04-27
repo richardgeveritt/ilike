@@ -23,6 +23,7 @@ test_that("MCMC works with all available proposals", {
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
   unlink("mcmc_m_proposal_norm_rw", recursive=TRUE)
 
+
   # # Test built-in Metropolis proposal in MCMC
   # # ilike::unif_rw
   #
