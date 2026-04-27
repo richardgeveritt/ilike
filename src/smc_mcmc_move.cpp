@@ -914,27 +914,19 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state)
 
 void SMCMCMCMove::evaluate_smc(SMCOutput* current_state)
 {
+  Rcerr << "[diag] evaluate_smc: calling evaluate_smcfixed_part_smc" << std::endl;
   this->evaluate_smcfixed_part_smc(current_state);
+  Rcerr << "[diag] evaluate_smc: calling evaluate_smcadaptive_part_given_smcfixed_smc" << std::endl;
   this->evaluate_smcadaptive_part_given_smcfixed_smc(current_state);
+  Rcerr << "[diag] evaluate_smc: done" << std::endl;
 }
 
 void SMCMCMCMove::evaluate_smcfixed_part_smc(SMCOutput* current_state)
 {
-  /*
-   if (this->sequencer_parameters!=NULL)
-   {
-   this->the_worker->smcfixed_weight(this->index,
-   current_state->back(),
-   *this->sequencer_parameters);
-   }
-   else
-   {
-   this->the_worker->smcfixed_weight(this->index,
-   current_state->back());
-   }
-   */
+  Rcerr << "[diag] evaluate_smcfixed: calling smcfixed_weight" << std::endl;
   this->the_worker->smcfixed_weight(this->index,
                                     current_state->back());
+  Rcerr << "[diag] evaluate_smcfixed: done" << std::endl;
   //current_state->initialise_next_step();
 }
 
@@ -943,16 +935,18 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
   // set sequencer to have values from conditioned_on_parameters
   if (!this->sequencer_limit_is_fixed)
     Rcpp::stop("SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc - need fixed sequencer limit if we are not conditioning on parameters.");
+  Rcerr << "[diag] evaluate_smcadaptive: entering while loop" << std::endl;
   
   // iterate until stop.
   bool terminate = FALSE;
   while (terminate==FALSE)
   {
-    
+    Rcerr << "[diag] evaluate_smcadaptive: calling find_desired_criterion" << std::endl;
     this->sequencer.find_desired_criterion(current_state);
-    
+    Rcerr << "[diag] evaluate_smcadaptive: calling find_next_target_bisection" << std::endl;
     // (involves evaluating adaptive weights, using Sequencer)
     this->sequencer.find_next_target_bisection(current_state,this->index);
+    Rcerr << "[diag] evaluate_smcadaptive: bisection done, computing log_likelihood" << std::endl;
     
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
     current_state->set_llhd(current_state->log_likelihood);
