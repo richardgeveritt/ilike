@@ -10,6 +10,7 @@ namespace ilike
 ZigZagMCMC::ZigZagMCMC()
 :MCMC()
 {
+  this->proposal = NULL;
 }
 
 ZigZagMCMC::ZigZagMCMC(size_t number_of_iterations_in,
@@ -24,6 +25,7 @@ ZigZagMCMC::ZigZagMCMC(size_t number_of_iterations_in,
                        const Parameters &proposal_variances_in)
 :MCMC(number_of_iterations_in)
 {
+  this->proposal = NULL;
   // default to Gaussian random walk
   //this->proposal = ProposalKernel(EvaluateLogMCMCProposalPtr proposal_evaluate_in,
   //                                SimulateMCMCProposalPtr proposal_simulate_in,

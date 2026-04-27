@@ -8,6 +8,7 @@ CustomSymmetricProposalKernel::CustomSymmetricProposalKernel()
 :SymmetricProposalKernel()
 {
   this->proposal_evaluate = NULL;
+  this->proposal_parameters = NULL;
 }
 
 CustomSymmetricProposalKernel::~CustomSymmetricProposalKernel()
@@ -19,6 +20,7 @@ CustomSymmetricProposalKernel::CustomSymmetricProposalKernel(SimulateMCMCProposa
 {
   this->proposal_evaluate = NULL;
   this->proposal_simulate = proposal_simulate_in;
+  this->proposal_parameters = NULL;
 }
 
 CustomSymmetricProposalKernel::CustomSymmetricProposalKernel(const CustomSymmetricProposalKernel &another)

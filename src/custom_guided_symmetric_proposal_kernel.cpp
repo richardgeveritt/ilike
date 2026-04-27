@@ -9,6 +9,7 @@ CustomGuidedSymmetricProposalKernel::CustomGuidedSymmetricProposalKernel()
 {
   this->proposal_evaluate = NULL;
   this->data = NULL;
+  this->proposal_parameters = NULL;
 }
 
 CustomGuidedSymmetricProposalKernel::~CustomGuidedSymmetricProposalKernel()
@@ -22,6 +23,7 @@ CustomGuidedSymmetricProposalKernel::CustomGuidedSymmetricProposalKernel(Simulat
   this->proposal_evaluate = NULL;
   this->proposal_simulate = proposal_simulate_in;
   this->data = data_in;
+  this->proposal_parameters = NULL;
 }
 
 CustomGuidedSymmetricProposalKernel::CustomGuidedSymmetricProposalKernel(const CustomGuidedSymmetricProposalKernel &another)

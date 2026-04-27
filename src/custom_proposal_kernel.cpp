@@ -8,6 +8,7 @@ CustomProposalKernel::CustomProposalKernel()
   :ProposalKernel()
 {
   this->proposal_evaluate = NULL;
+  this->proposal_parameters = NULL;
 }
 
 CustomProposalKernel::~CustomProposalKernel()
@@ -19,6 +20,7 @@ CustomProposalKernel::CustomProposalKernel(SimulateMCMCProposalPtr proposal_simu
 {
   this->proposal_evaluate = NULL;
   this->proposal_simulate = proposal_simulate_in;
+  this->proposal_parameters = NULL;
 }
 
 CustomProposalKernel::CustomProposalKernel(SimulateMCMCProposalPtr proposal_simulate_in,

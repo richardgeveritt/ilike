@@ -850,15 +850,10 @@ void SMCMCMCMove::make_copy(const SMCMCMCMove &another)
 
 SMCOutput* SMCMCMCMove::specific_run()
 {
-  Rcerr << "[diag] specific_run: calling initialise_smc" << std::endl;
   SMCOutput* simulation = this->initialise_smc();
-  Rcerr << "[diag] specific_run: calling simulate_smc" << std::endl;
   this->simulate_smc(simulation);
-  Rcerr << "[diag] specific_run: calling evaluate_smc" << std::endl;
   this->evaluate_smc(simulation);
-  Rcerr << "[diag] specific_run: calling normalise_and_resample_weights" << std::endl;
   simulation->normalise_and_resample_weights();
-  Rcerr << "[diag] specific_run: done" << std::endl;
   return simulation;
 }
 
@@ -884,33 +879,25 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state)
   if (current_state->number_of_smc_iterations()==0)
   {
     // Simulate from the proposal.
-    Rcerr << "[diag] simulate_smc: calling simulate_proposal (iteration 0)" << std::endl;
     this->simulate_proposal(current_state);
-    Rcerr << "[diag] simulate_smc: simulate_proposal done" << std::endl;
   }
   else
   {
     // update MCMC proposals
-    Rcerr << "[diag] simulate_smc (iter>0): calling smc_adapt, iteration=" << current_state->number_of_smc_iterations() << std::endl;
     this->mcmc->smc_adapt(current_state);
-    Rcerr << "[diag] simulate_smc (iter>0): smc_adapt done" << std::endl;
     
     current_state->normalise_and_resample_weights();
-    Rcerr << "[diag] simulate_smc (iter>0): normalise_and_resample done" << std::endl;
     //current_state->resample();
     
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Particles* current_particles = &current_state->back();
     Particles* next_particles = current_state->add_particles(current_particles);
-    Rcerr << "[diag] simulate_smc (iter>0): calling the_worker->move" << std::endl;
     
     this->the_worker->move(next_particles,
                            current_particles);
-    Rcerr << "[diag] simulate_smc (iter>0): move done" << std::endl;
     
     //this->evaluate_smcfixed_part_smc(current_state);
     current_state->increment_smc_iteration();
-    Rcerr << "[diag] simulate_smc (iter>0): increment done" << std::endl;
     
     // involves complete evaluation of weights using current adaptive param
   }
@@ -919,19 +906,14 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state)
 
 void SMCMCMCMove::evaluate_smc(SMCOutput* current_state)
 {
-  Rcerr << "[diag] evaluate_smc: calling evaluate_smcfixed_part_smc" << std::endl;
   this->evaluate_smcfixed_part_smc(current_state);
-  Rcerr << "[diag] evaluate_smc: calling evaluate_smcadaptive_part_given_smcfixed_smc" << std::endl;
   this->evaluate_smcadaptive_part_given_smcfixed_smc(current_state);
-  Rcerr << "[diag] evaluate_smc: done" << std::endl;
 }
 
 void SMCMCMCMove::evaluate_smcfixed_part_smc(SMCOutput* current_state)
 {
-  Rcerr << "[diag] evaluate_smcfixed: calling smcfixed_weight" << std::endl;
   this->the_worker->smcfixed_weight(this->index,
                                     current_state->back());
-  Rcerr << "[diag] evaluate_smcfixed: done" << std::endl;
   //current_state->initialise_next_step();
 }
 
@@ -940,69 +922,48 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
   // set sequencer to have values from conditioned_on_parameters
   if (!this->sequencer_limit_is_fixed)
     Rcpp::stop("SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc - need fixed sequencer limit if we are not conditioning on parameters.");
-  Rcerr << "[diag] evaluate_smcadaptive: entering while loop" << std::endl;
   
   // iterate until stop.
   bool terminate = FALSE;
   while (terminate==FALSE)
   {
-    Rcerr << "[diag] evaluate_smcadaptive: calling find_desired_criterion" << std::endl;
     this->sequencer.find_desired_criterion(current_state);
-    Rcerr << "[diag] evaluate_smcadaptive: calling find_next_target_bisection" << std::endl;
     // (involves evaluating adaptive weights, using Sequencer)
     this->sequencer.find_next_target_bisection(current_state,this->index);
-    Rcerr << "[diag] evaluate_smcadaptive: bisection done, computing log_likelihood" << std::endl;
     
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
-    Rcerr << "[diag] evaluate_smcadaptive: after calculate_latest_log_normalising_constant_ratio" << std::endl;
     current_state->set_llhd(current_state->log_likelihood);
-    Rcerr << "[diag] evaluate_smcadaptive: after set_llhd" << std::endl;
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
-    Rcerr << "[diag] evaluate_smcadaptive: after schedule_parameters deep_copy" << std::endl;
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
     // check termination, using sequencer
-    Rcerr << "[diag] evaluate_smcadaptive: calling check_termination" << std::endl;
     if (this->sequencer.check_termination())
     {
-      Rcerr << "[diag] evaluate_smcadaptive: termination true" << std::endl;
       //terminate = TRUE;
       
-      Rcerr << "[diag] evaluate_smcadaptive: mcmc_at_last_step=" << this->mcmc_at_last_step << std::endl;
       if (this->mcmc_at_last_step)
       {
-        Rcerr << "[diag] evaluate_smcadaptive: calling simulate_smc (last step)" << std::endl;
         this->simulate_smc(current_state);
-        Rcerr << "[diag] evaluate_smcadaptive: simulate_smc done, calling set_llhd" << std::endl;
         current_state->set_llhd(current_state->log_likelihood);
-        Rcerr << "[diag] evaluate_smcadaptive: set_llhd done, calling set_time_and_reset_start" << std::endl;
         current_state->set_time_and_reset_start();
-        Rcerr << "[diag] evaluate_smcadaptive: set_time done" << std::endl;
         //current_state->decrement_smc_iteration();
       }
-      Rcerr << "[diag] evaluate_smcadaptive: calling terminate()" << std::endl;
       current_state->terminate();
-      Rcerr << "[diag] evaluate_smcadaptive: terminate() done, breaking" << std::endl;
       break;
     }
     else
     {
-      Rcerr << "[diag] evaluate_smcadaptive: termination false, set_time_and_reset_start" << std::endl;
       current_state->set_time_and_reset_start();
     }
     
-    Rcerr << "[diag] evaluate_smcadaptive: calling simulate_smc (loop)" << std::endl;
     this->simulate_smc(current_state);
-    Rcerr << "[diag] evaluate_smcadaptive: simulate_smc done, set_previous_target" << std::endl;
     current_state->back().set_previous_target_evaluated_to_target_evaluated();
-    Rcerr << "[diag] evaluate_smcadaptive: end of loop iteration" << std::endl;
   }
-  Rcerr << "[diag] evaluate_smcadaptive: while loop exited" << std::endl;
 }
 
 MoveOutput* SMCMCMCMove::move(RandomNumberGenerator &rng,

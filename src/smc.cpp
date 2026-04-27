@@ -302,13 +302,10 @@ SMCOutput* SMC::run()
   
   if (this->initialised==false)
   {
-    Rcerr << "[diag] SMC::run: calling setup()" << std::endl;
     this->setup();
-    Rcerr << "[diag] SMC::run: setup() done" << std::endl;
     this->initialised = true;
   }
   
-  Rcerr << "[diag] SMC::run: calling specific_run()" << std::endl;
   return this->specific_run();
   //return new SMCOutput;
 }
@@ -367,30 +364,25 @@ void SMC::setup_variables()
   
   if (this->proposed_particles_inputted)
   {
-    Rcerr << "[diag] setup_variables: using initial_particles" << std::endl;
     dummy_parameters = this->initial_particles[0];
     dummy_parameters.merge_with_fixed(this->sequencer.schedule_parameters);
   }
   else
   {
-    Rcerr << "[diag] setup_variables: calling particle_simulator->simulate" << std::endl;
     dummy_parameters = std::move(this->particle_simulator->simulate(*this->rng,
                                                                     this->factors,
                                                                     &this->proposals_to_transform_for,
                                                                     &this->proposals_to_find_gradient_for,
                                                                     this->sequencer.schedule_parameters).parameters);
   }
-  Rcerr << "[diag] setup_variables: got dummy_parameters" << std::endl;
   
   this->vector_variables = dummy_parameters.get_nonfixed_vector_variables();
   this->any_variables = dummy_parameters.get_nonfixed_any_variables();
-  Rcerr << "[diag] setup_variables: got variables" << std::endl;
   
   this->vector_variable_sizes = dummy_parameters.get_variable_n_elems(this->vector_variables);
   
   if (this->factors!=NULL)
     this->factors->setup(dummy_parameters);
-  Rcerr << "[diag] setup_variables: done" << std::endl;
   
   //this->setup_moves_and_proposals();
 }
@@ -470,31 +462,23 @@ void SMC::setup_variables(const Parameters &parameters)
 void SMC::simulate_proposal(SMCOutput* current_state)
 {
   // Simulate from proposal.
-  Rcerr << "[diag] SMC::simulate_proposal: calling add_particles" << std::endl;
   Particles* next_particles = current_state->add_particles();
-  Rcerr << "[diag] SMC::simulate_proposal: add_particles done" << std::endl;
   
   if (!this->proposed_particles_inputted)
   {
-    Rcerr << "[diag] SMC::simulate_proposal: calling the_worker->simulate" << std::endl;
     this->the_worker->simulate(next_particles);
-    Rcerr << "[diag] SMC::simulate_proposal: the_worker->simulate done" << std::endl;
   }
   else
   {
-    Rcerr << "[diag] SMC::simulate_proposal: calling next_particles->setup (initial_particles)" << std::endl;
     next_particles->setup(this->initial_particles,
                           this->log_probabilities_of_initial_values,
                           this->factors,
                           &this->proposals_to_transform_for,
                           &this->proposals_to_find_gradient_for,
                           this->sequencer.schedule_parameters);
-    Rcerr << "[diag] SMC::simulate_proposal: next_particles->setup done" << std::endl;
   }
   
-  Rcerr << "[diag] SMC::simulate_proposal: calling initialise_weights" << std::endl;
   current_state->back().initialise_weights();
-  Rcerr << "[diag] SMC::simulate_proposal: done" << std::endl;
 }
 
 LikelihoodEstimatorOutput* SMC::initialise(const Parameters &conditioned_on_parameters)

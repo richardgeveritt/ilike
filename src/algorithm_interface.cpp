@@ -1,6 +1,7 @@
 #include <algorithm> // std::equal
 #include <cctype>    // std::tolower
 #include <chrono>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -4020,7 +4021,7 @@ MCMCTermination *make_mcmc_termination(const List &model_parameters,
         if (values.length() == 1) {
           double threshold =
               extract_double_parameter(values, model_parameters, 0);
-          int number_of_iterations = arma::datum::inf;
+          int number_of_iterations = std::numeric_limits<int>::max();
 
           termination_method =
               new SEMCMCTermination(threshold, number_of_iterations);
@@ -4732,9 +4733,7 @@ ImportanceSampler *get_importance_sampler(
     Rcout << "No importance sampling proposal specified; using prior."
           << std::endl;
 
-    Rcerr << "[diag] before get_prior_as_simulate_only_proposal" << std::endl;
     proposal_in = get_prior_as_simulate_only_proposal(model, parameters);
-    Rcerr << "[diag] after get_prior_as_simulate_only_proposal" << std::endl;
 
     likelihood_estimators = get_likelihood_estimators(
         rng, seed, the_data, model, parameters, algorithm_parameter_list, false,
@@ -4743,14 +4742,12 @@ ImportanceSampler *get_importance_sampler(
         any_annealing, factors_affected_by_smc_sequence,
         data_created_in_get_likelihood_estimators,
         data_created_in_get_measurement_covariance_estimators);
-    Rcerr << "[diag] after get_likelihood_estimators" << std::endl;
 
     proposal_is_evaluated_in = false;
   }
 
   Parameters algorithm_parameters =
       make_algorithm_parameters(algorithm_parameter_list);
-  Rcerr << "[diag] after make_algorithm_parameters" << std::endl;
 
   return new ImportanceSampler(
       rng, seed, the_data, algorithm_parameters, number_of_importance_points,
@@ -4774,23 +4771,16 @@ double do_importance_sampler(const List &model, const List &parameters,
       number_of_importance_points, parallel_in, grain_size_in, results_name_in,
       &seed, data_created_in_get_likelihood_estimators,
       data_created_in_measurement_covariance_estimators);
-  Rcerr << "[diag] get_importance_sampler returned" << std::endl;
 
   SMCOutput *output = alg->run();
-  Rcerr << "[diag] alg->run() returned" << std::endl;
 
   if (strcmp(results_name_in.get_cstring(), "") != 0)
     output->write(results_name_in.get_cstring());
-  Rcerr << "[diag] output->write() returned" << std::endl;
 
   double log_likelihood = output->log_likelihood;
-  Rcerr << "[diag] before delete output" << std::endl;
   delete output;
-  Rcerr << "[diag] before delete alg" << std::endl;
   delete alg;
-  Rcerr << "[diag] deletes complete" << std::endl;
 
-  Rcerr << "[diag] do_importance_sampler about to return" << std::endl;
   return log_likelihood;
 }
 
@@ -4840,10 +4830,8 @@ void do_mcmc(const List &model, const List &parameters,
 
   // ilike:: includes any of the options we have made
 
-  Rcerr << "[diag] do_mcmc entered" << std::endl;
   RandomNumberGenerator rng;
   Data the_data = get_data(model);
-  Rcerr << "[diag] do_mcmc: get_data done" << std::endl;
   std::vector<Data> data_created_in_get_likelihood_estimators;
   std::vector<Data> data_created_in_get_measurement_covariance_estimators;
 
@@ -4879,16 +4867,13 @@ void do_mcmc(const List &model, const List &parameters,
       factors_affected_by_smc_sequence,
       data_created_in_get_likelihood_estimators,
       data_created_in_get_measurement_covariance_estimators);
-  Rcerr << "[diag] do_mcmc: get_likelihood_estimators done" << std::endl;
 
   Parameters algorithm_parameters =
       make_algorithm_parameters(algorithm_parameter_list);
-  Rcerr << "[diag] do_mcmc: make_algorithm_parameters done" << std::endl;
 
   MCMC *the_mcmc =
       make_mcmc(model, parameters, &the_data, mcmc_termination_method,
                 mcmc_weights_method, full_index);
-  Rcerr << "[diag] do_mcmc: make_mcmc done" << std::endl;
 
   SMCMCMCMove *alg;
 
@@ -4933,18 +4918,13 @@ void do_mcmc(const List &model, const List &parameters,
                           parallel_in, grain_size_in, "");
   }
 
-  Rcerr << "[diag] do_mcmc: about to alg->run()" << std::endl;
   SMCOutput *output = alg->run();
-  Rcerr << "[diag] do_mcmc: alg->run() done" << std::endl;
 
   if (strcmp(results_name_in.get_cstring(), "") != 0)
     output->write(results_name_in.get_cstring());
-  Rcerr << "[diag] do_mcmc: write done" << std::endl;
 
   delete output;
-  Rcerr << "[diag] do_mcmc: delete output done" << std::endl;
   delete alg;
-  Rcerr << "[diag] do_mcmc: delete alg done" << std::endl;
 }
 
 // [[Rcpp::export]]

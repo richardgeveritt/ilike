@@ -71,9 +71,7 @@ MetropolisHastingsMCMC::~MetropolisHastingsMCMC()
 MetropolisHastingsMCMC::MetropolisHastingsMCMC(const MetropolisHastingsMCMC &another)
 :MCMC(another)
 {
-  Rcerr << "[diag] MH copy ctor: make_copy" << std::endl;
   this->make_copy(another);
-  Rcerr << "[diag] MH copy ctor: done" << std::endl;
 }
 
 void MetropolisHastingsMCMC::operator=(const MetropolisHastingsMCMC &another)
@@ -104,26 +102,21 @@ MCMC* MetropolisHastingsMCMC::mcmc_duplicate() const
 
 MetropolisHastingsMCMC* MetropolisHastingsMCMC::metropolis_hastings_mcmc_duplicate() const
 {
-  Rcerr << "[diag] mh_mcmc_dup: entered" << std::endl;
   MetropolisHastingsMCMC* result = new MetropolisHastingsMCMC(*this);
-  Rcerr << "[diag] mh_mcmc_dup: done" << std::endl;
   return result;
 }
 
 void MetropolisHastingsMCMC::make_copy(const MetropolisHastingsMCMC &another)
 {
-  Rcerr << "[diag] MH::make_copy: proposal=" << (void*)another.proposal << ", index=" << (void*)another.index << std::endl;
   if (another.proposal!=NULL)
     this->proposal = another.proposal->proposal_kernel_duplicate();
   else
     this->proposal = NULL;
-  Rcerr << "[diag] MH::make_copy: proposal done" << std::endl;
   
   if (another.index!=NULL)
     this->index = another.index->duplicate();
   else
     this->index = NULL;
-  Rcerr << "[diag] MH::make_copy: index done" << std::endl;
 }
 
 Particle MetropolisHastingsMCMC::move(RandomNumberGenerator &rng,
@@ -380,11 +373,8 @@ std::vector<const ProposalKernel*> MetropolisHastingsMCMC::get_proposals() const
 
 StandardMCMCOutput* MetropolisHastingsMCMC::initialise_mcmc_output() const
 {
-  Rcerr << "[diag] initialise_mcmc_output: entered, this=" << (void*)this << ", termination=" << (void*)this->termination << ", proposal=" << (void*)this->proposal << ", index=" << (void*)this->index << std::endl;
   MetropolisHastingsMCMC* dup = this->metropolis_hastings_mcmc_duplicate();
-  Rcerr << "[diag] initialise_mcmc_output: dup done, dup=" << (void*)dup << std::endl;
   MetropolisHastingsStandardMCMCOutput* out = new MetropolisHastingsStandardMCMCOutput(dup);
-  Rcerr << "[diag] initialise_mcmc_output: output constructed" << std::endl;
   return out;
 }
 }

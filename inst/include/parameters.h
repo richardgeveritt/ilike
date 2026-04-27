@@ -52,6 +52,7 @@
 
 #include <RcppArmadillo.h>
 #include <iostream>
+#include <limits>
 #include <vector>
 #include <string>
 #include <memory>
@@ -598,7 +599,7 @@ inline Parameters Parameters::cols(const arma::uvec &indices) const
 
 inline size_t Parameters::min_n_rows() const
 {
-  size_t min = arma::datum::inf;
+  size_t min = std::numeric_limits<size_t>::max();
   for (auto i = this->vector_begin(); i != this->vector_end(); ++i)
   {
     if (i->second.first->n_rows < min)
@@ -609,7 +610,7 @@ inline size_t Parameters::min_n_rows() const
 
 inline size_t Parameters::min_n_cols() const
 {
-  size_t min = arma::datum::inf;
+  size_t min = std::numeric_limits<size_t>::max();
   for (auto i = this->vector_begin(); i != this->vector_end(); ++i)
   {
     if (i->second.first->n_rows < min)

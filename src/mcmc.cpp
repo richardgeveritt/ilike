@@ -61,12 +61,10 @@ void MCMC::operator=(const MCMC &another)
 
 void MCMC::make_copy(const MCMC &another)
 {
-  Rcerr << "[diag] MCMC::make_copy: termination=" << (void*)another.termination << std::endl;
   if (another.termination!=NULL)
     this->termination = another.termination->duplicate();
   else
     this->termination = NULL;
-  Rcerr << "[diag] MCMC::make_copy: done" << std::endl;
   
   //if (another.adaptor!=NULL)
   //  this->adaptor = another.adaptor->duplicate();
@@ -76,21 +74,14 @@ MoveOutput* MCMC::run(RandomNumberGenerator &rng,
                       const Particle &particle) const
 
 {
-  Rcerr << "[diag] MCMC::run entered" << std::endl;
   StandardMCMCOutput* mcmc_output = this->initialise_mcmc_output();//new StandardMCMCOutput();
-  Rcerr << "[diag] MCMC::run: initialise_mcmc_output done" << std::endl;
   
   Particle current_particle = particle;
   Particle* old_pointer = &current_particle;
-  size_t iter_count = 0;
   while (!mcmc_output->terminate())
   {
-    if (iter_count % 1000 == 0)
-      Rcerr << "[diag] MCMC::run: iteration " << iter_count << std::endl;
     current_particle = mcmc_output->move(rng,
                                          current_particle);
-    if (iter_count % 1000 == 0)
-      Rcerr << "[diag] MCMC::run: move done at iteration " << iter_count << std::endl;
     mcmc_output->increment_counter();
     if (&current_particle==old_pointer)
     {
@@ -98,11 +89,8 @@ MoveOutput* MCMC::run(RandomNumberGenerator &rng,
     }
     mcmc_output->push_back(current_particle);
     mcmc_output->mcmc_adapt();
-    iter_count++;
   }
-  Rcerr << "[diag] MCMC::run: loop done after " << iter_count << " iterations" << std::endl;
   mcmc_output->reset_counter();
-  Rcerr << "[diag] MCMC::run: returning" << std::endl;
   return mcmc_output;
 }
 
