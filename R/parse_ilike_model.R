@@ -6742,7 +6742,12 @@ compile <- function(filenames,
 
     old_cppflags = Sys.getenv("PKG_CPPFLAGS")
     old_libs     = Sys.getenv("PKG_LIBS")
-    new_cppflags = paste(include_flags, collapse = " ")
+    # Add the directory of each input .ilike file to the include path so that
+    # user headers (e.g. LV_step.h) sitting next to the .ilike file are found
+    # when sourceCpp compiles from the cache directory.
+    ilike_dirs = unique(normalizePath(dirname(filenames), mustWork = FALSE))
+    ilike_dir_flags = paste0("-I", shQuote(ilike_dirs))
+    new_cppflags = paste(c(include_flags, ilike_dir_flags), collapse = " ")
     if (nchar(old_cppflags) > 0) new_cppflags = paste(new_cppflags, old_cppflags)
     new_libs = paste(lib_flags, collapse = " ")
     if (nchar(old_libs) > 0) new_libs = paste(new_libs, old_libs)

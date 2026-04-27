@@ -1,7 +1,7 @@
 Package: ilike
 Type: Package
 Title: Inference for Intractable Likelihoods
-Version: 0.0.2.3
+Version: 0.0.2.4
 Authors@R: 
     person(given = c("Richard","G"),
            family = "Everitt",
