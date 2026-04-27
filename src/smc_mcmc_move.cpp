@@ -891,21 +891,26 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state)
   else
   {
     // update MCMC proposals
+    Rcerr << "[diag] simulate_smc (iter>0): calling smc_adapt, iteration=" << current_state->number_of_smc_iterations() << std::endl;
     this->mcmc->smc_adapt(current_state);
+    Rcerr << "[diag] simulate_smc (iter>0): smc_adapt done" << std::endl;
     
     current_state->normalise_and_resample_weights();
+    Rcerr << "[diag] simulate_smc (iter>0): normalise_and_resample done" << std::endl;
     //current_state->resample();
     
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Particles* current_particles = &current_state->back();
     Particles* next_particles = current_state->add_particles(current_particles);
-    
+    Rcerr << "[diag] simulate_smc (iter>0): calling the_worker->move" << std::endl;
     
     this->the_worker->move(next_particles,
                            current_particles);
+    Rcerr << "[diag] simulate_smc (iter>0): move done" << std::endl;
     
     //this->evaluate_smcfixed_part_smc(current_state);
     current_state->increment_smc_iteration();
+    Rcerr << "[diag] simulate_smc (iter>0): increment done" << std::endl;
     
     // involves complete evaluation of weights using current adaptive param
   }
@@ -968,14 +973,21 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
       Rcerr << "[diag] evaluate_smcadaptive: termination true" << std::endl;
       //terminate = TRUE;
       
+      Rcerr << "[diag] evaluate_smcadaptive: mcmc_at_last_step=" << this->mcmc_at_last_step << std::endl;
       if (this->mcmc_at_last_step)
       {
+        Rcerr << "[diag] evaluate_smcadaptive: calling simulate_smc (last step)" << std::endl;
         this->simulate_smc(current_state);
+        Rcerr << "[diag] evaluate_smcadaptive: simulate_smc done, calling set_llhd" << std::endl;
         current_state->set_llhd(current_state->log_likelihood);
+        Rcerr << "[diag] evaluate_smcadaptive: set_llhd done, calling set_time_and_reset_start" << std::endl;
         current_state->set_time_and_reset_start();
+        Rcerr << "[diag] evaluate_smcadaptive: set_time done" << std::endl;
         //current_state->decrement_smc_iteration();
       }
+      Rcerr << "[diag] evaluate_smcadaptive: calling terminate()" << std::endl;
       current_state->terminate();
+      Rcerr << "[diag] evaluate_smcadaptive: terminate() done, breaking" << std::endl;
       break;
     }
     else
