@@ -1,9 +1,12 @@
 test_is_prior_as_proposal_z <- function()
 {
   # IS estimation of normalising constant
+  message("[diag] IS prior: before compile")
   filename = system.file("extdata", "test_gaussian_posterior.ilike", package = "ilike")
   recipe = ilike::compile(filename)
+  message("[diag] IS prior: after compile, before IS()")
   output = ilike::IS(recipe,results_name="is_prior_as_proposal",number_of_importance_points=1000,seed=2)
+  message("[diag] IS prior: after IS(), returning")
   return(output)
 }
 

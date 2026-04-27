@@ -4732,7 +4732,9 @@ ImportanceSampler *get_importance_sampler(
     Rcout << "No importance sampling proposal specified; using prior."
           << std::endl;
 
+    Rcerr << "[diag] before get_prior_as_simulate_only_proposal" << std::endl;
     proposal_in = get_prior_as_simulate_only_proposal(model, parameters);
+    Rcerr << "[diag] after get_prior_as_simulate_only_proposal" << std::endl;
 
     likelihood_estimators = get_likelihood_estimators(
         rng, seed, the_data, model, parameters, algorithm_parameter_list, false,
@@ -4741,12 +4743,14 @@ ImportanceSampler *get_importance_sampler(
         any_annealing, factors_affected_by_smc_sequence,
         data_created_in_get_likelihood_estimators,
         data_created_in_get_measurement_covariance_estimators);
+    Rcerr << "[diag] after get_likelihood_estimators" << std::endl;
 
     proposal_is_evaluated_in = false;
   }
 
   Parameters algorithm_parameters =
       make_algorithm_parameters(algorithm_parameter_list);
+  Rcerr << "[diag] after make_algorithm_parameters" << std::endl;
 
   return new ImportanceSampler(
       rng, seed, the_data, algorithm_parameters, number_of_importance_points,
@@ -4770,16 +4774,21 @@ double do_importance_sampler(const List &model, const List &parameters,
       number_of_importance_points, parallel_in, grain_size_in, results_name_in,
       &seed, data_created_in_get_likelihood_estimators,
       data_created_in_measurement_covariance_estimators);
+  Rcerr << "[diag] get_importance_sampler returned" << std::endl;
 
   SMCOutput *output = alg->run();
+  Rcerr << "[diag] alg->run() returned" << std::endl;
 
   if (strcmp(results_name_in.get_cstring(), "") != 0)
     output->write(results_name_in.get_cstring());
+  Rcerr << "[diag] output->write() returned" << std::endl;
 
   double log_likelihood = output->log_likelihood;
-
+  Rcerr << "[diag] before delete output" << std::endl;
   delete output;
+  Rcerr << "[diag] before delete alg" << std::endl;
   delete alg;
+  Rcerr << "[diag] deletes complete" << std::endl;
 
   return log_likelihood;
 }
