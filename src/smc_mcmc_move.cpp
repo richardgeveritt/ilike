@@ -850,10 +850,15 @@ void SMCMCMCMove::make_copy(const SMCMCMCMove &another)
 
 SMCOutput* SMCMCMCMove::specific_run()
 {
+  Rcerr << "[diag] specific_run: calling initialise_smc" << std::endl;
   SMCOutput* simulation = this->initialise_smc();
+  Rcerr << "[diag] specific_run: calling simulate_smc" << std::endl;
   this->simulate_smc(simulation);
+  Rcerr << "[diag] specific_run: calling evaluate_smc" << std::endl;
   this->evaluate_smc(simulation);
+  Rcerr << "[diag] specific_run: calling normalise_and_resample_weights" << std::endl;
   simulation->normalise_and_resample_weights();
+  Rcerr << "[diag] specific_run: done" << std::endl;
   return simulation;
 }
 
@@ -879,7 +884,9 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state)
   if (current_state->number_of_smc_iterations()==0)
   {
     // Simulate from the proposal.
+    Rcerr << "[diag] simulate_smc: calling simulate_proposal (iteration 0)" << std::endl;
     this->simulate_proposal(current_state);
+    Rcerr << "[diag] simulate_smc: simulate_proposal done" << std::endl;
   }
   else
   {
