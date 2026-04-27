@@ -4790,6 +4790,7 @@ double do_importance_sampler(const List &model, const List &parameters,
   delete alg;
   Rcerr << "[diag] deletes complete" << std::endl;
 
+  Rcerr << "[diag] do_importance_sampler about to return" << std::endl;
   return log_likelihood;
 }
 
@@ -4839,8 +4840,10 @@ void do_mcmc(const List &model, const List &parameters,
 
   // ilike:: includes any of the options we have made
 
+  Rcerr << "[diag] do_mcmc entered" << std::endl;
   RandomNumberGenerator rng;
   Data the_data = get_data(model);
+  Rcerr << "[diag] do_mcmc: get_data done" << std::endl;
   std::vector<Data> data_created_in_get_likelihood_estimators;
   std::vector<Data> data_created_in_get_measurement_covariance_estimators;
 
@@ -4876,13 +4879,16 @@ void do_mcmc(const List &model, const List &parameters,
       factors_affected_by_smc_sequence,
       data_created_in_get_likelihood_estimators,
       data_created_in_get_measurement_covariance_estimators);
+  Rcerr << "[diag] do_mcmc: get_likelihood_estimators done" << std::endl;
 
   Parameters algorithm_parameters =
       make_algorithm_parameters(algorithm_parameter_list);
+  Rcerr << "[diag] do_mcmc: make_algorithm_parameters done" << std::endl;
 
   MCMC *the_mcmc =
       make_mcmc(model, parameters, &the_data, mcmc_termination_method,
                 mcmc_weights_method, full_index);
+  Rcerr << "[diag] do_mcmc: make_mcmc done" << std::endl;
 
   SMCMCMCMove *alg;
 
@@ -4927,14 +4933,18 @@ void do_mcmc(const List &model, const List &parameters,
                           parallel_in, grain_size_in, "");
   }
 
+  Rcerr << "[diag] do_mcmc: about to alg->run()" << std::endl;
   SMCOutput *output = alg->run();
+  Rcerr << "[diag] do_mcmc: alg->run() done" << std::endl;
 
   if (strcmp(results_name_in.get_cstring(), "") != 0)
     output->write(results_name_in.get_cstring());
+  Rcerr << "[diag] do_mcmc: write done" << std::endl;
 
   delete output;
-
+  Rcerr << "[diag] do_mcmc: delete output done" << std::endl;
   delete alg;
+  Rcerr << "[diag] do_mcmc: delete alg done" << std::endl;
 }
 
 // [[Rcpp::export]]
