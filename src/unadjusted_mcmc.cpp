@@ -41,6 +41,7 @@ UnadjustedMCMC::UnadjustedMCMC(MCMCTermination* termination_in,
 :MCMC(termination_in)
 {
   this->proposal = proposal_in;
+  this->index = NULL;
 }
 
 UnadjustedMCMC::~UnadjustedMCMC()
