@@ -3,7 +3,7 @@
 run_mcmc_m_proposal <- function()
 {
   filename_model = system.file("extdata", "test_gaussian_posterior.ilike", package = "ilike")
-  filename_mcmc = system.file("extdata", "test_m_proposal_quick.ilike", package = "ilike")
+  filename_mcmc = system.file("extdata", "test_m_proposal.ilike", package = "ilike")
   recipe = ilike::compile(c(filename_model, filename_mcmc))
   ilike::MCMC(recipe,results_name="mcmc_m_proposal",seed=2,initial_values = list(list(theta=1)))
 }
@@ -53,7 +53,7 @@ run_mcmc_m_proposal_mirror <- function()
 
 # Test custom independent Metropolis-Hastings proposal in MCMC
 
-run_mcmc_imh_proposal_independent <- function()
+run_mcmc_imh_proposal <- function()
 {
   filename_model = system.file("extdata", "test_gaussian_posterior.ilike", package = "ilike")
   filename_mcmc = system.file("extdata", "test_imh_proposal.ilike", package = "ilike")
@@ -85,7 +85,7 @@ run_mcmc_mh_proposal_custom <- function()
 # Test built-in Metropolis-Hastings proposal in MCMC
 # ilike::norm_rw
 
-run_mcmc_mh_proposal_mh_norm_rw <- function()
+run_mcmc_mh_proposal_norm_rw <- function()
 {
   filename_model = system.file("extdata", "test_gaussian_posterior.ilike", package = "ilike")
   filename_mcmc = system.file("extdata", "test_mh_proposal_norm_rw.ilike", package = "ilike")

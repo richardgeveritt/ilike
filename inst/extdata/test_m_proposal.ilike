@@ -8,4 +8,4 @@ Parameters simulate_m_proposal(RandomNumberGenerator &rng,
   return Parameters("theta", theta);
 }
 
-/***mcmc_termination,ilike::iterations(500000)***/
+/***mcmc_termination,ilike::iterations(10000)***/
