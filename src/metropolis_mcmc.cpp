@@ -56,7 +56,9 @@ MetropolisMCMC::~MetropolisMCMC()
 MetropolisMCMC::MetropolisMCMC(const MetropolisMCMC &another)
 :MCMC(another)
 {
+  Rcerr << "[diag] Metro copy ctor: make_copy" << std::endl;
   this->make_copy(another);
+  Rcerr << "[diag] Metro copy ctor: done" << std::endl;
 }
 
 void MetropolisMCMC::operator=(const MetropolisMCMC &another)
@@ -87,20 +89,26 @@ MCMC* MetropolisMCMC::mcmc_duplicate() const
 
 MetropolisMCMC* MetropolisMCMC::metropolis_mcmc_duplicate() const
 {
-  return( new MetropolisMCMC(*this));
+  Rcerr << "[diag] metro_mcmc_dup: entered" << std::endl;
+  MetropolisMCMC* result = new MetropolisMCMC(*this);
+  Rcerr << "[diag] metro_mcmc_dup: done" << std::endl;
+  return result;
 }
 
 void MetropolisMCMC::make_copy(const MetropolisMCMC &another)
 {
+  Rcerr << "[diag] Metro::make_copy: proposal=" << (void*)another.proposal << ", index=" << (void*)another.index << std::endl;
   if (another.proposal!=NULL)
     this->proposal = another.proposal->symmetric_proposal_kernel_duplicate();
   else
     this->proposal = NULL;
+  Rcerr << "[diag] Metro::make_copy: proposal done" << std::endl;
   
   if (another.index!=NULL)
     this->index = another.index->duplicate();
   else
     this->index = NULL;
+  Rcerr << "[diag] Metro::make_copy: index done" << std::endl;
 }
 
 Particle MetropolisMCMC::move(RandomNumberGenerator &rng,
@@ -270,6 +278,11 @@ std::vector<const ProposalKernel*> MetropolisMCMC::get_proposals() const
 
 StandardMCMCOutput* MetropolisMCMC::initialise_mcmc_output() const
 {
-  return new MetropolisStandardMCMCOutput(this->metropolis_mcmc_duplicate());
+  Rcerr << "[diag] Metro::initialise_mcmc_output: entered, this=" << (void*)this << ", termination=" << (void*)this->termination << ", proposal=" << (void*)this->proposal << ", index=" << (void*)this->index << std::endl;
+  MetropolisMCMC* dup = this->metropolis_mcmc_duplicate();
+  Rcerr << "[diag] Metro::initialise_mcmc_output: dup done, dup=" << (void*)dup << std::endl;
+  MetropolisStandardMCMCOutput* out = new MetropolisStandardMCMCOutput(dup);
+  Rcerr << "[diag] Metro::initialise_mcmc_output: output constructed" << std::endl;
+  return out;
 }
 }

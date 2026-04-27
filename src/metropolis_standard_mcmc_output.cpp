@@ -14,8 +14,10 @@ MetropolisStandardMCMCOutput::MetropolisStandardMCMCOutput()
 MetropolisStandardMCMCOutput::MetropolisStandardMCMCOutput(MetropolisMCMC* mcmc_in)
 :StandardMCMCOutput(mcmc_in->get_duplicated_termination())
 {
+  Rcerr << "[diag] MetroOutput ctor: mcmc_in=" << (void*)mcmc_in << std::endl;
   this->mcmc = mcmc_in;
   this->termination->set_parameters(this);
+  Rcerr << "[diag] MetroOutput ctor: done" << std::endl;
 }
 
 MetropolisStandardMCMCOutput::~MetropolisStandardMCMCOutput()

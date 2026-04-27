@@ -61,10 +61,12 @@ void MCMC::operator=(const MCMC &another)
 
 void MCMC::make_copy(const MCMC &another)
 {
+  Rcerr << "[diag] MCMC::make_copy: termination=" << (void*)another.termination << std::endl;
   if (another.termination!=NULL)
     this->termination = another.termination->duplicate();
   else
     this->termination = NULL;
+  Rcerr << "[diag] MCMC::make_copy: done" << std::endl;
   
   //if (another.adaptor!=NULL)
   //  this->adaptor = another.adaptor->duplicate();
