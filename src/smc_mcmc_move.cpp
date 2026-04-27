@@ -949,18 +949,23 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
     Rcerr << "[diag] evaluate_smcadaptive: bisection done, computing log_likelihood" << std::endl;
     
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
+    Rcerr << "[diag] evaluate_smcadaptive: after calculate_latest_log_normalising_constant_ratio" << std::endl;
     current_state->set_llhd(current_state->log_likelihood);
+    Rcerr << "[diag] evaluate_smcadaptive: after set_llhd" << std::endl;
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
+    Rcerr << "[diag] evaluate_smcadaptive: after schedule_parameters deep_copy" << std::endl;
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
     // check termination, using sequencer
+    Rcerr << "[diag] evaluate_smcadaptive: calling check_termination" << std::endl;
     if (this->sequencer.check_termination())
     {
+      Rcerr << "[diag] evaluate_smcadaptive: termination true" << std::endl;
       //terminate = TRUE;
       
       if (this->mcmc_at_last_step)
@@ -975,13 +980,17 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
     }
     else
     {
+      Rcerr << "[diag] evaluate_smcadaptive: termination false, set_time_and_reset_start" << std::endl;
       current_state->set_time_and_reset_start();
     }
     
+    Rcerr << "[diag] evaluate_smcadaptive: calling simulate_smc (loop)" << std::endl;
     this->simulate_smc(current_state);
-    
+    Rcerr << "[diag] evaluate_smcadaptive: simulate_smc done, set_previous_target" << std::endl;
     current_state->back().set_previous_target_evaluated_to_target_evaluated();
+    Rcerr << "[diag] evaluate_smcadaptive: end of loop iteration" << std::endl;
   }
+  Rcerr << "[diag] evaluate_smcadaptive: while loop exited" << std::endl;
 }
 
 MoveOutput* SMCMCMCMove::move(RandomNumberGenerator &rng,
