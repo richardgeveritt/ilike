@@ -18,6 +18,14 @@
 #include <boost/random/poisson_distribution.hpp>
 #include <boost/random/uniform_real_distribution.hpp>
 #include <chrono>
+// Windows.h defines IN and OUT as empty SAL-annotation macros, which corrupts
+// the template parameter names in dqrng's convert_seed.h. Undef them first.
+#ifdef IN
+#undef IN
+#endif
+#ifdef OUT
+#undef OUT
+#endif
 #include <dqrng_generator.h>
 #include <math.h>
 

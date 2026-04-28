@@ -9,6 +9,25 @@
 #define HIGHFIVE_USE_EIGEN 0
 #endif
 
+// Windows.h (included via RcppParallel -> tinythread.h -> windows.h) defines
+// FILE_CREATE as a numeric constant, which breaks HighFive's PropertyType enum.
+// Undef it and other conflicting Win32 macros before including HighFive.
+#ifdef FILE_CREATE
+#undef FILE_CREATE
+#endif
+#ifdef FILE_ACCESS
+#undef FILE_ACCESS
+#endif
+#ifdef DATASET_CREATE
+#undef DATASET_CREATE
+#endif
+#ifdef DATASET_ACCESS
+#undef DATASET_ACCESS
+#endif
+#ifdef DATASET_XFER
+#undef DATASET_XFER
+#endif
+
 #include <highfive/highfive.hpp>
 #include <RcppArmadillo.h>
 #include <string>
