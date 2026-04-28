@@ -5,10 +5,12 @@
 using namespace Rcpp;
 
 #include <vector>
+#include <memory>
 
 #include "likelihood_estimator.h"
 #include "ilike_header.h"
 #include "parameters.h"
+#include "ilike_hdf5_utils.h"
 
 namespace ilike
 {
@@ -165,12 +167,10 @@ protected:
    */
   void make_copy(const DensityLikelihoodEstimator &another);
   
-  /** @brief The log likelihood file stream. */
-  std::ofstream log_likelihood_file_stream;
-  /** @brief The file stream. */
-  std::ofstream file_stream;
-  /** @brief The time file stream. */
-  std::ofstream time_file_stream;
+  /** @brief HDF5 output file (kept open for the duration of a run). */
+  std::shared_ptr<HighFive::File> h5_file;
+  /** @brief Path to the HDF5 output file. */
+  std::string h5_file_path;
   
 };
 }

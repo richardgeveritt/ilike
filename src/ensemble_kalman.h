@@ -14,6 +14,7 @@ using namespace Rcpp;
 #include "ensemble_sequencer.h"
 #include "packing_instructions.h"
 #include "ensemble.h"
+#include "ilike_hdf5_utils.h"
 
 namespace ilike
 {
@@ -358,26 +359,10 @@ protected:
   // Stored here.
   //EnsembleKalmanOutput* output;
   
-  /** @brief The log likelihood file stream. */
-  std::ofstream log_likelihood_file_stream;
-  /** @brief The output lengths file stream. */
-  std::ofstream output_lengths_file_stream;
-  /** @brief The vector variables file stream. */
-  std::ofstream vector_variables_file_stream;
-  /** @brief The vector variable sizes file stream. */
-  std::ofstream vector_variable_sizes_file_stream;
-  /** @brief The incremental log likelihood file stream. */
-  std::ofstream incremental_log_likelihood_file_stream;
-  /** @brief The ess file stream. */
-  std::ofstream ess_file_stream;
-  /** @brief The schedule parameters file stream. */
-  std::ofstream schedule_parameters_file_stream;
-  /** @brief The vector points file stream. */
-  std::ofstream vector_points_file_stream;
-  /** @brief The any points file stream. */
-  std::ofstream any_points_file_stream;
-  /** @brief The time file stream. */
-  std::ofstream time_file_stream;
+  /** @brief HDF5 output file (kept open for the duration of a run). */
+  std::shared_ptr<HighFive::File> h5_file;
+  /** @brief Path to the HDF5 output file. */
+  std::string h5_file_path;
   
   /**
    * @brief Copies the state of another EnsembleKalmanOutput into this object.

@@ -5,10 +5,12 @@
 using namespace Rcpp;
 
 #include <vector>
+#include <memory>
 
 #include "likelihood_estimator.h"
 #include "parameters.h"
 #include "abc_kernel_factor.h"
+#include "ilike_hdf5_utils.h"
 
 namespace ilike
 {
@@ -110,8 +112,10 @@ private:
   /** @brief The abc kernel. */
   ABCKernelFactor* abc_kernel;
   
-  /** @brief The log likelihood file stream. */
-  std::ofstream log_likelihood_file_stream;
+  /** @brief HDF5 output file (kept open for the duration of a run). */
+  std::shared_ptr<HighFive::File> h5_file;
+  /** @brief Path to the HDF5 output file. */
+  std::string h5_file_path;
   
   /**
    * @brief Copies the state of another ABCLikelihoodEstimatorOutput into this object.
