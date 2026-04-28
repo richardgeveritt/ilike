@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <numeric>
+#include <sstream>
 #include "smc_output.h"
 #include "smc.h"
 #include "importance_sampler.h"
@@ -8,6 +9,7 @@
 #include "smc_generic.h"
 #include "filesystem.h"
 #include "move_output.h"
+#include "ilike_hdf5_utils.h"
 
 namespace ilike
 {
@@ -424,13 +426,26 @@ void SMCOutput::write_to_file(const std::string &dir_name,
 {
   std::string directory_name = dir_name + "_smc";
   
-  //if (index!="")
-  //  directory_name = directory_name + "_" + index;
-  
   if (!directory_exists(directory_name))
   {
     make_directory(directory_name);
   }
+  
+  // Open or create the HDF5 file once per algorithm run
+  if (!this->estimator->h5_file)
+  {
+    this->estimator->h5_file_path = directory_name + "/output.h5";
+    this->estimator->h5_file = h5_open_or_create(this->estimator->h5_file_path);
+    
+    // Store variable names/sizes as root attributes (constant across all iterations)
+    auto root = this->estimator->h5_file->getGroup("/");
+    h5_set_str_attr(root, "variable_names", this->estimator->vector_variables);
+    std::vector<size_t> vsizes(this->estimator->vector_variable_sizes.begin(),
+                               this->estimator->vector_variable_sizes.end());
+    h5_set_sizet_attr(root, "variable_sizes", vsizes);
+  }
+  
+  HighFive::File &hf = *this->estimator->h5_file;
   
   // for each iteration left to write
   for (size_t iteration = this->iteration_written_to_file+1;
@@ -439,315 +454,90 @@ void SMCOutput::write_to_file(const std::string &dir_name,
   {
     size_t distance_from_end = this->smc_iteration-iteration;
     
-    /*
-     size_t llhd_index = this->llhds.size()-1-distance_from_end;
-     
-     //if (int(this->llhds.size())-1-int(distance_from_end)>=0)
-     //{
-     if (!this->estimator->log_likelihood_file_stream.is_open())
-     {
-     this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
-     }
-     if (this->estimator->log_likelihood_file_stream.is_open())
-     {
-     this->estimator->log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->llhds[llhd_index] << std::endl;
-     //log_likelihood_file_stream.close();
-     }
-     else
-     {
-     Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + " cannot be opened.");
-     }
-     
-     if (!this->estimator->time_file_stream.is_open())
-     {
-     this->estimator->time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
-     }
-     if (this->estimator->time_file_stream.is_open())
-     {
-     double time_sum = 0.0;
-     for (size_t k=0; k<this->times.size(); ++k)
-     {
-     time_sum = time_sum + this->times[k];
-     }
-     this->estimator->time_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << time_sum << std::endl;
-     //log_likelihood_file_stream.close();
-     }
-     else
-     {
-     Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
-     }
-     */
-    
     if (this->all_particles.size() > distance_from_end)
     {
       size_t deque_index = this->all_particles.size()-1-distance_from_end;
       
-      if (!this->estimator->log_likelihood_file_stream.is_open())
+      // ---- top-level extendable datasets ----
+      h5_append_double(hf, "log_likelihood", this->llhds[deque_index]);
+      h5_append_double(hf, "time",           this->times[deque_index]);
+      
+      // output_lengths: one row per iteration (one value per particle)
+      arma::rowvec ol = this->all_particles[deque_index].get_output_lengths();
+      std::vector<double> ol_vec(ol.begin(), ol.end());
+      h5_append_row(hf, "output_lengths", ol_vec);
+      
+      // ---- per-iteration group ----
+      std::string iter_grp_path = "iteration/" + std::to_string(iteration + 1);
+      HighFive::Group iter_grp = h5_ensure_group(hf, iter_grp_path);
+      
+      h5_write_scalar_double(iter_grp, "incremental_log_likelihood",
+                              this->all_particles[deque_index].log_normalising_constant_ratio);
+      h5_write_scalar_int(iter_grp, "resampled",
+                           static_cast<int>(this->all_particles[deque_index].resampled_flag));
+      h5_write_scalar_double(iter_grp, "ess",
+                              this->all_particles[deque_index].ess);
+      
+      // schedule_parameters as a string
       {
-        this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
-      }
-      if (this->estimator->log_likelihood_file_stream.is_open())
-      {
-        this->estimator->log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->llhds[deque_index] << std::endl;
-        //log_likelihood_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + "cannot be opened.");
+        std::ostringstream oss;
+        oss << this->all_particles[deque_index].schedule_parameters;
+        h5_write_string(iter_grp, "schedule_parameters", oss.str());
       }
       
-      if (!this->estimator->time_file_stream.is_open())
+      // vector_points: collect all particle rows into one matrix
       {
-        this->estimator->time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
-      }
-      if (this->estimator->time_file_stream.is_open())
-      {
-        //double time_sum = 0.0;
-        //for (size_t k=0; k<=llhd_index; ++k)
-        //{
-        //  time_sum = time_sum + this->times[k];
-        //}
-        this->estimator->time_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->times[deque_index] << std::endl;
-        //log_likelihood_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
-      }
-      
-      if (!this->estimator->vector_variables_file_stream.is_open())
-      {
-        this->estimator->vector_variables_file_stream.open(directory_name + "/vector_variables.txt",std::ios::out | std::ios::app);
-      }
-      if (this->estimator->vector_variables_file_stream.is_open())
-      {
-        for (size_t i=0; i<this->estimator->vector_variables.size(); ++i)
+        std::vector<arma::mat> mats;
+        mats.reserve(this->all_particles[deque_index].particles.size());
+        size_t total_rows = 0;
+        for (auto& p : this->all_particles[deque_index].particles)
         {
-          this->estimator->vector_variables_file_stream << this->estimator->vector_variables[i] << ";";
+          arma::mat m = p->get_matrix_of_vector_points(
+                          this->estimator->vector_variables, nullptr);
+          total_rows += m.n_rows;
+          mats.push_back(std::move(m));
         }
-        this->estimator->vector_variables_file_stream << std::endl;
-        //vector_variables_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + directory_name + "/vector_variables.txt" + " cannot be opened.");
-      }
-      
-      if (!this->estimator->vector_variable_sizes_file_stream.is_open())
-      {
-        this->estimator->vector_variable_sizes_file_stream.open(directory_name + "/vector_variable_sizes.txt",std::ios::out | std::ios::app);
-      }
-      if (this->estimator->vector_variable_sizes_file_stream.is_open())
-      {
-        for (size_t i=0; i<this->estimator->vector_variable_sizes.size(); ++i)
+        if (total_rows > 0 && !mats.empty())
         {
-          this->estimator->vector_variable_sizes_file_stream << this->estimator->vector_variable_sizes[i] << ";";
+          size_t ncols = mats[0].n_cols;
+          arma::mat combined(total_rows, ncols);
+          size_t row_offset = 0;
+          for (auto& m : mats)
+          {
+            if (m.n_rows > 0)
+            {
+              combined.rows(row_offset, row_offset + m.n_rows - 1) = m;
+              row_offset += m.n_rows;
+            }
+          }
+          h5_write_mat(iter_grp, "vector_points", combined);
         }
-        this->estimator->vector_variable_sizes_file_stream << std::endl;
-        //vector_variable_sizes_file_stream.close();
+      }
+      
+      // weights
+      h5_write_vec(iter_grp, "normalised_log_weights",
+                   this->all_particles[deque_index].normalised_log_weights);
+      h5_write_vec(iter_grp, "unnormalised_log_weights",
+                   this->all_particles[deque_index].unnormalised_log_weights);
+      
+      // ancestor_index from previous iteration's ancestor_variables
+      if (deque_index > 0)
+      {
+        const auto& av = this->all_particles[deque_index-1].ancestor_variables;
+        std::vector<size_t> ai(av.begin(), av.end());
+        h5_write_intvec(iter_grp, "ancestor_index", ai);
       }
       else
       {
-        Rcpp::stop("File " + directory_name + "/vector_variable_sizes.txt" + " cannot be opened.");
+        h5_write_intvec(iter_grp, "ancestor_index", {});
       }
       
-      if (!this->estimator->output_lengths_file_stream.is_open())
-      {
-        this->estimator->output_lengths_file_stream.open(directory_name + "/output_lengths.txt",std::ios::out | std::ios::app);
-      }
-      if (this->estimator->output_lengths_file_stream.is_open())
-      {
-        this->estimator->output_lengths_file_stream << this->all_particles[deque_index].get_output_lengths();
-        //incremental_log_likelihood_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + directory_name + "/output_lengths.txt" + " cannot be opened.");
-      }
-      
-      /*
-       std::ofstream any_variables_file_stream;
-       any_variables_file_stream.open(directory_name + "/any_variables.txt",std::ios::out | std::ios::app);
-       if (any_variables_file_stream.is_open())
-       {
-       for (size_t i=0; i<this->estimator->any_variables.size(); ++i)
-       {
-       any_variables_file_stream << this->estimator->any_variables[i] << ";";
-       }
-       any_variables_file_stream << std::endl;
-       any_variables_file_stream.close();
-       }
-       else
-       {
-       Rcpp::stop("File " + directory_name + "/any_variables.txt" + " cannot be opened.");
-       }
-       */
-      
+      // nested factor outputs: each creates its own output.h5 in a subdirectory
       std::string smc_iteration_directory = directory_name + "/iteration" + std::to_string(iteration+1);
-      
       if (!directory_exists(smc_iteration_directory))
       {
         make_directory(smc_iteration_directory);
       }
-      
-      if (!this->estimator->incremental_log_likelihood_file_stream.is_open())
-      {
-        this->estimator->incremental_log_likelihood_file_stream.open(smc_iteration_directory + "/incremental_log_likelihood.txt",std::ios::out | std::ios::app);
-      }
-      if (this->estimator->incremental_log_likelihood_file_stream.is_open())
-      {
-        this->estimator->incremental_log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->all_particles[deque_index].log_normalising_constant_ratio << std::endl;
-        //incremental_log_likelihood_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + smc_iteration_directory + "/incremental_log_likelihood.txt" + " cannot be opened.");
-      }
-      
-      if (!this->estimator->resampled_file_stream.is_open())
-      {
-        this->estimator->resampled_file_stream.open(smc_iteration_directory + "/resampled.txt",std::ios::out | std::ios::app);
-      }
-      if (this->estimator->resampled_file_stream.is_open())
-      {
-        this->estimator->resampled_file_stream << this->all_particles[deque_index].resampled_flag << std::endl;
-        //resampled_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + smc_iteration_directory + "/resampled.txt" + " cannot be opened.");
-      }
-      
-      if (!this->estimator->ess_file_stream.is_open())
-      {
-        this->estimator->ess_file_stream.open(smc_iteration_directory + "/ess.txt",std::ios::out | std::ios::app);
-      }
-      if (this->estimator->ess_file_stream.is_open())
-      {
-        this->estimator->ess_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->all_particles[deque_index].ess << std::endl;
-        //ess_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + smc_iteration_directory + "/ess.txt" + " cannot be opened.");
-      }
-      
-      if (!this->estimator->schedule_parameters_file_stream.is_open())
-      {
-        this->estimator->schedule_parameters_file_stream.open(smc_iteration_directory + "/schedule_parameters.txt",std::ios::out | std::ios::app);
-      }
-      if (this->estimator->schedule_parameters_file_stream.is_open())
-      {
-        this->estimator->schedule_parameters_file_stream.precision(std::numeric_limits<double>::max_digits10);
-        this->estimator->schedule_parameters_file_stream << this->all_particles[deque_index].schedule_parameters << std::endl;
-        //schedule_parameters_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + smc_iteration_directory + "/schedule_parameters.txt" + " cannot be opened.");
-      }
-      
-      if(!this->estimator->vector_points_file_stream.is_open())
-      {
-        this->estimator->vector_points_file_stream.open(smc_iteration_directory + "/vector_points.txt",std::ios::out | std::ios::app);
-      }
-      if(this->estimator->vector_points_file_stream.is_open())
-      {
-        for (auto i = this->all_particles[deque_index].particles.begin();
-             i!=this->all_particles[deque_index].particles.end();
-             ++i)
-        {
-          (*i)->write_vector_points(this->estimator->vector_variables,
-                                    this->estimator->vector_points_file_stream,
-                                    NULL);
-        }
-        //vector_points_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + smc_iteration_directory + "/vector_points.txt" + " cannot be opened.");
-      }
-      
-      if(!this->estimator->any_points_file_stream.is_open())
-      {
-        this->estimator->any_points_file_stream.open(smc_iteration_directory + "/any_points.txt",std::ios::out | std::ios::app);
-      }
-      if(this->estimator->any_points_file_stream.is_open())
-      {
-        for (auto i = this->all_particles[deque_index].particles.begin();
-             i!=this->all_particles[deque_index].particles.end();
-             ++i)
-        {
-          (*i)->write_any_points(this->estimator->any_variables,
-                                 this->estimator->any_points_file_stream);
-        }
-        //any_points_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + smc_iteration_directory + "/any_points.txt" + " cannot be opened.");
-      }
-      
-      if(!this->estimator->ancestor_index_file_stream.is_open())
-      {
-        this->estimator->ancestor_index_file_stream.open(smc_iteration_directory + "/ancestor_index.txt",std::ios::out | std::ios::app);
-      }
-      if(this->estimator->ancestor_index_file_stream.is_open())
-      {
-        if (deque_index>0)
-        {
-          for (auto i = this->all_particles[deque_index-1].ancestor_variables.begin();
-               i!=this->all_particles[deque_index-1].ancestor_variables.end();
-               ++i)
-          {
-            this->estimator->ancestor_index_file_stream << *i << std::endl;
-          }
-        }
-      }
-      else
-      {
-        Rcpp::stop("File " + smc_iteration_directory + "/ancestor_index.txt" + " cannot be opened.");
-      }
-      
-      if(!this->estimator->normalised_weights_file_stream.is_open())
-      {
-        this->estimator->normalised_weights_file_stream.open(smc_iteration_directory + "/normalised_log_weights.txt",std::ios::out | std::ios::app);
-      }
-      if(this->estimator->normalised_weights_file_stream.is_open())
-      {
-        this->estimator->normalised_weights_file_stream.precision(std::numeric_limits<double>::max_digits10);
-        this->all_particles[deque_index].normalised_log_weights.raw_print(this->estimator->normalised_weights_file_stream);
-        
-        //this->estimator->normalised_weights_file_stream << std::fixed << std::setprecision(12) << this->all_particles[deque_index].normalised_log_weights;
-        //normalised_weights_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + smc_iteration_directory + "/normalised_log_weights.txt" + " cannot be opened.");
-      }
-      
-      if(!this->estimator->unnormalised_weights_file_stream.is_open())
-      {
-        this->estimator->unnormalised_weights_file_stream.open(smc_iteration_directory + "/unnormalised_log_weights.txt",std::ios::out | std::ios::app);
-      }
-      if(this->estimator->unnormalised_weights_file_stream.is_open())
-      {
-        this->estimator->unnormalised_weights_file_stream.precision(std::numeric_limits<double>::max_digits10);
-        this->all_particles[deque_index].unnormalised_log_weights.raw_print(this->estimator->unnormalised_weights_file_stream);
-        
-        //this->estimator->unnormalised_weights_file_stream << std::setprecision() << this->all_particles[deque_index].unnormalised_log_weights;
-        //unnormalised_weights_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + smc_iteration_directory + "/unnormalised_log_weights.txt" + " cannot be opened.");
-      }
-      
-      // for any other info in Particles, write to a different file
-      
-      //for (auto i = this->all_particles[deque_index].particles.begin();
-      //     i!=this->all_particles[deque_index].particles.end();
-      //     ++i)
       for (size_t i = 0;
            i<this->all_particles[deque_index].particles.size();
            ++i)
@@ -761,26 +551,12 @@ void SMCOutput::write_to_file(const std::string &dir_name,
   }
   
   this->iteration_written_to_file = this->smc_iteration;
-  
 }
 
 void SMCOutput::close_ofstreams()
 {
-  this->estimator->log_likelihood_file_stream.close();
-  this->estimator->time_file_stream.close();
-  this->estimator->vector_variables_file_stream.close();
-  this->estimator->vector_variable_sizes_file_stream.close();
-  
-  this->estimator->incremental_log_likelihood_file_stream.close();
-  this->estimator->output_lengths_file_stream.close();
-  this->estimator->resampled_file_stream.close();
-  this->estimator->ess_file_stream.close();
-  this->estimator->schedule_parameters_file_stream.close();
-  this->estimator->vector_points_file_stream.close();
-  this->estimator->any_points_file_stream.close(); // should be one for each member of Parameters
-  this->estimator->ancestor_index_file_stream.close();
-  this->estimator->normalised_weights_file_stream.close();
-  this->estimator->unnormalised_weights_file_stream.close();
+  // HDF5 file stays open across iterations; reset at algorithm end.
+  this->estimator->h5_file.reset();
   
   for (auto i = this->all_particles.begin();
        i!=this->all_particles.end();
@@ -792,22 +568,7 @@ void SMCOutput::close_ofstreams()
 
 void SMCOutput::close_ofstreams(size_t deque_index)
 {
-  this->estimator->log_likelihood_file_stream.close();
-  this->estimator->time_file_stream.close();
-  this->estimator->vector_variables_file_stream.close();
-  this->estimator->vector_variable_sizes_file_stream.close();
-  
-  this->estimator->incremental_log_likelihood_file_stream.close();
-  this->estimator->output_lengths_file_stream.close();
-  this->estimator->resampled_file_stream.close();
-  this->estimator->ess_file_stream.close();
-  this->estimator->schedule_parameters_file_stream.close();
-  this->estimator->vector_points_file_stream.close();
-  this->estimator->any_points_file_stream.close(); // should be one for each member of Parameters
-  this->estimator->ancestor_index_file_stream.close();
-  this->estimator->normalised_weights_file_stream.close();
-  this->estimator->unnormalised_weights_file_stream.close();
-  
+  // Keep HDF5 file open; only close particles' nested outputs.
   this->all_particles[deque_index].close_ofstreams();
 }
 

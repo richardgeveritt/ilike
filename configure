@@ -1,0 +1,93 @@
+#!/bin/sh
+# configure script for ilike package
+# Finds HDF5 C library headers and linker flags.
+# Generates src/Makevars from src/Makevars.in
+
+: ${R_HOME=$(R RHOME)}
+
+# HighFive include path (CRAN package, header-only)
+HIGHFIVE_INC=$(${R_HOME}/bin/Rscript -e "cat(system.file('include', package='HighFive'))" 2>/dev/null)
+if [ -z "${HIGHFIVE_INC}" ] || [ ! -d "${HIGHFIVE_INC}" ]; then
+  echo "ERROR: HighFive package not found. Please install it: install.packages('HighFive')" >&2
+  exit 1
+fi
+echo "HighFive include: ${HIGHFIVE_INC}"
+
+# ---------- Find HDF5 --------------------------------------------------
+HDF5_CFLAGS=""
+HDF5_LIBS=""
+
+# 1. Try pkg-config
+if command -v pkg-config >/dev/null 2>&1; then
+  if pkg-config --exists hdf5 2>/dev/null; then
+    HDF5_CFLAGS=$(pkg-config --cflags hdf5 2>/dev/null)
+    HDF5_LIBS=$(pkg-config --libs hdf5 2>/dev/null)
+    echo "Found HDF5 via pkg-config"
+  fi
+fi
+
+# 2. Try h5cc
+if [ -z "${HDF5_LIBS}" ] && command -v h5cc >/dev/null 2>&1; then
+  H5CC_FLAGS=$(h5cc -show 2>/dev/null)
+  # Extract only -I... flags (skip the compiler name and other flags)
+  HDF5_CFLAGS=$(echo "${H5CC_FLAGS}" | grep -o -- '-I[^ ]*' | tr '\n' ' ')
+  HDF5_LIBS=$(echo "${H5CC_FLAGS}" | grep -o -- '-L[^ ]*\|-l[^ ]*' | tr '\n' ' ')
+  echo "Found HDF5 via h5cc"
+fi
+
+# 3. Try Rhdf5lib (Bioconductor)
+if [ -z "${HDF5_LIBS}" ]; then
+  RHDF5LIB=$(${R_HOME}/bin/Rscript -e "if (requireNamespace('Rhdf5lib', quietly=TRUE)) cat(Rhdf5lib::pkgconfig('PKG_C_LIBS')) else cat('')" 2>/dev/null)
+  if [ -n "${RHDF5LIB}" ]; then
+    HDF5_LIBS="${RHDF5LIB}"
+    RHDF5INC=$(${R_HOME}/bin/Rscript -e "if (requireNamespace('Rhdf5lib', quietly=TRUE)) cat(system.file('include', package='Rhdf5lib')) else cat('')" 2>/dev/null)
+    HDF5_CFLAGS="-I${RHDF5INC}"
+    echo "Found HDF5 via Rhdf5lib"
+  fi
+fi
+
+# 4. Try common paths
+if [ -z "${HDF5_LIBS}" ]; then
+  for DIR in /usr/local /opt/homebrew /opt/homebrew/opt/hdf5 /usr /opt/conda /Users/richard/miniconda3 $HOME/miniconda3 $HOME/anaconda3 /opt/anaconda3; do
+    if [ -f "${DIR}/include/hdf5.h" ]; then
+      HDF5_CFLAGS="-I${DIR}/include"
+      HDF5_LIBS="-L${DIR}/lib -lhdf5"
+      echo "Found HDF5 at ${DIR}"
+      break
+    fi
+  done
+fi
+
+# 5. Try conda environment
+if [ -z "${HDF5_LIBS}" ] && command -v conda >/dev/null 2>&1; then
+  CONDA_PREFIX=$(conda info --base 2>/dev/null)
+  if [ -n "${CONDA_PREFIX}" ] && [ -f "${CONDA_PREFIX}/include/hdf5.h" ]; then
+    HDF5_CFLAGS="-I${CONDA_PREFIX}/include"
+    HDF5_LIBS="-L${CONDA_PREFIX}/lib -lhdf5"
+    echo "Found HDF5 via conda at ${CONDA_PREFIX}"
+  fi
+fi
+
+if [ -z "${HDF5_LIBS}" ]; then
+  echo "ERROR: HDF5 library not found." >&2
+  echo "  Install with: brew install hdf5  OR  conda install -c conda-forge hdf5" >&2
+  echo "  Or install the Bioconductor package Rhdf5lib." >&2
+  exit 1
+fi
+
+echo "HDF5_CFLAGS: ${HDF5_CFLAGS}"
+echo "HDF5_LIBS:   ${HDF5_LIBS}"
+
+# Add -rpath entries for any -L directories in HDF5_LIBS so the shared
+# library can find libhdf5 at runtime without requiring LD_LIBRARY_PATH.
+HDF5_RPATH=$(echo "${HDF5_LIBS}" | grep -o -- '-L[^ ]*' | sed 's/-L/-Wl,-rpath,/g' | tr '\n' ' ')
+HDF5_LIBS="${HDF5_LIBS} ${HDF5_RPATH}"
+
+# Generate src/Makevars from src/Makevars.in
+sed \
+  -e "s|@HDF5_CFLAGS@|${HDF5_CFLAGS}|g" \
+  -e "s|@HDF5_LIBS@|${HDF5_LIBS}|g" \
+  -e "s|@HIGHFIVE_INC@|${HIGHFIVE_INC}|g" \
+  src/Makevars.in > src/Makevars
+
+echo "Generated src/Makevars"

@@ -137,6 +137,16 @@ void SinglePointMoveOutput::write_any_points(const std::vector<std::string> &var
   
 }
 
+arma::mat SinglePointMoveOutput::get_matrix_of_vector_points(const std::vector<std::string> &variables,
+                                                              std::shared_ptr<Transform> transform) const
+{
+  if (transform == NULL)
+    return arma::conv_to<arma::mat>::from(output.get_rowvec(variables));
+  else
+    return arma::conv_to<arma::mat>::from(
+      transform->inverse_transform(output.parameters).get_rowvec(variables));
+}
+
 void SinglePointMoveOutput::write_factors(const std::string &directory_name,
                                           const std::string &index) const
 {

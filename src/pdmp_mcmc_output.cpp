@@ -67,6 +67,12 @@ void PDMPMCMCOutput::write_any_points(const std::vector<std::string> &variables,
   
 }
 
+arma::mat PDMPMCMCOutput::get_matrix_of_vector_points(const std::vector<std::string> &variables,
+                                                       std::shared_ptr<Transform> transform) const
+{
+  return arma::mat();
+}
+
 void PDMPMCMCOutput::write_factors(const std::string &directory_name,
                                    const std::string &index) const
 {

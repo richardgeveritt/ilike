@@ -9,6 +9,8 @@ using namespace Rcpp;
 #include "likelihood_estimator.h"
 #include "ilike_header.h"
 #include "parameters.h"
+#include "ilike_hdf5_utils.h"
+#include <memory>
 
 namespace ilike
 {
@@ -246,8 +248,11 @@ protected:
   // Stored here.
   //ExactLikelihoodEstimatorOutput* output;
   
-  /** @brief The log likelihood file stream. */
-  std::ofstream log_likelihood_file_stream;
+  /** @brief HDF5 output file for exact likelihood output. */
+  std::shared_ptr<HighFive::File> h5_file;
+  
+  /** @brief Path to the HDF5 output file. */
+  std::string h5_file_path;
   
   /**
    * @brief Copies the state of another ExactLikelihoodEstimatorOutput into this object.

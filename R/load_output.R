@@ -70,7 +70,7 @@ ilike_pivot_wider <- function(output,
 #' @param external_log_weights (optional; for nested output only) The weights of the importance points external to the current folder. (default is 1, to be used at the top level of nested output)
 #' @param external_target_parameters (optional; for nested output only) The parameters of the target external to the current folder. (default is "", corresponding to no parameters)
 #' @param nesting_level (optional; for nested output only) The level of nesting at which to extract points. (default is 0, representing the top level of nested output)
-#' @param factor (optional; for nested output only) The factor from which to extract points. (default is 0)
+#' @param factor (optional; for nested output only) The factor from which to extract points. (default is 1)
 #' @return A list containing the SMC output.
 #' @export
 load_smc_output = function(results_directory,
@@ -185,121 +185,41 @@ load_smc_output = function(results_directory,
     stop("ilike.output and ggmcmc cannot both be TRUE, since the output formats are incompatible.")
   }
 
-  # Make the output names.
-
-  # New line for each iteration of SMC; one element in the line for each importance point -
-  # tells us the length of the MCMC or single point. (since the file vector_points.txt is concatenated,
-  # so we need this to split the file into different importance points). Same format for vector_variable_sizes and vector_variables.
-  # When nested, a new line is written to these files for every external particle.
-
-  names_file = file(paste(results_directory,"/vector_variables.txt",sep=""),open="r")
-  line = ""
-  while (TRUE)
+  # ---- Read metadata from HDF5 output file ----
+  h5_path <- file.path(results_directory, "output.h5")
+  if (!file.exists(h5_path))
   {
-    previous_line = line
-    line = readLines(names_file, n = 1)
-    if ( length(line) == 0 )
-    {
-      break
-    }
+    stop(paste("HDF5 output file not found:", h5_path))
   }
-  close(names_file)
-  variable_names = strsplit(previous_line,";")[[1]]
+  h5f <- hdf5r::H5File$new(h5_path, mode = "r")
+  on.exit(try(h5f$close_all(), silent = TRUE), add = TRUE)
 
-  sizes_file = file(paste(results_directory,"/vector_variable_sizes.txt",sep=""),open="r")
-  while (TRUE)
-  {
-    previous_line = line
-    line = readLines(sizes_file, n = 1)
-    if ( length(line) == 0 )
-    {
-      break
-    }
-  }
-  close(sizes_file)
-  variable_sizes = as.numeric(strsplit(previous_line,";")[[1]])
+  # Root attributes: variable names and sizes
+  variable_names <- h5f$attr_open("variable_names")$read()
+  variable_sizes  <- as.numeric(h5f$attr_open("variable_sizes")$read())
 
-  lengths_file = file(paste(results_directory,"/output_lengths.txt",sep=""),open="r")
-  output_lengths = vector("list", length(variable_sizes))
-  counter = 1
-  line = ""
-  while (TRUE)
-  {
-    previous_line = line
-    line = readLines(lengths_file, n = 1)
+  # Top-level datasets
+  llhds_vec <- h5f[["log_likelihood"]]$read()
+  times_vec  <- h5f[["time"]]$read()
 
-    if ( length(line) == 0 )
-    {
-      break
-    }
-    else
-    {
-      output_lengths[[counter]] = as.numeric(strsplit(line,split=" +")[[1]])
-      output_lengths[[counter]] = output_lengths[[counter]][!is.na(output_lengths[[counter]])]
+  # output_lengths: HDF5 shape [n_iters x n_particles] (C row-major, h5dump convention).
+  # hdf5r reverses dimension ordering: dims[1] = n_particles (C last dim),
+  #                                    dims[2] = n_iters    (C first dim).
+  ol_ds <- h5f[["output_lengths"]]
+  ol_dims <- ol_ds$dims      # hdf5r: c(n_particles, n_iters)
+  n_particles_dim <- ol_dims[1]
+  n_iters <- ol_dims[2]
+  ol_raw <- as.numeric(ol_ds$read())
+  # hdf5r returns data in column-major / reversed order matching its dims.
+  # Reshape to [n_iters x n_particles_dim].
+  ol_mat <- matrix(ol_raw, nrow = n_iters, ncol = n_particles_dim, byrow = TRUE)
+  output_lengths <- lapply(seq_len(n_iters), function(i) as.numeric(ol_mat[i, ]))
 
-      if (sum(output_lengths[[counter]])==0)
-      {
-        stop("Output reported to be of length 0 in output_lengths.txt. Error in output files.")
-      }
+  # Convert to lists matching the old interface
+  llhds <- as.list(llhds_vec)
+  times  <- as.list(times_vec)
 
-      counter = counter + 1
-    }
-  }
-  close(lengths_file)
-
-  llhds_file = file(paste(results_directory,"/log_likelihood.txt",sep=""),open="r")
-  llhds = vector("list", length(variable_sizes))
-  counter = 1
-  line = ""
-  while (TRUE)
-  {
-    previous_line = line
-    line = readLines(lengths_file, n = 1)
-
-    if ( length(line) == 0 )
-    {
-      break
-    }
-    else
-    {
-      llhds[[counter]] = as.numeric(strsplit(line,split=" +")[[1]])
-      #llhds[[counter]] = llhds[[counter]][!is.na(output_lengths[[counter]])]
-
-      counter = counter + 1
-    }
-  }
-  close(llhds_file)
-
-  time_file = file(paste(results_directory,"/time.txt",sep=""),open="r")
-  times = vector("list", length(variable_sizes))
-  counter = 1
-  line = ""
-  while (TRUE)
-  {
-    previous_line = line
-    line = readLines(lengths_file, n = 1)
-
-    if ( length(line) == 0 )
-    {
-      break
-    }
-    else
-    {
-      times[[counter]] = as.numeric(strsplit(line,split=" +")[[1]])
-      #llhds[[counter]] = llhds[[counter]][!is.na(output_lengths[[counter]])]
-
-      counter = counter + 1
-    }
-  }
-  close(time_file)
-
-
-  num_output_lengths_to_keep = length(output_lengths)/number_of_external_points
-  output_lengths = output_lengths[1:num_output_lengths_to_keep]
-
-  #number_of_points = length(output_lengths)
-
-  if (length(variable_names)!=length(variable_sizes))
+  if (length(variable_names) != length(variable_sizes))
   {
     stop("Variable names and sizes are of different lengths.")
   }
@@ -358,52 +278,54 @@ load_smc_output = function(results_directory,
 
     iteration_directory = all_dirs[k]
 
-    points_filename = paste(iteration_directory,"/vector_points.txt",sep="")
-
-    output = utils::read.table(file=points_filename,header=FALSE)
-
-    if (nrow(output)!=number_of_external_points*sum(output_lengths[[k]]))
-    {
-      stop("Number of rows in vector_points.txt file does not correspond to output_lengths.txt file.")
-    }
-    if (ncol(output)!=sum(variable_sizes))
-    {
-      stop("Number of columns in vector_points.txt file does not correspond to output_lengths.txt file.")
+    # Read vector_points from HDF5: stored as [n_rows x n_params] (C row-major).
+    # hdf5r returns [n_params x n_rows] due to transposition, so we transpose back.
+    iter_grp_path <- paste0("iteration/", target)
+    vp_raw <- h5f[[iter_grp_path]][["vector_points"]]$read()
+    if (is.matrix(vp_raw)) {
+      output <- as.data.frame(t(vp_raw))
+    } else {
+      # hdf5r drops size-1 dimensions; vp_raw is a plain vector.
+      # Reshape to [n_rows x n_cols] using the known number of parameters.
+      output <- as.data.frame(matrix(vp_raw, ncol = sum(variable_sizes)))
     }
 
     old_column_names = names(output)
     number_of_points = nrow(output)
     number_of_importance_points = nrow(output) / number_of_external_points # number_of_importance_points in the waste-free SMC viewpoint
-    chain_length = max(output_lengths[[k]])
+    # output_lengths[[target]] is the row for this iteration (1-indexed)
+    chain_length = max(output_lengths[[target]])
     number_of_chains = number_of_importance_points/chain_length
     number_of_targets = length(all_dirs)
 
     output_names_column = rep(output_names,number_of_points)
     output_index_column = as.numeric(rep(output_index,number_of_points))
 
-    llhds_for_current_target = unlist(llhds[sapply(lapply(1:(length(llhds)/number_of_targets),FUN=function(i) { k+number_of_targets*(i-1) } ),c)])
-    llhd_column_matrix = sapply(lapply(1:number_of_external_points,FUN=function(i) { rep(llhds_for_current_target[i],ncol(output)*number_of_importance_points) } ),c)
+    # llhds and times are simple vectors in new HDF5 format (one entry per iteration)
+    llhd_val = llhds[[target]]
+    if (is.null(llhd_val)) llhd_val = 0
+    llhd_column_matrix = sapply(lapply(1:number_of_external_points,FUN=function(i) { rep(llhd_val, ncol(output)*number_of_importance_points) } ),c)
     llhd_column = matrix(llhd_column_matrix,length(llhd_column_matrix))
 
-    times_for_current_target = unlist(times[sapply(lapply(1:(length(times)/number_of_targets),FUN=function(i) { k+number_of_targets*(i-1) } ),c)])
-    time_column_matrix = sapply(lapply(1:number_of_external_points,FUN=function(i) { rep(times_for_current_target[i],ncol(output)*number_of_importance_points) } ),c)
+    time_val = times[[target]]
+    if (is.null(time_val)) time_val = 0
+    time_column_matrix = sapply(lapply(1:number_of_external_points,FUN=function(i) { rep(time_val, ncol(output)*number_of_importance_points) } ),c)
     time_column = matrix(time_column_matrix,length(time_column_matrix))
-
-    #llhd_column = rep(llhds[[k]],ncol(output)*number_of_importance_points*number_of_external_points)
-    #time_column = rep(times[[k]],ncol(output)*number_of_importance_points*number_of_external_points)
 
     # number_of_points (=nrow(output)) equals number_of_external points multiplied by number of importance points
 
-    schedule_parameters_filename = paste(iteration_directory,"/schedule_parameters.txt",sep="")
-    tryCatch( {schedule_parameters = utils::read.table(file=schedule_parameters_filename,header=FALSE) }
-              , error = function(e) {schedule_parameters <<- NULL})
-    if (is.null(schedule_parameters))
+    schedule_parameters <- tryCatch(
+      h5f[[iter_grp_path]][["schedule_parameters"]]$read(),
+      error = function(e) NULL
+    )
+    if (is.null(schedule_parameters) || length(schedule_parameters) == 0)
     {
-      schedule_parameters_column = matrix(0,nrow(output),1)
+      schedule_parameters_column = matrix(0, nrow(output), 1)
+      schedule_parameters <- NULL
     }
     else
     {
-      schedule_parameters_column = matrix(paste(schedule_parameters[1,]),nrow(output)*ncol(output),1)
+      schedule_parameters_column = matrix(as.character(schedule_parameters[1]), nrow(output) * ncol(output), 1)
     }
 
     # 1, ncol(output)*number_of_importance_points times
@@ -424,13 +346,12 @@ load_smc_output = function(results_directory,
     iteration_fn = function(i) {rep(i,ncol(output))}
     iterations_column = rep(sapply(lapply(1:chain_length,FUN=iteration_fn),c),number_of_external_points*number_of_chains)
 
-    ess_filename = paste(iteration_directory,"/ess.txt",sep="")
-    ess = utils::read.table(file=ess_filename,header=FALSE,sep=",")
-
-    ess_for_each_external_point = lapply(1:number_of_external_points,FUN=function(i) { lw = nrow(ess)/number_of_external_points; o = matrix(0,lw); for (j in 1:lw) { o[j] = ess[j+lw*(i-1),] }; return(o); })
-    ess_list = lapply(1:number_of_external_points,FUN=function(i){ ess_for_each_external_point[[i]] })
-    ess_fn = function(j) {matrix(sapply(1:length(ess_list[[j]]),FUN=function(i) { rep(ess_list[[j]][i],sum(variable_sizes)) }),sum(variable_sizes)*length(ess_list[[j]]))}
-    ess_column = matrix(sapply(1:number_of_external_points,FUN=function(i) { ess_fn(i) }),length(iterations_column))
+    ess_val <- tryCatch(
+      as.numeric(h5f[[iter_grp_path]][["ess"]]$read()),
+      error = function(e) NA_real_
+    )
+    # ess is a single scalar per iteration; replicate to match long-format length.
+    ess_column = rep(ess_val, length(iterations_column))
 
     output = poorman::pivot_longer(output,cols = poorman::everything(), values_to="Value")
 
@@ -477,8 +398,8 @@ load_smc_output = function(results_directory,
       }
       else
       {
-        log_weight_filename = paste(iteration_directory,"/unnormalised_log_weights.txt",sep="")
-        log_weight = utils::read.table(file=log_weight_filename,header=FALSE,sep=",")
+        log_weight_raw <- h5f[[iter_grp_path]][["unnormalised_log_weights"]]$read()
+        log_weight <- as.data.frame(matrix(as.numeric(log_weight_raw), ncol = 1))
 
         log_weights_for_each_external_point = lapply(1:number_of_external_points,FUN=function(i) { lw = nrow(log_weight)/number_of_external_points; o = matrix(0,lw); for (j in 1:lw) { o[j] = log_weight[j+lw*(i-1),] }; return(o); })
         normalised_weights_for_each_external_point = lapply(log_weights_for_each_external_point,FUN=function(i) { i-log_sum_exp(i) })
@@ -498,9 +419,12 @@ load_smc_output = function(results_directory,
         #external_log_weight_fn = function(i) {rep(external_log_weights[i],length(log_weight_column)/length(external_log_weights))}
         #external_log_weight_column = matrix(apply(lapply(1:number_of_external_points,FUN=log_weight_fn),c),length(log_weight_column))
 
-        ancestor_index_filename = paste(iteration_directory,"/ancestor_index.txt",sep="")
-        tryCatch( {ancestor_index = utils::read.table(file=ancestor_index_filename,header=FALSE,sep=",") + 1 }
-                  , error = function(e) {ancestor_index <<- matrix(1:number_of_chains,number_of_chains)})
+        ancestor_index_raw <- tryCatch(
+          as.integer(h5f[[iter_grp_path]][["ancestor_index"]]$read()) + 1L,
+          error = function(e) seq_len(number_of_chains)
+        )
+        if (length(ancestor_index_raw) == 0) ancestor_index_raw <- seq_len(number_of_chains)
+        ancestor_index <- matrix(ancestor_index_raw, ncol = 1)
 
         # (repeat each value of ancestor (1:nchains) ncol(output)*niterations times)*number_of_external_points
         ancestor_fn = function(i) {rep(ancestor_index[i,],sum(variable_sizes)*chain_length)}

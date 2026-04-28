@@ -85,6 +85,10 @@ public:
                                    std::shared_ptr<Transform> transform) const=0;
   virtual void write_any_points(const std::vector<std::string> &variables,
                                 std::ofstream &file_stream) const=0;
+
+  // Returns all vector points as a matrix (one row per MCMC step / particle).
+  virtual arma::mat get_matrix_of_vector_points(const std::vector<std::string> &variables,
+                                                std::shared_ptr<Transform> transform) const=0;
   
   virtual void write_factors(const std::string &directory_name,
                              const std::string &index) const=0;

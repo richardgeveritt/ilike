@@ -11,6 +11,8 @@ using namespace Rcpp;
 #include "parameters.h"
 #include "sequencer.h"
 #include "ilike_header.h"
+#include "ilike_hdf5_utils.h"
+#include <memory>
 
 namespace ilike
 {
@@ -461,35 +463,12 @@ protected:
   /** @brief The proposals to find gradient for. */
   std::vector<const ProposalKernel*> proposals_to_find_gradient_for;
   
-  /** @brief The log likelihood file stream. */
-  std::ofstream log_likelihood_file_stream;
-  /** @brief The output lengths file stream. */
-  std::ofstream output_lengths_file_stream;
-  /** @brief The time file stream. */
-  std::ofstream time_file_stream;
-  /** @brief The vector variables file stream. */
-  std::ofstream vector_variables_file_stream;
-  /** @brief The vector variable sizes file stream. */
-  std::ofstream vector_variable_sizes_file_stream;
-  /** @brief The incremental log likelihood file stream. */
-  std::ofstream incremental_log_likelihood_file_stream;
-  /** @brief The resampled file stream. */
-  std::ofstream resampled_file_stream;
-  /** @brief The ess file stream. */
-  std::ofstream ess_file_stream;
-  /** @brief The schedule parameters file stream. */
-  std::ofstream schedule_parameters_file_stream;
-  /** @brief The vector points file stream. */
-  std::ofstream vector_points_file_stream;
-  /** @brief The ancestor index file stream. */
-  std::ofstream ancestor_index_file_stream;
-  /** @brief The any points file stream. */
-  std::ofstream any_points_file_stream; // should be one for each member of Parameters
-  /** @brief The normalised weights file stream. */
-  std::ofstream normalised_weights_file_stream;
-  /** @brief The unnormalised weights file stream. */
-  std::ofstream unnormalised_weights_file_stream;
+  /** @brief HDF5 output file (opened lazily in write_to_file). */
+  std::shared_ptr<HighFive::File> h5_file;
   
+  /** @brief Path to the HDF5 output file. */
+  std::string h5_file_path;
+
   //Parameters single_particle_is_step() const;
   
   //virtual void smc_step()=0;

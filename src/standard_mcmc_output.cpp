@@ -133,6 +133,30 @@ void StandardMCMCOutput::write_any_points(const std::vector<std::string> &variab
   //}
 }
 
+arma::mat StandardMCMCOutput::get_matrix_of_vector_points(const std::vector<std::string> &variables,
+                                                           std::shared_ptr<Transform> transform) const
+{
+  if (this->output.empty())
+    return arma::mat();
+
+  arma::rowvec first_row;
+  if (transform == NULL)
+    first_row = this->output.front().get_rowvec(variables);
+  else
+    first_row = transform->inverse_transform(this->output.front().parameters).get_rowvec(variables);
+
+  arma::mat result(this->output.size(), first_row.n_elem);
+  size_t row = 0;
+  for (auto i = this->output.begin(); i != this->output.end(); ++i, ++row)
+  {
+    if (transform == NULL)
+      result.row(row) = i->get_rowvec(variables);
+    else
+      result.row(row) = transform->inverse_transform(i->parameters).get_rowvec(variables);
+  }
+  return result;
+}
+
 void StandardMCMCOutput::write_factors(const std::string &directory_name,
                                        const std::string &index) const
 {
