@@ -57,6 +57,34 @@
 <p>Implementations of a number of ABC algorithms and pseudo-marginal methods for dynamic models. Documentation at <a href="https://richardgeveritt.github.io/ilike_documentation/" class="uri">https://richardgeveritt.github.io/ilike_documentation/</a></p>
 <!-- badges: start -->
 
+<div class="section level2">
+<h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
+</h2>
+<div class="section level3">
+<h3 id="id_1-install-the-hdf5-system-library">1. Install the HDF5 system library<a class="anchor" aria-label="anchor" href="#id_1-install-the-hdf5-system-library"></a>
+</h3>
+<p><code>ilike</code> requires the HDF5 C library. Install it for your platform before installing the R package.</p>
+<p><strong>macOS</strong></p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="ex">brew</span> install hdf5</span></code></pre></div>
+<p><strong>Linux (Debian / Ubuntu)</strong></p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">sudo</span> apt-get install libhdf5-dev</span></code></pre></div>
+<p><strong>Linux (Fedora / RHEL / CentOS)</strong></p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">sudo</span> dnf install hdf5-devel</span></code></pre></div>
+<p><strong>Windows</strong></p>
+<p>HDF5 is distributed via the <a href="https://cran.r-project.org/bin/windows/Rtools/" class="external-link">Rtools</a> toolchain. Open an Rtools MSYS2 shell (e.g. <code>C:\rtools45\ucrt64.exe</code>) and run:</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="ex">pacman</span> <span class="at">-Sy</span> mingw-w64-x86_64-hdf5</span></code></pre></div>
+<blockquote>
+<p><strong>Note:</strong> Rtools must already be installed. <code>pacman</code> is the package manager bundled with Rtools 4.x.</p>
+</blockquote>
+</div>
+<div class="section level3">
+<h3 id="id_2-install-ilike">2. Install ilike<a class="anchor" aria-label="anchor" href="#id_2-install-ilike"></a>
+</h3>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># install.packages("remotes")</span></span>
+<span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"richardgeveritt/ilike"</span><span class="op">)</span></span></code></pre></div>
+</div>
+</div>
 </div>
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
