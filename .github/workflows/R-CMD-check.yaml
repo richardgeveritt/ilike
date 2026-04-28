@@ -51,8 +51,19 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          & "C:\rtools44\usr\bin\bash.exe" -c "pacman --noconfirm -Sy mingw-w64-x86_64-hdf5"
-          "C:\rtools44\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          # Locate Rtools: try env var first, then search C:\ for rtools* directories
+          $rtools = ($env:RTOOLS44_HOME -replace '\\$', '')
+          if (-not $rtools -or -not (Test-Path "$rtools\usr\bin\pacman.exe")) {
+            $rtools = Get-ChildItem C:\ -Directory -Filter "rtools*" -ErrorAction SilentlyContinue |
+              Where-Object { Test-Path "$($_.FullName)\usr\bin\pacman.exe" } |
+              Select-Object -First 1 -ExpandProperty FullName
+          }
+          if (-not $rtools) { throw "Could not locate Rtools installation" }
+          Write-Host "Rtools found at: $rtools"
+          # pacman.exe is a native Windows binary - no bash needed
+          & "$rtools\usr\bin\pacman.exe" --noconfirm -Sy mingw-w64-x86_64-hdf5
+          # Add mingw64/bin to PATH so HDF5 DLLs are found at runtime
+          "$rtools\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Get ilike compile-cache path
         id: cache-path
