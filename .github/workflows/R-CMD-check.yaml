@@ -47,6 +47,10 @@ jobs:
           brew update
           brew install pkg-config hdf5
 
+      - name: Install system deps (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install -y libhdf5-dev
+
       - name: Install system deps (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -60,8 +64,14 @@ jobs:
           }
           if (-not $rtools) { throw "Could not locate Rtools installation" }
           Write-Host "Rtools found at: $rtools"
-          # pacman.exe is a native Windows binary - no bash needed
           & "$rtools\usr\bin\pacman.exe" --noconfirm -Sy mingw-w64-x86_64-hdf5
+          # Verify install
+          Write-Host "HDF5 headers:"
+          Get-ChildItem "$rtools\mingw64\include" -Filter "hdf5.h" -ErrorAction SilentlyContinue
+          Write-Host "HDF5 libs:"
+          Get-ChildItem "$rtools\mingw64\lib" -Filter "*hdf5*" -ErrorAction SilentlyContinue
+          Write-Host "HDF5 DLLs:"
+          Get-ChildItem "$rtools\mingw64\bin" -Filter "*hdf5*" -ErrorAction SilentlyContinue
           # Add mingw64/bin to PATH so HDF5 DLLs are found at runtime
           "$rtools\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
