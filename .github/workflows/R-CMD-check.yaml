@@ -49,11 +49,8 @@ jobs:
 
       - name: Install system deps (Windows)
         if: runner.os == 'Windows'
-        run: |
-          $rtoolsHome = $env:RTOOLS44_HOME
-          if (-not $rtoolsHome) { $rtoolsHome = "C:/rtools44" }
-          & "$rtoolsHome\usr\bin\bash.exe" -c "pacman --noconfirm -Sy mingw-w64-x86_64-hdf5"
-        shell: pwsh
+        run: pacman --noconfirm -Sy mingw-w64-x86_64-hdf5
+        shell: bash
 
       - name: Get ilike compile-cache path
         id: cache-path
