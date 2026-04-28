@@ -41,6 +41,12 @@ jobs:
           http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
 
+      - name: Install system deps (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install pkg-config hdf5
+
       - name: Get ilike compile-cache path
         id: cache-path
         shell: Rscript {0}
