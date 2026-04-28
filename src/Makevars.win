@@ -9,21 +9,15 @@ PKG_CPPFLAGS += -DBOOST_DISABLE_ASSERTS
 PKG_CPPFLAGS += -DHIGHFIVE_USE_EIGEN=0
 PKG_CPPFLAGS += -DHIGHFIVE_USE_BOOST=0
 PKG_CPPFLAGS += $(shell pkg-config --cflags hdf5 2>/dev/null || echo -I/mingw64/include)
-PKG_CXXFLAGS += -Wno-pedantic
 PKG_LIBS += $(shell pkg-config --libs hdf5 2>/dev/null || echo "-L/mingw64/lib -lhdf5")
+# Append AFTER R's own CXXFLAGS (which includes -pedantic) so -Wno-pedantic wins
+CXXFLAGS += -Wno-pedantic
 MAKEFLAGS += -j$(NUMBER_OF_PROCESSORS)
 
 PCH_FLAGS = $(ALL_CPPFLAGS) $(ALL_CXXFLAGS)
 
 .PHONY: all
 all: $(SHLIB)
-
-pch.h.gch: pch.h
-	$(CXX) $(PCH_FLAGS) -x c++-header -o $@ $<
-
-PKG_CXXFLAGS += -include pch.h
-
-$(OBJECTS): pch.h.gch
 
 pch.h.gch: pch.h
 	$(CXX) $(PCH_FLAGS) -x c++-header -o $@ $<
