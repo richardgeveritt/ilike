@@ -2,6 +2,8 @@
 #include "utils.h"
 #include "kalman_filter.h"
 #include "filesystem.h"
+#include "ilike_hdf5_utils.h"
+#include <sstream>
 
 namespace ilike
 {
