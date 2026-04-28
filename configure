@@ -48,7 +48,7 @@ fi
 
 # 4. Try common paths
 if [ -z "${HDF5_LIBS}" ]; then
-  for DIR in /usr/local /opt/homebrew /opt/homebrew/opt/hdf5 /usr /opt/conda /Users/richard/miniconda3 $HOME/miniconda3 $HOME/anaconda3 /opt/anaconda3; do
+  for DIR in /usr/local /opt/homebrew /opt/homebrew/opt/hdf5 /usr /opt/conda $HOME/miniconda3 $HOME/miniconda $HOME/anaconda3 $HOME/anaconda /opt/conda /opt/anaconda3; do
     if [ -f "${DIR}/include/hdf5.h" ]; then
       HDF5_CFLAGS="-I${DIR}/include"
       HDF5_LIBS="-L${DIR}/lib -lhdf5"
