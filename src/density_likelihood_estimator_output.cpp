@@ -5,6 +5,7 @@
 #include "filesystem.h"
 #include "independent_proposal_kernel.h"
 #include "density_estimator_output.h"
+#include "ilike_hdf5_utils.h"
 
 namespace ilike
 {
@@ -227,65 +228,25 @@ void DensityLikelihoodEstimatorOutput::write_to_file(const std::string &dir_name
                                                      const std::string &index)
 {
   std::string directory_name = dir_name + "_density";
-  
+
   if (!directory_exists(directory_name))
-  {
     make_directory(directory_name);
-  }
-  
-  if (!this->estimator->log_likelihood_file_stream.is_open())
+
+  if (!this->estimator->h5_file)
   {
-    this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
+    this->estimator->h5_file_path = directory_name + "/output.h5";
+    this->estimator->h5_file = h5_open_or_create(this->estimator->h5_file_path);
   }
-  if (this->estimator->log_likelihood_file_stream.is_open())
+
+  h5_append_double(*this->estimator->h5_file, "log_likelihood", this->log_likelihood);
+  h5_append_double(*this->estimator->h5_file, "time", this->time);
+
+  for (auto i = this->points.begin(); i != this->points.end(); ++i)
   {
-    this->estimator->log_likelihood_file_stream << std::fixed << std::setprecision(std::numeric_limits<double>::max_digits10) << this->log_likelihood << std::endl;
-    //log_likelihood_file_stream.close();
+    arma::rowvec rv = i->get_rowvec(this->estimator->variables);
+    std::vector<double> row_vec(rv.begin(), rv.end());
+    h5_append_row(*this->estimator->h5_file, "vector_points", row_vec);
   }
-  else
-  {
-    Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + "cannot be opened.");
-  }
-  
-  
-  if (!this->estimator->time_file_stream.is_open())
-  {
-    this->estimator->time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
-  }
-  if (this->estimator->time_file_stream.is_open())
-  {
-    this->estimator->time_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->time << std::endl;
-    //log_likelihood_file_stream.close();
-  }
-  else
-  {
-    Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
-  }
-  
-  
-  if (!this->estimator->file_stream.is_open())
-  {
-    this->estimator->file_stream.open(directory_name + "/vector_points.txt",std::ios::out | std::ios::app);
-  }
-  if (this->estimator->file_stream.is_open())
-  {
-    this->estimator->file_stream.precision(std::numeric_limits<double>::max_digits10);
-    for (auto i = this->points.begin();
-         i!=this->points.end();
-         ++i)
-    {
-      i->get_rowvec(this->estimator->variables).raw_print(this->estimator->file_stream);
-      
-      //this->estimator->file_stream << std::fixed << std::setprecision(12) << i->get_rowvec(this->estimator->variables);
-    }
-    
-    //file_stream.close();
-  }
-  else
-  {
-    Rcpp::stop("File " + directory_name + "/vector_points.txt" + "cannot be opened.");
-  }
-  
 }
 
 void DensityLikelihoodEstimatorOutput::forget_you_were_already_written_to_file()
@@ -294,8 +255,6 @@ void DensityLikelihoodEstimatorOutput::forget_you_were_already_written_to_file()
 
 void DensityLikelihoodEstimatorOutput::close_ofstreams()
 {
-  this->estimator->log_likelihood_file_stream.close();
-  this->estimator->file_stream.close();
-  this->estimator->time_file_stream.close();
+  this->estimator->h5_file.reset();
 }
 }

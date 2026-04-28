@@ -2,6 +2,7 @@
 #include "annealed_likelihood_estimator.h"
 #include "utils.h"
 #include "filesystem.h"
+#include "ilike_hdf5_utils.h"
 
 namespace ilike
 {
@@ -244,30 +245,19 @@ void AnnealedLikelihoodEstimatorOutput::write_to_file(const std::string &dir_nam
                                                       const std::string &index)
 {
   std::string directory_name = dir_name + "_annealed";
-  
-  //if (index!="")
-  //  directory_name = directory_name + "_" + index;
-  
+
   if (!directory_exists(directory_name))
-  {
     make_directory(directory_name);
-  }
-  
-  if (!this->estimator->log_likelihood_file_stream.is_open())
+
+  if (!this->estimator->h5_file)
   {
-    this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
+    this->estimator->h5_file_path = directory_name + "/output.h5";
+    this->estimator->h5_file = h5_open_or_create(this->estimator->h5_file_path);
   }
-  if (this->estimator->log_likelihood_file_stream.is_open())
-  {
-    this->estimator->log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->log_likelihood << std::endl;
-    //log_likelihood_file_stream.close();
-  }
-  else
-  {
-    Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + "cannot be opened.");
-  }
-  
-  this->estimator_output->write_to_file(directory_name,index);
+
+  h5_append_double(*this->estimator->h5_file, "log_likelihood", this->log_likelihood);
+
+  this->estimator_output->write_to_file(directory_name, index);
 }
 
 void AnnealedLikelihoodEstimatorOutput::forget_you_were_already_written_to_file()
@@ -277,7 +267,7 @@ void AnnealedLikelihoodEstimatorOutput::forget_you_were_already_written_to_file(
 
 void AnnealedLikelihoodEstimatorOutput::close_ofstreams()
 {
-  this->estimator->log_likelihood_file_stream.close();
+  this->estimator->h5_file.reset();
   this->estimator_output->close_ofstreams();
 }
 }

@@ -1,10 +1,10 @@
 PKG_CPPFLAGS += -I../inst/include/
 PKG_CPPFLAGS += -DBOOST_DISABLE_ASSERTS
-PKG_CPPFLAGS += -I/Users/richard/miniconda3/include
+PKG_CPPFLAGS += -I/Users/richard/miniconda3/include 
 PKG_CPPFLAGS += -I/Library/Frameworks/R.framework/Versions/4.5-arm64/Resources/library/HighFive/include
 PKG_CPPFLAGS += -DHIGHFIVE_USE_EIGEN=0
 PKG_LIBS += $(shell ${R_HOME}/bin/Rscript -e "RcppParallel::RcppParallelLibs()") $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
-PKG_LIBS += -L/Users/richard/miniconda3/lib -lhdf5 -Wl,-rpath,/Users/richard/miniconda3/lib 
+PKG_LIBS += -L/Users/richard/miniconda3/lib -lhdf5_hl -lhdf5  -Wl,-rpath,/Users/richard/miniconda3/lib 
 MAKEFLAGS += -j$(shell nproc 2>/dev/null || sysctl -n hw.logicalcpu 2>/dev/null || echo 1)
 
 .PHONY: all

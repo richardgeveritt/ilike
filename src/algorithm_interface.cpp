@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "filesystem.h"
+#include "ilike_hdf5_utils.h"
 #include "algorithm_interface.h"
 #include "custom_no_params_proposal_kernel.h"
 #include "custom_proposal_kernel.h"
@@ -6131,41 +6132,13 @@ double do_evaluate_log(const List &model,
       make_directory(directory_name);
     }
 
-    std::ofstream log_likelihood_file_stream;
-    std::ofstream time_file_stream;
-
-    if (!log_likelihood_file_stream.is_open())
-    {
-      log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
-    }
-    if (log_likelihood_file_stream.is_open())
-    {
-      log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << output << std::endl;
-    }
-    else
-    {
-      Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + "cannot be opened.");
-    }
-
-    if (!time_file_stream.is_open())
-    {
-      time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
-    }
-    if (time_file_stream.is_open())
-    {
-      time_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << elapsed_time.count() << std::endl;
-    }
-    else
-    {
-      Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
-    }
+    auto h5f = h5_open_or_create(directory_name + "/output.h5");
+    h5_append_double(*h5f, "log_likelihood", output);
+    h5_append_double(*h5f, "time", elapsed_time.count());
 
     std::string smc_iteration_directory = directory_name + "/iteration" + std::to_string(1);
 
     particle.factor_variables->write_to_file(smc_iteration_directory,0);
-
-    log_likelihood_file_stream.close();
-    time_file_stream.close();
 
   }
 
@@ -6256,41 +6229,13 @@ double do_evaluate_log_with_fixed_params(const List &model,
       make_directory(directory_name);
     }
 
-    std::ofstream log_likelihood_file_stream;
-    std::ofstream time_file_stream;
-
-    if (!log_likelihood_file_stream.is_open())
-    {
-      log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
-    }
-    if (log_likelihood_file_stream.is_open())
-    {
-      log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << output << std::endl;
-    }
-    else
-    {
-      Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + "cannot be opened.");
-    }
-
-    if (!time_file_stream.is_open())
-    {
-      time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
-    }
-    if (time_file_stream.is_open())
-    {
-      time_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << elapsed_time.count() << std::endl;
-    }
-    else
-    {
-      Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
-    }
+    auto h5f = h5_open_or_create(directory_name + "/output.h5");
+    h5_append_double(*h5f, "log_likelihood", output);
+    h5_append_double(*h5f, "time", elapsed_time.count());
 
     std::string smc_iteration_directory = directory_name + "/iteration" + std::to_string(1);
 
     particle.factor_variables->write_to_file(smc_iteration_directory,0);
-
-    log_likelihood_file_stream.close();
-    time_file_stream.close();
 
   }
 

@@ -338,270 +338,64 @@ void KalmanFilterOutput::write_to_file(const std::string &dir_name,
                                        const std::string &index)
 {
   std::string directory_name = dir_name + "_kf";
-  
-  //if (index!="")
-  //  directory_name = directory_name + "_" + index;
-  
+
   if (!directory_exists(directory_name))
-  {
     make_directory(directory_name);
+
+  if (!this->estimator->h5_file)
+  {
+    this->estimator->h5_file_path = directory_name + "/output.h5";
+    this->estimator->h5_file = h5_open_or_create(this->estimator->h5_file_path);
+
+    auto root = this->estimator->h5_file->getGroup("/");
+    h5_set_str_attr(root, "variable_names",
+                    std::vector<std::string>{this->estimator->state_name});
+    std::vector<size_t> vsizes{this->estimator->state_dimension};
+    h5_set_sizet_attr(root, "variable_sizes", vsizes);
   }
-  
-  // for each iteration left to write
+
+  HighFive::File &hf = *this->estimator->h5_file;
+
   for (size_t iteration = this->iteration_written_to_file+1;
-       iteration<this->kf_iteration+1;
+       iteration < this->kf_iteration+1;
        ++iteration)
   {
-    size_t distance_from_end = this->kf_iteration-iteration;
-    
-    /*
-     size_t llhd_index = this->llhds.size()-1-distance_from_end;
-     
-     //if (int(this->llhds.size())-1-int(distance_from_end)>=0)
-     //{
-     if (!this->estimator->log_likelihood_file_stream.is_open())
-     {
-     this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
-     }
-     
-     if (this->estimator->log_likelihood_file_stream.is_open())
-     {
-     this->estimator->log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->llhds[llhd_index] << std::endl;
-     //log_likelihood_file_stream.close();
-     }
-     else
-     {
-     Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + " cannot be opened.");
-     }
-     
-     //}
-     
-     if (!this->estimator->time_file_stream.is_open())
-     {
-     this->estimator->time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
-     }
-     if (this->estimator->time_file_stream.is_open())
-     {
-     double time_sum = 0.0;
-     for (size_t k=0; k<this->times.size(); ++k)
-     {
-     time_sum = time_sum + this->times[k];
-     }
-     this->estimator->time_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << time_sum << std::endl;
-     //log_likelihood_file_stream.close();
-     }
-     else
-     {
-     Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
-     }
-     */
-    
+    size_t distance_from_end = this->kf_iteration - iteration;
+
     if (this->posterior_means.size() > distance_from_end)
     {
       size_t deque_index = this->posterior_means.size()-1-distance_from_end;
-      
-      if (!this->estimator->log_likelihood_file_stream.is_open())
+
+      h5_append_double(hf, "log_likelihood", this->llhds[deque_index]);
+      h5_append_double(hf, "time",           this->times[deque_index]);
+      h5_append_double(hf, "output_lengths", 1.0);
+
+      std::string iter_grp_path = "iteration/" + std::to_string(iteration+1);
+      HighFive::Group iter_grp = h5_ensure_group(hf, iter_grp_path);
+
+      h5_write_scalar_double(iter_grp, "incremental_log_likelihood",
+                             this->log_normalising_constant_ratios[deque_index]);
       {
-        this->estimator->log_likelihood_file_stream.open(directory_name + "/log_likelihood.txt",std::ios::out | std::ios::app);
+        std::ostringstream oss;
+        oss << this->schedule_parameters[deque_index];
+        h5_write_string(iter_grp, "schedule_parameters", oss.str());
       }
-      if (this->estimator->log_likelihood_file_stream.is_open())
-      {
-        this->estimator->log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->llhds[deque_index] << std::endl;
-        //log_likelihood_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + directory_name + "/log_likelihood.txt" + "cannot be opened.");
-      }
-      
-      if (!this->estimator->time_file_stream.is_open())
-      {
-        this->estimator->time_file_stream.open(directory_name + "/time.txt",std::ios::out | std::ios::app);
-      }
-      if (this->estimator->time_file_stream.is_open())
-      {
-        //double time_sum = 0.0;
-        //for (size_t k=0; k<=llhd_index; ++k)
-        //{
-        //  time_sum = time_sum + this->times[k];
-        //}
-        this->estimator->time_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->times[deque_index] << std::endl;
-        //log_likelihood_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + directory_name + "/time.txt" + " cannot be opened.");
-      }
-      
-      if (!this->estimator->vector_variables_file_stream.is_open())
-      {
-        this->estimator->vector_variables_file_stream.open(directory_name + "/vector_variables.txt",std::ios::out | std::ios::app);
-      }
-      if (this->estimator->vector_variables_file_stream.is_open())
-      {
-        this->estimator->vector_variables_file_stream << this->estimator->state_name << ";";
-        this->estimator->vector_variables_file_stream << std::endl;
-        //vector_variables_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + directory_name + "/vector_variables.txt" + " cannot be opened.");
-      }
-      
-      if (!this->estimator->vector_variable_sizes_file_stream.is_open())
-      {
-        this->estimator->vector_variable_sizes_file_stream.open(directory_name + "/vector_variable_sizes.txt",std::ios::out | std::ios::app);
-      }
-      if (this->estimator->vector_variable_sizes_file_stream.is_open())
-      {
-        this->estimator->vector_variable_sizes_file_stream << this->estimator->state_dimension << ";";
-        this->estimator->vector_variable_sizes_file_stream << std::endl;
-        //vector_variable_sizes_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + directory_name + "/vector_variable_sizes.txt" + " cannot be opened.");
-      }
-      
-      if (!this->estimator->output_lengths_file_stream.is_open())
-      {
-        this->estimator->output_lengths_file_stream.open(directory_name + "/output_lengths.txt",std::ios::out | std::ios::app);
-      }
-      if (this->estimator->output_lengths_file_stream.is_open())
-      {
-        this->estimator->output_lengths_file_stream << 1 << std::endl;
-        //incremental_log_likelihood_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + directory_name + "/output_lengths.txt" + " cannot be opened.");
-      }
-      
-      std::string kf_iteration_directory = directory_name + "/iteration" + std::to_string(iteration+1);
-      
-      if (!directory_exists(kf_iteration_directory))
-      {
-        make_directory(kf_iteration_directory);
-      }
-      
-      
-      if (!this->estimator->incremental_log_likelihood_file_stream.is_open())
-      {
-        this->estimator->incremental_log_likelihood_file_stream.open(kf_iteration_directory + "/incremental_log_likelihood.txt",std::ios::out | std::ios::app);
-      }
-      if (this->estimator->incremental_log_likelihood_file_stream.is_open())
-      {
-        this->estimator->incremental_log_likelihood_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->log_normalising_constant_ratios[deque_index] << std::endl;
-        //incremental_log_likelihood_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + kf_iteration_directory + "/incremental_log_likelihood.txt" + " cannot be opened.");
-      }
-      
-      if (!this->estimator->schedule_parameters_file_stream.is_open())
-      {
-        this->estimator->schedule_parameters_file_stream.open(kf_iteration_directory + "/schedule_parameters.txt",std::ios::out | std::ios::app);
-      }
-      if (this->estimator->schedule_parameters_file_stream.is_open())
-      {
-        this->estimator->schedule_parameters_file_stream << std::setprecision(std::numeric_limits<double>::max_digits10) << this->schedule_parameters[deque_index] << std::endl;
-        //schedule_parameters_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + kf_iteration_directory + "/schedule_parameters.txt" + " cannot be opened.");
-      }
-      
-      if(!this->estimator->posterior_means_file_stream.is_open())
-      {
-        this->estimator->posterior_means_file_stream.open(kf_iteration_directory + "/posterior_means.txt",std::ios::out | std::ios::app);
-      }
-      if(this->estimator->posterior_means_file_stream.is_open())
-      {
-        this->estimator->posterior_means_file_stream.precision(std::numeric_limits<double>::max_digits10);
-        this->posterior_means[deque_index].as_row().raw_print(this->estimator->posterior_means_file_stream);
-        
-        //this->estimator->posterior_means_file_stream << std::fixed << std::setprecision(12) << this->posterior_means[deque_index].as_row();
-        //vector_points_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + kf_iteration_directory + "/posterior_means.txt" + " cannot be opened.");
-      }
-      
-      if(!this->estimator->posterior_covariances_file_stream.is_open())
-      {
-        this->estimator->posterior_covariances_file_stream.open(kf_iteration_directory + "/posterior_covariances.txt",std::ios::out | std::ios::app);
-      }
-      if(this->estimator->posterior_covariances_file_stream.is_open())
-      {
-        this->estimator->posterior_covariances_file_stream.precision(std::numeric_limits<double>::max_digits10);
-        this->posterior_covariances[deque_index].as_row().raw_print(this->estimator->posterior_covariances_file_stream);
-        
-        //this->estimator->posterior_covariances_file_stream << std::fixed << std::setprecision(12) << this->posterior_covariances[deque_index].as_row();
-        //vector_points_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + kf_iteration_directory + "/posterior_covariances.txt" + " cannot be opened.");
-      }
-      
-      if(!this->estimator->predicted_means_file_stream.is_open())
-      {
-        this->estimator->predicted_means_file_stream.open(kf_iteration_directory + "/predicted_means.txt",std::ios::out | std::ios::app);
-      }
-      if(this->estimator->predicted_means_file_stream.is_open())
-      {
-        this->estimator->predicted_means_file_stream.precision(std::numeric_limits<double>::max_digits10);
-        this->predicted_means[deque_index].as_row().raw_print(this->estimator->predicted_means_file_stream);
-        
-        //this->estimator->predicted_means_file_stream << std::fixed << std::setprecision(12) << this->predicted_means[deque_index].as_row();
-        //vector_points_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + kf_iteration_directory + "/predicted_means.txt" + " cannot be opened.");
-      }
-      
-      if(!this->estimator->predicted_covariances_file_stream.is_open())
-      {
-        this->estimator->predicted_covariances_file_stream.open(kf_iteration_directory + "/predicted_covariances.txt",std::ios::out | std::ios::app);
-      }
-      if(this->estimator->predicted_covariances_file_stream.is_open())
-      {
-        this->estimator->predicted_covariances_file_stream.precision(std::numeric_limits<double>::max_digits10);
-        this->predicted_covariances[deque_index].as_row().raw_print(this->estimator->predicted_covariances_file_stream);
-        
-        //this->estimator->predicted_covariances_file_stream << std::fixed << std::setprecision(12) << this->predicted_covariances[deque_index].as_row();
-        //vector_points_file_stream.close();
-      }
-      else
-      {
-        Rcpp::stop("File " + kf_iteration_directory + "/predicted_covariances.txt" + " cannot be opened.");
-      }
-      
-      
-      //this->close_ofstreams(deque_index);
-      this->close_ofstreams();
+      h5_write_vec(iter_grp, "posterior_means",
+                   this->posterior_means[deque_index]);
+      h5_write_mat(iter_grp, "posterior_covariances",
+                   this->posterior_covariances[deque_index]);
+      h5_write_vec(iter_grp, "predicted_means",
+                   this->predicted_means[deque_index]);
+      h5_write_mat(iter_grp, "predicted_covariances",
+                   this->predicted_covariances[deque_index]);
     }
   }
-  
+
   this->iteration_written_to_file = this->kf_iteration;
 }
 
 void KalmanFilterOutput::close_ofstreams()
 {
-  this->estimator->log_likelihood_file_stream.close();
-  this->estimator->time_file_stream.close();
-  this->estimator->vector_variables_file_stream.close();
-  this->estimator->vector_variable_sizes_file_stream.close();
-  this->estimator->output_lengths_file_stream.close();
-  this->estimator->incremental_log_likelihood_file_stream.close();
-  this->estimator->schedule_parameters_file_stream.close();
-  this->estimator->posterior_means_file_stream.close();
-  this->estimator->posterior_covariances_file_stream.close();
-  this->estimator->predicted_means_file_stream.close();
-  this->estimator->predicted_covariances_file_stream.close();
+  this->estimator->h5_file.reset();
 }
 }
