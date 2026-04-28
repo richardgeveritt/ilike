@@ -47,6 +47,14 @@ jobs:
           brew update
           brew install pkg-config hdf5
 
+      - name: Install system deps (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          $rtoolsHome = $env:RTOOLS44_HOME
+          if (-not $rtoolsHome) { $rtoolsHome = "C:/rtools44" }
+          & "$rtoolsHome\usr\bin\bash.exe" -c "pacman --noconfirm -Sy mingw-w64-x86_64-hdf5"
+        shell: pwsh
+
       - name: Get ilike compile-cache path
         id: cache-path
         shell: Rscript {0}
