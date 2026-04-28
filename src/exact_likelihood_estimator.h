@@ -254,6 +254,9 @@ protected:
   /** @brief Path to the HDF5 output file. */
   std::string h5_file_path;
   
+  /** @brief Buffer accumulating log-likelihood values before a batch HDF5 write. */
+  std::vector<double> pending_log_likelihoods;
+  
   /**
    * @brief Copies the state of another ExactLikelihoodEstimatorOutput into this object.
    *

@@ -59,6 +59,32 @@ inline void h5_append_double(HighFive::File &file,
   }
 }
 
+// Append a vector of doubles to a 1-D extendable dataset in a single operation.
+inline void h5_append_doubles(HighFive::File &file,
+                               const std::string &dset_path,
+                               const std::vector<double> &vals)
+{
+  if (vals.empty()) return;
+  size_t n = vals.size();
+  if (file.exist(dset_path))
+  {
+    auto ds = file.getDataSet(dset_path);
+    auto dims = ds.getDimensions();
+    size_t old_n = dims[0];
+    ds.resize({old_n + n});
+    ds.select({old_n}, {n}).write(vals);
+  }
+  else
+  {
+    HighFive::DataSetCreateProps props;
+    props.add(HighFive::Chunking(std::vector<hsize_t>{std::max(n, size_t{64})}));
+    HighFive::DataSpace space = HighFive::DataSpace({0}, {HighFive::DataSpace::UNLIMITED});
+    auto ds = file.createDataSet<double>(dset_path, space, props);
+    ds.resize({n});
+    ds.select({0}, {n}).write(vals);
+  }
+}
+
 // Append a scalar int to a 1-D extendable dataset.
 inline void h5_append_int(HighFive::File &file,
                            const std::string &dset_path,

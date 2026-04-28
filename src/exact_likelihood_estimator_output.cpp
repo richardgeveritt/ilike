@@ -9,6 +9,7 @@ namespace ilike
 ExactLikelihoodEstimatorOutput::ExactLikelihoodEstimatorOutput()
 :LikelihoodEstimatorOutput()
 {
+  this->estimator = nullptr;
   this->log_likelihood_smcfixed_part = 0.0;
   this->subsample_log_likelihood_smcfixed_part = 0.0;
 }
@@ -120,20 +121,13 @@ void ExactLikelihoodEstimatorOutput::print(std::ostream &os) const
 void ExactLikelihoodEstimatorOutput::write_to_file(const std::string &dir_name,
                                                    const std::string &index)
 {
-  std::string directory_name = dir_name + "_exact";
+  if (!this->estimator) return;
+  // Just record the file path on first call; accumulate value in buffer.
+  // No HDF5 I/O here — the batch write happens in close_ofstreams().
+  if (this->estimator->h5_file_path.empty())
+    this->estimator->h5_file_path = dir_name + "_exact.h5";
   
-  if (!directory_exists(directory_name))
-  {
-    make_directory(directory_name);
-  }
-  
-  if (!this->estimator->h5_file)
-  {
-    this->estimator->h5_file_path = directory_name + "/output.h5";
-    this->estimator->h5_file = h5_open_or_create(this->estimator->h5_file_path);
-  }
-  
-  h5_append_double(*this->estimator->h5_file, "log_likelihood", this->log_likelihood);
+  this->estimator->pending_log_likelihoods.push_back(this->log_likelihood);
 }
 
 void ExactLikelihoodEstimatorOutput::forget_you_were_already_written_to_file()
@@ -142,6 +136,19 @@ void ExactLikelihoodEstimatorOutput::forget_you_were_already_written_to_file()
 
 void ExactLikelihoodEstimatorOutput::close_ofstreams()
 {
-  this->estimator->h5_file.reset();
+  if (!this->estimator) return;
+  // Flush accumulated values in a single HDF5 extend, then clear the buffer.
+  if (!this->estimator->pending_log_likelihoods.empty() &&
+      !this->estimator->h5_file_path.empty())
+  {
+    if (!this->estimator->h5_file)
+      this->estimator->h5_file = h5_open_or_create(this->estimator->h5_file_path);
+    
+    h5_append_doubles(*this->estimator->h5_file,
+                      "log_likelihood",
+                      this->estimator->pending_log_likelihoods);
+    this->estimator->pending_log_likelihoods.clear();
+  }
+  // Leave h5_file open; it will be closed when the estimator is destroyed.
 }
 }
