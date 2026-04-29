@@ -1,18 +1,24 @@
 test_that("MCMC works with all available proposals", {
 
+  on.exit({
+    unlink("mcmc_m_proposal", recursive=TRUE)
+    unlink("mcmc_m_proposal_prior", recursive=TRUE)
+    unlink("mcmc_m_proposal_norm_rw", recursive=TRUE)
+    unlink("mcmc_m_proposal_unif_rw", recursive=TRUE)
+    unlink("mcmc_m_proposal_mirror", recursive=TRUE)
+  }, add=TRUE)
+
   # Test MCMC with custom Metropolis proposal
   run_mcmc_m_proposal()
   sampler_output = ilike::load_mcmc_output("mcmc_m_proposal")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
-  unlink("mcmc_m_proposal", recursive=TRUE)
 
   # Test custom Metropolis proposal in MCMC where only the first factor (the prior) is used
   run_mcmc_m_proposal_prior()
   sampler_output = ilike::load_mcmc_output("mcmc_m_proposal_prior")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
-  unlink("mcmc_m_proposal_prior", recursive=TRUE)
 
   # Test built-in Metropolis proposal in MCMC
   # ilike::norm_rw
@@ -20,7 +26,6 @@ test_that("MCMC works with all available proposals", {
   sampler_output = ilike::load_mcmc_output("mcmc_m_proposal_norm_rw")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
-  unlink("mcmc_m_proposal_norm_rw", recursive=TRUE)
 
   # Test built-in Metropolis proposal in MCMC
   # ilike::unif_rw
@@ -28,15 +33,13 @@ test_that("MCMC works with all available proposals", {
   sampler_output = ilike::load_mcmc_output("mcmc_m_proposal_unif_rw")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
-  unlink("mcmc_m_proposal_unif_rw", recursive=TRUE)
 
-  # # Test built-in Metropolis proposal in MCMC
-  # # ilike::mirror
-  # run_mcmc_m_proposal_mirror()
-  # sampler_output = ilike::load_mcmc_output("mcmc_m_proposal_mirror")
-  # expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
-  # expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
-  # unlink("mcmc_m_proposal_mirror", recursive=TRUE)
+  # Test built-in Metropolis proposal in MCMC
+  # ilike::mirror
+  run_mcmc_m_proposal_mirror()
+  sampler_output = ilike::load_mcmc_output("mcmc_m_proposal_mirror")
+  expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
+  expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
 
   # # Test custom independent Metropolis-Hastings proposal in MCMC
   # run_mcmc_imh_proposal()

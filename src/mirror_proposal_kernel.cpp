@@ -175,7 +175,7 @@ arma::mat MirrorProposalKernel::get_inverse_covariance(const std::string &variab
 Parameters MirrorProposalKernel::simulate(RandomNumberGenerator &rng,
                                           const Particle &particle) const
 {
-  Parameters output = particle.get_transformed_parameters(this);
+  Parameters output;
   for (auto i=this->proposal_info.begin();
        i!=this->proposal_info.end();
        ++i)
@@ -220,7 +220,7 @@ Parameters MirrorProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
   // no difference since size of data set does not impact on proposal
   auto found = this->proposal_info.find(variable);
   
-  Parameters output = particle.get_transformed_parameters(this);
+  Parameters output;
   output[variable] = rmvnorm_using_chol(rng,
                                         2.0*found->second.get_mean()-particle.get_transformed_parameters(this).get_colvec(variable),
                                         sqrt(found->second.get_double_scale())*found->second.get_chol());

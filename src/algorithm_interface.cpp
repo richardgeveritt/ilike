@@ -3940,14 +3940,16 @@ SymmetricProposalKernel *get_m_proposal(const List &current_proposal,
 
           proposal = new UniformRandomWalkProposalKernel(variable, halfwidth);
         } else if (iequals(type, "mirror")) {
-          List info = get_single_variable_vector_and_matrix_parameter_info(
-              model_parameters, proposal_info, type);
+          List info =
+              get_single_variable_vector_and_matrix_and_double_parameter_info(
+                  model_parameters, proposal_info, type);
 
           std::string variable = info[0];
           arma::colvec mean = info[1];
           arma::mat cov = info[2];
+          double scale = info[3];
 
-          proposal = new MirrorProposalKernel(variable, mean, cov);
+          proposal = new MirrorProposalKernel(variable, mean, cov, scale);
         } else {
           Rcout << "Proposal type " << type;
           stop("Proposal type unknown");
