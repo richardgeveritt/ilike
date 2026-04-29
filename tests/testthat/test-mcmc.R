@@ -29,14 +29,13 @@ test_that("MCMC works with all available proposals", {
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
   unlink("mcmc_m_proposal_unif_rw", recursive=TRUE)
-  #
+
   # # Test built-in Metropolis proposal in MCMC
   # # ilike::mirror
-  #
   # run_mcmc_m_proposal_mirror()
   # sampler_output = ilike::load_mcmc_output("mcmc_m_proposal_mirror")
-  # expect_equal(signif(mean(sampler_output$Value), digits = 2), 1)
-  # expect_equal(signif(var(sampler_output$Value), digits = 2), signif(1/(1+1), digits = 2))
+  # expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
+  # expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
   # unlink("mcmc_m_proposal_mirror", recursive=TRUE)
 
   # # Test custom independent Metropolis-Hastings proposal in MCMC
