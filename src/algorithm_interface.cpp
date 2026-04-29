@@ -3542,8 +3542,7 @@ ProposalKernel *get_mh_proposal(const List &current_proposal,
           double scale = info[2];
 
           proposal = new GaussianRandomWalkProposalKernel(variable, cov, scale);
-        }
-        if (iequals(type, "unif_rw")) {
+        } else if (iequals(type, "unif_rw")) {
           List info = get_single_variable_one_double_parameter_info(
               model_parameters, proposal_info, type);
 
@@ -3551,8 +3550,7 @@ ProposalKernel *get_mh_proposal(const List &current_proposal,
           double sd = info[1];
 
           proposal = new UniformRandomWalkProposalKernel(variable, sd);
-        }
-        if (iequals(type, "mvunif_rw")) {
+        } else if (iequals(type, "mvunif_rw")) {
           List info = get_single_variable_vector_parameter_info(
               model_parameters, proposal_info, type);
 

@@ -79,7 +79,7 @@ run_mcmc_mh_proposal_custom <- function()
   filename_model = system.file("extdata", "test_gaussian_posterior.ilike", package = "ilike")
   filename_mcmc = system.file("extdata", "test_mh_proposal.ilike", package = "ilike")
   recipe = ilike::compile(c(filename_model, filename_mcmc))
-  ilike::MCMC(recipe,results_name="mcmc_mh_proposal",seed=2,initial_values = list(list(theta=1)))
+  ilike::MCMC(recipe,results_name="mcmc_mh_proposal_custom",seed=2,initial_values = list(list(theta=1)))
 }
 
 # Test built-in Metropolis-Hastings proposal in MCMC
