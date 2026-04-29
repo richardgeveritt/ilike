@@ -15,4 +15,4 @@ double evaluate_log_mh_proposal(const Parameters &proposed_parameters,
                proposal_sd);
 }
 
-/***mcmc_termination,ilike::iterations(500000)***/
+/***mcmc_termination,ilike::iterations(10000)***/

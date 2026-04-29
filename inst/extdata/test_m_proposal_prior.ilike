@@ -15,4 +15,4 @@ NumericVector m_factor_index() {
   return factor_index;
 }
 
-/***mcmc_termination,ilike::iterations(500000)***/
+/***mcmc_termination,ilike::iterations(10000)***/

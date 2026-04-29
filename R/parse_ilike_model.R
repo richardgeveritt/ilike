@@ -852,7 +852,7 @@ mh_proposal_processing = function(mh_proposal_number,blocks,block_name,line_coun
       else
       {
         # mh_proposal is complete
-        if ( ("evaluate_log_mh_proposal" %in% names(current_mh_proposal_info)) && ("simulate_mh_proposal" %in% names(current_mh_proposal_info)) )
+        if ( ("evaluate_log_mh_proposal" %in% names(current_mh_proposal_info)) && ("simulate_mh_proposal" %in% names(current_mh_proposal_info)) && (block_name != "mh_factor_index") )
         {
           if (print_block_ends)
           {
@@ -914,7 +914,7 @@ unadjusted_proposal_processing = function(unadjusted_proposal_number,blocks,bloc
       else
       {
         # unadjusted_proposal is complete
-        if ( ("simulate_unadjusted_proposal" %in% names(current_unadjusted_proposal_info)) )
+        if ( ("simulate_unadjusted_proposal" %in% names(current_unadjusted_proposal_info)) && (block_name != "unadjusted_factor_index") )
         {
           if (print_block_ends)
           {
@@ -974,7 +974,7 @@ imh_proposal_processing = function(imh_proposal_number,blocks,block_name,line_co
       else
       {
         # imh_proposal is complete
-        if ( ("evaluate_log_imh_proposal" %in% names(current_imh_proposal_info)) && ("simulate_imh_proposal" %in% names(current_imh_proposal_info)) )
+        if ( ("evaluate_log_imh_proposal" %in% names(current_imh_proposal_info)) && ("simulate_imh_proposal" %in% names(current_imh_proposal_info)) && (block_name != "imh_factor_index") )
         {
           if (print_block_ends)
           {
@@ -1034,7 +1034,7 @@ m_proposal_processing = function(m_proposal_number,blocks,block_name,line_counte
       else
       {
         # m_proposal is complete
-        if ( ("simulate_m_proposal" %in% names(current_m_proposal_info)) )
+        if ( ("simulate_m_proposal" %in% names(current_m_proposal_info)) && (block_name != "m_factor_index") )
         {
           if (print_block_ends)
           {
@@ -2323,6 +2323,7 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
 
     return_type = "NumericVector"
     arguments = c()
+    R_args = ""
   }
   else if (block_name=="enk_likelihood_index")
   {
@@ -2348,6 +2349,7 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
 
     return_type = "NumericVector"
     arguments = c()
+    R_args = ""
   }
   else if ( (block_name=="m_factor_index") || (block_name=="mh_factor_index") || (block_name=="imh_factor_index") || (block_name=="unadjusted_factor_index") )
   {
@@ -2373,6 +2375,7 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
 
     return_type = "NumericVector"
     arguments = c()
+    R_args = ""
   }
   else if (block_name=="simulate_data_model")
   {
