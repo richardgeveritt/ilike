@@ -6,6 +6,7 @@ test_that("MCMC works with all available proposals", {
     unlink("mcmc_m_proposal_norm_rw", recursive=TRUE)
     unlink("mcmc_m_proposal_unif_rw", recursive=TRUE)
     unlink("mcmc_m_proposal_mirror", recursive=TRUE)
+    unlink("mcmc_imh_proposal", recursive=TRUE)
   }, add=TRUE)
 
   # Test MCMC with custom Metropolis proposal
@@ -41,12 +42,11 @@ test_that("MCMC works with all available proposals", {
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
 
-  # # Test custom independent Metropolis-Hastings proposal in MCMC
-  # run_mcmc_imh_proposal()
-  # sampler_output = ilike::load_mcmc_output("mcmc_imh_proposal")
-  # expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
-  # expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
-  # unlink("mcmc_imh_proposal", recursive=TRUE)
+  # Test custom independent Metropolis-Hastings proposal in MCMC
+  run_mcmc_imh_proposal()
+  sampler_output = ilike::load_mcmc_output("mcmc_imh_proposal")
+  expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
+  expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
   #
   # # Test built-in independent Metropolis-Hastings proposal in MCMC
   # # ilike::norm

@@ -107,9 +107,7 @@ arma::mat IndependentProposalKernel::specific_subsample_gradient_of_log(const st
 Parameters IndependentProposalKernel::simulate(RandomNumberGenerator &rng,
                                                const Particle &particle) const
 {
-  Parameters output = particle.parameters;
-  output.deep_overwrite_with_variables_in_argument(this->independent_simulate(rng));
-  return output;
+  return this->independent_simulate(rng);
 }
 
 /*
@@ -125,9 +123,7 @@ Parameters IndependentProposalKernel::simulate(RandomNumberGenerator &rng,
 Parameters IndependentProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                          const Particle &particle) const
 {
-  Parameters output = particle.parameters;
-  output.deep_overwrite_with_variables_in_argument(this->subsample_independent_simulate(rng));
-  return output;
+  return this->subsample_independent_simulate(rng);
 }
 
 /*
@@ -144,9 +140,7 @@ Parameters IndependentProposalKernel::subsample_simulate(RandomNumberGenerator &
                                                          const std::string &variable,
                                                          const Particle &particle) const
 {
-  Parameters output = particle.parameters;
-  output.deep_overwrite_with_variables_in_argument(this->subsample_independent_simulate(rng,variable));
-  return output;
+  return this->subsample_independent_simulate(rng, variable);
 }
 
 /*
