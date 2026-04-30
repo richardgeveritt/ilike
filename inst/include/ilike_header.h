@@ -255,6 +255,18 @@ inline EvaluateLogDistributionPtr load_evaluate_log_distribution(const SEXP &eva
   return *evaluate_log_distribution_XPtr;
 }
 
+inline EvaluateGradientLogDistributionPtr load_evaluate_gradient_log_distribution(const SEXP &evaluate_gradient_log_distribution_SEXP)
+{
+  XPtr<EvaluateGradientLogDistributionPtr> evaluate_gradient_log_distribution_XPtr(evaluate_gradient_log_distribution_SEXP);
+  return *evaluate_gradient_log_distribution_XPtr;
+}
+
+inline EvaluateGradientLogLikelihoodPtr load_evaluate_gradient_log_likelihood(const SEXP &evaluate_gradient_log_likelihood_SEXP)
+{
+  XPtr<EvaluateGradientLogLikelihoodPtr> evaluate_gradient_log_likelihood_XPtr(evaluate_gradient_log_likelihood_SEXP);
+  return *evaluate_gradient_log_likelihood_XPtr;
+}
+
 inline SimulateDistributionPtr load_simulate_distribution(const SEXP &simulate_distribution_SEXP)
 {
   XPtr<SimulateDistributionPtr> simulate_distribution_XPtr(simulate_distribution_SEXP);

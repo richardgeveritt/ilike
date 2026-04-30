@@ -1336,8 +1336,16 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
           }
         } else if (current_factor.containsElementNamed("evaluate_log_prior")) {
           SEXP evaluate_log_prior_SEXP = current_factor["evaluate_log_prior"];
-          DistributionFactor *new_factor = new CustomDistributionFactor(
-              load_evaluate_log_distribution(evaluate_log_prior_SEXP));
+          DistributionFactor *new_factor;
+          if (current_factor.containsElementNamed("evaluate_gradient_log_prior")) {
+            SEXP evaluate_gradient_log_prior_SEXP = current_factor["evaluate_gradient_log_prior"];
+            new_factor = new CustomDistributionFactor(
+                load_evaluate_log_distribution(evaluate_log_prior_SEXP),
+                load_evaluate_gradient_log_distribution(evaluate_gradient_log_prior_SEXP));
+          } else {
+            new_factor = new CustomDistributionFactor(
+                load_evaluate_log_distribution(evaluate_log_prior_SEXP));
+          }
           LikelihoodEstimator *new_likelihood_estimator =
               new ExactLikelihoodEstimator(rng_in, seed_in, data_in, new_factor,
                                            factor_is_fixed_in_smc);
@@ -1367,9 +1375,18 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
 
           SEXP evaluate_log_likelihood_SEXP =
               current_factor["evaluate_log_likelihood"];
-          LikelihoodFactor *new_factor = new CustomLikelihoodFactor(
-              load_evaluate_log_likelihood(evaluate_log_likelihood_SEXP),
-              data_in);
+          LikelihoodFactor *new_factor;
+          if (current_factor.containsElementNamed("evaluate_gradient_log_likelihood")) {
+            SEXP evaluate_gradient_log_likelihood_SEXP = current_factor["evaluate_gradient_log_likelihood"];
+            new_factor = new CustomLikelihoodFactor(
+                load_evaluate_log_likelihood(evaluate_log_likelihood_SEXP),
+                load_evaluate_gradient_log_likelihood(evaluate_gradient_log_likelihood_SEXP),
+                data_in);
+          } else {
+            new_factor = new CustomLikelihoodFactor(
+                load_evaluate_log_likelihood(evaluate_log_likelihood_SEXP),
+                data_in);
+          }
           LikelihoodEstimator *new_likelihood_estimator =
               new ExactLikelihoodEstimator(rng_in, seed_in, data_in, new_factor,
                                            factor_is_fixed_in_smc);
