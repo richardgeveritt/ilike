@@ -45,6 +45,7 @@ pacman -Sy mingw-w64-x86_64-hdf5
 ### 2. Install ilike
 
 ``` r
+
 # install.packages("remotes")
 remotes::install_github("richardgeveritt/ilike")
 ```
