@@ -96,7 +96,7 @@ run_mcmc_mh_proposal_norm_rw <- function()
 # Test built-in Metropolis-Hastings proposal in MCMC
 # ilike::unif_rw
 
-run_mcmc_mh_proposal_mh_unif_rw <- function()
+run_mcmc_mh_proposal_unif_rw <- function()
 {
   filename_model = system.file("extdata", "test_gaussian_posterior.ilike", package = "ilike")
   filename_mcmc = system.file("extdata", "test_mh_proposal_unif_rw.ilike", package = "ilike")
@@ -107,7 +107,7 @@ run_mcmc_mh_proposal_mh_unif_rw <- function()
 # Test built-in Metropolis-Hastings proposal in MCMC
 # ilike::langevin
 
-run_mcmc_mh_proposal_mh_langevin <- function()
+run_mcmc_mh_proposal_langevin <- function()
 {
   filename_model = system.file("extdata", "test_gaussian_posterior.ilike", package = "ilike")
   filename_mcmc = system.file("extdata", "test_mh_proposal_langevin.ilike", package = "ilike")
@@ -118,7 +118,7 @@ run_mcmc_mh_proposal_mh_langevin <- function()
 # Test built-in Metropolis-Hastings proposal in MCMC
 # ilike::barker
 
-run_mcmc_mh_proposal_mh_barker <- function()
+run_mcmc_mh_proposal_barker <- function()
 {
   filename_model = system.file("extdata", "test_gaussian_posterior.ilike", package = "ilike")
   filename_mcmc = system.file("extdata", "test_mh_proposal_barker.ilike", package = "ilike")
@@ -129,7 +129,7 @@ run_mcmc_mh_proposal_mh_barker <- function()
 # Test built-in Metropolis-Hastings proposal in MCMC
 # ilike::mirror
 
-run_mcmc_mh_proposal_mh_mirror <- function()
+run_mcmc_mh_proposal_mirror <- function()
 {
   filename_model = system.file("extdata", "test_gaussian_posterior.ilike", package = "ilike")
   filename_mcmc = system.file("extdata", "test_mh_proposal_mirror.ilike", package = "ilike")
@@ -150,7 +150,7 @@ run_mcmc_undajusted_proposal <- function()
 # Test built-in unadjusted proposal in MCMC
 # ilike::langevin
 
-run_mcmc_undajusted_proposal_unadjusted_langevin <- function()
+run_mcmc_undajusted_proposal_langevin <- function()
 {
   filename_model = system.file("extdata", "test_gaussian_posterior.ilike", package = "ilike")
   filename_mcmc = system.file("extdata", "test_unadjusted_proposal_langevin.ilike", package = "ilike")
