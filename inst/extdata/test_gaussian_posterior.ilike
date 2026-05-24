@@ -42,7 +42,7 @@ arma::mat likelihood_gradient_eval(const std::string &variable,
                                    const Parameters &parameters,
                                    const Data &data) {
   if (variable == "theta") {
-    arma::colvec y = data["y"];
+    arma::colvec y = data["x"];
     arma::mat grad(1, 1);
     grad(0, 0) = arma::sum((y - parameters["theta"][0]) / (obs_sd * obs_sd));
     return grad;
