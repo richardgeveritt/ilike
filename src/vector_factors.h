@@ -82,6 +82,9 @@ public:
    * @return The result.
    */
   FactorVariables* simulate_factor_variables(const Parameters &simulated_parameters) const;
+
+  // The estimator for factor i (0-based).
+  LikelihoodEstimator* get_likelihood_estimator(size_t i) const;
   /*
    FactorVariables* simulate_factor_variables(const Parameters &simulated_parameters,
    const Parameters &conditioned_on_parameters);

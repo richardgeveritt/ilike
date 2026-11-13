@@ -76,6 +76,12 @@ void HMMFactorVariables::operator=(const HMMFactorVariables &another)
   this->make_copy(another);
 }
 
+FactorVariables* HMMFactorVariables::copy_with_new_outputs(const Parameters &new_parameters,
+                                                          const Index* new_outputs_index) const
+{
+  Rcpp::stop("HMMFactorVariables::copy_with_new_outputs - not written yet.");
+}
+
 FactorVariables* HMMFactorVariables::duplicate() const
 {
   return( new HMMFactorVariables(*this));
@@ -431,6 +437,16 @@ double HMMFactorVariables::subsample_evaluate_smcadaptive_part_given_smcfixed_li
   }
   
   return result;
+}
+
+std::vector<size_t> HMMFactorVariables::find_changed_exact_factors(const Index* new_outputs_index) const
+{
+  Rcpp::stop("HMMFactorVariables::find_changed_exact_factors - not written yet.");
+}
+
+double HMMFactorVariables::get_cached_likelihoods(const Index* index) const
+{
+  Rcpp::stop("HMMFactorVariables::get_cached_likelihoods - not written yet.");
 }
 
 double HMMFactorVariables::evaluate_likelihoods(const Index* index) const

@@ -230,6 +230,16 @@ void StochasticScanMCMC::set_proposal_parameters(Parameters* proposal_parameters
   }
 }
 
+bool StochasticScanMCMC::reads_cached_factors() const
+{
+  for (auto i=this->moves.begin(); i!=this->moves.end(); ++i)
+  {
+    if ((*i)->reads_cached_factors())
+      return true;
+  }
+  return false;
+}
+
 std::vector<const ProposalKernel*> StochasticScanMCMC::get_proposals() const
 {
   std::vector<const ProposalKernel*> all_proposals;

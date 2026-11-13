@@ -826,7 +826,9 @@ mh_proposal_processing = function(mh_proposal_number,blocks,block_name,line_coun
   {
     current_mh_proposal_info = blocks[["mh_proposal"]][[mh_proposal_number]]
 
-    if ("mh_proposal" %in% names(current_mh_proposal_info))
+    # A factor index block that follows a complete proposal belongs to that
+    # proposal, so it does not start a new one.
+    if ( ("mh_proposal" %in% names(current_mh_proposal_info)) && !(block_name %in% c("mh_factor_index","mh_cut_factor_index")) )
     {
       # mh_proposal is complete
       if (print_block_ends)
@@ -852,7 +854,7 @@ mh_proposal_processing = function(mh_proposal_number,blocks,block_name,line_coun
       else
       {
         # mh_proposal is complete
-        if ( ("evaluate_log_mh_proposal" %in% names(current_mh_proposal_info)) && ("simulate_mh_proposal" %in% names(current_mh_proposal_info)) && (block_name != "mh_factor_index") )
+        if ( ("evaluate_log_mh_proposal" %in% names(current_mh_proposal_info)) && ("simulate_mh_proposal" %in% names(current_mh_proposal_info)) && !(block_name %in% c("mh_factor_index","mh_cut_factor_index")) )
         {
           if (print_block_ends)
           {
@@ -886,7 +888,9 @@ unadjusted_proposal_processing = function(unadjusted_proposal_number,blocks,bloc
   {
     current_unadjusted_proposal_info = blocks[["unadjusted_proposal"]][[unadjusted_proposal_number]]
 
-    if ("unadjusted_proposal" %in% names(current_unadjusted_proposal_info))
+    # A factor index block that follows a complete proposal belongs to that
+    # proposal, so it does not start a new one.
+    if ( ("unadjusted_proposal" %in% names(current_unadjusted_proposal_info)) && !(block_name %in% c("unadjusted_factor_index","unadjusted_cut_factor_index")) )
     {
       # unadjusted_proposal is complete
 
@@ -914,7 +918,7 @@ unadjusted_proposal_processing = function(unadjusted_proposal_number,blocks,bloc
       else
       {
         # unadjusted_proposal is complete
-        if ( ("simulate_unadjusted_proposal" %in% names(current_unadjusted_proposal_info)) && (block_name != "unadjusted_factor_index") )
+        if ( ("simulate_unadjusted_proposal" %in% names(current_unadjusted_proposal_info)) && !(block_name %in% c("unadjusted_factor_index","unadjusted_cut_factor_index")) )
         {
           if (print_block_ends)
           {
@@ -948,7 +952,9 @@ imh_proposal_processing = function(imh_proposal_number,blocks,block_name,line_co
   {
     current_imh_proposal_info = blocks[["imh_proposal"]][[imh_proposal_number]]
 
-    if ("imh_proposal" %in% names(current_imh_proposal_info))
+    # A factor index block that follows a complete proposal belongs to that
+    # proposal, so it does not start a new one.
+    if ( ("imh_proposal" %in% names(current_imh_proposal_info)) && !(block_name %in% c("imh_factor_index","imh_cut_factor_index")) )
     {
       # imh_proposal is complete
       if (print_block_ends)
@@ -974,7 +980,7 @@ imh_proposal_processing = function(imh_proposal_number,blocks,block_name,line_co
       else
       {
         # imh_proposal is complete
-        if ( ("evaluate_log_imh_proposal" %in% names(current_imh_proposal_info)) && ("simulate_imh_proposal" %in% names(current_imh_proposal_info)) && (block_name != "imh_factor_index") )
+        if ( ("evaluate_log_imh_proposal" %in% names(current_imh_proposal_info)) && ("simulate_imh_proposal" %in% names(current_imh_proposal_info)) && !(block_name %in% c("imh_factor_index","imh_cut_factor_index")) )
         {
           if (print_block_ends)
           {
@@ -1008,7 +1014,9 @@ m_proposal_processing = function(m_proposal_number,blocks,block_name,line_counte
   {
     current_m_proposal_info = blocks[["m_proposal"]][[m_proposal_number]]
 
-    if ("m_proposal" %in% names(current_m_proposal_info))
+    # A factor index block that follows a complete proposal belongs to that
+    # proposal, so it does not start a new one.
+    if ( ("m_proposal" %in% names(current_m_proposal_info)) && !(block_name %in% c("m_factor_index","m_cut_factor_index")) )
     {
       # m_proposal is complete
       if (print_block_ends)
@@ -1034,7 +1042,7 @@ m_proposal_processing = function(m_proposal_number,blocks,block_name,line_counte
       else
       {
         # m_proposal is complete
-        if ( ("simulate_m_proposal" %in% names(current_m_proposal_info)) && (block_name != "m_factor_index") )
+        if ( ("simulate_m_proposal" %in% names(current_m_proposal_info)) && !(block_name %in% c("m_factor_index","m_cut_factor_index")) )
         {
           if (print_block_ends)
           {
@@ -1428,10 +1436,10 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
   potential_function_types = c(custom_potential_function_types,ilike_potential_function_types)
   data_function_types = c("data")
   is_proposal_types = c("simulate_is_proposal","evaluate_log_is_proposal","is_proposal")
-  mh_proposal_types = c("simulate_mh_proposal","evaluate_log_mh_proposal","mh_proposal","mh_transform","mh_inverse_transform","mh_transform_jacobian_matrix","mh_factor_index")
-  unadjusted_proposal_types = c("simulate_unadjusted_proposal","unadjusted_proposal","unadjusted_transform","unadjusted_inverse_transform","unadjusted_transform_jacobian_matrix","unadjusted_factor_index")
-  imh_proposal_types = c("simulate_imh_proposal","evaluate_log_imh_proposal","imh_proposal","imh_transform","imh_inverse_transform","imh_transform_jacobian_matrix","imh_factor_index")
-  m_proposal_types = c("simulate_m_proposal","m_proposal","m_transform","m_inverse_transform","m_transform_jacobian_matrix","m_factor_index")
+  mh_proposal_types = c("simulate_mh_proposal","evaluate_log_mh_proposal","mh_proposal","mh_transform","mh_inverse_transform","mh_transform_jacobian_matrix","mh_factor_index","mh_cut_factor_index")
+  unadjusted_proposal_types = c("simulate_unadjusted_proposal","unadjusted_proposal","unadjusted_transform","unadjusted_inverse_transform","unadjusted_transform_jacobian_matrix","unadjusted_factor_index","unadjusted_cut_factor_index")
+  imh_proposal_types = c("simulate_imh_proposal","evaluate_log_imh_proposal","imh_proposal","imh_transform","imh_inverse_transform","imh_transform_jacobian_matrix","imh_factor_index","imh_cut_factor_index")
+  m_proposal_types = c("simulate_m_proposal","m_proposal","m_transform","m_inverse_transform","m_transform_jacobian_matrix","m_factor_index","m_cut_factor_index")
   transition_proposal_types = c("simulate_transition_proposal","evaluate_log_transition_proposal")
   enk_transform_types = c("enk_transform","enk_inverse_transform")
   #reinforce_gradient = c("reinforce_gradient")
@@ -2351,7 +2359,7 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
     arguments = c()
     R_args = ""
   }
-  else if ( (block_name=="m_factor_index") || (block_name=="mh_factor_index") || (block_name=="imh_factor_index") || (block_name=="unadjusted_factor_index") )
+  else if (block_name %in% c("m_factor_index","mh_factor_index","imh_factor_index","unadjusted_factor_index","m_cut_factor_index","mh_cut_factor_index","imh_cut_factor_index","unadjusted_cut_factor_index"))
   {
     if (sum(which_parameters)>0)
     {
@@ -4387,7 +4395,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
           }
 
         }
-        else if ( (block_name=="m_factor_index") || (block_name=="mh_factor_index") || (block_name=="imh_factor_index") || (block_name=="unadjusted_factor_index") )
+        else if (block_name %in% c("m_factor_index","mh_factor_index","imh_factor_index","unadjusted_factor_index","m_cut_factor_index","mh_cut_factor_index","imh_cut_factor_index","unadjusted_cut_factor_index"))
         {
           if (sum(which_parameters)>0)
           {

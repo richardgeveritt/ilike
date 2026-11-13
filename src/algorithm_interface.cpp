@@ -4079,6 +4079,125 @@ MCMCTermination *make_mcmc_termination(const List &model_parameters,
   return termination_method;
 }
 
+// Reads the optional "<prefix>_factor_index" (factors used in the move's
+// acceptance ratio) and "<prefix>_cut_factor_index" (factors that depend on
+// what the move changes but are deliberately left out, and are re-evaluated
+// after acceptance) from one proposal block of the recipe, and sets them on
+// the move. Indices are 1-based in the recipe. Defaults: no factor index means
+// all factors except the cut ones; no cut index means no cut. Factors in
+// neither set are assumed to cancel in the acceptance ratio.
+// The factors one move uses and cuts (0-based), with defaults filled in, and a
+// label for error messages.
+struct MoveFactors {
+  std::string label;
+  bool unadjusted;
+  std::vector<size_t> used;
+  std::vector<size_t> cut;
+};
+
+static MoveFactors set_move_factor_indices(MCMC *mcmc, const List &proposal_info,
+                                           const std::string &prefix,
+                                           const Index *full_index,
+                                           bool check_factor_index,
+                                           size_t block_number) {
+  MoveFactors move_factors;
+  move_factors.label = prefix + "_proposal " + std::to_string(block_number);
+  move_factors.unadjusted = (prefix == "unadjusted");
+  if (full_index != NULL)
+    move_factors.used.assign(full_index->begin(), full_index->end());
+
+  std::string used_name = prefix + "_factor_index";
+  std::string cut_name = prefix + "_cut_factor_index";
+  bool has_used = proposal_info.containsElementNamed(used_name.c_str());
+  bool has_cut = proposal_info.containsElementNamed(cut_name.c_str());
+  if (!has_used && !has_cut)
+    return move_factors;
+  mcmc->set_check_factor_index(check_factor_index, move_factors.label);
+  if (full_index == NULL)
+    Rcpp::stop("make_mcmc: full index of factors not available.");
+
+  std::vector<size_t> all_factors(full_index->begin(), full_index->end());
+
+  auto read_index = [&](const std::string &name) {
+    SEXP index_SEXP = proposal_info[name];
+    NumericVector index = load_numeric_vector(index_SEXP);
+    std::vector<size_t> result;
+    for (R_xlen_t k = 0; k < index.length(); ++k) {
+      double value = index[k];
+      if ((value < 1) || (value != std::floor(value)) ||
+          (std::find(all_factors.begin(), all_factors.end(),
+                     size_t(value) - 1) == all_factors.end()))
+        Rcpp::stop(name + ": " + std::to_string(value) +
+                   " is not the number of a factor in the model (factors are "
+                   "numbered from 1 in the order they appear).");
+      if (std::find(result.begin(), result.end(), size_t(value) - 1) ==
+          result.end())
+        result.push_back(size_t(value) - 1);
+    }
+    return result;
+  };
+
+  std::vector<size_t> cut;
+  if (has_cut)
+    cut = read_index(cut_name);
+
+  std::vector<size_t> used;
+  if (has_used) {
+    used = read_index(used_name);
+  } else {
+    for (auto i = all_factors.begin(); i != all_factors.end(); ++i)
+      if (std::find(cut.begin(), cut.end(), *i) == cut.end())
+        used.push_back(*i);
+  }
+
+  for (auto i = cut.begin(); i != cut.end(); ++i)
+    if (std::find(used.begin(), used.end(), *i) != used.end())
+      Rcpp::stop("Factor " + std::to_string(*i + 1) + " is in both " +
+                 used_name + " and " + cut_name + ".");
+
+  VectorIndex used_index(used); // the setters copy their arguments
+  mcmc->set_index_if_null(&used_index);
+  if (has_cut) {
+    VectorIndex cut_index(cut);
+    mcmc->set_cut_index(&cut_index);
+  }
+  move_factors.used = used;
+  move_factors.cut = cut;
+  return move_factors;
+}
+
+// Unadjusted moves do not evaluate any factor (often the reason for using them
+// is to avoid this, and the user may not even supply the functions to do it).
+// So after an unadjusted move, the cached values of the factors it changes
+// (its factor index and cut factor index) are not valid. A Metropolis or
+// Metropolis-Hastings move reads the cached values of the factors in its own
+// factor index for its acceptance-ratio denominator, so it may not use any
+// factor that an unadjusted move changes.
+static void check_unadjusted_compatibility(const std::vector<MoveFactors> &moves) {
+  for (auto u = moves.begin(); u != moves.end(); ++u) {
+    if (!u->unadjusted)
+      continue;
+    std::vector<size_t> changed = u->used;
+    changed.insert(changed.end(), u->cut.begin(), u->cut.end());
+    for (auto m = moves.begin(); m != moves.end(); ++m) {
+      if (m->unadjusted)
+        continue;
+      std::string shared;
+      for (auto f = m->used.begin(); f != m->used.end(); ++f)
+        if (std::find(changed.begin(), changed.end(), *f) != changed.end())
+          shared = shared + (shared.empty() ? "" : ", ") + std::to_string(*f + 1);
+      if (!shared.empty())
+        Rcpp::stop("The unadjusted move " + u->label +
+                   " does not evaluate factors, but " + m->label +
+                   " uses factor(s) " + shared +
+                   " (which the unadjusted move changes) in its acceptance "
+                   "ratio. Unadjusted moves can only be combined with moves "
+                   "whose factor index does not include the factors of the "
+                   "unadjusted move (its factor index and cut factor index).");
+    }
+  }
+}
+
 MCMC *make_mcmc(const List &model, const List &model_parameters, Data *data,
                 const List &mcmc_termination_method,
                 const List &mcmc_weights_method, Index *full_index) {
@@ -4087,10 +4206,17 @@ MCMC *make_mcmc(const List &model, const List &model_parameters, Data *data,
 
   MCMC *mcmc = NULL;
 
+  // Optional consistency check of the factor indices, set by the R wrappers
+  // (MCMC(..., check_factor_index = TRUE)) as an element of the recipe.
+  bool check_factor_index = false;
+  if (model.containsElementNamed("check_factor_index"))
+    check_factor_index = as<bool>(model["check_factor_index"]);
+
   if (model.containsElementNamed("order_of_mcmc")) {
     NumericVector order_of_mcmc = model["order_of_mcmc"];
     std::vector<MCMC *> moves;
     moves.reserve(order_of_mcmc.size());
+    std::vector<MoveFactors> move_factors;
 
     size_t simulate_mh_proposal_index = 0;
     size_t simulate_unadjusted_proposal_index = 0;
@@ -4118,16 +4244,12 @@ MCMC *make_mcmc(const List &model, const List &model_parameters, Data *data,
             mcmc = new MetropolisHastingsMCMC(termination_method, proposal);
           }
 
-          if (proposal_infos.containsElementNamed("mh_factor_index")) {
-            SEXP index_SEXP = proposal_infos["mh_factor_index"];
-            NumericVector index = load_numeric_vector(index_SEXP);
-            std::vector<size_t> indices_in;
-            for (size_t k = 0; k < index.length(); ++k) {
-              indices_in.push_back(size_t(index[k])-1);
-            }
-            VectorIndex factor_index(indices_in); // set_index_if_null copies it
-            mcmc->set_index_if_null(&factor_index);
-          }
+          // The factor indices are stored inside this proposal's block of the
+          // recipe (model$mh_proposal[[k]]$mh_factor_index), not in the list.
+          List current_proposal_info = proposal_infos[simulate_mh_proposal_index];
+          move_factors.push_back(set_move_factor_indices(
+              mcmc, current_proposal_info, "mh", full_index,
+              check_factor_index, simulate_mh_proposal_index + 1));
 
           simulate_mh_proposal_index = simulate_mh_proposal_index + 1;
         } else {
@@ -4153,16 +4275,12 @@ MCMC *make_mcmc(const List &model, const List &model_parameters, Data *data,
             mcmc = new MetropolisHastingsMCMC(termination_method, proposal);
           }
 
-          if (proposal_infos.containsElementNamed("imh_factor_index")) {
-            SEXP index_SEXP = proposal_infos["imh_factor_index"];
-            NumericVector index = load_numeric_vector(index_SEXP);
-            std::vector<size_t> indices_in;
-            for (size_t k = 0; k < index.length(); ++k) {
-              indices_in.push_back(size_t(index[k])-1);
-            }
-            VectorIndex factor_index(indices_in); // set_index_if_null copies it
-            mcmc->set_index_if_null(&factor_index);
-          }
+          // The factor indices are stored inside this proposal's block of the
+          // recipe (model$imh_proposal[[k]]$imh_factor_index), not in the list.
+          List current_proposal_info = proposal_infos[simulate_imh_proposal_index];
+          move_factors.push_back(set_move_factor_indices(
+              mcmc, current_proposal_info, "imh", full_index,
+              check_factor_index, simulate_imh_proposal_index + 1));
 
           simulate_imh_proposal_index = simulate_imh_proposal_index + 1;
         } else {
@@ -4187,16 +4305,12 @@ MCMC *make_mcmc(const List &model, const List &model_parameters, Data *data,
             mcmc = new MetropolisMCMC(termination_method, proposal);
           }
 
-          if (proposal_infos.containsElementNamed("m_factor_index")) {
-            SEXP index_SEXP = proposal_infos["m_factor_index"];
-            NumericVector index = load_numeric_vector(index_SEXP);
-            std::vector<size_t> indices_in;
-            for (size_t k = 0; k < index.length(); ++k) {
-              indices_in.push_back(size_t(index[k])-1);
-            }
-            VectorIndex factor_index(indices_in); // set_index_if_null copies it
-            mcmc->set_index_if_null(&factor_index);
-          }
+          // The factor indices are stored inside this proposal's block of the
+          // recipe (model$m_proposal[[k]]$m_factor_index), not in the list.
+          List current_proposal_info = proposal_infos[simulate_m_proposal_index];
+          move_factors.push_back(set_move_factor_indices(
+              mcmc, current_proposal_info, "m", full_index,
+              check_factor_index, simulate_m_proposal_index + 1));
 
           simulate_m_proposal_index = simulate_m_proposal_index + 1;
         } else {
@@ -4222,16 +4336,12 @@ MCMC *make_mcmc(const List &model, const List &model_parameters, Data *data,
             mcmc = new UnadjustedMCMC(termination_method, proposal);
           }
 
-          if (proposal_infos.containsElementNamed("unadjusted_factor_index")) {
-            SEXP index_SEXP = proposal_infos["unadjusted_factor_index"];
-            NumericVector index = load_numeric_vector(index_SEXP);
-            std::vector<size_t> indices_in;
-            for (size_t k = 0; k < index.length(); ++k) {
-              indices_in.push_back(size_t(index[k])-1);
-            }
-            VectorIndex factor_index(indices_in); // set_index_if_null copies it
-            mcmc->set_index_if_null(&factor_index);
-          }
+          // The factor indices are stored inside this proposal's block of the
+          // recipe (model$unadjusted_proposal[[k]]$unadjusted_factor_index), not in the list.
+          List current_proposal_info = proposal_infos[simulate_unadjusted_proposal_index];
+          move_factors.push_back(set_move_factor_indices(
+              mcmc, current_proposal_info, "unadjusted", full_index,
+              check_factor_index, simulate_unadjusted_proposal_index + 1));
 
           simulate_unadjusted_proposal_index =
               simulate_unadjusted_proposal_index + 1;
@@ -4244,6 +4354,8 @@ MCMC *make_mcmc(const List &model, const List &model_parameters, Data *data,
 
       moves.push_back(mcmc);
     }
+
+    check_unadjusted_compatibility(move_factors);
 
     if (mcmc_weights_method.containsElementNamed("func")) {
       NumericVector mcmc_weights;

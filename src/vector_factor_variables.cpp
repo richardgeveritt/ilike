@@ -1,8 +1,11 @@
+#include <algorithm>
 #include "vector_factor_variables.h"
 #include "likelihood_estimator_output.h"
 #include "index.h"
 #include "particle.h"
 #include "vector_factors.h"
+#include "likelihood_estimator.h"
+#include "exact_likelihood_estimator_output.h"
 
 namespace ilike
 {
@@ -65,6 +68,35 @@ void VectorFactorVariables::operator=(const VectorFactorVariables &another)
   
   FactorVariables::operator=(another);
   this->make_copy(another);
+}
+
+FactorVariables* VectorFactorVariables::copy_with_new_outputs(const Parameters &new_parameters,
+                                                             const Index* new_outputs_index) const
+{
+  std::vector<LikelihoodEstimatorOutput*> outputs;
+  outputs.reserve(this->likelihood_estimator_outputs.size());
+  for (size_t i=0; i<this->likelihood_estimator_outputs.size(); ++i)
+  {
+    bool new_output = std::find(new_outputs_index->begin(),
+                                new_outputs_index->end(),
+                                i)!=new_outputs_index->end();
+    if (new_output)
+    {
+      outputs.push_back(this->vector_factors->get_likelihood_estimator(i)->initialise(new_parameters));
+      outputs.back()->simulate(new_parameters);
+      outputs.back()->write_to_file_flag = false;
+    }
+    else if (this->likelihood_estimator_outputs[i]!=NULL)
+    {
+      outputs.push_back(this->likelihood_estimator_outputs[i]->duplicate());
+    }
+    else
+    {
+      outputs.push_back(NULL);
+    }
+  }
+  return new VectorFactorVariables(this->vector_factors,
+                                   outputs);
 }
 
 FactorVariables* VectorFactorVariables::duplicate() const
@@ -260,6 +292,44 @@ double VectorFactorVariables::subsample_evaluate_smcadaptive_part_given_smcfixed
  return result;
  }
  */
+
+std::vector<size_t> VectorFactorVariables::find_changed_exact_factors(const Index* new_outputs_index) const
+{
+  std::vector<size_t> changed;
+  for (size_t i=0; i<this->likelihood_estimator_outputs.size(); ++i)
+  {
+    if (std::find(new_outputs_index->begin(),
+                  new_outputs_index->end(),
+                  i)!=new_outputs_index->end())
+      continue;
+    LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[i];
+    if (dynamic_cast<ExactLikelihoodEstimatorOutput*>(output)==NULL)
+      continue;
+    LikelihoodEstimatorOutput* fresh = output->duplicate();
+    double fresh_value = fresh->evaluate(this->particle->parameters);
+    delete fresh;
+    double cached_value = output->log_likelihood;
+    if ( (fresh_value!=cached_value) &&
+         !(std::abs(fresh_value-cached_value) <= 1e-8*(1.0+std::abs(fresh_value))) )
+      changed.push_back(i);
+  }
+  return changed;
+}
+
+double VectorFactorVariables::get_cached_likelihoods(const Index* index) const
+{
+  double result = 0.0;
+  for (auto i=index->begin();
+       i!=index->end();
+       ++i)
+  {
+    if (this->likelihood_estimator_outputs[*i]!=NULL)
+    {
+      result = result + this->likelihood_estimator_outputs[*i]->log_likelihood;
+    }
+  }
+  return result;
+}
 
 double VectorFactorVariables::evaluate_likelihoods(const Index* index) const
 {

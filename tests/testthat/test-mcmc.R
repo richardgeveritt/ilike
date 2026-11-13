@@ -24,11 +24,14 @@ test_that("MCMC works with all available proposals", {
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
 
-  # Test custom Metropolis proposal in MCMC where only the first factor (the prior) is used
+  # Test custom Metropolis proposal in MCMC with a declared cut: only the first
+  # factor (the prior) is used (m_factor_index = 1) and the likelihood is cut
+  # (m_cut_factor_index = 2). The acceptance ratio ignores the likelihood, so
+  # the chain targets the prior N(1, 1), not the posterior.
   run_mcmc_m_proposal_prior()
   sampler_output = ilike::load_mcmc_output("mcmc_m_proposal_prior")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
-  expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
+  expect_equal(var(sampler_output$Value), 1, tolerance = 0.1)
 
   # Test built-in Metropolis proposal in MCMC
   # ilike::norm_rw
@@ -147,5 +150,98 @@ test_that("MCMC works with deterministic and stochastic sweeps", {
   sampler_output = ilike::load_mcmc_output("mcmc_sweep_stochastic")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
+
+})
+
+test_that("MCMC works with Metropolis-within-Gibbs factor indices", {
+
+  on.exit({
+    unlink("mcmc_gibbs_m_proposal", recursive=TRUE)
+    unlink("mcmc_gibbs_mh_proposal_langevin", recursive=TRUE)
+  }, add=TRUE)
+
+  # Each move uses only the two factors of the parameter it changes; the other
+  # two cancel in its acceptance ratio. Each posterior is N(1, 1/2).
+  run_mcmc_gibbs_m_proposal()
+  sampler_output = ilike::load_mcmc_output("mcmc_gibbs_m_proposal")
+  for (p in c("theta1", "theta2"))
+  {
+    values = sampler_output$Value[sampler_output$ParameterName==p]
+    expect_equal(mean(values), 1, tolerance = 0.1)
+    expect_equal(var(values), 1/(1+1), tolerance = 0.1)
+  }
+
+  # As above, with a Langevin move for theta2 (gradient from factors 3 and 4).
+  run_mcmc_gibbs_mh_proposal_langevin()
+  sampler_output = ilike::load_mcmc_output("mcmc_gibbs_mh_proposal_langevin")
+  for (p in c("theta1", "theta2"))
+  {
+    values = sampler_output$Value[sampler_output$ParameterName==p]
+    expect_equal(mean(values), 1, tolerance = 0.1)
+    expect_equal(var(values), 1/(1+1), tolerance = 0.1)
+  }
+
+})
+
+test_that("MCMC targets the cut distribution with a cut factor index", {
+
+  on.exit({
+    unlink("mcmc_cut", recursive=TRUE)
+  }, add=TRUE)
+
+  # Gaussian cut model (see inst/extdata/test_cut_model.ilike). The phi move
+  # cuts p(y | theta, phi); theta is drawn from its full conditional, so the
+  # chain targets the cut distribution exactly: phi ~ N(1, 1/2), theta has
+  # mean 1 and variance 5/8. (The full posterior has phi mean 1.4, var 0.4 and
+  # theta mean 0.8, var 0.6, so this distinguishes cut from no cut.)
+  run_mcmc_cut()
+  sampler_output = ilike::load_mcmc_output("mcmc_cut")
+  phi = sampler_output$Value[sampler_output$ParameterName=="phi"]
+  theta = sampler_output$Value[sampler_output$ParameterName=="theta"]
+  expect_equal(mean(phi), 1, tolerance = 0.1)
+  expect_equal(var(phi), 1/2, tolerance = 0.1)
+  expect_equal(mean(theta), 1, tolerance = 0.1)
+  expect_equal(var(theta), 5/8, tolerance = 0.1)
+
+})
+
+test_that("unadjusted moves combine only with moves not using their factors", {
+
+  on.exit({
+    unlink("mcmc_sweep_unadjusted_then_mh", recursive=TRUE)
+    unlink("mcmc_gibbs_unadjusted_then_m", recursive=TRUE)
+  }, add=TRUE)
+
+  # Unadjusted moves do not evaluate factors, so an MH move whose acceptance
+  # ratio uses the factors an unadjusted move changes is refused.
+  expect_error(run_mcmc_sweep_unadjusted_then_mh(), "does not evaluate factors")
+
+  # Allowed: the unadjusted move (theta1, factors 1 and 2) and the Metropolis
+  # move (theta2, factors 3 and 4) use different factors. theta1 follows the
+  # unadjusted Langevin chain with h = 0.5, whose stationary variance is
+  # 1/(2 - h) = 2/3 (see the unadjusted tests above); theta2 is N(1, 1/2).
+  run_mcmc_gibbs_unadjusted_then_m()
+  sampler_output = ilike::load_mcmc_output("mcmc_gibbs_unadjusted_then_m")
+  theta1 = sampler_output$Value[sampler_output$ParameterName=="theta1"]
+  theta2 = sampler_output$Value[sampler_output$ParameterName=="theta2"]
+  expect_equal(mean(theta1), 1, tolerance = 0.1)
+  expect_equal(var(theta1), 1/(2-0.5), tolerance = 0.1)
+  expect_equal(mean(theta2), 1, tolerance = 0.1)
+  expect_equal(var(theta2), 1/2, tolerance = 0.1)
+
+})
+
+test_that("check_factor_index catches a factor that does not cancel", {
+
+  on.exit({
+    unlink("mcmc_undeclared_cut", recursive=TRUE)
+    unlink("mcmc_gibbs_m_proposal_checked", recursive=TRUE)
+  }, add=TRUE)
+
+  # The likelihood depends on theta but is neither used nor cut.
+  expect_error(run_mcmc_undeclared_cut_checked(), "do not cancel")
+
+  # A correct Metropolis-within-Gibbs file passes the check.
+  expect_no_error(run_mcmc_gibbs_m_proposal_checked())
 
 })

@@ -20,7 +20,8 @@ MCMC(
   verify_cpp_function_types = FALSE,
   keep_temporary_recipe_code = FALSE,
   seed = NULL,
-  grain_size = 1e+05
+  grain_size = 1e+05,
+  check_factor_index = FALSE
 )
 }
 \arguments{
@@ -55,6 +56,8 @@ MCMC(
 \item{seed}{(optional) The seed for the random number generator.}
 
 \item{grain_size}{(optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).}
+
+\item{check_factor_index}{(optional) If TRUE, after every accepted MCMC move that has a factor index, re-evaluate the exact factors that were left out of the move (neither in its factor index nor its cut factor index) and stop if any changed value, i.e. did not cancel in the acceptance ratio. Slower; for checking a model file. Default FALSE.}
 }
 \value{
 Nothing: output can be found in the output_directory.

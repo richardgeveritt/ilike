@@ -1,0 +1,14 @@
+// Allowed: on test_gaussian_posterior_two_params.ilike, an unadjusted Langevin
+// move for theta1 (gradient from factors 1, 2; nothing evaluated) and a
+// Metropolis move for theta2 whose acceptance ratio uses only factors 3, 4,
+// which the unadjusted move does not change.
+
+/***unadjusted_proposal,ilike::langevin(theta1,1,0.5)***/
+
+/***unadjusted_factor_index,c(1,2)***/
+
+/***m_proposal,ilike::norm_rw(theta2,1)***/
+
+/***m_factor_index,c(3,4)***/
+
+/***mcmc_termination,ilike::iterations(10000)***/

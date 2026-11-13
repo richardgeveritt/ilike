@@ -138,6 +138,11 @@ void VectorFactors::set_data(const Index* index)
   }
 }
 
+LikelihoodEstimator* VectorFactors::get_likelihood_estimator(size_t i) const
+{
+  return this->likelihood_estimators[i];
+}
+
 FactorVariables* VectorFactors::simulate_factor_variables(const Parameters &simulated_parameters) const
 {
   std::vector<LikelihoodEstimatorOutput*> outputs;

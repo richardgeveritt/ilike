@@ -68,6 +68,8 @@ public:
    * @return The result.
    */
   FactorVariables* duplicate() const;
+  FactorVariables* copy_with_new_outputs(const Parameters &new_parameters,
+                                         const Index* new_outputs_index) const;
   
   /**
    * @brief Evaluates the smcfixed part of likelihoods.
@@ -86,6 +88,8 @@ public:
    */
   
   double evaluate_likelihoods(const Index* index) const;
+  double get_cached_likelihoods(const Index* index) const;
+  std::vector<size_t> find_changed_exact_factors(const Index* new_outputs_index) const;
   /*
    double evaluate_likelihoods(const Index* index,
    const Parameters &conditioned_on_parameters);

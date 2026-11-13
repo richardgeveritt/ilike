@@ -64,6 +64,16 @@ public:
    * @return The result.
    */
   virtual FactorVariables* duplicate() const=0;
+
+  // Factor variables for a proposed point new_parameters: the factors in
+  // new_outputs_index get new outputs (initialised and simulated at
+  // new_parameters, not yet evaluated); every other factor's output is a copy
+  // of this object's, keeping its cached value (and, for a random factor, its
+  // estimate). Used by MCMC moves, whose other factors either cancel in the
+  // acceptance ratio or are refreshed after acceptance. The caller owns the
+  // result and must call set_particle on it.
+  virtual FactorVariables* copy_with_new_outputs(const Parameters &new_parameters,
+                                                 const Index* new_outputs_index) const=0;
   
   /**
    * @brief Evaluates the smcfixed part of likelihoods.
@@ -81,6 +91,18 @@ public:
                                                                       const Parameters &conditioned_on_parameters)=0;
   */
   virtual double evaluate_likelihoods(const Index* index) const=0;
+
+  // Sum of the values most recently computed for the factors in index, read
+  // from each factor's cache without evaluating anything. Valid only if those
+  // factors were last evaluated at the particle's current parameters.
+  virtual double get_cached_likelihoods(const Index* index) const=0;
+
+  // Consistency check for MCMC factor indices: for every factor NOT in
+  // new_outputs_index whose output is exact (deterministic), re-evaluate a copy
+  // at the particle's current parameters and compare with the cached value.
+  // Returns the 0-based numbers of the factors whose value changed. Random
+  // factors cannot be checked this way and are skipped.
+  virtual std::vector<size_t> find_changed_exact_factors(const Index* new_outputs_index) const=0;
   /*
   virtual double evaluate_likelihoods(const Index* index,
                                       const Parameters &conditioned_on_parameters)=0;

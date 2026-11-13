@@ -1,0 +1,10 @@
+// Not allowed: an unadjusted Langevin move, then a Metropolis-Hastings move on
+// the same parameter using the same factors. The unadjusted move does not
+// evaluate factors, so the MH move's acceptance ratio would read unevaluated
+// values; make_mcmc stops with an error.
+
+/***unadjusted_proposal,ilike::langevin(theta,1,0.5)***/
+
+/***imh_proposal,ilike::norm(theta,1,0.7071068)***/
+
+/***mcmc_termination,ilike::iterations(10000)***/

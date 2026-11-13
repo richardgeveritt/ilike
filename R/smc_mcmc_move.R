@@ -15,6 +15,7 @@
 #' @param julia_required_libraries (optional) Vector of strings, each of which is a Julia packge that will be installed and loaded.
 #' @param verify_cpp_function_types (optional) If TRUE, check the types of the parameters of user-defined .cpp functions. If FALSE (default), types are not checked.
 #' @param keep_temporary_recipe_code (optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE,
+#' @param check_factor_index (optional) If TRUE, after every accepted MCMC move that has a factor index, re-evaluate the exact factors that were left out of the move (neither in its factor index nor its cut factor index) and stop if any changed value, i.e. did not cancel in the acceptance ratio. Slower; for checking a model file. Default FALSE.
 #' @param seed (optional) The seed for the random number generator.
 #' @param grain_size (optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).
 #' @return Estimate of the marginal likelihood.
@@ -35,7 +36,8 @@ SMC_with_MCMC = function(recipe,
                          verify_cpp_function_types=FALSE,
                          keep_temporary_recipe_code=FALSE,
                          seed = NULL,
-                         grain_size = 100000)
+                         grain_size = 100000,
+                         check_factor_index = FALSE)
 {
 
   if (is.character(recipe))
@@ -112,6 +114,9 @@ SMC_with_MCMC = function(recipe,
   {
     mcmc_weights_method = list()
   }
+
+  # Read by make_mcmc in C++.
+  recipe$check_factor_index = check_factor_index
 
   if (length(fixed_parameter_list)==0)
   {

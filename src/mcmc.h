@@ -129,6 +129,23 @@ public:
    * @param index_in The index.
    */
   virtual void set_index_if_null(Index* index_in)=0;
+
+  // Cut factors: they depend on what this move changes, but are deliberately
+  // left out of its acceptance ratio (as in a "cut" model). They are
+  // re-evaluated at the new point when a proposal is accepted, so the
+  // per-factor cache stays valid for later moves. Copies cut_index_in (the
+  // caller keeps ownership). Must be called after the move's own index is set.
+  // Only Metropolis, Metropolis-Hastings and unadjusted moves support cuts.
+  virtual void set_cut_index(const Index* cut_index_in);
+
+  // Turn on the optional consistency check of the factor indices (see
+  // check_carried_over_factors). label names the move in error messages.
+  void set_check_factor_index(bool check, const std::string &label);
+
+  // Whether this move reads cached factor values (for an acceptance-ratio
+  // denominator). True for Metropolis and Metropolis-Hastings moves; false
+  // for unadjusted moves; a sweep reads them if any of its moves does.
+  virtual bool reads_cached_factors() const;
   
   /**
    * @brief Sets the proposal parameters.
@@ -174,6 +191,35 @@ protected:
   // Stored here.
   /** @brief The termination. */
   MCMCTermination* termination;
+
+  // Owned copy of the cut factors (NULL: none).
+  Index* cut_index;
+
+  // Owned union of the move's index and cut_index (NULL when there is no cut):
+  // the factors that get new outputs in a proposed particle.
+  Index* index_with_cut;
+
+  // Recompute index_with_cut from the move's index; call whenever either
+  // index changes.
+  void update_index_with_cut(const Index* move_index);
+
+  // Replace cut_index by a copy of cut_index_in (used by the subclasses'
+  // set_cut_index, which then call update_index_with_cut).
+  void store_cut_index(const Index* cut_index_in);
+
+  // The factors that get new outputs in a proposed particle for this move.
+  const Index* get_new_outputs_index(const Index* move_index) const;
+
+  // Evaluate the cut factors of an accepted particle at its new parameters.
+  void refresh_cut_factors(Particle &accepted_particle) const;
+
+  // Optional check (off by default): after a move is accepted, stop if any
+  // exact factor that was carried over (neither in the move's index nor cut)
+  // changed value, i.e. it did not cancel in the acceptance ratio.
+  bool check_factor_index;
+  std::string move_label;
+  void check_carried_over_factors(const Particle &accepted_particle,
+                                  const Index* move_index) const;
   
   // stored here
   //Index* index;

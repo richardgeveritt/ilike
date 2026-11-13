@@ -1,0 +1,13 @@
+// Metropolis-within-Gibbs on test_gaussian_posterior_two_params.ilike: each
+// move changes one parameter and lists only the factors that depend on it;
+// the other two factors cancel in its acceptance ratio.
+
+/***m_proposal,ilike::norm_rw(theta1,1)***/
+
+/***m_factor_index,c(1,2)***/
+
+/***m_proposal,ilike::norm_rw(theta2,1)***/
+
+/***m_factor_index,c(3,4)***/
+
+/***mcmc_termination,ilike::iterations(10000)***/

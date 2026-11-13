@@ -407,7 +407,12 @@ protected:
   // stored here
   /** @brief The index. */
   Index* index;
-  
+
+  // Factors in the full target but not in index (they cancel in the SMC
+  // weights, so the SMC never evaluates them). Evaluated before each MCMC run
+  // so the moves' cached denominators are valid. Owned; may be NULL.
+  Index* cancelled_index;
+
   /** @brief The mcmc at last step. */
   bool mcmc_at_last_step;
   

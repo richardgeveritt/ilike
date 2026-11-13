@@ -1,0 +1,39 @@
+// MCMC for test_cut_model.ilike targeting the cut distribution.
+//
+// phi move: random walk whose acceptance ratio uses only p(phi) and p(z | phi)
+// (factors 1, 2). p(y | theta, phi) (factor 4) depends on phi but is cut:
+// ignored in the ratio and re-evaluated after acceptance. p(theta) (factor 3)
+// cancels.
+//
+// theta move: draws theta from its full conditional p(theta | y, phi) =
+// N((y - phi)/2, 1/2), with factors 3 and 4 in the acceptance ratio (always
+// accepted). Because theta is drawn exactly from p(theta | y, phi), the chain
+// targets the cut distribution exactly (Plummer 2015, section 2).
+
+// y is hard-coded here because this proposal type has no access to the data.
+// (Global variables must come before the first block.)
+double cut_test_y = 3.0;
+
+/***m_proposal,ilike::norm_rw(phi,1)***/
+
+/***m_factor_index,c(1,2)***/
+
+/***m_cut_factor_index,c(4)***/
+
+/***simulate_mh_proposal***/
+Parameters simulate_theta_full_conditional(RandomNumberGenerator &rng,
+                                           const Parameters &parameters) {
+  double mean = (cut_test_y - parameters["phi"][0]) / 2.0;
+  return Parameters("theta", rnorm(rng, mean, sqrt(0.5)));
+}
+
+/***evaluate_log_mh_proposal***/
+double evaluate_theta_full_conditional(const Parameters &proposed_parameters,
+                                       const Parameters &parameters) {
+  double mean = (cut_test_y - parameters["phi"][0]) / 2.0;
+  return dnorm(proposed_parameters["theta"][0], mean, sqrt(0.5));
+}
+
+/***mh_factor_index,c(3,4)***/
+
+/***mcmc_termination,ilike::iterations(10000)***/

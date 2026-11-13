@@ -1,0 +1,9 @@
+// A mistake that check_factor_index should catch: the move uses only factor 1
+// (the prior) but factor 2 (the likelihood) also depends on theta and is not
+// declared as cut, so ilike would wrongly treat it as cancelling.
+
+/***m_proposal,ilike::norm_rw(theta,1)***/
+
+/***m_factor_index,c(1)***/
+
+/***mcmc_termination,ilike::iterations(1000)***/

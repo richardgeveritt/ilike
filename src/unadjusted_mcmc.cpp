@@ -107,7 +107,15 @@ void UnadjustedMCMC::make_copy(const UnadjustedMCMC &another)
 Particle UnadjustedMCMC::move(RandomNumberGenerator &rng,
                               const Particle &particle) const
 {
-  return this->proposal->move(rng,particle);
+  // No factor is evaluated: avoiding that is often the reason for using an
+  // unadjusted move, and the user may not supply the functions to do it. The
+  // moved particle gets new (unevaluated) outputs for this move's factors and
+  // cut factors, and carries the others over. make_mcmc refuses to combine
+  // this move with a move whose acceptance ratio would read the unevaluated
+  // values (check_unadjusted_compatibility).
+  return this->proposal->move(rng,
+                              particle,
+                              this->get_new_outputs_index(this->index));
 }
 
 /*
@@ -197,6 +205,7 @@ void UnadjustedMCMC::set_index(Index* index_in)
   this->index = (index_in!=NULL) ? index_in->duplicate() : NULL;
   if (this->proposal!=NULL)
     this->proposal->set_index(index_in);
+  this->update_index_with_cut(this->index);
 }
 
 void UnadjustedMCMC::set_index_if_null(Index* index_in)
@@ -205,6 +214,18 @@ void UnadjustedMCMC::set_index_if_null(Index* index_in)
     this->index = index_in->duplicate();
   if (this->proposal!=NULL)
     this->proposal->set_index_if_null(index_in);
+  this->update_index_with_cut(this->index);
+}
+
+bool UnadjustedMCMC::reads_cached_factors() const
+{
+  return false;
+}
+
+void UnadjustedMCMC::set_cut_index(const Index* cut_index_in)
+{
+  this->store_cut_index(cut_index_in);
+  this->update_index_with_cut(this->index);
 }
 
 void UnadjustedMCMC::set_proposal_parameters(Parameters* proposal_parameters_in)

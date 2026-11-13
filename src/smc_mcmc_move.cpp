@@ -1,4 +1,5 @@
 #include <numeric>
+#include <algorithm>
 #include "smc_mcmc_move.h"
 #include "smc_output.h"
 #include "cess_smc_criterion.h"
@@ -17,11 +18,33 @@
 
 namespace ilike
 {
+
+// The factors in full_index that are not in used_index: those the SMC never
+// evaluates because they cancel in its weights (typically the prior, when the
+// prior is the initial proposal). Returns NULL if there are none. The caller
+// owns the result.
+static Index* make_cancelled_index(const Index* full_index,
+                                   const Index* used_index)
+{
+  if ( (full_index==NULL) || (used_index==NULL) )
+    return NULL;
+  std::vector<size_t> cancelled;
+  for (auto i=full_index->begin(); i!=full_index->end(); ++i)
+  {
+    if (std::find(used_index->begin(), used_index->end(), *i)==used_index->end())
+      cancelled.push_back(*i);
+  }
+  if (cancelled.size()==0)
+    return NULL;
+  return new VectorIndex(cancelled);
+}
+
 SMCMCMCMove::SMCMCMCMove()
 :SMC()
 {
   this->mcmc = NULL;
   this->index = NULL;
+  this->cancelled_index = NULL;
 }
 
 // Multiple MCMC chains.
@@ -103,6 +126,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                               smc_criterion);
   
   this->mcmc = mcmc_in;
+  this->cancelled_index = NULL;
   VectorIndex mcmc_index(indices); // set_index copies it
   this->mcmc->set_index(&mcmc_index);
   this->mcmc_at_last_step = true;
@@ -182,8 +206,10 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                               smc_criterion);
   
   this->mcmc = mcmc_in;
+  this->cancelled_index = NULL;
   if (this->mcmc!=NULL)
     this->mcmc->set_index_if_null(full_index);
+  this->cancelled_index = make_cancelled_index(full_index, without_cancelled_index);
   this->mcmc_at_last_step = true;
 }
 
@@ -265,8 +291,10 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                               smc_criterion);
   
   this->mcmc = mcmc_in;
+  this->cancelled_index = NULL;
   if (this->mcmc!=NULL)
     this->mcmc->set_index_if_null(full_index);
+  this->cancelled_index = make_cancelled_index(full_index, without_cancelled_index);
   this->mcmc_at_last_step = true;
 }
 
@@ -343,6 +371,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                               smc_criterion);
   
   this->mcmc = mcmc_in;
+  this->cancelled_index = NULL;
   VectorIndex mcmc_index(indices); // set_index copies it
   this->mcmc->set_index(&mcmc_index);
   this->mcmc_at_last_step = mcmc_at_last_step_in;
@@ -508,6 +537,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   //this->sequencer_parameters = &this->sequencer.schedule_parameters;
   
   this->mcmc = mcmc_in;
+  this->cancelled_index = NULL;
   VectorIndex mcmc_index(indices); // set_index copies it
   this->mcmc->set_index(&mcmc_index);
   this->mcmc_at_last_step = mcmc_at_last_step_in;
@@ -628,6 +658,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   //this->sequencer_parameters = &this->sequencer.schedule_parameters;
   
   this->mcmc = mcmc_in;
+  this->cancelled_index = NULL;
   VectorIndex mcmc_index(indices); // set_index copies it
   this->mcmc->set_index(&mcmc_index);
   this->mcmc_at_last_step = mcmc_at_last_step_in;
@@ -706,6 +737,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   //this->sequencer_parameters = &this->sequencer.schedule_parameters;
   
   this->mcmc = mcmc_in;
+  this->cancelled_index = NULL;
   if (this->mcmc!=NULL)
   {
     VectorIndex mcmc_index(indices); // set_index_if_null copies it
@@ -791,8 +823,10 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   //this->sequencer_parameters = &this->sequencer.schedule_parameters;
   
   this->mcmc = mcmc_in;
+  this->cancelled_index = NULL;
   if (this->mcmc!=NULL)
     this->mcmc->set_index_if_null(full_index);
+  this->cancelled_index = make_cancelled_index(full_index, without_cancelled_index);
   
   this->mcmc_at_last_step = mcmc_at_last_step_in;
 }
@@ -812,6 +846,9 @@ SMCMCMCMove::~SMCMCMCMove()
   
   if (this->index!=NULL)
     delete this->index;
+  
+  if (this->cancelled_index!=NULL)
+    delete this->cancelled_index;
 }
 
 void SMCMCMCMove::operator=(const SMCMCMCMove &another)
@@ -825,6 +862,9 @@ void SMCMCMCMove::operator=(const SMCMCMCMove &another)
   
   if (this->index!=NULL)
     delete this->index;
+  
+  if (this->cancelled_index!=NULL)
+    delete this->cancelled_index;
   
   SMC::operator=(another);
   this->make_copy(another);
@@ -851,6 +891,11 @@ void SMCMCMCMove::make_copy(const SMCMCMCMove &another)
     this->index = another.index->duplicate();
   else
     this->index = NULL;
+  
+  if (another.cancelled_index!=NULL)
+    this->cancelled_index = another.cancelled_index->duplicate();
+  else
+    this->cancelled_index = NULL;
   
   this->mcmc_at_last_step = another.mcmc_at_last_step;
 }
@@ -976,8 +1021,35 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
 MoveOutput* SMCMCMCMove::move(RandomNumberGenerator &rng,
                               const Particle &particle) const
 {
-  return this->mcmc->run(rng,
-                         particle);
+  // The MCMC moves read their acceptance-ratio denominators from the
+  // particle's per-factor cache, so every factor in the target must have been
+  // evaluated at the current parameters. The SMC has evaluated the factors in
+  // its own index; evaluate the ones it skipped (cancelled_index) here. Only
+  // those are evaluated, so random (pseudo-marginal) factors the SMC has
+  // already estimated are not re-estimated.
+  // A chain of unadjusted moves only never reads cached values, and the user
+  // may not have supplied the functions to evaluate the factors, so nothing is
+  // evaluated here (the behaviour before the cache was used).
+  if (!this->mcmc->reads_cached_factors())
+    return this->mcmc->run(rng, particle);
+  
+  MoveOutput* output;
+  if (this->cancelled_index!=NULL)
+  {
+    Particle start = particle;
+    start.evaluate_likelihoods(this->cancelled_index);
+    output = this->mcmc->run(rng, start);
+  }
+  else
+  {
+    output = this->mcmc->run(rng, particle);
+  }
+  
+  // The SMC uses target_evaluated (over its own index) in its next weight
+  // update, so set it from the cache rather than leaving whatever the last
+  // move happened to store there.
+  output->back().target_evaluated = output->back().get_cached_likelihoods(this->index);
+  return output;
 }
 
 //void SMCMCMCMove::weight_for_adapting_sequence(Particles &current_particles)

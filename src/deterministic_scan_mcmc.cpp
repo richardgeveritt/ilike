@@ -229,6 +229,16 @@ void DeterministicScanMCMC::set_proposal_parameters(Parameters* proposal_paramet
   }
 }
 
+bool DeterministicScanMCMC::reads_cached_factors() const
+{
+  for (auto i=this->moves.begin(); i!=this->moves.end(); ++i)
+  {
+    if ((*i)->reads_cached_factors())
+      return true;
+  }
+  return false;
+}
+
 std::vector<const ProposalKernel*> DeterministicScanMCMC::get_proposals() const
 {
   std::vector<const ProposalKernel*> all_proposals;

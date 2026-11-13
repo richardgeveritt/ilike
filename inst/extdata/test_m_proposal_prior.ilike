@@ -15,4 +15,8 @@ NumericVector m_factor_index() {
   return factor_index;
 }
 
+// Factor 2 (the likelihood) depends on theta but is deliberately cut: it is
+// left out of the acceptance ratio, so the chain targets the prior.
+/***m_cut_factor_index,c(2)***/
+
 /***mcmc_termination,ilike::iterations(10000)***/

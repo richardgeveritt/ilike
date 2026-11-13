@@ -259,6 +259,10 @@ public:
    */
   
   double evaluate_likelihoods(const Index* index);
+
+  // Sum of the cached factor values over index (no evaluation; see
+  // FactorVariables::get_cached_likelihoods).
+  double get_cached_likelihoods(const Index* index) const;
   
   /*
    double evaluate_likelihoods(const Index* index,
@@ -477,6 +481,11 @@ public:
    */
   
   void simulate_factor_variables(const Factors* factors);
+
+  // Replace this particle's factor variables with
+  // current->copy_with_new_outputs(this->parameters, new_outputs_index).
+  void simulate_factor_variables(const FactorVariables* current,
+                                 const Index* new_outputs_index);
   
   /**
    * @brief Simulates ensemble factor variables.

@@ -94,6 +94,13 @@ void ProposalKernel::make_copy(const ProposalKernel &another)
 Particle ProposalKernel::move(RandomNumberGenerator &rng,
                               const Particle &particle) const
 {
+  return this->move(rng, particle, NULL);
+}
+
+Particle ProposalKernel::move(RandomNumberGenerator &rng,
+                              const Particle &particle,
+                              const Index* new_outputs_index) const
+{
   Particle proposed_particle;
   proposed_particle.parameters = particle.parameters;
   
@@ -110,9 +117,17 @@ Particle ProposalKernel::move(RandomNumberGenerator &rng,
   // Outputs are created here, with memory managed by Particle hereafter.
   if (particle.factor_variables!=NULL)
   {
-    const Factors* old_factors = particle.factor_variables->get_factors();
-    if (old_factors!=NULL)
-      proposed_particle.simulate_factor_variables(old_factors);
+    if (new_outputs_index!=NULL)
+    {
+      proposed_particle.simulate_factor_variables(particle.factor_variables,
+                                                  new_outputs_index);
+    }
+    else
+    {
+      const Factors* old_factors = particle.factor_variables->get_factors();
+      if (old_factors!=NULL)
+        proposed_particle.simulate_factor_variables(old_factors);
+    }
   }
   
   if (particle.ensemble_factor_variables!=NULL)

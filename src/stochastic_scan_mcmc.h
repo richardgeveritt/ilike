@@ -130,6 +130,7 @@ public:
    * @param index_in The index.
    */
   void set_index_if_null(Index* index_in);
+  bool reads_cached_factors() const;
   
   /**
    * @brief Sets the proposal parameters.

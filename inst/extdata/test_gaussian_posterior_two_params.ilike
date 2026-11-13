@@ -1,0 +1,92 @@
+// Two independent parameters, each with prior N(1, 1) and one observation
+// x = 1 with likelihood N(theta, 1), so each posterior is N(1, 1/2).
+// Factors (in file order): 1 prior theta1, 2 likelihood theta1,
+// 3 prior theta2, 4 likelihood theta2.
+
+double prior_mean = 1.0;
+double prior_sd = 1.0;
+double obs_sd = 1.0;
+
+/***data***/
+Data set_data() {
+  arma::colvec x(2);
+  x(0) = 1.0;
+  x(1) = 1.0;
+  return Data("x", x);
+}
+
+/***evaluate_log_prior***/
+double evaluate_log_prior_theta1(const Parameters &params) {
+  return dnorm(params["theta1"][0], prior_mean, prior_sd);
+}
+
+/***simulate_prior***/
+Parameters simulate_prior_theta1(RandomNumberGenerator &rng) {
+  return Parameters("theta1", rnorm(rng, prior_mean, prior_sd));
+}
+
+/***evaluate_gradient_log_prior***/
+arma::mat prior_gradient_theta1(const std::string &variable,
+                                const Parameters &parameters) {
+  arma::mat grad(1, 1);
+  if (variable == "theta1")
+    grad(0, 0) = -(parameters["theta1"][0] - prior_mean) / (prior_sd * prior_sd);
+  else
+    grad(0, 0) = 0.0;
+  return grad;
+}
+
+/***evaluate_log_likelihood***/
+double evaluate_likelihood_theta1(const Parameters &params, const Data &data) {
+  return dnorm(data["x"][0], params["theta1"][0], obs_sd);
+}
+
+/***evaluate_gradient_log_likelihood***/
+arma::mat likelihood_gradient_theta1(const std::string &variable,
+                                     const Parameters &parameters,
+                                     const Data &data) {
+  arma::mat grad(1, 1);
+  if (variable == "theta1")
+    grad(0, 0) = (data["x"][0] - parameters["theta1"][0]) / (obs_sd * obs_sd);
+  else
+    grad(0, 0) = 0.0;
+  return grad;
+}
+
+/***evaluate_log_prior***/
+double evaluate_log_prior_theta2(const Parameters &params) {
+  return dnorm(params["theta2"][0], prior_mean, prior_sd);
+}
+
+/***simulate_prior***/
+Parameters simulate_prior_theta2(RandomNumberGenerator &rng) {
+  return Parameters("theta2", rnorm(rng, prior_mean, prior_sd));
+}
+
+/***evaluate_gradient_log_prior***/
+arma::mat prior_gradient_theta2(const std::string &variable,
+                                const Parameters &parameters) {
+  arma::mat grad(1, 1);
+  if (variable == "theta2")
+    grad(0, 0) = -(parameters["theta2"][0] - prior_mean) / (prior_sd * prior_sd);
+  else
+    grad(0, 0) = 0.0;
+  return grad;
+}
+
+/***evaluate_log_likelihood***/
+double evaluate_likelihood_theta2(const Parameters &params, const Data &data) {
+  return dnorm(data["x"][1], params["theta2"][0], obs_sd);
+}
+
+/***evaluate_gradient_log_likelihood***/
+arma::mat likelihood_gradient_theta2(const std::string &variable,
+                                     const Parameters &parameters,
+                                     const Data &data) {
+  arma::mat grad(1, 1);
+  if (variable == "theta2")
+    grad(0, 0) = (data["x"][1] - parameters["theta2"][0]) / (obs_sd * obs_sd);
+  else
+    grad(0, 0) = 0.0;
+  return grad;
+}

@@ -1,0 +1,12 @@
+// As test_gibbs_m_proposal.ilike, but theta2 is updated by a Langevin
+// Metropolis-Hastings move whose gradient uses only its own factors (3, 4).
+
+/***m_proposal,ilike::norm_rw(theta1,1)***/
+
+/***m_factor_index,c(1,2)***/
+
+/***mh_proposal,ilike::langevin(theta2,1,1)***/
+
+/***mh_factor_index,c(3,4)***/
+
+/***mcmc_termination,ilike::iterations(10000)***/

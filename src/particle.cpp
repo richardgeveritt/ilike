@@ -1341,6 +1341,14 @@ double Particle::subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(
  }
  */
 
+double Particle::get_cached_likelihoods(const Index* index) const
+{
+  if (this->factor_variables!=NULL)
+    return this->factor_variables->get_cached_likelihoods(index);
+  else
+    return 0.0;
+}
+
 double Particle::evaluate_likelihoods(const Index* index)
 {
   if (this->factor_variables!=NULL)
@@ -1816,6 +1824,19 @@ void Particle::set_acceptance(const ProposalKernel* proposal_in,
 void Particle::erase_mcmc_adaptation_info()
 {
   this->accepted_outputs.clear();
+}
+
+void Particle::simulate_factor_variables(const FactorVariables* current,
+                                         const Index* new_outputs_index)
+{
+  FactorVariables* new_factor_variables = current->copy_with_new_outputs(this->parameters,
+                                                                         new_outputs_index);
+  new_factor_variables->set_particle(this);
+  if (this->factor_variables!=NULL)
+  {
+    delete this->factor_variables;
+  }
+  this->factor_variables = new_factor_variables;
 }
 
 void Particle::simulate_factor_variables(const Factors* factors)

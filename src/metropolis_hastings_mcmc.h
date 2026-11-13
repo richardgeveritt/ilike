@@ -139,6 +139,7 @@ public:
    * @param index_in The index.
    */
   void set_index_if_null(Index* index_in);
+  void set_cut_index(const Index* cut_index_in);
   
   /**
    * @brief Sets the proposal parameters.

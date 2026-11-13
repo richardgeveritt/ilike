@@ -108,13 +108,21 @@ void MetropolisMCMC::make_copy(const MetropolisMCMC &another)
 Particle MetropolisMCMC::move(RandomNumberGenerator &rng,
                               const Particle &particle) const
 {
+  // Only this move's factors get new outputs in the proposed particle; the
+  // others are copied with their cached values. They either cancel in the
+  // acceptance ratio or (cut factors) are refreshed after acceptance.
   Particle proposed_particle = this->proposal->move(rng,
-                                                    particle);
+                                                    particle,
+                                                    this->get_new_outputs_index(this->index));
   
   double log_u = log(runif(rng));
   
   double numerator = proposed_particle.evaluate_likelihoods(this->index);
-  double denominator = particle.target_evaluated;
+  // The denominator is read from the current particle's per-factor cache over
+  // this move's own index. (It used to be particle.target_evaluated, a single
+  // number holding whatever index was evaluated last, e.g. the enclosing SMC's
+  // index or another move's factor index; see B6 in dev/plan.md.)
+  double denominator = particle.get_cached_likelihoods(this->index);
   
   if ( (numerator==-arma::datum::inf) || (denominator==-arma::datum::inf) )
   {
@@ -124,6 +132,8 @@ Particle MetropolisMCMC::move(RandomNumberGenerator &rng,
   if (log_u < numerator - denominator)
   {
     proposed_particle.set_acceptance(this->proposal,true);
+    this->refresh_cut_factors(proposed_particle);
+    this->check_carried_over_factors(proposed_particle, this->index);
     return proposed_particle;
   }
   else
@@ -244,6 +254,7 @@ void MetropolisMCMC::set_index(Index* index_in)
   this->index = (index_in!=NULL) ? index_in->duplicate() : NULL;
   if (this->proposal!=NULL)
     this->proposal->set_index(index_in);
+  this->update_index_with_cut(this->index);
 }
 
 void MetropolisMCMC::set_index_if_null(Index* index_in)
@@ -252,6 +263,13 @@ void MetropolisMCMC::set_index_if_null(Index* index_in)
     this->index = index_in->duplicate();
   if (this->proposal!=NULL)
     this->proposal->set_index_if_null(index_in);
+  this->update_index_with_cut(this->index);
+}
+
+void MetropolisMCMC::set_cut_index(const Index* cut_index_in)
+{
+  this->store_cut_index(cut_index_in);
+  this->update_index_with_cut(this->index);
 }
 
 void MetropolisMCMC::set_proposal_parameters(Parameters* proposal_parameters_in)

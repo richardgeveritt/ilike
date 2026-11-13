@@ -81,6 +81,14 @@ public:
   
   Particle move(RandomNumberGenerator &rng,
                 const Particle &particle) const;
+
+  // As above, but only the factors in new_outputs_index get new outputs in the
+  // proposed particle; the others are copied from particle with their cached
+  // values (see FactorVariables::copy_with_new_outputs). NULL means all
+  // factors get new outputs (the behaviour of the overload above).
+  Particle move(RandomNumberGenerator &rng,
+                const Particle &particle,
+                const Index* new_outputs_index) const;
   /*
    Particle move(RandomNumberGenerator &rng,
    Particle &particle,
