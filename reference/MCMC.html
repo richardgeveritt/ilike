@@ -58,7 +58,8 @@
 <span>  verify_cpp_function_types <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  keep_temporary_recipe_code <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  grain_size <span class="op">=</span> <span class="fl">1e+05</span></span>
+<span>  grain_size <span class="op">=</span> <span class="fl">1e+05</span>,</span>
+<span>  check_factor_index <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -128,6 +129,10 @@
 
 <dt id="arg-grain-size">grain_size<a class="anchor" aria-label="anchor" href="#arg-grain-size"></a></dt>
 <dd><p>(optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).</p></dd>
+
+
+<dt id="arg-check-factor-index">check_factor_index<a class="anchor" aria-label="anchor" href="#arg-check-factor-index"></a></dt>
+<dd><p>(optional) If TRUE, after every accepted MCMC move that has a factor index, re-evaluate the exact factors that were left out of the move (neither in its factor index nor its cut factor index) and stop if any changed value, i.e. did not cancel in the acceptance ratio. Slower; for checking a model file. Default FALSE.</p></dd>
 
 </dl></div>
     <div class="section level2">
