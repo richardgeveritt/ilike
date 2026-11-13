@@ -81,7 +81,7 @@ load_smc_output(
 - factor:
 
   (optional; for nested output only) The factor from which to extract
-  points. (default is 0)
+  points. (default is 1)
 
 ## Value
 
