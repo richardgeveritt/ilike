@@ -166,9 +166,8 @@ double LangevinProposalKernel::specific_evaluate_kernel(const Particle &proposed
     arma::colvec mean = old_particle.get_transformed_parameters(this).get_colvec(i->first);
     double scale = i->second.get_double_scale();
     double dim = double(mean.n_rows);
-    arma::mat grad = gradient_estimator_output->get_gradient_of_log(i->first,this->index,old_particle);
     output = output + dmvnorm_using_precomp(proposed_particle.get_transformed_parameters(this).get_colvec(i->first),
-                                            mean + scale*i->second.get_covariance()*arma::vectorise(grad)/2.0,
+                                            mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first,this->index,old_particle))/2.0,
                                             (1.0/sqrt(i->second.get_double_scale()))*i->second.get_inv(),
                                             dim*log(scale)+i->second.get_logdet());
   }
@@ -497,15 +496,23 @@ std::vector<const ProposalKernel*> LangevinProposalKernel::get_proposals() const
   return output;
 }
 
+// The kernel keeps its own private copy of the index: the pointer passed in is
+// owned (and deleted) by the calling MCMC object, so storing it directly would
+// lead to it being deleted twice.
 void LangevinProposalKernel::set_index(Index* index_in)
 {
-  this->index = index_in;
+  if (this->index!=NULL)
+    delete this->index;
+  if (index_in!=NULL)
+    this->index = index_in->duplicate();
+  else
+    this->index = NULL;
 }
 
 void LangevinProposalKernel::set_index_if_null(Index* index_in)
 {
-  if (this->index==NULL)
-    this->index = index_in;
+  if ( (this->index==NULL) && (index_in!=NULL) )
+    this->index = index_in->duplicate();
 }
 
 bool LangevinProposalKernel::can_be_evaluated() const

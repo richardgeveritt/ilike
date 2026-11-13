@@ -502,15 +502,23 @@ namespace ilike
     return proposals;
   }
 
+  // The kernel keeps its own private copy of the index: the pointer passed in
+  // is owned (and deleted) by the calling MCMC object, so storing it directly
+  // would lead to it being deleted twice.
   void BarkerDynamicsProposalKernel::set_index(Index *index_in)
   {
-    this->index = index_in;
+    if (this->index != NULL)
+      delete this->index;
+    if (index_in != NULL)
+      this->index = index_in->duplicate();
+    else
+      this->index = NULL;
   }
 
   void BarkerDynamicsProposalKernel::set_index_if_null(Index *index_in)
   {
-    if (this->index == NULL)
-      this->index = index_in;
+    if ((this->index == NULL) && (index_in != NULL))
+      this->index = index_in->duplicate();
   }
 
   bool BarkerDynamicsProposalKernel::can_be_evaluated() const

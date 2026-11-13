@@ -185,20 +185,26 @@ void UnadjustedMCMC::specific_mcmc_adapt(const Particle &current_particle,
                              iteration_counter);
 }
 
+// Ownership rule for indices: set_index and set_index_if_null never take
+// ownership of index_in. This object keeps its own duplicate (deleted in the
+// destructor), and the caller remains responsible for index_in. Previously the
+// pointer itself was stored, so when one index was handed to several moves (e.g.
+// the moves of a sweep) each destructor deleted it -> double free.
 void UnadjustedMCMC::set_index(Index* index_in)
 {
   if (this->index!=NULL)
     delete this->index;
-  
-  this->index = index_in;
-  this->proposal->set_index(index_in);
+  this->index = (index_in!=NULL) ? index_in->duplicate() : NULL;
+  if (this->proposal!=NULL)
+    this->proposal->set_index(index_in);
 }
 
 void UnadjustedMCMC::set_index_if_null(Index* index_in)
 {
-  if (this->index==NULL)
-    this->index = index_in;
-  this->proposal->set_index_if_null(index_in);
+  if ( (this->index==NULL) && (index_in!=NULL) )
+    this->index = index_in->duplicate();
+  if (this->proposal!=NULL)
+    this->proposal->set_index_if_null(index_in);
 }
 
 void UnadjustedMCMC::set_proposal_parameters(Parameters* proposal_parameters_in)

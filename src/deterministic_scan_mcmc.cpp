@@ -237,11 +237,10 @@ std::vector<const ProposalKernel*> DeterministicScanMCMC::get_proposals() const
        i!=this->moves.end();
        ++i)
   {
+    // Every move contributes its proposals (previously only the first move did,
+    // so particles had no ProposalStore for the kernels of later moves).
     std::vector<const ProposalKernel*> next_proposals = (*i)->get_proposals();
-    if (all_proposals.size()==0)
-    {
-      all_proposals.insert(all_proposals.end(), next_proposals.begin(), next_proposals.end());
-    }
+    all_proposals.insert(all_proposals.end(), next_proposals.begin(), next_proposals.end());
   }
   
   return all_proposals;

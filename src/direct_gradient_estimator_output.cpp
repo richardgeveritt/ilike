@@ -62,6 +62,7 @@ arma::mat DirectGradientEstimatorOutput::get_gradient_of_log(const std::string &
   }
   else
   {
+    
     arma::mat current_gradient = particle.direct_get_gradient_of_log(variable,
                                                                      index);
     if (this->estimator->proposal->transform!=NULL)

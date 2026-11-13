@@ -75,6 +75,26 @@ if [ -z "${HDF5_LIBS}" ]; then
   exit 1
 fi
 
+# Homebrew's pkg-config reports versioned paths such as
+# /opt/homebrew/Cellar/hdf5/2.2.0/..., which disappear after "brew upgrade hdf5"
+# and would leave the installed package unable to load. Rewrite them to the
+# stable link <prefix>/opt/<formula>/... when that link exists.
+homebrew_stable_path() {
+  echo "$1" | tr ' ' '\n' | while read -r FLAG; do
+    case "${FLAG}" in
+      -I*/Cellar/*|-L*/Cellar/*)
+        OPT=$(echo "${FLAG}" | cut -c1-2)
+        DIR=$(echo "${FLAG}" | cut -c3-)
+        STABLE=$(echo "${DIR}" | sed -e 's|/Cellar/\([^/]*\)/[^/]*|/opt/\1|')
+        if [ -d "${STABLE}" ]; then echo "${OPT}${STABLE}"; else echo "${FLAG}"; fi
+        ;;
+      *) echo "${FLAG}" ;;
+    esac
+  done | tr '\n' ' '
+}
+HDF5_CFLAGS=$(homebrew_stable_path "${HDF5_CFLAGS}")
+HDF5_LIBS=$(homebrew_stable_path "${HDF5_LIBS}")
+
 echo "HDF5_CFLAGS: ${HDF5_CFLAGS}"
 echo "HDF5_LIBS:   ${HDF5_LIBS}"
 

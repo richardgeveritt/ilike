@@ -603,16 +603,20 @@ void ProposalKernel::mcmc_adapt(const Particle &current_particle,
 double ProposalKernel::evaluate_kernel(const Particle &proposed_particle,
                                        const Particle &old_particle) const
 {
-  double result;
   if (this->transform==NULL)
   {
-    result = this->specific_evaluate_kernel(proposed_particle, old_particle);
+    //proposed_particle.set_move_transformed_parameters();
+    //old_particle.set_move_transformed_parameters();
+    return this->specific_evaluate_kernel(proposed_particle, old_particle);
   }
   else
   {
-    result = this->specific_evaluate_kernel(proposed_particle, old_particle) + this->transform->log_abs_jacobian_determinant(proposed_particle.parameters);
+    //proposed_particle.set_move_transformed_parameters(this->transform);
+    //old_particle.set_move_transformed_parameters(this->transform);
+    
+    // need to include absolute value of Jacobian determinant
+    return this->specific_evaluate_kernel(proposed_particle, old_particle) + this->transform->log_abs_jacobian_determinant(proposed_particle.parameters);
   }
-  return result;
 }
 
 /*

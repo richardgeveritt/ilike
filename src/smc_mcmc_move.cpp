@@ -103,7 +103,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                               smc_criterion);
   
   this->mcmc = mcmc_in;
-  this->mcmc->set_index(new VectorIndex(indices));
+  VectorIndex mcmc_index(indices); // set_index copies it
+  this->mcmc->set_index(&mcmc_index);
   this->mcmc_at_last_step = true;
 }
 
@@ -342,7 +343,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                               smc_criterion);
   
   this->mcmc = mcmc_in;
-  this->mcmc->set_index(new VectorIndex(indices));
+  VectorIndex mcmc_index(indices); // set_index copies it
+  this->mcmc->set_index(&mcmc_index);
   this->mcmc_at_last_step = mcmc_at_last_step_in;
 }
 
@@ -506,7 +508,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   //this->sequencer_parameters = &this->sequencer.schedule_parameters;
   
   this->mcmc = mcmc_in;
-  this->mcmc->set_index(new VectorIndex(indices));
+  VectorIndex mcmc_index(indices); // set_index copies it
+  this->mcmc->set_index(&mcmc_index);
   this->mcmc_at_last_step = mcmc_at_last_step_in;
 }
 
@@ -625,7 +628,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   //this->sequencer_parameters = &this->sequencer.schedule_parameters;
   
   this->mcmc = mcmc_in;
-  this->mcmc->set_index(new VectorIndex(indices));
+  VectorIndex mcmc_index(indices); // set_index copies it
+  this->mcmc->set_index(&mcmc_index);
   this->mcmc_at_last_step = mcmc_at_last_step_in;
 }
 
@@ -703,7 +707,10 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   
   this->mcmc = mcmc_in;
   if (this->mcmc!=NULL)
-    this->mcmc->set_index_if_null(new VectorIndex(indices));
+  {
+    VectorIndex mcmc_index(indices); // set_index_if_null copies it
+    this->mcmc->set_index_if_null(&mcmc_index);
+  }
   this->mcmc_at_last_step = mcmc_at_last_step_in;
 }
 

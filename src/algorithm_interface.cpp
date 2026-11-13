@@ -1312,10 +1312,10 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                   new ExactLikelihoodEstimator(rng_in, seed_in, data_in,
                                                new_factor, true);
 
-              full_index_vector.push_back(likelihood_estimators.size()-1);
+              full_index_vector.push_back(likelihood_estimators.size());
               if (include_priors) {
                 without_cancelled_index_vector.push_back(
-                    likelihood_estimators.size()-1);
+                    likelihood_estimators.size());
 
                 if (any_annealing) {
                   likelihood_estimators.push_back(
@@ -1336,12 +1336,17 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
           }
         } else if (current_factor.containsElementNamed("evaluate_log_prior")) {
           SEXP evaluate_log_prior_SEXP = current_factor["evaluate_log_prior"];
+          // The gradient is optional: it is only needed by gradient-based
+          // proposals (e.g. Langevin, Barker, HMC).
           DistributionFactor *new_factor;
-          if (current_factor.containsElementNamed("evaluate_gradient_log_prior")) {
-            SEXP evaluate_gradient_log_prior_SEXP = current_factor["evaluate_gradient_log_prior"];
+          if (current_factor.containsElementNamed(
+                  "evaluate_gradient_log_prior")) {
+            SEXP evaluate_gradient_log_prior_SEXP =
+                current_factor["evaluate_gradient_log_prior"];
             new_factor = new CustomDistributionFactor(
                 load_evaluate_log_distribution(evaluate_log_prior_SEXP),
-                load_evaluate_gradient_log_distribution(evaluate_gradient_log_prior_SEXP));
+                load_evaluate_gradient_log_distribution(
+                    evaluate_gradient_log_prior_SEXP));
           } else {
             new_factor = new CustomDistributionFactor(
                 load_evaluate_log_distribution(evaluate_log_prior_SEXP));
@@ -1375,12 +1380,17 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
 
           SEXP evaluate_log_likelihood_SEXP =
               current_factor["evaluate_log_likelihood"];
+          // The gradient is optional: it is only needed by gradient-based
+          // proposals (e.g. Langevin, Barker, HMC).
           LikelihoodFactor *new_factor;
-          if (current_factor.containsElementNamed("evaluate_gradient_log_likelihood")) {
-            SEXP evaluate_gradient_log_likelihood_SEXP = current_factor["evaluate_gradient_log_likelihood"];
+          if (current_factor.containsElementNamed(
+                  "evaluate_gradient_log_likelihood")) {
+            SEXP evaluate_gradient_log_likelihood_SEXP =
+                current_factor["evaluate_gradient_log_likelihood"];
             new_factor = new CustomLikelihoodFactor(
                 load_evaluate_log_likelihood(evaluate_log_likelihood_SEXP),
-                load_evaluate_gradient_log_likelihood(evaluate_gradient_log_likelihood_SEXP),
+                load_evaluate_gradient_log_likelihood(
+                    evaluate_gradient_log_likelihood_SEXP),
                 data_in);
           } else {
             new_factor = new CustomLikelihoodFactor(
@@ -4115,7 +4125,8 @@ MCMC *make_mcmc(const List &model, const List &model_parameters, Data *data,
             for (size_t k = 0; k < index.length(); ++k) {
               indices_in.push_back(size_t(index[k])-1);
             }
-            mcmc->set_index_if_null(new VectorIndex(indices_in));
+            VectorIndex factor_index(indices_in); // set_index_if_null copies it
+            mcmc->set_index_if_null(&factor_index);
           }
 
           simulate_mh_proposal_index = simulate_mh_proposal_index + 1;
@@ -4149,7 +4160,8 @@ MCMC *make_mcmc(const List &model, const List &model_parameters, Data *data,
             for (size_t k = 0; k < index.length(); ++k) {
               indices_in.push_back(size_t(index[k])-1);
             }
-            mcmc->set_index_if_null(new VectorIndex(indices_in));
+            VectorIndex factor_index(indices_in); // set_index_if_null copies it
+            mcmc->set_index_if_null(&factor_index);
           }
 
           simulate_imh_proposal_index = simulate_imh_proposal_index + 1;
@@ -4182,7 +4194,8 @@ MCMC *make_mcmc(const List &model, const List &model_parameters, Data *data,
             for (size_t k = 0; k < index.length(); ++k) {
               indices_in.push_back(size_t(index[k])-1);
             }
-            mcmc->set_index_if_null(new VectorIndex(indices_in));
+            VectorIndex factor_index(indices_in); // set_index_if_null copies it
+            mcmc->set_index_if_null(&factor_index);
           }
 
           simulate_m_proposal_index = simulate_m_proposal_index + 1;
@@ -4216,7 +4229,8 @@ MCMC *make_mcmc(const List &model, const List &model_parameters, Data *data,
             for (size_t k = 0; k < index.length(); ++k) {
               indices_in.push_back(size_t(index[k])-1);
             }
-            mcmc->set_index_if_null(new VectorIndex(indices_in));
+            VectorIndex factor_index(indices_in); // set_index_if_null copies it
+            mcmc->set_index_if_null(&factor_index);
           }
 
           simulate_unadjusted_proposal_index =
@@ -4703,9 +4717,6 @@ ImportanceSampler *get_importance_sampler(
     const String &results_name_in, size_t *seed,
     std::vector<Data> &data_created_in_get_likelihood_estimators,
     std::vector<Data> &data_created_in_get_measurement_covariance_estimators) {
-  // std::string results_name =
-  // "/Users/richard/Dropbox/code/ilike/experiments/test";
-
   // May need to alter for cases where the likelihood needs to be tuned
   // automatically (e.g. in ABC).
 
@@ -4943,6 +4954,7 @@ void do_mcmc(const List &model, const List &parameters,
 
   delete output;
   delete alg;
+  delete full_index; // MCMC moves keep their own copies of it
 }
 
 // [[Rcpp::export]]
@@ -5057,6 +5069,7 @@ void do_mcmc_with_fixed_params(
   delete output;
 
   delete alg;
+  delete full_index; // MCMC moves keep their own copies of it
 }
 
 SMCMCMCMove *get_smc_mcmc_move(
@@ -5151,8 +5164,9 @@ SMCMCMCMove *get_smc_mcmc_move(
   SMCTermination *smc_termination =
       get_smc_termination_method(model, parameters, smc_termination_method);
 
+  SMCMCMCMove *alg;
   if (write_to_file_at_each_iteration) {
-    return new SMCMCMCMove(
+    alg = new SMCMCMCMove(
         rng, seed, the_data, algorithm_parameters, number_of_particles,
         smc_iterations_to_store, smc_iterations_to_store, the_mcmc,
         resampling_criterion, adaptive_target_criterion, sequencer_info[3],
@@ -5161,7 +5175,7 @@ SMCMCMCMove *get_smc_mcmc_move(
         proposal_is_evaluated_in, true, true, false, false, parallel_in,
         grain_size_in, results_name_in.get_cstring());
   } else {
-    return new SMCMCMCMove(
+    alg = new SMCMCMCMove(
         rng, seed, the_data, algorithm_parameters, number_of_particles,
         smc_iterations_to_store, smc_iterations_to_store, the_mcmc,
         resampling_criterion, adaptive_target_criterion, sequencer_info[3],
@@ -5170,6 +5184,8 @@ SMCMCMCMove *get_smc_mcmc_move(
         proposal_is_evaluated_in, true, true, false, false, parallel_in,
         grain_size_in, "");
   }
+  delete full_index; // MCMC moves keep their own copies of it
+  return alg;
 }
 
 // [[Rcpp::export]]
@@ -5334,8 +5350,9 @@ EnsembleKalmanInversion *get_enki(
 
   EnsembleShifter *shifter = get_enk_shifter_method(model, parameters);
 
+  EnsembleKalmanInversion *alg;
   if (write_to_file_at_each_iteration) {
-    return new EnsembleKalmanInversion(
+    alg = new EnsembleKalmanInversion(
         rng, seed, the_data, number_of_ensemble_members,
         enk_iterations_to_store, shifter, adaptive_target_criterion,
         sequencer_info[3], enk_termination,
@@ -5344,7 +5361,7 @@ EnsembleKalmanInversion *get_enki(
         likelihood_estimators, estimators, transform, 1.0, 0, parallel_in,
         grain_size_in, results_name_in.get_cstring());
   } else {
-    return new EnsembleKalmanInversion(
+    alg = new EnsembleKalmanInversion(
         rng, seed, the_data, number_of_ensemble_members,
         enk_iterations_to_store, shifter, adaptive_target_criterion,
         sequencer_info[3], enk_termination,
@@ -5353,6 +5370,8 @@ EnsembleKalmanInversion *get_enki(
         likelihood_estimators, estimators, transform, 1.0, 0, parallel_in,
         grain_size_in, "");
   }
+  delete full_index; // MCMC moves keep their own copies of it
+  return alg;
 }
 
 // [[Rcpp::export]]
@@ -5410,9 +5429,6 @@ do_enkmfds(const List &model, const List &parameters,
   Data the_data = get_data(model);
   std::vector<Data> data_created_in_get_likelihood_estimators;
   std::vector<Data> data_created_in_get_measurement_covariance_estimators;
-
-  // std::string results_name =
-  // "/Users/richard/Dropbox/code/ilike/experiments/test";
 
   // May need to alter for cases where the likelihood needs to be tuned
   // automatically (e.g. in ABC).
@@ -5518,6 +5534,7 @@ do_enkmfds(const List &model, const List &parameters,
 
     delete output;
     delete alg;
+    delete full_index; // MCMC moves keep their own copies of it
 
     return log_likelihood;
   } else {
@@ -5539,6 +5556,7 @@ do_enkmfds(const List &model, const List &parameters,
 
     delete output;
     delete alg;
+    delete full_index; // MCMC moves keep their own copies of it
 
     return log_likelihood;
   }

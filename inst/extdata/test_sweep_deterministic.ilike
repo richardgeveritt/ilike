@@ -1,0 +1,5 @@
+/***m_proposal,ilike::norm_rw(theta,1)***/
+
+/***mh_proposal,ilike::langevin(theta,1,1)***/
+
+/***mcmc_termination,ilike::iterations(10000)***/

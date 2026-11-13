@@ -1,4 +1,6 @@
-double proposal_sd = 1.0;
+// Unadjusted Langevin proposal with step size h = proposal_sd^2 = 0.5, for the
+// posterior N(1, 1/2) (whose log density has gradient -2 (theta - 1)).
+double proposal_sd = sqrt(0.5);
 
 /***simulate_unadjusted_proposal***/
 Parameters simulate_langevin_proposal(RandomNumberGenerator &rng,

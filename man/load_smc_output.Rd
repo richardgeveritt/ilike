@@ -42,7 +42,7 @@ load_smc_output(
 
 \item{nesting_level}{(optional; for nested output only) The level of nesting at which to extract points. (default is 0, representing the top level of nested output)}
 
-\item{factor}{(optional; for nested output only) The factor from which to extract points. (default is 0)}
+\item{factor}{(optional; for nested output only) The factor from which to extract points. (default is 1)}
 }
 \value{
 A list containing the SMC output.

@@ -44,3 +44,8 @@ docs
 src/Makevars
 
 .vscode/
+
+# Files written by Claude Code (AI assistant context and developer notes)
+CLAUDE.md
+/dev/
+.claude/

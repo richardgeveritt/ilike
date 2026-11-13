@@ -8,4 +8,5 @@
 ^debug$
 ^LICENSE\.md$
 ^src/.*\.gch$
-^src/Makevars$
+^CLAUDE\.md$
+^dev$

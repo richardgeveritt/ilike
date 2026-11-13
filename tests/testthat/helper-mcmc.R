@@ -139,7 +139,7 @@ run_mcmc_mh_proposal_mirror <- function()
 
 # Test custom unadjusted proposal in MCMC
 
-run_mcmc_undajusted_proposal <- function()
+run_mcmc_unadjusted_proposal <- function()
 {
   filename_model = system.file("extdata", "test_gaussian_posterior.ilike", package = "ilike")
   filename_mcmc = system.file("extdata", "test_unadjusted_proposal.ilike", package = "ilike")
@@ -150,10 +150,32 @@ run_mcmc_undajusted_proposal <- function()
 # Test built-in unadjusted proposal in MCMC
 # ilike::langevin
 
-run_mcmc_undajusted_proposal_langevin <- function()
+run_mcmc_unadjusted_proposal_langevin <- function()
 {
   filename_model = system.file("extdata", "test_gaussian_posterior.ilike", package = "ilike")
   filename_mcmc = system.file("extdata", "test_unadjusted_proposal_langevin.ilike", package = "ilike")
   recipe = ilike::compile(c(filename_model, filename_mcmc))
   ilike::MCMC(recipe,results_name="mcmc_unadjusted_proposal_langevin",seed=2,initial_values = list(list(theta=1)))
+}
+
+# Test a deterministic sweep: a Metropolis random walk followed by a
+# Metropolis-Hastings Langevin move, both used in every iteration.
+
+run_mcmc_sweep_deterministic <- function()
+{
+  filename_model = system.file("extdata", "test_gaussian_posterior.ilike", package = "ilike")
+  filename_mcmc = system.file("extdata", "test_sweep_deterministic.ilike", package = "ilike")
+  recipe = ilike::compile(c(filename_model, filename_mcmc))
+  ilike::MCMC(recipe,results_name="mcmc_sweep_deterministic",seed=2,initial_values = list(list(theta=1)))
+}
+
+# Test a stochastic sweep: the same two moves, one chosen at random in each
+# iteration with probabilities given by mcmc_weights.
+
+run_mcmc_sweep_stochastic <- function()
+{
+  filename_model = system.file("extdata", "test_gaussian_posterior.ilike", package = "ilike")
+  filename_mcmc = system.file("extdata", "test_sweep_stochastic.ilike", package = "ilike")
+  recipe = ilike::compile(c(filename_model, filename_mcmc))
+  ilike::MCMC(recipe,results_name="mcmc_sweep_stochastic",seed=2,initial_values = list(list(theta=1)))
 }
