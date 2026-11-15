@@ -3,6 +3,7 @@
 #' @param recipe A pre-compiled ilike recipe, or an ilike file, or a vector of ilike files.
 #' @param results_name (optional) The name of the directory to which results will be written (default is to not write output to file).
 #' @param results_path (optional) The path in which the results folder will be created (current working directory is the default).
+#' @param write_factor_output (optional) If TRUE (default), write each point's factor outputs (the iterationK/factorJ_* files used to load nested output, e.g. the states of a particle filter inside particle marginal MH). FALSE writes only the points, weights and evidence.
 #' @param number_of_importance_points The number of importance points.
 #' @param parallel (optional) Set to true to perform the importance sampling in parallel, false for serial.
 #' @param model_parameter_list (optional) A list containing parameters for the model.
@@ -20,6 +21,7 @@
 IS = function(recipe,
                              results_name = "",
                              results_path = getwd(),
+                             write_factor_output = TRUE,
                              number_of_importance_points,
                              parallel = FALSE,
                              model_parameter_list = list(),
@@ -45,6 +47,9 @@ IS = function(recipe,
                      keep_temporary_recipe_code = keep_temporary_recipe_code)
   else if (!is.list(recipe))
     stop('"Receipe" argument must be either a compiled ilike recipe, the filename of an ilike file, or a vector of filenames of ilike files.')
+
+  # Read in C++ (apply_output_options).
+  recipe$write_factor_output = write_factor_output
 
   if (!results_name == "")
     results_directory = make_results_directory(results_name,results_path)

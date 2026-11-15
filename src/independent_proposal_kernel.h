@@ -109,6 +109,20 @@ public:
   
   virtual Parameters independent_simulate(RandomNumberGenerator &rng,
                                           const Parameters &conditioned_on_parameters) const=0;
+
+  // Append number_of_points draws to output, all with the same
+  // conditioned_on_parameters (e.g. the simulations of a synthetic
+  // likelihood at one parameter value). Same draws as calling
+  // independent_simulate that many times; kernels override it to do the work
+  // that does not depend on the draw only once.
+  virtual void independent_simulate_many(RandomNumberGenerator &rng,
+                                         const Parameters &conditioned_on_parameters,
+                                         size_t number_of_points,
+                                         std::vector<Parameters> &output) const
+  {
+    for (size_t i = 0; i < number_of_points; ++i)
+      output.push_back(this->independent_simulate(rng, conditioned_on_parameters));
+  }
   
   //virtual Parameters independent_simulate(RandomNumberGenerator &rng,
   //                                        const Parameters &conditioned_on_parameters) const=0;

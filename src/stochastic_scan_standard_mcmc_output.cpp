@@ -18,9 +18,17 @@ StochasticScanStandardMCMCOutput::StochasticScanStandardMCMCOutput(StochasticSca
   this->termination->set_parameters(this);
 }
 
+StochasticScanStandardMCMCOutput::StochasticScanStandardMCMCOutput(StochasticScanMCMC* mcmc_in, bool owns_mcmc_in)
+:StandardMCMCOutput(mcmc_in->get_duplicated_termination())
+{
+  this->mcmc = mcmc_in;
+  this->owns_mcmc = owns_mcmc_in;
+  this->termination->set_parameters(this);
+}
+
 StochasticScanStandardMCMCOutput::~StochasticScanStandardMCMCOutput()
 {
-  if (this->mcmc!=NULL)
+  if ((this->mcmc!=NULL) && this->owns_mcmc)
     delete this->mcmc;
 }
 
@@ -37,7 +45,7 @@ void StochasticScanStandardMCMCOutput::operator=(const StochasticScanStandardMCM
     return;
   }
   
-  if (this->mcmc!=NULL)
+  if ((this->mcmc!=NULL) && this->owns_mcmc)
     delete this->mcmc;
   
   StandardMCMCOutput::operator=(another);
@@ -51,10 +59,13 @@ MoveOutput* StochasticScanStandardMCMCOutput::duplicate() const
 
 void StochasticScanStandardMCMCOutput::make_copy(const StochasticScanStandardMCMCOutput &another)
 {
-  if (another.mcmc!=NULL)
+  this->owns_mcmc = another.owns_mcmc;
+  if (another.mcmc==NULL)
+    this->mcmc = NULL;
+  else if (another.owns_mcmc)
     this->mcmc = another.mcmc->stochastic_scan_mcmc_duplicate();
   else
-    this->mcmc = NULL;
+    this->mcmc = another.mcmc;
 }
 
 /*

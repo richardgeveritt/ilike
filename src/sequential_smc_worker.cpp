@@ -79,7 +79,7 @@ arma::colvec SequentialSMCWorker::get_unnormalised_log_incremental_weights() con
 void SequentialSMCWorker::specific_simulate(Particles* next_particles)
 {
   RandomNumberGenerator local_rng(*this->get_rng());
-  local_rng.seed(this->get_seed(),this->get_number_of_particles());
+  local_rng.seed(this->get_seed());
   
   for (size_t i = 0; i < this->get_number_of_particles(); ++i)
   {
@@ -176,7 +176,7 @@ void SequentialSMCWorker::specific_simulate(Particles* next_particles,
                                             const Parameters &conditioned_on_parameters)
 {
   RandomNumberGenerator local_rng(*this->get_rng());
-  local_rng.seed(this->get_seed(),this->get_number_of_particles());
+  local_rng.seed(this->get_seed());
   
   for (size_t i = 0; i < this->get_number_of_particles(); ++i)
   {
@@ -278,7 +278,7 @@ void SequentialSMCWorker::specific_simulate(Particles* next_particles,
 void SequentialSMCWorker::subsample_specific_simulate(Particles* next_particles)
 {
   RandomNumberGenerator local_rng(*this->get_rng());
-  local_rng.seed(this->get_seed(),this->get_number_of_particles());
+  local_rng.seed(this->get_seed());
   
   for (size_t i = 0; i < this->get_number_of_particles(); ++i)
   {
@@ -380,7 +380,7 @@ void SequentialSMCWorker::subsample_specific_simulate(Particles* next_particles,
                                                       const Parameters &conditioned_on_parameters)
 {
   RandomNumberGenerator local_rng(*this->get_rng());
-  local_rng.seed(this->get_seed(),this->get_number_of_particles());
+  local_rng.seed(this->get_seed());
   
   for (size_t i = 0; i < this->get_number_of_particles(); ++i)
   {
@@ -803,7 +803,7 @@ void SequentialSMCWorker::specific_move(Particles* next_particles,
                                         const Particles* current_particles)
 {
   RandomNumberGenerator local_rng(*this->get_rng());
-  local_rng.seed(this->get_seed(),this->get_number_of_particles());
+  local_rng.seed(this->get_seed());
   
   for (size_t i = 0; i < this->get_number_of_particles(); ++i)
   {
@@ -967,7 +967,7 @@ void SequentialSMCWorker::specific_move(Particles* next_particles,
  const Parameters &conditioned_on_parameters)
  {
  RandomNumberGenerator local_rng(*this->get_rng());
- local_rng.seed(this->get_seed(),this->get_number_of_particles());
+ local_rng.seed(this->get_seed());
  
  if (this->the_smc->sequencer_parameters==NULL)
  {
@@ -1006,7 +1006,7 @@ void SequentialSMCWorker::subsample_specific_move(Particles* next_particles,
                                                   const Particles* current_particles)
 {
   RandomNumberGenerator local_rng(*this->get_rng());
-  local_rng.seed(this->get_seed(),this->get_number_of_particles());
+  local_rng.seed(this->get_seed());
   
   for (size_t i = 0; i < this->get_number_of_particles(); ++i)
   {
@@ -1054,7 +1054,7 @@ void SequentialSMCWorker::subsample_specific_move(Particles* next_particles,
  const Parameters &conditioned_on_parameters)
  {
  RandomNumberGenerator local_rng(*this->get_rng());
- local_rng.seed(this->get_seed(),this->get_number_of_particles());
+ local_rng.seed(this->get_seed());
  
  if (this->the_smc->sequencer_parameters==NULL)
  {
@@ -1290,7 +1290,7 @@ void SequentialSMCWorker::subsample_pf_weight(const Index* index,
 //void SequentialSMCWorker::specific_simulate_and_weight()
 //{
 //  RandomNumberGenerator local_rng(*this->get_rng());
-//  local_rng.seed(this->get_seed(),this->get_number_of_particles());
+//  local_rng.seed(this->get_seed());
 
 //  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
 //  {

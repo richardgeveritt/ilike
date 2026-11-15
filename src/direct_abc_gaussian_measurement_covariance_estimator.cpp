@@ -292,7 +292,10 @@ arma::mat DirectABCGaussianMeasurementCovarianceEstimator::get_sqrt_adjustment(c
                                                                                const arma::mat &Cyy,
                                                                                double inverse_incremental_temperature) const
 {
-  arma::mat sqrtV = arma::chol(inverse_incremental_temperature*this->get_measurement_covariance());
+  // Symmetric square roots: the square-root update (I - K H) with
+  // K = Cxy S^{-1/2} (S^{1/2} + V^{1/2})^{-1} gives the Kalman posterior covariance
+  // only for symmetric roots (a Cholesky factor is triangular; B19).
+  arma::mat sqrtV = arma::sqrtmat_sympd(inverse_incremental_temperature*this->get_measurement_covariance());
   
   arma::colvec abs_eigenvalues = arma::abs(arma::eig_gen(Cyy));
   double biggest_eig = arma::abs(arma::eig_gen(Cyy)).max();
@@ -324,9 +327,9 @@ arma::mat DirectABCGaussianMeasurementCovarianceEstimator::get_sqrt_adjustment(c
   
   //arma::mat sqrtS2 = arma::chol(inverse_incremental_temperature*this->get_measurement_covariance());
   
-  arma::mat sqrtS = arma::chol(A+Cyy + inverse_incremental_temperature*this->get_measurement_covariance());
+  arma::mat sqrtS = arma::sqrtmat_sympd(A+Cyy + inverse_incremental_temperature*this->get_measurement_covariance());
   
-  //arma::mat sqrtS = arma::chol(Cyy + inverse_incremental_temperature*this->get_measurement_covariance());
+  //arma::mat sqrtS = arma::sqrtmat_sympd(Cyy + inverse_incremental_temperature*this->get_measurement_covariance());
   
   arma::mat stacked_H(Cyy.n_rows,Cxy.n_rows);
   stacked_H.eye();

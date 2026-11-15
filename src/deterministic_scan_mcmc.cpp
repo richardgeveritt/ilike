@@ -117,6 +117,17 @@ Particle DeterministicScanMCMC::move(RandomNumberGenerator &rng,
   return current_particle;
 }
 
+void DeterministicScanMCMC::move_in_place(RandomNumberGenerator &rng,
+                                          Particle &particle) const
+{
+  for (std::vector<size_t>::const_iterator i=this->order.begin();
+       i!=this->order.end();
+       ++i)
+  {
+    this->moves[*i]->move_in_place(rng, particle);
+  }
+}
+
 /*
  Particle DeterministicScanMCMC::move(RandomNumberGenerator &rng,
  Particle &particle,
@@ -270,8 +281,22 @@ std::vector<MCMC*> DeterministicScanMCMC::get_duplicate_moves() const
   return duplicate_moves;
 }
 
+bool DeterministicScanMCMC::adapts() const
+{
+  for (auto i=this->moves.begin(); i!=this->moves.end(); ++i)
+  {
+    if ((*i)->adapts())
+      return true;
+  }
+  return false;
+}
+
 StandardMCMCOutput* DeterministicScanMCMC::initialise_mcmc_output() const
 {
-  return new DeterministicScanStandardMCMCOutput(this->deterministic_scan_mcmc_duplicate());
+  // A move that adapts gives each chain its own copy of the kernel; otherwise
+  // all the particles' outputs share this one (used read-only by the moves).
+  if (this->adapts())
+    return new DeterministicScanStandardMCMCOutput(this->deterministic_scan_mcmc_duplicate());
+  return new DeterministicScanStandardMCMCOutput(const_cast<DeterministicScanMCMC*>(this), false);
 }
 }

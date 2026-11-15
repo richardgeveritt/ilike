@@ -118,7 +118,7 @@ arma::colvec MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::get
   }
   else
   {
-    return arma::join_cols(this->likelihood_measurement_state,this->prior_measurement_state) + arma::join_cols(arma::chol((inverse_incremental_temperature-1.0)*this->estimator->likelihood_Cygivenx)*this->likelihood_random_shift,blank_prior) + arma::join_cols(blank_measurement,sqrt(inverse_incremental_temperature)*this->prior_random_shift);
+    return arma::join_cols(this->likelihood_measurement_state,this->prior_measurement_state) + arma::join_cols(arma::chol((inverse_incremental_temperature-1.0)*this->estimator->likelihood_Cygivenx, "lower")*this->likelihood_random_shift,blank_prior) + arma::join_cols(blank_measurement,sqrt(inverse_incremental_temperature)*this->prior_random_shift);
   }
 }
 

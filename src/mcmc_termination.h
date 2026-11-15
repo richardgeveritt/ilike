@@ -71,6 +71,10 @@ public:
    * @param mcmc_output The mcmc output.
    */
   virtual void set_parameters(StandardMCMCOutput* mcmc_output)=0;
+
+  // The number of iterations a run will make, if known in advance (0 if
+  // not): used to reserve the storage for the chain.
+  virtual size_t get_known_number_of_iterations() const { return 0; }
   
 protected:
   

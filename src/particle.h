@@ -373,7 +373,12 @@ public:
    *
    * @return The result.
    */
-  Parameters get_transformed_parameters(const ProposalKernel* proposal_in) const;
+  // The particle's parameters on the scale the proposal works on: the
+  // parameters themselves for a proposal without a transform (by reference:
+  // returning a copy made every density evaluation and simulation copy the
+  // parameter hash map), otherwise the transformed parameters stored for the
+  // proposal (computed and kept on first use).
+  const Parameters& get_transformed_parameters(const ProposalKernel* proposal_in) const;
   
   /**
    * @brief Returns the gradient estimator output.
@@ -402,7 +407,9 @@ public:
   //Parameters move_transformed_parameters;
   //Parameters previous_move_transformed_parameters;
   
-  boost::unordered_map< int, ProposalStore> current_proposal_store;
+  // mutable: get_transformed_parameters (const) keeps a transform it computes
+  
+  mutable boost::unordered_map< int, ProposalStore> current_proposal_store;
   
   const std::vector<const ProposalKernel*>* proposals_to_transform_for_pointer;
   const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_pointer;

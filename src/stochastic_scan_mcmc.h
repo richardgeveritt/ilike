@@ -77,6 +77,15 @@ public:
   
   Particle move(RandomNumberGenerator &rng,
                 const Particle &particle) const;
+
+  
+  void move_in_place(RandomNumberGenerator &rng,
+  
+                     Particle &particle) const;
+
+
+  
+  bool adapts() const;
   
   Particle subsample_move(RandomNumberGenerator &rng,
                           const Particle &particle) const;

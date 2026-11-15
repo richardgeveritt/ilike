@@ -582,6 +582,48 @@ void VectorFactorVariables::forget_you_were_already_written_to_file()
   }
 }
 
+bool VectorFactorVariables::has_compact_values() const
+{
+  for (auto i = this->likelihood_estimator_outputs.begin(); i != this->likelihood_estimator_outputs.end(); ++i)
+  {
+    if ((*i)->compact_size() == 0)
+      return false;
+  }
+  return true;
+}
+
+size_t VectorFactorVariables::number_of_compact_values() const
+{
+  size_t n = 0;
+  for (auto i = this->likelihood_estimator_outputs.begin(); i != this->likelihood_estimator_outputs.end(); ++i)
+    n += (*i)->compact_size();
+  return n;
+}
+
+void VectorFactorVariables::compact_values(double *values) const
+{
+  size_t offset = 0;
+  for (size_t i=0; i<this->likelihood_estimator_outputs.size(); ++i)
+  {
+    this->likelihood_estimator_outputs[i]->compact_values(values + offset);
+    offset += this->likelihood_estimator_outputs[i]->compact_size();
+  }
+}
+
+void VectorFactorVariables::write_compact_values(const std::string &directory_name,
+                                                 const std::string &index,
+                                                 const double *values) const
+{
+  // the same directories as write_to_file
+  size_t offset = 0;
+  for (size_t i=0; i<this->likelihood_estimator_outputs.size(); ++i)
+  {
+    std::string factor_directory_name = directory_name + "/factor" + toString(i+1);
+    this->likelihood_estimator_outputs[i]->write_compact_values(factor_directory_name, index, values + offset);
+    offset += this->likelihood_estimator_outputs[i]->compact_size();
+  }
+}
+
 void VectorFactorVariables::write_to_file(const std::string &directory_name,
                                           const std::string &index) const
 {

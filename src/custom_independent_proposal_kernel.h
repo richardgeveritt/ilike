@@ -116,6 +116,11 @@ public:
   
   Parameters independent_simulate(RandomNumberGenerator &rng,
                                   const Parameters &conditioned_on_parameters) const;
+
+  void independent_simulate_many(RandomNumberGenerator &rng,
+                                 const Parameters &conditioned_on_parameters,
+                                 size_t number_of_points,
+                                 std::vector<Parameters> &output) const;
   
   /**
    * @brief Performs the subsample independent simulate operation.

@@ -104,6 +104,8 @@ void SMCOutput::make_copy(const SMCOutput &another)
   this->start_time = another.start_time;
   this->times = another.times;
   this->llhds = another.llhds;
+  this->compact_generations = another.compact_generations;
+  this->compacted = another.compacted;
 }
 
 void SMCOutput::simulate()
@@ -405,25 +407,126 @@ void SMCOutput::forget_you_were_already_written_to_file()
 
 void SMCOutput::terminate()
 {
+  // Keep the output_lag most recent generations. (These used to be removed
+  // from the back, i.e. the newest ones: with one generation to store, the
+  // final generation was dropped and the one before was written as if it
+  // were the final one, B24.)
   while (this->all_particles.size()>this->output_lag)
   {
-    this->all_particles.pop_back();
+    this->all_particles.pop_front();
   }
   
   while (this->llhds.size()>this->output_lag)
   {
-    this->llhds.pop_back();
+    this->llhds.pop_front();
   }
   
   while (this->times.size()>this->output_lag)
   {
-    this->times.pop_back();
+    this->times.pop_front();
+  }
+
+  if (this->estimator->compact_stored_output)
+    this->compact();
+}
+
+void SMCOutput::compact()
+{
+  this->compact_generations.clear();
+  size_t number_stored = this->all_particles.size();
+  size_t ncols = 0;
+  for (auto v : this->estimator->vector_variable_sizes)
+    ncols += v;
+  for (size_t g = 0; g < number_stored; ++g)
+  {
+    Particles &particles = this->all_particles[g];
+    CompactGeneration generation;
+    generation.iteration = this->smc_iteration - (number_stored - 1 - g);
+    arma::rowvec ol = particles.get_output_lengths();
+    generation.output_lengths.assign(ol.begin(), ol.end());
+    size_t total = size_t(arma::accu(ol));
+    generation.points_transposed.set_size(ncols, total);
+    size_t column = 0;
+    for (auto &p : particles.particles)
+      column += p->fill_vector_points_transposed(this->estimator->vector_variables,
+                                                 generation.points_transposed, column);
+    generation.unnormalised_log_weights = particles.unnormalised_log_weights;
+    generation.normalised_log_weights = particles.normalised_log_weights;
+    if (g > 0)
+      generation.ancestors = this->all_particles[g-1].ancestor_variables;
+    generation.incremental_log_likelihood = particles.log_normalising_constant_ratio;
+    generation.ess = particles.ess;
+    generation.resampled = static_cast<int>(particles.resampled_flag);
+    std::ostringstream oss;
+    oss << particles.schedule_parameters;
+    generation.schedule_parameters = oss.str();
+    this->compact_generations.push_back(std::move(generation));
+  }
+  // the rich particles are no longer needed
+  this->all_particles.clear();
+  this->compacted = true;
+}
+
+void SMCOutput::write_compact_nested(const std::string &dir_name)
+{
+  // One file per outer iteration (directory dir_name + "_smc"), shared by the
+  // outer points written one after another: each stored inner generation's
+  // points, weights, ancestors and output lengths are appended, so they are
+  // concatenated over the outer points; log_likelihood, time and the
+  // per-generation scalars have one value per outer point.
+  std::string directory_name = dir_name + "_smc";
+  if (!this->estimator->h5_file)
+  {
+    if (!directory_exists(directory_name))
+      make_directory(directory_name);
+    this->estimator->h5_file_path = directory_name + "/output.h5";
+    this->estimator->h5_file = h5_open_or_create(this->estimator->h5_file_path);
+    auto root = this->estimator->h5_file->getGroup("/");
+    if (!root.hasAttribute("variable_names"))
+    {
+      h5_set_str_attr(root, "variable_names", this->estimator->vector_variables);
+      std::vector<size_t> vsizes(this->estimator->vector_variable_sizes.begin(),
+                                 this->estimator->vector_variable_sizes.end());
+      h5_set_sizet_attr(root, "variable_sizes", vsizes);
+      h5_set_sizet_attr(root, "nested_external_points", {1});
+    }
+  }
+  HighFive::File &hf = *this->estimator->h5_file;
+  h5_append_double(hf, "log_likelihood", this->log_likelihood);
+  h5_append_double(hf, "time", this->times.empty() ? 0.0 : this->times.back());
+  for (auto &generation : this->compact_generations)
+  {
+    std::string group = "iteration/" + std::to_string(generation.iteration + 1);
+    HighFive::Group grp = h5_ensure_group(hf, group);
+    h5_append_rows(hf, group + "/vector_points", generation.points_transposed.memptr(),
+                   generation.points_transposed.n_cols, generation.points_transposed.n_rows);
+    h5_append_doubles(hf, group + "/unnormalised_log_weights",
+                      std::vector<double>(generation.unnormalised_log_weights.begin(), generation.unnormalised_log_weights.end()));
+    h5_append_doubles(hf, group + "/normalised_log_weights",
+                      std::vector<double>(generation.normalised_log_weights.begin(), generation.normalised_log_weights.end()));
+    if (!generation.ancestors.empty())
+      h5_append_doubles(hf, group + "/ancestor_index",
+                        std::vector<double>(generation.ancestors.begin(), generation.ancestors.end()));
+    h5_append_doubles(hf, group + "/output_lengths", generation.output_lengths);
+    h5_append_double(hf, group + "/incremental_log_likelihood", generation.incremental_log_likelihood);
+    h5_append_double(hf, group + "/ess", generation.ess);
+    h5_append_int(hf, group + "/resampled", generation.resampled);
+    if (!grp.exist("schedule_parameters"))
+      h5_write_string(grp, "schedule_parameters", generation.schedule_parameters);
   }
 }
 
 void SMCOutput::write_to_file(const std::string &dir_name,
                               const std::string &index)
 {
+  // A nested run kept in compact form (SMC::compact_stored_output).
+  if (this->compacted)
+  {
+    if (!this->compact_generations.empty())
+      this->write_compact_nested(dir_name);
+    return;
+  }
+
   // An output set to store no iterations (e.g. the importance sampler inside
   // an ABC likelihood, built without store_output) writes nothing. (Such an
   // output may still hold particles: an ABC likelihood whose tolerance is set
@@ -503,32 +606,32 @@ void SMCOutput::write_to_file(const std::string &dir_name,
         h5_write_string(iter_grp, "schedule_parameters", oss.str());
       }
       
-      // vector_points: collect all particle rows into one matrix
+      // vector_points: all particle rows in one matrix. Its size is known
+      // (rows: the summed output lengths; columns: the summed variable sizes),
+      // so each particle's rows are copied straight into it (the matrices
+      // used to be collected in a vector first and then copied again).
       {
-        std::vector<arma::mat> mats;
-        mats.reserve(this->all_particles[deque_index].particles.size());
-        size_t total_rows = 0;
-        for (auto& p : this->all_particles[deque_index].particles)
+        size_t total_rows = size_t(arma::accu(ol));
+        size_t ncols = 0;
+        for (auto s : this->estimator->vector_variable_sizes)
+          ncols += s;
+        if (total_rows > 0 && ncols > 0)
         {
-          arma::mat m = p->get_matrix_of_vector_points(
-                          this->estimator->vector_variables, nullptr);
-          total_rows += m.n_rows;
-          mats.push_back(std::move(m));
-        }
-        if (total_rows > 0 && !mats.empty())
-        {
-          size_t ncols = mats[0].n_cols;
-          arma::mat combined(total_rows, ncols);
-          size_t row_offset = 0;
-          for (auto& m : mats)
+          // one column per point; written as a (points x columns) dataset
+          arma::mat combined_transposed(ncols, total_rows);
+          size_t column_offset = 0;
+          for (auto& p : this->all_particles[deque_index].particles)
           {
-            if (m.n_rows > 0)
-            {
-              combined.rows(row_offset, row_offset + m.n_rows - 1) = m;
-              row_offset += m.n_rows;
-            }
+            size_t remaining = total_rows - column_offset;
+            if (size_t(p->length()) > remaining)
+              Rcpp::stop("SMCOutput::write_to_file: a particle's points do not match the expected output size.");
+            column_offset += p->fill_vector_points_transposed(this->estimator->vector_variables,
+                                                              combined_transposed,
+                                                              column_offset);
           }
-          h5_write_mat(iter_grp, "vector_points", combined);
+          if (column_offset != total_rows)
+            Rcpp::stop("SMCOutput::write_to_file: the particles' points do not match the stored output lengths.");
+          h5_write_mat_transposed(iter_grp, "vector_points", combined_transposed);
         }
       }
       
@@ -551,6 +654,9 @@ void SMCOutput::write_to_file(const std::string &dir_name,
       }
       
       // nested factor outputs: each creates its own output.h5 in a subdirectory
+      // (skipped when the algorithm was asked not to write them)
+      if (this->estimator->write_factor_output)
+      {
       std::string smc_iteration_directory = directory_name + "/iteration" + std::to_string(iteration+1);
       if (!directory_exists(smc_iteration_directory))
       {
@@ -562,6 +668,7 @@ void SMCOutput::write_to_file(const std::string &dir_name,
       {
         this->all_particles[deque_index].particles[i]->write_factors(smc_iteration_directory,
                                                                      std::to_string(i));
+      }
       }
       
       this->close_ofstreams(deque_index);

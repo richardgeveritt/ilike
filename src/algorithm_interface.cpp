@@ -1074,7 +1074,9 @@ List get_pf_info(const List &model_parameters, const List &current_likelihood,
     iterations_to_store =
         extract_int_parameter(parameters, model_parameters, 1);
   } else {
-    iterations_to_store = 0;
+    // default: keep the final generation (its points and weights) for each
+    // outer point (owner, 2026-11-15; was 0, i.e. nothing)
+    iterations_to_store = 1;
   }
 
   bool parallel;
@@ -2264,12 +2266,16 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
               bool parallel = pf_params[2];
               size_t grain_size = pf_params[3];
 
-              new_likelihood_estimator = get_particle_filter(
+              ParticleFilter *inner_pf = get_particle_filter(
                   rng_in, data_in, llhd_model, model_parameters,
                   algorithm_parameter_list, number_of_particles,
                   iterations_to_store, false, parallel, grain_size, "", seed_in,
                   data_created_in_get_likelihood_estimators,
                   data_created_in_get_measurement_covariance_estimators);
+              // nested: keep its stored generations compactly and write them
+              // concatenated over the outer points
+              inner_pf->set_compact_stored_output(true);
+              new_likelihood_estimator = inner_pf;
             } else {
               stop("Invalid type for 'likelihood'.");
             }
@@ -4293,6 +4299,11 @@ MCMC *make_mcmc(const List &model, const List &model_parameters, Data *data,
   if (model.containsElementNamed("check_factor_index"))
     check_factor_index = as<bool>(model["check_factor_index"]);
 
+  // MCMC(..., thin): store every thin-th iteration (recipe element mcmc_thin).
+  size_t mcmc_thin = 1;
+  if (model.containsElementNamed("mcmc_thin"))
+    mcmc_thin = as<size_t>(model["mcmc_thin"]);
+
   if (model.containsElementNamed("order_of_mcmc")) {
     NumericVector order_of_mcmc = model["order_of_mcmc"];
     std::vector<MCMC *> moves;
@@ -4446,20 +4457,24 @@ MCMC *make_mcmc(const List &model, const List &model_parameters, Data *data,
 
       if (moves.size() == 1) {
         mcmc->set_index_if_null(full_index);
+        mcmc->set_thin(mcmc_thin);
         return mcmc;
       } else {
         MCMC *new_mcmc =
             new StochasticScanMCMC(termination_method, moves, mcmc_weights);
         new_mcmc->set_index_if_null(full_index);
+        new_mcmc->set_thin(mcmc_thin);
         return new_mcmc;
       }
     } else {
       if (moves.size() == 1) {
         mcmc->set_index_if_null(full_index);
+        mcmc->set_thin(mcmc_thin);
         return mcmc;
       } else {
         MCMC *new_mcmc = new DeterministicScanMCMC(termination_method, moves);
         new_mcmc->set_index_if_null(full_index);
+        new_mcmc->set_thin(mcmc_thin);
         return new_mcmc;
       }
     }
@@ -4980,6 +4995,13 @@ ImportanceSampler *get_importance_sampler(
       true, true, false, parallel_in, grain_size_in, "");
 }
 
+
+// Output options set by the R wrappers as elements of the recipe.
+static void apply_output_options(const List &model, SMC *alg) {
+  if (model.containsElementNamed("write_factor_output"))
+    alg->set_write_factor_output(as<bool>(model["write_factor_output"]));
+}
+
 // [[Rcpp::export]]
 double do_importance_sampler(const List &model, const List &parameters,
                              const List &algorithm_parameter_list,
@@ -4996,6 +5018,8 @@ double do_importance_sampler(const List &model, const List &parameters,
       number_of_importance_points, parallel_in, grain_size_in, results_name_in,
       &seed, data_created_in_get_likelihood_estimators,
       data_created_in_measurement_covariance_estimators);
+
+  apply_output_options(model, alg);
 
   SMCOutput *output = alg->run();
 
@@ -5025,6 +5049,8 @@ double do_importance_sampler_with_fixed_params(
       number_of_importance_points, parallel_in, grain_size_in, results_name_in,
       &seed, data_created_in_get_likelihood_estimators,
       data_created_in_measurement_covariance_estimators);
+
+  apply_output_options(model, alg);
 
   SMCOutput *output = alg->run(list_to_parameters(fixed_parameter_list));
 
@@ -5143,6 +5169,8 @@ void do_mcmc(const List &model, const List &parameters,
                           parallel_in, grain_size_in, "");
   }
 
+  apply_output_options(model, alg);
+
   SMCOutput *output = alg->run();
 
   if (strcmp(results_name_in.get_cstring(), "") != 0)
@@ -5256,6 +5284,8 @@ void do_mcmc_with_fixed_params(
                           without_cancelled_index, full_index, true,
                           parallel_in, grain_size_in, "");
   }
+
+  apply_output_options(model, alg);
 
   SMCOutput *output = alg->run(list_to_parameters(fixed_parameter_list));
 
@@ -5409,6 +5439,8 @@ double do_smc_mcmc_move(
       data_created_in_get_likelihood_estimators,
       data_created_in_get_measurement_covariance_estimators);
 
+  apply_output_options(model, alg);
+
   SMCOutput *output = alg->run();
 
   if (!write_to_file_at_each_iteration) {
@@ -5448,6 +5480,8 @@ double do_smc_mcmc_move_with_fixed_params(
                                        grain_size_in, results_name_in, &seed,
                                        data_created_in_get_likelihood_estimators,
                                        data_created_in_get_measurement_covariance_estimators);
+
+  apply_output_options(model, alg);
 
   SMCOutput *output = alg->run(list_to_parameters(fixed_parameter_list));
 
@@ -5724,6 +5758,8 @@ do_enkmfds(const List &model, const List &parameters,
         proposal_is_evaluated_in, true, true, false, false, parallel_in,
         grain_size_in, results_name_in.get_cstring());
 
+    apply_output_options(model, alg);
+
     SMCOutput *output = alg->run();
 
     double log_likelihood = output->log_likelihood;
@@ -5742,6 +5778,8 @@ do_enkmfds(const List &model, const List &parameters,
         likelihood_estimators, proposal_in, without_cancelled_index, full_index,
         proposal_is_evaluated_in, true, true, false, false, parallel_in,
         grain_size_in, "");
+
+    apply_output_options(model, alg);
 
     SMCOutput *output = alg->run();
 
@@ -6225,6 +6263,8 @@ double do_particle_filter(const List &model, const List &parameters,
       results_name_in, &seed, data_created_in_get_likelihood_estimators,
       data_created_in_get_measurement_covariance_estimators);
 
+  apply_output_options(model, alg);
+
   SMCOutput *output = alg->run();
 
   if (!write_to_file_at_each_iteration) {
@@ -6261,6 +6301,8 @@ double do_particle_filter_with_fixed_params(
       write_to_file_at_each_iteration, parallel_in, grain_size_in,
       results_name_in, &seed, data_created_in_get_likelihood_estimators,
       data_created_in_get_measurement_covariance_estimators);
+
+  apply_output_options(model, alg);
 
   SMCOutput *output = alg->run(list_to_parameters(fixed_parameter_list));
 

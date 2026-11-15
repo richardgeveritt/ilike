@@ -68,6 +68,11 @@ public:
    * @param another The GradientEstimatorOutput instance to copy from.
    */
   void operator=(const ProposalStore &another);
+
+  // Moves take the gradient estimator output (an owned pointer) instead of
+  // duplicating it, and leave the source without one.
+  ProposalStore(ProposalStore &&another);
+  void operator=(ProposalStore &&another);
   
   /**
    * @brief Sets the transformed parameters.
@@ -94,7 +99,7 @@ public:
    *
    * @return The result.
    */
-  Parameters get_transformed_parameters() const;
+  const Parameters& get_transformed_parameters() const;
   
 protected:
   

@@ -936,14 +936,8 @@ void Particle::make_copy(Particle &&another)
   this->previous_self = another.previous_self;
   
   //this->current_proposal_store = boost::unordered_map<const ProposalKernel*, ProposalStore>();
-  this->current_proposal_store = boost::unordered_map<int, ProposalStore>();
-  this->current_proposal_store.reserve(another.current_proposal_store.size());
-  for (auto i=another.current_proposal_store.begin();
-       i!=another.current_proposal_store.end();
-       ++i)
-  {
-    this->current_proposal_store[i->first] = std::move(i->second);
-  }
+  // Move the whole map (its nodes change owner; no element is copied).
+  this->current_proposal_store = std::move(another.current_proposal_store);
   
   this->proposals_to_transform_for_pointer = another.proposals_to_transform_for_pointer;
   this->proposals_to_find_gradient_for_pointer = another.proposals_to_find_gradient_for_pointer;
@@ -1031,7 +1025,13 @@ void Particle::simulate_proposal_variables(const std::vector<const ProposalKerne
          i!=proposals_to_transform_for_pointer->end();
          ++i)
     {
-      
+      // A proposal without a transform needs nothing stored:
+      // get_transformed_parameters returns this->parameters for it without
+      // looking in the store. Storing a copy of the parameters here cost a
+      // hash-map copy (and a store entry) per proposed particle.
+      if ((*i)->get_transform()==NULL)
+        continue;
+
       boost::unordered_map< int, ProposalStore>::iterator current_transform_stored_at_proposal = this->current_proposal_store.end();
       
       /*
@@ -1753,46 +1753,23 @@ arma::rowvec Particle::get_rowvec(const std::vector<std::string> &state_names) c
  }
  */
 
-Parameters Particle::get_transformed_parameters(const ProposalKernel* proposal_in) const
+const Parameters& Particle::get_transformed_parameters(const ProposalKernel* proposal_in) const
 {
   if (proposal_in->get_transform()==NULL)
-  {
     return this->parameters;
-  }
-  else
+
+  auto found = this->current_proposal_store.find(proposal_in->get_instance_index());
+  if (found != this->current_proposal_store.end())
   {
-    auto found = this->current_proposal_store.find(proposal_in->get_instance_index());
-    if (found != this->current_proposal_store.end())
-    {
-      Parameters transformed_parameters = found->second.get_transformed_parameters();
-      if (transformed_parameters.is_empty())
-      {
-        if (proposal_in->get_transform()!=NULL)
-        {
-          return proposal_in->get_transform()->transform(this->parameters);
-        }
-        else
-        {
-          return this->parameters;
-        }
-      }
-      else
-      {
-        return transformed_parameters;
-      }
-    }
-    else
-    {
-      if (proposal_in->get_transform()!=NULL)
-      {
-        return proposal_in->get_transform()->transform(this->parameters);
-      }
-      else
-      {
-        return this->parameters;
-      }
-    }
+    const Parameters &transformed_parameters = found->second.get_transformed_parameters();
+    if (!transformed_parameters.is_empty())
+      return transformed_parameters;
+    found->second.set_transformed_parameters(proposal_in->get_transform()->transform(this->parameters));
+    return found->second.get_transformed_parameters();
   }
+  ProposalStore &store = this->current_proposal_store[proposal_in->get_instance_index()];
+  store.set_transformed_parameters(proposal_in->get_transform()->transform(this->parameters));
+  return store.get_transformed_parameters();
 }
 
 GradientEstimatorOutput* Particle::get_gradient_estimator_output(const ProposalKernel* proposal_in) const

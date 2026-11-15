@@ -144,6 +144,28 @@ Particle MetropolisMCMC::move(RandomNumberGenerator &rng,
   
 }
 
+void MetropolisMCMC::move_in_place(RandomNumberGenerator &rng,
+                                 Particle &particle) const
+{
+  // Same steps and random numbers as MetropolisMCMC::move; a rejection leaves
+  // particle as it is instead of returning a copy of it.
+  Particle proposed_particle = this->proposal->move(rng,
+                                                    particle,
+                                                    this->get_new_outputs_index(this->index));
+  double log_u = log(runif(rng));
+  double numerator = proposed_particle.evaluate_likelihoods(this->index);
+  double denominator = particle.get_cached_likelihoods(this->index);
+  if ( (numerator==-arma::datum::inf) || (denominator==-arma::datum::inf) )
+    return;
+  if (log_u < numerator - denominator)
+  {
+    proposed_particle.set_acceptance(this->proposal,true);
+    this->refresh_cut_factors(proposed_particle);
+    this->check_carried_over_factors(proposed_particle, this->index);
+    particle = std::move(proposed_particle);
+  }
+}
+
 /*
  Particle MetropolisMCMC::move(RandomNumberGenerator &rng,
  Particle &particle,
@@ -291,10 +313,17 @@ std::vector<const ProposalKernel*> MetropolisMCMC::get_proposals() const
   return proposals;
 }
 
+bool MetropolisMCMC::adapts() const
+{
+  return this->proposal->has_mcmc_adaptor();
+}
+
 StandardMCMCOutput* MetropolisMCMC::initialise_mcmc_output() const
 {
-  MetropolisMCMC* dup = this->metropolis_mcmc_duplicate();
-  MetropolisStandardMCMCOutput* out = new MetropolisStandardMCMCOutput(dup);
-  return out;
+  // A move that adapts gives each chain its own copy of the kernel; otherwise
+  // all the particles' outputs share this one (used read-only by the moves).
+  if (this->adapts())
+    return new MetropolisStandardMCMCOutput(this->metropolis_mcmc_duplicate());
+  return new MetropolisStandardMCMCOutput(const_cast<MetropolisMCMC*>(this), false);
 }
 }

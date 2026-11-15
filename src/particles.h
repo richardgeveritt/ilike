@@ -304,7 +304,8 @@ public:
   // only here for output
   Parameters schedule_parameters;
   
-  double ess;
+  // NaN until computed (MCMC output used to write uninitialised memory here).
+  double ess = arma::datum::nan;
   
   /**
    * @brief Closes any open file streams.

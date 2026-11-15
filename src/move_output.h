@@ -89,6 +89,21 @@ public:
   // Returns all vector points as a matrix (one row per MCMC step / particle).
   virtual arma::mat get_matrix_of_vector_points(const std::vector<std::string> &variables,
                                                 std::shared_ptr<Transform> transform) const=0;
+
+  // Write this output's points into columns first_column, first_column + 1,
+  // ... of destination (one column per point, the variables' values down
+  // the column): the transpose of get_matrix_of_vector_points(variables,
+  // NULL). Used to write all points of a generation without intermediate
+  // copies. Returns the number of columns written.
+  virtual size_t fill_vector_points_transposed(const std::vector<std::string> &variables,
+                                               arma::mat &destination,
+                                               size_t first_column) const
+  {
+    arma::mat m = this->get_matrix_of_vector_points(variables, NULL);
+    if (m.n_rows > 0)
+      destination.cols(first_column, first_column + m.n_rows - 1) = m.t();
+    return m.n_rows;
+  }
   
   virtual void write_factors(const std::string &directory_name,
                              const std::string &index) const=0;

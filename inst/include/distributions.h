@@ -762,17 +762,36 @@ inline double chol2logdet(const arma::mat &chol) {
 
 /*!
 Generates a random vector from the multivariate normal distribution with mean
-`mu` and Cholesky decomposition `chol` of the covariance.
+`mu` and Cholesky decomposition `chol` of the covariance. `chol` is the
+upper-triangular factor R with covariance = R^T R, as returned by
+`arma::chol(covariance)` (the convention used throughout ilike, e.g. by
+`chol2inv`).
 */
 inline arma::colvec rmvnorm_using_chol(RandomNumberGenerator &rng,
                                        const arma::colvec &mu,
                                        const arma::mat &chol) {
-  // rmvnorm from
-  // https://gallery.rcpp.org/articles/simulate-multivariate-normal/
+  // For a column vector z of independent N(0,1), R^T z has covariance R^T R.
+  // (Until 2026-11-15 this returned mu + R z, whose covariance R R^T differs
+  // from the covariance unless it is diagonal: the Rcpp gallery code this came
+  // from uses row vectors, z^T R.)
   size_t n = 1;
   int ncols = chol.n_cols;
   arma::mat Y = rnorm(rng, std::pair<size_t, size_t>(ncols, n));
-  return (mu + chol * Y);
+  return (mu + chol.t() * Y);
+}
+
+/*!
+Generates a random vector from the multivariate normal distribution with mean
+`mu` and covariance sd_scale^2 L L^T, where `lower_chol` is the
+lower-triangular Cholesky factor L (`arma::chol(covariance, "lower")`). Scales
+the simulated vector rather than the matrix, so no d x d temporary is formed.
+*/
+inline arma::colvec rmvnorm_using_lower_chol(RandomNumberGenerator &rng,
+                                             const arma::colvec &mu,
+                                             const arma::mat &lower_chol,
+                                             double sd_scale) {
+  arma::mat Y = rnorm(rng, std::pair<size_t, size_t>(lower_chol.n_cols, 1));
+  return (mu + sd_scale * (lower_chol * Y));
 }
 
 /*!
@@ -784,7 +803,8 @@ inline arma::colvec rmvnorm(RandomNumberGenerator &rng, const arma::colvec &mu,
   size_t n = 1;
   int ncols = Sigma.n_cols;
   arma::mat Y = rnorm(rng, std::pair<size_t, size_t>(ncols, n));
-  return (mu + arma::chol(Sigma) * Y);
+  // lower factor L, Sigma = L L^T (see rmvnorm_using_chol)
+  return (mu + arma::chol(Sigma, "lower") * Y);
 }
 
 /*!
@@ -797,7 +817,7 @@ inline arma::mat rmvnorm(RandomNumberGenerator &rng, size_t n,
                          const arma::colvec &mu, const arma::mat &Sigma) {
   int ncols = Sigma.n_cols;
   arma::mat Y = rnorm(rng, std::pair<size_t, size_t>(ncols, n));
-  arma::mat prod = arma::chol(Sigma) * Y;
+  arma::mat prod = arma::chol(Sigma, "lower") * Y;
   prod.each_col() += mu;
   return (prod);
 }
@@ -1042,6 +1062,13 @@ inline arma::colvec rmvlnorm_using_chol(RandomNumberGenerator &rng,
                                         const arma::colvec &mulog,
                                         const arma::mat &chollog) {
   return exp(rmvnorm_using_chol(rng, mulog, chollog));
+}
+
+inline arma::colvec rmvlnorm_using_lower_chol(RandomNumberGenerator &rng,
+                                              const arma::colvec &mulog,
+                                              const arma::mat &lower_chollog,
+                                              double sd_scale) {
+  return exp(rmvnorm_using_lower_chol(rng, mulog, lower_chollog, sd_scale));
 }
 
 /*!

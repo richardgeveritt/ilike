@@ -153,6 +153,13 @@ public:
   
   void write_to_file(const std::string &directory_name,
                      const std::string &index) const;
+
+  bool has_compact_values() const;
+  size_t number_of_compact_values() const;
+  void compact_values(double *values) const;
+  void write_compact_values(const std::string &directory_name,
+                            const std::string &index,
+                            const double *values) const;
   
   /**
    * @brief Closes any open file streams.

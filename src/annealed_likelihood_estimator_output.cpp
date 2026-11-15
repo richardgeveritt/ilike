@@ -244,20 +244,44 @@ void AnnealedLikelihoodEstimatorOutput::print(std::ostream &os) const
 void AnnealedLikelihoodEstimatorOutput::write_to_file(const std::string &dir_name,
                                                       const std::string &index)
 {
+  // Buffered (see close_ofstreams); the inner output writes as before.
   std::string directory_name = dir_name + "_annealed";
-
-  if (!directory_exists(directory_name))
-    make_directory(directory_name);
-
-  if (!this->estimator->h5_file)
+  if (this->estimator->h5_file_path.empty())
   {
+    if (!directory_exists(directory_name))
+      make_directory(directory_name);
     this->estimator->h5_file_path = directory_name + "/output.h5";
-    this->estimator->h5_file = h5_open_or_create(this->estimator->h5_file_path);
   }
-
-  h5_append_double(*this->estimator->h5_file, "log_likelihood", this->log_likelihood);
-
+  this->estimator->pending_log_likelihoods.push_back(this->log_likelihood);
   this->estimator_output->write_to_file(directory_name, index);
+}
+
+size_t AnnealedLikelihoodEstimatorOutput::compact_size() const
+{
+  // its own value and the inner output's record, if the inner output has one
+  size_t inner = this->estimator_output->compact_size();
+  return (inner == 0) ? 0 : 1 + inner;
+}
+
+void AnnealedLikelihoodEstimatorOutput::compact_values(double *values) const
+{
+  values[0] = this->log_likelihood;
+  this->estimator_output->compact_values(values + 1);
+}
+
+void AnnealedLikelihoodEstimatorOutput::write_compact_values(const std::string &dir_name,
+                                                             const std::string &index,
+                                                             const double *values)
+{
+  std::string directory_name = dir_name + "_annealed";
+  if (this->estimator->h5_file_path.empty())
+  {
+    if (!directory_exists(directory_name))
+      make_directory(directory_name);
+    this->estimator->h5_file_path = directory_name + "/output.h5";
+  }
+  this->estimator->pending_log_likelihoods.push_back(values[0]);
+  this->estimator_output->write_compact_values(directory_name, index, values + 1);
 }
 
 void AnnealedLikelihoodEstimatorOutput::forget_you_were_already_written_to_file()
@@ -267,7 +291,15 @@ void AnnealedLikelihoodEstimatorOutput::forget_you_were_already_written_to_file(
 
 void AnnealedLikelihoodEstimatorOutput::close_ofstreams()
 {
+  if (!this->estimator->pending_log_likelihoods.empty() &&
+      !this->estimator->h5_file_path.empty())
+  {
+    std::shared_ptr<HighFive::File> file = h5_open_or_create(this->estimator->h5_file_path);
+    h5_append_doubles(*file, "log_likelihood", this->estimator->pending_log_likelihoods);
+    this->estimator->pending_log_likelihoods.clear();
+  }
   this->estimator->h5_file.reset();
+  this->estimator->h5_file_path.clear();
   this->estimator_output->close_ofstreams();
 }
 }

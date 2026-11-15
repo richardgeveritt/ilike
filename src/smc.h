@@ -39,6 +39,9 @@ class ParticleSimulator;
 class SMC : public LikelihoodEstimator
 {
 public:
+
+  void set_write_factor_output(bool write_factor_output_in) { this->write_factor_output = write_factor_output_in; }
+  void set_compact_stored_output(bool compact_stored_output_in) { this->compact_stored_output = compact_stored_output_in; }
   
   /**
    * @brief Performs the smc operation.
@@ -468,6 +471,17 @@ protected:
   
   /** @brief Path to the HDF5 output file. */
   std::string h5_file_path;
+
+  // Whether write_to_file writes each particle's factor outputs (the
+  // iterationK/factorJ_* files). Set from the recipe (R argument
+  // write_factor_output, default TRUE).
+  bool write_factor_output = true;
+
+  // Set for an SMC run used inside a factor (e.g. an algorithmic likelihood):
+  // at the end of each run its stored generations are kept in compact form
+  // and written concatenated over the outer points (dev/plan.md, nested
+  // output design).
+  bool compact_stored_output = false;
 
   //Parameters single_particle_is_step() const;
   

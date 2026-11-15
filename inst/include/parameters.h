@@ -61,10 +61,93 @@
 
 class Parameters;
 
-typedef boost::unordered_map<std::string, std::pair<std::shared_ptr<arma::mat>, bool>>::iterator vector_parameter_iterator;
-typedef boost::unordered_map<std::string, std::pair<std::shared_ptr<arma::mat>, bool>>::const_iterator vector_parameter_const_iterator;
-typedef boost::unordered_map<std::string, std::pair<std::shared_ptr<boost::any>, bool>>::iterator any_parameter_iterator;
-typedef boost::unordered_map<std::string, std::pair<std::shared_ptr<boost::any>, bool>>::const_iterator any_parameter_const_iterator;
+// A small map from variable names to values, kept as a vector of
+// (name, value) pairs searched linearly (dev/plan.md, Stage 3 (b)). A model
+// has a handful of variables, so this is faster than a hash map: no hashing,
+// one allocation for the whole map instead of one node per variable, and
+// copies are a single vector copy. It offers the operations Parameters uses,
+// with std::unordered_map's semantics: insert never overwrites an existing
+// name; operator[] inserts a default value for a new name. Iteration is in
+// insertion order. Values are shared_ptrs in Parameters, so references to
+// the matrices stay valid when the vector grows.
+template <typename V>
+class FlatMap
+{
+public:
+  typedef std::pair<std::string, V> value_type;
+  typedef typename std::vector<value_type>::iterator iterator;
+  typedef typename std::vector<value_type>::const_iterator const_iterator;
+
+  iterator begin() { return this->data.begin(); }
+  iterator end() { return this->data.end(); }
+  const_iterator begin() const { return this->data.begin(); }
+  const_iterator end() const { return this->data.end(); }
+  size_t size() const { return this->data.size(); }
+  bool empty() const { return this->data.empty(); }
+  void clear() { this->data.clear(); }
+  void reserve(size_t n) { this->data.reserve(n); }
+
+  iterator find(const std::string &key)
+  {
+    for (iterator i = this->data.begin(); i != this->data.end(); ++i)
+      if (i->first == key)
+        return i;
+    return this->data.end();
+  }
+
+  const_iterator find(const std::string &key) const
+  {
+    for (const_iterator i = this->data.begin(); i != this->data.end(); ++i)
+      if (i->first == key)
+        return i;
+    return this->data.end();
+  }
+
+  std::pair<iterator, bool> insert(const value_type &value)
+  {
+    iterator found = this->find(value.first);
+    if (found != this->data.end())
+      return std::pair<iterator, bool>(found, false);
+    this->data.push_back(value);
+    return std::pair<iterator, bool>(this->data.end() - 1, true);
+  }
+
+  std::pair<iterator, bool> insert(value_type &&value)
+  {
+    iterator found = this->find(value.first);
+    if (found != this->data.end())
+      return std::pair<iterator, bool>(found, false);
+    this->data.push_back(std::move(value));
+    return std::pair<iterator, bool>(this->data.end() - 1, true);
+  }
+
+  template <typename InputIterator>
+  void insert(InputIterator first, InputIterator last)
+  {
+    for (; first != last; ++first)
+      this->insert(*first);
+  }
+
+  V& operator[](const std::string &key)
+  {
+    iterator found = this->find(key);
+    if (found != this->data.end())
+      return found->second;
+    this->data.emplace_back(key, V());
+    return this->data.back().second;
+  }
+
+private:
+  std::vector<value_type> data;
+};
+
+typedef FlatMap<std::pair<std::shared_ptr<arma::mat>, bool>> VectorParameterMap;
+typedef FlatMap<std::pair<std::shared_ptr<boost::any>, bool>> AnyParameterMap;
+
+typedef VectorParameterMap::iterator vector_parameter_iterator;
+typedef VectorParameterMap::const_iterator vector_parameter_const_iterator;
+typedef AnyParameterMap::iterator any_parameter_iterator;
+typedef AnyParameterMap::const_iterator any_parameter_const_iterator;
 
 RCPP_EXPOSED_CLASS(Parameters)
 
@@ -123,9 +206,11 @@ public:
   /**
    * @brief Accessor operator for const objects.
    * @param variable The name of the variable.
-   * @return Copy of the Armadillo matrix associated with the variable.
+   * @return The Armadillo matrix associated with the variable (a const
+   * reference: bind it to a reference, `const arma::mat &x = p["x"];`, to use
+   * it without copying; `arma::mat x = p["x"];` copies as before).
    */
-  arma::mat operator[](const std::string &variable) const;
+  const arma::mat& operator[](const std::string &variable) const;
 
   /**
    * @brief Accessor operator for a vector of variable names.
@@ -405,7 +490,7 @@ protected:
    * - A shared pointer to an Armadillo matrix (arma::mat), which holds the parameter data.
    * - A boolean flag indicating whether the parameter is treated as "fixed". When Parameters is copied, the fixed parameters only copy the shared pointer, while the non-fixed parameters perform a deep copy.
    */
-  boost::unordered_map<std::string, std::pair<std::shared_ptr<arma::mat>, bool>> vector_parameters;
+  VectorParameterMap vector_parameters;
 
   /**
    * @brief A map that associates parameter names with their values and a flag indicating if they are set.
@@ -415,7 +500,7 @@ protected:
    * - A shared pointer to a boost::any object, which can hold any type of parameter value.
    * - A boolean flag indicating whether the parameter is treated as "fixed". When Parameters is copied, the fixed parameters only copy the shared pointer, while the non-fixed parameters perform a deep copy.
    */
-  boost::unordered_map<std::string, std::pair<std::shared_ptr<boost::any>, bool>> any_parameters;
+  AnyParameterMap any_parameters;
 
   /**
    * @brief Copies the content of another Parameters object.
@@ -630,8 +715,8 @@ inline void Parameters::make_copy(Parameters &&another)
   this->vector_parameters = std::move(another.vector_parameters);
   this->any_parameters = std::move(another.any_parameters);
 
-  another.vector_parameters = boost::unordered_map<std::string, std::pair<std::shared_ptr<arma::mat>, bool>>();
-  another.any_parameters = boost::unordered_map<std::string, std::pair<std::shared_ptr<boost::any>, bool>>();
+  another.vector_parameters = VectorParameterMap();
+  another.any_parameters = AnyParameterMap();
 }
 
 inline arma::mat &Parameters::operator[](const std::string &variable)
@@ -658,7 +743,7 @@ inline arma::mat &Parameters::operator[](const std::string &variable)
   }
 }
 
-inline arma::mat Parameters::operator[](const std::string &variable) const
+inline const arma::mat& Parameters::operator[](const std::string &variable) const
 {
   auto found = this->vector_parameters.find(variable);
   if (found != this->vector_parameters.end())

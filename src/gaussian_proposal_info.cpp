@@ -91,6 +91,7 @@ void GaussianProposalInfo::make_copy(const GaussianProposalInfo &another)
   this->covariance = another.covariance;
   this->A = another.A;
   this->chol = another.chol;
+  this->chol_lower = another.chol_lower;
   this->inv = another.inv;
   this->logdet = another.logdet;
   this->inv_chol = another.inv_chol;
@@ -120,6 +121,7 @@ void GaussianProposalInfo::make_copy(GaussianProposalInfo &&another)
   this->covariance = std::move(another.covariance);
   this->A = std::move(another.A);
   this->chol = std::move(another.chol);
+  this->chol_lower = std::move(another.chol_lower);
   this->inv = std::move(another.inv);
   this->logdet = std::move(another.logdet);
   this->inv_chol = std::move(another.inv_chol);
@@ -129,6 +131,7 @@ void GaussianProposalInfo::make_copy(GaussianProposalInfo &&another)
   another.covariance = arma::mat();
   another.A = arma::mat();
   another.chol = arma::mat();
+  another.chol_lower = arma::mat();
   another.inv = arma::mat();
   another.logdet = 0.0;
   another.inv_chol = arma::mat();
@@ -153,6 +156,7 @@ void GaussianProposalInfo::set_covariance(const arma::mat &covariance_in)
       Rcpp::stop("GaussianRandomWalkProposalKernel::setup_covariances - covariance matrix is not sympd.");
     }
     this->chol= arma::chol(this->covariance);
+    this->chol_lower = this->chol.t();
     this->inv_chol = arma::inv(this->chol);
     this->inv = this->inv_chol*arma::trans(this->inv_chol);
     this->logdet = chol2logdet(this->chol);
@@ -175,18 +179,19 @@ void GaussianProposalInfo::set_covariance_info()
       Rcpp::stop("GaussianRandomWalkProposalKernel::set_covariance_info - covariance matrix is not sympd.");
     }
     this->chol= arma::chol(this->covariance);
+    this->chol_lower = this->chol.t();
     this->inv_chol = arma::inv(this->chol);
     this->inv = this->inv_chol*arma::trans(this->inv_chol);
     this->logdet = chol2logdet(this->chol);
   }
 }
 
-arma::colvec GaussianProposalInfo::get_mean() const
+const arma::colvec& GaussianProposalInfo::get_mean() const
 {
   return this->mean;
 }
 
-arma::mat GaussianProposalInfo::get_covariance() const
+const arma::mat& GaussianProposalInfo::get_covariance() const
 {
   return this->covariance;
 }
@@ -206,17 +211,22 @@ Scale GaussianProposalInfo::get_scale() const
   return this->scale;
 }
 
-arma::mat GaussianProposalInfo::get_chol() const
+const arma::mat& GaussianProposalInfo::get_chol() const
 {
   return this->chol;
 }
 
-arma::mat GaussianProposalInfo::get_inv() const
+const arma::mat& GaussianProposalInfo::get_chol_lower() const
+{
+  return this->chol_lower;
+}
+
+const arma::mat& GaussianProposalInfo::get_inv() const
 {
   return this->inv;
 }
 
-arma::mat GaussianProposalInfo::get_inv_chol() const
+const arma::mat& GaussianProposalInfo::get_inv_chol() const
 {
   return this->inv_chol;
 }

@@ -177,9 +177,9 @@ Parameters GaussianRandomWalkProposalKernel::simulate(RandomNumberGenerator &rng
     //arma::colvec mean = i->second.get_mean();
     double scale = i->second.get_double_scale();
     //double dim = double(mean.n_rows);
-    output[i->first] = rmvnorm_using_chol(rng,
+    output[i->first] = rmvnorm_using_lower_chol(rng,
                                           particle.get_transformed_parameters(this).get_colvec(i->first),
-                                          sqrt(scale)*i->second.get_chol());
+                                          i->second.get_chol_lower(), sqrt(scale));
   }
   return output;
 }
@@ -220,9 +220,9 @@ Parameters GaussianRandomWalkProposalKernel::subsample_simulate(RandomNumberGene
   Parameters output;
   //if (this->unused_variables_kept)
   //  output = *particle.move_parameters;
-  output[variable] = rmvnorm_using_chol(rng,
+  output[variable] = rmvnorm_using_lower_chol(rng,
                                         particle.get_transformed_parameters(this).get_colvec(variable),
-                                        sqrt(found->second.get_double_scale())*found->second.get_chol());
+                                        found->second.get_chol_lower(), sqrt(found->second.get_double_scale()));
   return output;
 }
 

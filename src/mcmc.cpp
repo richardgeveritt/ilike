@@ -81,6 +81,7 @@ void MCMC::operator=(const MCMC &another)
 
 void MCMC::make_copy(const MCMC &another)
 {
+  this->thin = another.thin;
   if (another.termination!=NULL)
     this->termination = another.termination->duplicate();
   else
@@ -177,22 +178,37 @@ MoveOutput* MCMC::run(RandomNumberGenerator &rng,
 {
   StandardMCMCOutput* mcmc_output = this->initialise_mcmc_output();//new StandardMCMCOutput();
   
+  mcmc_output->set_thin(this->thin);
+  bool adapting = this->adapts();
   Particle current_particle = particle;
-  Particle* old_pointer = &current_particle;
   while (!mcmc_output->terminate())
   {
-    current_particle = mcmc_output->move(rng,
-                                         current_particle);
+    // In place: a rejected proposal no longer copies the current state.
+    mcmc_output->get_mcmc()->move_in_place(rng, current_particle);
     mcmc_output->increment_counter();
-    if (&current_particle==old_pointer)
-    {
-      current_particle.tell_factors_to_forget_they_were_already_written_to_file();
-    }
-    mcmc_output->push_back(current_particle);
-    mcmc_output->mcmc_adapt();
+    current_particle.tell_factors_to_forget_they_were_already_written_to_file();
+    // Store the iteration compactly (its values and factor records), not a
+    // copy of the particle; the state itself is handed over at the end.
+    mcmc_output->record(current_particle);
+    if (adapting)
+      mcmc_output->mcmc_adapt(current_particle);
   }
+  mcmc_output->set_current(std::move(current_particle));
   mcmc_output->reset_counter();
   return mcmc_output;
+}
+
+void MCMC::set_thin(size_t thin_in)
+{
+  if (thin_in < 1)
+    Rcpp::stop("MCMC: thin must be at least 1.");
+  this->thin = thin_in;
+}
+
+void MCMC::move_in_place(RandomNumberGenerator &rng,
+                         Particle &particle) const
+{
+  particle = this->move(rng, particle);
 }
 
 /*

@@ -246,7 +246,7 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state)
       // For a particle filter, we instead need to use
       // Data current_measurement = this->data->get_using_time_index(this->measurements_names);
       // Returns the data for a time slice, which will include a bunch of variables.
-      arma::colvec current_measurement = this->data->row(this->current_index)[(*i)->get_measurement_variable()];
+      arma::colvec current_measurement = arma::vectorise(this->data->row(this->current_index)[(*i)->get_measurement_variable()]);
       //arma::colvec current_measurement = (*this->data)[this->measurements_names].col(this->current_index);
       
       // Update at initial step.
@@ -292,7 +292,7 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state)
          i!=this->updaters.end();
          ++i)
     {
-      arma::colvec current_measurement = this->data->row(this->current_index)[(*i)->get_measurement_variable()];
+      arma::colvec current_measurement = arma::vectorise(this->data->row(this->current_index)[(*i)->get_measurement_variable()]);
       //arma::colvec current_measurement = (*this->data)[this->measurements_names].col(this->current_index);
       
       // Update at initial step.
@@ -506,7 +506,7 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state,
       // For a particle filter, we instead need to use
       // Data current_measurement = this->data->get_using_time_index(this->measurements_names);
       // Returns the data for a time slice, which will include a bunch of variables.
-      arma::colvec current_measurement = this->data->row(this->current_index)[(*i)->get_measurement_variable()];
+      arma::colvec current_measurement = arma::vectorise(this->data->row(this->current_index)[(*i)->get_measurement_variable()]);
       //arma::colvec current_measurement = (*this->data)[this->measurements_names].col(this->current_index);
       
       // Update at initial step.
@@ -555,7 +555,7 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state,
       // For a particle filter, we instead need to use
       // Data current_measurement = this->data->get_using_time_index(this->measurements_names);
       // Returns the data for a time slice, which will include a bunch of variables.
-      arma::colvec current_measurement = this->data->row(this->current_index)[(*i)->get_measurement_variable()];
+      arma::colvec current_measurement = arma::vectorise(this->data->row(this->current_index)[(*i)->get_measurement_variable()]);
       //arma::colvec current_measurement = (*this->data)[this->measurements_names].col(this->current_index);
       
       // Update at initial step.

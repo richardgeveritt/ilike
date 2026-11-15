@@ -1,0 +1,46 @@
+// Linear-Gaussian SSM with a 2-D state and a 2-D measurement, correlated
+// noises and non-diagonal matrices (tests multivariate EnKF updates against
+// the exact Kalman filter): x_0 ~ N(0, I), x_t = A x_{t-1} + N(0, Q),
+// y_t = H x_t + N(0, R), with the matrices below; T = 10 measurements stored
+// as a T x 2 matrix (one row per time).
+
+/***data***/
+Data set_data() {
+  // simulated once from the model in R (set.seed(1)) and rounded
+  arma::mat y = {{-1.3703, 0.7706},
+                 {0.1127, 0.6335},
+                 {1.5672, 1.1424},
+                 {-0.0007, -0.9968},
+                 {-0.1496, 0.1188},
+                 {0.1355, -1.3231},
+                 {0.4484, -0.7974},
+                 {1.6447, 1.1012},
+                 {-0.7621, -0.6907},
+                 {1.3297, 1.4045}};
+  return Data("y", y);
+}
+
+/***prior,ilike::mvnorm(x,p1,p2)***/
+
+/***linear_gaussian_transition_variable***/
+std::string transition_variable() { return "x"; }
+
+/***linear_gaussian_transition_matrix***/
+arma::mat transition_matrix(const Parameters &parameters) { return arma::mat({{0.9, 0.2}, {-0.1, 0.8}}); }
+
+/***linear_gaussian_transition_covariance***/
+arma::mat transition_covariance(const Parameters &parameters) { return arma::mat({{0.5, 0.2}, {0.2, 0.4}}); }
+
+/***linear_gaussian_data_variable***/
+std::string data_variable() { return "y"; }
+
+/***linear_gaussian_data_state_variable***/
+std::string state_variable() { return "x"; }
+
+/***linear_gaussian_data_matrix***/
+arma::mat data_matrix(const Parameters &parameters) { return arma::mat({{1.0, 0.5}, {0.3, 1.0}}); }
+
+/***linear_gaussian_data_covariance***/
+arma::mat data_covariance(const Parameters &parameters) { return arma::mat({{1.0, 0.6}, {0.6, 1.0}}); }
+
+/***ssm,ilike::ssm(i,0,9,t,0,dt,1,1)***/

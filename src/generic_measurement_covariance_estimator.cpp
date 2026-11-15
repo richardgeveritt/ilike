@@ -96,7 +96,9 @@ void GenericMeasurementCovarianceEstimator::setup_measurement_variables()
   {
     arma::colvec current_vector = arma::vectorise(dummy_data[this->measurement_variables[i]]);
     means.push_back(arma::zeros<arma::colvec>(current_vector.n_rows));
-    covs.push_back(arma::zeros(current_vector.n_rows,current_vector.n_rows));
+    // N(0, I), as in setup_measurement_variables(parameters) (a zero matrix
+    // here is not positive definite, B20).
+    covs.push_back(arma::eye(current_vector.n_rows,current_vector.n_rows));
   }
   this->gaussian_simulator = GaussianIndependentProposalKernel(this->measurement_variables,
                                                                means,

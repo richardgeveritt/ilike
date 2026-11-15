@@ -282,7 +282,7 @@ void SequentialEnsembleKalmanWorker::specific_simulate(Ensemble* next_ensemble,
                                                        const Index* index)
 {
   RandomNumberGenerator local_rng(*this->get_rng());
-  local_rng.seed(this->get_seed(),this->get_number_of_ensemble_members());
+  local_rng.seed(this->get_seed());
   
   for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
   {
@@ -304,7 +304,7 @@ void SequentialEnsembleKalmanWorker::specific_simulate(Ensemble* next_ensemble,
                                                        const Parameters &conditioned_on_parameters)
 {
   RandomNumberGenerator local_rng(*this->get_rng());
-  local_rng.seed(this->get_seed(),this->get_number_of_ensemble_members());
+  local_rng.seed(this->get_seed());
   
   for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
   {
@@ -332,7 +332,7 @@ void SequentialEnsembleKalmanWorker::specific_simulate(Ensemble* next_ensemble,
  const Parameters &conditioned_on_parameters)
  {
  RandomNumberGenerator local_rng(*this->get_rng());
- local_rng.seed(this->get_seed(),this->get_number_of_particles());
+ local_rng.seed(this->get_seed());
  
  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
  {
@@ -578,7 +578,7 @@ void SequentialEnsembleKalmanWorker::specific_move(Ensemble* next_particles,
                                                    Ensemble* current_particles)
 {
   RandomNumberGenerator local_rng(*this->get_rng());
-  local_rng.seed(this->get_seed(),this->get_number_of_ensemble_members());
+  local_rng.seed(this->get_seed());
   
   for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
   {
@@ -594,7 +594,7 @@ void SequentialEnsembleKalmanWorker::specific_move(Ensemble* next_particles,
  const Parameters &conditioned_on_parameters)
  {
  RandomNumberGenerator local_rng(*this->get_rng());
- local_rng.seed(this->get_seed(),this->get_number_of_ensemble_members());
+ local_rng.seed(this->get_seed());
  
  for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
  {
@@ -610,7 +610,7 @@ void SequentialEnsembleKalmanWorker::subsample_specific_move(Ensemble* next_part
                                                              Ensemble* current_particles)
 {
   RandomNumberGenerator local_rng(*this->get_rng());
-  local_rng.seed(this->get_seed(),this->get_number_of_ensemble_members());
+  local_rng.seed(this->get_seed());
   
   for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
   {
@@ -626,7 +626,7 @@ void SequentialEnsembleKalmanWorker::subsample_specific_move(Ensemble* next_part
  const Parameters &conditioned_on_parameters)
  {
  RandomNumberGenerator local_rng(*this->get_rng());
- local_rng.seed(this->get_seed(),this->get_number_of_ensemble_members());
+ local_rng.seed(this->get_seed());
  
  for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
  {
@@ -733,7 +733,7 @@ void SequentialEnsembleKalmanWorker::subsample_specific_move(Ensemble* next_part
  const Parameters &conditioned_on_parameters)
  {
  RandomNumberGenerator local_rng(*this->get_rng());
- local_rng.seed(this->get_seed(),this->get_number_of_particles());
+ local_rng.seed(this->get_seed());
  
  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
  {
@@ -837,7 +837,7 @@ void SequentialEnsembleKalmanWorker::subsample_specific_move(Ensemble* next_part
 //void SequentialEnsembleKalmanWorker::specific_simulate_and_weight()
 //{
 //  RandomNumberGenerator local_rng(*this->get_rng());
-//  local_rng.seed(this->get_seed(),this->get_number_of_particles());
+//  local_rng.seed(this->get_seed());
 
 //  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
 //  {

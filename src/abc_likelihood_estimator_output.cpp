@@ -137,27 +137,52 @@ void ABCLikelihoodEstimatorOutput::print(std::ostream &os) const
 void ABCLikelihoodEstimatorOutput::write_to_file(const std::string &dir_name,
                                                  const std::string &index)
 {
-  std::string directory_name = dir_name + "_abc";
-
-  if (!directory_exists(directory_name))
-    make_directory(directory_name);
-
-  if (!this->estimator->h5_file)
-  {
-    this->estimator->h5_file_path = directory_name + "/output.h5";
-    this->estimator->h5_file = h5_open_or_create(this->estimator->h5_file_path);
-  }
-
-  h5_append_double(*this->estimator->h5_file, "log_likelihood", this->log_likelihood);
+  double values[1] = {this->log_likelihood};
+  this->write_compact_values(dir_name, index, values);
 }
 
 void ABCLikelihoodEstimatorOutput::forget_you_were_already_written_to_file()
 {
 }
 
+size_t ABCLikelihoodEstimatorOutput::compact_size() const
+{
+  return 1;
+}
+
+void ABCLikelihoodEstimatorOutput::compact_values(double *values) const
+{
+  values[0] = this->log_likelihood;
+}
+
+void ABCLikelihoodEstimatorOutput::write_compact_values(const std::string &dir_name,
+                                                        const std::string &index,
+                                                        const double *values)
+{
+  // Buffered: the values of a generation are written in one call by
+  // close_ofstreams (this used to stat the directory and extend the HDF5
+  // dataset once per point).
+  if (this->estimator->h5_file_path.empty())
+  {
+    std::string directory_name = dir_name + "_abc";
+    if (!directory_exists(directory_name))
+      make_directory(directory_name);
+    this->estimator->h5_file_path = directory_name + "/output.h5";
+  }
+  this->estimator->pending_log_likelihoods.push_back(values[0]);
+}
+
 void ABCLikelihoodEstimatorOutput::close_ofstreams()
 {
+  if (!this->estimator->pending_log_likelihoods.empty() &&
+      !this->estimator->h5_file_path.empty())
+  {
+    std::shared_ptr<HighFive::File> file = h5_open_or_create(this->estimator->h5_file_path);
+    h5_append_doubles(*file, "log_likelihood", this->estimator->pending_log_likelihoods);
+    this->estimator->pending_log_likelihoods.clear();
+  }
   this->estimator->h5_file.reset();
+  this->estimator->h5_file_path.clear();
 }
 
 }

@@ -127,7 +127,7 @@ public:
    *
    * @return The result.
    */
-  arma::colvec get_mean() const;
+  const arma::colvec& get_mean() const;
   /**
    * @brief Returns the a.
    *
@@ -139,7 +139,7 @@ public:
    *
    * @return The result.
    */
-  arma::mat get_covariance() const;
+  const arma::mat& get_covariance() const;
   /**
    * @brief Returns the double scale.
    *
@@ -157,19 +157,23 @@ public:
    *
    * @return The result.
    */
-  arma::mat get_chol() const;
+  const arma::mat& get_chol() const;
+  // Lower-triangular factor L = chol^T (covariance = L L^T), kept so that
+  // simulation can use L z: with R's reference BLAS a product with a
+  // transposed matrix (chol^T z) is about 3 times slower at d = 1000.
+  const arma::mat& get_chol_lower() const;
   /**
    * @brief Returns the inv.
    *
    * @return The result.
    */
-  arma::mat get_inv() const;
+  const arma::mat& get_inv() const;
   /**
    * @brief Returns the inv chol.
    *
    * @return The result.
    */
-  arma::mat get_inv_chol() const;
+  const arma::mat& get_inv_chol() const;
   /**
    * @brief Returns the logdet.
    *
@@ -258,6 +262,9 @@ protected:
   Scale scale;
   /** @brief The chol. */
   arma::mat chol;
+
+  // chol^T, see get_chol_lower.
+  arma::mat chol_lower;
   /** @brief The inv. */
   arma::mat inv;
   /** @brief The inv chol. */

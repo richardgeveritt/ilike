@@ -145,13 +145,75 @@ inline void h5_append_row(HighFive::File &file,
   }
   else
   {
+    // Rows per chunk: HDF5 allocates whole chunks, so a chunk of 64 rows of
+    // a long row (e.g. output_lengths: one row of N particles per SMC
+    // generation) wasted 63/64 of the space when only one row was written
+    // (IS: 512 bytes per point for N = 10^4). Keep chunks to about 8192
+    // values (64 KB) while still grouping short rows.
+    hsize_t rows_per_chunk = std::max<hsize_t>(1, std::min<hsize_t>(64, 8192/std::max<size_t>(ncols, 1)));
     HighFive::DataSetCreateProps props;
-    props.add(HighFive::Chunking(std::vector<hsize_t>{64, ncols}));
+    props.add(HighFive::Chunking(std::vector<hsize_t>{rows_per_chunk, ncols}));
     HighFive::DataSpace space = HighFive::DataSpace({0, ncols},
                                                     {HighFive::DataSpace::UNLIMITED, ncols});
     auto ds = file.createDataSet<double>(dset_path, space, props);
     ds.resize({1, ncols});
     ds.select({0, 0}, {1, ncols}).write(std::vector<std::vector<double>>{row});
+  }
+}
+
+// Append rows (given row by row in one buffer, ncols values each) to a 2-D
+// extendable dataset in one operation (h5_append_row extends it once per row).
+inline void h5_append_rows(HighFive::File &file,
+                           const std::string &dset_path,
+                           const std::vector<double> &rows_buffer,
+                           size_t ncols)
+{
+  if ((ncols == 0) || rows_buffer.empty()) return;
+  size_t nrows = rows_buffer.size()/ncols;
+  if (file.exist(dset_path))
+  {
+    auto ds = file.getDataSet(dset_path);
+    size_t old_rows = ds.getDimensions()[0];
+    ds.resize({old_rows + nrows, ncols});
+    ds.select({old_rows, 0}, {nrows, ncols}).write_raw(rows_buffer.data());
+  }
+  else
+  {
+    hsize_t rows_per_chunk = std::max<hsize_t>(1, std::min<hsize_t>(std::max<size_t>(nrows, 64), 8192/ncols));
+    HighFive::DataSetCreateProps props;
+    props.add(HighFive::Chunking(std::vector<hsize_t>{rows_per_chunk, ncols}));
+    HighFive::DataSpace space = HighFive::DataSpace({nrows, ncols},
+                                                    {HighFive::DataSpace::UNLIMITED, ncols});
+    auto ds = file.createDataSet<double>(dset_path, space, props);
+    ds.write_raw(rows_buffer.data());
+  }
+}
+
+// As h5_append_rows, from a raw buffer of nrows rows of ncols values (row by
+// row): e.g. the memory of a (ncols x nrows) Armadillo matrix.
+inline void h5_append_rows(HighFive::File &file,
+                           const std::string &dset_path,
+                           const double *rows_buffer,
+                           size_t nrows,
+                           size_t ncols)
+{
+  if ((ncols == 0) || (nrows == 0)) return;
+  if (file.exist(dset_path))
+  {
+    auto ds = file.getDataSet(dset_path);
+    size_t old_rows = ds.getDimensions()[0];
+    ds.resize({old_rows + nrows, ncols});
+    ds.select({old_rows, 0}, {nrows, ncols}).write_raw(rows_buffer);
+  }
+  else
+  {
+    hsize_t rows_per_chunk = std::max<hsize_t>(1, std::min<hsize_t>(std::max<size_t>(nrows, 64), 8192/ncols));
+    HighFive::DataSetCreateProps props;
+    props.add(HighFive::Chunking(std::vector<hsize_t>{rows_per_chunk, ncols}));
+    HighFive::DataSpace space = HighFive::DataSpace({nrows, ncols},
+                                                    {HighFive::DataSpace::UNLIMITED, ncols});
+    auto ds = file.createDataSet<double>(dset_path, space, props);
+    ds.write_raw(rows_buffer);
   }
 }
 
@@ -192,6 +254,21 @@ inline void h5_write_mat(HighFive::Group &grp,
   if (grp.exist(name))
     grp.unlink(name);
   grp.createDataSet(name, data);
+}
+
+// Write a (columns x points) matrix as a (points x columns) dataset: the
+// column-major memory of the argument is exactly the row-major layout of the
+// dataset, so it is written in one call without any copy (h5_write_mat copies
+// every row into its own std::vector first).
+inline void h5_write_mat_transposed(HighFive::Group &grp,
+                                    const std::string &name,
+                                    const arma::mat &transposed)
+{
+  if (grp.exist(name))
+    grp.unlink(name);
+  HighFive::DataSpace space(std::vector<size_t>{transposed.n_cols, transposed.n_rows});
+  auto ds = grp.createDataSet<double>(name, space);
+  ds.write_raw(transposed.memptr());
 }
 
 // Write an arma::colvec as a 1-D dataset.

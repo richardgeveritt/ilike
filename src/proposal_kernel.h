@@ -42,6 +42,8 @@ class ProposalKernel : public Kernel
 {
   
 public:
+
+  bool has_mcmc_adaptor() const { return this->mcmc_adaptor!=NULL; }
   
   /**
    * @brief Performs the proposalkernel operation.

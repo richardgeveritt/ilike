@@ -134,6 +134,27 @@ void ExactLikelihoodEstimatorOutput::forget_you_were_already_written_to_file()
 {
 }
 
+size_t ExactLikelihoodEstimatorOutput::compact_size() const
+{
+  return 1;
+}
+
+void ExactLikelihoodEstimatorOutput::compact_values(double *values) const
+{
+  values[0] = this->log_likelihood;
+}
+
+void ExactLikelihoodEstimatorOutput::write_compact_values(const std::string &dir_name,
+                                                          const std::string &index,
+                                                          const double *values)
+{
+  // as write_to_file, with the stored value
+  if (!this->estimator) return;
+  if (this->estimator->h5_file_path.empty())
+    this->estimator->h5_file_path = dir_name + "_exact.h5";
+  this->estimator->pending_log_likelihoods.push_back(values[0]);
+}
+
 void ExactLikelihoodEstimatorOutput::close_ofstreams()
 {
   if (!this->estimator) return;
@@ -149,6 +170,10 @@ void ExactLikelihoodEstimatorOutput::close_ofstreams()
                       this->estimator->pending_log_likelihoods);
     this->estimator->pending_log_likelihoods.clear();
   }
-  // Leave h5_file open; it will be closed when the estimator is destroyed.
+  // Close the file and forget its path: the next output written (the next
+  // SMC iteration) goes to its own directory. Keeping the path sent every
+  // iteration's values to the first iteration's file (B22).
+  this->estimator->h5_file.reset();
+  this->estimator->h5_file_path.clear();
 }
 }

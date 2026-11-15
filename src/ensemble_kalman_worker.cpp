@@ -86,7 +86,7 @@ void EnsembleKalmanWorker::simulate(Ensemble* next_ensemble,
   //this->simulated_particles().initialise_weights();
   
   // Simulate random numbers for resampling.
-  //this->the_enk->rng->seed(this->get_seed(),this->get_number_of_ensemble_members());
+  //this->the_enk->rng->seed(this->get_seed());
   //this->set_seed(this->get_seed() + this->get_number_of_ensemble_members());
 }
 
@@ -103,7 +103,7 @@ void EnsembleKalmanWorker::simulate(Ensemble* next_ensemble,
   //this->simulated_particles().initialise_weights();
   
   // Simulate random numbers for resampling.
-  //this->the_enk->rng->seed(this->get_seed(),this->get_number_of_ensemble_members());
+  //this->the_enk->rng->seed(this->get_seed());
   //this->set_seed(this->get_seed() + this->get_number_of_ensemble_members());
   
 }
@@ -160,7 +160,7 @@ void EnsembleKalmanWorker::subsample_move(Ensemble* next_particles,
  //this->simulated_particles().initialise_weights();
  
  // Simulate random numbers for resampling.
- this->the_enk->rng->seed(this->get_seed(),this->get_number_of_particles());
+ this->the_enk->rng->seed(this->get_seed());
  next_particles->simulate_resampling_variables(*this->the_enk->rng);
  this->set_seed(this->get_seed() + this->get_number_of_particles());
  

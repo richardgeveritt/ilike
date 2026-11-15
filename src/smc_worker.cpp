@@ -87,7 +87,7 @@ void SMCWorker::simulate(Particles* next_particles)
   //this->simulated_particles().initialise_weights();
   
   // Simulate random numbers for resampling.
-  this->the_smc->rng->seed(this->get_seed(),this->get_number_of_particles());
+  this->the_smc->rng->seed(this->get_seed());
   next_particles->simulate_resampling_variables(*this->the_smc->rng);
   this->set_seed(this->get_seed() + this->get_number_of_particles());
   
@@ -104,7 +104,7 @@ void SMCWorker::simulate(Particles* next_particles,
   //this->simulated_particles().initialise_weights();
   
   // Simulate random numbers for resampling.
-  this->the_smc->rng->seed(this->get_seed(),this->get_number_of_particles());
+  this->the_smc->rng->seed(this->get_seed());
   next_particles->simulate_resampling_variables(*this->the_smc->rng);
   this->set_seed(this->get_seed() + this->get_number_of_particles());
   
@@ -119,7 +119,7 @@ void SMCWorker::move(Particles* next_particles,
   this->set_seed(this->get_seed() + this->get_number_of_particles());
   
   // Simulate random numbers for resampling.
-  this->the_smc->rng->seed(this->get_seed(),this->get_number_of_particles());
+  this->the_smc->rng->seed(this->get_seed());
   next_particles->simulate_resampling_variables(*this->the_smc->rng);
   this->set_seed(this->get_seed() + this->get_number_of_particles());
 }
@@ -135,7 +135,7 @@ void SMCWorker::move(Particles* next_particles,
  this->set_seed(this->get_seed() + this->get_number_of_particles());
  
  // Simulate random numbers for resampling.
- this->the_smc->rng->seed(this->get_seed(),this->get_number_of_particles());
+ this->the_smc->rng->seed(this->get_seed());
  next_particles->simulate_resampling_variables(*this->the_smc->rng);
  this->set_seed(this->get_seed() + this->get_number_of_particles());
  }
@@ -152,7 +152,7 @@ void SMCWorker::subsample_simulate(Particles* next_particles,
   //this->simulated_particles().initialise_weights();
   
   // Simulate random numbers for resampling.
-  this->the_smc->rng->seed(this->get_seed(),this->get_number_of_particles());
+  this->the_smc->rng->seed(this->get_seed());
   next_particles->simulate_resampling_variables(*this->the_smc->rng);
   this->set_seed(this->get_seed() + this->get_number_of_particles());
   
@@ -166,7 +166,7 @@ void SMCWorker::subsample_move(Particles* next_particles,
   this->set_seed(this->get_seed() + this->get_number_of_particles());
   
   // Simulate random numbers for resampling.
-  this->the_smc->rng->seed(this->get_seed(),this->get_number_of_particles());
+  this->the_smc->rng->seed(this->get_seed());
   next_particles->simulate_resampling_variables(*this->the_smc->rng);
   this->set_seed(this->get_seed() + this->get_number_of_particles());
 }
@@ -182,7 +182,7 @@ void SMCWorker::subsample_move(Particles* next_particles,
  this->set_seed(this->get_seed() + this->get_number_of_particles());
  
  // Simulate random numbers for resampling.
- this->the_smc->rng->seed(this->get_seed(),this->get_number_of_particles());
+ this->the_smc->rng->seed(this->get_seed());
  next_particles->simulate_resampling_variables(*this->the_smc->rng);
  this->set_seed(this->get_seed() + this->get_number_of_particles());
  }

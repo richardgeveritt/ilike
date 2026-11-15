@@ -200,6 +200,9 @@ protected:
   std::shared_ptr<HighFive::File> h5_file;
   /** @brief Path to the HDF5 output file. */
   std::string h5_file_path;
+
+  // values written by AnnealedLikelihoodEstimatorOutput, flushed per generation
+  std::vector<double> pending_log_likelihoods;
   
   // Stored here.
   //AnnealedLikelihoodEstimatorOutput* output;

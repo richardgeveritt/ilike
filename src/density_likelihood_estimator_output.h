@@ -183,6 +183,17 @@ protected:
   
   void write_to_file(const std::string &directory_name,
                      const std::string &index = "");
+
+  
+  size_t compact_size() const;
+  
+  void compact_values(double *values) const;
+  
+  void write_compact_values(const std::string &directory_name,
+  
+                            const std::string &index,
+  
+                            const double *values);
   
   //std::string results_name;
   

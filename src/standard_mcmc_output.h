@@ -6,6 +6,8 @@ using namespace Rcpp;
 
 #include <vector>
 #include "move_output.h"
+#include "particle.h"
+#include "sample_store.h"
 #include "parameters.h"
 #include "ilike_header.h"
 
@@ -70,6 +72,16 @@ public:
    * @param particle_in The particle.
    */
   void push_back(const Particle &particle_in);
+
+  // Store an iteration (subject to thin) without changing the current state.
+  void record(const Particle &particle_in);
+
+  // Set the current state, taking it over.
+  void set_current(Particle &&particle_in);
+
+  void set_thin(size_t thin_in);
+
+  void mcmc_adapt(const Particle &current_particle);
   
   /**
    * @brief Performs the back operation.
@@ -96,6 +108,10 @@ public:
                            std::shared_ptr<Transform> transform) const;
   void write_any_points(const std::vector<std::string> &variables,
                         std::ofstream &file_stream) const;
+
+  size_t fill_vector_points_transposed(const std::vector<std::string> &variables,
+                                       arma::mat &destination,
+                                       size_t first_column) const;
 
   arma::mat get_matrix_of_vector_points(const std::vector<std::string> &variables,
                                         std::shared_ptr<Transform> transform) const;
@@ -190,8 +206,30 @@ protected:
    */
   void make_copy(const StandardMCMCOutput &another);
   
-  /** @brief The output. */
+  // The current state of the chain: what back() returns.
+  Particle current;
+
+  // Stored iterations (dev/plan.md 2.5, "Stage 2 - concrete design", item
+  // 2): their parameter values and, as extra columns, one compact record per
+  // factor (LikelihoodEstimatorOutput::compact_value). A stored MCMC
+  // iteration then costs 8 (d + number of factors) bytes instead of a
+  // Particle (about 1.7 KB at d = 1).
+  SampleStore store;
+
+  // Full copies of the stored iterations, used instead of the store when an
+  // iteration cannot be stored compactly: ensemble factor variables, or a
+  // factor output without a compact record (density/synthetic likelihood,
+  // annealed, nested algorithms, ...). Decided at the first stored
+  // iteration (rich_storage).
   std::deque<Particle> output;
+  bool storage_decided;
+  bool rich_storage;
+
+  // Store every thin-th iteration only (the current state is always kept).
+  size_t thin;
+  size_t number_of_iterations_seen;
+
+  std::vector<double> compact_scratch;
   
   /** @brief The algorithm parameters. */
   std::deque<Parameters> algorithm_parameters;

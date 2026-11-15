@@ -49,6 +49,24 @@ void ProposalStore::operator=(const ProposalStore &another)
   this->make_copy(another);
 }
 
+ProposalStore::ProposalStore(ProposalStore &&another)
+{
+  this->transformed_parameters = std::move(another.transformed_parameters);
+  this->gradient_estimator_output = another.gradient_estimator_output;
+  another.gradient_estimator_output = NULL;
+}
+
+void ProposalStore::operator=(ProposalStore &&another)
+{
+  if(this == &another)
+    return;
+  if (this->gradient_estimator_output!=NULL)
+    delete this->gradient_estimator_output;
+  this->transformed_parameters = std::move(another.transformed_parameters);
+  this->gradient_estimator_output = another.gradient_estimator_output;
+  another.gradient_estimator_output = NULL;
+}
+
 void ProposalStore::make_copy(const ProposalStore &another)
 {
   this->transformed_parameters = another.transformed_parameters;
@@ -78,7 +96,7 @@ GradientEstimatorOutput* ProposalStore::get_gradient_estimator_output() const
   return this->gradient_estimator_output;
 }
 
-Parameters ProposalStore::get_transformed_parameters() const
+const Parameters& ProposalStore::get_transformed_parameters() const
 {
   return this->transformed_parameters;
 }

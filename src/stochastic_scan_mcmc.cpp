@@ -102,6 +102,12 @@ Particle StochasticScanMCMC::move(RandomNumberGenerator &rng,
                                                            particle);
 }
 
+void StochasticScanMCMC::move_in_place(RandomNumberGenerator &rng,
+                                       Particle &particle) const
+{
+  this->moves[rdis(rng, this->probabilities)]->move_in_place(rng, particle);
+}
+
 /*
  Particle StochasticScanMCMC::move(RandomNumberGenerator &rng,
  Particle &particle,
@@ -271,8 +277,22 @@ std::vector<MCMC*> StochasticScanMCMC::get_duplicate_moves() const
   return duplicate_moves;
 }
 
+bool StochasticScanMCMC::adapts() const
+{
+  for (auto i=this->moves.begin(); i!=this->moves.end(); ++i)
+  {
+    if ((*i)->adapts())
+      return true;
+  }
+  return false;
+}
+
 StandardMCMCOutput* StochasticScanMCMC::initialise_mcmc_output() const
 {
-  return new StochasticScanStandardMCMCOutput(this->stochastic_scan_mcmc_duplicate());
+  // A move that adapts gives each chain its own copy of the kernel; otherwise
+  // all the particles' outputs share this one (used read-only by the moves).
+  if (this->adapts())
+    return new StochasticScanStandardMCMCOutput(this->stochastic_scan_mcmc_duplicate());
+  return new StochasticScanStandardMCMCOutput(const_cast<StochasticScanMCMC*>(this), false);
 }
 }

@@ -314,8 +314,11 @@ arma::mat DirectLinearGaussianMeasurementCovarianceEstimator::get_sqrt_adjustmen
                                                                                   double inverse_incremental_temperature) const
 {
   
-  arma::mat sqrtV = arma::chol(inverse_incremental_temperature*this->get_measurement_covariance());
-  arma::mat sqrtS = arma::chol(Cyy + inverse_incremental_temperature*this->get_measurement_covariance());
+  // Symmetric square roots: the square-root update (I - K H) with
+  // K = Cxy S^{-1/2} (S^{1/2} + V^{1/2})^{-1} gives the Kalman posterior covariance
+  // only for symmetric roots (a Cholesky factor is triangular; B19).
+  arma::mat sqrtV = arma::sqrtmat_sympd(inverse_incremental_temperature*this->get_measurement_covariance());
+  arma::mat sqrtS = arma::sqrtmat_sympd(Cyy + inverse_incremental_temperature*this->get_measurement_covariance());
   
   arma::mat stacked_H = this->As[0];
   if (this->As.size()>1)

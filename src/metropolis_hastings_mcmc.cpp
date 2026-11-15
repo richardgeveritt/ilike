@@ -160,6 +160,30 @@ Particle MetropolisHastingsMCMC::move(RandomNumberGenerator &rng,
   
 }
 
+void MetropolisHastingsMCMC::move_in_place(RandomNumberGenerator &rng,
+                                 Particle &particle) const
+{
+  // Same steps and random numbers as MetropolisHastingsMCMC::move; a rejection leaves
+  // particle as it is instead of returning a copy of it.
+  Particle proposed_particle = this->proposal->move(rng,
+                                                    particle,
+                                                    this->get_new_outputs_index(this->index));
+  double log_u = log(runif(rng));
+  double numerator = proposed_particle.evaluate_likelihoods(this->index);
+  double denominator = particle.get_cached_likelihoods(this->index);
+  if ( (numerator==-arma::datum::inf) || (denominator==-arma::datum::inf) )
+    return;
+  if (log_u < numerator - denominator +
+      this->proposal->evaluate_kernel(particle, proposed_particle) -
+      this->proposal->evaluate_kernel(proposed_particle, particle))
+  {
+    proposed_particle.set_acceptance(this->proposal,true);
+    this->refresh_cut_factors(proposed_particle);
+    this->check_carried_over_factors(proposed_particle, this->index);
+    particle = std::move(proposed_particle);
+  }
+}
+
 /*
  Particle MetropolisHastingsMCMC::move(RandomNumberGenerator &rng,
  Particle &particle,
@@ -392,10 +416,17 @@ std::vector<const ProposalKernel*> MetropolisHastingsMCMC::get_proposals() const
   return proposals;
 }
 
+bool MetropolisHastingsMCMC::adapts() const
+{
+  return this->proposal->has_mcmc_adaptor();
+}
+
 StandardMCMCOutput* MetropolisHastingsMCMC::initialise_mcmc_output() const
 {
-  MetropolisHastingsMCMC* dup = this->metropolis_hastings_mcmc_duplicate();
-  MetropolisHastingsStandardMCMCOutput* out = new MetropolisHastingsStandardMCMCOutput(dup);
-  return out;
+  // A move that adapts gives each chain its own copy of the kernel; otherwise
+  // all the particles' outputs share this one (used read-only by the moves).
+  if (this->adapts())
+    return new MetropolisHastingsStandardMCMCOutput(this->metropolis_hastings_mcmc_duplicate());
+  return new MetropolisHastingsStandardMCMCOutput(const_cast<MetropolisHastingsMCMC*>(this), false);
 }
 }

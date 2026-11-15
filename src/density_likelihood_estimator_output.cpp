@@ -227,26 +227,51 @@ void DensityLikelihoodEstimatorOutput::print(std::ostream &os) const
 void DensityLikelihoodEstimatorOutput::write_to_file(const std::string &dir_name,
                                                      const std::string &index)
 {
-  std::string directory_name = dir_name + "_density";
+  std::vector<double> values(this->compact_size());
+  this->compact_values(values.data());
+  this->write_compact_values(dir_name, index, values.data());
+}
 
-  if (!directory_exists(directory_name))
-    make_directory(directory_name);
+size_t DensityLikelihoodEstimatorOutput::compact_size() const
+{
+  // log-likelihood, time, and every simulated point (fixed for an estimator)
+  if (this->points.empty())
+    return 2;
+  if (this->estimator->point_columns == 0)
+    this->estimator->point_columns = this->points[0].get_rowvec(this->estimator->variables).n_elem;
+  return 2 + this->points.size()*this->estimator->point_columns;
+}
 
-  if (!this->estimator->h5_file)
-  {
-    this->estimator->h5_file_path = directory_name + "/output.h5";
-    this->estimator->h5_file = h5_open_or_create(this->estimator->h5_file_path);
-  }
-
-  h5_append_double(*this->estimator->h5_file, "log_likelihood", this->log_likelihood);
-  h5_append_double(*this->estimator->h5_file, "time", this->time);
-
+void DensityLikelihoodEstimatorOutput::compact_values(double *values) const
+{
+  values[0] = this->log_likelihood;
+  values[1] = this->time;
+  size_t offset = 2;
   for (auto i = this->points.begin(); i != this->points.end(); ++i)
   {
     arma::rowvec rv = i->get_rowvec(this->estimator->variables);
-    std::vector<double> row_vec(rv.begin(), rv.end());
-    h5_append_row(*this->estimator->h5_file, "vector_points", row_vec);
+    for (arma::uword k = 0; k < rv.n_elem; ++k)
+      values[offset++] = rv[k];
   }
+}
+
+void DensityLikelihoodEstimatorOutput::write_compact_values(const std::string &dir_name,
+                                                           const std::string &index,
+                                                           const double *values)
+{
+  // Buffered: one write per generation in close_ofstreams (this used to
+  // extend the HDF5 datasets once per value and once per simulated point).
+  if (this->estimator->h5_file_path.empty())
+  {
+    std::string directory_name = dir_name + "_density";
+    if (!directory_exists(directory_name))
+      make_directory(directory_name);
+    this->estimator->h5_file_path = directory_name + "/output.h5";
+  }
+  this->estimator->pending_log_likelihoods.push_back(values[0]);
+  this->estimator->pending_times.push_back(values[1]);
+  size_t n = this->compact_size();
+  this->estimator->pending_points.insert(this->estimator->pending_points.end(), values + 2, values + n);
 }
 
 void DensityLikelihoodEstimatorOutput::forget_you_were_already_written_to_file()
@@ -255,6 +280,18 @@ void DensityLikelihoodEstimatorOutput::forget_you_were_already_written_to_file()
 
 void DensityLikelihoodEstimatorOutput::close_ofstreams()
 {
+  if (!this->estimator->pending_log_likelihoods.empty() &&
+      !this->estimator->h5_file_path.empty())
+  {
+    std::shared_ptr<HighFive::File> file = h5_open_or_create(this->estimator->h5_file_path);
+    h5_append_doubles(*file, "log_likelihood", this->estimator->pending_log_likelihoods);
+    h5_append_doubles(*file, "time", this->estimator->pending_times);
+    h5_append_rows(*file, "vector_points", this->estimator->pending_points, this->estimator->point_columns);
+    this->estimator->pending_log_likelihoods.clear();
+    this->estimator->pending_times.clear();
+    this->estimator->pending_points.clear();
+  }
   this->estimator->h5_file.reset();
+  this->estimator->h5_file_path.clear();
 }
 }

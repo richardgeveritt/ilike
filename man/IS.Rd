@@ -8,6 +8,7 @@ IS(
   recipe,
   results_name = "",
   results_path = getwd(),
+  write_factor_output = TRUE,
   number_of_importance_points,
   parallel = FALSE,
   model_parameter_list = list(),
@@ -28,6 +29,8 @@ IS(
 \item{results_name}{(optional) The name of the directory to which results will be written (default is to not write output to file).}
 
 \item{results_path}{(optional) The path in which the results folder will be created (current working directory is the default).}
+
+\item{write_factor_output}{(optional) If TRUE (default), write each point's factor outputs (the iterationK/factorJ_* files used to load nested output, e.g. the states of a particle filter inside particle marginal MH). FALSE writes only the points, weights and evidence.}
 
 \item{number_of_importance_points}{The number of importance points.}
 

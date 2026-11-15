@@ -89,12 +89,28 @@ public:
   
   MoveOutput* subsample_run(RandomNumberGenerator &rng,
                             const Particle &particle) const;
-  
+
   /*
    MoveOutput* subsample_run(RandomNumberGenerator &rng,
    Particle &particle,
    const Parameters &conditioned_on_parameters);
    */
+
+  // One application of the kernel to particle, updating it in place. The
+  // result is the same as particle = move(rng, particle), but a rejected
+  // proposal leaves particle untouched instead of returning a copy of it
+  // (a full copy of the parameters and of every factor output). The default
+  // does exactly the assignment; Metropolis, Metropolis-Hastings and the
+  // sweeps override it. Used by run().
+  virtual void move_in_place(RandomNumberGenerator &rng,
+                             Particle &particle) const;
+
+  // Store every thin-th iteration of a run (MCMC(..., thin); default 1).
+  void set_thin(size_t thin_in);
+
+  // Whether the move adapts its kernel as it runs (a proposal with an MCMC
+  // adaptor). If not, the particles' outputs share one kernel.
+  virtual bool adapts() const { return false; }
   
   // could change to also have MoveOutput*
   // change when needed
@@ -174,6 +190,9 @@ public:
   //virtual void set_termination_parameters(h)=0;
   
 protected:
+
+  // Every thin-th iteration of a run is stored.
+  size_t thin = 1;
   
   friend StochasticScanMCMC;
   friend DeterministicScanMCMC;

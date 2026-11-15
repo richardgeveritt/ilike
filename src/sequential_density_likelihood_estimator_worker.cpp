@@ -59,7 +59,7 @@ std::vector<Parameters> SequentialDensityLikelihoodEstimatorWorker::get_points()
 void SequentialDensityLikelihoodEstimatorWorker::specific_simulate(DensityLikelihoodEstimatorOutput* output)
 {
   RandomNumberGenerator local_rng(*this->get_rng());
-  local_rng.seed(this->get_seed(),this->get_number_of_points());
+  local_rng.seed(this->get_seed());
   
   this->points.clear();
   this->points.reserve(this->get_number_of_points());
@@ -93,16 +93,15 @@ void SequentialDensityLikelihoodEstimatorWorker::specific_simulate(DensityLikeli
                                                                    const Parameters &conditioned_on_parameters)
 {
   RandomNumberGenerator local_rng(*this->get_rng());
-  local_rng.seed(this->get_seed(),this->get_number_of_points());
+  local_rng.seed(this->get_seed());
   
   this->points.clear();
   this->points.reserve(this->get_number_of_points());
   
-  for (size_t i = 0; i < this->get_number_of_points(); ++i)
-  {
-    this->points.push_back(this->the_dle->proposal->independent_simulate(local_rng,
-                                                                         conditioned_on_parameters));
-  }
+  this->the_dle->proposal->independent_simulate_many(local_rng,
+                                                    conditioned_on_parameters,
+                                                    this->get_number_of_points(),
+                                                    this->points);
   
   output->fit(this->points);
   
@@ -129,7 +128,7 @@ void SequentialDensityLikelihoodEstimatorWorker::specific_simulate(DensityLikeli
 void SequentialDensityLikelihoodEstimatorWorker::subsample_specific_simulate(DensityLikelihoodEstimatorOutput* output)
 {
   RandomNumberGenerator local_rng(*this->get_rng());
-  local_rng.seed(this->get_seed(),this->get_number_of_points());
+  local_rng.seed(this->get_seed());
   
   this->points.clear();
   this->points.reserve(this->get_number_of_points());
@@ -160,7 +159,7 @@ void SequentialDensityLikelihoodEstimatorWorker::subsample_specific_simulate(Den
                                                                              const Parameters &conditioned_on_parameters)
 {
   RandomNumberGenerator local_rng(*this->get_rng());
-  local_rng.seed(this->get_seed(),this->get_number_of_points());
+  local_rng.seed(this->get_seed());
   
   this->points.clear();
   this->points.reserve(this->get_number_of_points());

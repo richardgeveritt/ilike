@@ -57,6 +57,39 @@ ilike_pivot_wider <- function(output,
   return(poorman::pivot_wider(output, names_from = "Parameter", values_from = "Value"))
 }
 
+#' Change ilike output from the wide format (one row per point, one column per
+#' scalar, as given by \code{wide = TRUE} in the load functions or by
+#' \code{ilike_pivot_wider}) to the long format (one row per scalar, with
+#' columns ParameterName, Dimension and Value), as used by ggsmc.
+#'
+#' @param output Output in the wide format.
+#' @return The output in the long format: the index columns, then ParameterName, Dimension and Value; rows ordered point by point, as in the load functions.
+#' @export
+ilike_pivot_longer <- function(output)
+{
+  index_names = c("ExternalIndex", "ExternalTarget", "ExternalTargetParameters", "Target", "Time",
+                  "NormalisingConstant", "ISESS", "TargetParameters", "Iteration", "Particle",
+                  "Chain", "AncestorIndex", "LogWeight")
+  output = as.data.frame(output)
+  is_index = names(output) %in% index_names
+  value_names = names(output)[!is_index]
+  if (length(value_names) == 0)
+    stop("ilike_pivot_longer: no value columns (named variable_dimension, e.g. theta_1) found.")
+  parts = regmatches(value_names, regexec("^(.*)_([0-9]+)$", value_names))
+  if (any(lengths(parts) != 3))
+    stop("ilike_pivot_longer: columns not named variable_dimension: ",
+         paste(value_names[lengths(parts) != 3], collapse = ", "))
+  parameter_names = vapply(parts, function(x) x[2], character(1))
+  dimensions = as.integer(vapply(parts, function(x) x[3], character(1)))
+  n = nrow(output); p = length(value_names)
+  long = output[rep(seq_len(n), each = p), is_index, drop = FALSE]
+  rownames(long) = NULL
+  long$ParameterName = rep(parameter_names, times = n)
+  long$Dimension = rep(dimensions, times = n)
+  long$Value = as.vector(t(as.matrix(output[, value_names, drop = FALSE])))
+  long
+}
+
 #' Loading SMC output into R memory.
 #'
 #' @param results_directory The folder in which the results are stored.
@@ -71,7 +104,8 @@ ilike_pivot_wider <- function(output,
 #' @param external_target_parameters (optional; for nested output only) The parameters of the target external to the current folder. (default is "", corresponding to no parameters)
 #' @param nesting_level (optional; for nested output only) The level of nesting at which to extract points. (default is 0, representing the top level of nested output)
 #' @param factor (optional; for nested output only) The factor from which to extract points. (default is 1)
-#' @return A list containing the SMC output.
+#' @param wide (optional) If TRUE, return one row per point, with one column per scalar (named variable_dimension, e.g. theta_1) next to the index columns, instead of one row per scalar (default FALSE). Much faster for large outputs; ilike_pivot_longer converts it to the long format (needed by ggsmc).
+#' @return A data frame containing the SMC output.
 #' @export
 load_smc_output = function(results_directory,
                            ggmcmc = FALSE,
@@ -84,7 +118,8 @@ load_smc_output = function(results_directory,
                            external_log_weights = c(0),
                            external_target_parameters = "",
                            nesting_level = 0,
-                           factor = 1)
+                           factor = 1,
+                           wide = FALSE)
 {
   description = results_directory
 
@@ -112,7 +147,12 @@ load_smc_output = function(results_directory,
   }
 
   all_dirs = list.dirs(results_directory,recursive = FALSE)
-  all_dirs = order_directories(all_dirs)
+  # The iterationK directories hold the factor outputs; they are absent when
+  # the algorithm was run with write_factor_output = FALSE.
+  if (length(all_dirs) > 0)
+    all_dirs = order_directories(all_dirs)
+  else if (nesting_level > 0)
+    stop("No factor outputs in ", results_directory, ": was the algorithm run with write_factor_output = FALSE?")
 
   # Factor name.
   factor_name = paste("factor",factor,sep="")
@@ -127,35 +167,54 @@ load_smc_output = function(results_directory,
   # to pass into the function.
   if (nesting_level==1)
   {
+    # The outer points and their weights: each outer iteration's points, in
+    # the order their nested outputs were written (point by point), give the
+    # external weights of that iteration's nested output.
+    outer = load_smc_output(results_directory = description, as.mcmc = as.mcmc,
+                            ggsmc = !as.mcmc, directory_prefix = directory_prefix, wide = TRUE)
+    lines_output = NULL
     for (i in 1:length(all_dirs))
     {
+      numbers = extract_numbers(all_dirs[i])
+      target_id = numbers[length(numbers)]
+      if (!dir.exists(file.path(all_dirs[i], paste(factor_name, "_smc", sep = ""))))
+        next
+      # MCMC output: the outer points loaded are those of the final iteration
+      if (as.mcmc && (target_id != max(get_directory_numbers(all_dirs))))
+        next
+      if ("Target" %in% names(outer))
+        outer_points = outer[outer$Target == target_id, , drop = FALSE]
+      else
+        outer_points = outer
+      if ("LogWeight" %in% names(outer_points))
+        external_log_weights = outer_points$LogWeight
+      else
+        external_log_weights = rep(0, nrow(outer_points))
+      if ("TargetParameters" %in% names(outer_points))
+        external_target_parameters = as.character(outer_points$TargetParameters[1])
       sub_output = load_smc_output(results_directory=all_dirs[i],
-                                   ggmcmc=ggmcmc,
+                                   ggmcmc=FALSE,
                                    ggsmc=ggsmc,
-                                   as.mcmc = as.mcmc,
+                                   as.mcmc = FALSE,
                                    as.enk = as.enk,
                                    which.targets = which.targets,
                                    directory_prefix=factor_name,
                                    external_log_weights = external_log_weights,#poorman::filter(poorman::filter(theta_output,Target==i),Dimension==1)$LogWeight,
-                                   nesting_level = nesting_level-1)
+                                   nesting_level = nesting_level-1,
+                                   wide = wide)
 
-
-      numbers = extract_numbers(all_dirs[i])
-      target_id = numbers[length(numbers)]
 
       sub_output$ExternalTarget = rep(target_id,nrow(sub_output))
       sub_output$ExternalTargetParameters = rep(external_target_parameters,nrow(sub_output))#rep(poorman::filter(theta_output,Target==target_id)$TargetParameters[1],nrow(sub_output))
 
-      if (i==1)
-      {
+      if (is.null(lines_output))
         lines_output = sub_output
-      }
       else
-      {
         lines_output = rbind(lines_output,sub_output)
-      }
     }
 
+    if (is.null(lines_output))
+      stop("No nested output for factor ", factor, " in ", results_directory, ".")
     return(lines_output)
   }
 
@@ -185,6 +244,13 @@ load_smc_output = function(results_directory,
     stop("ilike.output and ggmcmc cannot both be TRUE, since the output formats are incompatible.")
   }
 
+  if (wide && ggmcmc)
+    stop("wide = TRUE and ggmcmc = TRUE are incompatible: ggmcmc needs the long format.")
+  # ggsmc = FALSE and ilike.output = FALSE asked for the wide format
+  # (previously made by ilike_pivot_wider at the end).
+  if ( (ggsmc==FALSE) && (ilike.output==FALSE) && (ggmcmc==FALSE) )
+    wide = TRUE
+
   # ---- Read metadata from HDF5 output file ----
   h5_path <- file.path(results_directory, "output.h5")
   if (!file.exists(h5_path))
@@ -205,15 +271,23 @@ load_smc_output = function(results_directory,
   # output_lengths: HDF5 shape [n_iters x n_particles] (C row-major, h5dump convention).
   # hdf5r reverses dimension ordering: dims[1] = n_particles (C last dim),
   #                                    dims[2] = n_iters    (C first dim).
-  ol_ds <- h5f[["output_lengths"]]
-  ol_dims <- ol_ds$dims      # hdf5r: c(n_particles, n_iters)
-  n_particles_dim <- ol_dims[1]
-  n_iters <- ol_dims[2]
-  ol_raw <- as.numeric(ol_ds$read())
-  # hdf5r returns data in column-major / reversed order matching its dims.
-  # Reshape to [n_iters x n_particles_dim].
-  ol_mat <- matrix(ol_raw, nrow = n_iters, ncol = n_particles_dim, byrow = TRUE)
-  output_lengths <- lapply(seq_len(n_iters), function(i) as.numeric(ol_mat[i, ]))
+  # A nested inner file (written by SMCOutput::write_compact_nested) holds
+  # the outputs of several outer points concatenated: output lengths per
+  # iteration group, and one log-likelihood, time and ESS per outer point.
+  nested_file <- "nested_external_points" %in% hdf5r::h5attr_names(h5f)
+  output_lengths <- list()
+  if (!nested_file)
+  {
+    ol_ds <- h5f[["output_lengths"]]
+    ol_dims <- ol_ds$dims      # hdf5r: c(n_particles, n_iters)
+    n_particles_dim <- ol_dims[1]
+    n_iters <- ol_dims[2]
+    ol_raw <- as.numeric(ol_ds$read())
+    # hdf5r returns data in column-major / reversed order matching its dims.
+    # Reshape to [n_iters x n_particles_dim].
+    ol_mat <- matrix(ol_raw, nrow = n_iters, ncol = n_particles_dim, byrow = TRUE)
+    output_lengths <- lapply(seq_len(n_iters), function(i) as.numeric(ol_mat[i, ]))
+  }
 
   # Convert to lists matching the old interface
   llhds <- as.list(llhds_vec)
@@ -237,37 +311,28 @@ load_smc_output = function(results_directory,
     }
   }
 
-  # Store the output in a data frame.
-  all_dirs = order_directories(all_dirs)
-  target_indices = get_directory_numbers(all_dirs)
+  # Store the output in a data frame. The stored iterations are the groups
+  # iteration/K of output.h5 (the matching iterationK directories exist only
+  # when factor outputs were written).
+  target_indices = sort(as.integer(names(h5f[["iteration"]])))
+  all_dirs = file.path(results_directory, paste0("iteration", target_indices))
 
+  # which.targets holds positions in target_indices (the loop below reads
+  # target_indices[k]). It used to hold the target numbers themselves, which
+  # only worked while the stored iterations were exactly 1, 2, ...; and a
+  # given which.targets kept only its last target.
   if (is.null(which.targets))
   {
     if (!as.mcmc)
-    {
-      which.targets = target_indices
-    }
+      which.targets = seq_along(target_indices)
     else
-    {
-      which.targets = max(target_indices)
-    }
+      which.targets = which.max(target_indices)
   }
   else
   {
-    inputted_which_targets = which.targets
-
-    # target_indices = matrix(0,length(all_dirs))
-    # for (k in 1:length(all_dirs))
-    # {
-    #   split = strsplit(all_dirs[k],"/")[[1]]
-    #   target_indices[i] = strtoi(gsub("iteration","",split[length(split)]))
-    # }
-
-    which.targets = matrix(0,length(inputted_which_targets))
-    for (k in 1:length(inputted_which_targets))
-    {
-      which.targets = which(target_indices==inputted_which_targets[k])
-    }
+    which.targets = which(target_indices %in% which.targets)
+    if (length(which.targets) == 0)
+      stop("load_smc_output: none of the requested targets is in the output.")
   }
 
   for (k in which.targets)
@@ -294,168 +359,126 @@ load_smc_output = function(results_directory,
     number_of_points = nrow(output)
     number_of_importance_points = nrow(output) / number_of_external_points # number_of_importance_points in the waste-free SMC viewpoint
     # output_lengths[[target]] is the row for this iteration (1-indexed)
-    chain_length = max(output_lengths[[target]])
+    if (nested_file)
+      chain_length = max(as.numeric(h5f[[iter_grp_path]][["output_lengths"]]$read()))
+    else
+      chain_length = max(output_lengths[[target]])
     number_of_chains = number_of_importance_points/chain_length
     number_of_targets = length(all_dirs)
 
-    output_names_column = rep(output_names,number_of_points)
-    output_index_column = as.numeric(rep(output_index,number_of_points))
-
-    # llhds and times are simple vectors in new HDF5 format (one entry per iteration)
-    llhd_val = llhds[[target]]
-    if (is.null(llhd_val)) llhd_val = 0
-    llhd_column_matrix = sapply(lapply(1:number_of_external_points,FUN=function(i) { rep(llhd_val, ncol(output)*number_of_importance_points) } ),c)
-    llhd_column = matrix(llhd_column_matrix,length(llhd_column_matrix))
-
-    time_val = times[[target]]
-    if (is.null(time_val)) time_val = 0
-    time_column_matrix = sapply(lapply(1:number_of_external_points,FUN=function(i) { rep(time_val, ncol(output)*number_of_importance_points) } ),c)
-    time_column = matrix(time_column_matrix,length(time_column_matrix))
-
-    # number_of_points (=nrow(output)) equals number_of_external points multiplied by number of importance points
-
+    if (nested_file)
+    {
+      # one value per outer (external) point
+      llhd_val = as.numeric(llhds_vec)
+      time_val = as.numeric(times_vec)
+    }
+    else
+    {
+      llhd_val = llhds[[target]]
+      if (is.null(llhd_val)) llhd_val = 0
+      time_val = times[[target]]
+      if (is.null(time_val)) time_val = 0
+    }
     schedule_parameters <- tryCatch(
       h5f[[iter_grp_path]][["schedule_parameters"]]$read(),
       error = function(e) NULL
     )
     if (is.null(schedule_parameters) || length(schedule_parameters) == 0)
-    {
-      schedule_parameters_column = matrix(0, nrow(output), 1)
       schedule_parameters <- NULL
-    }
-    else
+
+    # Build the index columns once per point (one row of `output` per
+    # point), then either keep one row per point (wide) or repeat each index
+    # value once per scalar (long). Rows are point-major: external point,
+    # then chain (particle), then stored iteration. (This replaces a cbind
+    # of mixed types, which went through a character matrix: slow, and
+    # numbers kept only 15 significant digits.)
+    p_total = sum(variable_sizes)
+    points_per_external = number_of_chains*chain_length
+    point_external = rep(seq_len(number_of_external_points), each = points_per_external)
+    point_chain = rep(rep(seq_len(number_of_chains), each = chain_length), times = number_of_external_points)
+    point_iteration = rep(seq_len(chain_length), times = number_of_chains*number_of_external_points)
+    llhd_val = as.numeric(llhd_val)
+    time_val = as.numeric(time_val)
+    if (nested_file)
     {
-      schedule_parameters_column = matrix(as.character(schedule_parameters[1]), nrow(output) * ncol(output), 1)
+      if ((length(llhd_val) != number_of_external_points) || (length(time_val) != number_of_external_points))
+        stop("load_smc_output: the nested output holds ", length(llhd_val), " outer points, but ",
+             number_of_external_points, " external weights were given.")
+      llhd_val = llhd_val[point_external]
+      time_val = time_val[point_external]
     }
-
-    # 1, ncol(output)*number_of_importance_points times
-    # 2, ncol(output)*number_of_importance_points times
-    # ...
-    # number_of_external_points, ncol(output)*number_of_importance_points times
-    external_column_matrix = sapply(lapply(1:number_of_external_points,FUN=function(i) { rep(i,ncol(output)*number_of_importance_points) } ),c)
-    external_column = matrix(external_column_matrix,length(external_column_matrix))
-
-    # all from this target
-    target_column = rep(target,length(external_column))
-
-    # (repeat each value (1:nchains) ncol(output)*niterations times)*number_of_external_points
-    chain_fn = function(i) {rep(i,ncol(output)*chain_length)}
-    chains_column = rep(sapply(lapply(1:number_of_chains,FUN=chain_fn),c),number_of_external_points)
-
-    # (repeat each value (1:niterations) ncol(output) times)*number_of_external_points*nchains
-    iteration_fn = function(i) {rep(i,ncol(output))}
-    iterations_column = rep(sapply(lapply(1:chain_length,FUN=iteration_fn),c),number_of_external_points*number_of_chains)
 
     ess_val <- tryCatch(
       as.numeric(h5f[[iter_grp_path]][["ess"]]$read()),
       error = function(e) NA_real_
     )
-    # ess is a single scalar per iteration; replicate to match long-format length.
-    ess_column = rep(ess_val, length(iterations_column))
+    if (nested_file && (length(ess_val) == number_of_external_points))
+      ess_val = ess_val[point_external]
 
-    output = poorman::pivot_longer(output,cols = poorman::everything(), values_to="Value")
-
-    #external_column = matrix(0,nrow(output))
-    #iterations_column = matrix(0,nrow(output),1)
-    #chains_column = matrix(0,nrow(output),1)
-    #target_column = matrix(0,nrow(output),1)
-
-    # index = 1
-    # for (p in 1:number_of_external_points)
-    # {
-    #   for (i in 1:length(output_lengths[[k]]))
-    #   {
-    #     for (j in 1:output_lengths[[k]][i])
-    #     {
-    #       #iterations_column[index] = j
-    #       #chains_column[index] = i
-    #       #target_column[index] = target
-    #       #external_column[index] = p
-    #       index = index + 1
-    #     }
-    #   }
-    # }
-
+    index = data.frame(ExternalIndex = point_external)
     if (as.mcmc)
     {
-      output = cbind(external_column,time_column,iterations_column,chains_column,output_names_column,output_index_column,output$Value)
-      colnames(output) = c('ExternalIndex','Time','Iteration','Chain','ParameterName','Dimension',"Value")
+      index$Time = time_val
+      index$Iteration = point_iteration
+      index$Chain = point_chain
     }
     else
     {
-      if (as.enk)
+      index$Target = rep(as.integer(target), number_of_points)
+      index$Time = time_val
+      index$NormalisingConstant = llhd_val
+      index$ISESS = ess_val
+      if (!is.null(schedule_parameters))
+        index$TargetParameters = as.character(schedule_parameters[1])
+      index$Iteration = point_iteration
+      index$Particle = point_chain
+      if (!as.enk)
       {
-        if (is.null(schedule_parameters))
+        log_weight_raw <- as.numeric(h5f[[iter_grp_path]][["unnormalised_log_weights"]]$read())
+        lw_per_external = length(log_weight_raw)/number_of_external_points
+        log_weight_list = lapply(seq_len(number_of_external_points), FUN = function(i) {
+          lw = log_weight_raw[(i - 1)*lw_per_external + seq_len(lw_per_external)]
+          lw = lw - log_sum_exp(lw)
+          lw[is.nan(lw)] = -Inf
+          lw + external_log_weights[i]
+        })
+        # each particle's weight covers its chain_length stored iterations
+        point_log_weight = unlist(lapply(log_weight_list, FUN = function(w) rep(as.numeric(w), each = chain_length)))
+        if (length(point_log_weight) != number_of_points)
         {
-          output = cbind(external_column,target_column,time_column,llhd_column,ess_column,iterations_column,chains_column,output_names_column,output_index_column,output$Value)
-          colnames(output) = c('ExternalIndex','Target','Time','NormalisingConstant','ISESS','Iteration','Particle','ParameterName','Dimension',"Value")
+          stop(paste("load_smc_output: target ", target, " has ", length(point_log_weight)/chain_length,
+                     " weights but ", number_of_chains*number_of_external_points, " particles.", sep = ""))
         }
-        else
-        {
-          output = cbind(external_column,target_column,time_column,llhd_column,ess_column,schedule_parameters_column,iterations_column,chains_column,output_names_column,output_index_column,output$Value)
-          colnames(output) = c('ExternalIndex','Target','Time','NormalisingConstant','ISESS','TargetParameters','Iteration','Particle','ParameterName','Dimension',"Value")
-        }
-      }
-      else
-      {
-        log_weight_raw <- h5f[[iter_grp_path]][["unnormalised_log_weights"]]$read()
-        log_weight <- as.data.frame(matrix(as.numeric(log_weight_raw), ncol = 1))
-
-        log_weights_for_each_external_point = lapply(1:number_of_external_points,FUN=function(i) { lw = nrow(log_weight)/number_of_external_points; o = matrix(0,lw); for (j in 1:lw) { o[j] = log_weight[j+lw*(i-1),] }; return(o); })
-        normalised_weights_for_each_external_point = lapply(log_weights_for_each_external_point,FUN=function(i) { i-log_sum_exp(i) })
-        normalised_weights_for_each_external_point = lapply(normalised_weights_for_each_external_point,FUN=function(i) { which_nan = which(is.nan(i)); o = i; o[which_nan] = -Inf; o })
-        log_weight_list = lapply(1:number_of_external_points,FUN=function(i){ normalised_weights_for_each_external_point[[i]] + external_log_weights[i] })
-
-        # Rows are particle-major: each particle has chain_length stored
-        # iterations, each spread over sum(variable_sizes) rows, so each
-        # particle's weight covers sum(variable_sizes)*chain_length rows (as
-        # for the Particle and AncestorIndex columns).
-        log_weight_column = matrix(unlist(lapply(log_weight_list,FUN=function(w) { rep(as.numeric(w),each=sum(variable_sizes)*chain_length) })),ncol=1)
-        if (length(log_weight_column) != length(iterations_column))
-        {
-          stop(paste("load_smc_output: target ",target," has ",length(log_weight_column)/(sum(variable_sizes)*chain_length)," weights but ",number_of_chains*number_of_external_points," particles.",sep=""))
-        }
-
-        #log_weight = log_weight$V1 - log_sum_exp(log_weight$V1)
-
-        # (repeat each value of log_weight (1:nchains) ncol(output)*niterations times)*number_of_external_points
-        #log_weight_fn = function(i) {rep(log_weight[i],sum(variable_sizes)*chain_length)}
-        #log_weight_column = rep(sapply(lapply(1:number_of_chains,FUN=log_weight_fn),c),number_of_external_points)
-
-        #external_log_weight_fn = function(i) {rep(external_log_weights[i],length(log_weight_column)/length(external_log_weights))}
-        #external_log_weight_column = matrix(apply(lapply(1:number_of_external_points,FUN=log_weight_fn),c),length(log_weight_column))
 
         ancestor_index_raw <- tryCatch(
           as.integer(h5f[[iter_grp_path]][["ancestor_index"]]$read()) + 1L,
           error = function(e) seq_len(number_of_chains)
         )
         if (length(ancestor_index_raw) == 0) ancestor_index_raw <- seq_len(number_of_chains)
-        ancestor_index <- matrix(ancestor_index_raw, ncol = 1)
-
-        # (repeat each value of ancestor (1:nchains) ncol(output)*niterations times)*number_of_external_points
-        ancestor_fn = function(i) {rep(ancestor_index[i,],sum(variable_sizes)*chain_length)}
-        ancestor_index_column = rep(sapply(lapply(1:number_of_chains,FUN=ancestor_fn),c),number_of_external_points)
-
-        if (is.null(schedule_parameters))
-        {
-          output = cbind(external_column,target_column,time_column,llhd_column,ess_column,iterations_column,chains_column,ancestor_index_column,log_weight_column,output_names_column,output_index_column,output$Value)
-          colnames(output) = c('ExternalIndex','Target','Time','NormalisingConstant','ISESS','Iteration','Particle','AncestorIndex','LogWeight','ParameterName','Dimension',"Value")
-        }
+        if (length(ancestor_index_raw) == number_of_chains*number_of_external_points)
+          # one set of ancestors per external point (nested output)
+          index$AncestorIndex = rep(ancestor_index_raw, each = chain_length)
         else
-        {
-          output = cbind(external_column,target_column,time_column,llhd_column,ess_column,schedule_parameters_column,iterations_column,chains_column,ancestor_index_column,log_weight_column,output_names_column,output_index_column,output$Value)
-          colnames(output) = c('ExternalIndex','Target','Time','NormalisingConstant','ISESS','TargetParameters','Iteration','Particle','AncestorIndex','LogWeight','ParameterName','Dimension',"Value")
-        }
-
+          index$AncestorIndex = rep(rep(ancestor_index_raw[seq_len(number_of_chains)], each = chain_length), times = number_of_external_points)
+        index$LogWeight = point_log_weight
       }
     }
 
-    output = as.data.frame(output)
-
-    output$Dimension = as.integer(output$Dimension)
-    output$ExternalIndex = as.integer(output$ExternalIndex)
-    output$Value = as.numeric(output$Value)
-    output$Iteration = as.integer(output$Iteration)
+    values = as.matrix(output)
+    dimnames(values) = NULL
+    if (wide)
+    {
+      colnames(values) = paste(output_names, output_index, sep = "_")
+      output = cbind(index, as.data.frame(values, stringsAsFactors = FALSE))
+    }
+    else
+    {
+      output = index[rep(seq_len(number_of_points), each = p_total), , drop = FALSE]
+      rownames(output) = NULL
+      output$ParameterName = rep(output_names, times = number_of_points)
+      output$Dimension = as.integer(rep(output_index, times = number_of_points))
+      output$Value = as.vector(t(values))
+    }
 
     if ((k==1) || (as.mcmc))
     {
@@ -557,11 +580,6 @@ load_smc_output = function(results_directory,
     return(all_output)
   }
 
-  if ( (ggsmc==FALSE) && (ilike.output==FALSE) )
-  {
-    all_output = ilike_pivot_wider(all_output)
-  }
-
   return(all_output)
 }
 
@@ -570,11 +588,13 @@ load_smc_output = function(results_directory,
 #' @param results_directory The folder in which the results are stored.
 #' @param ggmcmc (optional) Output in tidy format for plotting in ggmcmc package (default is FALSE if ilike.output is set to TRUE or not set and TRUE otherwise).
 #' @param ilike.output (optional) Output can be processed by ilike,output package (default is TRUE if ggmcmc is set to FALSE or is not set and FALSE otherwise). Choosing TRUE for this argument is incompatible with ggmcmc=TRUE, since the two packages require different formatting of the output.
+#' @param wide (optional) If TRUE, return one row per point, with one column per scalar (named variable_dimension, e.g. theta_1), instead of one row per scalar (default FALSE). Much faster for large outputs; ilike_pivot_longer converts it to the long format.
 #' @return A list containing the MCMC chains.
 #' @export
 load_mcmc_output = function(results_directory,
                             ggmcmc = NULL,
-                            ilike.output = NULL)
+                            ilike.output = NULL,
+                            wide = FALSE)
 {
   if (is.null(ggmcmc) && is.null(ilike.output))
   {
@@ -603,7 +623,7 @@ load_mcmc_output = function(results_directory,
     }
   }
 
-  output = load_smc_output(results_directory = results_directory,ggmcmc = ggmcmc,ggsmc = FALSE, ilike.output = ilike.output,as.mcmc=TRUE)
+  output = load_smc_output(results_directory = results_directory,ggmcmc = ggmcmc,ggsmc = FALSE, ilike.output = ilike.output,as.mcmc=TRUE,wide=wide)
   if (ggmcmc==TRUE)
     names(output)[names(output) == 'Value'] = "value"
   return(output)
@@ -617,6 +637,7 @@ load_mcmc_output = function(results_directory,
 #' @param external_target_parameters (optional; for nested output only) The parameters of the target external to the current folder. (default is "", corresponding to no parameters)
 #' @param nesting_level (optional; for nested output only) The level of nesting at which to extract points. (default is 0, representing the top level of nested output)
 #' @param factor (optional; for nested output only) The factor from which to extract points. (default is 0)
+#' @param wide (optional) If TRUE, return one row per point, with one column per scalar (named variable_dimension, e.g. theta_1), instead of one row per scalar (default FALSE). Much faster for large outputs; ilike_pivot_longer converts it to the long format.
 #' @return A list containing the ensemble members (called particles).
 #' @export
 load_enk_output = function(results_directory,
@@ -624,11 +645,13 @@ load_enk_output = function(results_directory,
                            external_log_weights = c(0),
                            external_target_parameters = "",
                            nesting_level = 0,
-                           factor = 1)
+                           factor = 1,
+                           wide = FALSE)
 {
   return(load_smc_output(results_directory = results_directory,
                          ggsmc = ggsmc,
                          as.enk=TRUE,
+                         wide = wide,
                          external_log_weights = external_log_weights,
                          external_target_parameters = external_target_parameters,
                          nesting_level = nesting_level,

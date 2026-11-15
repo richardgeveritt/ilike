@@ -16,7 +16,8 @@ load_smc_output(
   external_log_weights = c(0),
   external_target_parameters = "",
   nesting_level = 0,
-  factor = 1
+  factor = 1,
+  wide = FALSE
 )
 }
 \arguments{
@@ -43,6 +44,8 @@ load_smc_output(
 \item{nesting_level}{(optional; for nested output only) The level of nesting at which to extract points. (default is 0, representing the top level of nested output)}
 
 \item{factor}{(optional; for nested output only) The factor from which to extract points. (default is 1)}
+
+\item{wide}{(optional) If TRUE, return one row per point, with one column per scalar (named variable_dimension, e.g. theta_1) next to the index columns, instead of one row per scalar (default FALSE). Much faster for large outputs; ilike_pivot_longer converts it to the long format (needed by ggsmc).}
 }
 \value{
 A list containing the SMC output.

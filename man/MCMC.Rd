@@ -8,6 +8,7 @@ MCMC(
   recipe,
   results_name = "",
   results_path = getwd(),
+  write_factor_output = TRUE,
   number_of_chains = 1,
   initial_values = list(),
   parallel = FALSE,
@@ -21,7 +22,8 @@ MCMC(
   keep_temporary_recipe_code = FALSE,
   seed = NULL,
   grain_size = 1e+05,
-  check_factor_index = FALSE
+  check_factor_index = FALSE,
+  thin = 1
 )
 }
 \arguments{
@@ -30,6 +32,8 @@ MCMC(
 \item{results_name}{(optional) The name of the directory to which results will be written (default is to not write output to file).}
 
 \item{results_path}{(optional) The path in which the results folder will be created (current working directory is the default).}
+
+\item{write_factor_output}{(optional) If TRUE (default), write each point's factor outputs (the iterationK/factorJ_* files used to load nested output, e.g. the states of a particle filter inside particle marginal MH). FALSE writes only the points, weights and evidence.}
 
 \item{number_of_chains}{(optional) The number of chains.}
 
@@ -58,6 +62,8 @@ MCMC(
 \item{grain_size}{(optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).}
 
 \item{check_factor_index}{(optional) If TRUE, after every accepted MCMC move that has a factor index, re-evaluate the exact factors that were left out of the move (neither in its factor index nor its cut factor index) and stop if any changed value, i.e. did not cancel in the acceptance ratio. Slower; for checking a model file. Default FALSE.}
+
+\item{thin}{(optional) Store every thin-th iteration of each chain (default 1: every iteration). There is no burn-in option: discard iterations when analysing the output.}
 }
 \value{
 Nothing: output can be found in the output_directory.

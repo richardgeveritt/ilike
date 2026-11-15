@@ -86,7 +86,9 @@ arma::colvec GenericMeasurementCovarianceEstimatorOutput::get_shift(double inver
   if ((inverse_incremental_temperature-1.0)==0.0)
     return this->measurement_state;
   else
-    return this->measurement_state + arma::chol((inverse_incremental_temperature-1.0)*this->generic_estimator->Cygivenx)*this->random_shift;
+    // random_shift ~ N(0, I); L z with the lower factor L (C = L L^T) has
+    // covariance C (the upper factor R gave R R^T, B18).
+    return this->measurement_state + arma::chol((inverse_incremental_temperature-1.0)*this->generic_estimator->Cygivenx, "lower")*this->random_shift;
 }
 
 arma::colvec GenericMeasurementCovarianceEstimatorOutput::get_deterministic_shift() const

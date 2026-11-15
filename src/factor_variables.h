@@ -179,6 +179,21 @@ public:
   
   virtual void write_to_file(const std::string &directory_name,
                              const std::string &index) const=0;
+
+  // Compact records of the factor outputs (see LikelihoodEstimatorOutput::
+  // has_compact_value): true if every factor output has one; then
+  // compact_values gives one number per factor and write_compact_values
+  // writes them as write_to_file would have done. The default (false) keeps
+  // full copies of stored iterations.
+  virtual bool has_compact_values() const { return false; }
+  virtual size_t number_of_compact_values() const { return 0; }
+  virtual void compact_values(double *values) const {}
+  virtual void write_compact_values(const std::string &directory_name,
+                                    const std::string &index,
+                                    const double *values) const
+  {
+    Rcpp::stop("FactorVariables::write_compact_values: no compact records.");
+  }
   
   /**
    * @brief Closes any open file streams.

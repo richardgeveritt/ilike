@@ -216,6 +216,9 @@ void SMC::operator=(const SMC &another)
 
 void SMC::make_copy(const SMC &another)
 {
+  this->write_factor_output = another.write_factor_output;
+  this->compact_stored_output = another.compact_stored_output;
+
   if (another.the_worker!=NULL)
     this->the_worker = another.the_worker->duplicate();
   else

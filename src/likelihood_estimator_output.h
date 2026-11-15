@@ -220,6 +220,20 @@ protected:
   
   virtual void write_to_file(const std::string &directory_name,
                              const std::string &index = "")=0;
+
+  // Compact record of what write_to_file writes, for stored MCMC iterations
+  // (dev/plan.md 2.5, "Stage 2 - concrete design", item 3): compact_size()
+  // numbers that are enough to write later exactly what write_to_file would
+  // write now. 0 (the default) means no compact record: stored iterations
+  // then keep a full copy, as before.
+  virtual size_t compact_size() const { return 0; }
+  virtual void compact_values(double *values) const {}
+  virtual void write_compact_values(const std::string &directory_name,
+                                    const std::string &index,
+                                    const double *values)
+  {
+    Rcpp::stop("LikelihoodEstimatorOutput::write_compact_values: this output has no compact record.");
+  }
   
   /**
    * @brief Copies the state of another LikelihoodEstimator into this object.

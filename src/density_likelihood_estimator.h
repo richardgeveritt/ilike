@@ -171,6 +171,14 @@ protected:
   std::shared_ptr<HighFive::File> h5_file;
   /** @brief Path to the HDF5 output file. */
   std::string h5_file_path;
+
+  // values written by DensityLikelihoodEstimatorOutput, flushed per
+  // generation: log-likelihoods, times, and the simulated points row by row
+  // (point_columns values each)
+  std::vector<double> pending_log_likelihoods;
+  std::vector<double> pending_times;
+  std::vector<double> pending_points;
+  size_t point_columns = 0;
   
 };
 }

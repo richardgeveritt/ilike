@@ -204,9 +204,9 @@ Parameters LogGaussianIndependentProposalKernel::independent_simulate(RandomNumb
        i!=this->proposal_info.end();
        ++i)
   {
-    output[i->first] = rmvlnorm_using_chol(rng,
+    output[i->first] = rmvlnorm_using_lower_chol(rng,
                                            i->second.get_mean(),
-                                           sqrt(i->second.get_double_scale())*i->second.get_chol());
+                                           i->second.get_chol_lower(), sqrt(i->second.get_double_scale()));
   }
   return output;
 }
@@ -237,9 +237,9 @@ Parameters LogGaussianIndependentProposalKernel::subsample_independent_simulate(
   auto found = this->proposal_info.find(variable);
   
   Parameters output;
-  output[variable] = rmvlnorm_using_chol(rng,
+  output[variable] = rmvlnorm_using_lower_chol(rng,
                                          found->second.get_mean(),
-                                         sqrt(found->second.get_double_scale())*found->second.get_chol());
+                                         found->second.get_chol_lower(), sqrt(found->second.get_double_scale()));
   return output;
 }
 
@@ -251,9 +251,9 @@ Parameters LogGaussianIndependentProposalKernel::subsample_independent_simulate(
   auto found = this->proposal_info.find(variable);
   
   Parameters output;
-  output[variable] = rmvlnorm_using_chol(rng,
+  output[variable] = rmvlnorm_using_lower_chol(rng,
                                          found->second.get_mean(),
-                                         sqrt(found->second.get_double_scale())*found->second.get_chol());
+                                         found->second.get_chol_lower(), sqrt(found->second.get_double_scale()));
   return output;
 }
 

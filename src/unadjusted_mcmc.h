@@ -85,6 +85,9 @@ public:
   
   Particle move(RandomNumberGenerator &rng,
                 const Particle &particle) const;
+
+  
+  bool adapts() const;
   
   /*
    Particle move(RandomNumberGenerator &rng,

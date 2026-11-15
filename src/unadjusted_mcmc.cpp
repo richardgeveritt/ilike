@@ -240,8 +240,17 @@ std::vector<const ProposalKernel*> UnadjustedMCMC::get_proposals() const
   return proposals;
 }
 
+bool UnadjustedMCMC::adapts() const
+{
+  return this->proposal->has_mcmc_adaptor();
+}
+
 StandardMCMCOutput* UnadjustedMCMC::initialise_mcmc_output() const
 {
-  return new UnadjustedStandardMCMCOutput(this->unadjusted_mcmc_duplicate());
+  // A move that adapts gives each chain its own copy of the kernel; otherwise
+  // all the particles' outputs share this one (used read-only by the moves).
+  if (this->adapts())
+    return new UnadjustedStandardMCMCOutput(this->unadjusted_mcmc_duplicate());
+  return new UnadjustedStandardMCMCOutput(const_cast<UnadjustedMCMC*>(this), false);
 }
 }

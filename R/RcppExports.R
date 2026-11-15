@@ -65,3 +65,7 @@ do_evaluate_log_with_fixed_params <- function(model, model_parameters, algorithm
     .Call(`_ilike_do_evaluate_log_with_fixed_params`, model, model_parameters, algorithm_parameter_list, fixed_parameter_list, parameters_in, index_in, results_name_in, seed)
 }
 
+sample_store_check <- function() {
+    .Call(`_ilike_sample_store_check`)
+}
+

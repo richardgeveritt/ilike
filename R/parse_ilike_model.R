@@ -6918,9 +6918,17 @@ compile <- function(filenames,
     # skips recompilation when the generated code hasn't changed.
     # Include the ilike package version so that upgrading ilike forces a fresh
     # compilation (new headers may change the ABI of the resulting DLL).
+    # The key also includes a hash of the installed headers (inst/include),
+    # which the model code is compiled against, so that rebuilding ilike with
+    # changed headers but the same version cannot reuse a stale model DLL.
     cache_dir  <- tools::R_user_dir("ilike", "cache")
     pkg_ver    <- as.character(utils::packageVersion("ilike"))
-    ver_dir    <- file.path(cache_dir, pkg_ver)
+    header_files <- sort(list.files(system.file("include", package = "ilike"), full.names = TRUE))
+    header_list  <- tempfile()
+    writeLines(unname(tools::md5sum(header_files)), header_list)
+    header_hash  <- substr(tools::md5sum(header_list)[[1]], 1, 8)
+    unlink(header_list)
+    ver_dir    <- file.path(cache_dir, paste(pkg_ver, header_hash, sep = "-"))
     dir.create(ver_dir, recursive = TRUE, showWarnings = FALSE)
     content_hash <- tools::md5sum(model_for_compilation_name)[[1]]
     cache_file   <- file.path(ver_dir, paste0("model_", content_hash, ".cpp"))
@@ -6945,8 +6953,10 @@ compile <- function(filenames,
     }, add = TRUE)
 
     # echo = FALSE: do not print the generated R functions (from R-expression
-    # blocks) as they are defined.
-    Rcpp::sourceCpp(cache_file, echo = FALSE)
+    # blocks) as they are defined. cacheDir: sourceCpp keeps its build (the
+    # DLL) there; its default is the session's tempdir(), so without this every
+    # new R session recompiled the model despite the stable source path.
+    Rcpp::sourceCpp(cache_file, echo = FALSE, cacheDir = file.path(ver_dir, "sourceCpp"))
   }
 
   # Cleanup of temporary files is handled by on.exit() registered at creation.

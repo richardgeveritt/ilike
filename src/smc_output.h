@@ -303,6 +303,27 @@ protected:
   
   /** @brief The all particles. */
   std::deque<Particles> all_particles;
+
+  // The stored generations of a nested run in compact form (see
+  // SMC::compact_stored_output): once compacted, all_particles is empty and
+  // these are what is written.
+  struct CompactGeneration
+  {
+    size_t iteration;
+    arma::mat points_transposed;   // one column per point
+    arma::colvec unnormalised_log_weights;
+    arma::colvec normalised_log_weights;
+    std::vector<size_t> ancestors; // empty if the previous generation was not stored
+    std::vector<double> output_lengths;
+    double incremental_log_likelihood;
+    double ess;
+    int resampled;
+    std::string schedule_parameters;
+  };
+  std::vector<CompactGeneration> compact_generations;
+  bool compacted = false;
+  void compact();
+  void write_compact_nested(const std::string &dir_name);
   
   /** @brief The all proposed. */
   std::deque<Particles> all_proposed;

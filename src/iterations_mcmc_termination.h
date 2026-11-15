@@ -79,6 +79,8 @@ public:
    */
   void set_parameters(StandardMCMCOutput* mcmc_output);
   
+  size_t get_known_number_of_iterations() const { return this->number_of_iterations; }
+
 protected:
   
   // not stored here

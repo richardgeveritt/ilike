@@ -335,6 +335,16 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// sample_store_check
+List sample_store_check();
+RcppExport SEXP _ilike_sample_store_check() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(sample_store_check());
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_ilike_ilike_rdtsc", (DL_FUNC) &_ilike_ilike_rdtsc, 0},
@@ -353,6 +363,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ilike_do_particle_filter_with_fixed_params", (DL_FUNC) &_ilike_do_particle_filter_with_fixed_params, 11},
     {"_ilike_do_evaluate_log", (DL_FUNC) &_ilike_do_evaluate_log, 7},
     {"_ilike_do_evaluate_log_with_fixed_params", (DL_FUNC) &_ilike_do_evaluate_log_with_fixed_params, 8},
+    {"_ilike_sample_store_check", (DL_FUNC) &_ilike_sample_store_check, 0},
     {NULL, NULL, 0}
 };
 

@@ -116,6 +116,9 @@ private:
   std::shared_ptr<HighFive::File> h5_file;
   /** @brief Path to the HDF5 output file. */
   std::string h5_file_path;
+
+  // values written by ABCLikelihoodEstimatorOutput, flushed per generation
+  std::vector<double> pending_log_likelihoods;
   
   /**
    * @brief Copies the state of another ABCLikelihoodEstimatorOutput into this object.

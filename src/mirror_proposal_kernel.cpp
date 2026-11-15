@@ -180,9 +180,9 @@ Parameters MirrorProposalKernel::simulate(RandomNumberGenerator &rng,
        i!=this->proposal_info.end();
        ++i)
   {
-    output[i->first] = rmvnorm_using_chol(rng,
+    output[i->first] = rmvnorm_using_lower_chol(rng,
                                           2.0*i->second.get_mean()-particle.get_transformed_parameters(this).get_colvec(i->first),
-                                          sqrt(i->second.get_double_scale())*i->second.get_chol());
+                                          i->second.get_chol_lower(), sqrt(i->second.get_double_scale()));
   }
   return output;
 }
@@ -221,9 +221,9 @@ Parameters MirrorProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
   auto found = this->proposal_info.find(variable);
   
   Parameters output;
-  output[variable] = rmvnorm_using_chol(rng,
+  output[variable] = rmvnorm_using_lower_chol(rng,
                                         2.0*found->second.get_mean()-particle.get_transformed_parameters(this).get_colvec(variable),
-                                        sqrt(found->second.get_double_scale())*found->second.get_chol());
+                                        found->second.get_chol_lower(), sqrt(found->second.get_double_scale()));
   return output;
 }
 

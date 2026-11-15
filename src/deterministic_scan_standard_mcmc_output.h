@@ -40,6 +40,10 @@ public:
    * @param mcmc_in The mcmc.
    */
   DeterministicScanStandardMCMCOutput(DeterministicScanMCMC* mcmc_in);
+
+  // owns_mcmc_in false: share the kernel (not deleted or duplicated here;
+  // it must outlive this output, as the algorithm that owns it does).
+  DeterministicScanStandardMCMCOutput(DeterministicScanMCMC* mcmc_in, bool owns_mcmc_in);
   
   /**
    * @brief Performs the ~deterministicscanstandardmcmcoutput operation.
@@ -100,6 +104,11 @@ protected:
   // stored here
   /** @brief The mcmc. */
   DeterministicScanMCMC* mcmc;
+
+  // Whether this output owns mcmc: true for a move that adapts (each chain
+  // adapts its own copy), false when the kernel is shared between the
+  // particles' outputs (dev/plan.md, owner's decision 2, 2026-11-15).
+  bool owns_mcmc = true;
   
 };
 }

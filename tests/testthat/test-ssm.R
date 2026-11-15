@@ -89,3 +89,21 @@ test_that("a user function with the wrong arguments gives a clear message", {
   filename = system.file("extdata", "test_pf_transition_proposal_wrong_arguments.ilike", package = "ilike")
   expect_error(ilike::compile(filename), "simulate_transition_proposal function must have arguments")
 })
+
+test_that("KF and the stochastic and square-root EnKF handle a 2-D measurement with correlated noise", {
+  # Until C82-C84 the KF stopped on vector measurements (a 1 x 2 data row was
+  # assigned to a column vector), and the square-root EnKF used Cholesky
+  # factors where the update needs symmetric square roots (about 0.45 too low
+  # on this model). Both were correct only for scalar measurements.
+  skip_on_cran()
+  pl = list(c(0, 0), diag(2))
+  model = system.file("extdata", "test_enkf_bivariate.ilike", package = "ilike")
+  truth = kf_bivariate_log_likelihood()
+  expect_equal(ilike::KF(ilike::compile(model, model_parameter_list = pl), model_parameter_list = pl),
+               truth, tolerance = 1e-6)
+  enkf = ilike::compile(model, model_parameter_list = pl)
+  sqrt_enkf = ilike::compile(c(model, system.file("extdata", "test_enkf_sqrt.ilike", package = "ilike")),
+                             model_parameter_list = pl)
+  expect_lt(abs(ilike::EnKF(enkf, model_parameter_list = pl, number_of_ensemble_members = 20000, seed = 1) - truth), 0.15)
+  expect_lt(abs(ilike::EnKF(sqrt_enkf, model_parameter_list = pl, number_of_ensemble_members = 20000, seed = 1) - truth), 0.15)
+})

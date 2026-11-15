@@ -164,6 +164,20 @@ Parameters CustomIndependentProposalKernel::subsample_independent_simulate(Rando
   }
 }
 
+void CustomIndependentProposalKernel::independent_simulate_many(RandomNumberGenerator &rng,
+                                                                const Parameters &conditioned_on_parameters,
+                                                                size_t number_of_points,
+                                                                std::vector<Parameters> &output) const
+{
+  if (this->proposal_parameters==NULL)
+    stop("CustomIndependentProposalKernel::independent_simulate_many - proposal parameters not set.");
+  // the merged parameters are the same for every draw: build them once
+  // (independent_simulate merged them again for every draw)
+  Parameters merged = this->proposal_parameters->merge(conditioned_on_parameters);
+  for (size_t i = 0; i < number_of_points; ++i)
+    output.push_back(this->proposal_simulate(rng, merged));
+}
+
 Parameters CustomIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
                                                                            const Parameters &conditioned_on_parameters) const
 {

@@ -36,3 +36,16 @@ test_that("IS with built-in gamma and log-normal priors and proposals gives the 
   truth = log(integrate(function(t) dlnorm(t,0,1)*dnorm(1,t,1), 0, Inf)$value)
   expect_equal(test_is_builtin_z("test_is_lnorm_prior_gamma_proposal.ilike", "is_lnorm_prior"), truth, tolerance = 0.02)
 })
+
+test_that("write_factor_output = FALSE writes no factor outputs and the output still loads", {
+  on.exit(unlink(c("is_with_factors", "is_without_factors"), recursive = TRUE), add = TRUE)
+  recipe = ilike::compile(system.file("extdata", "test_gaussian_posterior.ilike", package = "ilike"))
+  ilike::IS(recipe, results_name = "is_with_factors", number_of_importance_points = 500, seed = 1)
+  ilike::IS(recipe, results_name = "is_without_factors", number_of_importance_points = 500, seed = 1,
+            write_factor_output = FALSE)
+  expect_true(dir.exists("is_with_factors/ilike_smc/iteration1"))
+  expect_false(dir.exists("is_without_factors/ilike_smc/iteration1"))
+  a = ilike::load_smc_output("is_with_factors"); b = ilike::load_smc_output("is_without_factors")
+  expect_equal(a$Value, b$Value)
+  expect_equal(a$LogWeight, b$LogWeight)
+})
