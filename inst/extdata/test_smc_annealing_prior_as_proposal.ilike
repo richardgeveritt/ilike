@@ -1,0 +1,9 @@
+// Invalid: anneals factor 1, the prior, which is also the importance proposal
+// (no is_proposal given), so it cancels and cannot be annealed.
+// Use with test_gaussian_posterior.ilike.
+
+/***m_proposal,ilike::norm_rw(theta,1)***/
+
+/***mcmc_termination,ilike::iterations(5)***/
+
+/***smc_sequence,ilike::annealing(power,c(0,0.25,0.5,0.75,1),c(1))***/

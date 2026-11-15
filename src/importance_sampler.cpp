@@ -589,6 +589,17 @@ namespace ilike
     this->make_copy(another);
   }
 
+  // Set the sequence variable (e.g. the ABC tolerance) to the value the
+  // caller passes in parameters. The particles see it because they share the
+  // sequencer's schedule_parameters (assignment writes into the shared matrix).
+  void ImportanceSampler::set_target_from_parameters(const Parameters &parameters)
+  {
+    const std::string &variable = this->sequencer.variable_names.back();
+    // (stops with a message naming the variable if the caller does not set it)
+    double value = parameters[variable][0];
+    this->sequencer.schedule_parameters[variable] = value;
+  }
+
   void ImportanceSampler::set_abc_scale(Particles *particles)
   {
     if (this->sequencer.find_scale == true)
@@ -867,17 +878,25 @@ namespace ilike
   void ImportanceSampler::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput *current_state,
                                                                        const Parameters &conditioned_on_parameters)
   {
-    // set sequencer to have values from conditioned_on_parameters
     if (!this->sequencer_limit_is_fixed)
-      this->sequencer.set_next_with_parameter(conditioned_on_parameters);
+    {
+      // The target (e.g. the ABC tolerance) is set by the caller, through
+      // conditioned_on_parameters. An importance sampler has a single target,
+      // so it is reweighted directly at that value: no bisection, and no state
+      // carried over from previous calls (this object is shared by every
+      // particle of the calling algorithm).
+      this->set_target_from_parameters(conditioned_on_parameters);
+      this->set_abc_scale(&current_state->back());
+      this->the_worker->smcadaptive_given_smcfixed_weight(this->index,
+                                                          current_state->back());
+      current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
+    }
     else
+    {
       this->sequencer.reset();
-
-    this->set_abc_scale(&current_state->back());
-
-    // this->smcadaptive_given_smcfixed_weight(current_state, conditioned_on_parameters);
-    // this->sequencer.find_next_target_bisection(current_state,this->index,conditioned_on_parameters);
-    this->sequencer.find_next_target_bisection(current_state, this->index);
+      this->set_abc_scale(&current_state->back());
+      this->sequencer.find_next_target_bisection(current_state, this->index);
+    }
     // this->the_worker->smcadaptive_given_smcfixed_weight(this->index,
     //                                                     current_state->back(),
     //                                                     conditioned_on_parameters);
@@ -894,7 +913,12 @@ namespace ilike
 
     current_state->set_time_and_reset_start();
 
-    current_state->terminate();
+    // When the target is set by the caller (e.g. an ABC tolerance chosen by an
+    // outer SMC), the simulations are kept: the caller reweights them at
+    // new targets. terminate() would discard every stored particle set when
+    // no output is stored.
+    if (this->sequencer_limit_is_fixed)
+      current_state->terminate();
   }
 
   void ImportanceSampler::subsample_simulate_smc(SMCOutput *current_state)
@@ -1007,12 +1031,14 @@ namespace ilike
 
     // this->log_likelihood = current_state->log_likelihood_pre_last_step + current_state->latest_log_normalising_constant_ratio();
 
-    current_state->log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
+    // A subsample run returns subsample_log_likelihood (see LikelihoodEstimatorOutput::subsample_evaluate).
+    current_state->subsample_log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
 
     // if (this->sequencer_parameters!=NULL)
     //   current_state->back().schedule_parameters = *this->sequencer_parameters;
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
 
+    current_state->set_llhd(current_state->subsample_log_likelihood);
     current_state->set_time_and_reset_start();
 
     current_state->terminate();
@@ -1021,16 +1047,22 @@ namespace ilike
   void ImportanceSampler::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput *current_state,
                                                                                  const Parameters &conditioned_on_parameters)
   {
-    // set sequencer to have values from conditioned_on_parameters
     if (!this->sequencer_limit_is_fixed)
-      this->sequencer.set_next_with_parameter(conditioned_on_parameters);
+    {
+      // As in evaluate_smcadaptive_part_given_smcfixed_smc: single target set
+      // by the caller.
+      this->set_target_from_parameters(conditioned_on_parameters);
+      this->set_abc_scale(&current_state->back());
+      this->the_worker->subsample_smcadaptive_given_smcfixed_weight(this->index,
+                                                                    current_state->back());
+      current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
+    }
     else
+    {
       this->sequencer.reset();
-
-    this->set_abc_scale(&current_state->back());
-
-    // this->sequencer.subsample_find_next_target_bisection(current_state,this->index,conditioned_on_parameters);
-    this->sequencer.subsample_find_next_target_bisection(current_state, this->index);
+      this->set_abc_scale(&current_state->back());
+      this->sequencer.subsample_find_next_target_bisection(current_state, this->index);
+    }
 
     // this->smcadaptive_given_smcfixed_weight(current_state, conditioned_on_parameters);
 
@@ -1043,15 +1075,22 @@ namespace ilike
 
     // this->log_likelihood = current_state->log_likelihood_pre_last_step + current_state->latest_log_normalising_constant_ratio();
 
-    current_state->log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
+    // A subsample run returns subsample_log_likelihood (see LikelihoodEstimatorOutput::subsample_evaluate).
+    current_state->subsample_log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
 
     // if (this->sequencer_parameters!=NULL)
     //   current_state->back().schedule_parameters = *this->sequencer_parameters;
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters;
 
+    current_state->set_llhd(current_state->subsample_log_likelihood);
     current_state->set_time_and_reset_start();
 
-    current_state->terminate();
+    // When the target is set by the caller (e.g. an ABC tolerance chosen by an
+    // outer SMC), the simulations are kept: the caller reweights them at
+    // new targets. terminate() would discard every stored particle set when
+    // no output is stored.
+    if (this->sequencer_limit_is_fixed)
+      current_state->terminate();
   }
 
   /*

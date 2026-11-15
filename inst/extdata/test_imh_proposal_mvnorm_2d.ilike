@@ -1,0 +1,5 @@
+// Independent MH proposal MVN(p1, p2) on a 2-D parameter (use with
+// test_gaussian_posterior_vector.ilike).
+/***imh_proposal,ilike::mvnorm(theta,p1,p2)***/
+
+/***mcmc_termination,ilike::iterations(10000)***/

@@ -17,33 +17,106 @@ get_text_between_first_pair_of_matching_parentheses <- function(my_string)
   }
 }
 
+# Scan an R expression character by character, tracking the depth of (), []
+# and {} and whether we are inside a string ('...', "..." or `...`, with
+# backslash escapes). Returns, for each character, TRUE if it is at the top
+# level (depth 0, outside any string).
+top_level_characters <- function(chars)
+{
+  top_level = logical(length(chars))
+  depth = 0
+  quote = ""
+  escaped = FALSE
+  for (k in seq_along(chars))
+  {
+    char = chars[k]
+    if (quote != "")
+    {
+      if (escaped)
+        escaped = FALSE
+      else if (char == "\\")
+        escaped = TRUE
+      else if (char == quote)
+        quote = ""
+      next
+    }
+    if (char %in% c("'", '"', "`"))
+    {
+      quote = char
+      next
+    }
+    if (char %in% c("(", "[", "{"))
+    {
+      depth = depth + 1
+      next
+    }
+    if (char %in% c(")", "]", "}"))
+    {
+      depth = depth - 1
+      next
+    }
+    top_level[k] = (depth == 0)
+  }
+  return(top_level)
+}
+
+# Split at commas that are not inside brackets of any kind or strings, e.g.
+# 'dnorm(x,1,log=TRUE),c(1,2),"a,b"' -> 'dnorm(x,1,log=TRUE)', 'c(1,2)', '"a,b"'.
 split_string_at_comma_ignoring_parentheses <- function(input_string)
 {
-  result <- vector()
-  current_word <- ""
-  parentheses_level <- 0
+  chars = strsplit(input_string, "")[[1]]
+  if (length(chars) == 0)
+    return("")
+  split_points = which(top_level_characters(chars) & (chars == ","))
+  starts = c(1, split_points + 1)
+  ends = c(split_points - 1, length(chars))
+  result = mapply(function(a, b) { if (b < a) "" else paste(chars[a:b], collapse = "") }, starts, ends)
+  return(trimws(unname(result)))
+}
 
-  for (char in strsplit(input_string, "")[[1]]) {
-    if (char == "," && parentheses_level == 0) {
-      result <- c(result, current_word)
-      current_word <- ""
-    } else {
-      current_word <- paste0(current_word, char)
-
-      if (char == "(") {
-        parentheses_level <- parentheses_level + 1
-      } else if (char == ")") {
-        parentheses_level <- parentheses_level - 1
-      }
+# Position of the "=" in an assignment "name=expression" written in a block
+# header: the first "=" at the top level that is not part of "==", "<=", ">="
+# or "!=". Named arguments (log=TRUE) are inside brackets, so they are not
+# found. Returns 0 if there is no assignment.
+find_top_level_assignment <- function(input_string)
+{
+  chars = strsplit(input_string, "")[[1]]
+  if (length(chars) == 0)
+    return(0)
+  top_level = top_level_characters(chars)
+  for (k in seq_along(chars))
+  {
+    if (top_level[k] && chars[k] == "=")
+    {
+      previous_char = if (k > 1) chars[k-1] else ""
+      next_char = if (k < length(chars)) chars[k+1] else ""
+      if (!(previous_char %in% c("=", "<", ">", "!")) && (next_char != "="))
+        return(k)
     }
   }
+  return(0)
+}
 
-  result <- c(result, current_word)
-
-  # Trim leading and trailing whitespace from each split substring
-  result <- trimws(result)
-
-  return(result)
+# A file named inside an ilike file (e.g. the inner model of an
+# algorithmic_likelihood): an absolute path is used as it is; a relative path
+# is looked for relative to the directories of the files given to compile, in
+# order, and then relative to the working directory.
+resolve_included_file <- function(filename, source_directories, block_name = "", line_counter = 0)
+{
+  is_absolute = grepl("^(/|~|[A-Za-z]:[/\\\\])", filename)
+  if (is_absolute)
+  {
+    if (!file.exists(path.expand(filename)))
+      stop(paste("Block ",block_name,", line number ",line_counter,": file ",filename," not found.",sep=""))
+    return(path.expand(filename))
+  }
+  candidates = c(file.path(source_directories, filename), filename)
+  for (candidate in candidates)
+  {
+    if (file.exists(candidate))
+      return(normalizePath(candidate))
+  }
+  stop(paste("Block ",block_name,", line number ",line_counter,": file ",filename," not found (looked in: ",paste(unique(c(source_directories, getwd())), collapse=", "),").",sep=""))
 }
 
 convert_dollar <- function(input_string)
@@ -123,15 +196,11 @@ my_julia_source = function(filename,
 ilike_parse <- function(input,
                         model_parameter_list = list())
 {
-  required_args <- formula.tools::get.vars(parse(text=input))
-
-  an.error.occured <- FALSE
-  tryCatch( { required_args <- formula.tools::get.vars(parse(text=input)) }
-            , error = function(e) {an.error.occured <<- TRUE})
-  if (an.error.occured)
-  {
-    stop(paste('Error in formula.tools::get.vars function. Maybe you used an equals sign within the function specification (e.g. using log=TRUE). This is not yet supported.',sep=""))
-  }
+  # The variables used in the expression (function names and named-argument
+  # names, e.g. "log" in log=TRUE, are not variables).
+  parsed = tryCatch(parse(text=input, keep.source=FALSE),
+                    error = function(e) stop(paste("Could not parse the R expression ", input, ": ", conditionMessage(e), sep="")))
+  required_args <- unique(all.vars(parsed))
 
   parameter_arguments = c()
 
@@ -1571,7 +1640,7 @@ get_parameters_output_function_body <- function(output_variable,R_functions,R_ar
     }
     else
     {
-      function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Parameters output; output["',output_variable,'"] = Rcpp::as<arma::mat>(NumericMatrix(f(',cpp_function_arguments_string,'))); return output;',sep="")
+      function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Function as_matrix("as.matrix"); Parameters output; output["',output_variable,'"] = Rcpp::as<arma::mat>(NumericMatrix(as_matrix(f(',cpp_function_arguments_string,')))); return output;',sep="")
     }
   }
 
@@ -1600,7 +1669,7 @@ get_matrix_output_function_body <- function(R_functions,R_args,R_function_name,R
   }
   else
   {
-    function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); ','NumericMatrix num_mat = NumericMatrix(f(',cpp_function_arguments_string,')); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), false);',sep="")
+    function_body = paste('Function f(Environment::global_env()["',R_function_name,'"]); Function as_matrix("as.matrix"); ','NumericMatrix num_mat = NumericMatrix(as_matrix(f(',cpp_function_arguments_string,'))); return arma::mat(num_mat.begin(), num_mat.nrow(), num_mat.ncol(), true);',sep="")
   }
 
   return(function_body)
@@ -1632,6 +1701,66 @@ get_string_output_function_body <- function(R_functions,R_args,R_function_name,R
   }
 
   return(function_body)
+}
+
+# The parameter list of the (first) C++ function in block_code, as a vector
+# of declarations, ignoring comments.
+cpp_function_parameter_list <- function(block_code)
+{
+  code = paste(block_code, collapse = "\n")
+  code = gsub("/\\*.*?\\*/", "", code, perl = TRUE)
+  code = gsub("//[^\n]*", "", code, perl = TRUE)
+  chars = strsplit(code, "")[[1]]
+  open = which(chars == "(")
+  if (length(open) == 0)
+    return(NULL)
+  depth = 0
+  for (k in open[1]:length(chars))
+  {
+    if (chars[k] == "(") depth = depth + 1
+    if (chars[k] == ")") depth = depth - 1
+    if (depth == 0)
+    {
+      inside = if (k - 1 >= open[1] + 1) paste(chars[(open[1]+1):(k-1)], collapse = "") else ""
+      inside = trimws(inside)
+      if (inside == "" || inside == "void")
+        return(character(0))
+      return(trimws(strsplit(inside, ",")[[1]]))
+    }
+  }
+  return(NULL)
+}
+
+# A parameter declaration reduced to its type: the name and spaces removed,
+# and Data written as Parameters (Data is a typedef of Parameters).
+cpp_parameter_type <- function(declaration)
+{
+  type = sub("[A-Za-z_][A-Za-z0-9_]*\\s*$", "", trimws(declaration))
+  type = gsub("\\s+", "", type)
+  type = gsub("\\bData\\b", "Parameters", type, perl = TRUE)
+  type
+}
+
+# Stop with a clear message if a user's C++ function does not have the
+# arguments that its block requires (otherwise the generated code fails to
+# compile with a compiler error).
+check_cpp_function_signature <- function(block_code, expected_arguments, block_name, line_counter, function_name)
+{
+  user = cpp_function_parameter_list(block_code)
+  if (is.null(user))
+    return(invisible(NULL))
+  expected = if (nchar(trimws(expected_arguments)) == 0) character(0) else trimws(strsplit(expected_arguments, ",")[[1]])
+  same = (length(user) == length(expected)) &&
+    all(sapply(user, cpp_parameter_type) == sapply(expected, cpp_parameter_type))
+  if (!same)
+  {
+    describe = function(a) if (length(a) == 0) "no arguments" else paste(a, collapse = ", ")
+    stop(paste("Block ", block_name, ", line number ", line_counter, ": function ", function_name,
+               " has arguments (", describe(user), "), but a ", block_name, " function must have arguments (",
+               describe(expected), "). For blocks with several forms, the form is chosen from the argument names ",
+               "(parameters, proposed_parameters, proposal_parameters, data).", sep = ""), call. = FALSE)
+  }
+  invisible(NULL)
 }
 
 parameter_types_for_cpp <- function(block_code)
@@ -2948,7 +3077,7 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
     return_type = "double"
     arguments = c()
     arguments[1] = "const Parameters &proposed_parameters"
-    arguments[1] = "const Parameters &parameters"
+    arguments[2] = "const Parameters &parameters"
     #args_for_typedef = "const Parameters&"
     R_args = "proposed_parameters,parameters"
   }
@@ -3295,7 +3424,7 @@ function_name_for_cpp <- function(block_code)
   return(split_at_space[length(split_at_space)])
 }
 
-extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_recipe_code,print_block_ends)
+extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_recipe_code,print_block_ends,source_directories=character(0))
 {
 
   # Get information about the order in which MCMC moves are included.
@@ -3348,6 +3477,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
       rt = return_types_for_cpp(block_name,line_counter,which_proposed_parameters,which_parameters,which_proposal_parameters,which_data)
       return_type = rt[[1]]
       args_for_typedef = rt[[2]]
+      check_cpp_function_signature(block_code, args_for_typedef, block_name, line_counter, actual_cpp_function_name)
       R_args = rt[[3]]
       proposal_type = rt[[4]]
 
@@ -3395,14 +3525,23 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
     }
     else
     {
-      # Check if block_function is of the form: function(some,stuff)
+      # Either an ilike function, ilike::name(arguments), or an R expression
+      # (a call, a string, a number, an if/else, optionally assigned with
+      # name=expression). Whitespace is only removed for ilike functions, so
+      # that strings in R expressions are kept intact.
+      block_function <- trimws(block_function)
+      compact_block_function <- gsub("\\s+", "", block_function)
 
-      block_function <- gsub("\\s+", "", block_function)
+      if (grepl("^[^(]*=\\s*ilike::", compact_block_function) && find_top_level_assignment(compact_block_function) > 0)
+      {
+        stop("When specifying an ilike function, you should not have an output (e.g. don't use x=ilike::mvnorm(...)).")
+      }
 
       # Split input into function name and arguments
-      parts <- strsplit(block_function, "\\(")[[1]]
-      if (length(parts)>1)
+      parts <- strsplit(compact_block_function, "\\(")[[1]]
+      if ( (length(parts)>1) && grepl("^ilike::", compact_block_function) )
       {
+        block_function <- compact_block_function
         function_name <- parts[1]
         if ( (substr(block_function,nchar(function_name)+1,nchar(function_name)+1)!="(") || (substr(block_function,nchar(block_function),nchar(block_function))!=")"))
         {
@@ -3429,7 +3568,8 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
       }
       else
       {
-        stop(paste("Block ",block_name,", line number ",line_counter,": function needs to have a name.",sep=""))
+        # An R expression.
+        is_like_function = FALSE
       }
 
       if (is_like_function==TRUE)
@@ -3518,6 +3658,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
           sub_filename = gsub('"', '', sub_filename)
           sub_filename = gsub("'", '', sub_filename)
+          sub_filename = resolve_included_file(sub_filename, source_directories, block_name, line_counter)
           my_list = list(list(type=ilike_type,
                               model=ilike::compile(filename=sub_filename,model_parameter_list=model_parameter_list,external_packages=external_packages,julia_bin_dir=julia_bin_dir,julia_required_libraries=julia_required_libraries,verify_cpp_function_types=verify_cpp_function_types,keep_temporary_recipe_code=keep_temporary_recipe_code,nesting_level=sub_nesting_level,print_block_ends=print_block_ends),
                               parameters=parameters))
@@ -3544,23 +3685,23 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
       else
       {
 
-        # need to check if output is assigned from function (for simulate)
-        split_at_equals = strsplit(block_function,"=")[[1]]
-        if (length(split_at_equals)==2)
+        # need to check if output is assigned from function (for simulate):
+        # output_variable=expression, with "=" at the top level (not a named
+        # argument such as log=TRUE, and not "==")
+        assignment_position = find_top_level_assignment(block_function)
+        if (assignment_position > 0)
         {
-          output_variable = split_at_equals[1]
-          function_to_use = split_at_equals[2]
-          function_name = strsplit(function_name,"=")[[1]][2]
+          output_variable = trimws(substr(block_function, 1, assignment_position-1))
+          function_to_use = trimws(substr(block_function, assignment_position+1, nchar(block_function)))
+          if ( (output_variable=="") || grepl("[[:space:](){}\\[\\],\"'`]", output_variable) )
+          {
+            stop(paste("Block ",block_name,", line number ",line_counter,": the output name ",output_variable," before \"=\" is not a variable name.",sep=""))
+          }
         }
         else
         {
           output_variable = ""
           function_to_use = block_function
-        }
-
-        if (length(split_at_equals)>2)
-        {
-          stop(paste("Block ",block_name,", line number ",line_counter,": can have a maximum of one equals sign in it.",sep=""))
         }
 
         function_to_use = convert_dollar(function_to_use)
@@ -4788,11 +4929,23 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
             stop(paste("Block ",block_name,", line number ",line_counter,": using variables from proposal parameters not possible in this function.",sep=""))
           }
 
+          # Constant (type 1) or a function of the parameters (type 2), as for
+          # the other covariance blocks.
+          if (sum(which_parameters)>0)
+          {
+            arguments = c()
+            arguments[1] = "const Parameters &parameters"
+            R_args = "parameters"
+            proposal_type = 2
+          }
+          else
+          {
+            arguments = c()
+            R_args = ""
+            proposal_type = 1
+          }
+
           return_type = "arma::mat"
-          arguments = c()
-          arguments[1] = "const Parameters &parameters"
-          #args_for_typedef = "const Parameters&"
-          R_args = "parameters"
 
           function_body = get_matrix_output_function_body(R_functions,R_args,R_function_name,R_function_arguments_string,cpp_function_arguments_string)
 
@@ -5443,13 +5596,14 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
         if (proposal_type!=0)
         {
-          my_list[["type"]] = proposal_type
-
           if ("type" %in% names(blocks[[block_type]][[factor_number]]))
           {
             if (blocks[[block_type]][[factor_number]][["type"]]!=proposal_type)
               stop(paste("Block ",block_name,", line number ",line_counter,": different parts of the proposal/transition model/measurement model are of different types (maybe one relies on additional parameters and/or data, and the other does not?)",sep=""))
           }
+          # Stored in the block (as for C++ functions); it was set on my_list
+          # after my_list had been stored, so it never reached the model.
+          blocks[[block_type]][[factor_number]][["type"]] = proposal_type
         }
 
       }
@@ -6298,6 +6452,10 @@ compile <- function(filenames,
     }
   }
 
+  # Directories of the input files: files named inside them (e.g. the inner
+  # model of an algorithmic_likelihood) are looked for here first.
+  source_directories = unique(dirname(normalizePath(filenames)))
+
   for (i in 1:length(filenames))
   {
     filename = filenames[i]
@@ -6335,19 +6493,28 @@ compile <- function(filenames,
     }
   }
 
+  # Close any file left open when parsing stops with an error (the flags are
+  # cleared wherever a connection is closed normally).
+  the_file_open = FALSE; ilikefileConn_open = FALSE; fileConn_open = FALSE
+  on.exit({
+    if (the_file_open) close(the_file)
+    if (ilikefileConn_open) close(ilikefileConn)
+    if (fileConn_open) close(fileConn)
+  }, add = TRUE)
+
   if (length(filenames)>1)
   {
     temporary_stacked_ilike_filename = file.path(tempdir(), paste("temporary_ilike_file",nesting_level,"_",ceiling(stats::runif(1, 0, 10^7)),".ilike",sep=""))
     if (keep_temporary_recipe_code==FALSE)
       on.exit(unlink(temporary_stacked_ilike_filename), add = TRUE)
-    ilikefileConn<-file(temporary_stacked_ilike_filename,open="w")
+    ilikefileConn<-file(temporary_stacked_ilike_filename,open="w"); ilikefileConn_open = TRUE
 
 
     # Make temporary concatenation of all files, dealing with header matter first
     for (i in 1:length(filenames))
     {
       filename = filenames[i]
-      the_file = file(filename,open="r")
+      the_file = file(filename,open="r"); the_file_open = TRUE
       while (TRUE)
       {
 
@@ -6369,14 +6536,14 @@ compile <- function(filenames,
       }
 
       writeLines("\n", ilikefileConn)
-      close(the_file)
+      close(the_file); the_file_open = FALSE
     }
 
 
     for (i in 1:length(filenames))
     {
       filename = filenames[i]
-      the_file = file(filename,open="r")
+      the_file = file(filename,open="r"); the_file_open = TRUE
       in_header = TRUE
       while (TRUE)
       {
@@ -6405,25 +6572,25 @@ compile <- function(filenames,
       }
 
       writeLines("\n", ilikefileConn)
-      close(the_file)
+      close(the_file); the_file_open = FALSE
     }
 
-    close(ilikefileConn)
+    close(ilikefileConn); ilikefileConn_open = FALSE
   }
 
   # Setup .cpp to be written to.
   model_for_compilation_name = file.path(tempdir(), paste("model_for_compilation",nesting_level,"_",ceiling(stats::runif(1, 0, 10^7)),".cpp",sep=""))
   if (keep_temporary_recipe_code==FALSE)
     on.exit(unlink(model_for_compilation_name), add = TRUE)
-  fileConn<-file(model_for_compilation_name,open="w")
+  fileConn<-file(model_for_compilation_name,open="w"); fileConn_open = TRUE
 
   if (length(filenames)>1)
   {
-    the_file = file(temporary_stacked_ilike_filename,open="r")
+    the_file = file(temporary_stacked_ilike_filename,open="r"); the_file_open = TRUE
   }
   else
   {
-    the_file = file(filenames,open="r")
+    the_file = file(filenames,open="r"); the_file_open = TRUE
   }
 
   in_block = FALSE
@@ -6468,7 +6635,7 @@ compile <- function(filenames,
 
     if ( (nchar(line)>=3) && (substr(line, 1, 3)=="//#") )
     {
-      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_recipe_code,print_block_ends)
+      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_recipe_code,print_block_ends,source_directories)
       in_block = FALSE
       starting_block_flag = TRUE
       is_custom = FALSE
@@ -6512,14 +6679,14 @@ compile <- function(filenames,
           }
           else # end current block
           {
-            blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_recipe_code,print_block_ends)
+            blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_recipe_code,print_block_ends,source_directories)
             is_custom = FALSE
             block_code = ""
           }
 
           unparsed_block_name = substr(line, 5, nchar(line)-4)
 
-          if (nchar(unparsed_block_name)==8)
+          if (nchar(trimws(unparsed_block_name))==0)
           {
             stop(paste("Invalid file: line ",line_counter,", new section of file needs a name: use /***name***/.",sep=""))
           }
@@ -6578,7 +6745,7 @@ compile <- function(filenames,
     # ignore block if block number is not positive
     if (number_to_pass_to_extract_block>0)
     {
-      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_recipe_code,print_block_ends)
+      blocks = extract_block(blocks,block_type,block_name,number_to_pass_to_extract_block,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_recipe_code,print_block_ends,source_directories)
 
       if (print_block_ends==TRUE)
       {
@@ -6639,14 +6806,23 @@ compile <- function(filenames,
     }
   }
 
-  close(the_file)
+  close(the_file); the_file_open = FALSE
 
   if (verify_cpp_function_types)
   {
     blocks = check_types(blocks)
   }
 
-  close(fileConn)
+  close(fileConn); fileConn_open = FALSE
+
+  # A model made only of built-in (ilike::) blocks generates no C++ functions;
+  # there is nothing to compile (and sourceCpp would warn that it found no
+  # exported functions).
+  if (file.exists(model_for_compilation_name) &&
+      !any(grepl("[[Rcpp::export]]", readLines(model_for_compilation_name, warn = FALSE), fixed = TRUE)))
+  {
+    unlink(model_for_compilation_name)
+  }
 
   if (file.exists(model_for_compilation_name))
   {
@@ -6768,7 +6944,9 @@ compile <- function(filenames,
       Sys.setenv(PKG_LIBS = old_libs)
     }, add = TRUE)
 
-    Rcpp::sourceCpp(cache_file)
+    # echo = FALSE: do not print the generated R functions (from R-expression
+    # blocks) as they are defined.
+    Rcpp::sourceCpp(cache_file, echo = FALSE)
   }
 
   # Cleanup of temporary files is handled by on.exit() registered at creation.

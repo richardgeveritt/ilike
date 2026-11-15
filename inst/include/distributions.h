@@ -978,7 +978,7 @@ inline double dgamma(double x, double shape, double rate) {
   if (x < 0)
     return -arma::datum::inf;
   return -boost::math::lgamma<double>(shape) + shape * log(rate) +
-         (rate - 1.0) * log(x) - rate * x;
+         (shape - 1.0) * log(x) - rate * x;
 }
 
 /*!

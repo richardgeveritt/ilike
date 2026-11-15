@@ -424,8 +424,15 @@ void SMCOutput::terminate()
 void SMCOutput::write_to_file(const std::string &dir_name,
                               const std::string &index)
 {
+  // An output set to store no iterations (e.g. the importance sampler inside
+  // an ABC likelihood, built without store_output) writes nothing. (Such an
+  // output may still hold particles: an ABC likelihood whose tolerance is set
+  // by an outer SMC keeps its simulations to reweight them.)
+  if (this->output_lag == 0)
+    return;
+
   std::string directory_name = dir_name + "_smc";
-  
+
   if (!directory_exists(directory_name))
   {
     make_directory(directory_name);
@@ -457,7 +464,18 @@ void SMCOutput::write_to_file(const std::string &dir_name,
     if (this->all_particles.size() > distance_from_end)
     {
       size_t deque_index = this->all_particles.size()-1-distance_from_end;
-      
+
+      // all_particles, llhds and times hold one entry per stored SMC
+      // iteration and must stay aligned.
+      if ((deque_index >= this->llhds.size()) || (deque_index >= this->times.size()))
+      {
+        Rcpp::stop("SMCOutput::write_to_file: output for SMC iteration " +
+                   std::to_string(iteration+1) + " is incomplete (" +
+                   std::to_string(this->all_particles.size()) + " particle sets, " +
+                   std::to_string(this->llhds.size()) + " log-likelihoods, " +
+                   std::to_string(this->times.size()) + " times).");
+      }
+
       // ---- top-level extendable datasets ----
       h5_append_double(hf, "log_likelihood", this->llhds[deque_index]);
       h5_append_double(hf, "time",           this->times[deque_index]);

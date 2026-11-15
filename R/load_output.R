@@ -406,9 +406,15 @@ load_smc_output = function(results_directory,
         normalised_weights_for_each_external_point = lapply(normalised_weights_for_each_external_point,FUN=function(i) { which_nan = which(is.nan(i)); o = i; o[which_nan] = -Inf; o })
         log_weight_list = lapply(1:number_of_external_points,FUN=function(i){ normalised_weights_for_each_external_point[[i]] + external_log_weights[i] })
 
-        log_weight_fn = function(j) {matrix(sapply(1:length(log_weight_list[[j]]),FUN=function(i) { rep(log_weight_list[[j]][i],sum(variable_sizes)) }),sum(variable_sizes)*length(log_weight_list[[j]]))}
-
-        log_weight_column = matrix(sapply(1:number_of_external_points,FUN=function(i) { log_weight_fn(i) }),length(iterations_column))
+        # Rows are particle-major: each particle has chain_length stored
+        # iterations, each spread over sum(variable_sizes) rows, so each
+        # particle's weight covers sum(variable_sizes)*chain_length rows (as
+        # for the Particle and AncestorIndex columns).
+        log_weight_column = matrix(unlist(lapply(log_weight_list,FUN=function(w) { rep(as.numeric(w),each=sum(variable_sizes)*chain_length) })),ncol=1)
+        if (length(log_weight_column) != length(iterations_column))
+        {
+          stop(paste("load_smc_output: target ",target," has ",length(log_weight_column)/(sum(variable_sizes)*chain_length)," weights but ",number_of_chains*number_of_external_points," particles.",sep=""))
+        }
 
         #log_weight = log_weight$V1 - log_sum_exp(log_weight$V1)
 

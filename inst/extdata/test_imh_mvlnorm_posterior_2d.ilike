@@ -1,0 +1,27 @@
+// A two-dimensional positive parameter theta with multivariate log-normal
+// prior (p1, p2) and one observation x = (1, 1) with likelihood
+// N(theta_i, 1) for each component. The independent MH proposal is the same
+// multivariate log-normal, so the acceptance probability depends only on the
+// likelihood. With p1 = (0, 0) and p2 = I the components are independent and
+// each has the posterior of test_imh_lnorm_posterior.ilike.
+
+/***prior,ilike::mvlnorm(theta,p1,p2)***/
+
+/***data***/
+Data set_data() {
+  arma::colvec x(2);
+  x(0) = 1.0;
+  x(1) = 1.0;
+  return Data("x", x);
+}
+
+/***evaluate_log_likelihood***/
+double evaluate_likelihood(const Parameters &params, const Data &data) {
+  arma::colvec theta = params["theta"];
+  arma::colvec x = data["x"];
+  return dnorm(x[0], theta[0], 1.0) + dnorm(x[1], theta[1], 1.0);
+}
+
+/***imh_proposal,ilike::mvlnorm(theta,p1,p2)***/
+
+/***mcmc_termination,ilike::iterations(10000)***/

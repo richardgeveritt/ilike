@@ -37,6 +37,8 @@ MCMC = function(recipe,
                 grain_size = 100000,
                 check_factor_index = FALSE)
 {
+  stop_if_parallel(parallel)
+
 
   if (is.character(recipe))
     recipe = compile(filenames = recipe,

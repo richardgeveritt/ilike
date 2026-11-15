@@ -1,0 +1,20 @@
+// Positive parameter with prior and independent MH proposal both lnorm
+// (ilike::lnorm(theta,0,1)), one observation 1 with likelihood N(theta,1).
+
+/***prior,ilike::lnorm(theta,0,1)***/
+
+/***data***/
+Data set_data() {
+  arma::colvec x(1);
+  x(0) = 1.0;
+  return Data("x", x);
+}
+
+/***evaluate_log_likelihood***/
+double evaluate_likelihood(const Parameters &params, const Data &data) {
+  return dnorm(data["x"][0], params["theta"][0], 1.0);
+}
+
+/***imh_proposal,ilike::lnorm(theta,0,1)***/
+
+/***mcmc_termination,ilike::iterations(10000)***/

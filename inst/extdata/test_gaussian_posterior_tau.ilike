@@ -1,0 +1,25 @@
+// Prior N(1,1) and one observation x = 1 with likelihood N(theta,1) raised to
+// the power tau, a variable set by the SMC sequence; at tau = 1 the posterior
+// is N(1, 1/2). Factors: 1 prior, 2 likelihood (the only one depending on tau).
+
+/***data***/
+Data set_data() {
+  arma::colvec x(1);
+  x(0) = 1.0;
+  return Data("x", x);
+}
+
+/***evaluate_log_prior***/
+double evaluate_log_prior(const Parameters &params) {
+  return dnorm(params["theta"][0], 1.0, 1.0);
+}
+
+/***simulate_prior***/
+Parameters simulate_prior(RandomNumberGenerator &rng) {
+  return Parameters("theta", rnorm(rng, 1.0, 1.0));
+}
+
+/***evaluate_log_likelihood***/
+double evaluate_likelihood(const Parameters &params, const Data &data) {
+  return params["tau"][0]*dnorm(data["x"][0], params["theta"][0], 1.0);
+}

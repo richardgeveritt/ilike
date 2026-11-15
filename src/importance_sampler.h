@@ -302,6 +302,7 @@ namespace ilike
      * @param particles The particles.
      */
     void set_abc_scale(Particles* particles);
+    void set_target_from_parameters(const Parameters &parameters);
 
     /*
      void weight(SMCOutput* simuation,

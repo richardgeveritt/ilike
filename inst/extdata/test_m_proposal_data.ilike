@@ -1,0 +1,13 @@
+// Metropolis proposal using the data (the observation x = 1 as the random
+// walk standard deviation; use with test_gaussian_posterior.ilike).
+
+/***simulate_m_proposal***/
+Parameters simulate_m_proposal(RandomNumberGenerator &rng,
+                               const Parameters &parameters,
+                               const Data &data) {
+  arma::colvec theta(1, 1);
+  theta[0] = rnorm(rng, parameters["theta"][0], data["x"][0]);
+  return Parameters("theta", theta);
+}
+
+/***mcmc_termination,ilike::iterations(10000)***/

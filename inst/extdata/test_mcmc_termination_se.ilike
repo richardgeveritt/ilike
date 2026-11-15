@@ -1,0 +1,5 @@
+// Standard-error termination is not written yet: running it stops.
+
+/***m_proposal,ilike::norm_rw(theta,1)***/
+
+/***mcmc_termination,ilike::se(0.01,3000)***/

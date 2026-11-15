@@ -1,0 +1,8 @@
+// As test_smc_annealing.ilike, using the name ilike::tempering.
+// Use with test_gaussian_posterior.ilike.
+
+/***m_proposal,ilike::norm_rw(theta,1)***/
+
+/***mcmc_termination,ilike::iterations(5)***/
+
+/***smc_sequence,ilike::tempering(power,c(0,0.25,0.5,0.75,1))***/

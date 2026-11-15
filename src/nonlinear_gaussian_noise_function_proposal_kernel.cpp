@@ -79,7 +79,7 @@ double NonLinearGaussianNoiseFunctionProposalKernel::specific_evaluate_kernel(co
     double dim = double(mean.n_rows);
     output = output + dmvnorm_using_precomp(proposed_particle.get_transformed_parameters(this).get_colvec(i->first),
                                             mean,
-                                            (1.0/sqrt(scale))*i->second.get_inv(transformed),
+                                            (1.0/scale)*i->second.get_inv(transformed),
                                             dim*log(scale)+i->second.get_logdet(transformed));
   }
   return output;

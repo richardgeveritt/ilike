@@ -1,0 +1,8 @@
+// User-defined MH proposal written as R expressions; use with
+// test_rforms_gaussian_posterior.ilike.
+
+/***simulate_mh_proposal,θ=rnorm(1,parameters$θ,1)***/
+
+/***evaluate_log_mh_proposal,dnorm(proposed_parameters$θ,parameters$θ,1,log=TRUE)***/
+
+/***mcmc_termination,ilike::iterations(10000)***/

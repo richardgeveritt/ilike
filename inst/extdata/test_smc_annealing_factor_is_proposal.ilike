@@ -1,0 +1,12 @@
+// As test_smc_annealing_factor.ilike, but starting from an importance
+// proposal N(0, 2^2): the targets are still prior x likelihood^power (no
+// proposal term in the path); the first weights are target / proposal.
+// Use with test_gaussian_posterior.ilike.
+
+/***is_proposal,ilike::norm(theta,0,2)***/
+
+/***m_proposal,ilike::norm_rw(theta,1)***/
+
+/***mcmc_termination,ilike::iterations(5)***/
+
+/***smc_sequence,ilike::annealing(power,c(0,0.25,0.5,0.75,1),c(2))***/

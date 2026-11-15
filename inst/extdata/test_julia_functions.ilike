@@ -1,0 +1,10 @@
+// Julia functions (in test_julia_functions.jl, sourced because it has the
+// same base name): the data, the prior (header in the documented
+// parameters.tau form) and the likelihood (parameters$tau form). Prior
+// logN(0, 1) on tau, observations y = (1, 1, 1) each N(tau, 1).
+
+/***data,y=my_ones(3L)***/
+
+/***evaluate_log_prior,my_dlnorm(parameters.tau,0,1,TRUE)***/
+
+/***evaluate_log_likelihood,my_log_llhd(parameters$tau,data$y)***/

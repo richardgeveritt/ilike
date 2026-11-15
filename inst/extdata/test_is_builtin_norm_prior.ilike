@@ -1,0 +1,17 @@
+// The model of test_gaussian_posterior.ilike with the built-in prior
+// prior,ilike::norm(theta,1,1) (prior N(1,1), one observation 1, likelihood
+// N(theta,1)).
+
+/***prior,ilike::norm(theta,1,1)***/
+
+/***data***/
+Data set_data() {
+  arma::colvec x(1);
+  x(0) = 1.0;
+  return Data("x", x);
+}
+
+/***evaluate_log_likelihood***/
+double evaluate_likelihood(const Parameters &params, const Data &data) {
+  return dnorm(data["x"][0], params["theta"][0], 1.0);
+}

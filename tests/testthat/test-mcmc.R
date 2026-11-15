@@ -1,134 +1,132 @@
-test_that("MCMC works with all available proposals", {
-
-  on.exit({
-    unlink("mcmc_m_proposal", recursive=TRUE)
-    unlink("mcmc_m_proposal_prior", recursive=TRUE)
-    unlink("mcmc_m_proposal_norm_rw", recursive=TRUE)
-    unlink("mcmc_m_proposal_unif_rw", recursive=TRUE)
-    unlink("mcmc_m_proposal_mirror", recursive=TRUE)
-    unlink("mcmc_imh_proposal", recursive=TRUE)
-    unlink("mcmc_imh_proposal_norm", recursive=TRUE)
-    unlink("mcmc_mh_proposal_custom", recursive=TRUE)
-    unlink("mcmc_mh_proposal_norm_rw", recursive=TRUE)
-    unlink("mcmc_mh_proposal_unif_rw", recursive=TRUE)
-    unlink("mcmc_mh_proposal_langevin", recursive=TRUE)
-    unlink("mcmc_mh_proposal_barker", recursive=TRUE)
-    unlink("mcmc_mh_proposal_mirror", recursive=TRUE)
-    unlink("mcmc_unadjusted_proposal", recursive=TRUE)
-    unlink("mcmc_unadjusted_proposal_langevin", recursive=TRUE)
-  }, add=TRUE)
-
-  # Test MCMC with custom Metropolis proposal
+test_that("MCMC: custom Metropolis proposal", {
+  on.exit(unlink("mcmc_m_proposal", recursive=TRUE), add=TRUE)
   run_mcmc_m_proposal()
   sampler_output = ilike::load_mcmc_output("mcmc_m_proposal")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
+})
 
-  # Test custom Metropolis proposal in MCMC with a declared cut: only the first
-  # factor (the prior) is used (m_factor_index = 1) and the likelihood is cut
+test_that("MCMC: custom Metropolis proposal with a declared cut targets the prior", {
+  on.exit(unlink("mcmc_m_proposal_prior", recursive=TRUE), add=TRUE)
+  # Only the first factor (the prior) is used (m_factor_index = 1) and the likelihood is cut
   # (m_cut_factor_index = 2). The acceptance ratio ignores the likelihood, so
   # the chain targets the prior N(1, 1), not the posterior.
   run_mcmc_m_proposal_prior()
   sampler_output = ilike::load_mcmc_output("mcmc_m_proposal_prior")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1, tolerance = 0.1)
+})
 
-  # Test built-in Metropolis proposal in MCMC
-  # ilike::norm_rw
+test_that("MCMC: built-in Metropolis proposal ilike::norm_rw", {
+  on.exit(unlink("mcmc_m_proposal_norm_rw", recursive=TRUE), add=TRUE)
   run_mcmc_m_proposal_norm_rw()
   sampler_output = ilike::load_mcmc_output("mcmc_m_proposal_norm_rw")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
+})
 
-  # Test built-in Metropolis proposal in MCMC
-  # ilike::unif_rw
+test_that("MCMC: built-in Metropolis proposal ilike::unif_rw", {
+  on.exit(unlink("mcmc_m_proposal_unif_rw", recursive=TRUE), add=TRUE)
   run_mcmc_m_proposal_unif_rw()
   sampler_output = ilike::load_mcmc_output("mcmc_m_proposal_unif_rw")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
+})
 
-  # Test built-in Metropolis proposal in MCMC
-  # ilike::mirror
+test_that("MCMC: built-in Metropolis proposal ilike::mirror", {
+  on.exit(unlink("mcmc_m_proposal_mirror", recursive=TRUE), add=TRUE)
   run_mcmc_m_proposal_mirror()
   sampler_output = ilike::load_mcmc_output("mcmc_m_proposal_mirror")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
+})
 
-  # Test custom independent Metropolis-Hastings proposal in MCMC
+test_that("MCMC: custom independent Metropolis-Hastings proposal", {
+  on.exit(unlink("mcmc_imh_proposal", recursive=TRUE), add=TRUE)
   run_mcmc_imh_proposal()
   sampler_output = ilike::load_mcmc_output("mcmc_imh_proposal")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
+})
 
-  # Test built-in independent Metropolis-Hastings proposal in MCMC
-  # ilike::norm
+test_that("MCMC: built-in independent Metropolis-Hastings proposal ilike::norm", {
+  on.exit(unlink("mcmc_imh_proposal_norm", recursive=TRUE), add=TRUE)
   run_mcmc_imh_proposal_norm()
   sampler_output = ilike::load_mcmc_output("mcmc_imh_proposal_norm")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
+})
 
-  # Test custom Metropolis-Hastings proposal in MCMC
+test_that("MCMC: custom Metropolis-Hastings proposal", {
+  on.exit(unlink("mcmc_mh_proposal_custom", recursive=TRUE), add=TRUE)
   run_mcmc_mh_proposal_custom()
   sampler_output = ilike::load_mcmc_output("mcmc_mh_proposal_custom")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
+})
 
-  # Test built-in Metropolis-Hastings proposal in MCMC
-  # ilike::norm_rw
+test_that("MCMC: built-in Metropolis-Hastings proposal ilike::norm_rw", {
+  on.exit(unlink("mcmc_mh_proposal_norm_rw", recursive=TRUE), add=TRUE)
   run_mcmc_mh_proposal_norm_rw()
   sampler_output = ilike::load_mcmc_output("mcmc_mh_proposal_norm_rw")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
+})
 
-  # Test built-in Metropolis-Hastings proposal in MCMC
-  # ilike::unif_rw
+test_that("MCMC: built-in Metropolis-Hastings proposal ilike::unif_rw", {
+  on.exit(unlink("mcmc_mh_proposal_unif_rw", recursive=TRUE), add=TRUE)
   run_mcmc_mh_proposal_unif_rw()
   sampler_output = ilike::load_mcmc_output("mcmc_mh_proposal_unif_rw")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
+})
 
-  # Test built-in Metropolis-Hastings proposal in MCMC
-  # ilike::langevin
+test_that("MCMC: built-in Metropolis-Hastings proposal ilike::langevin", {
+  on.exit(unlink("mcmc_mh_proposal_langevin", recursive=TRUE), add=TRUE)
   run_mcmc_mh_proposal_langevin()
   sampler_output = ilike::load_mcmc_output("mcmc_mh_proposal_langevin")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
+})
 
-  # Test built-in Metropolis-Hastings proposal in MCMC
-  # ilike::barker
+test_that("MCMC: built-in Metropolis-Hastings proposal ilike::barker", {
+  on.exit(unlink("mcmc_mh_proposal_barker", recursive=TRUE), add=TRUE)
   run_mcmc_mh_proposal_barker()
   sampler_output = ilike::load_mcmc_output("mcmc_mh_proposal_barker")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
+})
 
-  # Test built-in Metropolis-Hastings proposal in MCMC
-  # ilike::mirror
+test_that("MCMC: built-in Metropolis-Hastings proposal ilike::mirror", {
+  on.exit(unlink("mcmc_mh_proposal_mirror", recursive=TRUE), add=TRUE)
   run_mcmc_mh_proposal_mirror()
   sampler_output = ilike::load_mcmc_output("mcmc_mh_proposal_mirror")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(1+1), tolerance = 0.1)
+})
 
-  # The unadjusted proposals below are (unadjusted) Langevin moves with step
-  # size h = 0.5. There is no accept-reject correction, so the chain does not
-  # target the posterior N(1, 1/2) exactly. For a Gaussian target with variance
-  # s2, the chain is the AR(1) process
-  #   theta' = theta - (h/(2*s2)) (theta - 1) + N(0, h),
-  # whose stationary distribution is N(1, h / (1 - (1 - h/(2*s2))^2)).
-  # With s2 = 1/2 this variance is 1/(2-h) = 2/3 when h = 0.5.
+# The unadjusted proposals below are (unadjusted) Langevin moves with step
+# size h = 0.5. There is no accept-reject correction, so the chain does not
+# target the posterior N(1, 1/2) exactly. For a Gaussian target with variance
+# s2, the chain is the AR(1) process
+#   theta' = theta - (h/(2*s2)) (theta - 1) + N(0, h),
+# whose stationary distribution is N(1, h / (1 - (1 - h/(2*s2))^2)).
+# With s2 = 1/2 this variance is 1/(2-h) = 2/3 when h = 0.5.
 
-  # Test custom unadjusted proposal in MCMC
+test_that("MCMC: custom unadjusted proposal", {
+  on.exit(unlink("mcmc_unadjusted_proposal", recursive=TRUE), add=TRUE)
   run_mcmc_unadjusted_proposal()
   sampler_output = ilike::load_mcmc_output("mcmc_unadjusted_proposal")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(2-0.5), tolerance = 0.1)
+})
 
-  # Test built-in unadjusted proposal in MCMC
-  # ilike::langevin
+test_that("MCMC: built-in unadjusted proposal ilike::langevin", {
+  on.exit(unlink("mcmc_unadjusted_proposal_langevin", recursive=TRUE), add=TRUE)
   run_mcmc_unadjusted_proposal_langevin()
   sampler_output = ilike::load_mcmc_output("mcmc_unadjusted_proposal_langevin")
   expect_equal(mean(sampler_output$Value), 1, tolerance = 0.1)
   expect_equal(var(sampler_output$Value), 1/(2-0.5), tolerance = 0.1)
-
 })
 
 test_that("MCMC works with deterministic and stochastic sweeps", {
@@ -154,6 +152,7 @@ test_that("MCMC works with deterministic and stochastic sweeps", {
 })
 
 test_that("MCMC works with Metropolis-within-Gibbs factor indices", {
+  skip_on_cran() # slow (over 3 s); runs on CI and locally
 
   on.exit({
     unlink("mcmc_gibbs_m_proposal", recursive=TRUE)
@@ -206,6 +205,7 @@ test_that("MCMC targets the cut distribution with a cut factor index", {
 })
 
 test_that("unadjusted moves combine only with moves not using their factors", {
+  skip_on_cran() # slow (over 3 s); runs on CI and locally
 
   on.exit({
     unlink("mcmc_sweep_unadjusted_then_mh", recursive=TRUE)

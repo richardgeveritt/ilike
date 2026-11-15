@@ -202,7 +202,7 @@ namespace ilike
                                  false,
                                  store_output_in,
                                  false,
-                                 true,
+                                 false, // sequencer_limit_is_fixed: the tolerance comes from the outer SMC
                                  false,
                                  parallel_in,
                                  grain_size_in,
@@ -710,7 +710,7 @@ namespace ilike
                                  false,
                                  store_output_in,
                                  false,
-                                 true,
+                                 false, // sequencer_limit_is_fixed: the tolerance comes from the outer SMC
                                  false,
                                  parallel_in,
                                  grain_size_in,

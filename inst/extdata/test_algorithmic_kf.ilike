@@ -1,0 +1,22 @@
+// a ~ U(0,1), with the likelihood of the five observations y computed by
+// ilike::kf on the inner SSM test_algorithmic_inner_ssm.ilike, named by a path
+// relative to this file.
+
+/***data***/
+Data set_data() {
+  arma::colvec y(5);
+  y(0) = 0.5; y(1) = 1.0; y(2) = 0.2; y(3) = -0.3; y(4) = 0.8;
+  return Data("y", y);
+}
+
+/***evaluate_log_prior***/
+double evaluate_log_prior(const Parameters &parameters) {
+  return dunif(parameters["a"][0], 0.0, 1.0);
+}
+
+/***simulate_prior***/
+Parameters simulate_prior(RandomNumberGenerator &rng) {
+  return Parameters("a", runif(rng, 0.0, 1.0));
+}
+
+/***algorithmic_likelihood,ilike::kf("test_algorithmic_inner_ssm.ilike")***/

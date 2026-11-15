@@ -59,7 +59,10 @@ double ESSSMCCriterion::operator()(const Particles &particles) const
   }
   else
   {
-    return(particles.ess - this->desired_criterion);
+    // Computed from the current weights: particles.ess is only updated after
+    // the next target has been chosen, so during the bisection it is stale.
+    double ess = exp(2.0*log_sum_exp(particles.unnormalised_log_weights) - log_sum_exp(2.0*particles.unnormalised_log_weights));
+    return(ess - this->desired_criterion);
   }
 }
 

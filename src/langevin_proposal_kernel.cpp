@@ -168,7 +168,7 @@ double LangevinProposalKernel::specific_evaluate_kernel(const Particle &proposed
     double dim = double(mean.n_rows);
     output = output + dmvnorm_using_precomp(proposed_particle.get_transformed_parameters(this).get_colvec(i->first),
                                             mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first,this->index,old_particle))/2.0,
-                                            (1.0/sqrt(i->second.get_double_scale()))*i->second.get_inv(),
+                                            (1.0/i->second.get_double_scale())*i->second.get_inv(),
                                             dim*log(scale)+i->second.get_logdet());
   }
   return output;
@@ -192,7 +192,7 @@ double LangevinProposalKernel::specific_evaluate_kernel(const Particle &proposed
  double dim = double(mean.n_rows);
  output = output + dmvnorm_using_precomp(proposed_particle.move_parameters->get_colvec(i->first),
  mean + scale*i->second.get_covariance()*arma::vectorise(estimator->get_gradient_of_log(i->first,this->index,old_particle,conditioned_on_parameters))/2.0,
- (1.0/sqrt(i->second.get_double_scale()))*i->second.get_inv(),
+ (1.0/i->second.get_double_scale())*i->second.get_inv(),
  dim*log(scale)+i->second.get_logdet());
  }
  return output;
@@ -225,7 +225,7 @@ double LangevinProposalKernel::specific_subsample_evaluate_kernel(const Particle
     double dim = double(mean.n_rows);
     output = output + dmvnorm_using_precomp(proposed_particle.get_transformed_parameters(this).get_colvec(i->first),
                                             mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first,this->index,old_particle))/2.0,
-                                            (1.0/sqrt(i->second.get_double_scale()))*i->second.get_inv(),
+                                            (1.0/i->second.get_double_scale())*i->second.get_inv(),
                                             dim*log(scale)+i->second.get_logdet());
   }
   return output;
@@ -249,7 +249,7 @@ double LangevinProposalKernel::specific_subsample_evaluate_kernel(const Particle
  double dim = double(mean.n_rows);
  output = output + dmvnorm_using_precomp(proposed_particle.move_parameters->get_colvec(i->first),
  mean + scale*i->second.get_covariance()*arma::vectorise(estimator->subsample_get_gradient_of_log(i->first,this->index,old_particle,conditioned_on_parameters))/2.0,
- (1.0/sqrt(i->second.get_double_scale()))*i->second.get_inv(),
+ (1.0/i->second.get_double_scale())*i->second.get_inv(),
  dim*log(scale)+i->second.get_logdet());
  }
  return output;

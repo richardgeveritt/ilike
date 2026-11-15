@@ -1,0 +1,5 @@
+// Metropolis uniform random walk with half-widths p3 on a 2-D parameter
+// (use with test_gaussian_posterior_vector.ilike).
+/***m_proposal,ilike::mvunif_rw(theta,p3)***/
+
+/***mcmc_termination,ilike::iterations(10000)***/

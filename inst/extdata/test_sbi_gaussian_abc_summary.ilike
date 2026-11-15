@@ -1,0 +1,42 @@
+// Gaussian-kernel ABC on a summary statistic: ten observations equal to 1,
+// simulated as x_i ~ N(theta, 1), summary statistic the mean (so s ~ N(theta,
+// 1/10)), tolerance epsilon = 0.2, prior N(1, 1). The ABC likelihood is
+// N(1; theta, 1/10 + epsilon^2).
+
+/***evaluate_log_prior***/
+double evaluate_log_prior(const Parameters &params) {
+  return dnorm(params["theta"][0], 1.0, 1.0);
+}
+
+/***simulate_prior***/
+Parameters simulate_prior(RandomNumberGenerator &rng) {
+  return Parameters("theta", rnorm(rng, 1.0, 1.0));
+}
+
+/***data***/
+Data set_data() {
+  arma::colvec x(10);
+  x.fill(1.0);
+  return Data("x", x);
+}
+
+/***simulate_data_model***/
+Data simulate_data_model(RandomNumberGenerator &rng,
+                         const Parameters &parameters) {
+  arma::colvec x(10);
+  for (size_t i = 0; i < 10; ++i)
+    x(i) = rnorm(rng, parameters["theta"][0], 1.0);
+  return Data("x", x);
+}
+
+/***summary_statistics***/
+Data summary_statistics(const Data &data) {
+  arma::colvec x = data["x"];
+  arma::colvec m(1);
+  m(0) = arma::mean(x);
+  return Data("x_mean", m);
+}
+
+/***data_variable,"x_mean"***/
+
+/***sbi_likelihood,ilike::gaussian_abc(100,epsilon,0.2)***/

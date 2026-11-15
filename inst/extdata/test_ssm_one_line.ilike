@@ -1,0 +1,18 @@
+// Scalar linear-Gaussian state-space model as in test_kf_linear_gaussian.ilike,
+// with the transition and data models given by the one-line built-ins:
+// x_t = 0.9 x_{t-1} + N(0, 0.5), y_t = x_t + N(0, 1).
+
+/***data***/
+Data set_data() {
+  arma::colvec y(5);
+  y(0) = 0.5; y(1) = 1.0; y(2) = 0.2; y(3) = -0.3; y(4) = 0.8;
+  return Data("y", y);
+}
+
+/***prior,ilike::norm(x,0,1)***/
+
+/***linear_gaussian_transition_model,ilike::linear_gaussian_transition_model(x,0.9,0.5)***/
+
+/***linear_gaussian_data_model,ilike::linear_gaussian_data_model(y,x,1,1)***/
+
+/***ssm,ilike::ssm(i,0,4,t,0,dt,1,1)***/

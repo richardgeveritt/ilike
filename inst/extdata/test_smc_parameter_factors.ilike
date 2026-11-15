@@ -1,0 +1,9 @@
+// SMC with MCMC moves through tau = 0.25, 0.5, 0.75, 1, declaring that only
+// factor 2 (the likelihood) depends on tau.
+// Use with test_gaussian_posterior_tau.ilike.
+
+/***m_proposal,ilike::norm_rw(theta,1)***/
+
+/***mcmc_termination,ilike::iterations(5)***/
+
+/***smc_sequence,ilike::parameter(tau,c(0.25,0.5,0.75,1),c(2))***/

@@ -1,0 +1,17 @@
+// Stochastic sweep with the move probabilities given by a C++ function
+// (use with test_gaussian_posterior.ilike).
+
+/***m_proposal,ilike::norm_rw(theta,1)***/
+
+/***mh_proposal,ilike::langevin(theta,1,1)***/
+
+/***mcmc_weights***/
+NumericVector move_weights()
+{
+  NumericVector w(2);
+  w[0] = 0.3;
+  w[1] = 0.7;
+  return w;
+}
+
+/***mcmc_termination,ilike::iterations(10000)***/

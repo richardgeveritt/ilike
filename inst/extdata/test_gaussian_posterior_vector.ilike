@@ -1,0 +1,55 @@
+// A two-dimensional parameter theta with independent components, each with
+// prior N(1, 1) and one observation x = 1 with likelihood N(theta_i, 1), so
+// each component of the posterior is N(1, 1/2). Gradients are given so that
+// gradient-based proposals can be used.
+
+/***data***/
+Data set_data() {
+  arma::colvec x(2);
+  x(0) = 1.0;
+  x(1) = 1.0;
+  return Data("x", x);
+}
+
+/***evaluate_log_prior***/
+double evaluate_log_prior(const Parameters &params) {
+  arma::colvec theta = params["theta"];
+  return dnorm(theta[0], 1.0, 1.0) + dnorm(theta[1], 1.0, 1.0);
+}
+
+/***simulate_prior***/
+Parameters simulate_prior(RandomNumberGenerator &rng) {
+  arma::colvec theta(2);
+  theta[0] = rnorm(rng, 1.0, 1.0);
+  theta[1] = rnorm(rng, 1.0, 1.0);
+  return Parameters("theta", theta);
+}
+
+/***evaluate_gradient_log_prior***/
+arma::mat prior_gradient(const std::string &variable,
+                         const Parameters &parameters) {
+  arma::colvec theta = parameters["theta"];
+  arma::mat grad(2, 1);
+  grad(0, 0) = -(theta[0] - 1.0);
+  grad(1, 0) = -(theta[1] - 1.0);
+  return grad;
+}
+
+/***evaluate_log_likelihood***/
+double evaluate_likelihood(const Parameters &params, const Data &data) {
+  arma::colvec theta = params["theta"];
+  arma::colvec x = data["x"];
+  return dnorm(x[0], theta[0], 1.0) + dnorm(x[1], theta[1], 1.0);
+}
+
+/***evaluate_gradient_log_likelihood***/
+arma::mat likelihood_gradient(const std::string &variable,
+                              const Parameters &parameters,
+                              const Data &data) {
+  arma::colvec theta = parameters["theta"];
+  arma::colvec x = data["x"];
+  arma::mat grad(2, 1);
+  grad(0, 0) = x[0] - theta[0];
+  grad(1, 0) = x[1] - theta[1];
+  return grad;
+}

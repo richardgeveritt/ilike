@@ -1,0 +1,5 @@
+// Mirror proposal about p1 with covariance p2 and scale p4 on a 2-D parameter
+// (use with test_gaussian_posterior_vector.ilike).
+/***m_proposal,ilike::mirror(theta,p1,p2,p4)***/
+
+/***mcmc_termination,ilike::iterations(10000)***/

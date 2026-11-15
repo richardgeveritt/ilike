@@ -984,7 +984,11 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
     this->sequencer.find_next_target_bisection(current_state,this->index);
     
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
+    // One log-likelihood and one time per stored particle set: recorded here,
+    // before the termination check, so that the particle set written out by
+    // the final MCMC move below has both.
     current_state->set_llhd(current_state->log_likelihood);
+    current_state->set_time_and_reset_start();
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
@@ -1007,10 +1011,6 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
       }
       current_state->terminate();
       break;
-    }
-    else
-    {
-      current_state->set_time_and_reset_start();
     }
     
     this->simulate_smc(current_state);
@@ -1190,10 +1190,6 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
       current_state->terminate();
       break;
     }
-    else
-    {
-      current_state->set_time_and_reset_start();
-    }
     
     this->simulate_smc(current_state, conditioned_on_parameters);
     
@@ -1345,6 +1341,7 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
+    current_state->set_llhd(current_state->subsample_log_likelihood);
     current_state->set_time_and_reset_start();
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
@@ -1356,17 +1353,15 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
       //terminate = TRUE;
       if (this->mcmc_at_last_step)
       {
-        this->simulate_smc(current_state);
-        current_state->set_llhd(current_state->log_likelihood);
+        // The final move targets the same (subsampled) distribution as the
+        // other moves of this run.
+        this->subsample_simulate_smc(current_state);
+        current_state->set_llhd(current_state->subsample_log_likelihood);
         current_state->set_time_and_reset_start();
         //current_state->decrement_smc_iteration();
       }
       current_state->terminate();
       break;
-    }
-    else
-    {
-      current_state->set_time_and_reset_start();
     }
     
     this->subsample_simulate_smc(current_state);
@@ -1406,6 +1401,7 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
+    current_state->set_llhd(current_state->subsample_log_likelihood);
     current_state->set_time_and_reset_start();
     
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
@@ -1417,17 +1413,15 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
       //terminate = TRUE;
       if (this->mcmc_at_last_step)
       {
-        this->simulate_smc(current_state,conditioned_on_parameters);
-        current_state->set_llhd(current_state->log_likelihood);
+        // The final move targets the same (subsampled) distribution as the
+        // other moves of this run.
+        this->subsample_simulate_smc(current_state, conditioned_on_parameters);
+        current_state->set_llhd(current_state->subsample_log_likelihood);
         current_state->set_time_and_reset_start();
         //current_state->decrement_smc_iteration();
       }
       current_state->terminate();
       break;
-    }
-    else
-    {
-      current_state->set_time_and_reset_start();
     }
     
     this->subsample_simulate_smc(current_state,

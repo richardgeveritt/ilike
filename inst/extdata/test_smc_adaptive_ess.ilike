@@ -1,0 +1,13 @@
+// SMC with MCMC moves, annealing with the next power chosen to give an
+// effective sample size of 0.95 times the number of particles (with 0.5 the
+// first step would already reach power 1: going straight from the prior to
+// the posterior gives ESS about 0.87 N).
+// Use with test_gaussian_posterior.ilike.
+
+/***m_proposal,ilike::norm_rw(theta,1)***/
+
+/***mcmc_termination,ilike::iterations(5)***/
+
+/***smc_sequence,ilike::annealing(power,c(0,1))***/
+
+/***adaptive_target,ilike::ess(0.95)***/

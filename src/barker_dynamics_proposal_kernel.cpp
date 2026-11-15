@@ -201,7 +201,9 @@ namespace ilike
       arma::mat proposed_mat = proposed_particle.get_transformed_parameters(this)[i->first];
       arma::mat old_mat = old_particle.get_transformed_parameters(this)[i->first];
       arma::colvec current_proposed = arma::vectorise(proposed_mat);
-      arma::rowvec z = (current_proposed - arma::vectorise(old_mat)) * i->second.get_inv_chol();
+      // z = (C^T)^{-1}(y - x) with C = chol(s Sigma) = sqrt(s) chol(Sigma)
+      // (Livingstone and Zanella, supplement, preconditioned Barker).
+      arma::rowvec z = (current_proposed - arma::vectorise(old_mat)).t() * i->second.get_inv_chol() / sqrt(i->second.get_double_scale());
 
       for (size_t j = 0; j < current_proposed.size(); ++j)
       {
@@ -255,7 +257,9 @@ namespace ilike
       arma::mat proposed_mat = proposed_particle.get_transformed_parameters(this)[i->first];
       arma::mat old_mat = old_particle.get_transformed_parameters(this)[i->first];
       arma::colvec current_proposed = arma::vectorise(proposed_mat);
-      arma::rowvec z = (current_proposed - arma::vectorise(old_mat)) * i->second.get_inv_chol();
+      // z = (C^T)^{-1}(y - x) with C = chol(s Sigma) = sqrt(s) chol(Sigma)
+      // (Livingstone and Zanella, supplement, preconditioned Barker).
+      arma::rowvec z = (current_proposed - arma::vectorise(old_mat)).t() * i->second.get_inv_chol() / sqrt(i->second.get_double_scale());
 
       for (size_t j = 0; j < current_proposed.size(); ++j)
       {
@@ -311,7 +315,7 @@ namespace ilike
       arma::colvec current_chol_gradient_prod = sqrt(i->second.get_double_scale()) * i->second.get_chol() * arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first, this->index, current_particle));
 
       arma::mat initial_proposed = proposed[i->first];
-      arma::rowvec current_proposed = arma::vectorise(initial_proposed);
+      arma::rowvec current_proposed = arma::vectorise(initial_proposed).t();
 
       arma::rowvec log_unifs = log(multiple_runif(rng, current_proposed.size()));
       for (size_t j = 0; j < current_proposed.size(); ++j)
@@ -347,7 +351,7 @@ namespace ilike
    arma::colvec current_chol_gradient_prod = sqrt(i->second.get_double_scale())*i->second.get_chol() * arma::vectorise(estimator->get_gradient_of_log(i->first,this->index,particle,conditioned_on_parameters));
 
    arma::mat initial_proposed = proposed[i->first];
-   arma::rowvec current_proposed = arma::vectorise(initial_proposed);
+   arma::rowvec current_proposed = arma::vectorise(initial_proposed).t();
 
    arma::rowvec log_unifs = log(multiple_runif(rng,current_proposed.size()));
    for (size_t j=0; j<current_proposed.size(); ++j)
@@ -379,7 +383,7 @@ namespace ilike
      arma::colvec current_chol_gradient_prod = i->second.chol * arma::vectorise(this->subsample_gradient_estimator->get_gradient_of_log(i->first,particle));
 
      arma::mat initial_proposed = proposed[i->first];
-     arma::rowvec current_proposed = arma::vectorise(initial_proposed);
+     arma::rowvec current_proposed = arma::vectorise(initial_proposed).t();
 
      arma::rowvec log_unifs = log(runif(rng,current_proposed.size()));
      for (size_t j=0; j<current_proposed.size(); ++j)
@@ -420,7 +424,7 @@ namespace ilike
      arma::colvec current_chol_gradient_prod = found->second.chol * arma::vectorise(this->subsample_gradient_estimator->get_gradient_of_log(found->first,particle));
 
      arma::mat initial_proposed = proposed[found->first];
-     arma::rowvec current_proposed = arma::vectorise(initial_proposed);
+     arma::rowvec current_proposed = arma::vectorise(initial_proposed).t();
 
      arma::rowvec log_unifs = log(runif(rng,current_proposed.size()));
      for (size_t j=0; j<current_proposed.size(); ++j)

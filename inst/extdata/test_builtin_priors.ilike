@@ -1,0 +1,13 @@
+// One factor for each built-in prior, on separate variables, for evaluate_log:
+// 1 a ~ N(1, 2^2), 2 b ~ logN(0, 1), 3 c ~ Gamma(3, rate 2),
+// 4 d ~ MVN(p1, p2), 5 e ~ multivariate log-normal (p1, p2).
+
+/***prior,ilike::norm(a,1,2)***/
+
+/***prior,ilike::lnorm(b,0,1)***/
+
+/***prior,ilike::gamma(c,3,2)***/
+
+/***prior,ilike::mvnorm(d,p1,p2)***/
+
+/***prior,ilike::mvlnorm(e,p1,p2)***/

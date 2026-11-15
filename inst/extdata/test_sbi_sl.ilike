@@ -1,0 +1,34 @@
+// Simulation-based likelihood (ilike::sl) for one observation x = 1 simulated
+// from N(theta, 1), with prior N(1, 1).
+
+/***evaluate_log_prior***/
+double evaluate_log_prior(const Parameters &params) {
+  return dnorm(params["theta"][0], 1.0, 1.0);
+}
+
+/***simulate_prior***/
+Parameters simulate_prior(RandomNumberGenerator &rng) {
+  return Parameters("theta", rnorm(rng, 1.0, 1.0));
+}
+
+/***data***/
+Data set_data() {
+  arma::colvec x(1);
+  x(0) = 1.0;
+  return Data("x", x);
+}
+
+/***simulate_data_model***/
+Data simulate_data_model(RandomNumberGenerator &rng,
+                         const Parameters &parameters) {
+  arma::colvec x(1);
+  x(0) = rnorm(rng, parameters["theta"][0], 1.0);
+  return Data("x", x);
+}
+
+/***sbi_likelihood,ilike::sl(100)***/
+
+/***data_variable***/
+std::string simulated_variable() {
+  return "x";
+}

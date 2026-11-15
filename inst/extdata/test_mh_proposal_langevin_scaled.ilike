@@ -1,0 +1,4 @@
+// Langevin with s^2 = 0.25 (use with test_gaussian_posterior.ilike).
+/***mh_proposal,ilike::langevin(theta,1,0.25)***/
+
+/***mcmc_termination,ilike::iterations(10000)***/

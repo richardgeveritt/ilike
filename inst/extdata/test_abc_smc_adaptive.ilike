@@ -1,0 +1,11 @@
+// ABC-SMC from an infinite tolerance (the prior) to 0.5, each tolerance chosen
+// to keep the conditional ESS at 0.9 of the particles (use with an sbi model
+// whose tolerance variable is epsilon).
+
+/***m_proposal,ilike::norm_rw(theta,1)***/
+
+/***mcmc_termination,ilike::iterations(5)***/
+
+/***smc_sequence,ilike::parameter(epsilon,c(Inf,0.5))***/
+
+/***adaptive_target,ilike::cess(0.9)***/

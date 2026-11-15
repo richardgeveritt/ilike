@@ -1,0 +1,15 @@
+/***prior,ilike::gamma(theta,3,2)***/
+
+/***data***/
+Data set_data() {
+  arma::colvec x(1);
+  x(0) = 1.0;
+  return Data("x", x);
+}
+
+/***evaluate_log_likelihood***/
+double evaluate_likelihood(const Parameters &params, const Data &data) {
+  return dnorm(data["x"][0], params["theta"][0], 1.0);
+}
+
+/***is_proposal,ilike::lnorm(theta,0,1)***/

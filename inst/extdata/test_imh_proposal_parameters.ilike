@@ -1,0 +1,18 @@
+// Independent MH proposal N(mean, sd^2) with "mean" and "sd" given through
+// algorithm_parameter_list (use with test_gaussian_posterior.ilike).
+
+/***simulate_imh_proposal***/
+Parameters simulate_imh_proposal(RandomNumberGenerator &rng,
+                                 const Parameters &proposal_parameters) {
+  arma::colvec theta(1, 1);
+  theta[0] = rnorm(rng, proposal_parameters["mean"][0], proposal_parameters["sd"][0]);
+  return Parameters("theta", theta);
+}
+
+/***evaluate_log_imh_proposal***/
+double evaluate_log_imh_proposal(const Parameters &proposed_parameters,
+                                 const Parameters &proposal_parameters) {
+  return dnorm(proposed_parameters["theta"][0], proposal_parameters["mean"][0], proposal_parameters["sd"][0]);
+}
+
+/***mcmc_termination,ilike::iterations(10000)***/

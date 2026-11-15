@@ -1,0 +1,6 @@
+// SMC with MCMC moves and no smc_sequence: defaults to importance sampling
+// from the prior followed by MCMC moves. Use with test_gaussian_posterior.ilike.
+
+/***m_proposal,ilike::norm_rw(theta,1)***/
+
+/***mcmc_termination,ilike::iterations(5)***/

@@ -75,6 +75,12 @@ void GaussianABCKernelFactor::make_copy(const GaussianABCKernelFactor &another)
 
 double GaussianABCKernelFactor::likelihood_evaluate(const Parameters &input) const
 {
+  // At an infinite tolerance the kernel is taken to be 1 (log 0): the ABC
+  // target is then the prior predictive, with evidence 1, so an SMC can start
+  // from epsilon = Inf (the first weights are the kernel at the first finite
+  // tolerance).
+  if (std::isinf(input[this->epsilon_variable][0]))
+    return 0.0;
   double epsilon2 = pow(input[this->epsilon_variable][0],2.0);
   if (epsilon2==0.0)
     return -arma::datum::inf;
@@ -119,6 +125,12 @@ double GaussianABCKernelFactor::evaluate_kernel_given_distance(const Parameters 
                                                                double distance,
                                                                double scale_constant) const
 {
+  // At an infinite tolerance the kernel is taken to be 1 (log 0): the ABC
+  // target is then the prior predictive, with evidence 1, so an SMC can start
+  // from epsilon = Inf (the first weights are the kernel at the first finite
+  // tolerance).
+  if (std::isinf(input[this->epsilon_variable][0]))
+    return 0.0;
   double epsilon2 = pow(input[this->epsilon_variable][0],2.0);
   if (epsilon2==0.0)
     return -arma::datum::inf;

@@ -67,7 +67,7 @@ MirrorProposalKernel::MirrorProposalKernel(const std::string &variable_name_in,
                                            double scale_in)
 :SymmetricProposalKernel()
 {
-  this->proposal_info[variable_name_in] = GaussianProposalInfo(mean_in,covariance_in);
+  this->proposal_info[variable_name_in] = GaussianProposalInfo(mean_in,covariance_in,scale_in);
 }
 
 MirrorProposalKernel::MirrorProposalKernel(const std::vector<std::string> &variable_names_in,
@@ -131,7 +131,7 @@ double MirrorProposalKernel::specific_evaluate_kernel(const Particle &proposed_p
     double dim = double(mean.n_rows);
     output = output + dmvnorm_using_precomp(proposed_particle.get_transformed_parameters(this).get_colvec(i->first),
                                             2.0*mean-old_particle.get_transformed_parameters(this).get_colvec(i->first),
-                                            (1.0/sqrt(scale))*i->second.get_inv(),
+                                            (1.0/scale)*i->second.get_inv(),
                                             dim*log(scale)+i->second.get_logdet());
   }
   return output;

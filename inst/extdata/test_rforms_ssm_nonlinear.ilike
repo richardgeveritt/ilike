@@ -1,0 +1,20 @@
+// The SSM of test_kf_linear_gaussian.ilike written with the nonlinear-Gaussian
+// transition and data models, given as R expressions.
+
+/***data,y=c(0.5,1.0,0.2,-0.3,0.8)***/
+
+/***prior,ilike::norm(x,0,1)***/
+
+/***nonlinear_gaussian_transition_variable,"x"***/
+
+/***nonlinear_gaussian_transition_function,x=0.9*parameters$x***/
+
+/***nonlinear_gaussian_transition_covariance,matrix(0.5)***/
+
+/***nonlinear_gaussian_data_variable,"y"***/
+
+/***nonlinear_gaussian_data_function,y=parameters$x***/
+
+/***nonlinear_gaussian_data_covariance,diag(1)***/
+
+/***ssm,ilike::ssm(i,0,4,t,0,dt,1,1)***/

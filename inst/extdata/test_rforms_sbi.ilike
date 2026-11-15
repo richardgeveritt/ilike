@@ -1,0 +1,18 @@
+// Synthetic likelihood with the data, simulator, summary statistic and
+// simulated variable given as R expressions: ten observations equal to 1,
+// x_i ~ N(theta, 1), summary statistic the mean. With prior N(1,1) the
+// evidence of the mean is N(1; 1, 1 + 1/10).
+
+/***evaluate_log_prior,dnorm(parameters$theta,1,1,log=TRUE)***/
+
+/***simulate_prior,theta=rnorm(1,1,1)***/
+
+/***data,x=rep(1,10)***/
+
+/***simulate_data_model,x=rnorm(10,parameters$theta,1)***/
+
+/***summary_statistics,x_mean=mean(data$x)***/
+
+/***sbi_likelihood,ilike::sl(100)***/
+
+/***data_variable,"x_mean"***/

@@ -617,11 +617,44 @@ List get_single_variable_matrix_and_double_parameter_info(
   if (parameters.size() != 2)
     Rcpp::stop("Two parameters required for " + distribution_name + ".");
 
-  arma::colvec first_param =
+  arma::mat first_param =
       extract_matrix_parameter(parameters, model_parameters, 0);
 
   double second_param =
       extract_double_parameter(parameters, model_parameters, 1);
+
+  return List::create(variable_names[0], first_param, second_param);
+}
+
+// (variable, matrix) or (variable, matrix, double): the double is optional
+// and takes default_double when it is not given.
+List get_single_variable_matrix_and_optional_double_parameter_info(
+    const List &model_parameters, const List &current_distribution,
+    const std::string &distribution_name, double default_double) {
+  std::string augmented_variable_names = current_distribution["variables"];
+  std::vector<std::string> variable_names =
+      split(augmented_variable_names, ';');
+
+  if (variable_names.size() != 1)
+    Rcpp::stop("Only one variable allowed for " + distribution_name + ".");
+
+  if (!current_distribution.containsElementNamed("parameters"))
+    Rcpp::stop("Missing parameters for " + distribution_name +
+               " (a matrix and optionally a scale required).");
+
+  List parameters = current_distribution["parameters"];
+
+  if ((parameters.size() != 1) && (parameters.size() != 2))
+    Rcpp::stop(distribution_name +
+               " requires a matrix and optionally a scale (one or two "
+               "parameters after the variable).");
+
+  arma::mat first_param =
+      extract_matrix_parameter(parameters, model_parameters, 0);
+
+  double second_param = default_double;
+  if (parameters.size() == 2)
+    second_param = extract_double_parameter(parameters, model_parameters, 1);
 
   return List::create(variable_names[0], first_param, second_param);
 }
@@ -641,7 +674,7 @@ List get_single_variable_vector_and_matrix_and_double_parameter_info(
 
   if (!current_distribution.containsElementNamed("parameters"))
     Rcpp::stop("Missing parameters for " + distribution_name +
-               " (two parameters required).");
+               " (three parameters required).");
 
   List parameters = current_distribution["parameters"];
 
@@ -1177,6 +1210,164 @@ List get_ssm_info(const List &model, const List &model_parameters) {
   stop("SSM not found in model.");
 }
 
+// A linear-Gaussian model, given either by the separate blocks
+// (linear_gaussian_{data,transition}_{matrix,covariance,variable,...}), with
+// constant matrices (type 1) or matrix functions of the parameters (type 2),
+// or by the one-line built-in
+//   linear_gaussian_data_model,ilike::linear_gaussian_data_model(y,x,H,R)
+//   linear_gaussian_transition_model,ilike::linear_gaussian_transition_model(x,A,Q)
+// with constant matrices.
+struct LinearGaussianSpec {
+  std::string variable;
+  std::string state_variable_string;
+  std::vector<std::string> state_variables;
+  bool is_function = false;
+  arma::mat matrix;
+  arma::mat covariance;
+  GetMatrixPtr matrix_function = NULL;
+  GetMatrixPtr covariance_function = NULL;
+};
+
+bool is_linear_gaussian_data_model(const List &current_factor) {
+  return current_factor.containsElementNamed("linear_gaussian_data_covariance") ||
+         current_factor.containsElementNamed("linear_gaussian_data_model");
+}
+
+bool is_linear_gaussian_transition_model(const List &current_factor) {
+  return current_factor.containsElementNamed(
+             "linear_gaussian_transition_covariance") ||
+         current_factor.containsElementNamed("linear_gaussian_transition_model");
+}
+
+// The one-line built-in: (first variable, [second variable,] matrix, covariance).
+List get_one_line_linear_gaussian(const List &current_factor,
+                                  const std::string &block_name,
+                                  size_t number_of_variables,
+                                  const List &model_parameters) {
+  if (!Rf_isNewList(current_factor[block_name]))
+    stop(block_name + ": invalid specification.");
+  List info = current_factor[block_name];
+  if (!(info.containsElementNamed("type") &&
+        info.containsElementNamed("variables") &&
+        info.containsElementNamed("parameters")))
+    stop(block_name + ": invalid specification.");
+  std::string type = info["type"];
+  if (!iequals(type, block_name))
+    stop(block_name + ": unknown type ilike::" + type + " (expected ilike::" +
+         block_name + ").");
+  std::string first_variable = info["variables"];
+  List parameters = info["parameters"];
+  size_t expected = number_of_variables + 1; // other variables, matrix, covariance
+  if (parameters.size() != expected)
+    stop("ilike::" + block_name + " requires " +
+         std::to_string(expected + 1) + " arguments.");
+  std::string second_variable = first_variable;
+  size_t k = 0;
+  if (number_of_variables == 2) {
+    second_variable = Rcpp::as<std::string>(parameters[0]);
+    k = 1;
+  }
+  arma::mat matrix = extract_matrix_parameter(parameters, model_parameters, k);
+  arma::mat covariance =
+      extract_matrix_parameter(parameters, model_parameters, k + 1);
+  return List::create(first_variable, second_variable, matrix, covariance);
+}
+
+LinearGaussianSpec get_linear_gaussian_data_model(const List &current_factor,
+                                                  const List &model_parameters) {
+  LinearGaussianSpec spec;
+  if (current_factor.containsElementNamed("linear_gaussian_data_model")) {
+    List info = get_one_line_linear_gaussian(
+        current_factor, "linear_gaussian_data_model", 2, model_parameters);
+    spec.variable = Rcpp::as<std::string>(info[0]);
+    spec.state_variable_string = Rcpp::as<std::string>(info[1]);
+    spec.matrix = Rcpp::as<arma::mat>(info[2]);
+    spec.covariance = Rcpp::as<arma::mat>(info[3]);
+  } else {
+    if (!current_factor.containsElementNamed("linear_gaussian_data_matrix"))
+      stop("linear_gaussian_data must contain both matrix and covariance.");
+    if (!current_factor.containsElementNamed("type"))
+      stop("linear_gaussian_data must contain a type.");
+    if (!current_factor.containsElementNamed("linear_gaussian_data_variable"))
+      stop("linear_gaussian_data must contain linear_gaussian_data_variable.");
+    if (!current_factor.containsElementNamed(
+            "linear_gaussian_data_state_variable"))
+      stop("linear_gaussian_data must contain "
+           "linear_gaussian_data_state_variable.");
+    SEXP matrix_SEXP = current_factor["linear_gaussian_data_matrix"];
+    SEXP covariance_SEXP = current_factor["linear_gaussian_data_covariance"];
+    spec.variable = load_string(current_factor["linear_gaussian_data_variable"]);
+    spec.state_variable_string =
+        load_string(current_factor["linear_gaussian_data_state_variable"]);
+    size_t type = current_factor["type"];
+    if (type == 1) {
+      spec.matrix = load_matrix(matrix_SEXP);
+      spec.covariance = load_matrix(covariance_SEXP);
+    } else if (type == 2) {
+      spec.is_function = true;
+      spec.matrix_function = load_matrix_function(matrix_SEXP);
+      spec.covariance_function = load_matrix_function(covariance_SEXP);
+    } else {
+      stop("linear_gaussian_data specificiation is invalid.");
+    }
+  }
+  spec.state_variables = split(spec.state_variable_string, ';');
+  return spec;
+}
+
+LinearGaussianSpec
+get_linear_gaussian_transition_model(const List &current_factor,
+                                     const List &model_parameters,
+                                     bool variable_required) {
+  LinearGaussianSpec spec;
+  if (current_factor.containsElementNamed("linear_gaussian_transition_model")) {
+    List info = get_one_line_linear_gaussian(
+        current_factor, "linear_gaussian_transition_model", 1,
+        model_parameters);
+    spec.variable = Rcpp::as<std::string>(info[0]);
+    spec.matrix = Rcpp::as<arma::mat>(info[2]);
+    spec.covariance = Rcpp::as<arma::mat>(info[3]);
+  } else {
+    if (!current_factor.containsElementNamed("linear_gaussian_transition_matrix"))
+      stop("linear_gaussian must contain both matrix and covariance.");
+    if (!current_factor.containsElementNamed("type"))
+      stop("linear_gaussian must contain a type.");
+    if (current_factor.containsElementNamed(
+            "linear_gaussian_transition_variable"))
+      spec.variable =
+          load_string(current_factor["linear_gaussian_transition_variable"]);
+    else if (variable_required)
+      stop("linear_gaussian must contain linear_gaussian_transition_variable.");
+    SEXP matrix_SEXP = current_factor["linear_gaussian_transition_matrix"];
+    SEXP covariance_SEXP =
+        current_factor["linear_gaussian_transition_covariance"];
+    size_t type = current_factor["type"];
+    if (type == 1) {
+      spec.matrix = load_matrix(matrix_SEXP);
+      spec.covariance = load_matrix(covariance_SEXP);
+    } else if (type == 2) {
+      spec.is_function = true;
+      spec.matrix_function = load_matrix_function(matrix_SEXP);
+      spec.covariance_function = load_matrix_function(covariance_SEXP);
+    } else {
+      stop("linear_gaussian specificiation is invalid.");
+    }
+  }
+  spec.state_variable_string = spec.variable;
+  spec.state_variables = std::vector<std::string>(1, spec.variable);
+  return spec;
+}
+
+// Error for annealing a prior that is also the importance proposal: it
+// cancels in the weights, so it is not part of the target and its power would
+// be ignored.
+std::string prior_cannot_be_annealed(size_t factor_index) {
+  return "smc_sequence annealing: factor " + std::to_string(factor_index + 1) +
+         " is a prior that is also used as the importance proposal, so it "
+         "cancels and cannot be annealed. Remove it from the factors to "
+         "anneal, or give an is_proposal.";
+}
+
 std::vector<LikelihoodEstimator *> get_likelihood_estimators(
     RandomNumberGenerator *rng_in, size_t *seed_in, Data *data_in,
     const List &model, const List &model_parameters,
@@ -1232,13 +1423,36 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
 
     List factors = model["factor"];
 
+    for (size_t j = 0; j < factors_affected_by_smc_sequence.size(); ++j) {
+      if ((factors_affected_by_smc_sequence[j] < 0) ||
+          (size_t(factors_affected_by_smc_sequence[j]) >= factors.size()))
+        stop("smc_sequence: the factors affected must be between 1 and " +
+             std::to_string(factors.size()) + ".");
+    }
+
     for (size_t i = 0; i < factors.size(); ++i) {
 
-      bool factor_is_fixed_in_smc = true;
+      bool factor_is_listed = false;
       for (size_t j = 0; j < factors_affected_by_smc_sequence.size(); ++j) {
-        if (i == factors_affected_by_smc_sequence[j])
-          factor_is_fixed_in_smc = false;
+        if (int(i) == factors_affected_by_smc_sequence[j])
+          factor_is_listed = true;
       }
+      // Annealing: the listed factors are raised to the power (all factors if
+      // none are listed); the others enter the target unannealed. The value of
+      // an annealed factor does not depend on the power, so it is evaluated
+      // once (smcfixed) and only the power changes.
+      // Other sequences (ilike::parameter): the listed factors are the ones
+      // that depend on the sequence variable, so they are re-evaluated when
+      // the target changes; with no list, every factor is. Without an SMC
+      // sequence, factors are fixed.
+      bool factor_is_annealed =
+          any_annealing &&
+          (factors_affected_by_smc_sequence.empty() || factor_is_listed);
+      bool factor_changes_with_sequence =
+          (!sequencer_types.empty()) &&
+          (factors_affected_by_smc_sequence.empty() || factor_is_listed);
+      bool factor_is_fixed_in_smc =
+          any_annealing || !factor_changes_with_sequence;
 
       if (Rf_isNewList(factors[i])) {
 
@@ -1317,7 +1531,7 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                 without_cancelled_index_vector.push_back(
                     likelihood_estimators.size());
 
-                if (any_annealing) {
+                if (factor_is_annealed) {
                   likelihood_estimators.push_back(
                       new AnnealedLikelihoodEstimator(
                           rng_in, seed_in, data_in, new_likelihood_estimator,
@@ -1326,6 +1540,8 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                   likelihood_estimators.push_back(new_likelihood_estimator);
                 }
               } else {
+                if (any_annealing && factor_is_listed)
+                  stop(prior_cannot_be_annealed(i));
                 likelihood_estimators.push_back(new_likelihood_estimator);
               }
             } else {
@@ -1361,7 +1577,7 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
             without_cancelled_index_vector.push_back(
                 likelihood_estimators.size());
 
-            if (any_annealing) {
+            if (factor_is_annealed) {
 
               likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(
                   rng_in, seed_in, data_in, new_likelihood_estimator, power,
@@ -1371,7 +1587,8 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
               likelihood_estimators.push_back(new_likelihood_estimator);
             }
           } else {
-
+            if (any_annealing && factor_is_listed)
+              stop(prior_cannot_be_annealed(i));
             likelihood_estimators.push_back(new_likelihood_estimator);
           }
         } else if (current_factor.containsElementNamed("simulate_prior")) {
@@ -1406,7 +1623,7 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
               likelihood_estimators.size());
           without_priors_index_vector.push_back(likelihood_estimators.size());
 
-          if (any_annealing) {
+          if (factor_is_annealed) {
             likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(
                 rng_in, seed_in, data_in, new_likelihood_estimator, power,
                 annealing_variable, false));
@@ -1864,71 +2081,30 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
               likelihood_estimators.size());
           without_priors_index_vector.push_back(likelihood_estimators.size());
 
-          if (any_annealing) {
+          if (factor_is_annealed) {
             likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(
                 rng_in, seed_in, data_in, new_likelihood_estimator, power,
                 annealing_variable, false));
           } else {
             likelihood_estimators.push_back(new_likelihood_estimator);
           }
-        } else if (current_factor.containsElementNamed(
-                       "linear_gaussian_data_covariance")) {
-          if (!current_factor.containsElementNamed(
-                  "linear_gaussian_data_matrix")) {
-            stop("linear_gaussian_data must contain both matrix and "
-                 "covariance.");
-          }
-
-          if (!current_factor.containsElementNamed("type")) {
-            stop("linear_gaussian_data must contain a type.");
-          }
-
-          if (!current_factor.containsElementNamed(
-                  "linear_gaussian_data_variable")) {
-            stop("linear_gaussian_data must contain "
-                 "linear_gaussian_data_variable.");
-          }
-
-          if (!current_factor.containsElementNamed(
-                  "linear_gaussian_data_state_variable")) {
-            stop("linear_gaussian_data must contain "
-                 "linear_gaussian_data_state_variable.");
-          }
-
-          SEXP linear_gaussian_data_matrix_SEXP =
-              current_factor["linear_gaussian_data_matrix"];
-          SEXP linear_gaussian_data_covariance_SEXP =
-              current_factor["linear_gaussian_data_covariance"];
-          SEXP linear_gaussian_data_variable_SEXP =
-              current_factor["linear_gaussian_data_variable"];
-          SEXP linear_gaussian_data_state_variable_SEXP =
-              current_factor["linear_gaussian_data_state_variable"];
-
-          std::string augmented_state_variable_names =
-              load_string(linear_gaussian_data_state_variable_SEXP);
-          // split string in ;
-          std::vector<std::string> state_variable_names =
-              split(augmented_state_variable_names, ';');
-
-          // std::vector<std::string> variables =
-          // data_in->get_vector_variables(); if (variables.size()!=1)
-          //   stop("For this linear-Gaussian likelihood we can only have one
-          //   variable present in the data.");
-
-          size_t type = current_factor["type"];
+        } else if (is_linear_gaussian_data_model(current_factor)) {
+          LinearGaussianSpec lg = get_linear_gaussian_data_model(current_factor, model_parameters);
+          std::vector<std::string> state_variable_names = lg.state_variables;
+          size_t type = lg.is_function ? 2 : 1;
           ProposalKernel *proposal;
           if (type == 1) {
             proposal = new LinearGaussianNoiseProposalKernel(
-                load_string(linear_gaussian_data_variable_SEXP),
-                state_variable_names, // load_string(linear_gaussian_data_state_variable_SEXP),
-                load_matrix(linear_gaussian_data_matrix_SEXP),
-                load_matrix(linear_gaussian_data_covariance_SEXP));
+                lg.variable,
+                state_variable_names, // lg.state_variable_string,
+                lg.matrix,
+                lg.covariance);
           } else if (type == 2) {
             proposal = new LinearGaussianNoiseFunctionProposalKernel(
-                load_string(linear_gaussian_data_variable_SEXP),
-                state_variable_names, // load_string(linear_gaussian_data_state_variable_SEXP),
-                load_matrix_function(linear_gaussian_data_matrix_SEXP),
-                load_matrix_function(linear_gaussian_data_covariance_SEXP));
+                lg.variable,
+                state_variable_names, // lg.state_variable_string,
+                lg.matrix_function,
+                lg.covariance_function);
           } else {
             stop("linear_gaussian_data specificiation is invalid.");
           }
@@ -1942,7 +2118,7 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
               likelihood_estimators.size());
           without_priors_index_vector.push_back(likelihood_estimators.size());
 
-          if (any_annealing) {
+          if (factor_is_annealed) {
             likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(
                 rng_in, seed_in, data_in, new_likelihood_estimator, power,
                 annealing_variable, false));
@@ -2007,7 +2183,7 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
               likelihood_estimators.size());
           without_priors_index_vector.push_back(likelihood_estimators.size());
 
-          if (any_annealing) {
+          if (factor_is_annealed) {
             likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(
                 rng_in, seed_in, data_in, new_likelihood_estimator, power,
                 annealing_variable, false));
@@ -2103,7 +2279,7 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                 likelihood_estimators.size());
             without_priors_index_vector.push_back(likelihood_estimators.size());
 
-            if (any_annealing) {
+            if (factor_is_annealed) {
               likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(
                   rng_in, seed_in, data_in, new_likelihood_estimator, power,
                   annealing_variable, false));
@@ -2131,7 +2307,12 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                                                                true));
   */
 
-  if ((include_priors) && (any_annealing)) {
+  // Default annealing (all factors) with an importance proposal q: the target
+  // path is (all factors)^p q^(1-p), starting at q. When only chosen factors
+  // are annealed, the path is (other factors) (chosen factors)^p, with no q
+  // term; the first weights are then (target / q) as usual.
+  if ((include_priors) && (any_annealing) &&
+      (factors_affected_by_smc_sequence.empty())) {
     full_index_vector.push_back(likelihood_estimators.size());
     without_cancelled_index_vector.push_back(likelihood_estimators.size());
 
@@ -2171,51 +2352,22 @@ std::vector<KalmanUpdater *> get_kalman_updaters(const List &model,
       if (Rf_isNewList(factors[i])) {
         List current_factor = factors[i];
 
-        if (current_factor.containsElementNamed(
-                "linear_gaussian_data_covariance")) {
-          if (!current_factor.containsElementNamed(
-                  "linear_gaussian_data_matrix")) {
-            stop("linear_gaussian must contain both matrix and covariance.");
-          }
-
-          if (!current_factor.containsElementNamed("type")) {
-            stop("linear_gaussian must contain a type.");
-          }
-
-          if (!current_factor.containsElementNamed(
-                  "linear_gaussian_data_variable")) {
-            stop("linear_gaussian_data must contain "
-                 "linear_gaussian_data_variable.");
-          }
-
-          if (!current_factor.containsElementNamed(
-                  "linear_gaussian_data_state_variable")) {
-            stop("linear_gaussian_data must contain "
-                 "linear_gaussian_data_state_variable.");
-          }
-
-          SEXP linear_gaussian_data_matrix_SEXP =
-              current_factor["linear_gaussian_data_matrix"];
-          SEXP linear_gaussian_data_covariance_SEXP =
-              current_factor["linear_gaussian_data_covariance"];
-          SEXP linear_gaussian_data_variable_SEXP =
-              current_factor["linear_gaussian_data_variable"];
-          SEXP linear_gaussian_data_state_variable_SEXP =
-              current_factor["linear_gaussian_data_state_variable"];
-          size_t type = current_factor["type"];
+        if (is_linear_gaussian_data_model(current_factor)) {
+          LinearGaussianSpec lg = get_linear_gaussian_data_model(current_factor, model_parameters);
+          size_t type = lg.is_function ? 2 : 1;
 
           if (type == 1) {
             updaters.push_back(new ExactKalmanUpdater(
-                load_string(linear_gaussian_data_state_variable_SEXP),
-                load_string(linear_gaussian_data_variable_SEXP),
-                load_matrix(linear_gaussian_data_matrix_SEXP),
-                load_matrix(linear_gaussian_data_covariance_SEXP)));
+                lg.state_variable_string,
+                lg.variable,
+                lg.matrix,
+                lg.covariance));
           } else if (type == 2) {
             updaters.push_back(new ExactKalmanUpdater(
-                load_string(linear_gaussian_data_state_variable_SEXP),
-                load_string(linear_gaussian_data_variable_SEXP),
-                load_matrix_function(linear_gaussian_data_matrix_SEXP),
-                load_matrix_function(linear_gaussian_data_covariance_SEXP)));
+                lg.state_variable_string,
+                lg.variable,
+                lg.matrix_function,
+                lg.covariance_function));
           } else {
             stop("linear_gaussian specificiation is invalid.");
           }
@@ -2294,45 +2446,14 @@ KalmanPredictor *get_kalman_predictor(const List &model,
       if (Rf_isNewList(factors[i])) {
         List current_factor = factors[i];
 
-        if (current_factor.containsElementNamed(
-                "linear_gaussian_transition_covariance")) {
-          if (!current_factor.containsElementNamed(
-                  "linear_gaussian_transition_matrix")) {
-            stop("linear_gaussian must contain both matrix and covariance.");
-          }
-
-          if (!current_factor.containsElementNamed("type")) {
-            stop("linear_gaussian must contain a type.");
-          }
-
-          // if
-          // (!current_factor.containsElementNamed("linear_gaussian_transition_variable"))
-          //{
-          //   stop("linear_gaussian must contain
-          //   linear_gaussian_transition_variable.");
-          // }
-
-          SEXP linear_gaussian_transition_matrix_SEXP =
-              current_factor["linear_gaussian_transition_matrix"];
-          SEXP linear_gaussian_transition_covariance_SEXP =
-              current_factor["linear_gaussian_transition_covariance"];
-          // SEXP linear_gaussian_transition_variable_SEXP =
-          // current_factor["linear_gaussian_transition_variable"]; SEXP
-          // linear_gaussian_data_state_variable_SEXP =
-          // current_factor["linear_gaussian_data_state_variable"];
-          size_t type = current_factor["type"];
-
-          if (type == 1) {
-            return new ExactKalmanPredictor(
-                load_matrix(linear_gaussian_transition_matrix_SEXP),
-                load_matrix(linear_gaussian_transition_covariance_SEXP));
-          } else if (type == 2) {
-            return new ExactKalmanPredictor(
-                load_matrix_function(linear_gaussian_transition_matrix_SEXP),
-                load_matrix_function(
-                    linear_gaussian_transition_covariance_SEXP));
+        if (is_linear_gaussian_transition_model(current_factor)) {
+          LinearGaussianSpec lg = get_linear_gaussian_transition_model(
+              current_factor, model_parameters, false);
+          if (!lg.is_function) {
+            return new ExactKalmanPredictor(lg.matrix, lg.covariance);
           } else {
-            stop("linear_gaussian specificiation is invalid.");
+            return new ExactKalmanPredictor(lg.matrix_function,
+                                            lg.covariance_function);
           }
         } else if (current_factor.containsElementNamed(
                        "nonlinear_gaussian_transition_covariance")) {
@@ -2593,47 +2714,17 @@ ProposalKernel *get_transition_model(const List &model,
       if (Rf_isNewList(factors[i])) {
         List current_factor = factors[i];
 
-        if (current_factor.containsElementNamed(
-                "linear_gaussian_transition_covariance")) {
-          if (!current_factor.containsElementNamed(
-                  "linear_gaussian_transition_matrix")) {
-            stop("linear_gaussian must contain both matrix and covariance.");
-          }
-
-          if (!current_factor.containsElementNamed("type")) {
-            stop("linear_gaussian must contain a type.");
-          }
-
-          if (!current_factor.containsElementNamed(
-                  "linear_gaussian_transition_variable")) {
-            stop("linear_gaussian must contain "
-                 "linear_gaussian_transition_variable.");
-          }
-
-          SEXP linear_gaussian_transition_matrix_SEXP =
-              current_factor["linear_gaussian_transition_matrix"];
-          SEXP linear_gaussian_transition_covariance_SEXP =
-              current_factor["linear_gaussian_transition_covariance"];
-          SEXP linear_gaussian_transition_variable_SEXP =
-              current_factor["linear_gaussian_transition_variable"];
-
-          size_t type = current_factor["type"];
+        if (is_linear_gaussian_transition_model(current_factor)) {
+          LinearGaussianSpec lg = get_linear_gaussian_transition_model(
+              current_factor, model_parameters, true);
           ProposalKernel *proposal;
-          if (type == 1) {
+          if (!lg.is_function) {
             proposal = new LinearGaussianNoiseProposalKernel(
-                load_string(linear_gaussian_transition_variable_SEXP),
-                load_string(linear_gaussian_transition_variable_SEXP),
-                load_matrix(linear_gaussian_transition_matrix_SEXP),
-                load_matrix(linear_gaussian_transition_covariance_SEXP));
-          } else if (type == 2) {
-            proposal = new LinearGaussianNoiseFunctionProposalKernel(
-                load_string(linear_gaussian_transition_variable_SEXP),
-                load_string(linear_gaussian_transition_variable_SEXP),
-                load_matrix_function(linear_gaussian_transition_matrix_SEXP),
-                load_matrix_function(
-                    linear_gaussian_transition_covariance_SEXP));
+                lg.variable, lg.variable, lg.matrix, lg.covariance);
           } else {
-            stop("linear_gaussian_transition specificiation is invalid.");
+            proposal = new LinearGaussianNoiseFunctionProposalKernel(
+                lg.variable, lg.variable, lg.matrix_function,
+                lg.covariance_function);
           }
 
           return proposal;
@@ -2765,74 +2856,77 @@ ProposalKernel *get_transition_model(const List &model,
     stop("No transition_models found in model file.");
   }
 
-  stop("Valid transition model found.");
+  stop("No valid transition model found.");
 }
+
+// The Kalman filter needs the prior on the initial state to be Gaussian with
+// a known mean and covariance, so it must be a built-in Gaussian prior.
+const std::string kf_prior_requirement =
+    "The Kalman filter requires the prior on the initial state to be a "
+    "built-in Gaussian: prior,ilike::norm(variable,mean,sd) for a "
+    "one-dimensional state or prior,ilike::mvnorm(variable,mean,covariance).";
 
 List get_prior_mean_and_covariance(const List &model,
                                    const List &model_parameters) {
-  if (model.containsElementNamed("factor")) {
+  if (!model.containsElementNamed("factor"))
+    stop(kf_prior_requirement + " No prior was found.");
 
-    List factors = model["factor"];
+  List factors = model["factor"];
 
-    for (size_t i = 0; i < factors.size(); ++i) {
+  for (size_t i = 0; i < factors.size(); ++i) {
 
-      if (Rf_isNewList(factors[i])) {
+    if (!Rf_isNewList(factors[i]))
+      stop("Error in factors section of model file.");
 
-        List current_factor = factors[i];
-        if (current_factor.containsElementNamed("prior")) {
-          // DistributionFactor* new_factor;
+    List current_factor = factors[i];
 
-          if (Rf_isNewList(current_factor["prior"])) {
+    if (current_factor.containsElementNamed("evaluate_log_prior") ||
+        current_factor.containsElementNamed("simulate_prior"))
+      stop(kf_prior_requirement + " Factor " + std::to_string(i + 1) +
+           " is a user-defined prior.");
 
-            List current_prior = current_factor["prior"];
-            if (current_prior.containsElementNamed("type") &&
-                current_prior.containsElementNamed("variables")) {
-              std::string type = current_prior["type"];
+    if (!current_factor.containsElementNamed("prior"))
+      continue;
 
-              if (iequals(type, "norm")) {
-                List info = get_single_variable_two_double_parameter_info(
-                    model_parameters, current_prior, type);
+    if (!Rf_isNewList(current_factor["prior"]))
+      stop("Error in factors section of model file.");
 
-                std::string variable = info[0];
-                double mean = info[1];
-                double sd = info[2];
+    List current_prior = current_factor["prior"];
+    if (!(current_prior.containsElementNamed("type") &&
+          current_prior.containsElementNamed("variables")))
+      stop("Missing information for prior in model file.");
 
-                arma::colvec mean_vec(1);
-                mean_vec[0] = mean;
+    std::string type = current_prior["type"];
 
-                arma::colvec cov(1, 1);
-                cov(0, 0) = sd * sd;
+    if (iequals(type, "norm")) {
+      List info = get_single_variable_two_double_parameter_info(
+          model_parameters, current_prior, type);
 
-                return List::create(mean_vec, cov);
-              } else if (iequals(type, "mvnorm")) {
-                List info =
-                    get_single_variable_vector_and_matrix_parameter_info(
-                        model_parameters, current_prior, type);
+      double mean = info[1];
+      double sd = info[2];
 
-                std::string variable = info[0];
-                arma::colvec mean = info[1];
-                arma::mat cov = info[2];
+      arma::colvec mean_vec(1);
+      mean_vec[0] = mean;
 
-                return List::create(mean, cov);
-              }
-            } else {
-              stop("Missing information for prior in model file.");
-            }
-          } else {
-            stop("Error in factors section of model file.");
-          }
-        } else {
-          stop("Invalid factor.");
-        }
-      } else {
-        stop("Error in factors section of model file.");
-      }
+      arma::mat cov(1, 1);
+      cov(0, 0) = sd * sd;
+
+      return List::create(mean_vec, cov);
+    } else if (iequals(type, "mvnorm")) {
+      List info = get_single_variable_vector_and_matrix_parameter_info(
+          model_parameters, current_prior, type);
+
+      arma::colvec mean = info[1];
+      arma::mat cov = info[2];
+
+      return List::create(mean, cov);
+    } else {
+      stop(kf_prior_requirement + " Factor " + std::to_string(i + 1) +
+           " is a built-in prior of type " + type + ".");
     }
-  } else {
-    stop("No factors found in model.");
   }
 
-  stop("Valid prior mean and covariance not found.");
+  stop(kf_prior_requirement + " No prior was found.");
 }
 
 std::vector<MeasurementCovarianceEstimator *>
@@ -2922,42 +3016,12 @@ get_measurement_covariance_estimators(
 
           measurement_covariance_estimators.push_back(
               new_measurement_covariance_estimator);
-        } else if (current_factor.containsElementNamed(
-                       "linear_gaussian_data_covariance")) {
-          if (!current_factor.containsElementNamed(
-                  "linear_gaussian_data_matrix")) {
-            stop("linear_gaussian_data must contain both matrix and "
-                 "covariance.");
-          }
-
-          if (!current_factor.containsElementNamed("type")) {
-            stop("linear_gaussian_data must contain a type.");
-          }
-
-          if (!current_factor.containsElementNamed(
-                  "linear_gaussian_data_variable")) {
-            stop("linear_gaussian_data must contain "
-                 "linear_gaussian_data_variable.");
-          }
-
-          if (!current_factor.containsElementNamed(
-                  "linear_gaussian_data_state_variable")) {
-            stop("linear_gaussian_data must contain "
-                 "linear_gaussian_data_state_variable.");
-          }
-
-          SEXP linear_gaussian_data_matrix_SEXP =
-              current_factor["linear_gaussian_data_matrix"];
-          SEXP linear_gaussian_data_covariance_SEXP =
-              current_factor["linear_gaussian_data_covariance"];
-          SEXP linear_gaussian_data_variable_SEXP =
-              current_factor["linear_gaussian_data_variable"];
-          SEXP linear_gaussian_data_state_variable_SEXP =
-              current_factor["linear_gaussian_data_state_variable"];
-          size_t type = current_factor["type"];
+        } else if (is_linear_gaussian_data_model(current_factor)) {
+          LinearGaussianSpec lg = get_linear_gaussian_data_model(current_factor, model_parameters);
+          size_t type = lg.is_function ? 2 : 1;
 
           std::string augmented_state_variable_names =
-              load_string(linear_gaussian_data_state_variable_SEXP);
+              lg.state_variable_string;
           // split string in ;
           std::vector<std::string> state_variable_names =
               split(augmented_state_variable_names, ';');
@@ -2979,9 +3043,9 @@ get_measurement_covariance_estimators(
                       &data_created_in_get_measurement_covariance_estimators
                            .back(),
                       transform, std::make_shared<Transform>(summary_stats),
-                      load_matrix(linear_gaussian_data_matrix_SEXP),
-                      load_matrix(linear_gaussian_data_covariance_SEXP),
-                      load_string(linear_gaussian_data_variable_SEXP),
+                      lg.matrix,
+                      lg.covariance,
+                      lg.variable,
                       state_variable_names);
             } else if (type == 2) {
               new_measurement_covariance_estimator =
@@ -2991,10 +3055,9 @@ get_measurement_covariance_estimators(
                       transform,
                       // std::make_shared<Transform>(summary_stats),
                       NULL,
-                      load_matrix_function(linear_gaussian_data_matrix_SEXP),
-                      load_matrix_function(
-                          linear_gaussian_data_covariance_SEXP),
-                      load_string(linear_gaussian_data_variable_SEXP),
+                      lg.matrix_function,
+                      lg.covariance_function,
+                      lg.variable,
                       state_variable_names);
             } else {
               stop("linear_gaussian_data specificiation is invalid.");
@@ -3005,18 +3068,17 @@ get_measurement_covariance_estimators(
               new_measurement_covariance_estimator =
                   new DirectLinearGaussianMeasurementCovarianceEstimator(
                       rng_in, seed_in, data_in, transform, NULL,
-                      load_matrix(linear_gaussian_data_matrix_SEXP),
-                      load_matrix(linear_gaussian_data_covariance_SEXP),
-                      load_string(linear_gaussian_data_variable_SEXP),
+                      lg.matrix,
+                      lg.covariance,
+                      lg.variable,
                       state_variable_names);
             } else if (type == 2) {
               new_measurement_covariance_estimator =
                   new DirectLinearGaussianMeasurementCovarianceEstimator(
                       rng_in, seed_in, data_in, transform, NULL,
-                      load_matrix_function(linear_gaussian_data_matrix_SEXP),
-                      load_matrix_function(
-                          linear_gaussian_data_covariance_SEXP),
-                      load_string(linear_gaussian_data_variable_SEXP),
+                      lg.matrix_function,
+                      lg.covariance_function,
+                      lg.variable,
                       state_variable_names);
             } else {
               stop("linear_gaussian_data specificiation is invalid.");
@@ -3561,8 +3623,10 @@ ProposalKernel *get_mh_proposal(const List &current_proposal,
 
           proposal = new GaussianRandomWalkProposalKernel(variable, sd);
         } else if (iequals(type, "mvnorm_rw")) {
-          List info = get_single_variable_matrix_and_double_parameter_info(
-              model_parameters, proposal_info, type);
+          // (variable, Sigma) or (variable, Sigma, s^2); s^2 defaults to 1.
+          List info =
+              get_single_variable_matrix_and_optional_double_parameter_info(
+                  model_parameters, proposal_info, type, 1.0);
 
           std::string variable = info[0];
           arma::mat cov = info[1];
@@ -3596,6 +3660,9 @@ ProposalKernel *get_mh_proposal(const List &current_proposal,
           proposal = new LangevinProposalKernel(variable, cov, scale,
                                                 new DirectGradientEstimator());
         } else if (iequals(type, "hamiltonian")) {
+          // HMCProposalKernel is a stub (simulate returns no parameters, so
+          // the chain never moves); refuse it rather than return a stuck chain.
+          stop("MH proposal ilike::hamiltonian (HMC) is not written yet.");
           List info = get_single_variable_matrix_parameter_info(
               model_parameters, proposal_info, type);
 
@@ -3699,8 +3766,10 @@ ProposalKernel *get_unadjusted_proposal(const List &current_proposal,
 
           proposal = new GaussianRandomWalkProposalKernel(variable, sd);
         } else if (iequals(type, "mvnorm_rw")) {
-          List info = get_single_variable_matrix_and_double_parameter_info(
-              model_parameters, proposal_info, type);
+          // (variable, Sigma) or (variable, Sigma, s^2); s^2 defaults to 1.
+          List info =
+              get_single_variable_matrix_and_optional_double_parameter_info(
+                  model_parameters, proposal_info, type, 1.0);
 
           std::string variable = info[0];
           arma::mat cov = info[1];
@@ -3734,6 +3803,9 @@ ProposalKernel *get_unadjusted_proposal(const List &current_proposal,
           proposal = new LangevinProposalKernel(variable, cov, scale,
                                                 new DirectGradientEstimator());
         } else if (iequals(type, "hamiltonian")) {
+          // HMCProposalKernel is a stub (simulate returns no parameters, so
+          // the chain never moves); refuse it rather than return a stuck chain.
+          stop("MH proposal ilike::hamiltonian (HMC) is not written yet.");
           List info = get_single_variable_matrix_parameter_info(
               model_parameters, proposal_info, type);
 
@@ -3941,13 +4013,16 @@ SymmetricProposalKernel *get_m_proposal(const List &current_proposal,
 
           proposal = new GaussianRandomWalkProposalKernel(variable, sd);
         } else if (iequals(type, "mvnorm_rw")) {
-          List info = get_single_variable_matrix_parameter_info(
-              model_parameters, proposal_info, type);
+          // (variable, Sigma) or (variable, Sigma, s^2); s^2 defaults to 1.
+          List info =
+              get_single_variable_matrix_and_optional_double_parameter_info(
+                  model_parameters, proposal_info, type, 1.0);
 
           std::string variable = info[0];
           arma::mat cov = info[1];
+          double scale = info[2];
 
-          proposal = new GaussianRandomWalkProposalKernel(variable, cov);
+          proposal = new GaussianRandomWalkProposalKernel(variable, cov, scale);
         } else if (iequals(type, "unif_rw")) {
           List info = get_single_variable_one_double_parameter_info(
               model_parameters, proposal_info, type);
@@ -4043,6 +4118,12 @@ MCMCTermination *make_mcmc_termination(const List &model_parameters,
              "the number of iterations.");
       }
     } else if (iequals(method, "se")) {
+      // SEMCMCTermination::terminate() ignores its threshold and stops only
+      // at the maximum number of iterations (never, if no maximum is given),
+      // so refuse it until the standard-error rule is written. The parsing
+      // below is kept for that.
+      stop("MCMC termination ilike::se is not written yet: use "
+           "ilike::iterations.");
       if (Rf_isNewList(mcmc_termination_method["values"])) {
         List values = mcmc_termination_method["values"];
 
@@ -4583,10 +4664,13 @@ SMCTermination *get_smc_termination_method(const List &model,
           if (values.length() == 2) {
             double threshold =
                 extract_double_parameter(values, model_parameters, 0);
-            double number_in_a_row =
+            int number_in_a_row =
                 extract_int_parameter(values, model_parameters, 1);
+            if (number_in_a_row < 1)
+              stop("ilike::stable: the number of iterations in a row must be at least 1.");
+            // The constructor takes (number_in_a_row, threshold).
             smc_termination =
-                new StableSMCTermination(threshold, number_in_a_row);
+                new StableSMCTermination(size_t(number_in_a_row), threshold);
           } else {
             stop("SMC termination via stability requires the specificaton of a "
                  "threshold and the number of iterations in a row that this "
@@ -6194,6 +6278,22 @@ double do_particle_filter_with_fixed_params(
 }
 
 
+// Factor numbers given by the user in evaluate_log are 1-based (as in .ilike
+// files); C++ indexes the factors from 0.
+VectorIndex* user_factor_index(const IntegerVector &index_in,
+                               size_t number_of_factors)
+{
+  std::vector<size_t> indices_in;
+  for (R_xlen_t k = 0; k < index_in.size(); ++k) {
+    if ((index_in[k] == NA_INTEGER) || (index_in[k] < 1) ||
+        (size_t(index_in[k]) > number_of_factors))
+      Rcpp::stop("evaluate_log: index must contain factor numbers between 1 and " +
+                 std::to_string(number_of_factors) + ".");
+    indices_in.push_back(size_t(index_in[k] - 1));
+  }
+  return new VectorIndex(indices_in);
+}
+
 // [[Rcpp::export]]
 double do_evaluate_log(const List &model,
                        const List &model_parameters,
@@ -6242,11 +6342,7 @@ double do_evaluate_log(const List &model,
   }
   else
   {
-    std::vector<size_t> indices_in;
-    for (size_t k = 0; k < index_in.size(); ++k) {
-      indices_in.push_back(size_t(index_in[k]));
-    }
-    index = new VectorIndex(indices_in);
+    index = user_factor_index(index_in, likelihood_estimators.size());
   }
 
   factors->setup(parameters);
@@ -6338,11 +6434,7 @@ double do_evaluate_log_with_fixed_params(const List &model,
   }
   else
   {
-    std::vector<size_t> indices_in;
-    for (size_t k = 0; k < index_in.size(); ++k) {
-      indices_in.push_back(size_t(index_in[k]));
-    }
-    index = new VectorIndex(indices_in);
+    index = user_factor_index(index_in, likelihood_estimators.size());
   }
 
   Parameters parameters = list_to_parameters(parameters_in);

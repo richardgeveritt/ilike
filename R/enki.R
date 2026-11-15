@@ -35,6 +35,8 @@ IENKI = function(recipe,
                 seed = NULL,
                 grain_size = 100000)
 {
+  stop_if_parallel(parallel)
+
   if (is.character(recipe))
     recipe = compile(filenames = recipe,
                     model_parameter_list = model_parameter_list,

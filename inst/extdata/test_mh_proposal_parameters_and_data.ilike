@@ -1,0 +1,24 @@
+// MH proposal centred between the current state and the observation, with
+// standard deviation the proposal parameter "sd" (algorithm_parameter_list;
+// use with test_gaussian_posterior.ilike).
+
+/***simulate_mh_proposal***/
+Parameters simulate_mh_proposal(RandomNumberGenerator &rng,
+                                const Parameters &parameters,
+                                const Parameters &proposal_parameters,
+                                const Data &data) {
+  arma::colvec theta(1, 1);
+  theta[0] = rnorm(rng, 0.5*(parameters["theta"][0] + data["x"][0]), proposal_parameters["sd"][0]);
+  return Parameters("theta", theta);
+}
+
+/***evaluate_log_mh_proposal***/
+double evaluate_log_mh_proposal(const Parameters &proposed_parameters,
+                                const Parameters &parameters,
+                                const Parameters &proposal_parameters,
+                                const Data &data) {
+  return dnorm(proposed_parameters["theta"][0], 0.5*(parameters["theta"][0] + data["x"][0]),
+               proposal_parameters["sd"][0]);
+}
+
+/***mcmc_termination,ilike::iterations(10000)***/

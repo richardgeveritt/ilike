@@ -1587,7 +1587,7 @@ namespace ilike
       //   current_state->back().schedule_parameters = *this->sequencer_parameters;
       current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
 
-      current_state->set_llhd(current_state->log_likelihood);
+      current_state->set_llhd(current_state->subsample_log_likelihood);
       current_state->set_time();
 
       if (current_state->results_name != "")

@@ -1,0 +1,9 @@
+// SMC with MCMC moves, annealing the likelihood with a fixed schedule.
+// Use with test_gaussian_posterior.ilike (prior N(1,1), one observation x = 1
+// with N(theta,1) likelihood): the target at power p is N(1, 1/(1+p)).
+
+/***m_proposal,ilike::norm_rw(theta,1)***/
+
+/***mcmc_termination,ilike::iterations(5)***/
+
+/***smc_sequence,ilike::annealing(power,c(0,0.25,0.5,0.75,1))***/

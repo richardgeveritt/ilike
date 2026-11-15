@@ -1,0 +1,20 @@
+// The SSM of test_kf_linear_gaussian.ilike with the transition model given by
+// R expressions (simulate and evaluate).
+
+/***data,y=c(0.5,1.0,0.2,-0.3,0.8)***/
+
+/***prior,ilike::norm(x,0,1)***/
+
+/***simulate_transition_model,x=rnorm(1,0.9*parameters$x,sqrt(0.5))***/
+
+/***evaluate_log_transition_model,dnorm(proposed_parameters$x,0.9*parameters$x,sqrt(0.5),log=TRUE)***/
+
+/***linear_gaussian_data_variable,"y"***/
+
+/***linear_gaussian_data_state_variable,"x"***/
+
+/***linear_gaussian_data_matrix,diag(1)***/
+
+/***linear_gaussian_data_covariance,diag(1)***/
+
+/***ssm,ilike::ssm(i,0,4,t,0,dt,1,1)***/

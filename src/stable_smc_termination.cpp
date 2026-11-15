@@ -53,7 +53,7 @@ void StableSMCTermination::make_copy(const StableSMCTermination &another)
 
 bool StableSMCTermination::terminate(double score)
 {
-  if (abs(score)<=this->threshold)
+  if (std::abs(score)<=this->threshold)
     this->counter = this->counter + 1;
   else
     this->counter = 0;

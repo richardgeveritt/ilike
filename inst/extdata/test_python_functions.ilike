@@ -1,0 +1,10 @@
+// Python functions (in test_python_functions.py, sourced because it has the
+// same base name): the data, the prior and the likelihood. Prior logN(0, 1)
+// on tau, observations y = (1, 1, 1) each N(tau, 1). The integer argument is
+// written 3L, as the documentation requires.
+
+/***data,y=my_ones(3L)***/
+
+/***evaluate_log_prior,my_log_prior(parameters$tau)***/
+
+/***evaluate_log_likelihood,my_log_llhd(parameters,data)***/

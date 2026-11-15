@@ -345,6 +345,9 @@ namespace ilike
       {
         this->schedule_difference = this->schedules.back()[this->mileometer.back()] - this->previous_bisect_value; // this->current_bisect_value;//-this->schedules.back()[this->mileometer.back()-1];
                                                                                                                    // this->mileometer.increment();
+        // The point just reached is where the next step starts (the next
+        // schedule_difference, and the start of any bisection, are measured from it).
+        this->previous_bisect_value = this->schedules.back()[this->mileometer.back()];
 
         this->set_schedule_parameters();
         // this->schedule_parameters[this->variable_names.back()] = target_values.back();
@@ -781,6 +784,9 @@ namespace ilike
       {
         this->schedule_difference = this->schedules.back()[this->mileometer.back()] - this->previous_bisect_value; // this->schedules.back()[this->mileometer.back()-1];
                                                                                                                    // this->mileometer.increment();
+        // The point just reached is where the next step starts (the next
+        // schedule_difference, and the start of any bisection, are measured from it).
+        this->previous_bisect_value = this->schedules.back()[this->mileometer.back()];
         this->set_schedule_parameters();
         // this->schedule_parameters[this->variable_names.back()] = target_values.back();
 

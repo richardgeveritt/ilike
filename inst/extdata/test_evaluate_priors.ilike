@@ -124,7 +124,8 @@ double evaluate_mvnorm(const Parameters &parameters) {
 
 /***evaluate_log_prior***/
 double evaluate_gamma(const Parameters &parameters) {
-  return dgamma(parameters["x"][0], 3.0, 2.0);
+  // Evaluated at x + 0.3, so that log(x) is not 0 (x = 1 in the test).
+  return dgamma(parameters["x"][0] + 0.3, 3.0, 2.0);
 }
 
 /***evaluate_log_prior***/

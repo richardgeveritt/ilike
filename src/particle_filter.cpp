@@ -862,6 +862,7 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
+    current_state->set_llhd(current_state->subsample_log_likelihood);
     current_state->set_time_and_reset_start();
     
     // check termination, using sequencer
@@ -1039,6 +1040,7 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
     //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
     //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
+    current_state->set_llhd(current_state->subsample_log_likelihood);
     current_state->set_time_and_reset_start();
     
     // check termination, using sequencer

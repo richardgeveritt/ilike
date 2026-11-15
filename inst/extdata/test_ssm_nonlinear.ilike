@@ -1,0 +1,59 @@
+// The SSM of test_kf_linear_gaussian.ilike written with the nonlinear-Gaussian
+// transition and data models (whose functions happen to be linear), in C++.
+
+/***data***/
+Data set_data() {
+  arma::colvec y(5);
+  y(0) = 0.5; y(1) = 1.0; y(2) = 0.2; y(3) = -0.3; y(4) = 0.8;
+  return Data("y", y);
+}
+
+/***evaluate_log_prior***/
+double evaluate_log_prior(const Parameters &parameters) {
+  return dnorm(parameters["x"][0], 0.0, 1.0);
+}
+
+/***simulate_prior***/
+Parameters simulate_prior(RandomNumberGenerator &rng) {
+  return Parameters("x", rnorm(rng, 0.0, 1.0));
+}
+
+/***nonlinear_gaussian_transition_variable***/
+std::string transition_variable() {
+  return "x";
+}
+
+/***nonlinear_gaussian_transition_function***/
+Parameters transform_state(const Parameters &parameters) {
+  arma::colvec noiseless_xt(1);
+  noiseless_xt[0] = 0.9*parameters["x"][0];
+  return Parameters("x", noiseless_xt);
+}
+
+/***nonlinear_gaussian_transition_covariance***/
+arma::mat transition_covariance(const Parameters &parameters) {
+  arma::mat Q(1,1);
+  Q(0,0) = 0.5;
+  return Q;
+}
+
+/***nonlinear_gaussian_data_variable***/
+std::string data_variable() {
+  return "y";
+}
+
+/***nonlinear_gaussian_data_function***/
+Data transform_into_data_space(const Parameters &parameters) {
+  arma::colvec noiseless_y(1);
+  noiseless_y[0] = parameters["x"][0];
+  return Data("y", noiseless_y);
+}
+
+/***nonlinear_gaussian_data_covariance***/
+arma::mat data_covariance(const Parameters &parameters) {
+  arma::mat R(1,1);
+  R(0,0) = 1.0;
+  return R;
+}
+
+/***ssm,ilike::ssm(i,0,4,t,0,dt,1,1)***/

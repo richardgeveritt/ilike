@@ -1,0 +1,57 @@
+// Scalar linear-Gaussian state-space model as in test_kf_linear_gaussian.ilike,
+// with the transition model given by user-defined simulate/evaluate functions.
+
+/***data***/
+Data set_data() {
+  arma::colvec y(5);
+  y(0) = 0.5; y(1) = 1.0; y(2) = 0.2; y(3) = -0.3; y(4) = 0.8;
+  return Data("y", y);
+}
+
+/***evaluate_log_prior***/
+double evaluate_log_prior(const Parameters &parameters) {
+  return dnorm(parameters["x"][0], 0.0, 1.0);
+}
+
+/***simulate_prior***/
+Parameters simulate_prior(RandomNumberGenerator &rng) {
+  return Parameters("x", rnorm(rng, 0.0, 1.0));
+}
+
+/***simulate_transition_model***/
+Parameters simulate_state(RandomNumberGenerator &rng,
+                          const Parameters &parameters) {
+  return Parameters("x", rnorm(rng, 0.9*parameters["x"][0], sqrt(0.5)));
+}
+
+/***evaluate_log_transition_model***/
+double log_transition_density(const Parameters &proposed_parameters,
+                              const Parameters &parameters) {
+  return dnorm(proposed_parameters["x"][0], 0.9*parameters["x"][0], sqrt(0.5));
+}
+
+/***linear_gaussian_data_variable***/
+std::string data_variable() {
+  return "y";
+}
+
+/***linear_gaussian_data_state_variable***/
+std::string state_variable() {
+  return "x";
+}
+
+/***linear_gaussian_data_matrix***/
+arma::mat data_matrix(const Parameters &parameters) {
+  arma::mat H(1,1);
+  H(0,0) = 1.0;
+  return H;
+}
+
+/***linear_gaussian_data_covariance***/
+arma::mat data_covariance(const Parameters &parameters) {
+  arma::mat R(1,1);
+  R(0,0) = 1.0;
+  return R;
+}
+
+/***ssm,ilike::ssm(i,0,4,t,0,dt,1,1)***/

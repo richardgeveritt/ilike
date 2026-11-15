@@ -1,0 +1,5 @@
+// HMC is not written yet: compiling a recipe is fine, running it stops.
+
+/***mh_proposal,ilike::hamiltonian(theta,1)***/
+
+/***mcmc_termination,ilike::iterations(1000)***/

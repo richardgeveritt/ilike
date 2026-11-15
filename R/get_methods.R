@@ -1,15 +1,11 @@
 method_parse <- function(input,
                          parameter_list = list())
 {
-  required_args <- formula.tools::get.vars(parse(text=input))
-
-  an.error.occured <- FALSE
-  tryCatch( { required_args <- formula.tools::get.vars(parse(text=input)) }
-            , error = function(e) {an.error.occured <<- TRUE})
-  if (an.error.occured)
-  {
-    stop(paste('Error in formula.tools::get.vars function. Maybe you used an equals sign within the function specification (e.g. using log=TRUE). This is not yet supported.',sep=""))
-  }
+  # The variables used in the expression (function names and named-argument
+  # names are not variables).
+  parsed = tryCatch(parse(text=input, keep.source=FALSE),
+                    error = function(e) stop(paste("Could not parse the R expression ", input, ": ", conditionMessage(e), sep="")))
+  required_args <- unique(all.vars(parsed))
 
   parameter_arguments = c()
 
@@ -102,32 +98,52 @@ get_smc_sequences = function(model,model_parameters)
             stop('SMC sequence must not have any variables (except for parameters "p1", "p2", etc.)')
           }
 
-          if (length(methods[[i]][[method_name]][["parameters"]])<2)
+          # Optional third argument: the factors (1-based) that depend on the
+          # sequence variable. If it is not given, every factor is
+          # re-evaluated when the target changes.
+          if (length(methods[[i]][[method_name]][["parameters"]])>2)
           {
-            stop('If SMC sequence is "parameter", we must also specify the factors affected by this parameter changing.')
+            stop('smc_sequence ilike::parameter: too many arguments (expected the variable name, the sequence of values and optionally the factors affected).')
           }
-          else
+          factors_affected = NULL
+          if (length(methods[[i]][[method_name]][["parameters"]])==2)
           {
-            factors_affected = method_parse(methods[[i]][[method_name]][["parameters"]][[2]],model_parameters)
+            factors_affected = method_parse(methods[[i]][[method_name]][["parameters"]][[2]],model_parameters)[[1]]()
           }
 
           if (counter==0)
           {
             schedule_list = list()
             schedule_list[[1]] = f_info[[1]]()
-            output_method = list(types=methods[[i]][[method_name]][["type"]],variables=methods[[i]][[method_name]][["variables"]],schedules=schedule_list,factors_affected=factors_affected[[1]]())
+            output_method = list(types=methods[[i]][[method_name]][["type"]],variables=methods[[i]][[method_name]][["variables"]],schedules=schedule_list)
           }
           else
           {
             output_method[["types"]] = c(output_method[["types"]],methods[[i]][[method_name]][["type"]])
             output_method[["variables"]] = c(output_method[["variables"]],methods[[i]][[method_name]][["variables"]])
             output_method[["schedules"]] = append(output_method[["schedules"]],f_info[[1]]())
-            output_method[["factors_affected"]] = append(output_method[["factors_affected"]],factors_affected[[1]]())
+          }
+          if (!is.null(factors_affected))
+          {
+            output_method[["factors_affected"]] = append(output_method[["factors_affected"]],factors_affected)
           }
         }
         else
         {
-          sequence = methods[[i]][[method_name]][["parameters"]]
+          # Annealing/tempering: (variable, schedule) or (variable, schedule,
+          # factors). The optional factors (1-based) are the ones raised to the
+          # power; the others are not annealed.
+          sequence_parameters = methods[[i]][[method_name]][["parameters"]]
+          if (length(sequence_parameters)>2)
+          {
+            stop(paste('smc_sequence ilike::',methods[[i]][[method_name]][["type"]],': too many arguments (expected the variable name, the schedule and optionally the factors to anneal).',sep=""))
+          }
+          sequence = sequence_parameters[[1]]
+          factors_affected = NULL
+          if (length(sequence_parameters)==2)
+          {
+            factors_affected = method_parse(sequence_parameters[[2]],model_parameters)[[1]]()
+          }
 
           f_info = method_parse(sequence,model_parameters)
 
@@ -147,6 +163,10 @@ get_smc_sequences = function(model,model_parameters)
             output_method[["types"]] = c(output_method[["types"]],methods[[i]][[method_name]][["type"]])
             output_method[["variables"]] = c(output_method[["variables"]],methods[[i]][[method_name]][["variables"]])
             output_method[["schedules"]] = append(output_method[["schedules"]],f_info[[1]]())
+          }
+          if (!is.null(factors_affected))
+          {
+            output_method[["factors_affected"]] = append(output_method[["factors_affected"]],factors_affected)
           }
         }
 
@@ -211,4 +231,15 @@ get_enk_sequences = function(model,model_parameters)
   }
 
   return(output_method)
+}
+
+# The parallel workers (RcppParallelSMCWorker and the ensemble Kalman
+# equivalents) are disconnected in the C++ code: with parallel = TRUE some
+# algorithms stop with "Parallel worker not set up" and others leave the worker
+# NULL and crash. Refuse the option here until the workers are restored
+# (dev/plan.md section 3.1).
+stop_if_parallel = function(parallel)
+{
+  if (isTRUE(parallel))
+    stop("parallel = TRUE is not available yet: run with parallel = FALSE.")
 }

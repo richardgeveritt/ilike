@@ -1,0 +1,5 @@
+// m_proposal mvnorm_rw on a 2-D parameter in the long form (theta, Sigma, s^2)
+// (use with test_gaussian_posterior_vector.ilike).
+/***m_proposal,ilike::mvnorm_rw(theta,p1,p2)***/
+
+/***mcmc_termination,ilike::iterations(10000)***/

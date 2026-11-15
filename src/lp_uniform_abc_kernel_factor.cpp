@@ -82,6 +82,12 @@ void LpUniformABCKernelFactor::make_copy(const LpUniformABCKernelFactor &another
 
 double LpUniformABCKernelFactor::likelihood_evaluate(const Parameters &input) const
 {
+  // At an infinite tolerance the kernel is taken to be 1 (log 0): the ABC
+  // target is then the prior predictive, with evidence 1, so an SMC can start
+  // from epsilon = Inf (the first weights are the kernel at the first finite
+  // tolerance).
+  if (std::isinf(input[this->epsilon_variable][0]))
+    return 0.0;
   arma::colvec scale;
   if (this->scale_variable!="")
     scale = input[this->scale_variable];
@@ -130,6 +136,12 @@ double LpUniformABCKernelFactor::evaluate_kernel_given_distance(const Parameters
                                                                 double distance,
                                                                 double scale_constant) const
 {
+  // At an infinite tolerance the kernel is taken to be 1 (log 0): the ABC
+  // target is then the prior predictive, with evidence 1, so an SMC can start
+  // from epsilon = Inf (the first weights are the kernel at the first finite
+  // tolerance).
+  if (std::isinf(input[this->epsilon_variable][0]))
+    return 0.0;
   double epsilon = input[this->epsilon_variable][0];
   if (distance>epsilon)
     return -arma::datum::inf;

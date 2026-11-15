@@ -1,0 +1,12 @@
+// SMC with MCMC moves, annealing with a fixed schedule, stopped by
+// ilike::stable(0.05,2): the steps in the power are 0.1, 0.4, 0.02, 0.02, ...,
+// so the algorithm stops at power 0.54, the second step in a row of at most
+// 0.05. Use with test_gaussian_posterior.ilike.
+
+/***m_proposal,ilike::norm_rw(theta,1)***/
+
+/***mcmc_termination,ilike::iterations(5)***/
+
+/***smc_sequence,ilike::annealing(power,c(0,0.1,0.5,0.52,0.54,0.56,1))***/
+
+/***smc_termination,ilike::stable(0.05,2)***/

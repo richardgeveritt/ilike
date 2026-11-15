@@ -10,3 +10,7 @@
 ^src/.*\.gch$
 ^CLAUDE\.md$
 ^dev$
+^src/Makevars$
+^arXiv-
+^[^/]*\.pdf$
+^\.claude$

@@ -1,0 +1,5 @@
+// MH mvnorm_rw on a 2-D parameter with covariance p1 (a 2x2 matrix) and scale
+// p2 (use with test_gaussian_posterior_vector.ilike).
+/***mh_proposal,ilike::mvnorm_rw(theta,p1,p2)***/
+
+/***mcmc_termination,ilike::iterations(10000)***/

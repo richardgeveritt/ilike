@@ -1,0 +1,50 @@
+// Inner model for the algorithmic-likelihood tests: the scalar linear-Gaussian
+// SSM of test_kf_linear_gaussian.ilike with transition coefficient a, a
+// parameter of the outer model.
+
+/***prior,ilike::norm(x,0,1)***/
+
+/***linear_gaussian_transition_variable***/
+std::string transition_variable() {
+  return "x";
+}
+
+/***linear_gaussian_transition_matrix***/
+arma::mat transition_matrix(const Parameters &parameters) {
+  arma::mat A(1,1);
+  A(0,0) = parameters["a"][0];
+  return A;
+}
+
+/***linear_gaussian_transition_covariance***/
+arma::mat transition_covariance(const Parameters &parameters) {
+  arma::mat Q(1,1);
+  Q(0,0) = 0.5;
+  return Q;
+}
+
+/***linear_gaussian_data_variable***/
+std::string data_variable() {
+  return "y";
+}
+
+/***linear_gaussian_data_state_variable***/
+std::string state_variable() {
+  return "x";
+}
+
+/***linear_gaussian_data_matrix***/
+arma::mat data_matrix(const Parameters &parameters) {
+  arma::mat H(1,1);
+  H(0,0) = 1.0;
+  return H;
+}
+
+/***linear_gaussian_data_covariance***/
+arma::mat data_covariance(const Parameters &parameters) {
+  arma::mat R(1,1);
+  R(0,0) = 1.0;
+  return R;
+}
+
+/***ssm,ilike::ssm(i,0,4,t,0,dt,1,1)***/

@@ -1,0 +1,18 @@
+// Independent MH proposal N(x, 1) centred on the observation x (use with
+// test_gaussian_posterior.ilike).
+
+/***simulate_imh_proposal***/
+Parameters simulate_imh_proposal(RandomNumberGenerator &rng,
+                                 const Data &data) {
+  arma::colvec theta(1, 1);
+  theta[0] = rnorm(rng, data["x"][0], 1.0);
+  return Parameters("theta", theta);
+}
+
+/***evaluate_log_imh_proposal***/
+double evaluate_log_imh_proposal(const Parameters &proposed_parameters,
+                                 const Data &data) {
+  return dnorm(proposed_parameters["theta"][0], data["x"][0], 1.0);
+}
+
+/***mcmc_termination,ilike::iterations(10000)***/
