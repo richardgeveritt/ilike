@@ -11,7 +11,8 @@ load_enk_output(
   external_log_weights = c(0),
   external_target_parameters = "",
   nesting_level = 0,
-  factor = 1
+  factor = 1,
+  wide = FALSE
 )
 ```
 
@@ -47,6 +48,13 @@ load_enk_output(
 
   (optional; for nested output only) The factor from which to extract
   points. (default is 0)
+
+- wide:
+
+  (optional) If TRUE, return one row per point, with one column per
+  scalar (named variable_dimension, e.g. theta_1), instead of one row
+  per scalar (default FALSE). Much faster for large outputs;
+  ilike_pivot_longer converts it to the long format.
 
 ## Value
 

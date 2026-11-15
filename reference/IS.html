@@ -46,6 +46,7 @@
 <span>  <span class="va">recipe</span>,</span>
 <span>  results_name <span class="op">=</span> <span class="st">""</span>,</span>
 <span>  results_path <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/getwd.html" class="external-link">getwd</a></span><span class="op">(</span><span class="op">)</span>,</span>
+<span>  write_factor_output <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  <span class="va">number_of_importance_points</span>,</span>
 <span>  parallel <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  model_parameter_list <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
@@ -75,6 +76,10 @@
 
 <dt id="arg-results-path">results_path<a class="anchor" aria-label="anchor" href="#arg-results-path"></a></dt>
 <dd><p>(optional) The path in which the results folder will be created (current working directory is the default).</p></dd>
+
+
+<dt id="arg-write-factor-output">write_factor_output<a class="anchor" aria-label="anchor" href="#arg-write-factor-output"></a></dt>
+<dd><p>(optional) If TRUE (default), write each point's factor outputs (the iterationK/factorJ_* files used to load nested output, e.g. the states of a particle filter inside particle marginal MH). FALSE writes only the points, weights and evidence.</p></dd>
 
 
 <dt id="arg-number-of-importance-points">number_of_importance_points<a class="anchor" aria-label="anchor" href="#arg-number-of-importance-points"></a></dt>

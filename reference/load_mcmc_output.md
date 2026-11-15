@@ -5,7 +5,12 @@ Loading MCMC output into R memory.
 ## Usage
 
 ``` r
-load_mcmc_output(results_directory, ggmcmc = NULL, ilike.output = NULL)
+load_mcmc_output(
+  results_directory,
+  ggmcmc = NULL,
+  ilike.output = NULL,
+  wide = FALSE
+)
 ```
 
 ## Arguments
@@ -26,6 +31,13 @@ load_mcmc_output(results_directory, ggmcmc = NULL, ilike.output = NULL)
   TRUE if ggmcmc is set to FALSE or is not set and FALSE otherwise).
   Choosing TRUE for this argument is incompatible with ggmcmc=TRUE,
   since the two packages require different formatting of the output.
+
+- wide:
+
+  (optional) If TRUE, return one row per point, with one column per
+  scalar (named variable_dimension, e.g. theta_1), instead of one row
+  per scalar (default FALSE). Much faster for large outputs;
+  ilike_pivot_longer converts it to the long format.
 
 ## Value
 
