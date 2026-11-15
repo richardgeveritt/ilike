@@ -277,6 +277,13 @@ std::vector<MCMC*> StochasticScanMCMC::get_duplicate_moves() const
   return duplicate_moves;
 }
 
+void StochasticScanMCMC::move_in_place(RandomNumberGenerator &rng,
+                                 Particle &particle,
+                                 Particle &scratch) const
+{
+  this->moves[rdis(rng, this->probabilities)]->move_in_place(rng, particle, scratch);
+}
+
 bool StochasticScanMCMC::adapts() const
 {
   for (auto i=this->moves.begin(); i!=this->moves.end(); ++i)

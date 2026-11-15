@@ -379,6 +379,11 @@ public:
   // parameter hash map), otherwise the transformed parameters stored for the
   // proposal (computed and kept on first use).
   const Parameters& get_transformed_parameters(const ProposalKernel* proposal_in) const;
+
+  // Exchange the whole state of two particles (every member), keeping each
+  // one's factor variables pointing back to the particle that now holds them.
+  // Used to accept a proposal held in a scratch particle in O(1).
+  void swap(Particle &another);
   
   /**
    * @brief Returns the gradient estimator output.
@@ -411,8 +416,10 @@ public:
   
   mutable boost::unordered_map< int, ProposalStore> current_proposal_store;
   
-  const std::vector<const ProposalKernel*>* proposals_to_transform_for_pointer;
-  const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_pointer;
+  // NULL unless set: several constructors left these uninitialised, and code
+  // tests them against NULL before following them (B26)
+  const std::vector<const ProposalKernel*>* proposals_to_transform_for_pointer = NULL;
+  const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_pointer = NULL;
   
   //boost::unordered_map< const ProposalKernel*, ProposalStore> previous_proposal_store;
   
@@ -527,7 +534,7 @@ public:
    */
   
   // not stored here
-  const Particle* previous_self;
+  const Particle* previous_self = NULL;
   
   /**
    * @brief Performs the tell factors to forget they were already written to file operation.

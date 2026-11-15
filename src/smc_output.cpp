@@ -223,11 +223,17 @@ void SMCOutput::subsample_evaluate_smcadaptive_part_given_smcfixed(const Paramet
 Particles* SMCOutput::add_particles()
 {
   size_t num_to_pop_front = std::max<int>(0,this->all_particles.size()-this->lag+1);
+  // the objects of the dropped generation are kept for the new one to reuse
+  // when the algorithm can (SMC::reuses_particle_objects)
+  std::vector<MoveOutput*> recycled;
   for (size_t i=0; i<num_to_pop_front; ++i)
   {
+    if (this->estimator->reuses_particle_objects() && recycled.empty())
+      recycled.swap(this->all_particles.front().particles);
     this->all_particles.pop_front();
   }
   this->all_particles.push_back(Particles());
+  this->all_particles.back().spare.swap(recycled);
   this->all_particles.back().reserve(this->estimator->number_of_particles);
   return &this->all_particles.back();
 }
@@ -235,11 +241,17 @@ Particles* SMCOutput::add_particles()
 Particles* SMCOutput::add_particles(Particles* most_recent_particles)
 {
   size_t num_to_pop_front = std::max<int>(0,this->all_particles.size()-this->lag+1);
+  // the objects of the dropped generation are kept for the new one to reuse
+  // when the algorithm can (SMC::reuses_particle_objects)
+  std::vector<MoveOutput*> recycled;
   for (size_t i=0; i<num_to_pop_front; ++i)
   {
+    if (this->estimator->reuses_particle_objects() && recycled.empty())
+      recycled.swap(this->all_particles.front().particles);
     this->all_particles.pop_front();
   }
   this->all_particles.push_back(Particles());
+  this->all_particles.back().spare.swap(recycled);
   this->all_particles.back().reserve(this->estimator->number_of_particles);
   
   if ((this->all_particles.end()-2)->resampled_flag==true)

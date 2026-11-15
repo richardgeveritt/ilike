@@ -807,8 +807,14 @@ void SequentialSMCWorker::specific_move(Particles* next_particles,
   
   for (size_t i = 0; i < this->get_number_of_particles(); ++i)
   {
-    next_particles->push_back(this->the_smc->move(local_rng,
-                                                  (*current_particles)[current_particles->ancestor_variables[i]]->back()));
+    MoveOutput* spare = next_particles->take_spare();
+    if (spare!=NULL)
+      next_particles->push_back(this->the_smc->move_reusing(local_rng,
+                                                            (*current_particles)[current_particles->ancestor_variables[i]]->back(),
+                                                            spare));
+    else
+      next_particles->push_back(this->the_smc->move(local_rng,
+                                                    (*current_particles)[current_particles->ancestor_variables[i]]->back()));
     next_particles->back()->back().previous_self = &(*current_particles)[current_particles->ancestor_variables[i]]->back();
     //Particle* new_particle = next_particles->add_particle();
     //this->the_smc->move(local_rng,

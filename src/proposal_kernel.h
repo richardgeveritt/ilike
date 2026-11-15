@@ -91,6 +91,14 @@ public:
   Particle move(RandomNumberGenerator &rng,
                 const Particle &particle,
                 const Index* new_outputs_index) const;
+
+  // As move(rng, particle, new_outputs_index), but the proposal is built in
+  // scratch, reusing its objects where possible (dev/plan.md, Stage 3 (a)).
+  // Same random numbers and the same result as move.
+  void move_into(RandomNumberGenerator &rng,
+                 const Particle &particle,
+                 const Index* new_outputs_index,
+                 Particle &scratch) const;
   /*
    Particle move(RandomNumberGenerator &rng,
    Particle &particle,

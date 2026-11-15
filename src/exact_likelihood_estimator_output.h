@@ -158,6 +158,13 @@ protected:
                      const std::string &index = "");
 
   
+  bool reinitialise(const Parameters &parameters);
+
+  
+  bool assign_from(const LikelihoodEstimatorOutput &another);
+
+
+  
   size_t compact_size() const;
   
   void compact_values(double *values) const;

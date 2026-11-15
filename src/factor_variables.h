@@ -185,6 +185,21 @@ public:
   // compact_values gives one number per factor and write_compact_values
   // writes them as write_to_file would have done. The default (false) keeps
   // full copies of stored iterations.
+  // Make this object (the factor variables of a scratch particle) what
+  // source->copy_with_new_outputs(new_parameters, new_outputs_index) would
+  // return, reusing its output objects. Returns false (and may leave the
+  // object partly changed: the caller then makes a new one) if that is not
+  // possible. Default: not possible.
+  // Make this object what factors->simulate_factor_variables(new_parameters)
+  // would return (every output new), reusing its output objects. Returns
+  // false if not possible (default).
+  virtual bool recycle_all_outputs(const Factors* factors,
+                                   const Parameters &new_parameters) { return false; }
+
+  virtual bool recycle_with_new_outputs(const FactorVariables* source,
+                                        const Parameters &new_parameters,
+                                        const Index* new_outputs_index) { return false; }
+
   virtual bool has_compact_values() const { return false; }
   virtual size_t number_of_compact_values() const { return 0; }
   virtual void compact_values(double *values) const {}

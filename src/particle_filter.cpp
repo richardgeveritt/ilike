@@ -400,6 +400,28 @@ void ParticleFilter::evaluate_smcfixed_part_smc(SMCOutput* current_state)
   //current_state->initialise_next_step();
 }
 
+bool ParticleFilter::reuses_particle_objects() const
+{
+  return this->predictions_per_update == 1;
+}
+
+MoveOutput* ParticleFilter::move_reusing(RandomNumberGenerator &rng,
+                                         const Particle &particle,
+                                         MoveOutput* spare) const
+{
+  // as move (one prediction per update), building the new particle in a
+  // dropped generation's object
+  SinglePointMoveOutput* output = dynamic_cast<SinglePointMoveOutput*>(spare);
+  if ((output == NULL) || (this->predictions_per_update != 1))
+  {
+    delete spare;
+    return this->move(rng, particle);
+  }
+  this->transition_proposal->set_data(this->factors->get_current_data());
+  this->transition_proposal->move_into(rng, particle, NULL, output->back());
+  return output;
+}
+
 MoveOutput* ParticleFilter::move(RandomNumberGenerator &rng,
                                  const Particle &particle) const
 {

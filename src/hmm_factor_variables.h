@@ -143,6 +143,11 @@ public:
    */
   
   const Factors* get_factors() const;
+
+  
+  bool recycle_all_outputs(const Factors* factors,
+  
+                           const Parameters &new_parameters);
   
   /**
    * @brief Performs the forget you were already written to file operation.

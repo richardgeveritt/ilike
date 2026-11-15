@@ -187,6 +187,19 @@ public:
   
   virtual MoveOutput* move(RandomNumberGenerator &rng,
                            const Particle &particle) const=0;
+
+  // Reuse of the objects of dropped generations (Stage 3 (a)): if true, the
+  // output gives a dropped generation's objects to the next one, and the
+  // worker calls move_reusing with one of them. move_reusing must return the
+  // same as move(rng, particle), using spare (or deleting it).
+  virtual bool reuses_particle_objects() const { return false; }
+  virtual MoveOutput* move_reusing(RandomNumberGenerator &rng,
+                                   const Particle &particle,
+                                   MoveOutput* spare) const
+  {
+    delete spare;
+    return this->move(rng, particle);
+  }
   //virtual void specific_move(RandomNumberGenerator &rng,
   //                           Particle* new_particle,
   //                           Particle &particle)=0;

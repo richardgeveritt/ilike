@@ -154,6 +154,10 @@ public:
   void write_to_file(const std::string &directory_name,
                      const std::string &index) const;
 
+  bool recycle_with_new_outputs(const FactorVariables* source,
+                                const Parameters &new_parameters,
+                                const Index* new_outputs_index);
+
   bool has_compact_values() const;
   size_t number_of_compact_values() const;
   void compact_values(double *values) const;

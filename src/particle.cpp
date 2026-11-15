@@ -1753,6 +1753,36 @@ arma::rowvec Particle::get_rowvec(const std::vector<std::string> &state_names) c
  }
  */
 
+void Particle::swap(Particle &another)
+{
+  if (this == &another)
+    return;
+  std::swap(this->parameters, another.parameters);
+  std::swap(this->current_proposal_store, another.current_proposal_store);
+  std::swap(this->proposals_to_transform_for_pointer, another.proposals_to_transform_for_pointer);
+  std::swap(this->proposals_to_find_gradient_for_pointer, another.proposals_to_find_gradient_for_pointer);
+  std::swap(this->accepted_outputs, another.accepted_outputs);
+  std::swap(this->previous_target_evaluated, another.previous_target_evaluated);
+  std::swap(this->subsample_previous_target_evaluated, another.subsample_previous_target_evaluated);
+  std::swap(this->target_evaluated, another.target_evaluated);
+  std::swap(this->subsample_target_evaluated, another.subsample_target_evaluated);
+  std::swap(this->previous_ensemble_target_evaluated, another.previous_ensemble_target_evaluated);
+  std::swap(this->subsample_previous_ensemble_target_evaluated, another.subsample_previous_ensemble_target_evaluated);
+  std::swap(this->ensemble_target_evaluated, another.ensemble_target_evaluated);
+  std::swap(this->subsample_ensemble_target_evaluated, another.subsample_ensemble_target_evaluated);
+  std::swap(this->factor_variables, another.factor_variables);
+  std::swap(this->ensemble_factor_variables, another.ensemble_factor_variables);
+  std::swap(this->previous_self, another.previous_self);
+  if (this->factor_variables!=NULL)
+    this->factor_variables->set_particle(this);
+  if (another.factor_variables!=NULL)
+    another.factor_variables->set_particle(&another);
+  if (this->ensemble_factor_variables!=NULL)
+    this->ensemble_factor_variables->set_particle(this);
+  if (another.ensemble_factor_variables!=NULL)
+    another.ensemble_factor_variables->set_particle(&another);
+}
+
 const Parameters& Particle::get_transformed_parameters(const ProposalKernel* proposal_in) const
 {
   if (proposal_in->get_transform()==NULL)

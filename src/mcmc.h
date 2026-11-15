@@ -105,6 +105,14 @@ public:
   virtual void move_in_place(RandomNumberGenerator &rng,
                              Particle &particle) const;
 
+  // As move_in_place(rng, particle), with a scratch particle owned by the
+  // caller (one per chain) in which proposals are built and which is
+  // swapped with particle on acceptance (dev/plan.md, Stage 3 (a)). Same
+  // random numbers and results. Default: ignores scratch.
+  virtual void move_in_place(RandomNumberGenerator &rng,
+                             Particle &particle,
+                             Particle &scratch) const;
+
   // Store every thin-th iteration of a run (MCMC(..., thin); default 1).
   void set_thin(size_t thin_in);
 

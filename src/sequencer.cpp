@@ -330,7 +330,16 @@ namespace ilike
     // if we want to make this generic, need to hide the next two lines in a function that can have different choices
 
     // if we have not just found a value for the parameter that is at one of the points in the schedule
-    double small_value = std::min(abs((this->schedules.back()[this->mileometer.back()] - this->schedules.back()[this->mileometer.back() - 1])), 1.0) * std::pow(0.5, 30.0);
+    // Tolerance for "the next schedule point has been reached": a tiny
+    // fraction of the step to it from the previous point, at most 1. With no
+    // previous point (the first point of the schedule, e.g. an importance
+    // sampler's single target) the step is taken as 1: this used to read
+    // schedules.back()[-1], outside the vector (B25).
+    size_t schedule_position = this->mileometer.back();
+    double schedule_step = 1.0;
+    if (schedule_position > 0)
+      schedule_step = std::abs(this->schedules.back()[schedule_position] - this->schedules.back()[schedule_position - 1]);
+    double small_value = std::min(schedule_step, 1.0) * std::pow(0.5, 30.0);
     if (this->direction * this->current_bisect_value >= this->direction * this->schedules.back()[this->mileometer.back()] - small_value)
     {
       // check to see if we already reached the next point in the schedule
@@ -769,7 +778,16 @@ namespace ilike
 
     // if we want to make this generic, need to hide the next two lines in a function that can have different choices
 
-    double small_value = std::min(abs((this->schedules.back()[this->mileometer.back()] - this->schedules.back()[this->mileometer.back() - 1])), 1.0) * std::pow(0.5, 30.0);
+    // Tolerance for "the next schedule point has been reached": a tiny
+    // fraction of the step to it from the previous point, at most 1. With no
+    // previous point (the first point of the schedule, e.g. an importance
+    // sampler's single target) the step is taken as 1: this used to read
+    // schedules.back()[-1], outside the vector (B25).
+    size_t schedule_position = this->mileometer.back();
+    double schedule_step = 1.0;
+    if (schedule_position > 0)
+      schedule_step = std::abs(this->schedules.back()[schedule_position] - this->schedules.back()[schedule_position - 1]);
+    double small_value = std::min(schedule_step, 1.0) * std::pow(0.5, 30.0);
     // if we have not just found a value for the parameter that is at one of the points in the schedule
     if (this->direction * this->current_bisect_value >= this->direction * this->schedules.back()[this->mileometer.back()] - small_value)
     {

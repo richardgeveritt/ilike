@@ -220,6 +220,20 @@ Particles::~Particles()
     if (*i!=NULL)
       delete *i;
   }
+  for (auto i=this->spare.begin(); i!=this->spare.end(); ++i)
+  {
+    if (*i!=NULL)
+      delete *i;
+  }
+}
+
+MoveOutput* Particles::take_spare()
+{
+  if (this->spare.empty())
+    return NULL;
+  MoveOutput* output = this->spare.back();
+  this->spare.pop_back();
+  return output;
 }
 
 Particles& Particles::operator=(const Particles &another)
@@ -256,6 +270,12 @@ Particles& Particles::operator=(Particles &&another)
   }
   
   this->particles.clear();
+  for (auto i=this->spare.begin(); i!=this->spare.end(); ++i)
+  {
+    if (*i!=NULL)
+      delete *i;
+  }
+  this->spare.clear();
   
   this->make_copy(std::move(another));
   
@@ -385,6 +405,8 @@ void Particles::make_copy(const Particles &another)
 
 void Particles::make_copy(Particles &&another)
 {
+  this->spare = std::move(another.spare);
+  another.spare.clear();
   this->particles.resize(0);
   this->particles.reserve(another.particles.size());
   for (std::vector<MoveOutput*>::const_iterator i=another.particles.begin();

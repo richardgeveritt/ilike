@@ -146,6 +146,86 @@ Particle ProposalKernel::move(RandomNumberGenerator &rng,
   return proposed_particle; // what we need is for previous target eval to be set to eval for this target (when evaluated there)!!!!! we don't want it to know its grad, until evaluated there
 }
 
+void ProposalKernel::move_into(RandomNumberGenerator &rng,
+                               const Particle &particle,
+                               const Index* new_outputs_index,
+                               Particle &scratch) const
+{
+  // the steps of move(), in place
+  scratch.parameters = particle.parameters;
+  if (this->transform==NULL)
+  {
+    scratch.parameters.deep_overwrite_with_variables_in_argument(this->simulate(rng,particle));
+  }
+  else
+  {
+    Parameters proposed_parameters_in_transformed_space = this->simulate(rng,particle);
+    scratch.parameters.deep_overwrite_with_variables_in_argument(this->transform->inverse_transform(proposed_parameters_in_transformed_space));
+  }
+
+  bool recycled = false;
+  if ((particle.factor_variables!=NULL) && (scratch.factor_variables!=NULL))
+  {
+    if (new_outputs_index!=NULL)
+      recycled = scratch.factor_variables->recycle_with_new_outputs(particle.factor_variables,
+                                                                    scratch.parameters,
+                                                                    new_outputs_index);
+    else if (particle.factor_variables->get_factors()!=NULL)
+      recycled = scratch.factor_variables->recycle_all_outputs(particle.factor_variables->get_factors(),
+                                                               scratch.parameters);
+    if (recycled)
+      scratch.factor_variables->set_particle(&scratch);
+  }
+  if (!recycled)
+  {
+    if (scratch.factor_variables!=NULL)
+    {
+      delete scratch.factor_variables;
+      scratch.factor_variables = NULL;
+    }
+    if (particle.factor_variables!=NULL)
+    {
+      if (new_outputs_index!=NULL)
+      {
+        scratch.simulate_factor_variables(particle.factor_variables,
+                                          new_outputs_index);
+      }
+      else
+      {
+        const Factors* old_factors = particle.factor_variables->get_factors();
+        if (old_factors!=NULL)
+          scratch.simulate_factor_variables(old_factors);
+      }
+    }
+  }
+
+  if (scratch.ensemble_factor_variables!=NULL)
+  {
+    delete scratch.ensemble_factor_variables;
+    scratch.ensemble_factor_variables = NULL;
+  }
+  if (particle.ensemble_factor_variables!=NULL)
+  {
+    const EnsembleFactors* old_ensemble_factors = particle.ensemble_factor_variables->get_ensemble_factors();
+    if (old_ensemble_factors!=NULL)
+      scratch.simulate_ensemble_factor_variables(old_ensemble_factors);
+  }
+
+  // as a new Particle: empty proposal store, targets not yet evaluated
+  scratch.current_proposal_store.clear();
+  scratch.previous_target_evaluated = 0.0;
+  scratch.target_evaluated = 0.0;
+  scratch.subsample_previous_target_evaluated = 0.0;
+  scratch.subsample_target_evaluated = 0.0;
+  scratch.previous_ensemble_target_evaluated = 0.0;
+  scratch.subsample_previous_ensemble_target_evaluated = 0.0;
+  scratch.ensemble_target_evaluated = 0.0;
+  scratch.subsample_ensemble_target_evaluated = 0.0;
+  scratch.simulate_proposal_variables(particle.proposals_to_transform_for_pointer, particle.proposals_to_find_gradient_for_pointer);
+  scratch.accepted_outputs = particle.accepted_outputs;
+  scratch.previous_self = &particle;
+}
+
 /*
  Particle ProposalKernel::move(RandomNumberGenerator &rng,
  Particle &particle,

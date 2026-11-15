@@ -281,6 +281,18 @@ std::vector<MCMC*> DeterministicScanMCMC::get_duplicate_moves() const
   return duplicate_moves;
 }
 
+void DeterministicScanMCMC::move_in_place(RandomNumberGenerator &rng,
+                                 Particle &particle,
+                                 Particle &scratch) const
+{
+  for (std::vector<size_t>::const_iterator i=this->order.begin();
+       i!=this->order.end();
+       ++i)
+  {
+    this->moves[*i]->move_in_place(rng, particle, scratch);
+  }
+}
+
 bool DeterministicScanMCMC::adapts() const
 {
   for (auto i=this->moves.begin(); i!=this->moves.end(); ++i)

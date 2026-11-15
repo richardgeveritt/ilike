@@ -226,6 +226,16 @@ protected:
   // numbers that are enough to write later exactly what write_to_file would
   // write now. 0 (the default) means no compact record: stored iterations
   // then keep a full copy, as before.
+  // Reuse of an output object for a new proposal (dev/plan.md, Stage 3 (a)):
+  // reinitialise puts this output in exactly the state that
+  // estimator->initialise(parameters), then simulate(parameters), then
+  // write_to_file_flag = false would give a new one; assign_from copies
+  // another output of the same kind (as duplicate() would). Both return false
+  // if the output does not support this (the default): a new object is then
+  // made, as before.
+  virtual bool reinitialise(const Parameters &parameters) { return false; }
+  virtual bool assign_from(const LikelihoodEstimatorOutput &another) { return false; }
+
   virtual size_t compact_size() const { return 0; }
   virtual void compact_values(double *values) const {}
   virtual void write_compact_values(const std::string &directory_name,

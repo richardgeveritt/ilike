@@ -284,6 +284,12 @@ public:
   
   // Outer vector is over particles, inner is stored here
   std::vector< MoveOutput* > particles;
+
+  // Objects of a dropped generation, given to this one to be reused for its
+  // new particles (dev/plan.md, Stage 3 (a); used by the particle filter).
+  // Owned: deleted with this object if not taken. Not copied.
+  std::vector< MoveOutput* > spare;
+  MoveOutput* take_spare();
   
   arma::colvec unnormalised_log_weights;
   

@@ -134,6 +134,28 @@ void ExactLikelihoodEstimatorOutput::forget_you_were_already_written_to_file()
 {
 }
 
+bool ExactLikelihoodEstimatorOutput::reinitialise(const Parameters &parameters)
+{
+  // the state of a new ExactLikelihoodEstimatorOutput(estimator) after
+  // simulate (nothing to simulate) with write_to_file_flag set to false
+  this->log_likelihood = 0.0;
+  this->subsample_log_likelihood = 0.0;
+  this->write_to_file_flag = false;
+  this->log_likelihood_smcfixed_part = 0.0;
+  this->subsample_log_likelihood_smcfixed_part = 0.0;
+  return true;
+}
+
+bool ExactLikelihoodEstimatorOutput::assign_from(const LikelihoodEstimatorOutput &another)
+{
+  const ExactLikelihoodEstimatorOutput* exact = dynamic_cast<const ExactLikelihoodEstimatorOutput*>(&another);
+  if (exact == NULL)
+    return false;
+  LikelihoodEstimatorOutput::make_copy(*exact);
+  this->make_copy(*exact);
+  return true;
+}
+
 size_t ExactLikelihoodEstimatorOutput::compact_size() const
 {
   return 1;

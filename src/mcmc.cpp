@@ -181,10 +181,12 @@ MoveOutput* MCMC::run(RandomNumberGenerator &rng,
   mcmc_output->set_thin(this->thin);
   bool adapting = this->adapts();
   Particle current_particle = particle;
+  // proposals are built here, reusing its objects (Stage 3 (a))
+  Particle scratch;
   while (!mcmc_output->terminate())
   {
     // In place: a rejected proposal no longer copies the current state.
-    mcmc_output->get_mcmc()->move_in_place(rng, current_particle);
+    mcmc_output->get_mcmc()->move_in_place(rng, current_particle, scratch);
     mcmc_output->increment_counter();
     current_particle.tell_factors_to_forget_they_were_already_written_to_file();
     // Store the iteration compactly (its values and factor records), not a
@@ -203,6 +205,13 @@ void MCMC::set_thin(size_t thin_in)
   if (thin_in < 1)
     Rcpp::stop("MCMC: thin must be at least 1.");
   this->thin = thin_in;
+}
+
+void MCMC::move_in_place(RandomNumberGenerator &rng,
+                         Particle &particle,
+                         Particle &scratch) const
+{
+  this->move_in_place(rng, particle);
 }
 
 void MCMC::move_in_place(RandomNumberGenerator &rng,

@@ -98,6 +98,15 @@ public:
   
   MoveOutput* move(RandomNumberGenerator &rng,
                    const Particle &particle) const;
+
+  
+  bool reuses_particle_objects() const;
+  
+  MoveOutput* move_reusing(RandomNumberGenerator &rng,
+  
+                           const Particle &particle,
+  
+                           MoveOutput* spare) const;
   
   //void weight_for_adapting_sequence(Particles &current_particles);
   

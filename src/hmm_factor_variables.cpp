@@ -824,6 +824,23 @@ arma::mat HMMFactorVariables::direct_subsample_get_gradient_of_log(const Index* 
  }
  */
 
+bool HMMFactorVariables::recycle_all_outputs(const Factors* factors,
+                                             const Parameters &new_parameters)
+{
+  // as HMMFactors::simulate_factor_variables, reusing the output objects
+  if ((factors != this->hmm_factors) ||
+      (this->likelihood_estimator_outputs.size() != this->hmm_factors->likelihood_estimators.size()))
+    return false;
+  for (auto i = this->likelihood_estimator_outputs.begin(); i != this->likelihood_estimator_outputs.end(); ++i)
+  {
+    if ((*i == NULL) || !(*i)->reinitialise(new_parameters))
+      return false;
+    (*i)->simulate(new_parameters);
+  }
+  this->dynamic_smcfixed_part = 0.0;
+  return true;
+}
+
 const Factors* HMMFactorVariables::get_factors() const
 {
   return this->hmm_factors;

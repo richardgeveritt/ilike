@@ -582,6 +582,40 @@ void VectorFactorVariables::forget_you_were_already_written_to_file()
   }
 }
 
+bool VectorFactorVariables::recycle_with_new_outputs(const FactorVariables* source_in,
+                                                     const Parameters &new_parameters,
+                                                     const Index* new_outputs_index)
+{
+  const VectorFactorVariables* source = dynamic_cast<const VectorFactorVariables*>(source_in);
+  if ((source == NULL) || (source->vector_factors != this->vector_factors) ||
+      (source->likelihood_estimator_outputs.size() != this->likelihood_estimator_outputs.size()))
+    return false;
+  // as copy_with_new_outputs, output by output
+  for (size_t i=0; i<this->likelihood_estimator_outputs.size(); ++i)
+  {
+    LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[i];
+    bool new_output = std::find(new_outputs_index->begin(),
+                                new_outputs_index->end(),
+                                i)!=new_outputs_index->end();
+    if (new_output)
+    {
+      if ((output == NULL) || !output->reinitialise(new_parameters))
+        return false;
+      output->simulate(new_parameters);
+    }
+    else if (source->likelihood_estimator_outputs[i]!=NULL)
+    {
+      if ((output == NULL) || !output->assign_from(*source->likelihood_estimator_outputs[i]))
+        return false;
+    }
+    else if (output != NULL)
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
 bool VectorFactorVariables::has_compact_values() const
 {
   for (auto i = this->likelihood_estimator_outputs.begin(); i != this->likelihood_estimator_outputs.end(); ++i)

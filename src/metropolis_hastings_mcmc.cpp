@@ -416,6 +416,31 @@ std::vector<const ProposalKernel*> MetropolisHastingsMCMC::get_proposals() const
   return proposals;
 }
 
+void MetropolisHastingsMCMC::move_in_place(RandomNumberGenerator &rng,
+                                 Particle &particle,
+                                 Particle &scratch) const
+{
+  // As move_in_place(rng, particle), with the proposal built in scratch.
+  this->proposal->move_into(rng,
+                            particle,
+                            this->get_new_outputs_index(this->index),
+                            scratch);
+  double log_u = log(runif(rng));
+  double numerator = scratch.evaluate_likelihoods(this->index);
+  double denominator = particle.get_cached_likelihoods(this->index);
+  if ( (numerator==-arma::datum::inf) || (denominator==-arma::datum::inf) )
+    return;
+  if (log_u < numerator - denominator +
+      this->proposal->evaluate_kernel(particle, scratch) -
+      this->proposal->evaluate_kernel(scratch, particle))
+  {
+    scratch.set_acceptance(this->proposal,true);
+    this->refresh_cut_factors(scratch);
+    this->check_carried_over_factors(scratch, this->index);
+    particle.swap(scratch);
+  }
+}
+
 bool MetropolisHastingsMCMC::adapts() const
 {
   return this->proposal->has_mcmc_adaptor();
