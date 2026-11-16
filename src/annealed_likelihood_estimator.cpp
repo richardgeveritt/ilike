@@ -134,5 +134,25 @@ bool AnnealedLikelihoodEstimator::supports_restore_from_summary() const
     this->estimator->supports_restore_from_summary();
 }
 
+
+bool AnnealedLikelihoodEstimator::supports_parallel_chunks() const
+{
+  return (this->estimator!=NULL) && this->estimator->supports_parallel_chunks();
+}
+
+
+bool AnnealedLikelihoodEstimator::supports_parallel_copies() const
+{
+  return (this->estimator!=NULL) && this->estimator->supports_parallel_copies();
+}
+
+void AnnealedLikelihoodEstimator::redirect_random_numbers(RandomNumberGenerator* rng_in,
+                                                          size_t* seed_in)
+{
+  LikelihoodEstimator::redirect_random_numbers(rng_in, seed_in);
+  if (this->estimator!=NULL)
+    this->estimator->redirect_random_numbers(rng_in, seed_in);
+}
+
 }
 

@@ -717,6 +717,44 @@ bool VectorFactorVariables::restore_from_summary(const Index* index,
   return true;
 }
 
+bool VectorFactorVariables::repoint_to(const Factors* factors)
+{
+  const VectorFactors* vector_factors_in = dynamic_cast<const VectorFactors*>(factors);
+  if ((vector_factors_in == NULL) ||
+      (vector_factors_in->number_of_likelihood_estimators() != this->likelihood_estimator_outputs.size()))
+    return false;
+  for (size_t i=0; i<this->likelihood_estimator_outputs.size(); ++i)
+  {
+    if ((this->likelihood_estimator_outputs[i] != NULL) &&
+        !this->likelihood_estimator_outputs[i]->repoint_estimator(vector_factors_in->get_likelihood_estimator(i)))
+      return false;
+  }
+  this->vector_factors = vector_factors_in;
+  return true;
+}
+
+void VectorFactorVariables::smcadaptive_from_summaries(const Index* index,
+                                                         const double* values,
+                                                         size_t stride,
+                                                         size_t n,
+                                                         const Parameters &parameters,
+                                                         double* results) const
+{
+  // as smcadaptive_from_summary for each point: the same sum, in the same
+  // order (results start at 0.0 and each output's value is added in turn)
+  std::fill(results, results + n, 0.0);
+  std::vector<double> values_of_output(n);
+  size_t offset = 0;
+  for (auto i=index->begin(); i!=index->end(); ++i)
+  {
+    const LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i];
+    output->smcadaptive_from_summaries(values + offset, stride, n, parameters, values_of_output.data());
+    for (size_t j = 0; j < n; ++j)
+      results[j] = results[j] + values_of_output[j];
+    offset = offset + size_t(output->adaptive_summary_size());
+  }
+}
+
 bool VectorFactorVariables::has_compact_values() const
 {
   for (auto i = this->likelihood_estimator_outputs.begin(); i != this->likelihood_estimator_outputs.end(); ++i)

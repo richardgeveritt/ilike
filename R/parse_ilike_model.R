@@ -6824,6 +6824,12 @@ compile <- function(filenames,
     unlink(model_for_compilation_name)
   }
 
+  # Whether any generated function calls R (R expressions, and R, Python or
+  # Julia functions, which are reached through R): such models cannot be run
+  # in parallel threads (dev/plan.md 2.6a, G4).
+  uses_r_functions = file.exists(model_for_compilation_name) &&
+    any(grepl("Environment::global_env()", readLines(model_for_compilation_name, warn = FALSE), fixed = TRUE))
+
   if (file.exists(model_for_compilation_name))
   {
     # Strip ALL // [[Rcpp::depends(...)]] annotations so sourceCpp never calls
@@ -6979,6 +6985,7 @@ compile <- function(filenames,
   }
 
   blocks = strip_out_xptr_stuff(blocks)
+  blocks$uses_r_functions = uses_r_functions
 
   return(blocks)
 }

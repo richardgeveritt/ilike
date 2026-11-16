@@ -358,4 +358,16 @@ void AnnealedLikelihoodEstimatorOutput::restore_from_summary(const double *value
   this->log_likelihood = this->smcadaptive_from_summary(values, parameters);
 }
 
+
+bool AnnealedLikelihoodEstimatorOutput::repoint_estimator(LikelihoodEstimator* estimator_in)
+{
+  AnnealedLikelihoodEstimator* annealed = dynamic_cast<AnnealedLikelihoodEstimator*>(estimator_in);
+  if (annealed == NULL)
+    return false;
+  this->estimator = annealed;
+  if (this->estimator_output != NULL)
+    return this->estimator_output->repoint_estimator(annealed->estimator);
+  return true;
+}
+
 }

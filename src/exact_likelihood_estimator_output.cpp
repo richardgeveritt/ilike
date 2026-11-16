@@ -229,4 +229,14 @@ void ExactLikelihoodEstimatorOutput::restore_from_summary(const double *values,
   this->log_likelihood = values[0];
 }
 
+
+bool ExactLikelihoodEstimatorOutput::repoint_estimator(LikelihoodEstimator* estimator_in)
+{
+  ExactLikelihoodEstimator* exact = dynamic_cast<ExactLikelihoodEstimator*>(estimator_in);
+  if (exact == NULL)
+    return false;
+  this->estimator = exact;
+  return true;
+}
+
 }

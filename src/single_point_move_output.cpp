@@ -189,5 +189,13 @@ Parameters SinglePointMoveOutput::get_current_algorithm_parameters() const
 {
   return this->algorithm_parameters;
 }
+
+bool SinglePointMoveOutput::repoint_to(const Factors* factors)
+{
+  if (this->output.factor_variables!=NULL)
+    return this->output.factor_variables->repoint_to(factors);
+  return true;
+}
+
 }
 

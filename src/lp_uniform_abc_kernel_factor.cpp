@@ -140,9 +140,17 @@ double LpUniformABCKernelFactor::evaluate_kernel_given_distance(const Parameters
   // target is then the prior predictive, with evidence 1, so an SMC can start
   // from epsilon = Inf (the first weights are the kernel at the first finite
   // tolerance).
-  if (std::isinf(input[this->epsilon_variable][0]))
+  return this->evaluate_kernel_given_distance_at(input[this->epsilon_variable][0],
+                                                 distance,
+                                                 scale_constant);
+}
+
+double LpUniformABCKernelFactor::evaluate_kernel_given_distance_at(double epsilon,
+                                                                   double distance,
+                                                                   double scale_constant) const
+{
+  if (std::isinf(epsilon))
     return 0.0;
-  double epsilon = input[this->epsilon_variable][0];
   if (distance>epsilon)
     return -arma::datum::inf;
   else

@@ -153,6 +153,60 @@ void SampleStore::append(const Parameters &parameters,
   this->number_of_points = this->number_of_points + 1;
 }
 
+const arma::mat& SampleStore::lookup_vector_variable(const Parameters &parameters,
+                                                     size_t k) const
+{
+  const std::string &name = this->vector_names[k];
+  if (k < parameters.vector_size())
+  {
+    auto i = parameters.vector_begin() + k;
+    if (i->first == name)
+      return *i->second.first;
+  }
+  return parameters[name];
+}
+
+void SampleStore::prepare(const Parameters &parameters, size_t number_of_points_in)
+{
+  if (!this->layout_set)
+    this->setup_layout(parameters);
+  this->pending_reserve = 0;
+  this->grow(number_of_points_in);
+  for (auto i = this->any_values.begin(); i != this->any_values.end(); ++i)
+    i->resize(number_of_points_in);
+  this->number_of_points = number_of_points_in;
+}
+
+void SampleStore::set_point(size_t i,
+                            const Parameters &parameters,
+                            const double *extra_values)
+{
+  if (i >= this->number_of_points)
+    Rcpp::stop("SampleStore::set_point: index out of range.");
+  double *column = this->values.colptr(i);
+  for (size_t k = 0; k < this->vector_names.size(); ++k)
+  {
+    // element order of as_row(): row by row
+    const arma::mat &m = this->lookup_vector_variable(parameters, k);
+    if ((m.n_rows != this->vector_n_rows[k]) || (m.n_cols != this->vector_n_cols[k]))
+      Rcpp::stop("SampleStore::set_point: variable '" + this->vector_names[k] + "' changed size.");
+    size_t offset = this->vector_offsets[k];
+    for (arma::uword r = 0; r < m.n_rows; ++r)
+      for (arma::uword c = 0; c < m.n_cols; ++c)
+        column[offset++] = m(r, c);
+  }
+  for (size_t k = 0; k < this->any_names.size(); ++k)
+  {
+    this->any_values[k][i] = parameters(this->any_names[k]);
+  }
+  if (this->number_of_extra_columns > 0)
+  {
+    double *extra_column = this->extras.colptr(i);
+    for (size_t j = 0; j < this->number_of_extra_columns; ++j)
+      extra_column[j] = (extra_values == NULL) ? arma::datum::nan : extra_values[j];
+  }
+}
+
 size_t SampleStore::size() const
 {
   return this->number_of_points;

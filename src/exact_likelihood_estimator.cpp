@@ -232,8 +232,10 @@ void ExactLikelihoodEstimator::make_copy(const ExactLikelihoodEstimator &another
 {
   this->numerator_distribution_factors.resize(0);
   this->numerator_distribution_factors.reserve(another.numerator_distribution_factors.size());
+  // B30: iterate over another's factors (the loop used to stop at this
+  // object's own end, so it read past the end of another's vector)
   for (auto i=another.numerator_distribution_factors.begin();
-       i!=numerator_distribution_factors.end();
+       i!=another.numerator_distribution_factors.end();
        ++i)
   {
     if (*i!=NULL)
@@ -244,8 +246,10 @@ void ExactLikelihoodEstimator::make_copy(const ExactLikelihoodEstimator &another
   
   this->numerator_likelihood_factors.resize(0);
   this->numerator_likelihood_factors.reserve(another.numerator_likelihood_factors.size());
+  // B30: iterate over another's factors (the loop used to stop at this
+  // object's own end, so it read past the end of another's vector)
   for (auto i=another.numerator_likelihood_factors.begin();
-       i!=numerator_likelihood_factors.end();
+       i!=another.numerator_likelihood_factors.end();
        ++i)
   {
     if (*i!=NULL)

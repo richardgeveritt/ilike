@@ -177,6 +177,13 @@ namespace ilike
     SMC *smc_duplicate() const;
     LikelihoodEstimator *duplicate() const;
 
+    // G5 (dev/plan.md 2.6b): an inner importance sampler (e.g. an ABC
+    // likelihood's) can be copied per thread when its generations are flat
+    // (nothing of a run points to its rich particles) and not stored.
+    bool supports_parallel_copies() const;
+    const Index* get_weighting_index() const { return this->index; }
+    bool reweights_at_caller_target() const { return !this->sequencer_limit_is_fixed; }
+
     MoveOutput *move(RandomNumberGenerator &rng,
                      const Particle &particle) const;
 
@@ -237,6 +244,9 @@ namespace ilike
     void simulate_in_chunks(SMCOutput *current_state,
                             const Parameters* conditioned_on_parameters,
                             bool summarise);
+
+    // Whether the chunks of a run may be processed in parallel (G4).
+    bool can_run_in_parallel() const;
     // SMCOutput* specific_run(const std::string &directory_name);
 
     SMCOutput *specific_initialise_smc();

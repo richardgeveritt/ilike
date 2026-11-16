@@ -1,5 +1,7 @@
 #include <numeric>
 #include "particle_filter.h"
+#include "factors.h"
+#include "chunk_parallel.h"
 #include "smc_output.h"
 #include "cess_smc_criterion.h"
 #include "exact_likelihood_estimator.h"
@@ -95,15 +97,9 @@ ParticleFilter::ParticleFilter(RandomNumberGenerator* rng_in,
   
   this->transition_proposal = transition_proposal_in;
   
-  if (parallel_in==true)
-  {
-    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
-    Rcpp::stop("Parallel worker not set up.");
-  }
-  else
-  {
-    this->the_worker = new SequentialSMCWorker(this);
-  }
+  this->parallel = parallel_in;
+  this->chunk_size = grain_size_in;
+  this->the_worker = new SequentialSMCWorker(this);
   
   this->transition_proposal_is_evaluated = transition_proposal_is_evaluated_in;
   
@@ -265,10 +261,11 @@ LikelihoodEstimator* ParticleFilter::duplicate() const
 
 void ParticleFilter::make_copy(const ParticleFilter &another)
 {
+  // B29: the copy owns its own transition proposal (the destructor deletes it)
   if (another.transition_proposal!=NULL)
-    this->transition_proposal = another.transition_proposal;
+    this->transition_proposal = another.transition_proposal->proposal_kernel_duplicate();
   else
-    this->transition_proposal = another.transition_proposal;
+    this->transition_proposal = NULL;
   
   if (another.index!=NULL)
     this->index = another.index->hmm_index_duplicate();
@@ -348,8 +345,18 @@ void ParticleFilter::simulate_smc(SMCOutput* current_state)
     
     this->increment_time_index();
     
-    this->the_worker->move(next_particles,
+    if (this->can_move_in_chunks())
+    {
+      this->move_in_chunks(next_particles,
                            current_particles);
+    }
+    else
+    {
+      if (this->parallel)
+        this->parallel_refused = true;
+      this->the_worker->move(next_particles,
+                             current_particles);
+    }
     //this->evaluate_smcfixed_part_smc(current_state);
     
     current_state->increment_smc_iteration();
@@ -418,6 +425,19 @@ MoveOutput* ParticleFilter::move_reusing(RandomNumberGenerator &rng,
     return this->move(rng, particle);
   }
   this->transition_proposal->set_data(this->factors->get_current_data());
+  return this->move_reusing_with_data_set(rng, particle, spare);
+}
+
+MoveOutput* ParticleFilter::move_reusing_with_data_set(RandomNumberGenerator &rng,
+                                                       const Particle &particle,
+                                                       MoveOutput* spare) const
+{
+  SinglePointMoveOutput* output = dynamic_cast<SinglePointMoveOutput*>(spare);
+  if ((output == NULL) || (this->predictions_per_update != 1))
+  {
+    delete spare;
+    return this->move_with_data_set(rng, particle);
+  }
   this->transition_proposal->move_into(rng, particle, NULL, output->back());
   return output;
 }
@@ -425,10 +445,14 @@ MoveOutput* ParticleFilter::move_reusing(RandomNumberGenerator &rng,
 MoveOutput* ParticleFilter::move(RandomNumberGenerator &rng,
                                  const Particle &particle) const
 {
-  //double predict_time_step = this->update_time_step/double(this->predictions_per_update);
-  
-  Particle moved_particle;
   this->transition_proposal->set_data(this->factors->get_current_data());
+  return this->move_with_data_set(rng, particle);
+}
+
+MoveOutput* ParticleFilter::move_with_data_set(RandomNumberGenerator &rng,
+                                               const Particle &particle) const
+{
+  Particle moved_particle;
   for (size_t i=0; i<this->predictions_per_update; ++i)
   {
     if (i==0)
@@ -462,7 +486,11 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
   while (terminate==FALSE)
   {
     
-    if (current_state->number_of_smc_iterations()==1)
+    if (this->parallel && this->can_move_in_chunks())
+    {
+      this->weight_in_chunks(current_state);
+    }
+    else if (current_state->number_of_smc_iterations()==1)
     {
       this->the_worker->weight(this->index,
                                current_state->back());
@@ -588,8 +616,18 @@ void ParticleFilter::simulate_smc(SMCOutput* current_state,
     
     this->increment_time_index();
     
-    this->the_worker->move(next_particles,
+    if (this->can_move_in_chunks())
+    {
+      this->move_in_chunks(next_particles,
                            current_particles);
+    }
+    else
+    {
+      if (this->parallel)
+        this->parallel_refused = true;
+      this->the_worker->move(next_particles,
+                             current_particles);
+    }
     //this->evaluate_smcfixed_part_smc(current_state,
     //                                 conditioned_on_parameters);
     
@@ -663,7 +701,11 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
   while (terminate==FALSE)
   {
     
-    if (current_state->number_of_smc_iterations()==1)
+    if (this->parallel && this->can_move_in_chunks())
+    {
+      this->weight_in_chunks(current_state);
+    }
+    else if (current_state->number_of_smc_iterations()==1)
     {
       //this->the_worker->pf_initial_weight(current_state->back());
       this->the_worker->weight(this->index,
@@ -1234,4 +1276,109 @@ void ParticleFilter::increment_time_index()
  */
 
 //}
+
+bool ParticleFilter::supports_parallel_copies() const
+{
+  return (this->compact_stored_output || (this->lag == 0)) &&
+    (this->factors!=NULL) && this->factors->supports_parallel_copies();
+}
+
+
+bool ParticleFilter::can_move_in_chunks() const
+{
+  return (this->factors!=NULL) && this->factors->supports_parallel_chunks() &&
+    (this->transition_proposal!=NULL) &&
+    (dynamic_cast<const SequentialSMCWorker*>(this->the_worker)!=NULL);
+}
+
+void ParticleFilter::move_in_chunks(Particles* next_particles,
+                                    Particles* current_particles)
+{
+  // SequentialSMCWorker::specific_move and the seed bookkeeping of
+  // SMCWorker::move, grain_size particles at a time: each chunk with its own
+  // stream, writing only its own particles' slots (spares, the dropped
+  // generation's objects, are handed out by index).
+  SMCWorker* worker = this->the_worker;
+  size_t N = this->number_of_particles;
+  size_t B = ((this->chunk_size == 0) || (this->chunk_size > N)) ? N : this->chunk_size;
+  size_t K = (N + B - 1)/B;
+  this->transition_proposal->set_data(this->factors->get_current_data());
+
+  std::vector<MoveOutput*> spares;
+  spares.swap(next_particles->spare);
+  if (spares.size() < N)
+    spares.resize(N, NULL);
+  next_particles->particles.assign(N, NULL);
+
+  RandomNumberGenerator first_stream(*worker->get_rng());
+  first_stream.seed(worker->get_seed());
+  std::vector<RandomNumberGenerator> streams = chunk_streams(first_stream, K);
+
+  run_chunk_groups(0, K, this->parallel, this->number_of_threads,
+                   [&](size_t group, size_t first_chunk, size_t end_chunk)
+                   {
+                     for (size_t k = first_chunk; k < end_chunk; ++k)
+                     {
+                       size_t first = k*B;
+                       size_t n = std::min(B, N - first);
+                       RandomNumberGenerator local_rng(streams[k]);
+                       for (size_t i = first; i < first + n; ++i)
+                       {
+                         const Particle &ancestor = (*current_particles)[current_particles->ancestor_variables[i]]->back();
+                         MoveOutput* spare = spares[i];
+                         spares[i] = NULL;
+                         MoveOutput* moved = (spare != NULL) ?
+                           this->move_reusing_with_data_set(local_rng, ancestor, spare) :
+                           this->move_with_data_set(local_rng, ancestor);
+                         moved->back().previous_self = &ancestor;
+                         next_particles->particles[i] = moved;
+                       }
+                     }
+                   });
+  for (size_t i = N; i < spares.size(); ++i)
+  {
+    if (spares[i] != NULL)
+      delete spares[i];
+  }
+
+  worker->set_seed(worker->get_seed() + N);
+  this->rng->seed(worker->get_seed());
+  next_particles->simulate_resampling_variables(*this->rng);
+  worker->set_seed(worker->get_seed() + N);
+}
+
+void ParticleFilter::weight_in_chunks(SMCOutput* current_state)
+{
+  // SequentialSMCWorker::weight (first step) or pf_weight, by chunks of
+  // particles; no random numbers, so the same values in any order
+  size_t N = this->number_of_particles;
+  size_t B = ((this->chunk_size == 0) || (this->chunk_size > N)) ? N : this->chunk_size;
+  size_t K = (N + B - 1)/B;
+  Particles &current = current_state->back();
+  bool first_step = (current_state->number_of_smc_iterations()==1);
+  Particles* previous = first_step ? NULL : &*(current_state->end()-2);
+  const ProposalKernel* kernel = this->transition_proposal_is_evaluated ? this->transition_proposal : NULL;
+  arma::colvec weights(N);
+  run_chunk_groups(0, K, this->parallel, this->number_of_threads,
+                   [&](size_t group, size_t first_chunk, size_t end_chunk)
+                   {
+                     for (size_t i = first_chunk*B; i < std::min(N, end_chunk*B); ++i)
+                     {
+                       Particle &particle = current[i]->back();
+                       if (first_step)
+                       {
+                         weights[i] = particle.evaluate_likelihoods(this->index) - particle.previous_target_evaluated;
+                       }
+                       else
+                       {
+                         weights[i] = particle.evaluate_likelihoods(this->index);
+                         if (kernel != NULL)
+                           weights[i] = weights[i] - kernel->evaluate_kernel(particle,
+                                                                            (*previous)[previous->ancestor_variables[i]]->back());
+                       }
+                     }
+                   });
+  this->the_worker->set_unnormalised_log_incremental_weights(weights);
+}
+
 }

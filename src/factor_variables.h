@@ -213,6 +213,17 @@ public:
   {
     Rcpp::stop("FactorVariables::smcadaptive_from_summary: not available.");
   }
+  // the same for n points whose summaries are `stride` numbers apart
+  virtual void smcadaptive_from_summaries(const Index* index,
+                                          const double* values,
+                                          size_t stride,
+                                          size_t n,
+                                          const Parameters &parameters,
+                                          double* results) const
+  {
+    for (size_t i = 0; i < n; ++i)
+      results[i] = this->smcadaptive_from_summary(index, values + i*stride, parameters);
+  }
 
   // Put the outputs in the state of a particle whose factors of index were
   // last evaluated with this adaptive summary (restore_from_summary at
@@ -222,6 +233,10 @@ public:
                                     const Index* other_index,
                                     const double* values,
                                     const Parameters &parameters) { return false; }
+
+  // Make these factor variables (and their outputs) belong to `factors`, an
+  // object equal to their own (G5); false if not possible (the default).
+  virtual bool repoint_to(const Factors* factors) { return false; }
 
   virtual bool has_compact_values() const { return false; }
   virtual size_t number_of_compact_values() const { return 0; }

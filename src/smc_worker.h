@@ -44,6 +44,9 @@ public:
    * @param the_smc_in The the smc.
    */
   SMCWorker(SMC* the_smc_in);
+
+  // The SMC this worker works for (after the SMC has been copied, B29).
+  void set_smc(SMC* the_smc_in) { this->the_smc = the_smc_in; }
   
   /**
    * @brief Performs the ~smcworker operation.

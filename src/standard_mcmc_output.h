@@ -127,6 +127,7 @@ public:
    * @return The result.
    */
   size_t length() const;
+  bool repoint_to(const Factors* factors);
   
   /**
    * @brief Closes any open file streams.

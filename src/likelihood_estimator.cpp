@@ -120,4 +120,14 @@ bool LikelihoodEstimator::get_smcfixed_flag() const
 {
   return this->smcfixed_flag;
 }
+
+void LikelihoodEstimator::redirect_random_numbers(RandomNumberGenerator* rng_in,
+                                                  size_t* seed_in)
+{
+  this->rng = rng_in;
+  this->seed = seed_in;
+  if (this->factors!=NULL)
+    this->factors->redirect_random_numbers(rng_in, seed_in);
+}
+
 }

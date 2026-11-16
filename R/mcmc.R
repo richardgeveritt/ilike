@@ -6,7 +6,7 @@
 #' @param write_factor_output (optional) If TRUE (default), write each point's factor outputs (the iterationK/factorJ_* files used to load nested output, e.g. the states of a particle filter inside particle marginal MH). FALSE writes only the points, weights and evidence.
 #' @param number_of_chains (optional) The number of chains.
 #' @param initial_values (optional) A list of lists containing the initial values for the chains.
-#' @param parallel (optional) Set to true to perform the MCMC chains in parallel, false for serial.
+#' @param parallel (optional) If TRUE, chunks of grain_size chains run in parallel threads (the number set by RcppParallel::setThreadOptions); useful only with more chains than grain_size. The results are exactly those of the sequential run with the same seed and grain_size. Needs a model written in C++ or with ilike:: built-in functions, exact factors and a fixed number of iterations; otherwise the chains are run sequentially, with a warning.
 #' @param model_parameter_list (optional) A list containing parameters for the model.
 #' @param algorithm_parameter_list (optional) A list containing named parameters for the algorithm.
 #' @param fixed_parameter_list (optional) A list containing parameters to condition on.
@@ -18,7 +18,7 @@
 #' @param check_factor_index (optional) If TRUE, after every accepted MCMC move that has a factor index, re-evaluate the exact factors that were left out of the move (neither in its factor index nor its cut factor index) and stop if any changed value, i.e. did not cancel in the acceptance ratio. Slower; for checking a model file. Default FALSE.
 #' @param thin (optional) Store every thin-th iteration of each chain (default 1: every iteration). There is no burn-in option: discard iterations when analysing the output.
 #' @param seed (optional) The seed for the random number generator.
-#' @param grain_size (optional) The number of chains run together (default 100000). Each chunk of chains has its own random-number stream, determined by the seed and the chunk's position, so results depend on the seed and on grain_size when there are more chains than grain_size (and will not depend on whether the run is parallel).
+#' @param grain_size (optional) The number of chains run together (default 64). Each chunk of chains has its own random-number stream, determined by the seed and the chunk's position, so results depend on the seed and on grain_size when there are more chains than grain_size (and will not depend on whether the run is parallel).
 #' @return Nothing: output can be found in the output_directory.
 #' @export
 MCMC = function(recipe,
@@ -37,12 +37,10 @@ MCMC = function(recipe,
                 verify_cpp_function_types=FALSE,
                 keep_temporary_recipe_code=FALSE,
                 seed = NULL,
-                grain_size = 100000,
+                grain_size = 64,
                 check_factor_index = FALSE,
                 thin = 1)
 {
-  stop_if_parallel(parallel)
-
 
   if (is.character(recipe))
     recipe = compile(filenames = recipe,
@@ -54,6 +52,9 @@ MCMC = function(recipe,
                      keep_temporary_recipe_code = keep_temporary_recipe_code)
   else if (!is.list(recipe))
     stop('"Receipe" argument must be either a compiled ilike recipe, the filename of an ilike file, or a vector of filenames of ilike files.')
+
+  # parallel = TRUE: refuse models that call R; pass the number of threads
+  recipe = prepare_parallel(recipe, parallel)
 
   # Read in C++ (apply_output_options).
   recipe$write_factor_output = write_factor_output

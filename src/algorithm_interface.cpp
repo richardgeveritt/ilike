@@ -1090,7 +1090,7 @@ List get_pf_info(const List &model_parameters, const List &current_likelihood,
   if (parameters.size() > 3) {
     grain_size = extract_int_parameter(parameters, model_parameters, 3);
   } else {
-    grain_size = 100000;
+    grain_size = 64; // as PF() (dev/plan.md 2.6b, G5)
   }
 
   return List::create(number_of_particles, iterations_to_store, parallel,
@@ -2265,6 +2265,10 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
               size_t iterations_to_store = pf_params[1];
               bool parallel = pf_params[2];
               size_t grain_size = pf_params[3];
+              // an inner model that calls R cannot run in parallel threads
+              if (parallel && llhd_model.containsElementNamed("uses_r_functions") &&
+                  as<bool>(llhd_model["uses_r_functions"]))
+                Rcpp::stop("A particle filter with parallel = TRUE needs a model written in C++ (or with ilike:: built-in functions): its model has functions written in R, Python or Julia, or R expressions, which cannot be called from parallel threads.");
 
               ParticleFilter *inner_pf = get_particle_filter(
                   rng_in, data_in, llhd_model, model_parameters,
@@ -2275,6 +2279,9 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
               // nested: keep its stored generations compactly and write them
               // concatenated over the outer points
               inner_pf->set_compact_stored_output(true);
+              // threads for an inner particle filter with parallel = TRUE
+              if (model.containsElementNamed("number_of_threads"))
+                inner_pf->set_number_of_threads(size_t(as<double>(model["number_of_threads"])));
               new_likelihood_estimator = inner_pf;
             } else {
               stop("Invalid type for 'likelihood'.");
@@ -5003,6 +5010,17 @@ static void apply_output_options(const List &model, SMC *alg) {
   // testing switch: never keep a generation in flat form (dev/plan.md 2.6a)
   if (model.containsElementNamed("force_rich_generations"))
     alg->set_force_rich_generations(as<bool>(model["force_rich_generations"]));
+  // threads for parallel runs (set by the R wrappers from RcppParallel)
+  if (model.containsElementNamed("number_of_threads"))
+    alg->set_number_of_threads(size_t(as<double>(model["number_of_threads"])));
+}
+
+// After a run with parallel = TRUE (dev/plan.md 2.6a, G4).
+static void warn_if_parallel_refused(const SMC *alg) {
+  if (alg->parallel_was_refused())
+    Rcpp::warning("parallel = TRUE: part of this run was done sequentially, because "
+                  "it was not on the chunked path or a factor estimates its likelihood "
+                  "with an inner algorithm. The results are the same as a sequential run.");
 }
 
 // [[Rcpp::export]]
@@ -5028,6 +5046,8 @@ double do_importance_sampler(const List &model, const List &parameters,
     alg->set_write_factor_output(false);
 
   SMCOutput *output = alg->run();
+
+  warn_if_parallel_refused(alg);
 
   if (strcmp(results_name_in.get_cstring(), "") != 0)
     output->write(results_name_in.get_cstring());
@@ -5059,6 +5079,8 @@ double do_importance_sampler_with_fixed_params(
   apply_output_options(model, alg);
 
   SMCOutput *output = alg->run(list_to_parameters(fixed_parameter_list));
+
+  warn_if_parallel_refused(alg);
 
   if (strcmp(results_name_in.get_cstring(), "") != 0)
     output->write(results_name_in.get_cstring());
@@ -5179,6 +5201,8 @@ void do_mcmc(const List &model, const List &parameters,
 
   SMCOutput *output = alg->run();
 
+  warn_if_parallel_refused(alg);
+
   if (strcmp(results_name_in.get_cstring(), "") != 0)
     output->write(results_name_in.get_cstring());
 
@@ -5294,6 +5318,8 @@ void do_mcmc_with_fixed_params(
   apply_output_options(model, alg);
 
   SMCOutput *output = alg->run(list_to_parameters(fixed_parameter_list));
+
+  warn_if_parallel_refused(alg);
 
   if (strcmp(results_name_in.get_cstring(), "") != 0)
     output->write(results_name_in.get_cstring());
@@ -5449,6 +5475,8 @@ double do_smc_mcmc_move(
 
   SMCOutput *output = alg->run();
 
+  warn_if_parallel_refused(alg);
+
   if (!write_to_file_at_each_iteration) {
     if (strcmp(results_name_in.get_cstring(), "") != 0)
       output->write(results_name_in.get_cstring());
@@ -5490,6 +5518,8 @@ double do_smc_mcmc_move_with_fixed_params(
   apply_output_options(model, alg);
 
   SMCOutput *output = alg->run(list_to_parameters(fixed_parameter_list));
+
+  warn_if_parallel_refused(alg);
 
   if (!write_to_file_at_each_iteration) {
     if (strcmp(results_name_in.get_cstring(), "") != 0)
@@ -5768,6 +5798,8 @@ do_enkmfds(const List &model, const List &parameters,
 
     SMCOutput *output = alg->run();
 
+    warn_if_parallel_refused(alg);
+
     double log_likelihood = output->log_likelihood;
 
     delete output;
@@ -5788,6 +5820,8 @@ do_enkmfds(const List &model, const List &parameters,
     apply_output_options(model, alg);
 
     SMCOutput *output = alg->run();
+
+    warn_if_parallel_refused(alg);
 
     if (strcmp(results_name_in.get_cstring(), "") != 0)
       output->write(results_name_in.get_cstring());
@@ -6273,6 +6307,8 @@ double do_particle_filter(const List &model, const List &parameters,
 
   SMCOutput *output = alg->run();
 
+  warn_if_parallel_refused(alg);
+
   if (!write_to_file_at_each_iteration) {
     if (strcmp(results_name_in.get_cstring(), "") != 0)
       output->write(results_name_in.get_cstring());
@@ -6311,6 +6347,8 @@ double do_particle_filter_with_fixed_params(
   apply_output_options(model, alg);
 
   SMCOutput *output = alg->run(list_to_parameters(fixed_parameter_list));
+
+  warn_if_parallel_refused(alg);
 
   if (!write_to_file_at_each_iteration) {
     if (strcmp(results_name_in.get_cstring(), "") != 0)

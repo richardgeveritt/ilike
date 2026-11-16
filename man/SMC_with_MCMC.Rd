@@ -22,7 +22,7 @@ SMC_with_MCMC(
   verify_cpp_function_types = FALSE,
   keep_temporary_recipe_code = FALSE,
   seed = NULL,
-  grain_size = 1e+05,
+  grain_size = 64,
   check_factor_index = FALSE
 )
 }
@@ -37,7 +37,7 @@ SMC_with_MCMC(
 
 \item{number_of_particles}{The number of particles.}
 
-\item{parallel}{(optional) Set to true to perform the importance sampling in parallel, false for serial.}
+\item{parallel}{(optional) If TRUE, the MCMC moves of each chunk of grain_size particles run in parallel threads (the number set by RcppParallel::setThreadOptions). The results are exactly those of the sequential run with the same seed and grain_size. Needs a model written in C++ or with ilike:: built-in functions (not R, Python or Julia), exact or annealed factors, and an MCMC termination with a fixed number of iterations; otherwise the moves are sequential, with a warning. The initial simulation and the weighting are sequential.}
 
 \item{smc_iterations_to_store}{(optional) The number of iterations of SMC output stored in memory as the algorithm is running (cannot be fewer than 2).}
 
@@ -61,7 +61,7 @@ SMC_with_MCMC(
 
 \item{seed}{(optional) The seed for the random number generator.}
 
-\item{grain_size}{(optional) The number of particles moved together (default 100000). Each chunk of particles has its own random-number stream, determined by the seed and the chunk's position, so results depend on the seed and on grain_size when there are more particles than grain_size (and will not depend on whether the run is parallel).}
+\item{grain_size}{(optional) The number of particles moved together (default 64). Each chunk of particles has its own random-number stream, determined by the seed and the chunk's position, so results depend on the seed and on grain_size when there are more particles than grain_size (and will not depend on whether the run is parallel).}
 
 \item{check_factor_index}{(optional) If TRUE, after every accepted MCMC move that has a factor index, re-evaluate the exact factors that were left out of the move (neither in its factor index nor its cut factor index) and stop if any changed value, i.e. did not cancel in the acceptance ratio. Slower; for checking a model file. Default FALSE.}
 }

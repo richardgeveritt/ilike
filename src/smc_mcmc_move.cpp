@@ -1,6 +1,8 @@
 #include <numeric>
 #include <algorithm>
 #include "smc_mcmc_move.h"
+#include "chunk_parallel.h"
+#include <mutex>
 #include <memory>
 #include "factors.h"
 #include "factor_variables.h"
@@ -110,13 +112,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   //this->model_and_algorithm.particle_simulator = new ParameterParticleSimulator(simulate_proposal_in,
   //                                                                              this->model_and_algorithm.likelihood_estimators);
   
-  if (parallel_in==TRUE)
-  {
-  }
-  else
-  {
-    this->the_worker = new SequentialSMCWorker(this);
-  }
+  this->parallel = parallel_in;
+  this->the_worker = new SequentialSMCWorker(this);
   
   std::vector<double> schedule_in;
   schedule_in.push_back(0.0);
@@ -189,15 +186,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   //this->model_and_algorithm.particle_simulator = new ParameterParticleSimulator(simulate_proposal_in,
   //                                                                              this->model_and_algorithm.likelihood_estimators);
   
-  if (parallel_in==TRUE)
-  {
-    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
-    Rcpp::stop("Parallel worker not set up.");
-  }
-  else
-  {
-    this->the_worker = new SequentialSMCWorker(this);
-  }
+  this->parallel = parallel_in;
+  this->the_worker = new SequentialSMCWorker(this);
   
   std::vector<double> schedule_in;
   schedule_in.push_back(0.0);
@@ -275,15 +265,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   //this->model_and_algorithm.particle_simulator = new ParameterParticleSimulator(simulate_proposal_in,
   //                                                                              this->model_and_algorithm.likelihood_estimators);
   
-  if (parallel_in==TRUE)
-  {
-    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
-    Rcpp::stop("Parallel worker not set up.");
-  }
-  else
-  {
-    this->the_worker = new SequentialSMCWorker(this);
-  }
+  this->parallel = parallel_in;
+  this->the_worker = new SequentialSMCWorker(this);
   
   std::vector<double> schedule_in;
   schedule_in.push_back(0.0);
@@ -358,13 +341,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
    }
    */
   
-  if (parallel_in==TRUE)
-  {
-  }
-  else
-  {
-    this->the_worker = new SequentialSMCWorker(this);
-  }
+  this->parallel = parallel_in;
+  this->the_worker = new SequentialSMCWorker(this);
   
   std::vector<double> schedule_in;
   schedule_in.push_back(0.0);
@@ -524,13 +502,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   this->particle_simulator = new ParameterParticleSimulator(proposal,
                                                             likelihood_estimators);
   
-  if (parallel_in==true)
-  {
-  }
-  else
-  {
-    this->the_worker = new SequentialSMCWorker(this);
-  }
+  this->parallel = parallel_in;
+  this->the_worker = new SequentialSMCWorker(this);
   
   std::vector<double> schedule_in;
   schedule_in.push_back(0.0);
@@ -641,13 +614,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   this->particle_simulator = new ParameterParticleSimulator(proposal,
                                                             likelihood_estimators);
   
-  if (parallel_in==true)
-  {
-  }
-  else
-  {
-    this->the_worker = new SequentialSMCWorker(this);
-  }
+  this->parallel = parallel_in;
+  this->the_worker = new SequentialSMCWorker(this);
   
   std::vector<double> schedule_in;
   schedule_in.reserve(temperatures_in.size()+1);
@@ -726,15 +694,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   this->particle_simulator = new ParameterParticleSimulator(proposal_in,
                                                             likelihood_estimators_in);
   
-  if (parallel_in==true)
-  {
-    //this->the_worker = new RcppParallelSMCWorker(this, grain_size_in);
-    Rcpp::stop("Parallel worker not set up.");
-  }
-  else
-  {
-    this->the_worker = new SequentialSMCWorker(this);
-  }
+  this->parallel = parallel_in;
+  this->the_worker = new SequentialSMCWorker(this);
   
   SMCCriterion* smc_criterion = new CESSSMCCriterion(annealing_desired_cess_in);
   //this->model_and_algorithm.smc_termination = NULL;
@@ -813,15 +774,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                                                             likelihood_estimators_in);
   
   
-  if (parallel_in==true)
-  {
-    //this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
-    Rcpp::stop("Parallel worker not set up.");
-  }
-  else
-  {
-    this->the_worker = new SequentialSMCWorker(this);
-  }
+  this->parallel = parallel_in;
+  this->the_worker = new SequentialSMCWorker(this);
   
   SMCCriterion* smc_criterion = adaptive_target_in;
   //this->model_and_algorithm.smc_termination = NULL;
@@ -937,6 +891,92 @@ SMCOutput* SMCMCMCMove::specific_initialise_smc()
   return output;
 }
 
+int SMCMCMCMove::rich_chunk_mode() const
+{
+  if ((dynamic_cast<const SequentialSMCWorker*>(this->the_worker) == NULL) ||
+      (this->mcmc == NULL) || (this->factors == NULL))
+    return 0;
+  if (this->factors->supports_parallel_chunks())
+    return 1;
+  if (this->factors->supports_parallel_copies())
+    return 2;
+  return 0;
+}
+
+void SMCMCMCMove::move_rich_in_chunks(Particles* next_particles,
+                                      Particles* current_particles,
+                                      bool copies)
+{
+  // SequentialSMCWorker::specific_move and the seed bookkeeping of
+  // SMCWorker::move, grain_size particles at a time, each chunk with its own
+  // stream, each particle's MoveOutput put in its own slot. A kernel that
+  // adapts is copied for every chain (C98), which touches a static counter
+  // of the kernels: such runs are chunked but not parallel.
+  SMCWorker* worker = this->the_worker;
+  size_t N = this->number_of_particles;
+  size_t B = ((this->chunk_size == 0) || (this->chunk_size > N)) ? N : this->chunk_size;
+  size_t K = (N + B - 1)/B;
+  bool in_parallel = this->parallel && !this->mcmc->adapts();
+  if (this->parallel && !in_parallel)
+    this->parallel_refused = true;
+  next_particles->particles.assign(N, NULL);
+
+  RandomNumberGenerator first_stream(*worker->get_rng());
+  first_stream.seed(worker->get_seed());
+  std::vector<RandomNumberGenerator> streams = chunk_streams(first_stream, K);
+
+  run_chunk_groups(0, K, in_parallel, this->number_of_threads,
+                   [&](size_t group, size_t first_chunk, size_t end_chunk)
+                   {
+                     // the group's copy of the factors, drawing from its own
+                     // generator and seed counter
+                     std::unique_ptr<Factors> own_factors;
+                     RandomNumberGenerator group_rng;
+                     size_t group_seed = 0;
+                     const Factors* factors_for_group = this->factors;
+                     if (copies)
+                     {
+                       own_factors.reset(this->factors->duplicate());
+                       own_factors->redirect_random_numbers(&group_rng, &group_seed);
+                       factors_for_group = own_factors.get();
+                     }
+                     for (size_t k = first_chunk; k < end_chunk; ++k)
+                     {
+                       size_t first = k*B;
+                       size_t n = std::min(B, N - first);
+                       RandomNumberGenerator local_rng(streams[k]);
+                       for (size_t i = first; i < first + n; ++i)
+                       {
+                         const Particle &ancestor = (*current_particles)[current_particles->ancestor_variables[i]]->back();
+                         MoveOutput* moved;
+                         if (copies)
+                         {
+                           group_seed = size_t(local_rng());
+                           Particle start = ancestor;
+                           if ((start.factor_variables != NULL) && !start.factor_variables->repoint_to(factors_for_group))
+                             Rcpp::stop("SMCMCMCMove::move_rich_in_chunks: the factors could not be repointed.");
+                           moved = this->move(local_rng, start);
+                           // what is kept outlives the group's copy
+                           if (!moved->repoint_to(this->factors))
+                             Rcpp::stop("SMCMCMCMove::move_rich_in_chunks: the factors could not be repointed.");
+                         }
+                         else
+                         {
+                           moved = this->move(local_rng, ancestor);
+                         }
+                         moved->back().previous_self = &ancestor;
+                         next_particles->particles[i] = moved;
+                       }
+                     }
+                   });
+
+  // as SMCWorker::move
+  worker->set_seed(worker->get_seed() + N);
+  this->rng->seed(worker->get_seed());
+  next_particles->simulate_resampling_variables(*this->rng);
+  worker->set_seed(worker->get_seed() + N);
+}
+
 bool SMCMCMCMove::can_move_flat() const
 {
   // Conditions (dev/plan.md 2.6a, G3): the moves read the cached factor
@@ -1004,11 +1044,17 @@ void SMCMCMCMove::move_flat(Particles* next_particles,
 {
   // The steps of SequentialSMCWorker::specific_move with this->move() and
   // MCMC::run for each particle, then the seed bookkeeping of SMCWorker::move.
+  // The chunks run in order, or in parallel (G4, G5), each with its own
+  // stream and writing only its own particles' rows: a chain of
+  // `iterations` moves stores iterations/thin states, so particle i's states
+  // are rows [i*m, (i+1)*m) of the chain store.
   SMCWorker* worker = this->the_worker;
   size_t N = this->number_of_particles;
   size_t B = ((this->chunk_size == 0) || (this->chunk_size > N)) ? N : this->chunk_size;
+  size_t K = (N + B - 1)/B;
   size_t iterations = this->mcmc->known_number_of_iterations();
   size_t thin = std::max<size_t>(this->mcmc->get_thin(), 1);
+  size_t m = iterations/thin;
   bool from_flat = current_particles->is_flat();
   // the factor values a rich generation's particles held after the target
   // was chosen: those of the last trial target (SMC::finish_weighting_from_summaries)
@@ -1018,30 +1064,26 @@ void SMCMCMCMove::move_flat(Particles* next_particles,
 
   next_particles->flat = true;
   next_particles->flat_size = N;
-  next_particles->flat_output_lengths.assign(N, 0.0);
+  next_particles->flat_output_lengths.assign(N, double(m));
   next_particles->adaptive_previous_targets.set_size(N);
-  next_particles->flat_final_points.reserve_after_first(N);
-  next_particles->flat_points.reserve_after_first(N*(iterations/thin));
 
   bool keep_records = this->write_factor_output;
-  bool records_decided = false;
-  std::vector<double> records;
+  size_t number_of_records = 0;
   int summary_size = -1;
+  // the first state to be stored, and the first particle to finish, fix the
+  // layouts (every particle gives the same; set_point checks it)
+  std::once_flag chain_setup;
+  std::once_flag final_setup;
 
-  Particle current;
-  Particle scratch;
-  RandomNumberGenerator chunk_start(*worker->get_rng());
-  chunk_start.seed(worker->get_seed());
+  RandomNumberGenerator first_stream(*worker->get_rng());
+  first_stream.seed(worker->get_seed());
+  std::vector<RandomNumberGenerator> streams = chunk_streams(first_stream, K);
 
-  for (size_t first = 0, k = 0; first < N; first += B, ++k)
+  auto run_chunk = [&](size_t k, Particle &current, Particle &scratch, std::vector<double> &records)
   {
+    size_t first = k*B;
     size_t n = std::min(B, N - first);
-    if (k > 0)
-    {
-      std::unique_ptr<dqrng::random_64bit_generator> next = chunk_start.clone(1);
-      chunk_start = *dynamic_cast<RandomNumberGenerator*>(next.get());
-    }
-    RandomNumberGenerator local_rng(chunk_start);
+    RandomNumberGenerator local_rng(streams[k]);
 
     for (size_t i = first; i < first + n; ++i)
     {
@@ -1063,27 +1105,29 @@ void SMCMCMCMove::move_flat(Particles* next_particles,
         if ((thin > 1) && ((iteration % thin) != 0))
           continue;
         // as StandardMCMCOutput::record
-        if (!records_decided)
+        std::call_once(chain_setup, [&]()
         {
           if (keep_records && (current.factor_variables != NULL))
           {
             if (!current.factor_variables->has_compact_values())
               Rcpp::stop("SMCMCMCMove::move_flat: a factor has no compact record.");
-            records.resize(current.factor_variables->number_of_compact_values());
-            next_particles->flat_points.set_number_of_extra_columns(records.size());
+            number_of_records = current.factor_variables->number_of_compact_values();
+            next_particles->flat_points.set_number_of_extra_columns(number_of_records);
             next_particles->flat_record_writer = current.factor_variables->duplicate();
             next_particles->flat_record_writer->set_particle(NULL);
           }
-          records_decided = true;
-        }
-        if (records.size() > 0)
+          next_particles->flat_points.prepare(current.parameters, N*m);
+        });
+        size_t row = i*m + stored;
+        if (number_of_records > 0)
         {
+          records.resize(number_of_records);
           current.factor_variables->compact_values(records.data());
-          next_particles->flat_points.append(current.parameters, records.data());
+          next_particles->flat_points.set_point(row, current.parameters, records.data());
         }
         else
         {
-          next_particles->flat_points.append(current.parameters);
+          next_particles->flat_points.set_point(row, current.parameters);
         }
         ++stored;
       }
@@ -1091,12 +1135,11 @@ void SMCMCMCMove::move_flat(Particles* next_particles,
       // as move(): the target over the SMC's index, which becomes the
       // particle's previous target (set_previous_target_evaluated_to_target_evaluated)
       double target = current.get_cached_likelihoods(this->index);
-      next_particles->flat_output_lengths[i] = double(stored);
-      next_particles->flat_final_points.append(current.parameters);
       const FactorVariables* factor_variables = current.factor_variables;
       int size = (factor_variables == NULL) ? -1 : factor_variables->adaptive_summary_size(this->index);
-      if (i == 0)
+      std::call_once(final_setup, [&]()
       {
+        next_particles->flat_final_points.prepare(current.parameters, N);
         if (size < 0)
           Rcpp::stop("SMCMCMCMove::move_flat: a factor has no adaptive summary.");
         summary_size = size;
@@ -1106,8 +1149,9 @@ void SMCMCMCMove::move_flat(Particles* next_particles,
         next_particles->adaptive_summary_evaluator = next_particles->flat_summary_evaluator;
         next_particles->adaptive_summary_index = this->index;
         next_particles->adaptive_summary_state = 1;
-      }
-      else if (size != summary_size)
+      });
+      next_particles->flat_final_points.set_point(i, current.parameters);
+      if (size != summary_size)
       {
         Rcpp::stop("SMCMCMCMove::move_flat: the particles' adaptive summaries differ in size.");
       }
@@ -1115,7 +1159,23 @@ void SMCMCMCMove::move_flat(Particles* next_particles,
         factor_variables->adaptive_summary(this->index, next_particles->adaptive_summaries.colptr(i));
       next_particles->adaptive_previous_targets[i] = target;
     }
-  }
+  };
+
+
+  // the moves read the kernels and factors only (C98; checked by
+  // supports_flat_moves, which admits exact and annealed-exact factors only)
+  bool in_parallel = this->parallel && (this->factors != NULL) && this->factors->supports_parallel_chunks();
+  if (this->parallel && !in_parallel)
+    this->parallel_refused = true;
+  run_chunk_groups(0, K, in_parallel, this->number_of_threads,
+                   [&](size_t group, size_t first_chunk, size_t end_chunk)
+                   {
+                     Particle current;
+                     Particle scratch;
+                     std::vector<double> records;
+                     for (size_t k = first_chunk; k < end_chunk; ++k)
+                       run_chunk(k, current, scratch, records);
+                   });
 
   // as SMCWorker::move
   worker->set_seed(worker->get_seed() + N);
@@ -1144,11 +1204,23 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state)
     Particles* next_particles = current_state->add_particles(current_particles);
     
     if (this->can_move_flat())
+    {
       this->move_flat(next_particles,
                       current_particles);
+    }
+    else if (this->rich_chunk_mode() > 0)
+    {
+      this->move_rich_in_chunks(next_particles,
+                                current_particles,
+                                this->rich_chunk_mode() == 2);
+    }
     else
+    {
+      if (this->parallel)
+        this->parallel_refused = true;
       this->the_worker->move(next_particles,
                              current_particles);
+    }
     
     //this->evaluate_smcfixed_part_smc(current_state);
     current_state->increment_smc_iteration();

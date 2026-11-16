@@ -14,6 +14,8 @@
 #include "vector_index.h"
 #include "positive_smc_criterion.h"
 #include "factor_variables.h"
+#include "chunk_parallel.h"
+#include <mutex>
 #include "particle_simulator.h"
 #include <memory>
 // #include "rcppparallel_smc_worker.h"
@@ -63,14 +65,8 @@ namespace ilike
     this->particle_simulator = new ParameterParticleSimulator(proposal,
                                                               likelihood_estimators);
 
-    if (parallel_in == TRUE)
-    {
-      this->the_worker = NULL;
-    }
-    else
-    {
-      this->the_worker = new SequentialSMCWorker(this);
-    }
+    this->parallel = parallel_in;
+    this->the_worker = new SequentialSMCWorker(this);
 
     std::vector<double> schedule_in;
     schedule_in.push_back(0.0);
@@ -137,13 +133,8 @@ namespace ilike
     //                                                                               this->model_and_algorithm.likelihood_estimators,
     //                                                                               "u");
 
-    if (parallel_in == TRUE)
-    {
-    }
-    else
-    {
-      this->the_worker = new SequentialSMCWorker(this);
-    }
+    this->parallel = parallel_in;
+    this->the_worker = new SequentialSMCWorker(this);
 
     std::vector<double> schedule_in;
     schedule_in.push_back(0.0);
@@ -198,13 +189,8 @@ namespace ilike
     //                                                                               this->model_and_algorithm.likelihood_estimators,
     //                                                                               "u");
 
-    if (parallel_in == TRUE)
-    {
-    }
-    else
-    {
-      this->the_worker = new SequentialSMCWorker(this);
-    }
+    this->parallel = parallel_in;
+    this->the_worker = new SequentialSMCWorker(this);
 
     std::vector<double> schedule_in;
     schedule_in.push_back(0.0);
@@ -266,15 +252,8 @@ namespace ilike
     //                                                                               this->model_and_algorithm.likelihood_estimators,
     //                                                                               "u");
 
-    if (parallel_in == TRUE)
-    {
-      // this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
-      this->the_worker = NULL;
-    }
-    else
-    {
-      this->the_worker = new SequentialSMCWorker(this);
-    }
+    this->parallel = parallel_in;
+    this->the_worker = new SequentialSMCWorker(this);
 
     std::vector<double> schedule_in;
     schedule_in.push_back(1.0);
@@ -336,15 +315,8 @@ namespace ilike
     //                                                                               this->model_and_algorithm.likelihood_estimators,
     //                                                                               "u");
 
-    if (parallel_in == TRUE)
-    {
-      // this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
-      this->the_worker = NULL;
-    }
-    else
-    {
-      this->the_worker = new SequentialSMCWorker(this);
-    }
+    this->parallel = parallel_in;
+    this->the_worker = new SequentialSMCWorker(this);
 
     std::vector<double> schedule_in;
     schedule_in.push_back(target_value_in);
@@ -407,15 +379,8 @@ namespace ilike
     //                                                                               this->model_and_algorithm.likelihood_estimators,
     //                                                                               "u");
 
-    if (parallel_in == TRUE)
-    {
-      // this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
-      this->the_worker = NULL;
-    }
-    else
-    {
-      this->the_worker = new SequentialSMCWorker(this);
-    }
+    this->parallel = parallel_in;
+    this->the_worker = new SequentialSMCWorker(this);
 
     std::vector<double> schedule_in;
     schedule_in.push_back(1.0);
@@ -514,15 +479,8 @@ namespace ilike
     //                                                                               this->model_and_algorithm.likelihood_estimators,
     //                                                                               "u");
 
-    if (parallel_in == TRUE)
-    {
-      // this->the_worker = new RcppParallelSMCWorker(this,grain_size_in);
-      this->the_worker = NULL;
-    }
-    else
-    {
-      this->the_worker = new SequentialSMCWorker(this);
-    }
+    this->parallel = parallel_in;
+    this->the_worker = new SequentialSMCWorker(this);
 
     std::vector<double> schedule_in;
     schedule_in.push_back(target_value_in);
@@ -681,6 +639,8 @@ namespace ilike
   SMCOutput *ImportanceSampler::specific_run()
   {
     SMCOutput *simulation = this->initialise_smc();
+    if (this->parallel && !this->can_run_in_chunks())
+      this->parallel_refused = true;
     if (this->can_run_in_chunks())
     {
       this->simulate_and_weight_in_chunks(simulation);
@@ -747,15 +707,36 @@ namespace ilike
     // the bisection do (SequentialSMCWorker::specific_simulate,
     // SMCWorker::simulate, smcfixed_weight, smcadaptive_given_smcfixed_weight),
     // B points at a time. Per chunk the phases keep their order (simulate all
-    // B, then the smcfixed parts, then the weights), so with one chunk
-    // (chunk_size >= N) every call happens in the same order as before and
-    // the results are identical. Chunk k uses its own random-number stream:
-    // the stream of chunk 0 (the generator seeded as before) jumped k times
-    // (2^192 steps each), so streams never overlap and depend only on the
-    // seed and k.
+    // B, then the smcfixed parts, then the weights or summaries). Chunk k uses
+    // its own random-number stream (chunk_streams). Three modes (dev/plan.md
+    // 2.6a G4, 2.6b G5):
+    //  - independent: no factor uses random numbers or keeps run state; every
+    //    chunk (chunk 0 included) may run in parallel, sharing the factors;
+    //  - copies: some factors run an inner algorithm; each group of chunks
+    //    gets its own copy of the factors, drawing from its own generator, and
+    //    each point's inner runs draw from a seed counter set from the point's
+    //    chunk stream (and kept with the point between its simulation and its
+    //    smcfixed part), so the results do not depend on the threads;
+    //  - shared: anything else; sequential, in the original order (the seed
+    //    bookkeeping of SMCWorker::simulate after chunk 0's simulations), so
+    //    that with one chunk the results are those of the per-particle path.
+    // In the first two modes the seed bookkeeping is done first (after the
+    // chunk streams have been taken from the seed: it does not touch them),
+    // and the first point to be kept fixes the layout of what is kept.
     SMCWorker* worker = this->the_worker;
     size_t N = this->number_of_particles;
     size_t B = ((this->chunk_size == 0) || (this->chunk_size > N)) ? N : this->chunk_size;
+    size_t K = (N + B - 1)/B;
+
+    enum Mode { independent, copies, shared };
+    Mode mode = shared;
+    if ((this->factors != NULL) && this->factors->supports_parallel_chunks())
+      mode = independent;
+    else if ((this->factors != NULL) && this->factors->supports_parallel_copies())
+      mode = copies;
+    bool in_parallel = this->parallel && (mode != shared);
+    if (this->parallel && !in_parallel)
+      this->parallel_refused = true;
 
     Particles* generation = current_state->add_particles();
     generation->flat = true;
@@ -768,58 +749,96 @@ namespace ilike
     // whose generations are never written).
     bool keep_points = (this->lag > 0);
     bool keep_factor_output = keep_points && this->write_factor_output;
-    int summary_size = -1;
     bool compact_records = false;
-    std::vector<double> records;
+    size_t number_of_records = 0;
+    int summary_size = -1;
+    std::once_flag store_setup;
+    std::once_flag summary_setup;
 
-    std::vector<Particle> slots(B);
-    RandomNumberGenerator chunk_start(*worker->get_rng());
-    chunk_start.seed(worker->get_seed());
+    RandomNumberGenerator first_stream(*worker->get_rng());
+    first_stream.seed(worker->get_seed());
+    std::vector<RandomNumberGenerator> streams = chunk_streams(first_stream, K);
 
-    size_t point = 0;
-    for (size_t first = 0, k = 0; first < N; first += B, ++k)
+    auto seed_bookkeeping = [&]()
     {
-      size_t n = std::min(B, N - first);
-      if (k > 0)
+      // the seed bookkeeping and resampling variables of SMCWorker::simulate
+      worker->set_seed(worker->get_seed() + N);
+      this->rng->seed(worker->get_seed());
+      generation->simulate_resampling_variables(*this->rng);
+      worker->set_seed(worker->get_seed() + N);
+    };
+
+    // What a group of chunks works with: the factors (the main ones, or the
+    // group's copy), its particle objects, and in copies mode the generator
+    // and seed counter its copy draws from.
+    struct Workspace
+    {
+      std::unique_ptr<Factors> own_factors;
+      const Factors* factors = NULL;
+      RandomNumberGenerator rng;
+      size_t seed = 0;
+      std::vector<size_t> point_seeds;
+      std::vector<Particle> slots;
+      std::vector<double> records;
+    };
+    auto make_workspace = [&](Workspace &w)
+    {
+      if (mode == copies)
       {
-        std::unique_ptr<dqrng::random_64bit_generator> next = chunk_start.clone(1);
-        chunk_start = *dynamic_cast<RandomNumberGenerator*>(next.get());
+        w.own_factors.reset(this->factors->duplicate());
+        w.own_factors->redirect_random_numbers(&w.rng, &w.seed);
+        w.factors = w.own_factors.get();
+        w.point_seeds.assign(B, 0);
       }
-      RandomNumberGenerator local_rng(chunk_start);
+      else
+      {
+        w.factors = this->factors;
+      }
+      w.slots.resize(B);
+    };
+
+    // One chunk: simulate, evaluate and keep points [first, first + n).
+    auto run_chunk = [&](size_t k, Workspace &w)
+    {
+      size_t first = k*B;
+      size_t n = std::min(B, N - first);
+      RandomNumberGenerator local_rng(streams[k]);
+      std::vector<Particle> &slots = w.slots;
 
       for (size_t j = 0; j < n; ++j)
       {
+        if (mode == copies)
+          w.seed = size_t(local_rng());
         if (conditioned_on_parameters == NULL)
           this->particle_simulator->simulate_into(local_rng,
                                                   slots[j],
-                                                  this->factors,
+                                                  w.factors,
                                                   &this->proposals_to_transform_for,
                                                   &this->proposals_to_find_gradient_for,
                                                   this->sequencer.schedule_parameters);
         else
           this->particle_simulator->simulate_into(local_rng,
                                                   slots[j],
-                                                  this->factors,
+                                                  w.factors,
                                                   &this->proposals_to_transform_for,
                                                   &this->proposals_to_find_gradient_for,
                                                   *conditioned_on_parameters,
                                                   this->sequencer.schedule_parameters);
         if (this->proposal_is_evaluated == true)
           slots[j].previous_target_evaluated = this->particle_simulator->evaluate(slots[j]);
+        if (mode == copies)
+          w.point_seeds[j] = w.seed;
       }
 
-      if (k == 0)
-      {
-        // the seed bookkeeping and resampling variables of SMCWorker::simulate,
-        // at the point where it happened before when there is one chunk
-        worker->set_seed(worker->get_seed() + N);
-        this->rng->seed(worker->get_seed());
-        generation->simulate_resampling_variables(*this->rng);
-        worker->set_seed(worker->get_seed() + N);
-      }
+      if ((mode == shared) && (k == 0))
+        seed_bookkeeping();
 
       for (size_t j = 0; j < n; ++j)
+      {
+        if (mode == copies)
+          w.seed = w.point_seeds[j];
         slots[j].evaluate_smcfixed_part_of_likelihoods(this->index);
+      }
 
       if (summarise)
       {
@@ -827,7 +846,7 @@ namespace ilike
         {
           const FactorVariables* factor_variables = slots[j].factor_variables;
           int size = (factor_variables == NULL) ? -1 : factor_variables->adaptive_summary_size(this->index);
-          if (first + j == 0)
+          std::call_once(summary_setup, [&]()
           {
             if (size < 0)
               Rcpp::stop("ImportanceSampler::simulate_in_chunks: a factor has no adaptive summary.");
@@ -836,14 +855,14 @@ namespace ilike
             generation->adaptive_previous_targets.set_size(N);
             generation->flat_summary_evaluator = factor_variables->duplicate();
             generation->flat_summary_evaluator->set_particle(NULL);
+            if ((mode == copies) && !generation->flat_summary_evaluator->repoint_to(this->factors))
+              Rcpp::stop("ImportanceSampler::simulate_in_chunks: the factors could not be repointed.");
             generation->adaptive_summary_evaluator = generation->flat_summary_evaluator;
             generation->adaptive_summary_index = this->index;
             generation->adaptive_summary_state = 1;
-          }
-          else if (size != summary_size)
-          {
+          });
+          if (size != summary_size)
             Rcpp::stop("ImportanceSampler::simulate_in_chunks: the points' adaptive summaries differ in size.");
-          }
           if (summary_size > 0)
             factor_variables->adaptive_summary(this->index, generation->adaptive_summaries.colptr(first + j));
           generation->adaptive_previous_targets[first + j] = slots[j].previous_target_evaluated;
@@ -859,49 +878,97 @@ namespace ilike
         }
       }
 
-      for (size_t j = 0; (j < n) && keep_points; ++j, ++point)
+      if (!keep_points)
+        return;
+      for (size_t j = 0; j < n; ++j)
       {
         Particle &slot = slots[j];
-        if (point == 0)
+        size_t point = first + j;
+        std::call_once(store_setup, [&]()
         {
           if (keep_factor_output && (slot.factor_variables != NULL))
           {
             compact_records = slot.factor_variables->has_compact_values();
             if (compact_records)
             {
-              generation->flat_points.set_number_of_extra_columns(slot.factor_variables->number_of_compact_values());
-              records.resize(slot.factor_variables->number_of_compact_values());
+              number_of_records = slot.factor_variables->number_of_compact_values();
+              generation->flat_points.set_number_of_extra_columns(number_of_records);
               generation->flat_record_writer = slot.factor_variables->duplicate();
               generation->flat_record_writer->set_particle(NULL);
+              if ((mode == copies) && !generation->flat_record_writer->repoint_to(this->factors))
+                Rcpp::stop("ImportanceSampler::simulate_in_chunks: the factors could not be repointed.");
             }
             else
             {
-              generation->flat_factor_variables.reserve(N);
+              generation->flat_factor_variables.assign(N, NULL);
             }
           }
-          generation->flat_points.reserve_after_first(N);
-        }
+          generation->flat_points.prepare(slot.parameters, N);
+        });
         if (compact_records)
         {
-          slot.factor_variables->compact_values(records.data());
-          generation->flat_points.append(slot.parameters, records.data());
+          w.records.resize(number_of_records);
+          slot.factor_variables->compact_values(w.records.data());
+          generation->flat_points.set_point(point, slot.parameters, w.records.data());
         }
         else
         {
-          generation->flat_points.append(slot.parameters);
+          generation->flat_points.set_point(point, slot.parameters);
           if (keep_factor_output && (slot.factor_variables != NULL))
           {
-            // keep this point's factor outputs whole; the slot gets new ones
+            // keep this point's factor outputs whole (repointed to the main
+            // factors, which outlive the group's copy); the slot gets new ones
             slot.factor_variables->set_particle(NULL);
-            generation->flat_factor_variables.push_back(slot.factor_variables);
+            if ((mode == copies) && !slot.factor_variables->repoint_to(this->factors))
+              Rcpp::stop("ImportanceSampler::simulate_in_chunks: the factors could not be repointed.");
+            generation->flat_factor_variables[point] = slot.factor_variables;
             slot.factor_variables = NULL;
           }
         }
       }
+    };
+
+    if (mode == shared)
+    {
+      Workspace w;
+      make_workspace(w);
+      for (size_t k = 0; k < K; ++k)
+        run_chunk(k, w);
+    }
+    else
+    {
+      seed_bookkeeping();
+      run_chunk_groups(0, K, in_parallel, this->number_of_threads,
+                       [&](size_t group, size_t first_chunk, size_t end_chunk)
+                       {
+                         Workspace w;
+                         make_workspace(w);
+                         for (size_t k = first_chunk; k < end_chunk; ++k)
+                           run_chunk(k, w);
+                         // the slots' factor variables belong to the group's
+                         // copy of the factors: delete them first
+                         w.slots.clear();
+                       });
     }
 
     generation->initialise_weights();
   }
+
+  bool ImportanceSampler::can_run_in_parallel() const
+  {
+    // Chunks may run at the same time if nothing they call shares mutable
+    // state, or if each group can have its own copy of what does (G5).
+    return (this->factors != NULL) &&
+      (this->factors->supports_parallel_chunks() || this->factors->supports_parallel_copies());
+  }
+
+  bool ImportanceSampler::supports_parallel_copies() const
+  {
+    return this->can_run_flat_conditioned() && (this->lag == 0) &&
+      (this->factors != NULL) && this->factors->supports_parallel_copies();
+  }
+
+
 
   /*
    SMCOutput* ImportanceSampler::specific_run(const std::string &directory_name)
@@ -1067,9 +1134,15 @@ namespace ilike
                                        const Parameters &conditioned_on_parameters)
   {
     if (this->can_run_flat_conditioned())
+    {
       this->simulate_in_chunks(current_state, &conditioned_on_parameters, true);
+    }
     else
+    {
+      if (this->parallel)
+        this->parallel_refused = true;
       this->simulate_proposal(current_state, conditioned_on_parameters);
+    }
   }
 
   void ImportanceSampler::evaluate_smc(SMCOutput *current_state,

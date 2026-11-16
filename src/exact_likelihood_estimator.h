@@ -167,6 +167,7 @@ public:
   bool supports_flat_generations() const { return this->smcfixed_flag; }
   bool supports_restore_from_summary() const { return this->smcfixed_flag; }
   bool supports_reinitialise() const { return true; }
+  bool supports_parallel_chunks() const { return true; }
   /**
    * @brief Initialises the estimator with given parameters and returns an output object.
    *

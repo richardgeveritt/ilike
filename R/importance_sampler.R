@@ -5,7 +5,7 @@
 #' @param results_path (optional) The path in which the results folder will be created (current working directory is the default).
 #' @param write_factor_output (optional) If TRUE (default), write each point's factor outputs (the iterationK/factorJ_* files used to load nested output, e.g. the states of a particle filter inside particle marginal MH). FALSE writes only the points, weights and evidence.
 #' @param number_of_importance_points The number of importance points.
-#' @param parallel (optional) Set to true to perform the importance sampling in parallel, false for serial.
+#' @param parallel (optional) If TRUE, the chunks of grain_size points are simulated and weighted in parallel threads (the number set by RcppParallel::setThreadOptions). The results are exactly those of the sequential run with the same seed and grain_size. Needs a model written in C++ or with ilike:: built-in functions (not R, Python or Julia), a fixed target, and factors that do not estimate their likelihood with an inner algorithm; otherwise the run is sequential, with a warning.
 #' @param model_parameter_list (optional) A list containing parameters for the model.
 #' @param algorithm_parameter_list (optional) A list containing named parameters for the algorithm.
 #' @param fixed_parameter_list (optional) A list containing parameters to condition on.
@@ -35,8 +35,6 @@ IS = function(recipe,
                              seed = NULL,
                              grain_size = 256)
 {
-  stop_if_parallel(parallel)
-
   if (is.character(recipe))
     recipe = compile(filenames = recipe,
                      model_parameter_list = model_parameter_list,
@@ -47,6 +45,9 @@ IS = function(recipe,
                      keep_temporary_recipe_code = keep_temporary_recipe_code)
   else if (!is.list(recipe))
     stop('"Receipe" argument must be either a compiled ilike recipe, the filename of an ilike file, or a vector of filenames of ilike files.')
+
+  # parallel = TRUE: refuse models that call R; pass the number of threads
+  recipe = prepare_parallel(recipe, parallel)
 
   # Read in C++ (apply_output_options).
   recipe$write_factor_output = write_factor_output

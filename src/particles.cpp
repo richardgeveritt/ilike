@@ -262,6 +262,27 @@ void Particles::forget_adaptive_summaries()
   this->adaptive_summaries_used = false;
 }
 
+bool Particles::repoint_flat_to(const Factors* factors,
+                                const Index* index)
+{
+  if (this->particles.size() > 0)
+    return false;
+  // the summaries are over the new owner's index (an equal object)
+  if ((index != NULL) && (this->adaptive_summary_state == 1))
+    this->adaptive_summary_index = index;
+  bool ok = true;
+  if (this->flat_record_writer!=NULL)
+    ok = ok && this->flat_record_writer->repoint_to(factors);
+  if (this->flat_summary_evaluator!=NULL)
+    ok = ok && this->flat_summary_evaluator->repoint_to(factors);
+  for (auto i=this->flat_factor_variables.begin(); i!=this->flat_factor_variables.end(); ++i)
+  {
+    if (*i!=NULL)
+      ok = ok && (*i)->repoint_to(factors);
+  }
+  return ok;
+}
+
 bool Particles::prepare_adaptive_summaries(const Index* index)
 {
   if (this->adaptive_summary_state != 0)

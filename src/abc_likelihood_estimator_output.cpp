@@ -217,4 +217,35 @@ double ABCLikelihoodEstimatorOutput::smcadaptive_from_summary(const double *valu
                                                                      values[1]);
 }
 
+
+bool ABCLikelihoodEstimatorOutput::repoint_estimator(LikelihoodEstimator* estimator_in)
+{
+  ABCLikelihoodEstimator* abc = dynamic_cast<ABCLikelihoodEstimator*>(estimator_in);
+  if (abc == NULL)
+    return false;
+  this->estimator = abc;
+  return true;
+}
+
+
+void ABCLikelihoodEstimatorOutput::smcadaptive_from_summaries(const double *values,
+                                                              size_t stride,
+                                                              size_t n,
+                                                              const Parameters &parameters,
+                                                              double *results) const
+{
+  if (this->estimator->smcfixed_flag)
+  {
+    for (size_t i = 0; i < n; ++i)
+      results[i] = values[i*stride];
+    return;
+  }
+  // as smcadaptive_from_summary, with the tolerance looked up once
+  double epsilon = this->estimator->abc_kernel->get_epsilon(parameters);
+  for (size_t i = 0; i < n; ++i)
+    results[i] = this->estimator->abc_kernel->evaluate_kernel_given_distance_at(epsilon,
+                                                                                values[i*stride],
+                                                                                values[i*stride + 1]);
+}
+
 }

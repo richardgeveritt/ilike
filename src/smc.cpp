@@ -1,4 +1,5 @@
 #include "smc.h"
+#include "chunk_parallel.h"
 
 //#include "function_pointers.h"
 #include "utils.h"
@@ -220,6 +221,8 @@ void SMC::make_copy(const SMC &another)
   this->compact_stored_output = another.compact_stored_output;
   this->chunk_size = another.chunk_size;
   this->force_rich_generations = another.force_rich_generations;
+  this->parallel = another.parallel;
+  this->number_of_threads = another.number_of_threads;
 
   if (another.the_worker!=NULL)
     this->the_worker = another.the_worker->duplicate();
@@ -250,6 +253,13 @@ void SMC::make_copy(const SMC &another)
   //  this->output = another.output->smc_duplicate();
   
   this->sequencer = another.sequencer;
+  // B29: the copy's worker and sequencer work for the copy, and its schedule
+  // variables are its own (Sequencer's copy shares the matrices, and the
+  // sequencer writes into them in place)
+  if (this->the_worker!=NULL)
+    this->the_worker->set_smc(this);
+  this->sequencer.set_worker(this->the_worker);
+  this->sequencer.schedule_parameters = another.sequencer.schedule_parameters.deep_copy();
   /*
    if (another.sequencer_parameters!=NULL)
    {
@@ -479,11 +489,30 @@ void SMC::weight_from_summaries_if_possible(const Index* index,
   arma::colvec weights(n);
   const FactorVariables* evaluator = current_particles.adaptive_summary_evaluator;
   const Parameters &schedule_parameters = this->sequencer.schedule_parameters;
+  std::vector<double> targets(n);
+  // in parallel when asked: each particle's value depends only on its own
+  // summary (no random numbers, nothing shared is written), so the values
+  // are the same in any order
+  size_t B = ((this->chunk_size == 0) || (this->chunk_size > n)) ? n : this->chunk_size;
+  size_t K = (B == 0) ? 0 : (n + B - 1)/B;
+  size_t stride = current_particles.adaptive_summaries.n_rows;
+  const double* summaries = current_particles.adaptive_summaries.memptr();
+  run_chunk_groups(0, K, this->parallel, this->number_of_threads,
+                   [&](size_t group, size_t first_chunk, size_t end_chunk)
+                   {
+                     size_t first = first_chunk*B;
+                     size_t last = std::min(n, end_chunk*B);
+                     if (last > first)
+                       evaluator->smcadaptive_from_summaries(index,
+                                                             summaries + first*stride,
+                                                             stride,
+                                                             last - first,
+                                                             schedule_parameters,
+                                                             targets.data() + first);
+                   });
   for (size_t i = 0; i < n; ++i)
   {
-    double a = evaluator->smcadaptive_from_summary(index,
-                                                   current_particles.adaptive_summaries.colptr(i),
-                                                   schedule_parameters);
+    double a = targets[i];
     double b = current_particles.adaptive_previous_targets[i];
     if (a==-arma::datum::inf)
       weights[i] = -arma::datum::inf;

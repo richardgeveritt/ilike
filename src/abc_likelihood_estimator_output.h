@@ -214,6 +214,12 @@ namespace ilike
   void adaptive_summary(double *values) const;
   double smcadaptive_from_summary(const double *values,
                                   const Parameters &parameters) const;
+  bool repoint_estimator(LikelihoodEstimator* estimator_in);
+  void smcadaptive_from_summaries(const double *values,
+                                  size_t stride,
+                                  size_t n,
+                                  const Parameters &parameters,
+                                  double *results) const;
     void compact_values(double *values) const;
     void write_compact_values(const std::string &directory_name,
                               const std::string &index,

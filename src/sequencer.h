@@ -85,6 +85,10 @@ namespace ilike
      */
     void find_desired_criterion(SMCOutput *current_state);
 
+    // The worker this sequencer weights through (after its SMC has been
+    // copied, B29).
+    void set_worker(SMCWorker *the_worker_in) { this->the_worker = the_worker_in; }
+
     void find_next_target_bisection(SMCOutput *current_state,
                                     const Index *index);
 

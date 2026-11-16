@@ -84,6 +84,11 @@ public:
   FactorVariables* simulate_factor_variables(const Parameters &simulated_parameters) const;
   bool supports_flat_generations(const Index* index) const;
   bool supports_flat_moves(const Index* index, const Index* other_index) const;
+  bool supports_parallel_chunks() const;
+  bool supports_parallel_copies() const;
+  void redirect_random_numbers(RandomNumberGenerator* rng_in,
+                               size_t* seed_in);
+  size_t number_of_likelihood_estimators() const { return this->likelihood_estimators.size(); }
 
   // The estimator for factor i (0-based).
   LikelihoodEstimator* get_likelihood_estimator(size_t i) const;

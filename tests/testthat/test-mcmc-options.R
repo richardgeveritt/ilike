@@ -69,8 +69,8 @@ test_that("unfinished MCMC options stop with a clear message", {
   expect_error(run_mcmc_fixture("test_gaussian_posterior.ilike", "test_mcmc_termination_se.ilike",
                                 "mcmc_se", list(theta = 1)),
                "ilike::se is not written yet")
-  # The parallel workers are disconnected (dev/plan.md section 3.1)
-  expect_error(run_mcmc_fixture("test_gaussian_posterior.ilike", "test_m_proposal_norm_rw.ilike",
-                                "mcmc_hmc", list(theta = 1), parallel = TRUE),
+  # Parallel runs exist for IS, SMC_with_MCMC, MCMC and PF (dev/plan.md 2.6a-b)
+  expect_error(ilike::EnKF(system.file("extdata", "test_ssm_one_line.ilike", package = "ilike"),
+                           number_of_ensemble_members = 10, parallel = TRUE),
                "parallel = TRUE is not available yet")
 })

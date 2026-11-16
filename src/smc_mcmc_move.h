@@ -410,6 +410,17 @@ protected:
   // every value are those of the per-particle path (one chunk); chunks of
   // chunk_size particles use their own streams, as in importance sampling.
   bool can_move_flat() const;
+  const Index* get_weighting_index() const { return this->index; }
+
+  // The per-particle (rich) move path in chunks (dev/plan.md 2.6b, G5): 0
+  // not possible (the worker's path), 1 the factors use no random numbers
+  // (shared by all chunks), 2 they include inner algorithms (one copy per
+  // group of chunks, each particle's inner runs drawing from a seed counter
+  // set from its chunk's stream).
+  int rich_chunk_mode() const;
+  void move_rich_in_chunks(Particles* next_particles,
+                           Particles* current_particles,
+                           bool copies);
   void move_flat(Particles* next_particles,
                  Particles* current_particles);
   void restore_particle(Particle &particle,

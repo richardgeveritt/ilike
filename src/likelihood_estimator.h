@@ -159,6 +159,26 @@ public:
   // neither.
   virtual bool supports_restore_from_summary() const { return false; }
   virtual bool supports_reinitialise() const { return false; }
+
+  // True if this estimator's outputs may be simulated and evaluated for
+  // different particles at the same time (dev/plan.md 2.6a, G4): they use no
+  // random numbers from the shared generator or seed counter, and change no
+  // shared state (the estimator, its data). Default: false (estimators that
+  // run an algorithm draw from the shared seed counter).
+  virtual bool supports_parallel_chunks() const { return false; }
+
+  // Parallel outer chunks with inner algorithms (dev/plan.md 2.6b, G5):
+  // supports_parallel_copies: a copy of this estimator (duplicate()), with
+  // its random numbers redirected (redirect_random_numbers), may run in one
+  // thread while other copies run in others, and the outputs it makes can be
+  // repointed to this estimator afterwards
+  // (LikelihoodEstimatorOutput::repoint_estimator). Default: true when no
+  // copy is needed at all (supports_parallel_chunks).
+  // redirect_random_numbers: draw from this generator and seed counter
+  // instead (this estimator and every estimator inside it).
+  virtual bool supports_parallel_copies() const { return this->supports_parallel_chunks(); }
+  virtual void redirect_random_numbers(RandomNumberGenerator* rng_in,
+                                       size_t* seed_in);
   
   Parameters algorithm_parameters;
   

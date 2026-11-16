@@ -143,6 +143,36 @@ LikelihoodEstimator* VectorFactors::get_likelihood_estimator(size_t i) const
   return this->likelihood_estimators[i];
 }
 
+bool VectorFactors::supports_parallel_copies() const
+{
+  for (auto i=this->likelihood_estimators.begin(); i!=this->likelihood_estimators.end(); ++i)
+  {
+    if ((*i==NULL) || !(*i)->supports_parallel_copies())
+      return false;
+  }
+  return true;
+}
+
+void VectorFactors::redirect_random_numbers(RandomNumberGenerator* rng_in,
+                                            size_t* seed_in)
+{
+  for (auto i=this->likelihood_estimators.begin(); i!=this->likelihood_estimators.end(); ++i)
+  {
+    if (*i!=NULL)
+      (*i)->redirect_random_numbers(rng_in, seed_in);
+  }
+}
+
+bool VectorFactors::supports_parallel_chunks() const
+{
+  for (auto i=this->likelihood_estimators.begin(); i!=this->likelihood_estimators.end(); ++i)
+  {
+    if ((*i==NULL) || !(*i)->supports_parallel_chunks())
+      return false;
+  }
+  return true;
+}
+
 bool VectorFactors::supports_flat_moves(const Index* index, const Index* other_index) const
 {
   if (index==NULL)

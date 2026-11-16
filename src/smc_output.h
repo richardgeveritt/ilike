@@ -112,6 +112,7 @@ public:
   void adaptive_summary(double *values) const;
   double smcadaptive_from_summary(const double *values,
                                   const Parameters &parameters) const;
+  bool repoint_estimator(LikelihoodEstimator* estimator_in);
   
   /**
    * @brief Performs the subsample simulate operation.

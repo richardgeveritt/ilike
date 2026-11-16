@@ -142,6 +142,10 @@ public:
 
   // restorable when the inner estimator is (dev/plan.md 2.6a, G3)
   bool supports_restore_from_summary() const;
+  bool supports_parallel_chunks() const;
+  bool supports_parallel_copies() const;
+  void redirect_random_numbers(RandomNumberGenerator* rng_in,
+                               size_t* seed_in);
   
   // double estimate_log_likelihood(const List &inputs,
   //                                const List &auxiliary_variables) const;

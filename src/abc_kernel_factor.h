@@ -128,6 +128,15 @@ namespace ilike
                                                   double distance,
                                                   double scale_constant) const = 0;
 
+    // The same at a given tolerance (the value of input[epsilon_variable][0]),
+    // so that many distances can be evaluated with one lookup of the
+    // tolerance (dev/plan.md 2.6b). evaluate_kernel_given_distance is this at
+    // get_epsilon(input): one copy of the expression.
+    virtual double evaluate_kernel_given_distance_at(double epsilon,
+                                                     double distance,
+                                                     double scale_constant) const = 0;
+    double get_epsilon(const Parameters &input) const { return input[this->epsilon_variable][0]; }
+
   protected:
     /**
      * @brief Creates a copy of the given ABCKernelFactor object.

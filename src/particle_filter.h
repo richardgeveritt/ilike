@@ -95,6 +95,12 @@ public:
    * @return The result.
    */
   LikelihoodEstimator* duplicate() const;
+
+  // G5 (dev/plan.md 2.6b): an inner particle filter can be copied per
+  // thread when what it keeps of a run outlives no rich particle (its stored
+  // generations are compacted, or none is stored) and its data model can
+  // be copied too.
+  bool supports_parallel_copies() const;
   
   MoveOutput* move(RandomNumberGenerator &rng,
                    const Particle &particle) const;
@@ -149,6 +155,22 @@ protected:
    * @brief Performs the increment time index operation.
    */
   void increment_time_index();
+
+  // Chunked moves and weights (dev/plan.md 2.6b, G5): when the data model
+  // uses no random numbers and keeps no run state, the particles are moved
+  // grain_size at a time, each chunk with its own random-number stream, and
+  // weighted by chunks; in parallel when parallel = TRUE. The transition
+  // kernels are only read (their data is set once per step, before the
+  // chunks).
+  bool can_move_in_chunks() const;
+  void move_in_chunks(Particles* next_particles,
+                      Particles* current_particles);
+  void weight_in_chunks(SMCOutput* current_state);
+  MoveOutput* move_with_data_set(RandomNumberGenerator &rng,
+                                 const Particle &particle) const;
+  MoveOutput* move_reusing_with_data_set(RandomNumberGenerator &rng,
+                                         const Particle &particle,
+                                         MoveOutput* spare) const;
   
   /**
    * @brief Class-specific implementation for run.

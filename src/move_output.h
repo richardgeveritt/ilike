@@ -116,6 +116,11 @@ public:
    * @return The result.
    */
   virtual size_t length() const=0;
+
+  // Make the factor variables of every particle held here belong to
+  // `factors` (an object equal to theirs; dev/plan.md 2.6b, G5). False if not
+  // possible (the default).
+  virtual bool repoint_to(const Factors* factors) { return false; }
   
   /**
    * @brief Closes any open file streams.

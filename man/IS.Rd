@@ -34,7 +34,7 @@ IS(
 
 \item{number_of_importance_points}{The number of importance points.}
 
-\item{parallel}{(optional) Set to true to perform the importance sampling in parallel, false for serial.}
+\item{parallel}{(optional) If TRUE, the chunks of grain_size points are simulated and weighted in parallel threads (the number set by RcppParallel::setThreadOptions). The results are exactly those of the sequential run with the same seed and grain_size. Needs a model written in C++ or with ilike:: built-in functions (not R, Python or Julia), a fixed target, and factors that do not estimate their likelihood with an inner algorithm; otherwise the run is sequential, with a warning.}
 
 \item{model_parameter_list}{(optional) A list containing parameters for the model.}
 

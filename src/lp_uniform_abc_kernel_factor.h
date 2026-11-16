@@ -94,6 +94,9 @@ public:
   double evaluate_kernel_given_distance(const Parameters &input,
                                         double distance,
                                         double scale_constant) const;
+  double evaluate_kernel_given_distance_at(double epsilon,
+                                           double distance,
+                                           double scale_constant) const;
   
   arma::mat likelihood_evaluate_gradient(const std::string &variable,
                                          const Parameters &input) const;

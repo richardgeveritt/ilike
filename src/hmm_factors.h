@@ -117,6 +117,14 @@ protected:
   void specific_change_data(Data* new_data);
   
   friend HMMFactorVariables;
+public:
+  // G5 (dev/plan.md 2.6b): the data-model estimators; the transition kernel
+  // is only read
+  bool supports_parallel_chunks() const;
+  bool supports_parallel_copies() const;
+  void redirect_random_numbers(RandomNumberGenerator* rng_in,
+                               size_t* seed_in);
+protected:
   // stored here
   /** @brief The transition kernel. */
   ProposalKernel* transition_kernel;

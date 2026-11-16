@@ -172,6 +172,7 @@ protected:
                                   const Parameters &parameters) const;
   void restore_from_summary(const double *values,
                             const Parameters &parameters);
+  bool repoint_estimator(LikelihoodEstimator* estimator_in);
   
   void compact_values(double *values) const;
   

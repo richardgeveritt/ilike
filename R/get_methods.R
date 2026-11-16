@@ -243,3 +243,31 @@ stop_if_parallel = function(parallel)
   if (isTRUE(parallel))
     stop("parallel = TRUE is not available yet: run with parallel = FALSE.")
 }
+
+# TRUE if the recipe, or a recipe nested in it (an algorithmic likelihood's
+# model), contains functions that call R (R expressions; R, Python or Julia
+# functions).
+recipe_uses_r_functions = function(recipe)
+{
+  if (!is.list(recipe))
+    return(FALSE)
+  if (isTRUE(recipe[["uses_r_functions"]]))
+    return(TRUE)
+  any(vapply(recipe, recipe_uses_r_functions, logical(1)))
+}
+
+# For parallel = TRUE in IS, SMC_with_MCMC and MCMC (dev/plan.md 2.6a, G4):
+# refuse models that call R (R is single-threaded), and pass on the number of
+# threads RcppParallel is set to use (RcppParallel::setThreadOptions).
+prepare_parallel = function(recipe, parallel)
+{
+  # the number of threads is passed even when parallel = FALSE: an inner
+  # particle filter may be asked to run in parallel (ilike::pf(..., TRUE))
+  threads = suppressWarnings(as.integer(Sys.getenv("RCPP_PARALLEL_NUM_THREADS", "")))
+  if (is.na(threads) || (threads < 1))
+    threads = RcppParallel::defaultNumThreads()
+  recipe$number_of_threads = threads
+  if (isTRUE(parallel) && recipe_uses_r_functions(recipe))
+    stop("parallel = TRUE needs a model written in C++ (or with ilike:: built-in functions): this model has functions written in R, Python or Julia, or R expressions, which cannot be called from parallel threads.")
+  recipe
+}

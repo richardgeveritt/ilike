@@ -256,6 +256,20 @@ protected:
     Rcpp::stop("LikelihoodEstimatorOutput::smcadaptive_from_summary: not available for this output.");
   }
 
+  // smcadaptive_from_summary for n points whose summaries are `stride`
+  // numbers apart (results[i] for values + i*stride): the same values, with
+  // what does not depend on the point (e.g. the tolerance) looked up once.
+  // Default: one call per point.
+  virtual void smcadaptive_from_summaries(const double *values,
+                                          size_t stride,
+                                          size_t n,
+                                          const Parameters &parameters,
+                                          double *results) const
+  {
+    for (size_t i = 0; i < n; ++i)
+      results[i] = this->smcadaptive_from_summary(values + i*stride, parameters);
+  }
+
   // Put this output in the state its last evaluation left it in (smcfixed
   // part, then the adaptive part at `parameters`), given that evaluation's
   // adaptive summary (dev/plan.md 2.6a, G3). Only for outputs whose
@@ -265,6 +279,12 @@ protected:
   {
     Rcpp::stop("LikelihoodEstimatorOutput::restore_from_summary: not available for this output.");
   }
+
+  // Make this output belong to `estimator` (an estimator equal to its own,
+  // e.g. the original of the copy that made it), and the same for every
+  // output inside it (dev/plan.md 2.6b, G5). False if not possible (the
+  // default).
+  virtual bool repoint_estimator(LikelihoodEstimator* estimator_in) { return false; }
   virtual void compact_values(double *values) const {}
   virtual void write_compact_values(const std::string &directory_name,
                                     const std::string &index,

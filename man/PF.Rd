@@ -22,7 +22,7 @@ PF(
   verify_cpp_function_types = FALSE,
   keep_temporary_recipe_code = FALSE,
   seed = NULL,
-  grain_size = 1e+05
+  grain_size = 64
 )
 }
 \arguments{
@@ -60,7 +60,7 @@ PF(
 
 \item{seed}{(optional) The seed for the random number generator.}
 
-\item{grain_size}{(optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).}
+\item{grain_size}{(optional) The number of particles moved and weighted together (default 64). Each chunk of particles has its own random-number stream, determined by the seed and the chunk's position, so results depend on the seed and on grain_size when there are more particles than grain_size (and not on whether the run is parallel).}
 }
 \value{
 Estimate of the marginal likelihood.

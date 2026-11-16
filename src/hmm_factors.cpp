@@ -293,4 +293,35 @@ Data* HMMFactors::get_current_data()
   
   return NULL;
 }
+
+bool HMMFactors::supports_parallel_chunks() const
+{
+  for (auto i=this->likelihood_estimators.begin(); i!=this->likelihood_estimators.end(); ++i)
+  {
+    if ((*i==NULL) || !(*i)->supports_parallel_chunks())
+      return false;
+  }
+  return true;
+}
+
+bool HMMFactors::supports_parallel_copies() const
+{
+  for (auto i=this->likelihood_estimators.begin(); i!=this->likelihood_estimators.end(); ++i)
+  {
+    if ((*i==NULL) || !(*i)->supports_parallel_copies())
+      return false;
+  }
+  return true;
+}
+
+void HMMFactors::redirect_random_numbers(RandomNumberGenerator* rng_in,
+                                         size_t* seed_in)
+{
+  for (auto i=this->likelihood_estimators.begin(); i!=this->likelihood_estimators.end(); ++i)
+  {
+    if (*i!=NULL)
+      (*i)->redirect_random_numbers(rng_in, seed_in);
+  }
+}
+
 }

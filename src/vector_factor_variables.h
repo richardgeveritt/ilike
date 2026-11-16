@@ -168,11 +168,19 @@ public:
   double smcadaptive_from_summary(const Index* index,
                                   const double* values,
                                   const Parameters &parameters) const;
+  void smcadaptive_from_summaries(const Index* index,
+                                  const double* values,
+                                  size_t stride,
+                                  size_t n,
+                                  const Parameters &parameters,
+                                  double* results) const;
 
   bool restore_from_summary(const Index* index,
                             const Index* other_index,
                             const double* values,
                             const Parameters &parameters);
+
+  bool repoint_to(const Factors* factors);
 
   bool has_compact_values() const;
   size_t number_of_compact_values() const;

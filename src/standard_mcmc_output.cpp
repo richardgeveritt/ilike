@@ -379,4 +379,17 @@ Parameters StandardMCMCOutput::get_current_algorithm_parameters() const
 {
   return this->algorithm_parameters.back();
 }
+
+bool StandardMCMCOutput::repoint_to(const Factors* factors)
+{
+  if ((this->current.factor_variables!=NULL) && !this->current.factor_variables->repoint_to(factors))
+    return false;
+  for (auto i = this->output.begin(); i != this->output.end(); ++i)
+  {
+    if ((i->factor_variables!=NULL) && !i->factor_variables->repoint_to(factors))
+      return false;
+  }
+  return true;
+}
+
 }

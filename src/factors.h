@@ -102,6 +102,15 @@ public:
   // NULL), the estimators of index support restore_from_summary and those of
   // other_index support reinitialise (dev/plan.md 2.6a, G3). Default: false.
   virtual bool supports_flat_moves(const Index* index, const Index* other_index) const { return false; }
+
+  // True if every estimator supports_parallel_chunks (G4). Default: false.
+  virtual bool supports_parallel_chunks() const { return false; }
+
+  // G5: every estimator supports_parallel_copies; redirect every estimator's
+  // random numbers. Defaults: no; nothing.
+  virtual bool supports_parallel_copies() const { return false; }
+  virtual void redirect_random_numbers(RandomNumberGenerator* rng_in,
+                                       size_t* seed_in) {}
   
   /*
    virtual FactorVariables* simulate_factor_variables(const Parameters &simulated_parameters,

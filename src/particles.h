@@ -370,6 +370,11 @@ public:
   bool adaptive_summaries_used = false;
   Parameters last_trial_schedule;
   bool prepare_adaptive_summaries(const Index* index);
+
+  // Make the factor-variables objects of a flat generation belong to
+  // `factors` (G5); false if the generation holds rich particles.
+  bool repoint_flat_to(const Factors* factors,
+                       const Index* index = NULL);
   void forget_adaptive_summaries();
   
   /**

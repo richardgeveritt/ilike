@@ -44,6 +44,17 @@ public:
   void set_compact_stored_output(bool compact_stored_output_in) { this->compact_stored_output = compact_stored_output_in; }
   void set_chunk_size(size_t chunk_size_in) { this->chunk_size = chunk_size_in; }
   void set_force_rich_generations(bool force_rich_generations_in) { this->force_rich_generations = force_rich_generations_in; }
+  void set_number_of_threads(size_t number_of_threads_in) { this->number_of_threads = number_of_threads_in; }
+  // parallel = TRUE was asked for but some step ran sequentially (G4)
+  bool parallel_was_refused() const { return this->parallel_refused; }
+  // The index over which this SMC weights (for repointing a flat
+  // generation's summaries to it, G5); NULL if none.
+  virtual const Index* get_weighting_index() const { return NULL; }
+  // True if, as an estimator inside a factor, this SMC reweights its single
+  // generation at a target set by the caller each time (the importance
+  // sampler of an ABC likelihood with a tolerance sequence, C62); then its
+  // output's adaptive summary is that generation's summaries (G2/G5).
+  virtual bool reweights_at_caller_target() const { return false; }
   
   /**
    * @brief Performs the smc operation.
@@ -520,6 +531,14 @@ protected:
 
   // Testing switch (recipe$force_rich_generations): never use the flat form.
   bool force_rich_generations = false;
+
+  // Parallel runs (dev/plan.md 2.6a, G4): the R argument parallel, and the
+  // number of threads to share the chunks between (the recipe's
+  // number_of_threads, from RcppParallel's setting). Results are those of the
+  // sequential run with the same seed and chunk size.
+  bool parallel = false;
+  size_t number_of_threads = 1;
+  bool parallel_refused = false;
 
   //Parameters single_particle_is_step() const;
   

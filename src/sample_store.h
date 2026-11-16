@@ -51,6 +51,16 @@ public:
   void append(const Parameters &parameters,
               const double *extra_values = NULL);
 
+  // For filling a store from several threads (dev/plan.md 2.6a, G4): fix
+  // the layout from `parameters` (if not yet fixed) and make the store hold
+  // number_of_points points (contents undefined until set); then set_point
+  // writes point i. set_point touches only column i (and its extra values),
+  // reads only shared state, and may be called concurrently for different i.
+  void prepare(const Parameters &parameters, size_t number_of_points);
+  void set_point(size_t i,
+                 const Parameters &parameters,
+                 const double *extra_values = NULL);
+
   size_t size() const;
   bool empty() const;
   void reserve(size_t number_of_points);
@@ -120,6 +130,8 @@ protected:
   // only). Checked by name on every use; a miss searches and updates it.
   std::vector<size_t> vector_positions;
   const arma::mat& find_vector_variable(const Parameters &parameters, size_t k);
+  // the same without the cache (no member is changed)
+  const arma::mat& lookup_vector_variable(const Parameters &parameters, size_t k) const;
 
   // (total_dimension x capacity) and (number_of_extra_columns x capacity):
   // one column per point

@@ -3,6 +3,7 @@
 #include <sstream>
 #include "smc_output.h"
 #include "factor_variables.h"
+#include "utils.h"
 #include "smc.h"
 #include "importance_sampler.h"
 #include "smc_mcmc_move.h"
@@ -823,18 +824,98 @@ void SMCOutput::print(std::ostream &os) const
 // part leaves log_likelihood as the smcfixed part set it.
 int SMCOutput::adaptive_summary_size() const
 {
-  return this->estimator->smcfixed_flag ? 1 : -1;
+  // smcfixed: the adaptive part leaves log_likelihood as the smcfixed part
+  // set it. An importance sampler reweighted at the caller's target (the ABC
+  // likelihood under a tolerance sequence): its single flat generation's
+  // summaries — the number of values per point s, then each point's s
+  // values, its previous target and its previous normalised log weight —
+  // from which smcadaptive_from_summary computes the log normalising
+  // constant at a trial target exactly as the reweighting would
+  // (ImportanceSampler::evaluate_smcadaptive_part_given_smcfixed_smc with
+  // weight_from_summaries_if_possible, update_weights and
+  // calculate_log_normalising_constant).
+  if (this->estimator->smcfixed_flag)
+    return 1;
+  if (!this->estimator->reweights_at_caller_target() || (this->all_particles.size() != 1))
+    return -1;
+  const Particles &generation = this->all_particles.back();
+  size_t N = generation.size();
+  if (!generation.is_flat() || (generation.adaptive_summary_state != 1) ||
+      (generation.adaptive_summary_evaluator == NULL) ||
+      (generation.adaptive_previous_targets.n_elem != N) ||
+      (generation.previous_normalised_log_weights.n_elem != N))
+    return -1;
+  return int(1 + generation.adaptive_summaries.n_rows*N + 2*N);
 }
 
 void SMCOutput::adaptive_summary(double *values) const
 {
-  values[0] = this->log_likelihood;
+  if (this->estimator->smcfixed_flag)
+  {
+    values[0] = this->log_likelihood;
+    return;
+  }
+  const Particles &generation = this->all_particles.back();
+  size_t N = generation.size();
+  size_t s = generation.adaptive_summaries.n_rows;
+  values[0] = double(s);
+  std::copy(generation.adaptive_summaries.memptr(), generation.adaptive_summaries.memptr() + s*N, values + 1);
+  std::copy(generation.adaptive_previous_targets.memptr(), generation.adaptive_previous_targets.memptr() + N, values + 1 + s*N);
+  std::copy(generation.previous_normalised_log_weights.memptr(), generation.previous_normalised_log_weights.memptr() + N, values + 1 + s*N + N);
 }
 
 double SMCOutput::smcadaptive_from_summary(const double *values,
-                                     const Parameters &parameters) const
+                                           const Parameters &parameters) const
 {
-  return values[0];
+  if (this->estimator->smcfixed_flag)
+    return values[0];
+  // this output's own generation supplies the evaluator (factor variables of
+  // the inner sampler's factors) and the index; the numbers come from values
+  const Particles &generation = this->all_particles.back();
+  const FactorVariables* evaluator = generation.adaptive_summary_evaluator;
+  const Index* index = generation.adaptive_summary_index;
+  size_t N = generation.size();
+  size_t s = size_t(values[0]);
+  const double *summaries = values + 1;
+  const double *previous_targets = values + 1 + s*N;
+  const double *previous_weights = values + 1 + s*N + N;
+  arma::colvec weights(N);
+  std::vector<double> targets(N);
+  if (N > 0)
+    evaluator->smcadaptive_from_summaries(index, summaries, s, N, parameters, targets.data());
+  for (size_t i = 0; i < N; ++i)
+  {
+    double a = targets[i];
+    if (a==-arma::datum::inf)
+      weights[i] = -arma::datum::inf;
+    else
+      weights[i] = a - previous_targets[i];
+  }
+  // as Particles::update_weights and calculate_log_normalising_constant
+  arma::colvec previous(const_cast<double*>(previous_weights), N, false, true);
+  arma::colvec unnormalised = previous + weights;
+  return log_sum_exp(unnormalised);
+}
+
+bool SMCOutput::repoint_estimator(LikelihoodEstimator* estimator_in)
+{
+  // the stored generations must hold no rich particles (they would point to
+  // the copy's factors): compacted, flat, or none
+  SMC* smc = dynamic_cast<SMC*>(estimator_in);
+  if (smc == NULL)
+    return false;
+  for (auto g = this->all_particles.begin(); g != this->all_particles.end(); ++g)
+  {
+    if (!g->repoint_flat_to(smc->factors, smc->get_weighting_index()))
+      return false;
+  }
+  for (auto g = this->all_proposed.begin(); g != this->all_proposed.end(); ++g)
+  {
+    if (g->size() > 0)
+      return false;
+  }
+  this->estimator = smc;
+  return true;
 }
 
 }
