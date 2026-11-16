@@ -12,7 +12,7 @@ StandardMCMCOutput::StandardMCMCOutput()
 :MoveOutput()
 {
   this->iteration_counter = 0;
-  this->termination = NULL;
+  this->termination.reset();
   this->storage_decided = false;
   this->rich_storage = false;
   this->thin = 1;
@@ -22,7 +22,7 @@ StandardMCMCOutput::StandardMCMCOutput()
 StandardMCMCOutput::StandardMCMCOutput(MCMCTermination* termination_in)
 {
   this->iteration_counter = 0;
-  this->termination = termination_in;
+  this->termination.reset(termination_in);
   this->storage_decided = false;
   this->rich_storage = false;
   this->thin = 1;
@@ -37,8 +37,7 @@ StandardMCMCOutput::StandardMCMCOutput(MCMCTermination* termination_in)
 
 StandardMCMCOutput::~StandardMCMCOutput()
 {
-  if (this->termination!=NULL)
-    delete this->termination;
+  this->termination.reset();
 }
 
 //Copy constructor for the StandardMCMCOutput class.
@@ -54,8 +53,7 @@ void StandardMCMCOutput::operator=(const StandardMCMCOutput &another)
     return;
   }
   
-  if (this->termination!=NULL)
-    delete this->termination;
+  this->termination.reset();
   
   MoveOutput::operator=(another);
   this->make_copy(another);
@@ -64,9 +62,9 @@ void StandardMCMCOutput::operator=(const StandardMCMCOutput &another)
 void StandardMCMCOutput::make_copy(const StandardMCMCOutput &another)
 {
   if (another.termination!=NULL)
-    this->termination = another.termination->duplicate();
+    this->termination.reset(another.termination->duplicate());
   else
-    this->termination = NULL;
+    this->termination.reset();
   
   this->iteration_counter = another.iteration_counter;
   this->algorithm_parameters = another.algorithm_parameters;

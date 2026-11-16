@@ -28,14 +28,14 @@ DensityLikelihoodEstimatorOutput::DensityLikelihoodEstimatorOutput(DensityLikeli
   this->estimator = estimator_in;
   
   if (density_estimator_in!=NULL)
-    this->density_estimator_output = density_estimator_in->initialise();
+    this->density_estimator_output.reset(density_estimator_in->initialise());
   else
-    this->density_estimator_output = NULL;
+    this->density_estimator_output.reset();
   
   if (subsample_density_estimator_in!=NULL)
-    this->subsample_density_estimator_output = subsample_density_estimator_in->initialise();
+    this->subsample_density_estimator_output.reset(subsample_density_estimator_in->initialise());
   else
-    this->subsample_density_estimator_output = NULL;
+    this->subsample_density_estimator_output.reset();
   //this->density_estimator = this->estimator->density_estimator->duplicate();
   
   this->log_likelihood_smcfixed_part = 0.0;
@@ -94,14 +94,14 @@ LikelihoodEstimatorOutput* DensityLikelihoodEstimatorOutput::duplicate() const
 void DensityLikelihoodEstimatorOutput::make_copy(const DensityLikelihoodEstimatorOutput &another)
 {
   if (another.density_estimator_output!=NULL)
-    this->density_estimator_output = another.density_estimator_output->duplicate();
+    this->density_estimator_output.reset(another.density_estimator_output->duplicate());
   else
-    this->density_estimator_output = NULL;
+    this->density_estimator_output.reset();
   
   if (another.subsample_density_estimator_output!=NULL)
-    this->subsample_density_estimator_output = another.subsample_density_estimator_output->duplicate();
+    this->subsample_density_estimator_output.reset(another.subsample_density_estimator_output->duplicate());
   else
-    this->subsample_density_estimator_output = NULL;
+    this->subsample_density_estimator_output.reset();
   
   this->estimator = another.estimator;
   this->log_likelihood_smcfixed_part = another.log_likelihood_smcfixed_part;

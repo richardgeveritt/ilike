@@ -192,7 +192,7 @@ protected:
   
   // Stored here.
   /** @brief The the worker. */
-  EnsembleKalmanWorker* the_worker;
+  std::unique_ptr<EnsembleKalmanWorker> the_worker;
   
   /**
    * @brief Performs the ensemble kalman initialise operation.
@@ -310,15 +310,15 @@ protected:
   
   // stored here
   /** @brief The proposal. */
-  IndependentProposalKernel* proposal;
+  std::unique_ptr<IndependentProposalKernel> proposal;
   
   // stored here
   /** @brief The ensemble factors. */
-  EnsembleFactors* ensemble_factors;
+  std::unique_ptr<EnsembleFactors> ensemble_factors;
   
   // stored here
   /** @brief The ensemble shifter. */
-  EnsembleShifter* ensemble_shifter;
+  std::unique_ptr<EnsembleShifter> ensemble_shifter;
   
   //EnsembleKalmanUpdater* updater;
   //EnsembleKalmanPredictor* predictor;

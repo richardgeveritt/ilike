@@ -64,23 +64,18 @@ KalmanFilter::KalmanFilter(Data* data_in,
   this->current_time = initial_time_in;
   this->current_index = this->first_index;
   this->last_index_is_fixed = last_index_is_fixed_in;
-  this->updaters = updaters_in;
-  this->predictor = predictor_in;
+  // takes ownership
+  this->updaters.clear();
+  for (auto i=updaters_in.begin(); i!=updaters_in.end(); ++i)
+    this->updaters.emplace_back(*i);
+  this->predictor.reset(predictor_in);
   this->results_name = results_name_in;
 }
 
 KalmanFilter::~KalmanFilter()
 {
-  for (auto i=this->updaters.begin();
-       i!=this->updaters.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
   
-  if (this->predictor!=NULL)
-    delete this->predictor;
+  this->predictor.reset();
 }
 
 //Copy constructor for the KalmanFilter class.
@@ -95,18 +90,9 @@ void KalmanFilter::operator=(const KalmanFilter &another)
   if(this == &another){ //if a==a
     return;
   }
-  
-  for (auto i=this->updaters.begin();
-       i!=this->updaters.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
   this->updaters.clear();
   
-  if (this->predictor!=NULL)
-    delete this->predictor;
+  this->predictor.reset();
   
   LikelihoodEstimator::operator=(another);
   this->make_copy(another);
@@ -146,15 +132,15 @@ void KalmanFilter::make_copy(const KalmanFilter &another)
        ++i)
   {
     if (*i!=NULL)
-      this->updaters.push_back((*i)->duplicate());
+      this->updaters.emplace_back((*i)->duplicate());
     else
-      this->updaters.push_back(NULL);
+      this->updaters.emplace_back(nullptr);
   }
   
   if (another.predictor!=NULL)
-    this->predictor = another.predictor->duplicate();
+    this->predictor.reset(another.predictor->duplicate());
   else
-    this->predictor = NULL;
+    this->predictor.reset();
 }
 
 // double KalmanFilter::estimate_log_likelihood(const List &inputs,

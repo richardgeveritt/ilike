@@ -22,7 +22,10 @@ Particles::Particles(size_t number_of_particles_in)
 
 Particles::Particles(const std::vector< MoveOutput* > &particles_in)
 {
-  this->particles = particles_in;
+  // takes ownership of the moved points
+  this->particles.reserve(particles_in.size());
+  for (auto i = particles_in.begin(); i != particles_in.end(); ++i)
+    this->particles.emplace_back(*i);
   this->resampling_variables = arma::colvec(this->particles.size());
   this->ancestor_variables = std::vector<size_t>(this->particles.size());
   this->unnormalised_log_weights = arma::colvec(this->particles.size());
@@ -214,32 +217,13 @@ Particles::Particles(Particles &&another)
 
 Particles::~Particles()
 {
-  for (std::vector<MoveOutput*>::iterator i=this->particles.begin();
-       i!=this->particles.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
-  for (auto i=this->spare.begin(); i!=this->spare.end(); ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
   this->clear_flat();
 }
 
 void Particles::clear_flat()
 {
-  for (auto i=this->flat_factor_variables.begin(); i!=this->flat_factor_variables.end(); ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
   this->flat_factor_variables.clear();
-  if (this->flat_record_writer!=NULL)
-    delete this->flat_record_writer;
-  this->flat_record_writer = NULL;
+  this->flat_record_writer.reset();
   this->flat_points = SampleStore();
   this->flat_final_points = SampleStore();
   this->flat_output_lengths.clear();
@@ -248,9 +232,7 @@ void Particles::clear_flat()
   this->flat_size = 0;
   this->flat = false;
   this->forget_adaptive_summaries();
-  if (this->flat_summary_evaluator!=NULL)
-    delete this->flat_summary_evaluator;
-  this->flat_summary_evaluator = NULL;
+  this->flat_summary_evaluator.reset();
 }
 
 void Particles::forget_adaptive_summaries()
@@ -298,7 +280,7 @@ bool Particles::prepare_adaptive_summaries(const Index* index)
   size_t N = this->particles.size();
   if (this->flat || (N == 0) || (index == NULL))
     return false;
-  const FactorVariables* first = this->particles[0]->back().factor_variables;
+  const FactorVariables* first = this->particles[0]->back().factor_variables.get();
   if (first == NULL)
     return false;
   int n = first->adaptive_summary_size(index);
@@ -328,7 +310,7 @@ MoveOutput* Particles::take_spare()
 {
   if (this->spare.empty())
     return NULL;
-  MoveOutput* output = this->spare.back();
+  MoveOutput* output = this->spare.back().release();
   this->spare.pop_back();
   return output;
 }
@@ -337,14 +319,6 @@ Particles& Particles::operator=(const Particles &another)
 {
   if(this == &another)
     return *this;
-  
-  for (std::vector<MoveOutput*>::iterator i=this->particles.begin();
-       i!=this->particles.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
   
   this->particles.clear();
   
@@ -358,20 +332,7 @@ Particles& Particles::operator=(Particles &&another)
   if(this == &another)
     return *this;
   
-  for (std::vector<MoveOutput*>::iterator i=this->particles.begin();
-       i!=this->particles.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
-  
   this->particles.clear();
-  for (auto i=this->spare.begin(); i!=this->spare.end(); ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
   this->spare.clear();
   
   this->make_copy(std::move(another));
@@ -397,13 +358,13 @@ void Particles::reserve(size_t number_of_particles_in)
  {
  MoveOutput* single_particle = new SinglePointMoveOutput(parameters_in,
  factors_in);
- this->particles.push_back(single_particle);
+ this->particles.emplace_back(single_particle);
  }
  
  void Particles::push_back(const Particle &particle_in)
  {
  MoveOutput* single_particle = new SinglePointMoveOutput(particle_in);
- this->particles.push_back(single_particle);
+ this->particles.emplace_back(single_particle);
  }
  */
 
@@ -417,13 +378,13 @@ void Particles::push_back(Parameters &&parameters_in,
                                                           factors_in,
                                                           proposals_to_transform_for_in,
                                                           proposals_to_find_gradient_for_in);
-  this->particles.push_back(single_particle);
+  this->particles.emplace_back(single_particle);
 }
 
 void Particles::push_back(Particle &&particle_in)
 {
   MoveOutput* single_particle = new SinglePointMoveOutput(std::move(particle_in));
-  this->particles.push_back(single_particle);
+  this->particles.emplace_back(single_particle);
 }
 
 void Particles::push_back(const Parameters &parameters_in,
@@ -436,24 +397,24 @@ void Particles::push_back(const Parameters &parameters_in,
                                                           factors_in,
                                                           proposals_to_transform_for_in,
                                                           proposals_to_find_gradient_for_in);
-  this->particles.push_back(single_particle);
+  this->particles.emplace_back(single_particle);
 }
 
 void Particles::push_back(const Particle &particle_in)
 {
   MoveOutput* single_particle = new SinglePointMoveOutput(particle_in);
-  this->particles.push_back(single_particle);
+  this->particles.emplace_back(single_particle);
 }
 
 void Particles::push_back(MoveOutput* move_output_in)
 {
-  this->particles.push_back(move_output_in);
+  this->particles.emplace_back(move_output_in);
 }
 
 Particle* Particles::add_particle()
 {
   MoveOutput* single_particle = new SinglePointMoveOutput();
-  this->particles.push_back(single_particle);
+  this->particles.emplace_back(single_particle);
   return &this->particles.back()->back();
 }
 
@@ -478,14 +439,14 @@ void Particles::make_copy(const Particles &another)
 {
   this->particles.resize(0);
   this->particles.reserve(another.particles.size());
-  for (std::vector<MoveOutput*>::const_iterator i=another.particles.begin();
+  for (auto i=another.particles.begin();
        i!=another.particles.end();
        ++i)
   {
     if (*i!=NULL)
-      this->particles.push_back((*i)->duplicate());
+      this->particles.emplace_back((*i)->duplicate());
     else
-      this->particles.push_back(NULL);
+      this->particles.emplace_back(nullptr);
   }
   
   this->resampling_variables = another.resampling_variables;
@@ -509,13 +470,13 @@ void Particles::make_copy(const Particles &another)
   this->flat_factor_variables.reserve(another.flat_factor_variables.size());
   for (auto i=another.flat_factor_variables.begin(); i!=another.flat_factor_variables.end(); ++i)
   {
-    FactorVariables* copy = (*i)->duplicate();
+    std::unique_ptr<FactorVariables> copy((*i)->duplicate());
     copy->set_particle(NULL);
-    this->flat_factor_variables.push_back(copy);
+    this->flat_factor_variables.push_back(std::move(copy));
   }
   if (another.flat_record_writer!=NULL)
   {
-    this->flat_record_writer = another.flat_record_writer->duplicate();
+    this->flat_record_writer.reset(another.flat_record_writer->duplicate());
     this->flat_record_writer->set_particle(NULL);
   }
   if (another.flat)
@@ -530,10 +491,10 @@ void Particles::make_copy(const Particles &another)
     this->last_trial_schedule = another.last_trial_schedule.deep_copy();
     if (another.flat_summary_evaluator!=NULL)
     {
-      this->flat_summary_evaluator = another.flat_summary_evaluator->duplicate();
+      this->flat_summary_evaluator.reset(another.flat_summary_evaluator->duplicate());
       this->flat_summary_evaluator->set_particle(NULL);
     }
-    this->adaptive_summary_evaluator = this->flat_summary_evaluator;
+    this->adaptive_summary_evaluator = this->flat_summary_evaluator.get();
   }
 }
 
@@ -543,15 +504,7 @@ void Particles::make_copy(Particles &&another)
   another.spare.clear();
   this->particles.resize(0);
   this->particles.reserve(another.particles.size());
-  for (std::vector<MoveOutput*>::const_iterator i=another.particles.begin();
-       i!=another.particles.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      this->particles.push_back(*i);
-    else
-      this->particles.push_back(NULL);
-  }
+  this->particles = std::move(another.particles);
   
   this->resampling_variables = std::move(another.resampling_variables);
   this->ancestor_variables = std::move(another.ancestor_variables);
@@ -564,7 +517,7 @@ void Particles::make_copy(Particles &&another)
   this->schedule_parameters = std::move(another.schedule_parameters);
   this->ess = std::move(another.ess);
   
-  another.particles = std::vector<MoveOutput*>();
+  another.particles.clear();
   another.resampling_variables = arma::colvec();
   another.ancestor_variables = std::vector<size_t>();
   another.unnormalised_log_weights = arma::colvec();
@@ -584,9 +537,8 @@ void Particles::make_copy(Particles &&another)
   this->flat_records_from_summaries = another.flat_records_from_summaries;
   this->flat_incremental_log_weights = std::move(another.flat_incremental_log_weights);
   this->flat_factor_variables = std::move(another.flat_factor_variables);
-  this->flat_record_writer = another.flat_record_writer;
+  this->flat_record_writer = std::move(another.flat_record_writer);
   another.flat_factor_variables.clear();
-  another.flat_record_writer = NULL;
   if (another.flat)
   {
     this->adaptive_summaries = std::move(another.adaptive_summaries);
@@ -595,9 +547,8 @@ void Particles::make_copy(Particles &&another)
     this->adaptive_summary_state = another.adaptive_summary_state;
     this->adaptive_summaries_used = another.adaptive_summaries_used;
     this->last_trial_schedule = std::move(another.last_trial_schedule);
-    this->flat_summary_evaluator = another.flat_summary_evaluator;
-    this->adaptive_summary_evaluator = this->flat_summary_evaluator;
-    another.flat_summary_evaluator = NULL;
+    this->flat_summary_evaluator = std::move(another.flat_summary_evaluator);
+    this->adaptive_summary_evaluator = this->flat_summary_evaluator.get();
   }
   another.clear_flat();
 }
@@ -625,25 +576,25 @@ static void stop_if_flat(bool flat)
 MoveOutput* Particles::operator[](const size_t &i)
 {
   stop_if_flat(this->flat);
-  return(this->particles[i]);
+  return(this->particles[i].get());
 }
 
 MoveOutput* Particles::operator[](const size_t &i) const
 {
   stop_if_flat(this->flat);
-  return(this->particles[i]);
+  return(this->particles[i].get());
 }
 
 MoveOutput* Particles::back()
 {
   stop_if_flat(this->flat);
-  return this->particles.back();
+  return this->particles.back().get();
 }
 
 MoveOutput* Particles::back() const
 {
   stop_if_flat(this->flat);
-  return this->particles.back();
+  return this->particles.back().get();
 }
 
 size_t Particles::size() const
@@ -788,7 +739,7 @@ void Particles::close_ofstreams()
 
 void Particles::set_previous_target_evaluated_to_target_evaluated()
 {
-  for (std::vector< MoveOutput* >::iterator i = this->particles.begin();
+  for (auto i = this->particles.begin();
        i != this->particles.end();
        ++i)
   {
@@ -799,7 +750,7 @@ void Particles::set_previous_target_evaluated_to_target_evaluated()
 
 void Particles::subsample_set_previous_target_evaluated_to_target_evaluated()
 {
-  for (std::vector< MoveOutput* >::iterator i = this->particles.begin();
+  for (auto i = this->particles.begin();
        i != this->particles.end();
        ++i)
   {

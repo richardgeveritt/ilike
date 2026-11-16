@@ -8,7 +8,7 @@ namespace ilike
 {
 LikelihoodEstimator::LikelihoodEstimator()
 {
-  this->factors = NULL;
+  this->factors.reset();
 }
 
 LikelihoodEstimator::LikelihoodEstimator(RandomNumberGenerator* rng_in,
@@ -24,14 +24,13 @@ LikelihoodEstimator::LikelihoodEstimator(RandomNumberGenerator* rng_in,
   this->seed = seed_in;
   this->smcfixed_flag = smcfixed_flag_in;
   this->subsampler = NULL;
-  this->factors = NULL;
+  this->factors.reset();
   this->algorithm_parameters = algorithm_parameters_in;
 }
 
 LikelihoodEstimator::~LikelihoodEstimator()
 {
-  if (this->factors!=NULL)
-    delete this->factors;
+  this->factors.reset();
 }
 
 LikelihoodEstimator::LikelihoodEstimator(const LikelihoodEstimator &another)
@@ -44,8 +43,7 @@ void LikelihoodEstimator::operator=(const LikelihoodEstimator &another)
   if(this == &another)
     return;
   
-  if (this->factors!=NULL)
-    delete this->factors;
+  this->factors.reset();
   
   this->make_copy(another);
 }
@@ -60,9 +58,9 @@ void LikelihoodEstimator::make_copy(const LikelihoodEstimator &another)
   this->subsampler = another.subsampler;
   this->smcfixed_flag = another.smcfixed_flag;
   if (another.factors!=NULL)
-    this->factors = another.factors->duplicate();
+    this->factors.reset(another.factors->duplicate());
   else
-    this->factors = NULL;
+    this->factors.reset();
   this->algorithm_parameters = another.algorithm_parameters;
 }
 

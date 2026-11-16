@@ -2,6 +2,7 @@
 #define LANGEVINPROPOSALKERNEL_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -230,11 +231,11 @@ protected:
   
   // stored here
   /** @brief The gradient estimator. */
-  GradientEstimator* gradient_estimator;
+  std::unique_ptr<GradientEstimator> gradient_estimator;
   
   // stored here
   /** @brief The index. */
-  Index* index;
+  std::unique_ptr<Index> index;
   
 };
 }

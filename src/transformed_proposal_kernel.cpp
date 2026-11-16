@@ -9,14 +9,13 @@ namespace ilike
 TransformedProposalKernel::TransformedProposalKernel()
 :ProposalKernel()
 {
-  this->proposal = NULL;
+  this->proposal.reset();
   this->distribution_on_transformed_space = true;
 }
 
 TransformedProposalKernel::~TransformedProposalKernel()
 {
-  if (this->proposal!=NULL)
-    delete this->proposal;
+  this->proposal.reset();
 }
 
 TransformedProposalKernel::TransformedProposalKernel(ProposalKernel* proposal_in,
@@ -24,7 +23,7 @@ TransformedProposalKernel::TransformedProposalKernel(ProposalKernel* proposal_in
                                                      bool distribution_on_transformed_space_in)
 :ProposalKernel(), transform(transform_in), distribution_on_transformed_space(distribution_on_transformed_space_in)
 {
-  this->proposal = proposal_in;
+  this->proposal.reset(proposal_in);
 }
 
 TransformedProposalKernel::TransformedProposalKernel(const TransformedProposalKernel &another)
@@ -38,8 +37,7 @@ void TransformedProposalKernel::operator=(const TransformedProposalKernel &anoth
   if(this == &another)
     return;
   
-  if (this->proposal!=NULL)
-    delete this->proposal;
+  this->proposal.reset();
   
   ProposalKernel::operator=(another);
   this->make_copy(another);
@@ -58,9 +56,9 @@ ProposalKernel* TransformedProposalKernel::proposal_kernel_duplicate() const
 void TransformedProposalKernel::make_copy(const TransformedProposalKernel &another)
 {
   if (another.proposal!=NULL)
-    this->proposal = another.proposal->proposal_kernel_duplicate();
+    this->proposal.reset(another.proposal->proposal_kernel_duplicate());
   else
-    this->proposal = NULL;
+    this->proposal.reset();
   
   this->transform = another.transform;
   this->distribution_on_transformed_space = another.distribution_on_transformed_space;

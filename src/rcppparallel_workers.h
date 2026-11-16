@@ -30,7 +30,7 @@ public:
   
   void operator()(std::size_t begin, std::size_t end);
   
-  std::vector< MoveOutput* >* particles_pointer;
+  std::vector<std::unique_ptr<MoveOutput>>* particles_pointer;
   
 private:
   
@@ -57,7 +57,7 @@ public:
   
   void operator()(std::size_t begin, std::size_t end);
   
-  std::vector< MoveOutput* >* particles_pointer;
+  std::vector<std::unique_ptr<MoveOutput>>* particles_pointer;
   
   const Parameters* conditioned_on_parameters_pointer;
   
@@ -86,7 +86,7 @@ public:
   
   void operator()(std::size_t begin, std::size_t end);
   
-  std::vector< MoveOutput* >* particles_pointer;
+  std::vector<std::unique_ptr<MoveOutput>>* particles_pointer;
   
 private:
   
@@ -113,7 +113,7 @@ public:
   
   void operator()(std::size_t begin, std::size_t end);
   
-  std::vector< MoveOutput* >* particles_pointer;
+  std::vector<std::unique_ptr<MoveOutput>>* particles_pointer;
   
   const Parameters* conditioned_on_parameters_pointer;
   
@@ -143,7 +143,7 @@ public:
   
   void operator()(std::size_t begin, std::size_t end);
   
-  std::vector< MoveOutput* >* particles_pointer;
+  std::vector<std::unique_ptr<MoveOutput>>* particles_pointer;
   const Particles* current_particles_pointer;
   
 private:
@@ -172,7 +172,7 @@ public:
   
   void operator()(std::size_t begin, std::size_t end);
   
-  std::vector< MoveOutput* >* particles_pointer;
+  std::vector<std::unique_ptr<MoveOutput>>* particles_pointer;
   const Particles* current_particles_pointer;
   
 private:
@@ -262,7 +262,7 @@ public:
   
   std::vector<double> my_log_unnormalised_incremental_weights;
   const Index* index_pointer;
-  std::vector< MoveOutput* >* current_particles_pointer;
+  std::vector<std::unique_ptr<MoveOutput>>* current_particles_pointer;
   //Particles* current_particles_pointer;
   
 private:
@@ -293,7 +293,7 @@ public:
   
   std::vector<double> my_log_unnormalised_incremental_weights;
   const Index* index_pointer;
-  std::vector< MoveOutput* >* current_particles_pointer;
+  std::vector<std::unique_ptr<MoveOutput>>* current_particles_pointer;
   
 private:
   

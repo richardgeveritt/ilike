@@ -2,6 +2,7 @@
 #define ProposalKernel_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -386,15 +387,18 @@ protected:
   
   // stored here
   /** @brief The mcmc adaptor. */
-  MCMCAdaptor* mcmc_adaptor;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<MCMCAdaptor> mcmc_adaptor;
   
   // stored here
   /** @brief The smc adaptor. */
-  SMCAdaptor* smc_adaptor;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<SMCAdaptor> smc_adaptor;
   
   // stored here
   /** @brief The transform. */
-  Transform* transform;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<Transform> transform;
   
   /** @brief The instance counter. */
   static int instance_counter; // Static member variable to track instances

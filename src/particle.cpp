@@ -20,8 +20,8 @@ Particle::Particle()
   //this->move_transform = NULL;
   //this->move_parameters = NULL;
   
-  this->factor_variables = NULL;
-  this->ensemble_factor_variables = NULL;
+  this->factor_variables.reset();
+  this->ensemble_factor_variables.reset();
   
   this->previous_target_evaluated = 0.0;
   this->target_evaluated = 0.0;
@@ -40,8 +40,8 @@ Particle::Particle(const Parameters &parameters_in)
   //this->move_transform = NULL;
   //this->move_parameters = &this->parameters;
   
-  this->factor_variables = NULL;
-  this->ensemble_factor_variables = NULL;
+  this->factor_variables.reset();
+  this->ensemble_factor_variables.reset();
   
   this->previous_target_evaluated = 0.0;
   this->target_evaluated = 0.0;
@@ -63,7 +63,7 @@ Particle::Particle(const Parameters &parameters_in,
 {
   if (factors_in!=NULL)
   {
-    this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
+    this->factor_variables.reset(factors_in->simulate_factor_variables(this->parameters));
     this->factor_variables->set_particle(this);
   }
   
@@ -72,7 +72,7 @@ Particle::Particle(const Parameters &parameters_in,
   //this->move_transform = NULL;
   //this->move_parameters = &this->parameters;
   
-  this->ensemble_factor_variables = NULL;
+  this->ensemble_factor_variables.reset();
   
   this->previous_target_evaluated = 0.0;
   this->target_evaluated = 0.0;
@@ -97,7 +97,7 @@ Particle::Particle(const Parameters &parameters_in,
   
   if (factors_in!=NULL)
   {
-    this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
+    this->factor_variables.reset(factors_in->simulate_factor_variables(this->parameters));
     this->factor_variables->set_particle(this);
   }
   
@@ -106,7 +106,7 @@ Particle::Particle(const Parameters &parameters_in,
   //this->move_transform = NULL;
   //this->move_parameters = &this->parameters;
   
-  this->ensemble_factor_variables = NULL;
+  this->ensemble_factor_variables.reset();
   
   this->previous_target_evaluated = 0.0;
   this->target_evaluated = 0.0;
@@ -133,7 +133,7 @@ Particle::Particle(const Parameters &parameters_in,
   
   if (factors_in!=NULL)
   {
-    this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
+    this->factor_variables.reset(factors_in->simulate_factor_variables(this->parameters));
     this->factor_variables->set_particle(this);
   }
   
@@ -142,7 +142,7 @@ Particle::Particle(const Parameters &parameters_in,
   //this->move_transform = NULL;
   //this->move_parameters = &this->parameters;
   
-  this->ensemble_factor_variables = NULL;
+  this->ensemble_factor_variables.reset();
   
   this->previous_target_evaluated = 0.0;
   this->target_evaluated = 0.0;
@@ -164,7 +164,7 @@ factor_variables(factor_variables_in)
   //this->move_transform = NULL;
   //this->move_parameters = &this->parameters;
   
-  this->ensemble_factor_variables = NULL;
+  this->ensemble_factor_variables.reset();
   
   this->factor_variables->set_particle(this);
   
@@ -188,7 +188,7 @@ factor_variables(factor_variables_in)
   //this->move_transform = NULL;
   //this->move_parameters = &this->parameters;
   
-  this->ensemble_factor_variables = NULL;
+  this->ensemble_factor_variables.reset();
   
   this->factor_variables->set_particle(this);
   
@@ -210,14 +210,14 @@ Particle::Particle(const Parameters &parameters_in,
 {
   if (ensemble_factors_in!=NULL)
   {
-    this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters);
+    this->ensemble_factor_variables.reset(ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters));
     this->ensemble_factor_variables->set_particle(this);
   }
   
   //this->move_transform = NULL;
   //this->move_parameters = &this->parameters;
   
-  this->factor_variables = NULL;
+  this->factor_variables.reset();
   
   this->previous_target_evaluated = 0.0;
   this->target_evaluated = 0.0;
@@ -244,14 +244,14 @@ Particle::Particle(const Parameters &parameters_in,
   
   if (ensemble_factors_in!=NULL)
   {
-    this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters);
+    this->ensemble_factor_variables.reset(ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters));
     this->ensemble_factor_variables->set_particle(this);
   }
   else
   {
-    this->ensemble_factor_variables = NULL;
+    this->ensemble_factor_variables.reset();
   }
-  this->factor_variables = NULL;
+  this->factor_variables.reset();
   
   this->previous_target_evaluated = 0.0;
   this->target_evaluated = 0.0;
@@ -280,14 +280,14 @@ Particle::Particle(const Parameters &parameters_in,
   
   if (ensemble_factors_in!=NULL)
   {
-    this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters);
+    this->ensemble_factor_variables.reset(ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters));
     this->ensemble_factor_variables->set_particle(this);
   }
   else
   {
-    this->ensemble_factor_variables = NULL;
+    this->ensemble_factor_variables.reset();
   }
-  this->factor_variables = NULL;
+  this->factor_variables.reset();
   
   this->previous_target_evaluated = 0.0;
   this->target_evaluated = 0.0;
@@ -308,8 +308,8 @@ Particle::Particle(const Parameters &parameters_in,
   //this->move_transform = NULL;
   //this->move_parameters = &this->parameters;
   
-  this->ensemble_factor_variables = ensemble_factor_variables_in;
-  this->factor_variables = NULL;
+  this->ensemble_factor_variables.reset(ensemble_factor_variables_in);
+  this->factor_variables.reset();
   if (this->ensemble_factor_variables!=NULL)
   {
     this->ensemble_factor_variables->set_particle(this);
@@ -333,8 +333,8 @@ Particle::Particle(Parameters &&parameters_in)
   //this->move_transform = NULL;
   //this->move_parameters = &this->parameters;
   
-  this->factor_variables = NULL;
-  this->ensemble_factor_variables = NULL;
+  this->factor_variables.reset();
+  this->ensemble_factor_variables.reset();
   
   this->previous_target_evaluated = 0.0;
   this->target_evaluated = 0.0;
@@ -357,7 +357,7 @@ Particle::Particle(Parameters &&parameters_in,
   
   if (factors_in!=NULL)
   {
-    this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
+    this->factor_variables.reset(factors_in->simulate_factor_variables(this->parameters));
     this->factor_variables->set_particle(this);
   }
   
@@ -366,7 +366,7 @@ Particle::Particle(Parameters &&parameters_in,
   //this->move_transform = NULL;
   //this->move_parameters = &this->parameters;
   
-  this->ensemble_factor_variables = NULL;
+  this->ensemble_factor_variables.reset();
   
   this->previous_target_evaluated = 0.0;
   this->target_evaluated = 0.0;
@@ -391,7 +391,7 @@ Particle::Particle(Parameters &&parameters_in,
   
   if (factors_in!=NULL)
   {
-    this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
+    this->factor_variables.reset(factors_in->simulate_factor_variables(this->parameters));
     this->factor_variables->set_particle(this);
   }
   
@@ -400,7 +400,7 @@ Particle::Particle(Parameters &&parameters_in,
   //this->move_transform = NULL;
   //this->move_parameters = &this->parameters;
   
-  this->ensemble_factor_variables = NULL;
+  this->ensemble_factor_variables.reset();
   
   this->previous_target_evaluated = 0.0;
   this->target_evaluated = 0.0;
@@ -427,7 +427,7 @@ Particle::Particle(Parameters &&parameters_in,
   
   if (factors_in!=NULL)
   {
-    this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
+    this->factor_variables.reset(factors_in->simulate_factor_variables(this->parameters));
     this->factor_variables->set_particle(this);
   }
   
@@ -436,7 +436,7 @@ Particle::Particle(Parameters &&parameters_in,
   //this->move_transform = NULL;
   //this->move_parameters = &this->parameters;
   
-  this->ensemble_factor_variables = NULL;
+  this->ensemble_factor_variables.reset();
   
   this->previous_target_evaluated = 0.0;
   this->target_evaluated = 0.0;
@@ -458,7 +458,7 @@ factor_variables(factor_variables_in)
   //this->move_transform = NULL;
   //this->move_parameters = &this->parameters;
   
-  this->ensemble_factor_variables = NULL;
+  this->ensemble_factor_variables.reset();
   
   this->factor_variables->set_particle(this);
   
@@ -482,7 +482,7 @@ factor_variables(factor_variables_in)
   //this->move_transform = NULL;
   //this->move_parameters = &this->parameters;
   
-  this->ensemble_factor_variables = NULL;
+  this->ensemble_factor_variables.reset();
   
   this->factor_variables->set_particle(this);
   
@@ -504,14 +504,14 @@ Particle::Particle(Parameters &&parameters_in,
 {
   if (ensemble_factors_in!=NULL)
   {
-    this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters);
+    this->ensemble_factor_variables.reset(ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters));
     this->ensemble_factor_variables->set_particle(this);
   }
   
   //this->move_transform = NULL;
   //this->move_parameters = &this->parameters;
   
-  this->factor_variables = NULL;
+  this->factor_variables.reset();
   
   this->previous_target_evaluated = 0.0;
   this->target_evaluated = 0.0;
@@ -538,14 +538,14 @@ Particle::Particle(Parameters &&parameters_in,
   
   if (ensemble_factors_in!=NULL)
   {
-    this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters);
+    this->ensemble_factor_variables.reset(ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters));
     this->ensemble_factor_variables->set_particle(this);
   }
   else
   {
-    this->ensemble_factor_variables = NULL;
+    this->ensemble_factor_variables.reset();
   }
-  this->factor_variables = NULL;
+  this->factor_variables.reset();
   
   this->previous_target_evaluated = 0.0;
   this->target_evaluated = 0.0;
@@ -574,14 +574,14 @@ Particle::Particle(Parameters &&parameters_in,
   
   if (ensemble_factors_in!=NULL)
   {
-    this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters);
+    this->ensemble_factor_variables.reset(ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters));
     this->ensemble_factor_variables->set_particle(this);
   }
   else
   {
-    this->ensemble_factor_variables = NULL;
+    this->ensemble_factor_variables.reset();
   }
-  this->factor_variables = NULL;
+  this->factor_variables.reset();
   
   this->previous_target_evaluated = 0.0;
   this->target_evaluated = 0.0;
@@ -602,8 +602,8 @@ Particle::Particle(Parameters &&parameters_in,
   //this->move_transform = NULL;
   //this->move_parameters = &this->parameters;
   
-  this->ensemble_factor_variables = ensemble_factor_variables_in;
-  this->factor_variables = NULL;
+  this->ensemble_factor_variables.reset(ensemble_factor_variables_in);
+  this->factor_variables.reset();
   if (this->ensemble_factor_variables!=NULL)
   {
     this->ensemble_factor_variables->set_particle(this);
@@ -625,7 +625,7 @@ Particle::Particle(Parameters &&parameters_in,
 
 void Particle::setup(Factors* factors_in)
 {
-  this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
+  this->factor_variables.reset(factors_in->simulate_factor_variables(this->parameters));
   //this->move_parameters = &this->parameters;
   this->factor_variables->set_particle(this);
 }
@@ -635,7 +635,7 @@ void Particle::setup(Factors* factors_in,
 {
   this->parameters.merge_with_fixed(conditioned_on_parameters);
   
-  this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
+  this->factor_variables.reset(factors_in->simulate_factor_variables(this->parameters));
   //this->move_parameters = &this->parameters;
   this->factor_variables->set_particle(this);
 }
@@ -647,7 +647,7 @@ void Particle::setup(Factors* factors_in,
   this->parameters.merge_with_fixed(conditioned_on_parameters,
                                     sequencer_parameters);
   
-  this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
+  this->factor_variables.reset(factors_in->simulate_factor_variables(this->parameters));
   //this->move_parameters = &this->parameters;
   this->factor_variables->set_particle(this);
 }
@@ -656,7 +656,7 @@ void Particle::setup(const Parameters &parameters_in,
                      Factors* factors_in)
 {
   this->parameters = parameters_in;
-  this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
+  this->factor_variables.reset(factors_in->simulate_factor_variables(this->parameters));
   //this->move_parameters = &this->parameters;
   this->factor_variables->set_particle(this);
 }
@@ -668,7 +668,7 @@ void Particle::setup(const Parameters &parameters_in,
   this->parameters = parameters_in;
   this->parameters.merge_with_fixed(conditioned_on_parameters);
   
-  this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
+  this->factor_variables.reset(factors_in->simulate_factor_variables(this->parameters));
   //this->move_parameters = &this->parameters;
   this->factor_variables->set_particle(this);
 }
@@ -682,7 +682,7 @@ void Particle::setup(const Parameters &parameters_in,
   this->parameters.merge_with_fixed(conditioned_on_parameters,
                                     sequencer_parameters);
   
-  this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
+  this->factor_variables.reset(factors_in->simulate_factor_variables(this->parameters));
   //this->move_parameters = &this->parameters;
   this->factor_variables->set_particle(this);
 }
@@ -691,7 +691,7 @@ void Particle::setup(const Parameters &parameters_in,
                      EnsembleFactors* ensemble_factors_in)
 {
   this->parameters = parameters_in;
-  this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters);
+  this->ensemble_factor_variables.reset(ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters));
   //this->move_parameters = &this->parameters;
   this->ensemble_factor_variables->set_particle(this);
 }
@@ -703,7 +703,7 @@ void Particle::setup(const Parameters &parameters_in,
   this->parameters = parameters_in;
   this->parameters.merge_with_fixed(conditioned_on_parameters);
   
-  this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters);
+  this->ensemble_factor_variables.reset(ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters));
   this->ensemble_factor_variables->set_particle(this);
 }
 
@@ -716,18 +716,16 @@ void Particle::setup(const Parameters &parameters_in,
   this->parameters.merge_with_fixed(conditioned_on_parameters,
                                     sequencer_parameters);
   
-  this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters);
+  this->ensemble_factor_variables.reset(ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters));
   //this->move_parameters = &this->parameters;
   this->ensemble_factor_variables->set_particle(this);
 }
 
 Particle::~Particle()
 {
-  if (this->factor_variables!=NULL)
-    delete this->factor_variables;
+  this->factor_variables.reset();
   
-  if (this->ensemble_factor_variables!=NULL)
-    delete this->ensemble_factor_variables;
+  this->ensemble_factor_variables.reset();
   
   /*
    for (auto i=this->gradient_estimator_outputs.begin();
@@ -751,11 +749,9 @@ Particle& Particle::operator=(const Particle &another)
   if(this == &another)
     return *this;
   
-  if (this->factor_variables!=NULL)
-    delete this->factor_variables;
+  this->factor_variables.reset();
   
-  if (this->ensemble_factor_variables!=NULL)
-    delete this->ensemble_factor_variables;
+  this->ensemble_factor_variables.reset();
   
   /*
    for (auto i=this->gradient_estimator_outputs.begin();
@@ -777,19 +773,19 @@ void Particle::make_copy(const Particle &another)
 {
   if (another.factor_variables!=NULL)
   {
-    this->factor_variables = another.factor_variables->duplicate();
+    this->factor_variables.reset(another.factor_variables->duplicate());
     this->factor_variables->set_particle(this);
   }
   else
-    this->factor_variables = NULL;
+    this->factor_variables.reset();
   
   if (another.ensemble_factor_variables!=NULL)
   {
-    this->ensemble_factor_variables = another.ensemble_factor_variables->duplicate();
+    this->ensemble_factor_variables.reset(another.ensemble_factor_variables->duplicate());
     this->ensemble_factor_variables->set_particle(this);
   }
   else
-    this->ensemble_factor_variables = NULL;
+    this->ensemble_factor_variables.reset();
   
   this->previous_target_evaluated = another.previous_target_evaluated;
   this->target_evaluated = another.target_evaluated;
@@ -853,11 +849,9 @@ Particle& Particle::operator=(Particle &&another)
   if(this == &another)
     return *this;
   
-  if (this->factor_variables!=NULL)
-    delete this->factor_variables;
+  this->factor_variables.reset();
   
-  if (this->ensemble_factor_variables!=NULL)
-    delete this->ensemble_factor_variables;
+  this->ensemble_factor_variables.reset();
   
   /*
    for (auto i=this->gradient_estimator_outputs.begin();
@@ -879,19 +873,19 @@ void Particle::make_copy(Particle &&another)
 {
   if (another.factor_variables!=NULL)
   {
-    this->factor_variables = another.factor_variables;
+    this->factor_variables = std::move(another.factor_variables);
     this->factor_variables->set_particle(this);
   }
   else
-    this->factor_variables = NULL;
+    this->factor_variables.reset();
   
   if (another.ensemble_factor_variables!=NULL)
   {
-    this->ensemble_factor_variables = another.ensemble_factor_variables;
+    this->ensemble_factor_variables = std::move(another.ensemble_factor_variables);
     this->ensemble_factor_variables->set_particle(this);
   }
   else
-    this->ensemble_factor_variables = NULL;
+    this->ensemble_factor_variables.reset();
   
   this->previous_target_evaluated = std::move(another.previous_target_evaluated);
   this->target_evaluated = std::move(another.target_evaluated);
@@ -953,8 +947,8 @@ void Particle::make_copy(Particle &&another)
    }
    */
   
-  another.factor_variables = NULL;
-  another.ensemble_factor_variables = NULL;
+  another.factor_variables.reset();
+  another.ensemble_factor_variables.reset();
   another.previous_target_evaluated = 0.0;
   another.target_evaluated = 0.0;
   another.subsample_previous_target_evaluated = 0.0;
@@ -979,7 +973,7 @@ void Particle::simulate_factor_variables()
 {
   if (this->factor_variables->get_factors()!=NULL)
   {
-    this->factor_variables = this->factor_variables->get_factors()->simulate_factor_variables(this->parameters);
+    this->factor_variables.reset(this->factor_variables->get_factors()->simulate_factor_variables(this->parameters));
     this->factor_variables->set_particle(this);
   }
 }
@@ -988,7 +982,7 @@ void Particle::simulate_ensemble_factor_variables()
 {
   if (this->ensemble_factor_variables->get_ensemble_factors()!=NULL)
   {
-    this->ensemble_factor_variables = this->ensemble_factor_variables->get_ensemble_factors()->simulate_ensemble_factor_variables(this->parameters);
+    this->ensemble_factor_variables.reset(this->ensemble_factor_variables->get_ensemble_factors()->simulate_ensemble_factor_variables(this->parameters));
     this->ensemble_factor_variables->set_particle(this);
   }
 }
@@ -1014,18 +1008,17 @@ void Particle::refill(Parameters &&parameters_in,
     recycled = this->factor_variables->recycle_all_outputs(factors_in, this->parameters);
   if (!recycled)
   {
-    if (this->factor_variables!=NULL)
-      delete this->factor_variables;
-    this->factor_variables = NULL;
+    this->factor_variables.reset();
+    this->factor_variables.reset();
     if (factors_in!=NULL)
-      this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
+      this->factor_variables.reset(factors_in->simulate_factor_variables(this->parameters));
   }
   if (this->factor_variables!=NULL)
     this->factor_variables->set_particle(this);
   if (this->ensemble_factor_variables!=NULL)
   {
-    delete this->ensemble_factor_variables;
-    this->ensemble_factor_variables = NULL;
+    this->ensemble_factor_variables.reset();
+    this->ensemble_factor_variables.reset();
   }
 
   // as a new Particle
@@ -1885,9 +1878,9 @@ void Particle::simulate_factor_variables(const FactorVariables* current,
   new_factor_variables->set_particle(this);
   if (this->factor_variables!=NULL)
   {
-    delete this->factor_variables;
+    this->factor_variables.reset();
   }
-  this->factor_variables = new_factor_variables;
+  this->factor_variables.reset(new_factor_variables);
 }
 
 void Particle::simulate_factor_variables(const Factors* factors)
@@ -1897,10 +1890,10 @@ void Particle::simulate_factor_variables(const Factors* factors)
   new_factor_variables->set_particle(this);
   if (this->factor_variables!=NULL)
   {
-    delete this->factor_variables;
+    this->factor_variables.reset();
   }
   
-  this->factor_variables = new_factor_variables;
+  this->factor_variables.reset(new_factor_variables);
 }
 
 void Particle::simulate_ensemble_factor_variables(const EnsembleFactors* ensemble_factors)
@@ -1910,10 +1903,10 @@ void Particle::simulate_ensemble_factor_variables(const EnsembleFactors* ensembl
   new_ensemble_factor_variables->set_particle(this);
   if (this->ensemble_factor_variables!=NULL)
   {
-    delete this->ensemble_factor_variables;
+    this->ensemble_factor_variables.reset();
   }
   
-  this->ensemble_factor_variables = new_ensemble_factor_variables;
+  this->ensemble_factor_variables.reset(new_ensemble_factor_variables);
 }
 
 /*
@@ -1924,10 +1917,10 @@ void Particle::simulate_ensemble_factor_variables(const EnsembleFactors* ensembl
  new_factor_variables->set_particle(this);
  if (this->factor_variables!=NULL)
  {
- delete this->factor_variables;
+ this->factor_variables.reset();
  }
  
- this->factor_variables = new_factor_variables;
+ this->factor_variables.reset(new_factor_variables);
  }
  */
 
@@ -1940,10 +1933,10 @@ void Particle::simulate_ensemble_factor_variables(const EnsembleFactors* ensembl
  new_ensemble_factor_variables->set_particle(this);
  if (this->ensemble_factor_variables!=NULL)
  {
- delete this->ensemble_factor_variables;
+ this->ensemble_factor_variables.reset();
  }
  
- this->ensemble_factor_variables = new_ensemble_factor_variables;
+ this->ensemble_factor_variables.reset(new_ensemble_factor_variables);
  }
  */
 
@@ -1954,10 +1947,10 @@ void Particle::subsample_simulate_factor_variables(const Factors* factors)
   new_factor_variables->set_particle(this);
   if (this->factor_variables!=NULL)
   {
-    delete this->factor_variables;
+    this->factor_variables.reset();
   }
   
-  this->factor_variables = new_factor_variables;
+  this->factor_variables.reset(new_factor_variables);
 }
 
 void Particle::subsample_simulate_ensemble_factor_variables(const EnsembleFactors* ensemble_factors)
@@ -1967,10 +1960,10 @@ void Particle::subsample_simulate_ensemble_factor_variables(const EnsembleFactor
   new_ensemble_factor_variables->set_particle(this);
   if (this->ensemble_factor_variables!=NULL)
   {
-    delete this->ensemble_factor_variables;
+    this->ensemble_factor_variables.reset();
   }
   
-  this->ensemble_factor_variables = new_ensemble_factor_variables;
+  this->ensemble_factor_variables.reset(new_ensemble_factor_variables);
 }
 
 void Particle::tell_factors_to_forget_they_were_already_written_to_file()
@@ -1993,10 +1986,10 @@ void Particle::tell_factors_to_forget_they_were_already_written_to_file()
  new_factor_variables->set_particle(this);
  if (this->factor_variables!=NULL)
  {
- delete this->factor_variables;
+ this->factor_variables.reset();
  }
  
- this->factor_variables = new_factor_variables;
+ this->factor_variables.reset(new_factor_variables);
  }
  
  void Particle::simulate_ensemble_factor_variables(EnsembleFactors* ensemble_factors,
@@ -2009,10 +2002,10 @@ void Particle::tell_factors_to_forget_they_were_already_written_to_file()
  new_ensemble_factor_variables->set_particle(this);
  if (this->ensemble_factor_variables!=NULL)
  {
- delete this->ensemble_factor_variables;
+ this->ensemble_factor_variables.reset();
  }
  
- this->ensemble_factor_variables = new_ensemble_factor_variables;
+ this->ensemble_factor_variables.reset(new_ensemble_factor_variables);
  }
  
  void Particle::subsample_simulate_factor_variables(Factors* factors,
@@ -2025,10 +2018,10 @@ void Particle::tell_factors_to_forget_they_were_already_written_to_file()
  new_factor_variables->set_particle(this);
  if (this->factor_variables!=NULL)
  {
- delete this->factor_variables;
+ this->factor_variables.reset();
  }
  
- this->factor_variables = new_factor_variables;
+ this->factor_variables.reset(new_factor_variables);
  }
  
  void Particle::subsample_simulate_ensemble_factor_variables(EnsembleFactors* ensemble_factors,
@@ -2041,10 +2034,10 @@ void Particle::tell_factors_to_forget_they_were_already_written_to_file()
  new_ensemble_factor_variables->set_particle(this);
  if (this->ensemble_factor_variables!=NULL)
  {
- delete this->ensemble_factor_variables;
+ this->ensemble_factor_variables.reset();
  }
  
- this->ensemble_factor_variables = new_ensemble_factor_variables;
+ this->ensemble_factor_variables.reset(new_ensemble_factor_variables);
  }
  */
 

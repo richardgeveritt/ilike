@@ -238,16 +238,16 @@ protected:
   
   // stored here
   /** @brief The proposal kernel. */
-  ProposalKernel* proposal_kernel;
+  std::unique_ptr<ProposalKernel> proposal_kernel;
   /** @brief The l kernel. */
-  ProposalKernel* L_kernel;
+  std::unique_ptr<ProposalKernel> L_kernel;
   
   // Stored here.
   //SMCCriterion* smc_criterion;
   
   // stored here
   /** @brief The index. */
-  Index* index;
+  std::unique_ptr<Index> index;
   
   //void smc_step();
   

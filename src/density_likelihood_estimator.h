@@ -129,15 +129,19 @@ protected:
   
   // stored here, to make a deep copy for each Output we make
   /** @brief The density estimator. */
-  DensityEstimator* density_estimator;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<DensityEstimator> density_estimator;
   /** @brief The subsample density estimator. */
-  DensityEstimator* subsample_density_estimator;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<DensityEstimator> subsample_density_estimator;
   
   // stored here
   /** @brief The proposal. */
-  IndependentProposalKernel* proposal;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<IndependentProposalKernel> proposal;
   /** @brief The subsample proposal. */
-  IndependentProposalKernel* subsample_proposal;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<IndependentProposalKernel> subsample_proposal;
   
   //SimulateIndependentProposalPtr simulate_distribution;
   //SimulateIndependentProposalPtr subsample_simulate_distribution;
@@ -155,7 +159,8 @@ protected:
   
   // Stored here.
   /** @brief The the worker. */
-  DensityLikelihoodEstimatorWorker* the_worker;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<DensityLikelihoodEstimatorWorker> the_worker;
   
   /** @brief The variables. */
   std::vector<std::string> variables;

@@ -1,3 +1,4 @@
+#include "move_output.h"
 #include "rcppparallel_workers.h"
 #include "particle_simulator.h"
 #include "smc.h"
@@ -44,11 +45,11 @@ void SimulateWorker::operator()(std::size_t begin, std::size_t end)
   local_rng.seed(this->smc_worker->get_seed(),end);
   for (std::size_t i = begin; i < end; ++i)
   {
-    (*this->particles_pointer)[i] = new SinglePointMoveOutput(this->smc_worker->the_smc->particle_simulator->simulate(local_rng,
-                                                                                                                      this->smc_worker->the_smc->factors,
+    (*this->particles_pointer)[i].reset(new SinglePointMoveOutput(this->smc_worker->the_smc->particle_simulator->simulate(local_rng,
+                                                                                                                      this->smc_worker->the_smc->factors.get(),
                                                                                                                       &this->smc_worker->the_smc->proposals_to_transform_for,
                                                                                                                       &this->smc_worker->the_smc->proposals_to_find_gradient_for,
-                                                                                                                      this->smc_worker->the_smc->sequencer.schedule_parameters));
+                                                                                                                      this->smc_worker->the_smc->sequencer.schedule_parameters)));
     
     if (this->smc_worker->the_smc->proposal_is_evaluated==true)
     {
@@ -100,12 +101,12 @@ void ConditionalSimulateWorker::operator()(std::size_t begin, std::size_t end)
   local_rng.seed(this->smc_worker->get_seed(),end);
   for (std::size_t i = begin; i < end; ++i)
   {
-    (*this->particles_pointer)[i] = new SinglePointMoveOutput(this->smc_worker->the_smc->particle_simulator->simulate(local_rng,
-                                                                                                                      this->smc_worker->the_smc->factors,
+    (*this->particles_pointer)[i].reset(new SinglePointMoveOutput(this->smc_worker->the_smc->particle_simulator->simulate(local_rng,
+                                                                                                                      this->smc_worker->the_smc->factors.get(),
                                                                                                                       &this->smc_worker->the_smc->proposals_to_transform_for,
                                                                                                                       &this->smc_worker->the_smc->proposals_to_find_gradient_for,
                                                                                                                       *this->conditioned_on_parameters_pointer,
-                                                                                                                      this->smc_worker->the_smc->sequencer.schedule_parameters));
+                                                                                                                      this->smc_worker->the_smc->sequencer.schedule_parameters)));
     
     if (this->smc_worker->the_smc->proposal_is_evaluated==true)
     {
@@ -157,11 +158,11 @@ void SubsampleSimulateWorker::operator()(std::size_t begin, std::size_t end)
   local_rng.seed(this->smc_worker->get_seed(),end);
   for (std::size_t i = begin; i < end; ++i)
   {
-    (*this->particles_pointer)[i] = new SinglePointMoveOutput(this->smc_worker->the_smc->particle_simulator->subsample_simulate(local_rng,
-                                                                                                                                this->smc_worker->the_smc->factors,
+    (*this->particles_pointer)[i].reset(new SinglePointMoveOutput(this->smc_worker->the_smc->particle_simulator->subsample_simulate(local_rng,
+                                                                                                                                this->smc_worker->the_smc->factors.get(),
                                                                                                                                 &this->smc_worker->the_smc->proposals_to_transform_for,
                                                                                                                                 &this->smc_worker->the_smc->proposals_to_find_gradient_for,
-                                                                                                                                this->smc_worker->the_smc->sequencer.schedule_parameters));
+                                                                                                                                this->smc_worker->the_smc->sequencer.schedule_parameters)));
     
     if (this->smc_worker->the_smc->proposal_is_evaluated==true)
     {
@@ -213,12 +214,12 @@ void SubsampleConditionalSimulateWorker::operator()(std::size_t begin, std::size
   local_rng.seed(this->smc_worker->get_seed(),end);
   for (std::size_t i = begin; i < end; ++i)
   {
-    (*this->particles_pointer)[i] = new SinglePointMoveOutput(this->smc_worker->the_smc->particle_simulator->subsample_simulate(local_rng,
-                                                                                                                                this->smc_worker->the_smc->factors,
+    (*this->particles_pointer)[i].reset(new SinglePointMoveOutput(this->smc_worker->the_smc->particle_simulator->subsample_simulate(local_rng,
+                                                                                                                                this->smc_worker->the_smc->factors.get(),
                                                                                                                                 &this->smc_worker->the_smc->proposals_to_transform_for,
                                                                                                                                 &this->smc_worker->the_smc->proposals_to_find_gradient_for,
                                                                                                                                 *this->conditioned_on_parameters_pointer,
-                                                                                                                                this->smc_worker->the_smc->sequencer.schedule_parameters));
+                                                                                                                                this->smc_worker->the_smc->sequencer.schedule_parameters)));
     
     if (this->smc_worker->the_smc->proposal_is_evaluated==true)
     {
@@ -272,8 +273,8 @@ void MoveWorker::operator()(std::size_t begin, std::size_t end)
   
   for (std::size_t i = begin; i < end; ++i)
   {
-    (*this->particles_pointer)[i] = this->smc_worker->the_smc->move(local_rng,
-                                                                    (*this->current_particles_pointer)[current_particles_pointer->ancestor_variables[i]]->back());
+    (*this->particles_pointer)[i].reset(this->smc_worker->the_smc->move(local_rng,
+                                                                    (*this->current_particles_pointer)[current_particles_pointer->ancestor_variables[i]]->back()));
   }
 }
 
@@ -321,8 +322,8 @@ void SubsampleMoveWorker::operator()(std::size_t begin, std::size_t end)
   local_rng.seed(this->smc_worker->get_seed(),end);
   for (std::size_t i = begin; i < end; ++i)
   {
-    (*this->particles_pointer)[i] = this->smc_worker->the_smc->subsample_move(local_rng,
-                                                                              (*this->current_particles_pointer)[current_particles_pointer->ancestor_variables[i]]->back());
+    (*this->particles_pointer)[i].reset(this->smc_worker->the_smc->subsample_move(local_rng,
+                                                                              (*this->current_particles_pointer)[current_particles_pointer->ancestor_variables[i]]->back()));
   }
 }
 

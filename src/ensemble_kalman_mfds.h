@@ -252,7 +252,7 @@ protected:
   
   // Stored here.
   /** @brief The mcmc. */
-  MCMC* mcmc;
+  std::unique_ptr<MCMC> mcmc;
   
   /** @brief The state mean as data. */
   Data state_mean_as_data;
@@ -271,7 +271,7 @@ protected:
   
   // stored here
   /** @brief The index. */
-  Index* index;
+  std::unique_ptr<Index> index;
   
   //void smc_step();
   

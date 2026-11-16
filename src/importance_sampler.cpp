@@ -26,7 +26,7 @@ namespace ilike
   ImportanceSampler::ImportanceSampler()
       : SMC()
   {
-    this->index = NULL;
+    this->index.reset();
   }
 
   ImportanceSampler::ImportanceSampler(RandomNumberGenerator *rng_in,
@@ -58,22 +58,22 @@ namespace ilike
                                                                  evaluate_log_likelihood_in,
                                                                  true));
     indices.push_back(0);
-    this->index = new VectorIndex(indices);
+    this->index.reset(new VectorIndex(indices));
 
-    this->factors = new VectorFactors(likelihood_estimators);
+    this->factors.reset(new VectorFactors(likelihood_estimators));
 
     // Need to construct LikelihoodEstimator to read in to this constructor.
-    this->particle_simulator = new ParameterParticleSimulator(proposal,
-                                                              likelihood_estimators);
+    this->particle_simulator.reset(new ParameterParticleSimulator(proposal,
+                                                              likelihood_estimators));
 
     this->parallel = parallel_in;
-    this->the_worker = new SequentialSMCWorker(this);
+    this->the_worker.reset(new SequentialSMCWorker(this));
 
     std::vector<double> schedule_in;
     schedule_in.push_back(0.0);
     schedule_in.push_back(1.0);
     SMCCriterion *smc_criterion = new PositiveSMCCriterion();
-    this->sequencer = Sequencer(this->the_worker,
+    this->sequencer = Sequencer(this->the_worker.get(),
                                 schedule_in,
                                 "",
                                 25,
@@ -113,13 +113,13 @@ namespace ilike
                                                                  evaluate_log_likelihood_in,
                                                                  true));
     indices.push_back(0);
-    this->index = new VectorIndex(indices);
+    this->index.reset(new VectorIndex(indices));
 
-    this->factors = new VectorFactors(likelihood_estimators);
+    this->factors.reset(new VectorFactors(likelihood_estimators));
 
     // Need to construct LikelihoodEstimator to read in to this constructor.
-    this->particle_simulator = new ParameterParticleSimulator(proposal,
-                                                              likelihood_estimators);
+    this->particle_simulator.reset(new ParameterParticleSimulator(proposal,
+                                                              likelihood_estimators));
 
     /*
      for (auto i=likelihood_estimators.begin();
@@ -135,13 +135,13 @@ namespace ilike
     //                                                                               "u");
 
     this->parallel = parallel_in;
-    this->the_worker = new SequentialSMCWorker(this);
+    this->the_worker.reset(new SequentialSMCWorker(this));
 
     std::vector<double> schedule_in;
     schedule_in.push_back(0.0);
     schedule_in.push_back(1.0);
     SMCCriterion *smc_criterion = new PositiveSMCCriterion();
-    this->sequencer = Sequencer(this->the_worker,
+    this->sequencer = Sequencer(this->the_worker.get(),
                                 schedule_in,
                                 "",
                                 25,
@@ -178,26 +178,26 @@ namespace ilike
                                                                  true));
 
     indices.push_back(0);
-    this->index = new VectorIndex(indices);
+    this->index.reset(new VectorIndex(indices));
 
-    this->factors = new VectorFactors(likelihood_estimators);
+    this->factors.reset(new VectorFactors(likelihood_estimators));
 
     // Need to construct LikelihoodEstimator to read in to this constructor.
-    this->particle_simulator = new ParameterParticleSimulator(proposal_in,
-                                                              likelihood_estimators);
+    this->particle_simulator.reset(new ParameterParticleSimulator(proposal_in,
+                                                              likelihood_estimators));
 
     // this->model_and_algorithm.particle_simulator = new ParameterParticleSimulator(simulate_proposal_in,
     //                                                                               this->model_and_algorithm.likelihood_estimators,
     //                                                                               "u");
 
     this->parallel = parallel_in;
-    this->the_worker = new SequentialSMCWorker(this);
+    this->the_worker.reset(new SequentialSMCWorker(this));
 
     std::vector<double> schedule_in;
     schedule_in.push_back(0.0);
     schedule_in.push_back(1.0);
     SMCCriterion *smc_criterion = new PositiveSMCCriterion();
-    this->sequencer = Sequencer(this->the_worker,
+    this->sequencer = Sequencer(this->the_worker.get(),
                                 schedule_in,
                                 "",
                                 25,
@@ -231,10 +231,10 @@ namespace ilike
     //indices.reserve(likelihood_estimators_in.size());
     //for (size_t i = 0; i < likelihood_estimators_in.size(); ++i)
     //  indices.push_back(i);
-    //this->index = new VectorIndex(indices);
-    this->index = without_cancelled_index;
+    //this->index.reset(new VectorIndex(indices));
+    this->index.reset(without_cancelled_index);
 
-    this->factors = new VectorFactors(likelihood_estimators_in);
+    this->factors.reset(new VectorFactors(likelihood_estimators_in));
 
     /*
      for (auto i=likelihood_estimators_in.begin();
@@ -246,20 +246,20 @@ namespace ilike
      */
 
     // Need to construct LikelihoodEstimator to read in to this constructor.
-    this->particle_simulator = new ParameterParticleSimulator(proposal_in,
-                                                              likelihood_estimators_in);
+    this->particle_simulator.reset(new ParameterParticleSimulator(proposal_in,
+                                                              likelihood_estimators_in));
 
     // this->model_and_algorithm.particle_simulator = new ParameterParticleSimulator(simulate_proposal_in,
     //                                                                               this->model_and_algorithm.likelihood_estimators,
     //                                                                               "u");
 
     this->parallel = parallel_in;
-    this->the_worker = new SequentialSMCWorker(this);
+    this->the_worker.reset(new SequentialSMCWorker(this));
 
     std::vector<double> schedule_in;
     schedule_in.push_back(1.0);
     SMCCriterion *smc_criterion = new PositiveSMCCriterion();
-    this->sequencer = Sequencer(this->the_worker,
+    this->sequencer = Sequencer(this->the_worker.get(),
                                 schedule_in,
                                 target_variable_in,
                                 100,
@@ -294,10 +294,10 @@ namespace ilike
     //indices.reserve(likelihood_estimators_in.size());
     //for (size_t i = 0; i < likelihood_estimators_in.size(); ++i)
     //  indices.push_back(i);
-    //this->index = new VectorIndex(indices);
-    this->index = without_cancelled_index;
+    //this->index.reset(new VectorIndex(indices));
+    this->index.reset(without_cancelled_index);
 
-    this->factors = new VectorFactors(likelihood_estimators_in);
+    this->factors.reset(new VectorFactors(likelihood_estimators_in));
 
     /*
      for (auto i=likelihood_estimators_in.begin();
@@ -309,20 +309,20 @@ namespace ilike
      */
 
     // Need to construct LikelihoodEstimator to read in to this constructor.
-    this->particle_simulator = new ParameterParticleSimulator(proposal_in,
-                                                              likelihood_estimators_in);
+    this->particle_simulator.reset(new ParameterParticleSimulator(proposal_in,
+                                                              likelihood_estimators_in));
 
     // this->model_and_algorithm.particle_simulator = new ParameterParticleSimulator(simulate_proposal_in,
     //                                                                               this->model_and_algorithm.likelihood_estimators,
     //                                                                               "u");
 
     this->parallel = parallel_in;
-    this->the_worker = new SequentialSMCWorker(this);
+    this->the_worker.reset(new SequentialSMCWorker(this));
 
     std::vector<double> schedule_in;
     schedule_in.push_back(target_value_in);
     SMCCriterion *smc_criterion = new PositiveSMCCriterion();
-    this->sequencer = Sequencer(this->the_worker,
+    this->sequencer = Sequencer(this->the_worker.get(),
                                 schedule_in,
                                 target_variable_in,
                                 25,
@@ -359,9 +359,9 @@ namespace ilike
     indices.reserve(likelihood_estimators_in.size());
     for (size_t i = 0; i < likelihood_estimators_in.size(); ++i)
       indices.push_back(i);
-    this->index = new VectorIndex(indices);
+    this->index.reset(new VectorIndex(indices));
 
-    this->factors = new VectorFactors(likelihood_estimators_in);
+    this->factors.reset(new VectorFactors(likelihood_estimators_in));
 
     /*
      for (auto i=likelihood_estimators_in.begin();
@@ -373,20 +373,20 @@ namespace ilike
      */
 
     // Need to construct LikelihoodEstimator to read in to this constructor.
-    this->particle_simulator = new ParameterParticleSimulator(proposal_in,
-                                                              likelihood_estimators_in);
+    this->particle_simulator.reset(new ParameterParticleSimulator(proposal_in,
+                                                              likelihood_estimators_in));
 
     // this->model_and_algorithm.particle_simulator = new ParameterParticleSimulator(simulate_proposal_in,
     //                                                                               this->model_and_algorithm.likelihood_estimators,
     //                                                                               "u");
 
     this->parallel = parallel_in;
-    this->the_worker = new SequentialSMCWorker(this);
+    this->the_worker.reset(new SequentialSMCWorker(this));
 
     std::vector<double> schedule_in;
     schedule_in.push_back(1.0);
     SMCCriterion *smc_criterion = new PositiveSMCCriterion();
-    this->sequencer = Sequencer(this->the_worker,
+    this->sequencer = Sequencer(this->the_worker.get(),
                                 schedule_in,
                                 target_variable_in,
                                 100,
@@ -459,9 +459,9 @@ namespace ilike
     indices.reserve(likelihood_estimators_in.size());
     for (size_t i = 0; i < likelihood_estimators_in.size(); ++i)
       indices.push_back(i);
-    this->index = new VectorIndex(indices);
+    this->index.reset(new VectorIndex(indices));
 
-    this->factors = new VectorFactors(likelihood_estimators_in);
+    this->factors.reset(new VectorFactors(likelihood_estimators_in));
 
     /*
      for (auto i=likelihood_estimators_in.begin();
@@ -473,20 +473,20 @@ namespace ilike
      */
 
     // Need to construct LikelihoodEstimator to read in to this constructor.
-    this->particle_simulator = new ParameterParticleSimulator(proposal_in,
-                                                              likelihood_estimators_in);
+    this->particle_simulator.reset(new ParameterParticleSimulator(proposal_in,
+                                                              likelihood_estimators_in));
 
     // this->model_and_algorithm.particle_simulator = new ParameterParticleSimulator(simulate_proposal_in,
     //                                                                               this->model_and_algorithm.likelihood_estimators,
     //                                                                               "u");
 
     this->parallel = parallel_in;
-    this->the_worker = new SequentialSMCWorker(this);
+    this->the_worker.reset(new SequentialSMCWorker(this));
 
     std::vector<double> schedule_in;
     schedule_in.push_back(target_value_in);
     SMCCriterion *smc_criterion = new PositiveSMCCriterion();
-    this->sequencer = Sequencer(this->the_worker,
+    this->sequencer = Sequencer(this->the_worker.get(),
                                 schedule_in,
                                 target_variable_in,
                                 25,
@@ -540,8 +540,7 @@ namespace ilike
   // Destructor for the ImportanceSampler class.
   ImportanceSampler::~ImportanceSampler()
   {
-    if (this->index != NULL)
-      delete this->index;
+    this->index.reset();
   }
 
   void ImportanceSampler::operator=(const ImportanceSampler &another)
@@ -551,8 +550,7 @@ namespace ilike
       return;
     }
 
-    if (this->index != NULL)
-      delete this->index;
+    this->index.reset();
 
     SMC::operator=(another);
     this->make_copy(another);
@@ -624,9 +622,9 @@ namespace ilike
   void ImportanceSampler::make_copy(const ImportanceSampler &another)
   {
     if (another.index != NULL)
-      this->index = another.index->duplicate();
+      this->index.reset(another.index->duplicate());
     else
-      this->index = NULL;
+      this->index.reset();
   }
 
   // void ImportanceSampler::smc_step()
@@ -669,13 +667,13 @@ namespace ilike
       return false;
     if ((this->particle_simulator == NULL) || (this->number_of_particles == 0))
       return false;
-    if (dynamic_cast<const SequentialSMCWorker*>(this->the_worker) == NULL)
+    if (dynamic_cast<const SequentialSMCWorker*>(this->the_worker.get()) == NULL)
       return false;
     if (!this->sequencer_limit_is_fixed || this->sequencer.find_scale)
       return false;
     if ((this->sequencer.schedules.size() != 1) || (this->sequencer.schedules.back().size() != 1))
       return false;
-    if (dynamic_cast<const PositiveSMCCriterion*>(this->sequencer.criterion) == NULL)
+    if (dynamic_cast<const PositiveSMCCriterion*>(this->sequencer.criterion.get()) == NULL)
       return false;
     return true;
   }
@@ -694,11 +692,11 @@ namespace ilike
       return false;
     if ((this->particle_simulator == NULL) || (this->number_of_particles == 0))
       return false;
-    if (dynamic_cast<const SequentialSMCWorker*>(this->the_worker) == NULL)
+    if (dynamic_cast<const SequentialSMCWorker*>(this->the_worker.get()) == NULL)
       return false;
     if (this->sequencer.find_scale)
       return false;
-    if ((this->factors == NULL) || !this->factors->supports_flat_generations(this->index))
+    if ((this->factors == NULL) || !this->factors->supports_flat_generations(this->index.get()))
       return false;
     return true;
   }
@@ -710,7 +708,7 @@ namespace ilike
     this->simulate_generation_in_chunks(current_state,
                                         conditioned_on_parameters,
                                         summarise,
-                                        this->index,
+                                        this->index.get(),
                                         this->lag > 0);
   }
 
@@ -758,7 +756,7 @@ namespace ilike
     //
     /*
      //this->weight(current_state, conditioned_on_parameters);
-     this->the_worker->weight(this->index,
+     this->the_worker->weight(this->index.get(),
      current_state->back());
      //current_state->initialise_next_step();
      current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
@@ -779,19 +777,19 @@ namespace ilike
   {
     // this->smcfixed_weight(current_state, conditioned_on_parameters);
 
-    this->the_worker->smcfixed_weight(this->index,
+    this->the_worker->smcfixed_weight(this->index.get(),
                                       current_state->back());
 
     /*
      if (this->sequencer_parameters!=NULL)
      {
-     this->the_worker->smcfixed_weight(this->index,
+     this->the_worker->smcfixed_weight(this->index.get(),
      current_state->back(),
      *this->sequencer_parameters);
      }
      else
      {
-     this->the_worker->smcfixed_weight(this->index,
+     this->the_worker->smcfixed_weight(this->index.get(),
      current_state->back());
      }
      */
@@ -801,13 +799,13 @@ namespace ilike
   void ImportanceSampler::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput *current_state)
   {
     // this->smcadaptive_given_smcfixed_weight(current_state, conditioned_on_parameters);
-    // this->the_worker->smcadaptive_given_smcfixed_weight(this->index,
+    // this->the_worker->smcadaptive_given_smcfixed_weight(this->index.get(),
     //                                                     current_state->back());
     // current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
 
     this->set_abc_scale(&current_state->back());
 
-    this->sequencer.find_next_target_bisection(current_state, this->index);
+    this->sequencer.find_next_target_bisection(current_state, this->index.get());
     // this->log_likelihood = current_state->log_likelihood_pre_last_step + current_state->latest_log_normalising_constant_ratio();
 
     current_state->log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
@@ -910,7 +908,7 @@ namespace ilike
   {
     /*
      //this->weight(current_state, conditioned_on_parameters);
-     this->the_worker->weight(this->index,
+     this->the_worker->weight(this->index.get(),
      current_state->back(),
      conditioned_on_parameters);
      //current_state->initialise_next_step();
@@ -939,19 +937,19 @@ namespace ilike
      if (this->sequencer_parameters!=NULL)
      {
      Parameters all_parameters = conditioned_on_parameters.merge(*this->sequencer_parameters);
-     this->the_worker->smcfixed_weight(this->index,
+     this->the_worker->smcfixed_weight(this->index.get(),
      current_state->back(),
      all_parameters);
      }
      else
      {
-     this->the_worker->smcfixed_weight(this->index,
+     this->the_worker->smcfixed_weight(this->index.get(),
      current_state->back(),
      conditioned_on_parameters);
      }
      */
 
-    this->the_worker->smcfixed_weight(this->index,
+    this->the_worker->smcfixed_weight(this->index.get(),
                                       current_state->back());
   }
 
@@ -967,7 +965,7 @@ namespace ilike
       // particle of the calling algorithm).
       this->set_target_from_parameters(conditioned_on_parameters);
       this->set_abc_scale(&current_state->back());
-      this->weight_for_adapting_sequence(this->index,
+      this->weight_for_adapting_sequence(this->index.get(),
                                          current_state->back());
       current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     }
@@ -975,9 +973,9 @@ namespace ilike
     {
       this->sequencer.reset();
       this->set_abc_scale(&current_state->back());
-      this->sequencer.find_next_target_bisection(current_state, this->index);
+      this->sequencer.find_next_target_bisection(current_state, this->index.get());
     }
-    // this->the_worker->smcadaptive_given_smcfixed_weight(this->index,
+    // this->the_worker->smcadaptive_given_smcfixed_weight(this->index.get(),
     //                                                     current_state->back(),
     //                                                     conditioned_on_parameters);
     // current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
@@ -1016,7 +1014,7 @@ namespace ilike
   {
 
     /*
-     this->the_worker->subsample_weight(this->index,
+     this->the_worker->subsample_weight(this->index.get(),
      current_state->back());
      current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
      current_state->subsample_log_likelihood = current_state->calculate_latest_log_normalising_constant_ratio();
@@ -1031,7 +1029,7 @@ namespace ilike
   {
 
     /*
-     this->the_worker->subsample_weight(this->index,
+     this->the_worker->subsample_weight(this->index.get(),
      current_state->back());
      current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
 
@@ -1049,19 +1047,19 @@ namespace ilike
      if (this->sequencer_parameters!=NULL)
      {
      Parameters all_parameters = conditioned_on_parameters.merge(*this->sequencer_parameters);
-     this->the_worker->subsample_smcfixed_weight(this->index,
+     this->the_worker->subsample_smcfixed_weight(this->index.get(),
      current_state->back(),
      all_parameters);
      }
      else
      {
-     this->the_worker->subsample_smcfixed_weight(this->index,
+     this->the_worker->subsample_smcfixed_weight(this->index.get(),
      current_state->back(),
      conditioned_on_parameters);
      }
      */
 
-    this->the_worker->subsample_smcfixed_weight(this->index,
+    this->the_worker->subsample_smcfixed_weight(this->index.get(),
                                                 current_state->back());
     // current_state->initialise_next_step();
   }
@@ -1074,19 +1072,19 @@ namespace ilike
      if (this->sequencer_parameters!=NULL)
      {
      Parameters all_parameters = conditioned_on_parameters.merge(*this->sequencer_parameters);
-     this->the_worker->subsample_smcfixed_weight(this->index,
+     this->the_worker->subsample_smcfixed_weight(this->index.get(),
      current_state->back(),
      all_parameters);
      }
      else
      {
-     this->the_worker->subsample_smcfixed_weight(this->index,
+     this->the_worker->subsample_smcfixed_weight(this->index.get(),
      current_state->back(),
      conditioned_on_parameters);
      }
      */
 
-    this->the_worker->subsample_smcfixed_weight(this->index,
+    this->the_worker->subsample_smcfixed_weight(this->index.get(),
                                                 current_state->back());
     // current_state->initialise_next_step();
   }
@@ -1097,13 +1095,13 @@ namespace ilike
 
     this->set_abc_scale(&current_state->back());
 
-    // this->sequencer.subsample_find_next_target_bisection(current_state,this->index,conditioned_on_parameters);
-    this->sequencer.subsample_find_next_target_bisection(current_state, this->index);
+    // this->sequencer.subsample_find_next_target_bisection(current_state,this->index.get(),conditioned_on_parameters);
+    this->sequencer.subsample_find_next_target_bisection(current_state, this->index.get());
 
     // this->smcadaptive_given_smcfixed_weight(current_state, conditioned_on_parameters);
 
     /*
-     this->the_worker->subsample_smcadaptive_given_smcfixed_weight(this->index,
+     this->the_worker->subsample_smcadaptive_given_smcfixed_weight(this->index.get(),
      current_state->back(),
      conditioned_on_parameters);
      current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
@@ -1133,7 +1131,7 @@ namespace ilike
       // by the caller.
       this->set_target_from_parameters(conditioned_on_parameters);
       this->set_abc_scale(&current_state->back());
-      this->the_worker->subsample_smcadaptive_given_smcfixed_weight(this->index,
+      this->the_worker->subsample_smcadaptive_given_smcfixed_weight(this->index.get(),
                                                                     current_state->back());
       current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     }
@@ -1141,13 +1139,13 @@ namespace ilike
     {
       this->sequencer.reset();
       this->set_abc_scale(&current_state->back());
-      this->sequencer.subsample_find_next_target_bisection(current_state, this->index);
+      this->sequencer.subsample_find_next_target_bisection(current_state, this->index.get());
     }
 
     // this->smcadaptive_given_smcfixed_weight(current_state, conditioned_on_parameters);
 
     /*
-     this->the_worker->subsample_smcadaptive_given_smcfixed_weight(this->index,
+     this->the_worker->subsample_smcadaptive_given_smcfixed_weight(this->index.get(),
      current_state->back(),
      conditioned_on_parameters);
      current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
@@ -1185,7 +1183,7 @@ namespace ilike
   // void ImportanceSampler::weight_for_adapting_sequence(Particles &current_particles,
   //                                                      const Parameters &conditioned_on_parameters)
   //{
-  //   this->the_worker->smcadaptive_given_smcfixed_weight(this->index,
+  //   this->the_worker->smcadaptive_given_smcfixed_weight(this->index.get(),
   //                                                       current_particles,
   //                                                       conditioned_on_parameters);
   // }

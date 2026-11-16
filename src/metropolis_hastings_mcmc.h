@@ -2,6 +2,7 @@
 #define METROPOLISHASTINGSMCMC_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -188,7 +189,8 @@ protected:
   
   // stored here
   /** @brief The proposal. */
-  ProposalKernel* proposal;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<ProposalKernel> proposal;
   
   /**
    * @brief Copies the state of another StandardMCMCOutput into this object.
@@ -199,7 +201,8 @@ protected:
   
   // stored here
   /** @brief The index. */
-  Index* index;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<Index> index;
   
 };
 }

@@ -2,6 +2,7 @@
 #define PARTICLE_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 #include <vector>
 #include <iostream>
@@ -522,8 +523,10 @@ public:
   double subsample_ensemble_target_evaluated;
   
   // Stored here.
-  FactorVariables* factor_variables;
-  EnsembleFactorVariables* ensemble_factor_variables;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<FactorVariables> factor_variables;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<EnsembleFactorVariables> ensemble_factor_variables;
   
   arma::mat direct_get_gradient_of_log(const std::string &variable,
                                        const Index* index) const;

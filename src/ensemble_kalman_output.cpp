@@ -14,7 +14,7 @@ EnsembleKalmanOutput::EnsembleKalmanOutput()
 {
   this->log_likelihood_smcfixed_part = 0.0;
   this->subsample_log_likelihood_smcfixed_part = 0.0;
-  this->estimator = NULL;
+  this->estimator.reset();
   this->iteration_written_to_file = -1;
   this->transform = NULL;
   this->enk_iteration = 0;
@@ -29,7 +29,7 @@ EnsembleKalmanOutput::EnsembleKalmanOutput(EnsembleKalman* estimator_in,
                                            const std::string &results_name_in)
 :LikelihoodEstimatorOutput()
 {
-  this->estimator = estimator_in->ensemble_kalman_duplicate();
+  this->estimator.reset(estimator_in->ensemble_kalman_duplicate());
   this->log_likelihood_smcfixed_part = 0.0;
   this->subsample_log_likelihood_smcfixed_part = 0.0;
   if (lag_in<2)
@@ -51,8 +51,7 @@ EnsembleKalmanOutput::EnsembleKalmanOutput(EnsembleKalman* estimator_in,
 
 EnsembleKalmanOutput::~EnsembleKalmanOutput()
 {
-  if (this->estimator!=NULL)
-    delete this->estimator;
+  this->estimator.reset();
 }
 
 //Copy constructor for the EnsembleKalmanOutput class.
@@ -68,8 +67,7 @@ void EnsembleKalmanOutput::operator=(const EnsembleKalmanOutput &another)
     return;
   }
   
-  if (this->estimator!=NULL)
-    delete this->estimator;
+  this->estimator.reset();
   
   LikelihoodEstimatorOutput::operator=(another);
   this->make_copy(another);
@@ -83,9 +81,9 @@ LikelihoodEstimatorOutput* EnsembleKalmanOutput::duplicate() const
 void EnsembleKalmanOutput::make_copy(const EnsembleKalmanOutput &another)
 {
   if (another.estimator!=NULL)
-    this->estimator = another.estimator->ensemble_kalman_duplicate();
+    this->estimator.reset(another.estimator->ensemble_kalman_duplicate());
   else
-    this->estimator = NULL;
+    this->estimator.reset();
   this->enk_iteration = another.enk_iteration;
   this->iteration_written_to_file = another.iteration_written_to_file;
   this->transform = another.transform;
@@ -348,7 +346,7 @@ void EnsembleKalmanOutput::subsample_evaluate_smcadaptive_part_given_smcfixed(co
 
 LikelihoodEstimator* EnsembleKalmanOutput::get_likelihood_estimator() const
 {
-  return this->estimator;
+  return this->estimator.get();
 }
 
 arma::mat EnsembleKalmanOutput::get_gradient_of_log(const std::string &variable,

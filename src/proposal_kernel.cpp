@@ -20,21 +20,18 @@ ProposalKernel::ProposalKernel()
 :Kernel()
 {
   this->instance_index = this->instance_counter++;
-  this->mcmc_adaptor = NULL;
-  this->smc_adaptor = NULL;
-  this->transform = NULL;
+  this->mcmc_adaptor.reset();
+  this->smc_adaptor.reset();
+  this->transform.reset();
 }
 
 ProposalKernel::~ProposalKernel()
 {
-  if (this->mcmc_adaptor!=NULL)
-    delete this->mcmc_adaptor;
+  this->mcmc_adaptor.reset();
   
-  if (this->smc_adaptor!=NULL)
-    delete this->smc_adaptor;
+  this->smc_adaptor.reset();
   
-  if (this->transform!=NULL)
-    delete this->transform;
+  this->transform.reset();
 }
 
 ProposalKernel::ProposalKernel(const Parameters &proposal_parameters_in)
@@ -55,14 +52,11 @@ void ProposalKernel::operator=(const ProposalKernel &another)
   if(this == &another)
     return;
   
-  if (this->mcmc_adaptor!=NULL)
-    delete this->mcmc_adaptor;
+  this->mcmc_adaptor.reset();
   
-  if (this->smc_adaptor!=NULL)
-    delete this->smc_adaptor;
+  this->smc_adaptor.reset();
   
-  if (this->transform!=NULL)
-    delete this->transform;
+  this->transform.reset();
   
   Kernel::operator=(another);
   this->make_copy(another);
@@ -71,19 +65,19 @@ void ProposalKernel::operator=(const ProposalKernel &another)
 void ProposalKernel::make_copy(const ProposalKernel &another)
 {
   if (another.mcmc_adaptor!=NULL)
-    this->mcmc_adaptor = another.mcmc_adaptor->duplicate();
+    this->mcmc_adaptor.reset(another.mcmc_adaptor->duplicate());
   else
-    this->mcmc_adaptor = NULL;
+    this->mcmc_adaptor.reset();
   
   if (another.smc_adaptor!=NULL)
-    this->smc_adaptor = another.smc_adaptor->duplicate();
+    this->smc_adaptor.reset(another.smc_adaptor->duplicate());
   else
-    this->smc_adaptor = NULL;
+    this->smc_adaptor.reset();
   
   if (another.transform!=NULL)
-    this->transform = another.transform->duplicate();
+    this->transform.reset(another.transform->duplicate());
   else
-    this->transform = NULL;
+    this->transform.reset();
   
   //this->proposal_parameters = another.proposal_parameters;
   
@@ -119,7 +113,7 @@ Particle ProposalKernel::move(RandomNumberGenerator &rng,
   {
     if (new_outputs_index!=NULL)
     {
-      proposed_particle.simulate_factor_variables(particle.factor_variables,
+      proposed_particle.simulate_factor_variables(particle.factor_variables.get(),
                                                   new_outputs_index);
     }
     else
@@ -171,7 +165,7 @@ void ProposalKernel::move_into(RandomNumberGenerator &rng,
   if ((particle.factor_variables!=NULL) && (scratch.factor_variables!=NULL))
   {
     if (new_outputs_index!=NULL)
-      recycled = scratch.factor_variables->recycle_with_new_outputs(particle.factor_variables,
+      recycled = scratch.factor_variables->recycle_with_new_outputs(particle.factor_variables.get(),
                                                                     scratch.parameters,
                                                                     new_outputs_index);
     else if (particle.factor_variables->get_factors()!=NULL)
@@ -184,14 +178,14 @@ void ProposalKernel::move_into(RandomNumberGenerator &rng,
   {
     if (scratch.factor_variables!=NULL)
     {
-      delete scratch.factor_variables;
-      scratch.factor_variables = NULL;
+      scratch.factor_variables.reset();
+      scratch.factor_variables.reset();
     }
     if (particle.factor_variables!=NULL)
     {
       if (new_outputs_index!=NULL)
       {
-        scratch.simulate_factor_variables(particle.factor_variables,
+        scratch.simulate_factor_variables(particle.factor_variables.get(),
                                           new_outputs_index);
       }
       else
@@ -205,8 +199,8 @@ void ProposalKernel::move_into(RandomNumberGenerator &rng,
 
   if (scratch.ensemble_factor_variables!=NULL)
   {
-    delete scratch.ensemble_factor_variables;
-    scratch.ensemble_factor_variables = NULL;
+    scratch.ensemble_factor_variables.reset();
+    scratch.ensemble_factor_variables.reset();
   }
   if (particle.ensemble_factor_variables!=NULL)
   {
@@ -248,7 +242,7 @@ void ProposalKernel::move_into(RandomNumberGenerator &rng,
  else
  {
  // transform particles
- particle.set_move_transformed_parameters(this->transform);
+ particle.set_move_transformed_parameters(this->transform.get());
  proposed_particle.move_transformed_parameters = this->simulate(rng,
  particle,
  conditioned_on_parameters);
@@ -337,7 +331,7 @@ Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
  else
  {
  // transform particles
- particle.set_move_transformed_parameters(this->transform);
+ particle.set_move_transformed_parameters(this->transform.get());
  proposed_particle.move_transformed_parameters = this->subsample_simulate(rng,particle);
  proposed_particle.parameters = this->transform->inverse_transform(proposed_particle.move_transformed_parameters);
  }
@@ -416,7 +410,7 @@ Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
  else
  {
  // transform particles
- particle.set_move_transformed_parameters(this->transform);
+ particle.set_move_transformed_parameters(this->transform.get());
  proposed_particle.move_transformed_parameters = this->subsample_simulate(rng,
  variable,
  particle,
@@ -454,7 +448,7 @@ Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
  else
  {
  // transform particles
- particle.set_move_transformed_parameters(this->transform);
+ particle.set_move_transformed_parameters(this->transform.get());
  proposed_particle.move_transformed_parameters = this->simulate(rng,particle);
  proposed_particle.parameters = this->transform->inverse_transform(proposed_particle.move_transformed_parameters);
  
@@ -499,7 +493,7 @@ Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
  else
  {
  // transform particles
- particle.set_move_transformed_parameters(this->transform);
+ particle.set_move_transformed_parameters(this->transform.get());
  proposed_particle.move_transformed_parameters = this->simulate(rng,
  particle,
  conditioned_on_parameters);
@@ -538,7 +532,7 @@ Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
  else
  {
  // transform particles
- particle.set_move_transformed_parameters(this->transform);
+ particle.set_move_transformed_parameters(this->transform.get());
  proposed_particle.move_transformed_parameters = this->subsample_simulate(rng,particle);
  proposed_particle.parameters = this->transform->inverse_transform(proposed_particle.move_transformed_parameters);
  }
@@ -568,7 +562,7 @@ Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
  else
  {
  // transform particles
- particle.set_move_transformed_parameters(this->transform);
+ particle.set_move_transformed_parameters(this->transform.get());
  proposed_particle.move_transformed_parameters = this->subsample_simulate(rng,
  particle,
  conditioned_on_parameters);
@@ -607,7 +601,7 @@ Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
  else
  {
  // transform particles
- particle.set_move_transformed_parameters(this->transform);
+ particle.set_move_transformed_parameters(this->transform.get());
  proposed_particle.move_transformed_parameters = this->subsample_simulate(rng,variable,particle);
  proposed_particle.parameters = this->transform->inverse_transform(proposed_particle.move_transformed_parameters);
  }
@@ -640,7 +634,7 @@ Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
  else
  {
  // transform particles
- particle.set_move_transformed_parameters(this->transform);
+ particle.set_move_transformed_parameters(this->transform.get());
  proposed_particle.move_transformed_parameters = this->subsample_simulate(rng,
  variable,
  particle,
@@ -694,7 +688,7 @@ void ProposalKernel::mcmc_adapt(const Particle &current_particle,
  }
  else
  {
- particle.set_move_transformed_parameters(this->transform);
+ particle.set_move_transformed_parameters(this->transform.get());
  }
  }
  */
@@ -710,8 +704,8 @@ double ProposalKernel::evaluate_kernel(const Particle &proposed_particle,
   }
   else
   {
-    //proposed_particle.set_move_transformed_parameters(this->transform);
-    //old_particle.set_move_transformed_parameters(this->transform);
+    //proposed_particle.set_move_transformed_parameters(this->transform.get());
+    //old_particle.set_move_transformed_parameters(this->transform.get());
     
     // need to include absolute value of Jacobian determinant
     return this->specific_evaluate_kernel(proposed_particle, old_particle) + this->transform->log_abs_jacobian_determinant(proposed_particle.parameters);
@@ -755,8 +749,8 @@ double ProposalKernel::specific_evaluate_kernel_from_parameters(const Parameters
  }
  else
  {
- proposed_particle.set_move_transformed_parameters(this->transform);
- old_particle.set_move_transformed_parameters(this->transform);
+ proposed_particle.set_move_transformed_parameters(this->transform.get());
+ old_particle.set_move_transformed_parameters(this->transform.get());
  
  // need to include absolute value of Jacobian determinant
  return this->specific_evaluate_kernel(proposed_particle,
@@ -778,8 +772,8 @@ double ProposalKernel::subsample_evaluate_kernel(const Particle &proposed_partic
   }
   else
   {
-    //proposed_particle.set_move_transformed_parameters(this->transform);
-    //old_particle.set_move_transformed_parameters(this->transform);
+    //proposed_particle.set_move_transformed_parameters(this->transform.get());
+    //old_particle.set_move_transformed_parameters(this->transform.get());
     
     // need to include absolute value of Jacobian determinant
     return this->specific_subsample_evaluate_kernel(proposed_particle,
@@ -802,8 +796,8 @@ double ProposalKernel::subsample_evaluate_kernel(const Particle &proposed_partic
  }
  else
  {
- proposed_particle.set_move_transformed_parameters(this->transform);
- old_particle.set_move_transformed_parameters(this->transform);
+ proposed_particle.set_move_transformed_parameters(this->transform.get());
+ old_particle.set_move_transformed_parameters(this->transform.get());
  
  // need to include absolute value of Jacobian determinant
  return this->specific_subsample_evaluate_kernel(proposed_particle,
@@ -815,7 +809,7 @@ double ProposalKernel::subsample_evaluate_kernel(const Particle &proposed_partic
 
 Transform* ProposalKernel::get_transform() const
 {
-  return this->transform;
+  return this->transform.get();
 }
 
 int ProposalKernel::get_instance_index() const

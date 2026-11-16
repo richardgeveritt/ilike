@@ -2,6 +2,7 @@
 #define GAUSSIANDENSITYESTIMATOROUTPUT_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 //#include <vector>
@@ -87,9 +88,9 @@ protected:
   
   // Stored here.
   /** @brief The mean estimator. */
-  VectorParameterEstimator* mean_estimator;
+  std::unique_ptr<VectorParameterEstimator> mean_estimator;
   /** @brief The covariance estimator. */
-  MatrixParameterEstimator* covariance_estimator;
+  std::unique_ptr<MatrixParameterEstimator> covariance_estimator;
   
   /**
    * @brief Copies the state of another VectorParameterEstimator into this object.

@@ -317,7 +317,8 @@ protected:
   
   // stored here
   /** @brief The particle simulator. */
-  ParticleSimulator* particle_simulator;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<ParticleSimulator> particle_simulator;
   
   /**
    * @brief Class-specific implementation for run.
@@ -468,10 +469,12 @@ protected:
   friend SMCOutput;
   // Stored here.
   /** @brief The the worker. */
-  SMCWorker* the_worker;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<SMCWorker> the_worker;
   // Stored here.
   /** @brief The resampling criterion. */
-  SMCCriterion* resampling_criterion;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<SMCCriterion> resampling_criterion;
   
   // Stored here.
   //Transform* transform;

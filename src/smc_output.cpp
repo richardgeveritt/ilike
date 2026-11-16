@@ -227,7 +227,7 @@ Particles* SMCOutput::add_particles()
   size_t num_to_pop_front = std::max<int>(0,this->all_particles.size()-this->lag+1);
   // the objects of the dropped generation are kept for the new one to reuse
   // when the algorithm can (SMC::reuses_particle_objects)
-  std::vector<MoveOutput*> recycled;
+  std::vector<std::unique_ptr<MoveOutput>> recycled;
   for (size_t i=0; i<num_to_pop_front; ++i)
   {
     if (this->estimator->reuses_particle_objects() && recycled.empty())
@@ -245,7 +245,7 @@ Particles* SMCOutput::add_particles(Particles* most_recent_particles)
   size_t num_to_pop_front = std::max<int>(0,this->all_particles.size()-this->lag+1);
   // the objects of the dropped generation are kept for the new one to reuse
   // when the algorithm can (SMC::reuses_particle_objects)
-  std::vector<MoveOutput*> recycled;
+  std::vector<std::unique_ptr<MoveOutput>> recycled;
   for (size_t i=0; i<num_to_pop_front; ++i)
   {
     if (this->estimator->reuses_particle_objects() && recycled.empty())
@@ -906,7 +906,7 @@ bool SMCOutput::repoint_estimator(LikelihoodEstimator* estimator_in)
     return false;
   for (auto g = this->all_particles.begin(); g != this->all_particles.end(); ++g)
   {
-    if (!g->repoint_flat_to(smc->factors, smc->get_weighting_index()))
+    if (!g->repoint_flat_to(smc->factors.get(), smc->get_weighting_index()))
       return false;
   }
   for (auto g = this->all_proposed.begin(); g != this->all_proposed.end(); ++g)

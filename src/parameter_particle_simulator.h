@@ -165,7 +165,7 @@ protected:
   
   // stored here
   /** @brief The proposal. */
-  const IndependentProposalKernel* proposal;
+  std::unique_ptr<const IndependentProposalKernel> proposal;
   
   // Not stored here.
   /** @brief The likelihood estimators. */

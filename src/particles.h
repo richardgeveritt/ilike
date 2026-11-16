@@ -3,6 +3,7 @@
 
 //#include <RcppParallel.h>
 #include <RcppArmadillo.h>
+#include <memory>
 #include <iostream>
 
 using namespace Rcpp;
@@ -286,12 +287,13 @@ public:
   size_t size() const;
   
   // Outer vector is over particles, inner is stored here
-  std::vector< MoveOutput* > particles;
+  // owned (dev/plan.md 3.5, CH3)
+  std::vector<std::unique_ptr<MoveOutput>> particles;
 
   // Objects of a dropped generation, given to this one to be reused for its
   // new particles (dev/plan.md, Stage 3 (a); used by the particle filter).
   // Owned: deleted with this object if not taken. Not copied.
-  std::vector< MoveOutput* > spare;
+  std::vector<std::unique_ptr<MoveOutput>> spare;
   MoveOutput* take_spare();
   
   arma::colvec unnormalised_log_weights;
@@ -335,8 +337,8 @@ public:
   bool flat = false;
   size_t flat_size = 0;
   SampleStore flat_points;
-  std::vector<FactorVariables*> flat_factor_variables;
-  FactorVariables* flat_record_writer = NULL;
+  std::vector<std::unique_ptr<FactorVariables>> flat_factor_variables;
+  std::unique_ptr<FactorVariables> flat_record_writer;
   arma::colvec flat_incremental_log_weights;
   //  - for a generation made by MCMC moves (dev/plan.md 2.6a, G3):
   //    flat_points holds every stored chain state, particle by particle,
@@ -372,7 +374,7 @@ public:
   const Index* adaptive_summary_index = NULL;
   int adaptive_summary_state = 0;
   const FactorVariables* adaptive_summary_evaluator = NULL;
-  FactorVariables* flat_summary_evaluator = NULL; // owned
+  std::unique_ptr<FactorVariables> flat_summary_evaluator; // owned
   bool adaptive_summaries_used = false;
   Parameters last_trial_schedule;
   bool prepare_adaptive_summaries(const Index* index);

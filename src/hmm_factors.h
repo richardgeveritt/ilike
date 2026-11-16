@@ -2,6 +2,7 @@
 #define HMMFACTORS_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -127,7 +128,7 @@ public:
 protected:
   // stored here
   /** @brief The transition kernel. */
-  ProposalKernel* transition_kernel;
+  std::unique_ptr<ProposalKernel> transition_kernel;
   
   // A flag to determine if the terms are deemed to be "smcfixed" (will not be reevaluated when finding the next target in adaptive SMC).
   /** @brief The smcfixed flag. */
@@ -139,7 +140,8 @@ protected:
   // pointers to llhd estimators
   // stored here
   /** @brief The likelihood estimators. */
-  std::vector<LikelihoodEstimator*> likelihood_estimators;
+  // owned (dev/plan.md 3.5, CH3)
+  std::vector<std::unique_ptr<LikelihoodEstimator>> likelihood_estimators;
   
   // stored here
   // data temporarily used in a likelihood estimator

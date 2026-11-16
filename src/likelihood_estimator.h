@@ -2,6 +2,7 @@
 #define LIKELIHOODESTIMATOR_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -217,7 +218,8 @@ protected:
   
   // stored here
   /** @brief The factors. */
-  Factors* factors;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<Factors> factors;
   
   // A flag to determine if the terms are deemed to be "smcfixed" (will not be reevaluated when finding the next target in adaptive SMC).
   /** @brief The smcfixed flag. */

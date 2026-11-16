@@ -17,7 +17,7 @@ AnnealedLikelihoodEstimator::AnnealedLikelihoodEstimator(RandomNumberGenerator* 
                                                          bool smcfixed_flag_in)
 :LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
 {
-  this->estimator = estimator_in;
+  this->estimator.reset(estimator_in);
   this->function_power = function_power_in;
   this->power_variable = power_variable_in;
   this->constant_power = 1.0;
@@ -34,7 +34,7 @@ AnnealedLikelihoodEstimator::AnnealedLikelihoodEstimator(RandomNumberGenerator* 
                                                          bool smcfixed_flag_in)
 :LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
 {
-  this->estimator = estimator_in;
+  this->estimator.reset(estimator_in);
   this->function_power = PowerFunctionPtr();
   this->power_variable = "";
   this->constant_power = constant_power_in;
@@ -45,8 +45,7 @@ AnnealedLikelihoodEstimator::AnnealedLikelihoodEstimator(RandomNumberGenerator* 
 
 AnnealedLikelihoodEstimator::~AnnealedLikelihoodEstimator()
 {
-  if (this->estimator!=NULL)
-    delete this->estimator;
+  this->estimator.reset();
 }
 
 //Copy constructor for the AnnealedLikelihoodEstimator class.
@@ -62,8 +61,7 @@ void AnnealedLikelihoodEstimator::operator=(const AnnealedLikelihoodEstimator &a
     return;
   }
   
-  if (this->estimator!=NULL)
-    delete this->estimator;
+  this->estimator.reset();
   
   LikelihoodEstimator::operator=(another);
   this->make_copy(another);
@@ -77,9 +75,9 @@ LikelihoodEstimator* AnnealedLikelihoodEstimator::duplicate() const
 void AnnealedLikelihoodEstimator::make_copy(const AnnealedLikelihoodEstimator &another)
 {
   if (another.estimator!=NULL)
-    this->estimator = another.estimator->duplicate();
+    this->estimator.reset(another.estimator->duplicate());
   else
-    this->estimator = NULL;
+    this->estimator.reset();
   
   this->function_power = another.function_power;
   this->power_variable = another.power_variable;

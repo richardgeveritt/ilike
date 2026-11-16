@@ -19,17 +19,19 @@ VectorEnsembleFactors::VectorEnsembleFactors()
 VectorEnsembleFactors::VectorEnsembleFactors(const std::vector<MeasurementCovarianceEstimator*> &measurement_covariance_estimators_in)
 :EnsembleFactors()
 {
-  this->measurement_covariance_estimators = measurement_covariance_estimators_in;
+  this->measurement_covariance_estimators.reserve(measurement_covariance_estimators_in.size());
+  for (auto k : measurement_covariance_estimators_in)
+    this->measurement_covariance_estimators.emplace_back(k);
 }
 
 VectorEnsembleFactors::~VectorEnsembleFactors()
 {
-  for (std::vector<MeasurementCovarianceEstimator*>::iterator i=this->measurement_covariance_estimators.begin();
+  for (auto i=this->measurement_covariance_estimators.begin();
        i!=this->measurement_covariance_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   
   /*
@@ -38,7 +40,7 @@ VectorEnsembleFactors::~VectorEnsembleFactors()
    ++i)
    {
    if (*i!=NULL)
-   delete *i;
+   (*i).reset();
    }
    */
 }
@@ -56,12 +58,12 @@ void VectorEnsembleFactors::operator=(const VectorEnsembleFactors &another)
     return;
   }
   
-  for (std::vector<MeasurementCovarianceEstimator*>::iterator i=this->measurement_covariance_estimators.begin();
+  for (auto i=this->measurement_covariance_estimators.begin();
        i!=this->measurement_covariance_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   this->measurement_covariance_estimators.clear();
   
@@ -71,7 +73,7 @@ void VectorEnsembleFactors::operator=(const VectorEnsembleFactors &another)
    ++i)
    {
    if (*i!=NULL)
-   delete *i;
+   (*i).reset();
    }
    this->measurement_covariance_estimator_temp_data.clear();
    */
@@ -89,14 +91,14 @@ void VectorEnsembleFactors::make_copy(const VectorEnsembleFactors &another)
 {
   this->measurement_covariance_estimators.resize(0);
   this->measurement_covariance_estimators.reserve(another.measurement_covariance_estimators.size());
-  for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i=another.measurement_covariance_estimators.begin();
+  for (auto i=another.measurement_covariance_estimators.begin();
        i!=another.measurement_covariance_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      this->measurement_covariance_estimators.push_back((*i)->duplicate());
+      this->measurement_covariance_estimators.emplace_back((*i)->duplicate());
     else
-      this->measurement_covariance_estimators.push_back(NULL);
+      this->measurement_covariance_estimators.emplace_back();
   }
   
   /*
@@ -146,7 +148,7 @@ std::vector<arma::colvec*> VectorEnsembleFactors::get_measurements()
   std::vector<arma::colvec*> measurements;
   measurements.reserve(this->measurement_covariance_estimators.size());
   
-  for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+  for (auto i=this->measurement_covariance_estimators.begin();
        i != this->measurement_covariance_estimators.end();
        ++i)
   {
@@ -163,7 +165,7 @@ EnsembleFactorVariables* VectorEnsembleFactors::simulate_ensemble_factor_variabl
   std::vector<MeasurementCovarianceEstimatorOutput*> outputs;
   outputs.reserve(this->measurement_covariance_estimators.size());
   
-  for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+  for (auto i=this->measurement_covariance_estimators.begin();
        i != this->measurement_covariance_estimators.end();
        ++i)
   {
@@ -184,7 +186,7 @@ EnsembleFactorVariables* VectorEnsembleFactors::simulate_ensemble_factor_variabl
  
  Parameters all_parameters = simulated_parameters.merge(conditioned_on_parameters);
  
- for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+ for (auto i=this->measurement_covariance_estimators.begin();
  i != this->measurement_covariance_estimators.end();
  ++i)
  {
@@ -209,7 +211,7 @@ EnsembleFactorVariables* VectorEnsembleFactors::subsample_simulate_ensemble_fact
   std::vector<MeasurementCovarianceEstimatorOutput*> outputs;
   outputs.reserve(this->measurement_covariance_estimators.size());
   
-  for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+  for (auto i=this->measurement_covariance_estimators.begin();
        i != this->measurement_covariance_estimators.end();
        ++i)
   {
@@ -230,7 +232,7 @@ EnsembleFactorVariables* VectorEnsembleFactors::subsample_simulate_ensemble_fact
  
  Parameters all_parameters = simulated_parameters.merge(conditioned_on_parameters);
  
- for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+ for (auto i=this->measurement_covariance_estimators.begin();
  i != this->measurement_covariance_estimators.end();
  ++i)
  {
@@ -255,7 +257,7 @@ EnsembleFactorVariables* VectorEnsembleFactors::subsample_simulate_ensemble_fact
  {
  std::vector<arma::mat> output;
  output.reserve(this->measurement_covariance_estimators.size());
- for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+ for (auto i=this->measurement_covariance_estimators.begin();
  i != this->measurement_covariance_estimators.end();
  ++i)
  {
@@ -268,7 +270,7 @@ EnsembleFactorVariables* VectorEnsembleFactors::subsample_simulate_ensemble_fact
  {
  std::vector<arma::mat> output;
  output.reserve(this->measurement_covariance_estimators.size());
- for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+ for (auto i=this->measurement_covariance_estimators.begin();
  i != this->measurement_covariance_estimators.end();
  ++i)
  {

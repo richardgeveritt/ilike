@@ -91,10 +91,10 @@ void SequentialSMCWorker::specific_simulate(Particles* next_particles)
     //Particle* new_particle = next_particles->add_particle();
     //this->the_smc->particle_simulator->simulate(local_rng,
     //                                            new_particle,
-    //                                            this->the_smc->factors);
+    //                                            this->the_smc->factors.get());
     
     next_particles->push_back(this->the_smc->particle_simulator->simulate(local_rng,
-                                                                          this->the_smc->factors,
+                                                                          this->the_smc->factors.get(),
                                                                           &this->the_smc->proposals_to_transform_for,
                                                                           &this->the_smc->proposals_to_find_gradient_for,
                                                                           this->the_smc->sequencer.schedule_parameters));
@@ -114,7 +114,7 @@ void SequentialSMCWorker::specific_simulate(Particles* next_particles)
    Particle* new_particle = next_particles->add_particle();
    this->the_smc->particle_simulator->simulate(local_rng,
    new_particle,
-   this->the_smc->factors);
+   this->the_smc->factors.get());
    
    //next_particles->push_back(new_p);
    
@@ -138,7 +138,7 @@ void SequentialSMCWorker::specific_simulate(Particles* next_particles)
    Particle* new_particle = next_particles->add_particle();
    this->the_smc->particle_simulator->simulate_and_transform(local_rng,
    new_particle,
-   this->the_smc->factors,
+   this->the_smc->factors.get(),
    this->the_smc->transform,
    this->the_smc->store_raw);
    
@@ -188,11 +188,11 @@ void SequentialSMCWorker::specific_simulate(Particles* next_particles,
     //Particle* new_particle = next_particles->add_particle();
     //this->the_smc->particle_simulator->simulate(local_rng,
     //                                            new_particle,
-    //                                            this->the_smc->factors,
+    //                                            this->the_smc->factors.get(),
     //                                            conditioned_on_parameters);
     
     next_particles->push_back(this->the_smc->particle_simulator->simulate(local_rng,
-                                                                          this->the_smc->factors,
+                                                                          this->the_smc->factors.get(),
                                                                           &this->the_smc->proposals_to_transform_for,
                                                                           &this->the_smc->proposals_to_find_gradient_for,
                                                                           conditioned_on_parameters,
@@ -213,11 +213,11 @@ void SequentialSMCWorker::specific_simulate(Particles* next_particles,
    Particle* new_particle = next_particles->add_particle();
    this->the_smc->particle_simulator->simulate(local_rng,
    new_particle,
-   this->the_smc->factors,
+   this->the_smc->factors.get(),
    conditioned_on_parameters);
    
    //next_particles->push_back(this->the_smc->particle_simulator->simulate(local_rng,
-   //                                                                      this->the_smc->factors,
+   //                                                                      this->the_smc->factors.get(),
    //                                                                      conditioned_on_parameters));
    
    if (this->the_smc->proposal_is_evaluated==true)
@@ -240,7 +240,7 @@ void SequentialSMCWorker::specific_simulate(Particles* next_particles,
    Particle* new_particle = next_particles->add_particle();
    this->the_smc->particle_simulator->simulate_and_transform(local_rng,
    new_particle,
-   this->the_smc->factors,
+   this->the_smc->factors.get(),
    this->the_smc->transform,
    this->the_smc->store_raw,
    conditioned_on_parameters);
@@ -290,11 +290,11 @@ void SequentialSMCWorker::subsample_specific_simulate(Particles* next_particles)
     //Particle* new_particle = next_particles->add_particle();
     //this->the_smc->particle_simulator->subsample_simulate(local_rng,
     //                                                      new_particle,
-    //                                                      this->the_smc->factors,
+    //                                                      this->the_smc->factors.get(),
     //                                                      conditioned_on_parameters);
     
     next_particles->push_back(this->the_smc->particle_simulator->subsample_simulate(local_rng,
-                                                                                    this->the_smc->factors,
+                                                                                    this->the_smc->factors.get(),
                                                                                     &this->the_smc->proposals_to_transform_for,
                                                                                     &this->the_smc->proposals_to_find_gradient_for,
                                                                                     this->the_smc->sequencer.schedule_parameters));
@@ -314,11 +314,11 @@ void SequentialSMCWorker::subsample_specific_simulate(Particles* next_particles)
    Particle* new_particle = next_particles->add_particle();
    this->the_smc->particle_simulator->subsample_simulate(local_rng,
    new_particle,
-   this->the_smc->factors,
+   this->the_smc->factors.get(),
    conditioned_on_parameters);
    
    //next_particles->push_back(this->the_smc->particle_simulator->subsample_simulate(local_rng,
-   //                                                                                this->the_smc->factors,
+   //                                                                                this->the_smc->factors.get(),
    //                                                                                conditioned_on_parameters));
    
    if (this->the_smc->proposal_is_evaluated==true)
@@ -341,7 +341,7 @@ void SequentialSMCWorker::subsample_specific_simulate(Particles* next_particles)
    Particle* new_particle = next_particles->add_particle();
    this->the_smc->particle_simulator->subsample_simulate_and_transform(local_rng,
    new_particle,
-   this->the_smc->factors,
+   this->the_smc->factors.get(),
    this->the_smc->transform,
    this->the_smc->store_raw,
    conditioned_on_parameters);
@@ -392,11 +392,11 @@ void SequentialSMCWorker::subsample_specific_simulate(Particles* next_particles,
     //Particle* new_particle = next_particles->add_particle();
     //this->the_smc->particle_simulator->subsample_simulate(local_rng,
     //                                                      new_particle,
-    //                                                      this->the_smc->factors,
+    //                                                      this->the_smc->factors.get(),
     //                                                      conditioned_on_parameters);
     
     next_particles->push_back(this->the_smc->particle_simulator->subsample_simulate(local_rng,
-                                                                                    this->the_smc->factors,
+                                                                                    this->the_smc->factors.get(),
                                                                                     &this->the_smc->proposals_to_transform_for,
                                                                                     &this->the_smc->proposals_to_find_gradient_for,
                                                                                     conditioned_on_parameters,
@@ -417,11 +417,11 @@ void SequentialSMCWorker::subsample_specific_simulate(Particles* next_particles,
    Particle* new_particle = next_particles->add_particle();
    this->the_smc->particle_simulator->subsample_simulate(local_rng,
    new_particle,
-   this->the_smc->factors,
+   this->the_smc->factors.get(),
    conditioned_on_parameters);
    
    //next_particles->push_back(this->the_smc->particle_simulator->subsample_simulate(local_rng,
-   //                                                                                this->the_smc->factors,
+   //                                                                                this->the_smc->factors.get(),
    //                                                                                conditioned_on_parameters));
    
    if (this->the_smc->proposal_is_evaluated==true)
@@ -444,7 +444,7 @@ void SequentialSMCWorker::subsample_specific_simulate(Particles* next_particles,
    Particle* new_particle = next_particles->add_particle();
    this->the_smc->particle_simulator->subsample_simulate_and_transform(local_rng,
    new_particle,
-   this->the_smc->factors,
+   this->the_smc->factors.get(),
    this->the_smc->transform,
    this->the_smc->store_raw,
    conditioned_on_parameters);
@@ -1305,7 +1305,7 @@ void SequentialSMCWorker::subsample_pf_weight(const Index* index,
 
 //  for (size_t i = 0; i < this->get_number_of_particles(); ++i)
 //  {
-//    this->particles[i] = (*this->particle_simulator)(local_rng);
+//    this->particles[i] = (*this->particle_simulator.get())(local_rng);
 //  }
 
 //std::vector<LikelihoodEstimatorOutput*> inner_likelihood_estimator_outputs;

@@ -2,6 +2,7 @@
 #define HMMENSEMBLEFACTORS_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -64,6 +65,8 @@ public:
    * @return The result.
    */
   EnsembleFactors* duplicate() const;
+
+  ProposalKernel* get_transition_kernel() const;
   
   /**
    * @brief Sets the data.
@@ -174,11 +177,11 @@ protected:
   
   // stored here
   /** @brief The transition kernel. */
-  ProposalKernel* transition_kernel;
+  std::unique_ptr<ProposalKernel> transition_kernel;
   
   // stored here
   /** @brief The measurement covariance estimators. */
-  std::vector<MeasurementCovarianceEstimator*> measurement_covariance_estimators;
+  std::vector<std::unique_ptr<MeasurementCovarianceEstimator>> measurement_covariance_estimators;
   
   // stored here
   // data temporarily used in a likelihood estimator

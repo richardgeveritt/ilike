@@ -2,6 +2,7 @@
 #define SEQUENCER_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <string>
@@ -239,8 +240,9 @@ namespace ilike
     SMCWorker *the_worker;
 
     // stored here
-    SMCCriterion *criterion;
-    SMCTermination *termination;
+    // owned (dev/plan.md 3.5, CH3)
+    std::unique_ptr<SMCCriterion> criterion;
+    std::unique_ptr<SMCTermination> termination;
   };
 }
 

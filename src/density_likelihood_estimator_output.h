@@ -2,6 +2,7 @@
 #define DensityLikelihoodEstimatorOutput_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <string>
@@ -160,9 +161,9 @@ protected:
   
   // Stored here.
   /** @brief The density estimator output. */
-  DensityEstimatorOutput* density_estimator_output;
+  std::unique_ptr<DensityEstimatorOutput> density_estimator_output;
   /** @brief The subsample density estimator output. */
-  DensityEstimatorOutput* subsample_density_estimator_output;
+  std::unique_ptr<DensityEstimatorOutput> subsample_density_estimator_output;
   // Stored here.
   //DensityEstimator* density_estimator;
   

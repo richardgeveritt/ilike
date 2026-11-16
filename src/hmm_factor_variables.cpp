@@ -22,7 +22,10 @@ HMMFactorVariables::HMMFactorVariables(const HMMFactors* hmm_factors_in,
 :FactorVariables()
 {
   this->hmm_factors = hmm_factors_in;
-  this->likelihood_estimator_outputs = std::move(likelihood_estimator_outputs_in);
+  // takes ownership of the outputs
+  this->likelihood_estimator_outputs.reserve(likelihood_estimator_outputs_in.size());
+  for (auto i=likelihood_estimator_outputs_in.begin(); i!=likelihood_estimator_outputs_in.end(); ++i)
+    this->likelihood_estimator_outputs.emplace_back(*i);
 }
 
 HMMFactorVariables::HMMFactorVariables(const HMMFactors* hmm_factors_in,
@@ -31,18 +34,14 @@ HMMFactorVariables::HMMFactorVariables(const HMMFactors* hmm_factors_in,
 :FactorVariables(particle_in)
 {
   this->hmm_factors = hmm_factors_in;
-  this->likelihood_estimator_outputs = std::move(likelihood_estimator_outputs_in);
+  // takes ownership of the outputs
+  this->likelihood_estimator_outputs.reserve(likelihood_estimator_outputs_in.size());
+  for (auto i=likelihood_estimator_outputs_in.begin(); i!=likelihood_estimator_outputs_in.end(); ++i)
+    this->likelihood_estimator_outputs.emplace_back(*i);
 }
 
 HMMFactorVariables::~HMMFactorVariables()
 {
-  for (std::vector<LikelihoodEstimatorOutput*>::iterator i=this->likelihood_estimator_outputs.begin();
-       i!=this->likelihood_estimator_outputs.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
   
   //if (this->initial_prior!=NULL)
   //  delete this->initial_prior;
@@ -59,14 +58,6 @@ void HMMFactorVariables::operator=(const HMMFactorVariables &another)
 {
   if(this == &another){ //if a==a
     return;
-  }
-  
-  for (std::vector<LikelihoodEstimatorOutput*>::iterator i=this->likelihood_estimator_outputs.begin();
-       i!=this->likelihood_estimator_outputs.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
   }
   this->likelihood_estimator_outputs.clear();
   
@@ -97,14 +88,14 @@ void HMMFactorVariables::make_copy(const HMMFactorVariables &another)
 
   this->likelihood_estimator_outputs.resize(0);
   this->likelihood_estimator_outputs.reserve(another.likelihood_estimator_outputs.size());
-  for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=another.likelihood_estimator_outputs.begin();
+  for (auto i=another.likelihood_estimator_outputs.begin();
        i!=another.likelihood_estimator_outputs.end();
        ++i)
   {
     if (*i!=NULL)
-      this->likelihood_estimator_outputs.push_back((*i)->duplicate());
+      this->likelihood_estimator_outputs.emplace_back((*i)->duplicate());
     else
-      this->likelihood_estimator_outputs.push_back(NULL);
+      this->likelihood_estimator_outputs.emplace_back(nullptr);
   }
   
   /*
@@ -625,7 +616,7 @@ double HMMFactorVariables::subsample_evaluate_likelihoods(const Index* index) co
  
  arma::mat current_parameter = this->particle->parameters[variable];
  arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
- for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=this->likelihood_estimator_outputs.begin();
+ for (auto i=this->likelihood_estimator_outputs.begin();
  i!=this->likelihood_estimator_outputs.end();
  ++i)
  {
@@ -663,7 +654,7 @@ double HMMFactorVariables::subsample_evaluate_likelihoods(const Index* index) co
  Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
  arma::mat current_parameter = this->particle->parameters[variable];
  arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
- for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=this->likelihood_estimator_outputs.begin();
+ for (auto i=this->likelihood_estimator_outputs.begin();
  i!=this->likelihood_estimator_outputs.end();
  ++i)
  {
@@ -691,7 +682,7 @@ double HMMFactorVariables::subsample_evaluate_likelihoods(const Index* index) co
  
  arma::mat current_parameter = this->particle->parameters[variable];
  arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
- for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=this->likelihood_estimator_outputs.begin();
+ for (auto i=this->likelihood_estimator_outputs.begin();
  i!=this->likelihood_estimator_outputs.end();
  ++i)
  {
@@ -719,7 +710,7 @@ double HMMFactorVariables::subsample_evaluate_likelihoods(const Index* index) co
  Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
  arma::mat current_parameter = this->particle->parameters[variable];
  arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
- for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=this->likelihood_estimator_outputs.begin();
+ for (auto i=this->likelihood_estimator_outputs.begin();
  i!=this->likelihood_estimator_outputs.end();
  ++i)
  {
@@ -749,7 +740,7 @@ arma::mat HMMFactorVariables::direct_get_gradient_of_log(const Index* index,
   /*
    arma::mat current_parameter = this->particle->parameters[variable];
    arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
-   for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=this->likelihood_estimator_outputs.begin();
+   for (auto i=this->likelihood_estimator_outputs.begin();
    i!=this->likelihood_estimator_outputs.end();
    ++i)
    {
@@ -798,7 +789,7 @@ arma::mat HMMFactorVariables::direct_subsample_get_gradient_of_log(const Index* 
   /*
    arma::mat current_parameter = this->particle->parameters[variable];
    arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
-   for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=this->likelihood_estimator_outputs.begin();
+   for (auto i=this->likelihood_estimator_outputs.begin();
    i!=this->likelihood_estimator_outputs.end();
    ++i)
    {

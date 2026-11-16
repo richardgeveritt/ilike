@@ -22,7 +22,7 @@ SMCGeneric::SMCGeneric()
 :SMC()
 {
   //this->smc_criterion = NULL;
-  this->index = NULL;
+  this->index.reset();
 }
 
 SMCGeneric::SMCGeneric(RandomNumberGenerator* rng_in,
@@ -96,7 +96,7 @@ SMCGeneric::SMCGeneric(RandomNumberGenerator* rng_in,
                                                                   variable_in,
                                                                   true));
   indices.push_back(1);
-  this->index = new VectorIndex(indices);
+  this->index.reset(new VectorIndex(indices));
   
   /*
    for (auto i=likelihood_estimators.begin();
@@ -107,33 +107,33 @@ SMCGeneric::SMCGeneric(RandomNumberGenerator* rng_in,
    }
    */
   
-  this->factors = new VectorFactors(likelihood_estimators);
+  this->factors.reset(new VectorFactors(likelihood_estimators));
   
   // Need to construct LikelihoodEstimator to read in to this constructor.
-  this->particle_simulator = new ParameterParticleSimulator(proposal,
-                                                            likelihood_estimators);
+  this->particle_simulator.reset(new ParameterParticleSimulator(proposal,
+                                                            likelihood_estimators));
   
   if (parallel_in==TRUE)
   {
-    //this->the_worker = new RcppParallelSMCWorker(this,
+    //this->the_worker.reset(new RcppParallelSMCWorker(this,
     //this->model_and_algorithm.particle_simulator,
-    //grain_size_in);
+    //grain_size_in));
   }
   else
   {
-    this->the_worker = new SequentialSMCWorker(this);
+    this->the_worker.reset(new SequentialSMCWorker(this));
   }
   
   SMCCriterion* smc_criterion = new PositiveSMCCriterion();
-  this->sequencer = Sequencer(this->the_worker,
+  this->sequencer = Sequencer(this->the_worker.get(),
                               temperatures_in,
                               variable_in,
                               25,
                               smc_criterion);
   //this->sequencer_parameters = &this->sequencer.schedule_parameters;
   
-  this->proposal_kernel = proposal_kernel_in;
-  this->L_kernel = L_kernel_in;
+  this->proposal_kernel.reset(proposal_kernel_in);
+  this->L_kernel.reset(L_kernel_in);
 }
 
 //Copy constructor for the SMCGeneric class.
@@ -146,14 +146,11 @@ SMCGeneric::SMCGeneric(const SMCGeneric &another)
 //Destructor for the SMCGeneric class.
 SMCGeneric::~SMCGeneric()
 {
-  if (this->proposal_kernel!=NULL)
-    delete this->proposal_kernel;
+  this->proposal_kernel.reset();
   
-  if (this->L_kernel!=NULL)
-    delete this->L_kernel;
+  this->L_kernel.reset();
   
-  if (this->index!=NULL)
-    delete this->index;
+  this->index.reset();
 }
 
 void SMCGeneric::operator=(const SMCGeneric &another)
@@ -162,14 +159,11 @@ void SMCGeneric::operator=(const SMCGeneric &another)
     return;
   }
   
-  if (this->proposal_kernel!=NULL)
-    delete this->proposal_kernel;
+  this->proposal_kernel.reset();
   
-  if (this->L_kernel!=NULL)
-    delete this->L_kernel;
+  this->L_kernel.reset();
   
-  if (this->index!=NULL)
-    delete this->index;
+  this->index.reset();
   
   SMC::operator=(another);
   this->make_copy(another);
@@ -188,19 +182,19 @@ LikelihoodEstimator* SMCGeneric::duplicate() const
 void SMCGeneric::make_copy(const SMCGeneric &another)
 {
   if (another.proposal_kernel!=NULL)
-    this->proposal_kernel = another.proposal_kernel;
+    this->proposal_kernel.reset(another.proposal_kernel->proposal_kernel_duplicate());
   else
-    this->proposal_kernel = NULL;
+    this->proposal_kernel.reset();
   
   if (another.L_kernel!=NULL)
-    this->L_kernel = another.L_kernel;
+    this->L_kernel.reset(another.L_kernel->proposal_kernel_duplicate());
   else
-    this->L_kernel = another.L_kernel;
+    this->L_kernel.reset();
   
   if (another.index!=NULL)
-    this->index = another.index->duplicate();
+    this->index.reset(another.index->duplicate());
   else
-    this->index = NULL;
+    this->index.reset();
 }
 
 SMCOutput* SMCGeneric::specific_run()
@@ -241,7 +235,7 @@ void SMCGeneric::simulate_smc(SMCOutput* current_state)
     
     // at some point this one might need to be changed to bisection on the ESS
     this->sequencer.find_next_target_bisection(current_state,
-                                               this->index);
+                                               this->index.get());
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
@@ -258,7 +252,7 @@ void SMCGeneric::simulate_smc(SMCOutput* current_state)
     // Different at first step?
     this->sequencer.find_desired_criterion(current_state);
     this->sequencer.find_next_target_quantile(current_state,
-                                              index);
+                                              index.get());
     
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Particles* current_particles = &current_state->back();
@@ -300,7 +294,7 @@ void SMCGeneric::evaluate_smcfixed_part_smc(SMCOutput* current_state)
    }
    */
   
-  this->the_worker->smcfixed_weight(this->index,
+  this->the_worker->smcfixed_weight(this->index.get(),
                                     current_state->back());
   //current_state->initialise_next_step();
 }
@@ -334,7 +328,7 @@ void SMCGeneric::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current
        }
        */
       
-      this->the_worker->weight(this->index,
+      this->the_worker->weight(this->index.get(),
                                current_state->back());
     }
     else
@@ -361,11 +355,11 @@ void SMCGeneric::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current
        }
        */
       
-      this->the_worker->generic_weight(this->index,
+      this->the_worker->generic_weight(this->index.get(),
                                        current_state->back(),
                                        *(current_state->end()-2),
-                                       this->proposal_kernel,
-                                       this->L_kernel);
+                                       this->proposal_kernel.get(),
+                                       this->L_kernel.get());
     }
     
     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
@@ -402,7 +396,7 @@ MoveOutput* SMCGeneric::move(RandomNumberGenerator &rng,
 void SMCGeneric::weight_for_adapting_sequence(const Index* index,
                                               Particles &current_particles)
 {
-  this->the_worker->smcadaptive_given_smcfixed_weight(this->index,
+  this->the_worker->smcadaptive_given_smcfixed_weight(this->index.get(),
                                                       current_particles);
 }
 
@@ -457,7 +451,7 @@ void SMCGeneric::simulate_smc(SMCOutput* current_state,
     
     // at some point this one might need to be changed to bisection on the ESS
     this->sequencer.find_next_target_bisection(current_state,
-                                               this->index);
+                                               this->index.get());
     
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
@@ -495,7 +489,7 @@ void SMCGeneric::simulate_smc(SMCOutput* current_state,
     // Different at first step?
     this->sequencer.find_desired_criterion(current_state);
     this->sequencer.find_next_target_quantile(current_state,
-                                              this->index);
+                                              this->index.get());
     
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Particles* current_particles = &current_state->back();
@@ -552,7 +546,7 @@ void SMCGeneric::evaluate_smcfixed_part_smc(SMCOutput* current_state,
    }
    */
   
-  this->the_worker->smcfixed_weight(this->index,
+  this->the_worker->smcfixed_weight(this->index.get(),
                                     current_state->back());
   //current_state->initialise_next_step();
 }
@@ -590,7 +584,7 @@ void SMCGeneric::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current
        conditioned_on_parameters);
        }
        */
-      this->the_worker->weight(this->index,
+      this->the_worker->weight(this->index.get(),
                                current_state->back());
     }
     else
@@ -618,11 +612,11 @@ void SMCGeneric::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current
        conditioned_on_parameters);
        }
        */
-      this->the_worker->generic_weight(this->index,
+      this->the_worker->generic_weight(this->index.get(),
                                        current_state->back(),
                                        *(current_state->end()-2),
-                                       this->proposal_kernel,
-                                       this->L_kernel);
+                                       this->proposal_kernel.get(),
+                                       this->L_kernel.get());
     }
     
     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
@@ -689,7 +683,7 @@ MoveOutput* SMCGeneric::subsample_move(RandomNumberGenerator &rng,
 void SMCGeneric::subsample_weight_for_adapting_sequence(const Index* index,
                                                         Particles &current_particles)
 {
-  this->the_worker->subsample_smcadaptive_given_smcfixed_weight(this->index,
+  this->the_worker->subsample_smcadaptive_given_smcfixed_weight(this->index.get(),
                                                                 current_particles);
 }
 
@@ -716,7 +710,7 @@ void SMCGeneric::subsample_simulate_smc(SMCOutput* current_state)
     
     // at some point this one might need to be changed to bisection on the ESS
     this->sequencer.subsample_find_next_target_bisection(current_state,
-                                                         this->index);
+                                                         this->index.get());
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
@@ -734,7 +728,7 @@ void SMCGeneric::subsample_simulate_smc(SMCOutput* current_state)
     // Different at first step?
     this->sequencer.subsample_find_desired_criterion(current_state);
     this->sequencer.subsample_find_next_target_quantile(current_state,
-                                                        this->index);
+                                                        this->index.get());
     
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Particles* current_particles = &current_state->back();
@@ -765,7 +759,7 @@ void SMCGeneric::subsample_simulate_smc(SMCOutput* current_state,
     
     // at some point this one might need to be changed to bisection on the ESS
     this->sequencer.subsample_find_next_target_bisection(current_state,
-                                                         this->index);
+                                                         this->index.get());
     
     //if (this->sequencer_parameters!=NULL)
     //  current_state->back().schedule_parameters = *this->sequencer_parameters;
@@ -782,7 +776,7 @@ void SMCGeneric::subsample_simulate_smc(SMCOutput* current_state,
     // Different at first step?
     this->sequencer.subsample_find_desired_criterion(current_state);
     this->sequencer.subsample_find_next_target_quantile(current_state,
-                                                        this->index);
+                                                        this->index.get());
     
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Particles* current_particles = &current_state->back();
@@ -836,7 +830,7 @@ void SMCGeneric::subsample_evaluate_smcfixed_part_smc(SMCOutput* current_state)
    }
    */
   
-  this->the_worker->subsample_smcfixed_weight(this->index,
+  this->the_worker->subsample_smcfixed_weight(this->index.get(),
                                               current_state->back());
   //current_state->initialise_next_step();
 }
@@ -860,7 +854,7 @@ void SMCGeneric::subsample_evaluate_smcfixed_part_smc(SMCOutput* current_state,
    }
    */
   
-  this->the_worker->subsample_smcfixed_weight(this->index,
+  this->the_worker->subsample_smcfixed_weight(this->index.get(),
                                               current_state->back());
   //current_state->initialise_next_step();
 }
@@ -884,18 +878,18 @@ void SMCGeneric::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutpu
     
     if (current_state->number_of_smc_iterations()==1)
     {
-      this->the_worker->subsample_weight(this->index,
+      this->the_worker->subsample_weight(this->index.get(),
                                          current_state->back());
     }
     else
     {
       this->L_kernel->smc_adapt(current_state);
       
-      this->the_worker->subsample_generic_weight(this->index,
+      this->the_worker->subsample_generic_weight(this->index.get(),
                                                  current_state->back(),
                                                  *(current_state->end()-2),
-                                                 this->proposal_kernel,
-                                                 this->L_kernel);
+                                                 this->proposal_kernel.get(),
+                                                 this->L_kernel.get());
     }
     
     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
@@ -940,18 +934,18 @@ void SMCGeneric::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutpu
     
     if (current_state->number_of_smc_iterations()==1)
     {
-      this->the_worker->subsample_weight(this->index,
+      this->the_worker->subsample_weight(this->index.get(),
                                          current_state->back());
     }
     else
     {
       this->L_kernel->smc_adapt(current_state);
       
-      this->the_worker->subsample_generic_weight(this->index,
+      this->the_worker->subsample_generic_weight(this->index.get(),
                                                  current_state->back(),
                                                  *(current_state->end()-2),
-                                                 this->proposal_kernel,
-                                                 this->L_kernel);
+                                                 this->proposal_kernel.get(),
+                                                 this->L_kernel.get());
     }
     
     current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());

@@ -9,6 +9,7 @@
 #include <vector>
 #include <memory>
 #include <thread>
+#include <cfenv>
 #include <atomic>
 #include "distributions.h"
 
@@ -37,7 +38,9 @@ inline std::atomic<int>& ilike_parallel_depth()
 inline void check_interrupt()
 {
   if ((std::this_thread::get_id() == ilike_main_thread()) && (ilike_parallel_depth() == 0))
+  {
     Rcpp::checkUserInterrupt();
+  }
 }
 
 // chunk_streams: the random-number generator of each chunk k = 0, ..., K-1:
@@ -72,6 +75,12 @@ inline std::vector<RandomNumberGenerator> chunk_streams(const RandomNumberGenera
 // The bodies must not call the R API.
 struct ChunkGroupWorker : public RcppParallel::Worker
 {
+  // The floating-point environment of the thread that started the region
+  // (rounding, and on Windows/MinGW the x87 precision, which worker threads
+  // do not inherit: the maths library's exp and log then differed in the
+  // last bits between threads, so parallel runs differed from sequential
+  // ones in the 16th digit). Each group runs under it.
+  std::fenv_t environment;
   const std::function<void(size_t, size_t, size_t)>* body;
   size_t first;
   size_t chunks_per_group;
@@ -80,6 +89,9 @@ struct ChunkGroupWorker : public RcppParallel::Worker
 
   void operator()(std::size_t begin_group, std::size_t end_group)
   {
+    std::fenv_t own_environment;
+    std::fegetenv(&own_environment);
+    std::fesetenv(&this->environment);
     for (std::size_t g = begin_group; g < end_group; ++g)
     {
       size_t a = this->first + g*this->chunks_per_group;
@@ -101,6 +113,7 @@ struct ChunkGroupWorker : public RcppParallel::Worker
         (*this->messages)[g] = "unknown error";
       }
     }
+    std::fesetenv(&own_environment);
   }
 };
 
@@ -145,6 +158,7 @@ inline void run_chunk_groups(size_t first,
     worker.chunks_per_group = chunks_per_group;
     worker.end = wave_end;
     worker.messages = &messages;
+    std::fegetenv(&worker.environment);
     ilike_parallel_depth()++;
     RcppParallel::parallelFor(0, groups, worker, 1);
     ilike_parallel_depth()--;

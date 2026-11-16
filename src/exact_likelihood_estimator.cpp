@@ -20,7 +20,7 @@ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in
                                                    bool smcfixed_flag_in)
 :LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
 {
-  this->numerator_likelihood_factors.push_back(new CustomLikelihoodFactor(llhd_in,
+  this->numerator_likelihood_factors.emplace_back(new CustomLikelihoodFactor(llhd_in,
                                                                           data_in));
   //this->output = new ExactLikelihoodEstimatorOutput();
 }
@@ -32,7 +32,7 @@ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in
                                                    bool smcfixed_flag_in)
 :LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
 {
-  this->numerator_distribution_factors.push_back(new CustomDistributionFactor(dist_in));
+  this->numerator_distribution_factors.emplace_back(new CustomDistributionFactor(dist_in));
   //this->output = new ExactDistributionEstimatorOutput();
 }
 
@@ -43,7 +43,7 @@ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in
                                                    bool smcfixed_flag_in)
 :LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
 {
-  this->numerator_distribution_factors.push_back(dist_in);
+  this->numerator_distribution_factors.emplace_back(dist_in);
 }
 
 ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
@@ -53,7 +53,10 @@ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in
                                                    bool smcfixed_flag_in)
 :LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
 {
-  this->numerator_distribution_factors = numerator_distribution_factors_in;
+  // takes ownership
+  this->numerator_distribution_factors.clear();
+  for (auto i=numerator_distribution_factors_in.begin(); i!=numerator_distribution_factors_in.end(); ++i)
+    this->numerator_distribution_factors.emplace_back(*i);
 }
 
 ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
@@ -63,7 +66,7 @@ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in
                                                    bool smcfixed_flag_in)
 :LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
 {
-  this->numerator_likelihood_factors.push_back(llhd_in);
+  this->numerator_likelihood_factors.emplace_back(llhd_in);
 }
 
 ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
@@ -73,7 +76,10 @@ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in
                                                    bool smcfixed_flag_in)
 :LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
 {
-  this->numerator_likelihood_factors = numerator_likelihood_factors_in;
+  // takes ownership
+  this->numerator_likelihood_factors.clear();
+  for (auto i=numerator_likelihood_factors_in.begin(); i!=numerator_likelihood_factors_in.end(); ++i)
+    this->numerator_likelihood_factors.emplace_back(*i);
 }
 
 ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
@@ -84,8 +90,14 @@ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in
                                                    bool smcfixed_flag_in)
 :LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
 {
-  this->numerator_distribution_factors = numerator_distribution_factors_in;
-  this->numerator_likelihood_factors = numerator_likelihood_factors_in;
+  // takes ownership
+  this->numerator_distribution_factors.clear();
+  for (auto i=numerator_distribution_factors_in.begin(); i!=numerator_distribution_factors_in.end(); ++i)
+    this->numerator_distribution_factors.emplace_back(*i);
+  // takes ownership
+  this->numerator_likelihood_factors.clear();
+  for (auto i=numerator_likelihood_factors_in.begin(); i!=numerator_likelihood_factors_in.end(); ++i)
+    this->numerator_likelihood_factors.emplace_back(*i);
 }
 
 ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
@@ -97,8 +109,14 @@ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in
                                                    bool smcfixed_flag_in)
 :LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
 {
-  this->numerator_distribution_factors = numerator_distribution_factors_in;
-  this->numerator_likelihood_factors = numerator_likelihood_factors_in;
+  // takes ownership
+  this->numerator_distribution_factors.clear();
+  for (auto i=numerator_distribution_factors_in.begin(); i!=numerator_distribution_factors_in.end(); ++i)
+    this->numerator_distribution_factors.emplace_back(*i);
+  // takes ownership
+  this->numerator_likelihood_factors.clear();
+  for (auto i=numerator_likelihood_factors_in.begin(); i!=numerator_likelihood_factors_in.end(); ++i)
+    this->numerator_likelihood_factors.emplace_back(*i);
   this->numerator_likelihood_proposals = numerator_likelihood_proposals_in;
 }
 
@@ -130,10 +148,10 @@ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in
                                                    bool smcfixed_flag_in)
 :LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
 {
-  this->numerator_likelihood_factors.push_back(new CustomLikelihoodFactor(llhd_in,
+  this->numerator_likelihood_factors.emplace_back(new CustomLikelihoodFactor(llhd_in,
                                                                           data_in));
   
-  this->numerator_distribution_factors.push_back(new CustomDistributionFactor(prior_in));
+  this->numerator_distribution_factors.emplace_back(new CustomDistributionFactor(prior_in));
 }
 
 /*
@@ -161,21 +179,6 @@ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in
 
 ExactLikelihoodEstimator::~ExactLikelihoodEstimator()
 {
-  for (auto i=this->numerator_distribution_factors.begin();
-       i!=this->numerator_distribution_factors.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
-  
-  for (auto i=this->numerator_likelihood_factors.begin();
-       i!=this->numerator_likelihood_factors.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
   
   /*
    for (auto i=this->numerator_proposals.begin();
@@ -200,23 +203,7 @@ void ExactLikelihoodEstimator::operator=(const ExactLikelihoodEstimator &another
   if(this == &another){ //if a==a
     return;
   }
-  
-  for (auto i=this->numerator_distribution_factors.begin();
-       i!=this->numerator_distribution_factors.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
   this->numerator_distribution_factors.clear();
-  
-  for (auto i=this->numerator_likelihood_factors.begin();
-       i!=this->numerator_likelihood_factors.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
   this->numerator_likelihood_factors.clear();
   
   LikelihoodEstimator::operator=(another);
@@ -239,9 +226,9 @@ void ExactLikelihoodEstimator::make_copy(const ExactLikelihoodEstimator &another
        ++i)
   {
     if (*i!=NULL)
-      this->numerator_distribution_factors.push_back((*i)->distribution_factor_duplicate());
+      this->numerator_distribution_factors.emplace_back((*i)->distribution_factor_duplicate());
     else
-      this->numerator_distribution_factors.push_back(NULL);
+      this->numerator_distribution_factors.emplace_back(nullptr);
   }
   
   this->numerator_likelihood_factors.resize(0);
@@ -253,9 +240,9 @@ void ExactLikelihoodEstimator::make_copy(const ExactLikelihoodEstimator &another
        ++i)
   {
     if (*i!=NULL)
-      this->numerator_likelihood_factors.push_back((*i)->likelihood_factor_duplicate());
+      this->numerator_likelihood_factors.emplace_back((*i)->likelihood_factor_duplicate());
     else
-      this->numerator_likelihood_factors.push_back(NULL);
+      this->numerator_likelihood_factors.emplace_back(nullptr);
   }
   
   this->numerator_proposals = another.numerator_proposals;
@@ -372,7 +359,7 @@ double ExactLikelihoodEstimator::subsample_evaluate(const Parameters &parameters
   {
     if (result!=-arma::datum::inf)
     {
-      (*i)->set_data(this->subsampler->small_data);
+      (*i)->set_data(this->subsampler->small_data.get());
       result = result + this->subsampler->ratio*(*i)->evaluate(parameters);
       (*i)->set_data(this->data);
     }
@@ -446,7 +433,7 @@ arma::mat ExactLikelihoodEstimator::subsample_evaluate_gradient(const std::strin
        i!=this->numerator_likelihood_factors.end();
        ++i)
   {
-    (*i)->set_data(this->subsampler->small_data);
+    (*i)->set_data(this->subsampler->small_data.get());
     result = result + (*i)->evaluate_gradient(variable,
                                               parameters);
     (*i)->set_data(this->data);

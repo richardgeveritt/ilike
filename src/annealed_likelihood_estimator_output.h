@@ -2,6 +2,7 @@
 #define ANNEALEDLIKELIHOODESTIMATOROUTPUT_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include "likelihood_estimator_output.h"
@@ -138,7 +139,8 @@ protected:
   
   // Stored here.
   /** @brief The estimator output. */
-  LikelihoodEstimatorOutput* estimator_output;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<LikelihoodEstimatorOutput> estimator_output;
   
   void write_to_file(const std::string &directory_name,
                      const std::string &index = "");

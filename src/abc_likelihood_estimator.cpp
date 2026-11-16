@@ -16,13 +16,12 @@ ABCLikelihoodEstimator::ABCLikelihoodEstimator(RandomNumberGenerator* rng_in,
                                                bool smcfixed_flag_in)
 :LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
 {
-  this->abc_kernel = abc_kernel_in;
+  this->abc_kernel.reset(abc_kernel_in);
 }
 
 ABCLikelihoodEstimator::~ABCLikelihoodEstimator()
 {
-  if (this->abc_kernel!=NULL)
-    delete this->abc_kernel;
+  this->abc_kernel.reset();
 }
 
 //Copy constructor for the ABCLikelihoodEstimator class.
@@ -38,8 +37,7 @@ void ABCLikelihoodEstimator::operator=(const ABCLikelihoodEstimator &another)
     return;
   }
   
-  if (this->abc_kernel!=NULL)
-    delete this->abc_kernel;
+  this->abc_kernel.reset();
   
   LikelihoodEstimator::operator=(another);
   this->make_copy(another);
@@ -53,9 +51,9 @@ LikelihoodEstimator* ABCLikelihoodEstimator::duplicate() const
 void ABCLikelihoodEstimator::make_copy(const ABCLikelihoodEstimator &another)
 {
   if (another.abc_kernel!=NULL)
-    this->abc_kernel = another.abc_kernel->abc_kernel_factor_duplicate();
+    this->abc_kernel.reset(another.abc_kernel->abc_kernel_factor_duplicate());
   else
-    this->abc_kernel = NULL;
+    this->abc_kernel.reset();
 }
 
 // double ABCLikelihoodEstimator::estimate_log_likelihood(const List &inputs,

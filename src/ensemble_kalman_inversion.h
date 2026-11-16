@@ -325,13 +325,13 @@ protected:
   
   // Stored here.
   /** @brief The mcmc. */
-  MCMC* mcmc;
+  std::unique_ptr<MCMC> mcmc;
   
   //bool sequencer_limit_is_fixed;
   
   // stored here
   /** @brief The index. */
-  Index* index;
+  std::unique_ptr<Index> index;
   
   // If this is not 1.0, then check to see if we think the current ensemble is Gaussian, then skip to the end of the sequence if it is.
   /** @brief The significance level. */

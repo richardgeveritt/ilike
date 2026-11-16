@@ -30,13 +30,13 @@ DensityLikelihoodEstimator::DensityLikelihoodEstimator(RandomNumberGenerator* rn
 :LikelihoodEstimator(rng_in, seed_in, data_in, algorithm_parameters_in, smcfixed_flag_in)
 {
   proposal_in->set_proposal_parameters(&this->algorithm_parameters);
-  this->density_estimator = density_estimator_in;
+  this->density_estimator.reset(density_estimator_in);
   if (make_subsample_version_in==true)
-    this->subsample_density_estimator = density_estimator_in->duplicate();
+    this->subsample_density_estimator.reset(density_estimator_in->duplicate());
   else
-    this->subsample_density_estimator = NULL;
-  this->proposal = proposal_in;
-  this->subsample_proposal = NULL;
+    this->subsample_density_estimator.reset();
+  this->proposal.reset(proposal_in);
+  this->subsample_proposal.reset();
   this->number_of_points = number_of_points_in;
   
   this->store_output = store_output_in;
@@ -44,30 +44,25 @@ DensityLikelihoodEstimator::DensityLikelihoodEstimator(RandomNumberGenerator* rn
   
   if (parallel_in==TRUE)
   {
-    //this->the_worker = new RcppParallelDensityLikelihoodEstimatorWorker(this);
+    //this->the_worker.reset(new RcppParallelDensityLikelihoodEstimatorWorker(this));
   }
   else
   {
-    this->the_worker = new SequentialDensityLikelihoodEstimatorWorker(this);
+    this->the_worker.reset(new SequentialDensityLikelihoodEstimatorWorker(this));
   }
 }
 
 DensityLikelihoodEstimator::~DensityLikelihoodEstimator()
 {
-  if (this->density_estimator!=NULL)
-    delete this->density_estimator;
+  this->density_estimator.reset();
   
-  if (this->subsample_density_estimator!=NULL)
-    delete this->subsample_density_estimator;
+  this->subsample_density_estimator.reset();
   
-  if (this->the_worker!=NULL)
-    delete this->the_worker;
+  this->the_worker.reset();
   
-  if (this->proposal!=NULL)
-    delete this->proposal;
+  this->proposal.reset();
   
-  if (this->subsample_proposal!=NULL)
-    delete this->subsample_proposal;
+  this->subsample_proposal.reset();
   
   //if (this->transform!=NULL)
   //  delete this->transform;
@@ -86,20 +81,15 @@ void DensityLikelihoodEstimator::operator=(const DensityLikelihoodEstimator &ano
     return;
   }
   
-  if (this->density_estimator!=NULL)
-    delete this->density_estimator;
+  this->density_estimator.reset();
   
-  if (this->subsample_density_estimator!=NULL)
-    delete this->subsample_density_estimator;
+  this->subsample_density_estimator.reset();
   
-  if (this->the_worker!=NULL)
-    delete this->the_worker;
+  this->the_worker.reset();
   
-  if (this->proposal!=NULL)
-    delete this->proposal;
+  this->proposal.reset();
   
-  if (this->subsample_proposal!=NULL)
-    delete this->subsample_proposal;
+  this->subsample_proposal.reset();
   
   //if (this->transform!=NULL)
   //  delete this->transform;
@@ -116,29 +106,29 @@ LikelihoodEstimator* DensityLikelihoodEstimator::duplicate() const
 void DensityLikelihoodEstimator::make_copy(const DensityLikelihoodEstimator &another)
 {
   if (another.density_estimator!=NULL)
-    this->density_estimator = another.density_estimator->duplicate();
+    this->density_estimator.reset(another.density_estimator->duplicate());
   else
-    this->density_estimator = NULL;
+    this->density_estimator.reset();
   
   if (another.subsample_density_estimator!=NULL)
-    this->subsample_density_estimator = another.subsample_density_estimator->duplicate();
+    this->subsample_density_estimator.reset(another.subsample_density_estimator->duplicate());
   else
-    this->subsample_density_estimator = NULL;
+    this->subsample_density_estimator.reset();
   
   if (another.the_worker!=NULL)
-    this->the_worker = another.the_worker->duplicate();
+    this->the_worker.reset(another.the_worker->duplicate());
   else
-    this->the_worker = NULL;
+    this->the_worker.reset();
   
   if (another.proposal!=NULL)
-    this->proposal = another.proposal->independent_proposal_kernel_duplicate();
+    this->proposal.reset(another.proposal->independent_proposal_kernel_duplicate());
   else
-    this->proposal = NULL;
+    this->proposal.reset();
   
   if (another.subsample_proposal!=NULL)
-    this->subsample_proposal = another.subsample_proposal->independent_proposal_kernel_duplicate();
+    this->subsample_proposal.reset(another.subsample_proposal->independent_proposal_kernel_duplicate());
   else
-    this->subsample_proposal = NULL;
+    this->subsample_proposal.reset();
   
   this->store_output = another.store_output;
   
@@ -167,16 +157,16 @@ void DensityLikelihoodEstimator::make_copy(const DensityLikelihoodEstimator &ano
 LikelihoodEstimatorOutput* DensityLikelihoodEstimator::initialise()
 {
   return new DensityLikelihoodEstimatorOutput(this,
-                                              this->density_estimator,
-                                              this->subsample_density_estimator,
+                                              this->density_estimator.get(),
+                                              this->subsample_density_estimator.get(),
                                               this->store_output);
 }
 
 LikelihoodEstimatorOutput* DensityLikelihoodEstimator::initialise(const Parameters &parameters)
 {
   return new DensityLikelihoodEstimatorOutput(this,
-                                              this->density_estimator,
-                                              this->subsample_density_estimator,
+                                              this->density_estimator.get(),
+                                              this->subsample_density_estimator.get(),
                                               this->store_output);
 }
 

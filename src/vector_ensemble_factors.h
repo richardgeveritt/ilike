@@ -2,6 +2,7 @@
 #define VECTORENSEMBLEFACTORS_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -190,7 +191,7 @@ protected:
   
   // stored here
   /** @brief The measurement covariance estimators. */
-  std::vector<MeasurementCovarianceEstimator*> measurement_covariance_estimators;
+  std::vector<std::unique_ptr<MeasurementCovarianceEstimator>> measurement_covariance_estimators;
   
   // stored here
   // data temporarily used in a likelihood estimator

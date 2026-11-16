@@ -2,6 +2,7 @@
 #define ENSEMBLEKALMANFILTER_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -253,7 +254,7 @@ protected:
   
   // stored here
   /** @brief The index. */
-  Index* index;
+  std::unique_ptr<Index> index;
   
   //arma::colvec prior_mean;
   //arma::mat prior_covariance;

@@ -9,17 +9,15 @@ namespace ilike
 {
 EnsembleSequencer::EnsembleSequencer()
 {
-  this->criterion = NULL;
-  this->termination = NULL;
+  this->criterion.reset();
+  this->termination.reset();
   this->find_scale = false;
 }
 
 EnsembleSequencer::~EnsembleSequencer()
 {
-  if (this->criterion!=NULL)
-    delete this->criterion;
-  if (this->termination!=NULL)
-    delete this->termination;
+  this->criterion.reset();
+  this->termination.reset();
 }
 
 //EnsembleSequencer::EnsembleSequencer(const std::vector<double> &schedule_in,
@@ -58,8 +56,8 @@ void EnsembleSequencer::setup(EnsembleKalmanWorker* the_worker_in,
 {
   this->the_worker = the_worker_in;
   
-  this->criterion = criterion_in;
-  this->termination = termination_in;
+  this->criterion.reset(criterion_in);
+  this->termination.reset(termination_in);
   this->variable_name = variable_in;
   this->number_of_bisections = number_of_bisections_in;
   
@@ -134,10 +132,8 @@ EnsembleSequencer& EnsembleSequencer::operator=(const EnsembleSequencer &another
   if(this == &another)
     return *this;
   
-  if (this->criterion!=NULL)
-    delete this->criterion;
-  if (this->termination!=NULL)
-    delete this->termination;
+  this->criterion.reset();
+  this->termination.reset();
   
   this->make_copy(another);
   
@@ -147,8 +143,8 @@ EnsembleSequencer& EnsembleSequencer::operator=(const EnsembleSequencer &another
 void EnsembleSequencer::make_copy(const EnsembleSequencer &another)
 {
   this->schedule = another.schedule;
-  //this->criterion = another.criterion;
-  //this->termination = another.termination;
+  //this->criterion.reset(another.criterion);
+  //this->termination.reset(another.termination);
   this->direction = another.direction;
   this->current_bisect_value = another.current_bisect_value;
   this->previous_bisect_value = another.previous_bisect_value;
@@ -158,13 +154,13 @@ void EnsembleSequencer::make_copy(const EnsembleSequencer &another)
   //this->extra_bit = another.extra_bit;
   this->the_worker = another.the_worker;
   if (another.criterion!=NULL)
-    this->criterion = another.criterion->duplicate();
+    this->criterion.reset(another.criterion->duplicate());
   else
-    this->criterion = NULL;
+    this->criterion.reset();
   if (another.termination!=NULL)
-    this->termination = another.termination->duplicate();
+    this->termination.reset(another.termination->duplicate());
   else
-    this->termination = NULL;
+    this->termination.reset();
   this->variable_name = another.variable_name;
   this->schedule_difference = another.schedule_difference;
   this->schedule_parameters = another.schedule_parameters;
@@ -183,10 +179,8 @@ EnsembleSequencer& EnsembleSequencer::operator=(EnsembleSequencer &&another)
   if(this == &another)
     return *this;
   
-  if (this->criterion!=NULL)
-    delete this->criterion;
-  if (this->termination!=NULL)
-    delete this->termination;
+  this->criterion.reset();
+  this->termination.reset();
   
   this->make_copy(std::move(another));
   
@@ -196,8 +190,8 @@ EnsembleSequencer& EnsembleSequencer::operator=(EnsembleSequencer &&another)
 void EnsembleSequencer::make_copy(EnsembleSequencer &&another)
 {
   this->schedule = std::move(another.schedule);
-  //this->criterion = another.criterion;
-  //this->termination = another.termination;
+  //this->criterion.reset(another.criterion);
+  //this->termination.reset(another.termination);
   this->direction = std::move(another.direction);
   this->current_bisect_value = std::move(another.current_bisect_value);
   this->previous_bisect_value = std::move(another.previous_bisect_value);
@@ -206,14 +200,8 @@ void EnsembleSequencer::make_copy(EnsembleSequencer &&another)
   this->number_of_bisections = std::move(another.number_of_bisections);
   //this->extra_bit = another.extra_bit;
   this->the_worker = std::move(another.the_worker);
-  if (another.criterion!=NULL)
-    this->criterion = another.criterion;
-  else
-    this->criterion = NULL;
-  if (another.termination!=NULL)
-    this->termination = another.termination;
-  else
-    this->termination = NULL;
+  this->criterion = std::move(another.criterion);
+  this->termination = std::move(another.termination);
   this->variable_name = std::move(another.variable_name);
   this->schedule_difference = std::move(another.schedule_difference);
   this->schedule_parameters = std::move(another.schedule_parameters);
@@ -229,8 +217,6 @@ void EnsembleSequencer::make_copy(EnsembleSequencer &&another)
   another.current_score = 0.0;
   another.number_of_bisections = 0;
   another.the_worker = NULL;
-  another.criterion = NULL;
-  another.termination = NULL;
   another.variable_name = "";
   another.schedule_difference = 0.0;
   another.schedule_parameters = Parameters();
@@ -297,7 +283,7 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
     
     current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
-    this->current_score = (*this->criterion)(current_state->all_ensembles.back());
+    this->current_score = (*this->criterion.get())(current_state->all_ensembles.back());
     
     if (this->current_score>=0.0)
     {
@@ -351,7 +337,7 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
     
     current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
-    this->current_score = (*this->criterion)(current_state->back());
+    this->current_score = (*this->criterion.get())(current_state->back());
     
     current_direction = std::copysign(1.0,this->current_score)*this->direction;
     
@@ -404,7 +390,7 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
    1.0/(target_values.back()-current_bisect_value));
    current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
    
-   this->current_score = (*this->criterion)(current_state->all_ensembles.back());
+   this->current_score = (*this->criterion.get())(current_state->all_ensembles.back());
    
    if (this->current_score>=0.0)
    {
@@ -439,7 +425,7 @@ void EnsembleSequencer::find_next_target_bisection(EnsembleKalmanOutput* current
    
    //incremental_log_weights = this->the_worker->get_unnormalised_log_incremental_weights();
    
-   this->current_score = (*this->criterion)(current_state->all_ensembles.back());
+   this->current_score = (*this->criterion.get())(current_state->all_ensembles.back());
    
    current_direction = std::copysign(1.0,this->current_score)*this->direction;
    
@@ -535,7 +521,7 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
     
     current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
-    this->current_score = (*this->criterion)(current_state->all_ensembles.back());
+    this->current_score = (*this->criterion.get())(current_state->all_ensembles.back());
     
     if (this->current_score>=0.0)
     {
@@ -587,7 +573,7 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
                                                             1.0/(new_bisect_value-starting_value));
     current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     
-    this->current_score = (*this->criterion)(current_state->back());
+    this->current_score = (*this->criterion.get())(current_state->back());
     
     current_direction = std::copysign(1.0,this->current_score)*this->direction;
     
@@ -640,7 +626,7 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
    1.0/(target_values.back()-current_bisect_value));
    current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
    
-   this->current_score = (*this->criterion)(current_state->all_ensembles.back());
+   this->current_score = (*this->criterion.get())(current_state->all_ensembles.back());
    
    if (this->current_score>=0.0)
    {
@@ -675,7 +661,7 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
    
    //incremental_log_weights = this->the_worker->get_unnormalised_log_incremental_weights();
    
-   this->current_score = (*this->criterion)(current_state->all_ensembles.back());
+   this->current_score = (*this->criterion.get())(current_state->all_ensembles.back());
    
    current_direction = std::copysign(1.0,this->current_score)*this->direction;
    
@@ -756,7 +742,7 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
  conditioned_on_parameters);
  current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
  
- this->current_score = (*this->criterion)(current_state->all_ensembles.back());
+ this->current_score = (*this->criterion.get())(current_state->all_ensembles.back());
  
  if (this->current_score>=0.0)
  {
@@ -793,7 +779,7 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
  
  //incremental_log_weights = this->the_worker->get_unnormalised_log_incremental_weights();
  
- this->current_score = (*this->criterion)(current_state->all_ensembles.back());
+ this->current_score = (*this->criterion.get())(current_state->all_ensembles.back());
  
  current_direction = std::copysign(1.0,this->current_score)*this->direction;
  
@@ -865,7 +851,7 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
  conditioned_on_parameters);
  current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
  
- this->current_score = (*this->criterion)(current_state->all_ensembles.back());
+ this->current_score = (*this->criterion.get())(current_state->all_ensembles.back());
  
  if (this->current_score>=0.0)
  {
@@ -900,7 +886,7 @@ void EnsembleSequencer::subsample_find_next_target_bisection(EnsembleKalmanOutpu
  
  current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
  
- this->current_score = (*this->criterion)(current_state->all_ensembles.back());
+ this->current_score = (*this->criterion.get())(current_state->all_ensembles.back());
  
  current_direction = std::copysign(1.0,this->current_score)*this->direction;
  

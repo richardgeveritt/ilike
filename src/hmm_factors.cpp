@@ -17,23 +17,17 @@ HMMFactors::HMMFactors(ProposalKernel* transition_kernel_in,
                        const std::vector<LikelihoodEstimator*> &likelihood_estimators_in)
 :Factors()
 {
-  this->transition_kernel = transition_kernel_in;
-  this->likelihood_estimators = likelihood_estimators_in;
+  this->transition_kernel.reset(transition_kernel_in);
+  // takes ownership of the estimators
+  this->likelihood_estimators.reserve(likelihood_estimators_in.size());
+  for (auto i=likelihood_estimators_in.begin(); i!=likelihood_estimators_in.end(); ++i)
+    this->likelihood_estimators.emplace_back(*i);
   this->likelihood_estimator_temp_data.resize(0);
 }
 
 HMMFactors::~HMMFactors()
 {
-  if (this->transition_kernel!=NULL)
-    delete this->transition_kernel;
-  
-  for (std::vector<LikelihoodEstimator*>::iterator i=this->likelihood_estimators.begin();
-       i!=this->likelihood_estimators.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
+  this->transition_kernel.reset();
   
   /*
    for (std::vector<Data*>::iterator i=this->likelihood_estimator_temp_data.begin();
@@ -59,16 +53,7 @@ void HMMFactors::operator=(const HMMFactors &another)
     return;
   }
   
-  if (this->transition_kernel!=NULL)
-    delete this->transition_kernel;
-  
-  for (std::vector<LikelihoodEstimator*>::iterator i=this->likelihood_estimators.begin();
-       i!=this->likelihood_estimators.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
+  this->transition_kernel.reset();
   this->likelihood_estimators.clear();
   
   /*
@@ -94,9 +79,9 @@ Factors* HMMFactors::duplicate() const
 void HMMFactors::make_copy(const HMMFactors &another)
 {
   if (another.transition_kernel!=NULL)
-    this->transition_kernel = another.transition_kernel->proposal_kernel_duplicate();
+    this->transition_kernel.reset(another.transition_kernel->proposal_kernel_duplicate());
   else
-    this->transition_kernel = NULL;
+    this->transition_kernel.reset();
   
   this->smcfixed_flag = another.smcfixed_flag;
   
@@ -104,14 +89,14 @@ void HMMFactors::make_copy(const HMMFactors &another)
   
   this->likelihood_estimators.resize(0);
   this->likelihood_estimators.reserve(another.likelihood_estimators.size());
-  for (std::vector<LikelihoodEstimator*>::const_iterator i=another.likelihood_estimators.begin();
+  for (auto i=another.likelihood_estimators.begin();
        i!=another.likelihood_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      this->likelihood_estimators.push_back((*i)->duplicate());
+      this->likelihood_estimators.emplace_back((*i)->duplicate());
     else
-      this->likelihood_estimators.push_back(NULL);
+      this->likelihood_estimators.emplace_back(nullptr);
   }
   
   this->likelihood_estimator_temp_data = another.likelihood_estimator_temp_data;
@@ -175,7 +160,7 @@ FactorVariables* HMMFactors::simulate_factor_variables(const Parameters &simulat
   std::vector<LikelihoodEstimatorOutput*> outputs;
   outputs.reserve(this->likelihood_estimators.size());
   
-  for (std::vector<LikelihoodEstimator*>::const_iterator i = this->likelihood_estimators.begin();
+  for (auto i = this->likelihood_estimators.begin();
        i != this->likelihood_estimators.end();
        ++i)
   {
@@ -197,7 +182,7 @@ FactorVariables* HMMFactors::simulate_factor_variables(const Parameters &simulat
  
  Parameters all_parameters = simulated_parameters.merge(conditioned_on_parameters);
  
- for (std::vector<LikelihoodEstimator*>::const_iterator i = this->likelihood_estimators.begin();
+ for (auto i = this->likelihood_estimators.begin();
  i != this->likelihood_estimators.end();
  ++i)
  {
@@ -216,7 +201,7 @@ FactorVariables* HMMFactors::subsample_simulate_factor_variables(const Parameter
   std::vector<LikelihoodEstimatorOutput*> outputs;
   outputs.reserve(this->likelihood_estimators.size());
   
-  for (std::vector<LikelihoodEstimator*>::const_iterator i = this->likelihood_estimators.begin();
+  for (auto i = this->likelihood_estimators.begin();
        i != this->likelihood_estimators.end();
        ++i)
   {
@@ -238,7 +223,7 @@ FactorVariables* HMMFactors::subsample_simulate_factor_variables(const Parameter
  
  Parameters all_parameters = simulated_parameters.merge(conditioned_on_parameters);
  
- for (std::vector<LikelihoodEstimator*>::const_iterator i = this->likelihood_estimators.begin();
+ for (auto i = this->likelihood_estimators.begin();
  i != this->likelihood_estimators.end();
  ++i)
  {

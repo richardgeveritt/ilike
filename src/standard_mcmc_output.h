@@ -2,6 +2,7 @@
 #define STANDARDMCMCOUTPUT_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -198,7 +199,8 @@ protected:
   
   // Stored here.
   /** @brief The termination. */
-  MCMCTermination* termination;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<MCMCTermination> termination;
   
   /**
    * @brief Copies the state of another MCMCTermination into this object.

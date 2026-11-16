@@ -2,6 +2,7 @@
 #define TRANSFORMEDPROPOSALKERNEL_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -198,7 +199,7 @@ protected:
   
   // stored here
   /** @brief The proposal. */
-  ProposalKernel* proposal;
+  std::unique_ptr<ProposalKernel> proposal;
   
   /** @brief The transform. */
   Transform transform;

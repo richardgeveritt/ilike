@@ -89,7 +89,7 @@ void SequentialEnsembleKalmanWorker::shift(Ensemble* ensemble,
        i<ensemble->members.size();
        ++i)
   {
-    this->the_enk->ensemble_shifter->shift(ensemble->members[i]->back().ensemble_factor_variables,
+    this->the_enk->ensemble_shifter->shift(ensemble->members[i]->back().ensemble_factor_variables.get(),
                                            ensemble->partially_packed_members_col[i],
                                            measurements,
                                            ensemble->kalman_gains,
@@ -203,7 +203,7 @@ void SequentialEnsembleKalmanWorker::unpack_with_predicted(Ensemble* ensemble)
                                                                                                                                            this->the_enk->packing_instructions.states_start_and_end[j].second));
     }
     
-    ensemble->predicted_members.push_back(new SinglePointMoveOutput(new_parameters,ensemble->members[i]->back().ensemble_factor_variables->get_ensemble_factors()));
+    ensemble->predicted_members.emplace_back(new SinglePointMoveOutput(new_parameters,ensemble->members[i]->back().ensemble_factor_variables->get_ensemble_factors()));
   }
   
 }

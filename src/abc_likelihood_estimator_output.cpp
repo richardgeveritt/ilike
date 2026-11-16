@@ -90,12 +90,12 @@ void ABCLikelihoodEstimatorOutput::subsample_evaluate_smcfixed_part(const Parame
 {
   if (this->estimator->smcfixed_flag)
   {
-    this->estimator->abc_kernel->set_data(this->estimator->subsampler->small_data);
+    this->estimator->abc_kernel->set_data(this->estimator->subsampler->small_data.get());
     this->subsample_log_likelihood = this->estimator->abc_kernel->likelihood_evaluate(parameters);
   }
   else
   {
-    this->estimator->abc_kernel->set_data(this->estimator->subsampler->small_data);
+    this->estimator->abc_kernel->set_data(this->estimator->subsampler->small_data.get());
     this->estimator->abc_kernel->find_distance(parameters,
                                                this->distance,
                                                this->scale_constant);

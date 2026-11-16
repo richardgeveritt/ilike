@@ -2,6 +2,7 @@
 #define ZIGZAGMCMC_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -180,7 +181,7 @@ protected:
   
   // stored here
   /** @brief The proposal. */
-  ProposalKernel* proposal;
+  std::unique_ptr<ProposalKernel> proposal;
   
   /**
    * @brief Copies the state of another StandardMCMCOutput into this object.

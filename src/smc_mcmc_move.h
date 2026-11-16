@@ -411,7 +411,7 @@ protected:
   // chunk_size particles use their own streams, as in importance sampling.
   bool can_move_flat() const;
   bool can_simulate_flat() const;
-  const Index* get_weighting_index() const { return this->index; }
+  const Index* get_weighting_index() const { return this->index.get(); }
 
   // The per-particle (rich) move path in chunks (dev/plan.md 2.6b, G5): 0
   // not possible (the worker's path), 1 the factors use no random numbers
@@ -435,16 +435,18 @@ protected:
   
   // Stored here.
   /** @brief The mcmc. */
-  MCMC* mcmc;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<MCMC> mcmc;
   
   // stored here
   /** @brief The index. */
-  Index* index;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<Index> index;
 
   // Factors in the full target but not in index (they cancel in the SMC
   // weights, so the SMC never evaluates them). Evaluated before each MCMC run
   // so the moves' cached denominators are valid. Owned; may be NULL.
-  Index* cancelled_index;
+  std::unique_ptr<Index> cancelled_index;
 
   /** @brief The mcmc at last step. */
   bool mcmc_at_last_step;

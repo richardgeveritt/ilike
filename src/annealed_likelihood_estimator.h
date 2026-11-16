@@ -202,7 +202,8 @@ protected:
   
   // Stored here.
   /** @brief The estimator. */
-  LikelihoodEstimator* estimator;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<LikelihoodEstimator> estimator;
   
   /** @brief HDF5 output file (kept open for the duration of a run). */
   std::shared_ptr<HighFive::File> h5_file;

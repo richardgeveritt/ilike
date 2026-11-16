@@ -18,13 +18,6 @@ VectorFactorVariables::VectorFactorVariables()
 
 VectorFactorVariables::~VectorFactorVariables()
 {
-  for (std::vector<LikelihoodEstimatorOutput*>::iterator i=this->likelihood_estimator_outputs.begin();
-       i!=this->likelihood_estimator_outputs.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
 }
 
 // The outputs vector is taken by value and moved in: callers that pass a
@@ -34,7 +27,10 @@ VectorFactorVariables::VectorFactorVariables(const VectorFactors* vector_factors
 :FactorVariables()
 {
   this->vector_factors = vector_factors_in;
-  this->likelihood_estimator_outputs = std::move(likelihood_estimator_outputs_in);
+  // takes ownership of the outputs
+  this->likelihood_estimator_outputs.reserve(likelihood_estimator_outputs_in.size());
+  for (auto i=likelihood_estimator_outputs_in.begin(); i!=likelihood_estimator_outputs_in.end(); ++i)
+    this->likelihood_estimator_outputs.emplace_back(*i);
 }
 
 VectorFactorVariables::VectorFactorVariables(VectorFactors* vector_factors_in,
@@ -43,7 +39,10 @@ VectorFactorVariables::VectorFactorVariables(VectorFactors* vector_factors_in,
 :FactorVariables(particle_in)
 {
   this->vector_factors = vector_factors_in;
-  this->likelihood_estimator_outputs = std::move(likelihood_estimator_outputs_in);
+  // takes ownership of the outputs
+  this->likelihood_estimator_outputs.reserve(likelihood_estimator_outputs_in.size());
+  for (auto i=likelihood_estimator_outputs_in.begin(); i!=likelihood_estimator_outputs_in.end(); ++i)
+    this->likelihood_estimator_outputs.emplace_back(*i);
 }
 
 //Copy constructor for the VectorFactorVariables class.
@@ -57,14 +56,6 @@ void VectorFactorVariables::operator=(const VectorFactorVariables &another)
 {
   if(this == &another){ //if a==a
     return;
-  }
-  
-  for (std::vector<LikelihoodEstimatorOutput*>::iterator i=this->likelihood_estimator_outputs.begin();
-       i!=this->likelihood_estimator_outputs.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
   }
   this->likelihood_estimator_outputs.clear();
   
@@ -110,14 +101,14 @@ void VectorFactorVariables::make_copy(const VectorFactorVariables &another)
 {
   this->likelihood_estimator_outputs.resize(0);
   this->likelihood_estimator_outputs.reserve(another.likelihood_estimator_outputs.size());
-  for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=another.likelihood_estimator_outputs.begin();
+  for (auto i=another.likelihood_estimator_outputs.begin();
        i!=another.likelihood_estimator_outputs.end();
        ++i)
   {
     if (*i!=NULL)
-      this->likelihood_estimator_outputs.push_back((*i)->duplicate());
+      this->likelihood_estimator_outputs.emplace_back((*i)->duplicate());
     else
-      this->likelihood_estimator_outputs.push_back(NULL);
+      this->likelihood_estimator_outputs.emplace_back(nullptr);
   }
   this->vector_factors = another.vector_factors;
 }
@@ -304,7 +295,7 @@ std::vector<size_t> VectorFactorVariables::find_changed_exact_factors(const Inde
                   new_outputs_index->end(),
                   i)!=new_outputs_index->end())
       continue;
-    LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[i];
+    LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[i].get();
     if (dynamic_cast<ExactLikelihoodEstimatorOutput*>(output)==NULL)
       continue;
     LikelihoodEstimatorOutput* fresh = output->duplicate();
@@ -409,7 +400,7 @@ arma::mat VectorFactorVariables::direct_get_gradient_of_log(const std::string &v
 {
   arma::mat current_parameter = this->particle->parameters[variable];
   arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
-  for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=this->likelihood_estimator_outputs.begin();
+  for (auto i=this->likelihood_estimator_outputs.begin();
        i!=this->likelihood_estimator_outputs.end();
        ++i)
   {
@@ -430,7 +421,7 @@ arma::mat VectorFactorVariables::direct_get_gradient_of_log(const std::string &v
  Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
  arma::mat current_parameter = this->particle->parameters[variable];
  arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
- for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=this->likelihood_estimator_outputs.begin();
+ for (auto i=this->likelihood_estimator_outputs.begin();
  i!=this->likelihood_estimator_outputs.end();
  ++i)
  {
@@ -449,7 +440,7 @@ arma::mat VectorFactorVariables::direct_subsample_get_gradient_of_log(const std:
 {
   arma::mat current_parameter = this->particle->parameters[variable];
   arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
-  for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=this->likelihood_estimator_outputs.begin();
+  for (auto i=this->likelihood_estimator_outputs.begin();
        i!=this->likelihood_estimator_outputs.end();
        ++i)
   {
@@ -470,7 +461,7 @@ arma::mat VectorFactorVariables::direct_subsample_get_gradient_of_log(const std:
  Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
  arma::mat current_parameter = this->particle->parameters[variable];
  arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
- for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=this->likelihood_estimator_outputs.begin();
+ for (auto i=this->likelihood_estimator_outputs.begin();
  i!=this->likelihood_estimator_outputs.end();
  ++i)
  {
@@ -597,7 +588,7 @@ bool VectorFactorVariables::recycle_all_outputs(const Factors* factors,
     return false;
   for (size_t i=0; i<this->likelihood_estimator_outputs.size(); ++i)
   {
-    LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[i];
+    LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[i].get();
     if ((output == NULL) || !output->reinitialise(new_parameters))
       return false;
   }
@@ -620,7 +611,7 @@ bool VectorFactorVariables::recycle_with_new_outputs(const FactorVariables* sour
   // as copy_with_new_outputs, output by output
   for (size_t i=0; i<this->likelihood_estimator_outputs.size(); ++i)
   {
-    LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[i];
+    LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[i].get();
     bool new_output = std::find(new_outputs_index->begin(),
                                 new_outputs_index->end(),
                                 i)!=new_outputs_index->end();
@@ -650,7 +641,7 @@ int VectorFactorVariables::adaptive_summary_size(const Index* index) const
   int size = 0;
   for (auto i=index->begin(); i!=index->end(); ++i)
   {
-    const LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i];
+    const LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i].get();
     if (output==NULL)
       return -1;
     int n = output->adaptive_summary_size();
@@ -666,7 +657,7 @@ void VectorFactorVariables::adaptive_summary(const Index* index, double* values)
   size_t offset = 0;
   for (auto i=index->begin(); i!=index->end(); ++i)
   {
-    const LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i];
+    const LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i].get();
     output->adaptive_summary(values + offset);
     offset = offset + size_t(output->adaptive_summary_size());
   }
@@ -682,7 +673,7 @@ double VectorFactorVariables::smcadaptive_from_summary(const Index* index,
   size_t offset = 0;
   for (auto i=index->begin(); i!=index->end(); ++i)
   {
-    const LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i];
+    const LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i].get();
     result = result + output->smcadaptive_from_summary(values + offset, parameters);
     offset = offset + size_t(output->adaptive_summary_size());
   }
@@ -697,7 +688,7 @@ bool VectorFactorVariables::restore_from_summary(const Index* index,
   size_t offset = 0;
   for (auto i=index->begin(); i!=index->end(); ++i)
   {
-    LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i];
+    LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i].get();
     if (output==NULL)
       return false;
     output->restore_from_summary(values + offset, parameters);
@@ -707,7 +698,7 @@ bool VectorFactorVariables::restore_from_summary(const Index* index,
   {
     for (auto i=other_index->begin(); i!=other_index->end(); ++i)
     {
-      LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i];
+      LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i].get();
       if ((output==NULL) || !output->reinitialise(this->particle->parameters))
         return false;
       output->simulate(this->particle->parameters);
@@ -747,7 +738,7 @@ void VectorFactorVariables::smcadaptive_from_summaries(const Index* index,
   size_t offset = 0;
   for (auto i=index->begin(); i!=index->end(); ++i)
   {
-    const LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i];
+    const LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i].get();
     output->smcadaptive_from_summaries(values + offset, stride, n, parameters, values_of_output.data());
     for (size_t j = 0; j < n; ++j)
       results[j] = results[j] + values_of_output[j];

@@ -17,18 +17,20 @@ VectorEnsembleFactorVariables::VectorEnsembleFactorVariables(const VectorEnsembl
                                                              const std::vector<MeasurementCovarianceEstimatorOutput*> &measurement_covariance_estimators_in)
 :EnsembleFactorVariables()
 {
-  this->measurement_covariance_estimator_outputs = measurement_covariance_estimators_in;
+  this->measurement_covariance_estimator_outputs.reserve(measurement_covariance_estimators_in.size());
+  for (auto k : measurement_covariance_estimators_in)
+    this->measurement_covariance_estimator_outputs.emplace_back(k);
   this->vector_ensemble_factors = vector_ensemble_factors_in;
 }
 
 VectorEnsembleFactorVariables::~VectorEnsembleFactorVariables()
 {
-  for (std::vector<MeasurementCovarianceEstimatorOutput*>::iterator i=this->measurement_covariance_estimator_outputs.begin();
+  for (auto i=this->measurement_covariance_estimator_outputs.begin();
        i!=this->measurement_covariance_estimator_outputs.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
 }
 
@@ -45,12 +47,12 @@ void VectorEnsembleFactorVariables::operator=(const VectorEnsembleFactorVariable
     return;
   }
   
-  for (std::vector<MeasurementCovarianceEstimatorOutput*>::iterator i=this->measurement_covariance_estimator_outputs.begin();
+  for (auto i=this->measurement_covariance_estimator_outputs.begin();
        i!=this->measurement_covariance_estimator_outputs.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   this->measurement_covariance_estimator_outputs.clear();
   
@@ -67,14 +69,14 @@ void VectorEnsembleFactorVariables::make_copy(const VectorEnsembleFactorVariable
 {
   this->measurement_covariance_estimator_outputs.resize(0);
   this->measurement_covariance_estimator_outputs.reserve(another.measurement_covariance_estimator_outputs.size());
-  for (std::vector<MeasurementCovarianceEstimatorOutput*>::const_iterator i=another.measurement_covariance_estimator_outputs.begin();
+  for (auto i=another.measurement_covariance_estimator_outputs.begin();
        i!=another.measurement_covariance_estimator_outputs.end();
        ++i)
   {
     if (*i!=NULL)
-      this->measurement_covariance_estimator_outputs.push_back((*i)->duplicate());
+      this->measurement_covariance_estimator_outputs.emplace_back((*i)->duplicate());
     else
-      this->measurement_covariance_estimator_outputs.push_back(NULL);
+      this->measurement_covariance_estimator_outputs.emplace_back();
   }
   this->vector_ensemble_factors = another.vector_ensemble_factors;
 }
@@ -474,7 +476,7 @@ void VectorEnsembleFactorVariables::close_ofstreams()
  {
  arma::mat current_parameter = this->particle->parameters[variable];
  arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
- for (std::vector<MeasurementCovarianceEstimatorOutput*>::const_iterator i=this->measurement_covariance_estimator_outputs.begin();
+ for (auto i=this->measurement_covariance_estimator_outputs.begin();
  i!=this->measurement_covariance_estimator_outputs.end();
  ++i)
  {
@@ -494,7 +496,7 @@ void VectorEnsembleFactorVariables::close_ofstreams()
  Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
  arma::mat current_parameter = this->particle->parameters[variable];
  arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
- for (std::vector<MeasurementCovarianceEstimatorOutput*>::const_iterator i=this->measurement_covariance_estimator_outputs.begin();
+ for (auto i=this->measurement_covariance_estimator_outputs.begin();
  i!=this->measurement_covariance_estimator_outputs.end();
  ++i)
  {
@@ -512,7 +514,7 @@ void VectorEnsembleFactorVariables::close_ofstreams()
  {
  arma::mat current_parameter = this->particle->parameters[variable];
  arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
- for (std::vector<MeasurementCovarianceEstimatorOutput*>::const_iterator i=this->measurement_covariance_estimator_outputs.begin();
+ for (auto i=this->measurement_covariance_estimator_outputs.begin();
  i!=this->measurement_covariance_estimator_outputs.end();
  ++i)
  {
@@ -532,7 +534,7 @@ void VectorEnsembleFactorVariables::close_ofstreams()
  Parameters all_parameters = this->particle->parameters.merge(conditioned_on_parameters);
  arma::mat current_parameter = this->particle->parameters[variable];
  arma::mat result(current_parameter.n_rows,current_parameter.n_cols);
- for (std::vector<MeasurementCovarianceEstimatorOutput*>::const_iterator i=this->measurement_covariance_estimator_outputs.begin();
+ for (auto i=this->measurement_covariance_estimator_outputs.begin();
  i!=this->measurement_covariance_estimator_outputs.end();
  ++i)
  {

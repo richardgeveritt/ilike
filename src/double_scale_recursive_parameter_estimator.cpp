@@ -11,8 +11,7 @@ DoubleScaleRecursiveParameterEstimator::DoubleScaleRecursiveParameterEstimator()
 
 DoubleScaleRecursiveParameterEstimator::~DoubleScaleRecursiveParameterEstimator()
 {
-  if (this->recursive_estimator!=NULL)
-    delete this->recursive_estimator;
+  this->recursive_estimator.reset();
 }
 
 //Copy constructor for the DoubleScaleRecursiveParameterEstimator class.
@@ -28,8 +27,7 @@ void DoubleScaleRecursiveParameterEstimator::operator=(const DoubleScaleRecursiv
     return;
   }
   
-  if (this->recursive_estimator!=NULL)
-    delete this->recursive_estimator;
+  this->recursive_estimator.reset();
   
   ScaleRecursiveParameterEstimator::operator=(another);
   this->make_copy(another);
@@ -48,9 +46,9 @@ ScaleRecursiveParameterEstimator* DoubleScaleRecursiveParameterEstimator::scale_
 void DoubleScaleRecursiveParameterEstimator::make_copy(const DoubleScaleRecursiveParameterEstimator &another)
 {
   if (another.recursive_estimator!=NULL)
-    this->recursive_estimator = another.recursive_estimator->double_duplicate();
+    this->recursive_estimator.reset(another.recursive_estimator->double_duplicate());
   else
-    this->recursive_estimator = NULL;
+    this->recursive_estimator.reset();
 }
 
 void DoubleScaleRecursiveParameterEstimator::update(const std::string &variable_name,

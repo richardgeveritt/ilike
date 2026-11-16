@@ -2,6 +2,7 @@
 #define BARKERDYNAMICSPROPOSALKERNEL_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -211,13 +212,13 @@ namespace ilike
     // must simulate each dimension of all variables specified in variable names independently from a symmetric proposal
     // to work, must work on transformed space, with transformation the same as this
     // stored here
-    IndependentProposalKernel *proposal_simulate;
+    std::unique_ptr<IndependentProposalKernel> proposal_simulate;
 
     // stored here
-    GradientEstimator *gradient_estimator;
+    std::unique_ptr<GradientEstimator> gradient_estimator;
 
     // stored here
-    Index *index;
+    std::unique_ptr<Index> index;
   };
 }
 

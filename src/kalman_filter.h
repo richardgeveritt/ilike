@@ -227,9 +227,11 @@ protected:
   
   // stored here
   /** @brief The updaters. */
-  std::vector<KalmanUpdater*> updaters;
+  // owned (dev/plan.md 3.5, CH3)
+  std::vector<std::unique_ptr<KalmanUpdater>> updaters;
   /** @brief The predictor. */
-  KalmanPredictor* predictor;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<KalmanPredictor> predictor;
   
   /** @brief The schedule parameters. */
   Parameters schedule_parameters;

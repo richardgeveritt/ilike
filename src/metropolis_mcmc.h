@@ -2,6 +2,7 @@
 #define METROPOLISMCMC_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -170,7 +171,8 @@ protected:
   
   // stored here
   /** @brief The proposal. */
-  SymmetricProposalKernel* proposal;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<SymmetricProposalKernel> proposal;
   
   /**
    * @brief Copies the state of another SymmetricProposalKernel into this object.
@@ -181,7 +183,8 @@ protected:
   
   // stored here (change to shared pointer so that memory is not duplicated)
   /** @brief The index. */
-  Index* index;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<Index> index;
   
 };
 }

@@ -10,24 +10,19 @@ namespace ilike
 GaussianDensityEstimatorOutput::GaussianDensityEstimatorOutput()
 :DensityEstimatorOutput()
 {
-  this->mean_estimator = NULL;
-  this->covariance_estimator = NULL;
+  this->mean_estimator.reset();
+  this->covariance_estimator.reset();
 }
 
 GaussianDensityEstimatorOutput::GaussianDensityEstimatorOutput(GaussianDensityEstimator* estimator_in)
 :DensityEstimatorOutput()
 {
   this->estimator = estimator_in;
-  this->mean_estimator = new SampleMeanVectorParameterEstimator();
-  this->covariance_estimator = new SampleCovarianceMatrixParameterEstimator();
+  this->mean_estimator.reset(new SampleMeanVectorParameterEstimator());
+  this->covariance_estimator.reset(new SampleCovarianceMatrixParameterEstimator());
 }
 GaussianDensityEstimatorOutput::~GaussianDensityEstimatorOutput()
 {
-  if (this->mean_estimator==NULL)
-    delete this->mean_estimator;
-  
-  if (this->covariance_estimator==NULL)
-    delete this->covariance_estimator;
 }
 
 //Copy constructor for the GaussianDensityEstimatorOutput class.
@@ -43,12 +38,6 @@ void GaussianDensityEstimatorOutput::operator=(const GaussianDensityEstimatorOut
     return;
   }
   
-  if (this->mean_estimator==NULL)
-    delete this->mean_estimator;
-  
-  if (this->covariance_estimator==NULL)
-    delete this->covariance_estimator;
-  
   DensityEstimatorOutput::operator=(another);
   this->make_copy(another);
 }
@@ -61,14 +50,14 @@ DensityEstimatorOutput* GaussianDensityEstimatorOutput::duplicate() const
 void GaussianDensityEstimatorOutput::make_copy(const GaussianDensityEstimatorOutput &another)
 {
   if (another.mean_estimator!=NULL)
-    this->mean_estimator = another.mean_estimator->duplicate();
+    this->mean_estimator.reset(another.mean_estimator->duplicate());
   else
-    this->mean_estimator = NULL;
+    this->mean_estimator.reset();
   
   if (another.covariance_estimator!=NULL)
-    this->covariance_estimator = another.covariance_estimator->duplicate();
+    this->covariance_estimator.reset(another.covariance_estimator->duplicate());
   else
-    this->covariance_estimator = NULL;
+    this->covariance_estimator.reset();
   
   //this->unbiased = another.unbiased;
   

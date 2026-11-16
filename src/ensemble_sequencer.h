@@ -2,6 +2,7 @@
 #define ENSEMBLESEQUENCER_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <string>
@@ -238,9 +239,9 @@ protected:
   
   // stored here
   /** @brief The criterion. */
-  SMCCriterion* criterion;
+  std::unique_ptr<SMCCriterion> criterion;
   /** @brief The termination. */
-  SMCTermination* termination;
+  std::unique_ptr<SMCTermination> termination;
   
 };
 }

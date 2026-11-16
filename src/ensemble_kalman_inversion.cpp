@@ -35,8 +35,8 @@ namespace ilike
   EnsembleKalmanInversion::EnsembleKalmanInversion()
       : EnsembleKalman()
   {
-    this->mcmc = NULL;
-    this->index = NULL;
+    this->mcmc.reset();
+    this->index.reset();
     this->estimator_type = 0;
   }
 
@@ -70,7 +70,7 @@ namespace ilike
     this->estimator_type = estimator_type_in;
 
     this->significance_level = significance_level_in;
-    this->proposal = prior_in;
+    this->proposal.reset(prior_in);
     this->proposal->set_proposal_parameters(&this->algorithm_parameters);
 
     // IndependentProposalKernel* proposal = new CustomDistributionProposalKernel(simulate_prior_in);
@@ -88,9 +88,9 @@ namespace ilike
                                                                                           measurement_variables_in));
     measurement_covariance_estimators.back()->change_data();
     indices.push_back(0);
-    this->index = new VectorIndex(indices);
+    this->index.reset(new VectorIndex(indices));
 
-    this->ensemble_factors = new VectorEnsembleFactors(measurement_covariance_estimators);
+    this->ensemble_factors.reset(new VectorEnsembleFactors(measurement_covariance_estimators));
 
     /*
      for (auto i=measurement_covariance_estimators.begin();
@@ -107,28 +107,28 @@ namespace ilike
 
     if (parallel_in == TRUE)
     {
-      // this->the_worker = new RcppParallelSMCWorker(this,
+      // this->the_worker.reset(new RcppParallelSMCWorker(this,
       // this->model_and_algorithm.particle_simulator,
-      // grain_size_in);
+      // grain_size_in));
     }
     else
     {
-      this->the_worker = new SequentialEnsembleKalmanWorker(this);
+      this->the_worker.reset(new SequentialEnsembleKalmanWorker(this));
     }
 
     std::vector<double> schedule_in;
     schedule_in.push_back(0.0);
     schedule_in.push_back(1.0);
     SMCCriterion *smc_criterion = new PositiveSMCCriterion();
-    this->sequencer = EnsembleSequencer(this->the_worker,
+    this->sequencer = EnsembleSequencer(this->the_worker.get(),
                                         schedule_in,
                                         "",
                                         25,
                                         smc_criterion);
 
-    this->mcmc = NULL;
+    this->mcmc.reset();
 
-    // this->mcmc = mcmc_in;
+    // this->mcmc.reset(mcmc_in);
     // this->mcmc->set_index(new VectorIndex(indices));
     // this->mcmc_at_last_step = mcmc_at_last_step_in;
   }
@@ -170,7 +170,7 @@ namespace ilike
     // IndependentProposalKernel* proposal = new CustomDistributionProposalKernel(simulate_prior_in);
     // Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
 
-    this->proposal = prior_in;
+    this->proposal.reset(prior_in);
     this->proposal->set_proposal_parameters(&this->algorithm_parameters);
 
     std::vector<MeasurementCovarianceEstimator *> measurement_covariance_estimators;
@@ -185,11 +185,10 @@ namespace ilike
                                                                                           measurement_variables_in));
     measurement_covariance_estimators.back()->change_data();
     indices.push_back(0);
-    this->index = new VectorIndex(indices);
+    this->index.reset(new VectorIndex(indices));
 
-    this->ensemble_factors = new VectorEnsembleFactors(measurement_covariance_estimators);
+    this->ensemble_factors.reset(new VectorEnsembleFactors(measurement_covariance_estimators));
 
-    this->proposal = proposal;
 
     /*
      for (auto i=measurement_covariance_estimators.begin();
@@ -206,28 +205,28 @@ namespace ilike
 
     if (parallel_in == TRUE)
     {
-      // this->the_worker = new RcppParallelSMCWorker(this,
+      // this->the_worker.reset(new RcppParallelSMCWorker(this,
       // this->model_and_algorithm.particle_simulator,
-      // grain_size_in);
+      // grain_size_in));
     }
     else
     {
-      this->the_worker = new SequentialEnsembleKalmanWorker(this);
+      this->the_worker.reset(new SequentialEnsembleKalmanWorker(this));
     }
 
     // std::vector<double> schedule_in;
     // schedule_in.push_back(0.0);
     // schedule_in.push_back(1.0);
     SMCCriterion *smc_criterion = new ESSSMCCriterion(annealing_desired_cess_in);
-    this->sequencer = EnsembleSequencer(this->the_worker,
+    this->sequencer = EnsembleSequencer(this->the_worker.get(),
                                         schedule_in,
                                         sequence_variable_in,
                                         number_of_bisections_in,
                                         smc_criterion);
     // this->sequencer_parameters = &this->sequencer.schedule_parameters;
-    this->mcmc = NULL;
+    this->mcmc.reset();
 
-    // this->mcmc = mcmc_in;
+    // this->mcmc.reset(mcmc_in);
     // this->mcmc->set_index(new VectorIndex(indices));
     // this->mcmc_at_last_step = mcmc_at_last_step_in;
   }
@@ -271,7 +270,7 @@ namespace ilike
     // Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
     // Data candidate_measurement = measurement_transform_function_in(candidate_parameters);
 
-    this->proposal = prior_in;
+    this->proposal.reset(prior_in);
     this->proposal->set_proposal_parameters(&this->algorithm_parameters);
 
     std::vector<MeasurementCovarianceEstimator *> measurement_covariance_estimators;
@@ -287,9 +286,9 @@ namespace ilike
                                                                                                           measurement_variables));
     measurement_covariance_estimators.back()->change_data();
     indices.push_back(0);
-    this->index = new VectorIndex(indices);
+    this->index.reset(new VectorIndex(indices));
 
-    this->ensemble_factors = new VectorEnsembleFactors(measurement_covariance_estimators);
+    this->ensemble_factors.reset(new VectorEnsembleFactors(measurement_covariance_estimators));
 
     /*
      for (auto i=measurement_covariance_estimators.begin();
@@ -307,28 +306,28 @@ namespace ilike
 
     if (parallel_in == TRUE)
     {
-      // this->the_worker = new RcppParallelSMCWorker(this,
+      // this->the_worker.reset(new RcppParallelSMCWorker(this,
       // this->model_and_algorithm.particle_simulator,
-      // grain_size_in);
+      // grain_size_in));
     }
     else
     {
-      this->the_worker = new SequentialEnsembleKalmanWorker(this);
+      this->the_worker.reset(new SequentialEnsembleKalmanWorker(this));
     }
 
     // std::vector<double> schedule_in;
     // schedule_in.push_back(0.0);
     //  schedule_in.push_back(1.0);
     SMCCriterion *smc_criterion = new ESSSMCCriterion(annealing_desired_cess_in);
-    this->sequencer = EnsembleSequencer(this->the_worker,
+    this->sequencer = EnsembleSequencer(this->the_worker.get(),
                                         schedule_in,
                                         sequence_variable_in,
                                         number_of_bisections_in,
                                         smc_criterion);
     // this->sequencer_parameters = &this->sequencer.schedule_parameters;
-    this->mcmc = NULL;
+    this->mcmc.reset();
 
-    // this->mcmc = mcmc_in;
+    // this->mcmc.reset(mcmc_in);
     // this->mcmc->set_index(new VectorIndex(indices));
     // this->mcmc_at_last_step = mcmc_at_last_step_in;
   }
@@ -370,7 +369,7 @@ namespace ilike
    //Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
    //Data candidate_measurement = measurement_transform_function_in(candidate_parameters);
 
-   this->proposal = prior_in;
+   this->proposal.reset(prior_in);
    this->proposal->set_proposal_parameters(&this->algorithm_parameters);
 
    std::vector<MeasurementCovarianceEstimator*> measurement_covariance_estimators;
@@ -387,9 +386,9 @@ namespace ilike
    measurement_variables_in));
    measurement_covariance_estimators.back()->change_data();
    indices.push_back(0);
-   this->index = new VectorIndex(indices);
+   this->index.reset(new VectorIndex(indices));
 
-   this->ensemble_factors = new VectorEnsembleFactors(measurement_covariance_estimators);
+   this->ensemble_factors.reset(new VectorEnsembleFactors(measurement_covariance_estimators));
 
    // Need to construct LikelihoodEstimator to read in to this constructor.
    //this->particle_simulator = new ParameterParticleSimulator(proposal,
@@ -397,30 +396,30 @@ namespace ilike
 
    if (parallel_in==TRUE)
    {
-   //this->the_worker = new RcppParallelSMCWorker(this,
+   //this->the_worker.reset(new RcppParallelSMCWorker(this,
    //this->model_and_algorithm.particle_simulator,
-   //grain_size_in);
+   //grain_size_in));
    }
    else
    {
-   this->the_worker = new SequentialEnsembleKalmanWorker(this);
+   this->the_worker.reset(new SequentialEnsembleKalmanWorker(this));
    }
 
    //std::vector<double> schedule_in;
    //schedule_in.push_back(0.0);
    // schedule_in.push_back(1.0);
    SMCCriterion* smc_criterion = new ESSSMCCriterion(annealing_desired_cess_in);
-   this->sequencer = EnsembleSequencer(this->the_worker,
+   this->sequencer = EnsembleSequencer(this->the_worker.get(),
    schedule_in,
    sequence_variable_in,
    number_of_bisections_in,
    smc_criterion);
    //this->sequencer_parameters = &this->sequencer.schedule_parameters;
-   this->mcmc = NULL;
+   this->mcmc.reset();
 
    this->set_reciprocal_schedule_scale(min_epsilon_in);
 
-   //this->mcmc = mcmc_in;
+   //this->mcmc.reset(mcmc_in);
    //this->mcmc->set_index(new VectorIndex(indices));
    //this->mcmc_at_last_step = mcmc_at_last_step_in;
    }
@@ -465,7 +464,7 @@ namespace ilike
     // Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
     // Data candidate_measurement = measurement_transform_function_in(candidate_parameters);
 
-    this->proposal = prior_in;
+    this->proposal.reset(prior_in);
     this->proposal->set_proposal_parameters(&this->algorithm_parameters);
 
     std::vector<MeasurementCovarianceEstimator *> measurement_covariance_estimators;
@@ -482,9 +481,9 @@ namespace ilike
                                                                                                     measurement_variables_in));
     measurement_covariance_estimators.back()->change_data();
     indices.push_back(0);
-    this->index = new VectorIndex(indices);
+    this->index.reset(new VectorIndex(indices));
 
-    this->ensemble_factors = new VectorEnsembleFactors(measurement_covariance_estimators);
+    this->ensemble_factors.reset(new VectorEnsembleFactors(measurement_covariance_estimators));
 
     /*
      for (auto i=measurement_covariance_estimators.begin();
@@ -502,13 +501,13 @@ namespace ilike
 
     if (parallel_in == TRUE)
     {
-      // this->the_worker = new RcppParallelSMCWorker(this,
+      // this->the_worker.reset(new RcppParallelSMCWorker(this,
       // this->model_and_algorithm.particle_simulator,
-      // grain_size_in);
+      // grain_size_in));
     }
     else
     {
-      this->the_worker = new SequentialEnsembleKalmanWorker(this);
+      this->the_worker.reset(new SequentialEnsembleKalmanWorker(this));
     }
 
     // using the vector to store the information needed later, when we can set up the sequence
@@ -517,7 +516,7 @@ namespace ilike
     for (size_t i = 0; i < number_of_targets + 1; ++i)
       schedule_in.push_back(min_epsilon_in);
     SMCCriterion *smc_criterion = new PositiveSMCCriterion();
-    this->sequencer = EnsembleSequencer(this->the_worker,
+    this->sequencer = EnsembleSequencer(this->the_worker.get(),
                                         schedule_in,
                                         sequence_variable_in,
                                         100, // number_of_bisections_in,
@@ -559,11 +558,11 @@ namespace ilike
     }
 
     // this->sequencer_parameters = &this->sequencer.schedule_parameters;
-    this->mcmc = NULL;
+    this->mcmc.reset();
 
     this->set_reciprocal_schedule_scale(min_epsilon_in);
 
-    // this->mcmc = mcmc_in;
+    // this->mcmc.reset(mcmc_in);
     // this->mcmc->set_index(new VectorIndex(indices));
     // this->mcmc_at_last_step = mcmc_at_last_step_in;
   }
@@ -606,7 +605,7 @@ namespace ilike
     // Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
     // Data candidate_measurement = measurement_transform_function_in(candidate_parameters);
 
-    this->proposal = prior_in;
+    this->proposal.reset(prior_in);
     this->proposal->set_proposal_parameters(&this->algorithm_parameters);
 
     std::vector<MeasurementCovarianceEstimator *> measurement_covariance_estimators = estimators_in;
@@ -635,9 +634,9 @@ namespace ilike
       indices.push_back(i);
     }
 
-    this->index = new VectorIndex(indices);
+    this->index.reset(new VectorIndex(indices));
 
-    this->ensemble_factors = new VectorEnsembleFactors(measurement_covariance_estimators);
+    this->ensemble_factors.reset(new VectorEnsembleFactors(measurement_covariance_estimators));
 
     /*
      for (auto i=measurement_covariance_estimators.begin();
@@ -655,29 +654,29 @@ namespace ilike
 
     if (parallel_in == TRUE)
     {
-      // this->the_worker = new RcppParallelSMCWorker(this,
+      // this->the_worker.reset(new RcppParallelSMCWorker(this,
       // this->model_and_algorithm.particle_simulator,
-      // grain_size_in);
+      // grain_size_in));
     }
     else
     {
-      this->the_worker = new SequentialEnsembleKalmanWorker(this);
+      this->the_worker.reset(new SequentialEnsembleKalmanWorker(this));
     }
 
     // std::vector<double> schedule_in;
     // schedule_in.push_back(0.0);
     //  schedule_in.push_back(1.0);
     // SMCCriterion* smc_criterion = new ESSSMCCriterion(annealing_desired_cess_in);
-    this->sequencer = EnsembleSequencer(this->the_worker,
+    this->sequencer = EnsembleSequencer(this->the_worker.get(),
                                         schedule_in,
                                         sequence_variable_in,
                                         number_of_bisections_in,
                                         adaptive_target_criterion_in,
                                         termination_in);
     // this->sequencer_parameters = &this->sequencer.schedule_parameters;
-    this->mcmc = NULL;
+    this->mcmc.reset();
 
-    // this->mcmc = mcmc_in;
+    // this->mcmc.reset(mcmc_in);
     // this->mcmc->set_index(new VectorIndex(indices));
     // this->mcmc_at_last_step = mcmc_at_last_step_in;
   }
@@ -692,11 +691,9 @@ namespace ilike
   // Destructor for the EnsembleKalmanInversion class.
   EnsembleKalmanInversion::~EnsembleKalmanInversion()
   {
-    if (this->mcmc != NULL)
-      delete this->mcmc;
+    this->mcmc.reset();
 
-    if (this->index != NULL)
-      delete this->index;
+    this->index.reset();
   }
 
   void EnsembleKalmanInversion::operator=(const EnsembleKalmanInversion &another)
@@ -706,11 +703,9 @@ namespace ilike
       return;
     }
 
-    if (this->mcmc != NULL)
-      delete this->mcmc;
+    this->mcmc.reset();
 
-    if (this->index != NULL)
-      delete this->index;
+    this->index.reset();
 
     EnsembleKalman::operator=(another);
     this->make_copy(another);
@@ -729,14 +724,14 @@ namespace ilike
   void EnsembleKalmanInversion::make_copy(const EnsembleKalmanInversion &another)
   {
     if (another.mcmc != NULL)
-      this->mcmc = another.mcmc->mcmc_duplicate();
+      this->mcmc.reset(another.mcmc->mcmc_duplicate());
     else
-      this->mcmc = NULL;
+      this->mcmc.reset();
 
     if (another.index != NULL)
-      this->index = another.index->duplicate();
+      this->index.reset(another.index->duplicate());
     else
-      this->index = NULL;
+      this->index.reset();
 
     this->significance_level = another.significance_level;
 
@@ -765,7 +760,7 @@ namespace ilike
     {
       // Simulate from the proposal.
       this->simulate_proposal(current_state,
-                              index);
+                              this->index.get());
     }
     else
     {
@@ -775,7 +770,7 @@ namespace ilike
 
       // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
       Ensemble *current_particles = &current_state->back();
-      Ensemble *next_particles = current_state->add_ensemble(this->ensemble_factors);
+      Ensemble *next_particles = current_state->add_ensemble(this->ensemble_factors.get());
       this->the_worker->move(next_particles,
                              current_particles);
 
@@ -901,7 +896,7 @@ namespace ilike
       this->sequencer.find_desired_criterion(current_state);
       // (involves evaluating adaptive weights, using Sequencer)
       this->sequencer.find_next_target_bisection(current_state,
-                                                 this->index);
+                                                 this->index.get());
 
       /*
        double path_sampling_U_multiplier = 1.0;
@@ -923,7 +918,7 @@ namespace ilike
       std::vector<double> initial_log_measurement_likelihood_variances;
       if (this->estimator_type == 0)
       {
-        current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_mc_inversion_latest_log_normalising_constant_ratio(this->index,
+        current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_mc_inversion_latest_log_normalising_constant_ratio(this->index.get(),
                                                                                                                                                     1.0 / this->sequencer.schedule_difference);
       }
       else if (this->estimator_type == 1)
@@ -1121,7 +1116,7 @@ namespace ilike
     {
       // Simulate from the proposal.
       this->simulate_proposal(current_state,
-                              this->index,
+                              this->index.get(),
                               conditioned_on_parameters);
     }
     else
@@ -1132,7 +1127,7 @@ namespace ilike
 
       // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
       Ensemble *current_particles = &current_state->back();
-      Ensemble *next_particles = current_state->add_ensemble(this->ensemble_factors);
+      Ensemble *next_particles = current_state->add_ensemble(this->ensemble_factors.get());
       this->the_worker->move(next_particles,
                              current_particles);
       // this->the_worker->move(next_particles,
@@ -1206,7 +1201,7 @@ namespace ilike
 
       // (involves evaluating adaptive weights, using Sequencer)
       this->sequencer.find_next_target_bisection(current_state,
-                                                 this->index);
+                                                 this->index.get());
 
       // current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_inversion_latest_log_normalising_constant_ratio(1.0/this->sequencer.schedule_difference);
 
@@ -1215,7 +1210,7 @@ namespace ilike
       std::vector<double> initial_log_measurement_likelihood_variances;
       if (this->estimator_type == 0)
       {
-        current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_mc_inversion_latest_log_normalising_constant_ratio(this->index,1.0 / this->sequencer.schedule_difference);
+        current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_mc_inversion_latest_log_normalising_constant_ratio(this->index.get(),1.0 / this->sequencer.schedule_difference);
         current_state->calculate_kalman_gains(1.0 / this->sequencer.schedule_difference);
       }
       else if (this->estimator_type == 1)
@@ -1253,7 +1248,7 @@ namespace ilike
 
        // (involves evaluating adaptive weights, using Sequencer)
        this->sequencer.find_next_target_bisection(current_state,
-       this->index,
+       this->index.get(),
        conditioned_on_parameters);
        */
 
@@ -1350,7 +1345,7 @@ namespace ilike
     {
       // Simulate from the proposal.
       this->simulate_proposal(current_state,
-                              this->index);
+                              this->index.get());
     }
     else
     {
@@ -1360,7 +1355,7 @@ namespace ilike
 
       // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
       Ensemble *current_particles = &current_state->back();
-      Ensemble *next_particles = current_state->add_ensemble(this->ensemble_factors);
+      Ensemble *next_particles = current_state->add_ensemble(this->ensemble_factors.get());
       this->the_worker->move(next_particles,
                              current_particles);
 
@@ -1380,7 +1375,7 @@ namespace ilike
     {
       // Simulate from the proposal.
       this->simulate_proposal(current_state,
-                              this->index,
+                              this->index.get(),
                               conditioned_on_parameters);
     }
     else
@@ -1391,7 +1386,7 @@ namespace ilike
 
       // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
       Ensemble *current_particles = &current_state->back();
-      Ensemble *next_particles = current_state->add_ensemble(this->ensemble_factors);
+      Ensemble *next_particles = current_state->add_ensemble(this->ensemble_factors.get());
       this->the_worker->move(next_particles,
                              current_particles);
       // this->the_worker->move(next_particles,
@@ -1463,7 +1458,7 @@ namespace ilike
 
       // (involves evaluating adaptive weights, using Sequencer)
       this->sequencer.subsample_find_next_target_bisection(current_state,
-                                                           this->index);
+                                                           this->index.get());
 
       /*
        double path_sampling_U_multiplier = 1.0;
@@ -1482,7 +1477,7 @@ namespace ilike
 
        // (involves evaluating adaptive weights, using Sequencer)
        this->sequencer.subsample_find_next_target_bisection(current_state,
-       this->index,
+       this->index.get(),
        conditioned_on_parameters);
        */
 
@@ -1494,7 +1489,7 @@ namespace ilike
       std::vector<double> initial_log_measurement_likelihood_variances;
       if (this->estimator_type == 0)
       {
-        current_state->subsample_log_likelihood = current_state->subsample_log_likelihood + current_state->calculate_mc_inversion_latest_log_normalising_constant_ratio(this->index,
+        current_state->subsample_log_likelihood = current_state->subsample_log_likelihood + current_state->calculate_mc_inversion_latest_log_normalising_constant_ratio(this->index.get(),
                                                                                                                                                                         1.0 / this->sequencer.schedule_difference);
       }
       else if (this->estimator_type == 1)

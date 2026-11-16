@@ -11,16 +11,16 @@ namespace ilike
 MetropolisMCMC::MetropolisMCMC()
 :MCMC()
 {
-  this->index = NULL;
-  this->proposal = NULL;
+  this->index.reset();
+  this->proposal.reset();
 }
 
 MetropolisMCMC::MetropolisMCMC(size_t number_of_iterations_in,
                                SymmetricProposalKernel* proposal_in)
 :MCMC(number_of_iterations_in)
 {
-  this->proposal = proposal_in;
-  this->index = NULL;
+  this->proposal.reset(proposal_in);
+  this->index.reset();
 }
 
 MetropolisMCMC::MetropolisMCMC(size_t number_of_iterations_in,
@@ -28,29 +28,27 @@ MetropolisMCMC::MetropolisMCMC(size_t number_of_iterations_in,
                                const Parameters &proposal_variances_in)
 :MCMC(number_of_iterations_in)
 {
-  this->index = NULL;
-  this->proposal = NULL;
+  this->index.reset();
+  this->proposal.reset();
   // default to Gaussian random walk
-  //this->proposal = ProposalKernel(EvaluateLogMCMCProposalPtr proposal_evaluate_in,
+  //this->proposal.reset(ProposalKernel(EvaluateLogMCMCProposalPtr proposal_evaluate_in,
   //                                SimulateMCMCProposalPtr proposal_simulate_in,
-  //                                proposal_variances_in);
+  //                                proposal_variances_in));
 }
 
 MetropolisMCMC::MetropolisMCMC(MCMCTermination* termination_in,
                                SymmetricProposalKernel* proposal_in)
 :MCMC(termination_in)
 {
-  this->proposal = proposal_in;
-  this->index = NULL;
+  this->proposal.reset(proposal_in);
+  this->index.reset();
 }
 
 MetropolisMCMC::~MetropolisMCMC()
 {
-  if (this->proposal!=NULL)
-    delete this->proposal;
+  this->proposal.reset();
   
-  if (this->index!=NULL)
-    delete index;
+  this->index.reset();
 }
 
 //Copy constructor for the MetropolisMCMC class.
@@ -66,11 +64,9 @@ void MetropolisMCMC::operator=(const MetropolisMCMC &another)
     return;
   }
   
-  if (this->proposal!=NULL)
-    delete this->proposal;
+  this->proposal.reset();
   
-  if (this->index!=NULL)
-    delete index;
+  this->index.reset();
   
   MCMC::operator=(another);
   this->make_copy(another);
@@ -95,14 +91,14 @@ MetropolisMCMC* MetropolisMCMC::metropolis_mcmc_duplicate() const
 void MetropolisMCMC::make_copy(const MetropolisMCMC &another)
 {
   if (another.proposal!=NULL)
-    this->proposal = another.proposal->symmetric_proposal_kernel_duplicate();
+    this->proposal.reset(another.proposal->symmetric_proposal_kernel_duplicate());
   else
-    this->proposal = NULL;
+    this->proposal.reset();
   
   if (another.index!=NULL)
-    this->index = another.index->duplicate();
+    this->index.reset(another.index->duplicate());
   else
-    this->index = NULL;
+    this->index.reset();
 }
 
 Particle MetropolisMCMC::move(RandomNumberGenerator &rng,
@@ -113,16 +109,16 @@ Particle MetropolisMCMC::move(RandomNumberGenerator &rng,
   // acceptance ratio or (cut factors) are refreshed after acceptance.
   Particle proposed_particle = this->proposal->move(rng,
                                                     particle,
-                                                    this->get_new_outputs_index(this->index));
+                                                    this->get_new_outputs_index(this->index.get()));
   
   double log_u = log(runif(rng));
   
-  double numerator = proposed_particle.evaluate_likelihoods(this->index);
+  double numerator = proposed_particle.evaluate_likelihoods(this->index.get());
   // The denominator is read from the current particle's per-factor cache over
   // this move's own index. (It used to be particle.target_evaluated, a single
   // number holding whatever index was evaluated last, e.g. the enclosing SMC's
   // index or another move's factor index; see B6 in dev/plan.md.)
-  double denominator = particle.get_cached_likelihoods(this->index);
+  double denominator = particle.get_cached_likelihoods(this->index.get());
   
   if ( (numerator==-arma::datum::inf) || (denominator==-arma::datum::inf) )
   {
@@ -131,14 +127,14 @@ Particle MetropolisMCMC::move(RandomNumberGenerator &rng,
   
   if (log_u < numerator - denominator)
   {
-    proposed_particle.set_acceptance(this->proposal,true);
+    proposed_particle.set_acceptance(this->proposal.get(),true);
     this->refresh_cut_factors(proposed_particle);
-    this->check_carried_over_factors(proposed_particle, this->index);
+    this->check_carried_over_factors(proposed_particle, this->index.get());
     return proposed_particle;
   }
   else
   {
-    //particle.set_acceptance(this->proposal,false);
+    //particle.set_acceptance(this->proposal.get(),false);
     return particle;
   }
   
@@ -151,17 +147,17 @@ void MetropolisMCMC::move_in_place(RandomNumberGenerator &rng,
   // particle as it is instead of returning a copy of it.
   Particle proposed_particle = this->proposal->move(rng,
                                                     particle,
-                                                    this->get_new_outputs_index(this->index));
+                                                    this->get_new_outputs_index(this->index.get()));
   double log_u = log(runif(rng));
-  double numerator = proposed_particle.evaluate_likelihoods(this->index);
-  double denominator = particle.get_cached_likelihoods(this->index);
+  double numerator = proposed_particle.evaluate_likelihoods(this->index.get());
+  double denominator = particle.get_cached_likelihoods(this->index.get());
   if ( (numerator==-arma::datum::inf) || (denominator==-arma::datum::inf) )
     return;
   if (log_u < numerator - denominator)
   {
-    proposed_particle.set_acceptance(this->proposal,true);
+    proposed_particle.set_acceptance(this->proposal.get(),true);
     this->refresh_cut_factors(proposed_particle);
-    this->check_carried_over_factors(proposed_particle, this->index);
+    this->check_carried_over_factors(proposed_particle, this->index.get());
     particle = std::move(proposed_particle);
   }
 }
@@ -177,16 +173,16 @@ void MetropolisMCMC::move_in_place(RandomNumberGenerator &rng,
  
  double log_u = log(runif(rng));
  
- if (log_u < proposed_particle.evaluate_likelihoods(this->index,
+ if (log_u < proposed_particle.evaluate_likelihoods(this->index.get(),
  conditioned_on_parameters) -
  particle.target_evaluated)
  {
- proposed_particle.set_acceptance(this->proposal,true);
+ proposed_particle.set_acceptance(this->proposal.get(),true);
  return proposed_particle;
  }
  else
  {
- proposed_particle.set_acceptance(this->proposal,false);
+ proposed_particle.set_acceptance(this->proposal.get(),false);
  return particle;
  }
  
@@ -201,7 +197,7 @@ Particle MetropolisMCMC::subsample_move(RandomNumberGenerator &rng,
   
   double log_u = log(runif(rng));
   
-  double numerator = proposed_particle.subsample_evaluate_likelihoods(this->index);
+  double numerator = proposed_particle.subsample_evaluate_likelihoods(this->index.get());
   double denominator = particle.subsample_target_evaluated;
   
   if ( (numerator==-arma::datum::inf) || (denominator==-arma::datum::inf) )
@@ -211,12 +207,12 @@ Particle MetropolisMCMC::subsample_move(RandomNumberGenerator &rng,
   
   if (log_u < numerator - denominator)
   {
-    proposed_particle.set_acceptance(this->proposal,true);
+    proposed_particle.set_acceptance(this->proposal.get(),true);
     return proposed_particle;
   }
   else
   {
-    //particle.set_acceptance(this->proposal,false);
+    //particle.set_acceptance(this->proposal.get(),false);
     return particle;
   }
   
@@ -233,7 +229,7 @@ Particle MetropolisMCMC::subsample_move(RandomNumberGenerator &rng,
  
  double log_u = log(runif(rng));
  
- if (log_u < proposed_particle.subsample_evaluate_likelihoods(this->index,
+ if (log_u < proposed_particle.subsample_evaluate_likelihoods(this->index.get(),
  conditioned_on_parameters) -
  particle.subsample_target_evaluated)
  {
@@ -271,27 +267,26 @@ void MetropolisMCMC::specific_mcmc_adapt(const Particle &current_particle,
 // the moves of a sweep) each destructor deleted it -> double free.
 void MetropolisMCMC::set_index(Index* index_in)
 {
-  if (this->index!=NULL)
-    delete this->index;
-  this->index = (index_in!=NULL) ? index_in->duplicate() : NULL;
+  this->index.reset();
+  this->index.reset((index_in!=NULL) ? index_in->duplicate() : NULL);
   if (this->proposal!=NULL)
     this->proposal->set_index(index_in);
-  this->update_index_with_cut(this->index);
+  this->update_index_with_cut(this->index.get());
 }
 
 void MetropolisMCMC::set_index_if_null(Index* index_in)
 {
   if ( (this->index==NULL) && (index_in!=NULL) )
-    this->index = index_in->duplicate();
+    this->index.reset(index_in->duplicate());
   if (this->proposal!=NULL)
     this->proposal->set_index_if_null(index_in);
-  this->update_index_with_cut(this->index);
+  this->update_index_with_cut(this->index.get());
 }
 
 void MetropolisMCMC::set_cut_index(const Index* cut_index_in)
 {
   this->store_cut_index(cut_index_in);
-  this->update_index_with_cut(this->index);
+  this->update_index_with_cut(this->index.get());
 }
 
 void MetropolisMCMC::set_proposal_parameters(Parameters* proposal_parameters_in)
@@ -309,7 +304,7 @@ std::vector<const ProposalKernel*> MetropolisMCMC::get_proposals() const
   {
     proposals = this->proposal->get_proposals();
   }
-  //proposals.push_back(this->proposal);
+  //proposals.push_back(this->proposal.get());
   return proposals;
 }
 
@@ -320,18 +315,18 @@ void MetropolisMCMC::move_in_place(RandomNumberGenerator &rng,
   // As move_in_place(rng, particle), with the proposal built in scratch.
   this->proposal->move_into(rng,
                             particle,
-                            this->get_new_outputs_index(this->index),
+                            this->get_new_outputs_index(this->index.get()),
                             scratch);
   double log_u = log(runif(rng));
-  double numerator = scratch.evaluate_likelihoods(this->index);
-  double denominator = particle.get_cached_likelihoods(this->index);
+  double numerator = scratch.evaluate_likelihoods(this->index.get());
+  double denominator = particle.get_cached_likelihoods(this->index.get());
   if ( (numerator==-arma::datum::inf) || (denominator==-arma::datum::inf) )
     return;
   if (log_u < numerator - denominator)
   {
-    scratch.set_acceptance(this->proposal,true);
+    scratch.set_acceptance(this->proposal.get(),true);
     this->refresh_cut_factors(scratch);
-    this->check_carried_over_factors(scratch, this->index);
+    this->check_carried_over_factors(scratch, this->index.get());
     particle.swap(scratch);
   }
 }

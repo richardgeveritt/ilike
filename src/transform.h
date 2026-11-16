@@ -121,7 +121,7 @@ protected: // Things that can be accessed in this class and subclasses.
   
   // stored here
   /** @brief The components. */
-  std::vector<TransformComponent*> components;
+  std::vector<std::unique_ptr<TransformComponent>> components;
   
   // points to one of the components
   /** @brief The root. */

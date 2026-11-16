@@ -20,18 +20,18 @@ Transform::Transform()
 
 Transform::Transform(TransformPtr transform_in)
 {
-  this->components.push_back(new CustomLeafRootTransformComponent(transform_in));
-  this->root = *this->components.begin();
-  this->leaf = *this->components.begin();
+  this->components.emplace_back(new CustomLeafRootTransformComponent(transform_in));
+  this->root = this->components.begin()->get();
+  this->leaf = this->components.begin()->get();
 }
 
 Transform::Transform(TransformPtr transform_in,
                      TransformPtr inverse_transform_in)
 {
-  this->components.push_back(new CustomLeafRootTransformComponent(transform_in,
+  this->components.emplace_back(new CustomLeafRootTransformComponent(transform_in,
                                                                   inverse_transform_in));
-  this->root = *this->components.begin();
-  this->leaf = *this->components.begin();
+  this->root = this->components.begin()->get();
+  this->leaf = this->components.begin()->get();
 }
 
 // Comment about function.
@@ -39,12 +39,12 @@ Transform::~Transform()
 {
   // Delete all the pointers owned by this class.
   
-  for (std::vector<TransformComponent*>::iterator i=this->components.begin();
+  for (auto i=this->components.begin();
        i!=this->components.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   
 }
@@ -78,24 +78,30 @@ void Transform::make_copy(const Transform &another)
   
   std::vector<int> parent_indices;
   parent_indices.reserve(another.components.size());
+
+  // the components' own lookup functions take plain (non-owning) pointers
+  std::vector<TransformComponent*> another_components;
+  another_components.reserve(another.components.size());
+  for (const auto &component : another.components)
+    another_components.push_back(component.get());
   
   for (size_t i=0;
        i<another.components.size();
        ++i)
   {
     if (another.components[i]!=NULL)
-      this->components.push_back(another.components[i]->duplicate());
+      this->components.emplace_back(another.components[i]->duplicate());
     else
-      this->components.push_back(NULL);
+      this->components.emplace_back();
     
-    child_indices.push_back(another.components[i]->find_child_index(another.components));
-    parent_indices.push_back(another.components[i]->find_parent_index(another.components));
+    child_indices.push_back(another.components[i]->find_child_index(another_components));
+    parent_indices.push_back(another.components[i]->find_parent_index(another_components));
     
-    if (another.components[i]==another.root)
-      this->root = this->components.back();
+    if (another.components[i].get()==another.root)
+      this->root = this->components.back().get();
     
-    if (another.components[i]==another.leaf)
-      this->leaf = this->components.back();
+    if (another.components[i].get()==another.leaf)
+      this->leaf = this->components.back().get();
   }
   
   for (size_t i=0;
@@ -103,10 +109,10 @@ void Transform::make_copy(const Transform &another)
        ++i)
   {
     if (child_indices[i]>=0)
-      this->components[i]->set_child(this->components[child_indices[i]]);
+      this->components[i]->set_child(this->components[child_indices[i]].get());
     
     if (parent_indices[i]>=0)
-      this->components[i]->set_parent(this->components[parent_indices[i]]);
+      this->components[i]->set_parent(this->components[parent_indices[i]].get());
   }
 }
 
@@ -116,12 +122,12 @@ void Transform::operator=(const Transform &another)
   if(this==&another)//a==a
     return;
   
-  for (std::vector<TransformComponent*>::iterator i=this->components.begin();
+  for (auto i=this->components.begin();
        i!=this->components.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   this->components.clear();
   

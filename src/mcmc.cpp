@@ -17,18 +17,18 @@ namespace ilike
 MCMC::MCMC()
 :Kernel()
 {
-  this->termination = NULL;
-  this->cut_index = NULL;
-  this->index_with_cut = NULL;
+  this->termination.reset();
+  this->cut_index.reset();
+  this->index_with_cut.reset();
   this->check_factor_index = false;
 }
 
 MCMC::MCMC(size_t number_of_iterations_in)
 :Kernel()
 {
-  this->termination = new IterationsMCMCTermination(number_of_iterations_in);
-  this->cut_index = NULL;
-  this->index_with_cut = NULL;
+  this->termination.reset(new IterationsMCMCTermination(number_of_iterations_in));
+  this->cut_index.reset();
+  this->index_with_cut.reset();
   this->check_factor_index = false;
   //this->termination->set_parameters(this);
 }
@@ -36,21 +36,18 @@ MCMC::MCMC(size_t number_of_iterations_in)
 MCMC::MCMC(MCMCTermination* termination_in)
 :Kernel()
 {
-  this->termination = termination_in;
-  this->cut_index = NULL;
-  this->index_with_cut = NULL;
+  this->termination.reset(termination_in);
+  this->cut_index.reset();
+  this->index_with_cut.reset();
   this->check_factor_index = false;
   //this->termination->set_parameters(this);
 }
 
 MCMC::~MCMC()
 {
-  if (this->termination!=NULL)
-    delete this->termination;
-  if (this->cut_index!=NULL)
-    delete this->cut_index;
-  if (this->index_with_cut!=NULL)
-    delete this->index_with_cut;
+  this->termination.reset();
+  this->cut_index.reset();
+  this->index_with_cut.reset();
   
   //if (this->adaptor!=NULL)
   //  delete this->adaptor;
@@ -67,16 +64,13 @@ void MCMC::operator=(const MCMC &another)
   if(this == &another)
     return;
   
-  if (this->termination!=NULL)
-    delete this->termination;
+  this->termination.reset();
   
   //if (this->adaptor!=NULL)
   //  delete this->adaptor;
   
-  if (this->cut_index!=NULL)
-    delete this->cut_index;
-  if (this->index_with_cut!=NULL)
-    delete this->index_with_cut;
+  this->cut_index.reset();
+  this->index_with_cut.reset();
   Kernel::operator=(another);
   this->make_copy(another);
 }
@@ -85,20 +79,20 @@ void MCMC::make_copy(const MCMC &another)
 {
   this->thin = another.thin;
   if (another.termination!=NULL)
-    this->termination = another.termination->duplicate();
+    this->termination.reset(another.termination->duplicate());
   else
-    this->termination = NULL;
+    this->termination.reset();
   
   //if (another.adaptor!=NULL)
   //  this->adaptor = another.adaptor->duplicate();
   if (another.cut_index!=NULL)
-    this->cut_index = another.cut_index->duplicate();
+    this->cut_index.reset(another.cut_index->duplicate());
   else
-    this->cut_index = NULL;
+    this->cut_index.reset();
   if (another.index_with_cut!=NULL)
-    this->index_with_cut = another.index_with_cut->duplicate();
+    this->index_with_cut.reset(another.index_with_cut->duplicate());
   else
-    this->index_with_cut = NULL;
+    this->index_with_cut.reset();
   this->check_factor_index = another.check_factor_index;
   this->move_label = another.move_label;
 }
@@ -137,17 +131,16 @@ void MCMC::set_cut_index(const Index* cut_index_in)
 
 void MCMC::store_cut_index(const Index* cut_index_in)
 {
-  if (this->cut_index!=NULL)
-    delete this->cut_index;
-  this->cut_index = (cut_index_in!=NULL) ? cut_index_in->duplicate() : NULL;
+  this->cut_index.reset();
+  this->cut_index.reset((cut_index_in!=NULL) ? cut_index_in->duplicate() : NULL);
 }
 
 void MCMC::update_index_with_cut(const Index* move_index)
 {
   if (this->index_with_cut!=NULL)
   {
-    delete this->index_with_cut;
-    this->index_with_cut = NULL;
+    this->index_with_cut.reset();
+    this->index_with_cut.reset();
   }
   if ( (this->cut_index==NULL) || (move_index==NULL) )
     return;
@@ -157,13 +150,13 @@ void MCMC::update_index_with_cut(const Index* move_index)
     if (std::find(both.begin(), both.end(), *i)==both.end())
       both.push_back(*i);
   }
-  this->index_with_cut = new VectorIndex(both);
+  this->index_with_cut.reset(new VectorIndex(both));
 }
 
 const Index* MCMC::get_new_outputs_index(const Index* move_index) const
 {
   if (this->index_with_cut!=NULL)
-    return this->index_with_cut;
+    return this->index_with_cut.get();
   else
     return move_index;
 }
@@ -171,7 +164,7 @@ const Index* MCMC::get_new_outputs_index(const Index* move_index) const
 void MCMC::refresh_cut_factors(Particle &accepted_particle) const
 {
   if (this->cut_index!=NULL)
-    accepted_particle.evaluate_likelihoods(this->cut_index);
+    accepted_particle.evaluate_likelihoods(this->cut_index.get());
 }
 
 MoveOutput* MCMC::run(RandomNumberGenerator &rng,

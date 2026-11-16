@@ -10,14 +10,13 @@ namespace ilike
 TransformedIndependentProposalKernel::TransformedIndependentProposalKernel()
 :IndependentProposalKernel()
 {
-  this->proposal = NULL;
+  this->proposal.reset();
   this->distribution_on_transformed_space = true;
 }
 
 TransformedIndependentProposalKernel::~TransformedIndependentProposalKernel()
 {
-  if (this->proposal!=NULL)
-    delete this->proposal;
+  this->proposal.reset();
 }
 
 // find mean and cov adaptively
@@ -26,7 +25,7 @@ TransformedIndependentProposalKernel::TransformedIndependentProposalKernel(Indep
                                                                            bool distribution_on_transformed_space_in)
 :IndependentProposalKernel(), transform(transform_in), distribution_on_transformed_space(distribution_on_transformed_space_in)
 {
-  this->proposal = proposal_in;
+  this->proposal.reset(proposal_in);
   
   if (this->transform==NULL)
   {
@@ -45,8 +44,7 @@ void TransformedIndependentProposalKernel::operator=(const TransformedIndependen
   if(this == &another)
     return;
   
-  if (this->proposal!=NULL)
-    delete this->proposal;
+  this->proposal.reset();
   
   IndependentProposalKernel::operator=(another);
   this->make_copy(another);
@@ -70,9 +68,9 @@ IndependentProposalKernel* TransformedIndependentProposalKernel::independent_pro
 void TransformedIndependentProposalKernel::make_copy(const TransformedIndependentProposalKernel &another)
 {
   if (another.proposal!=NULL)
-    this->proposal = another.proposal->independent_proposal_kernel_duplicate();
+    this->proposal.reset(another.proposal->independent_proposal_kernel_duplicate());
   else
-    this->proposal = NULL;
+    this->proposal.reset();
   
   this->transform = another.transform;
   this->distribution_on_transformed_space = another.distribution_on_transformed_space;

@@ -13,7 +13,10 @@ StochasticScanMCMC::StochasticScanMCMC(const std::vector<MCMC*> &moves_in,
                                        const arma::colvec &unnormalised_probabilities_in)
 :MCMC()
 {
-  this->moves = moves_in;
+  // takes ownership
+  this->moves.clear();
+  for (auto i=moves_in.begin(); i!=moves_in.end(); ++i)
+    this->moves.emplace_back(*i);
   this->probabilities = unnormalised_probabilities_in/sum(unnormalised_probabilities_in);
 }
 
@@ -22,19 +25,15 @@ StochasticScanMCMC::StochasticScanMCMC(MCMCTermination* termination_in,
                                        const arma::colvec &unnormalised_probabilities_in)
 :MCMC(termination_in)
 {
-  this->moves = moves_in;
+  // takes ownership
+  this->moves.clear();
+  for (auto i=moves_in.begin(); i!=moves_in.end(); ++i)
+    this->moves.emplace_back(*i);
   this->probabilities = unnormalised_probabilities_in/sum(unnormalised_probabilities_in);
 }
 
 StochasticScanMCMC::~StochasticScanMCMC()
 {
-  for (std::vector<MCMC*>::iterator i=this->moves.begin();
-       i!=this->moves.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
 }
 
 //Copy constructor for the StochasticScanMCMC class.
@@ -48,14 +47,6 @@ void StochasticScanMCMC::operator=(const StochasticScanMCMC &another)
 {
   if(this == &another){ //if a==a
     return;
-  }
-  
-  for (std::vector<MCMC*>::iterator i=this->moves.begin();
-       i!=this->moves.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
   }
   this->moves.clear();
   
@@ -82,14 +73,14 @@ void StochasticScanMCMC::make_copy(const StochasticScanMCMC &another)
 {
   this->moves.resize(0);
   this->moves.reserve(another.moves.size());
-  for (std::vector<MCMC*>::const_iterator i=another.moves.begin();
+  for (auto i=another.moves.begin();
        i!=another.moves.end();
        ++i)
   {
     if (*i!=NULL)
-      this->moves.push_back((*i)->mcmc_duplicate());
+      this->moves.emplace_back((*i)->mcmc_duplicate());
     else
-      this->moves.push_back(NULL);
+      this->moves.emplace_back(nullptr);
   }
   
   this->probabilities = another.probabilities;
@@ -141,7 +132,7 @@ void StochasticScanMCMC::smc_adapt(SMCOutput* current_state)
 {
   // Adapt probabilities?
   
-  for (std::vector<MCMC*>::iterator i=this->moves.begin();
+  for (auto i=this->moves.begin();
        i!=this->moves.end();
        ++i)
   {
@@ -186,7 +177,7 @@ void StochasticScanMCMC::ensemble_adapt(EnsembleKalmanOutput* current_state)
 {
   // Adapt probabilities?
   
-  for (std::vector<MCMC*>::iterator i=this->moves.begin();
+  for (auto i=this->moves.begin();
        i!=this->moves.end();
        ++i)
   {
@@ -197,7 +188,7 @@ void StochasticScanMCMC::ensemble_adapt(EnsembleKalmanOutput* current_state)
 void StochasticScanMCMC::specific_mcmc_adapt(const Particle &current_particle,
                                              size_t iteration_counter)
 {
-  for (std::vector<MCMC*>::iterator i=this->moves.begin();
+  for (auto i=this->moves.begin();
        i!=this->moves.end();
        ++i)
   {
@@ -268,7 +259,7 @@ std::vector<MCMC*> StochasticScanMCMC::get_duplicate_moves() const
   std::vector<MCMC*> duplicate_moves;
   duplicate_moves.reserve(this->moves.size());
   
-  for (std::vector<MCMC*>::const_iterator i=this->moves.begin();
+  for (auto i=this->moves.begin();
        i!=this->moves.end();
        ++i)
   {

@@ -2,6 +2,7 @@
 #define HMMFACTORVARIABLES_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -185,7 +186,8 @@ protected:
   // stored here
   // these are the likelihood terms for each measurement
   /** @brief The likelihood estimator outputs. */
-  std::vector<LikelihoodEstimatorOutput*> likelihood_estimator_outputs;
+  // owned (dev/plan.md 3.5, CH3)
+  std::vector<std::unique_ptr<LikelihoodEstimatorOutput>> likelihood_estimator_outputs;
   
   // stored here
   // data temporarily used in a likelihood estimator

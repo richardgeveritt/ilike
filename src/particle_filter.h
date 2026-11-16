@@ -289,7 +289,8 @@ protected:
   
   // stored here
   /** @brief The transition proposal. */
-  ProposalKernel* transition_proposal;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<ProposalKernel> transition_proposal;
   
   
   /** @brief The index name. */
@@ -317,7 +318,8 @@ protected:
   
   // stored here
   /** @brief The index. */
-  HMMIndex* index;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<HMMIndex> index;
   
   /** @brief The transition proposal is evaluated. */
   bool transition_proposal_is_evaluated;

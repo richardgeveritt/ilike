@@ -2,6 +2,7 @@
 #define HMMENSEMBLEFACTORVARIABLES_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -200,7 +201,7 @@ protected:
   
   // stored here
   /** @brief The measurement covariance estimator outputs. */
-  std::vector<MeasurementCovarianceEstimatorOutput*> measurement_covariance_estimator_outputs;
+  std::vector<std::unique_ptr<MeasurementCovarianceEstimatorOutput>> measurement_covariance_estimator_outputs;
   
 };
 }

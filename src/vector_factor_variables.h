@@ -209,7 +209,8 @@ protected:
   
   // stored here
   /** @brief The likelihood estimator outputs. */
-  std::vector<LikelihoodEstimatorOutput*> likelihood_estimator_outputs;
+  // owned (dev/plan.md 3.5, CH3)
+  std::vector<std::unique_ptr<LikelihoodEstimatorOutput>> likelihood_estimator_outputs;
 
   // The factor directory names (directory + "/factorK") for the directory
   // they were last built for: write_compact_values is called once per stored

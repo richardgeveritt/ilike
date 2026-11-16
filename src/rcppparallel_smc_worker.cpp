@@ -1,3 +1,4 @@
+#include "move_output.h"
 #include "rcppparallel_smc_worker.h"
 
 namespace ilike

@@ -25,7 +25,7 @@ namespace ilike
 SMC::SMC()
 :LikelihoodEstimator()
 {
-  this->particle_simulator = NULL;
+  this->particle_simulator.reset();
   //this->smc_termination = NULL;
   //this->sequencer_parameters = NULL;
   //this->transform = NULL;
@@ -33,8 +33,8 @@ SMC::SMC()
   //this->store_transformed = false;
   this->setup_default_ancestor_variables();
   this->initialised = false;
-  this->the_worker = NULL;
-  this->resampling_criterion = NULL;
+  this->the_worker.reset();
+  this->resampling_criterion.reset();
   //this->output = NULL;
 }
 
@@ -64,9 +64,9 @@ SMC::SMC(RandomNumberGenerator* rng_in,
   this->sequencer_limit_is_fixed = sequencer_limit_is_fixed_in;
   //this->evaluate_log_proposal = evaluate_log_proposal_in;
   this->proposal_is_evaluated = proposal_is_evaluated_in;
-  this->resampling_criterion = new ESSSMCCriterion(resampling_desired_ess_in);
+  this->resampling_criterion.reset(new ESSSMCCriterion(resampling_desired_ess_in));
   this->proposed_particles_inputted = false;
-  this->particle_simulator = NULL;
+  this->particle_simulator.reset();
   //this->smc_termination = NULL;
   //this->sequencer_parameters = NULL;
   //this->transform = NULL;
@@ -84,7 +84,7 @@ SMC::SMC(RandomNumberGenerator* rng_in,
   else
     this->proposals_to_transform_for = std::vector<const ProposalKernel*>();
   
-  this->the_worker = NULL;
+  this->the_worker.reset();
 }
 
 SMC::SMC(RandomNumberGenerator* rng_in,
@@ -113,9 +113,9 @@ SMC::SMC(RandomNumberGenerator* rng_in,
   this->sequencer_limit_is_fixed = sequencer_limit_is_fixed_in;
   //this->evaluate_log_proposal = evaluate_log_proposal_in;
   this->proposal_is_evaluated = proposal_is_evaluated_in;
-  this->resampling_criterion = adaptive_resampling_method_in;
+  this->resampling_criterion.reset(adaptive_resampling_method_in);
   this->proposed_particles_inputted = false;
-  this->particle_simulator = NULL;
+  this->particle_simulator.reset();
   //this->smc_termination = NULL;
   //this->sequencer_parameters = NULL;
   //this->transform = NULL;
@@ -133,7 +133,7 @@ SMC::SMC(RandomNumberGenerator* rng_in,
   else
     this->proposals_to_transform_for = std::vector<const ProposalKernel*>();
   
-  this->the_worker = NULL;
+  this->the_worker.reset();
 }
 
 /*
@@ -154,13 +154,13 @@ SMC::SMC(RandomNumberGenerator* rng_in,
  this->lag_proposed = lag_proposed_in;
  this->smcfixed_flag = smcfixed_flag_in;
  this->sequencer_limit_is_fixed = sequencer_limit_is_fixed_in;
- this->resampling_criterion = new ESSSMCCriterion(resampling_desired_ess_in);
+ this->resampling_criterion.reset(new ESSSMCCriterion(resampling_desired_ess_in));
  //this->evaluate_log_proposal = NULL;
  this->proposal_is_evaluated = false;
  this->proposed_particles_inputted = true;
  this->initial_particles = Particles(initial_values_in,
  log_probabilities_of_initial_values_in);
- this->particle_simulator = NULL;
+ this->particle_simulator.reset();
  this->smc_termination = NULL;
  //this->results_name = results_name_in;
  }
@@ -175,14 +175,11 @@ SMC::SMC(const SMC &another)
 SMC::~SMC()
 {
   
-  if (this->the_worker!=NULL)
-    delete this->the_worker;
+  this->the_worker.reset();
   
-  if (this->resampling_criterion!=NULL)
-    delete this->resampling_criterion;
+  this->resampling_criterion.reset();
   
-  if (this->particle_simulator!=NULL)
-    delete this->particle_simulator;
+  this->particle_simulator.reset();
   
   //if (this->transform!=NULL)
   //  delete this->transform;
@@ -199,14 +196,11 @@ void SMC::operator=(const SMC &another)
   if(this == &another)
     return;
   
-  if (this->the_worker!=NULL)
-    delete this->the_worker;
+  this->the_worker.reset();
   
-  if (this->resampling_criterion!=NULL)
-    delete this->resampling_criterion;
+  this->resampling_criterion.reset();
   
-  if (this->particle_simulator!=NULL)
-    delete this->particle_simulator;
+  this->particle_simulator.reset();
   
   //if (this->transform!=NULL)
   //  delete this->transform;
@@ -228,19 +222,19 @@ void SMC::make_copy(const SMC &another)
   this->waste_free_chains = another.waste_free_chains;
 
   if (another.the_worker!=NULL)
-    this->the_worker = another.the_worker->duplicate();
+    this->the_worker.reset(another.the_worker->duplicate());
   else
-    this->the_worker = NULL;
+    this->the_worker.reset();
   
   if (another.resampling_criterion!=NULL)
-    this->resampling_criterion = another.resampling_criterion->duplicate();
+    this->resampling_criterion.reset(another.resampling_criterion->duplicate());
   else
-    this->resampling_criterion = NULL;
+    this->resampling_criterion.reset();
   
   if (another.particle_simulator!=NULL)
-    this->particle_simulator = another.particle_simulator->duplicate();
+    this->particle_simulator.reset(another.particle_simulator->duplicate());
   else
-    this->particle_simulator = NULL;
+    this->particle_simulator.reset();
   
   //if (another.transform!=NULL)
   //  this->transform = another.transform->duplicate();
@@ -261,7 +255,7 @@ void SMC::make_copy(const SMC &another)
   // sequencer writes into them in place)
   if (this->the_worker!=NULL)
     this->the_worker->set_smc(this);
-  this->sequencer.set_worker(this->the_worker);
+  this->sequencer.set_worker(this->the_worker.get());
   this->sequencer.schedule_parameters = another.sequencer.schedule_parameters.deep_copy();
   /*
    if (another.sequencer_parameters!=NULL)
@@ -388,7 +382,7 @@ void SMC::setup_variables()
   else
   {
     dummy_parameters = std::move(this->particle_simulator->simulate(*this->rng,
-                                                                    this->factors,
+                                                                    this->factors.get(),
                                                                     &this->proposals_to_transform_for,
                                                                     &this->proposals_to_find_gradient_for,
                                                                     this->sequencer.schedule_parameters).parameters);
@@ -417,7 +411,7 @@ void SMC::setup_variables(const Parameters &parameters)
   else
   {
     dummy_parameters = std::move(this->particle_simulator->simulate(*this->rng,
-                                                                    this->factors,
+                                                                    this->factors.get(),
                                                                     &this->proposals_to_transform_for,
                                                                     &this->proposals_to_find_gradient_for,
                                                                     parameters,
@@ -456,7 +450,7 @@ void SMC::setup_variables(const Parameters &parameters)
  Particle new_particle;
  this->particle_simulator->simulate(*this->rng,
  &new_particle,
- this->factors);
+ this->factors.get());
  dummy_parameters = new_particle.parameters;
  }
  
@@ -503,7 +497,7 @@ void SMC::simulate_generation_in_chunks(SMCOutput *current_state,
     // In the first two modes the seed bookkeeping is done first (after the
     // chunk streams have been taken from the seed: it does not touch them),
     // and the first point to be kept fixes the layout of what is kept.
-    SMCWorker* worker = this->the_worker;
+    SMCWorker* worker = this->the_worker.get();
     size_t N = this->number_of_particles;
     size_t B = ((this->chunk_size == 0) || (this->chunk_size > N)) ? N : this->chunk_size;
     size_t K = (N + B - 1)/B;
@@ -571,7 +565,7 @@ void SMC::simulate_generation_in_chunks(SMCOutput *current_state,
       }
       else
       {
-        w.factors = this->factors;
+        w.factors = this->factors.get();
       }
       w.slots.resize(B);
     };
@@ -623,7 +617,7 @@ void SMC::simulate_generation_in_chunks(SMCOutput *current_state,
       {
         for (size_t j = 0; j < n; ++j)
         {
-          const FactorVariables* factor_variables = slots[j].factor_variables;
+          const FactorVariables* factor_variables = slots[j].factor_variables.get();
           int size = (factor_variables == NULL) ? -1 : factor_variables->adaptive_summary_size(index);
           std::call_once(summary_setup, [&]()
           {
@@ -632,11 +626,11 @@ void SMC::simulate_generation_in_chunks(SMCOutput *current_state,
             summary_size = size;
             generation->adaptive_summaries.set_size(size_t(summary_size), N);
             generation->adaptive_previous_targets.set_size(N);
-            generation->flat_summary_evaluator = factor_variables->duplicate();
+            generation->flat_summary_evaluator.reset(factor_variables->duplicate());
             generation->flat_summary_evaluator->set_particle(NULL);
-            if ((mode == copies) && !generation->flat_summary_evaluator->repoint_to(this->factors))
+            if ((mode == copies) && !generation->flat_summary_evaluator->repoint_to(this->factors.get()))
               Rcpp::stop("SMC::simulate_generation_in_chunks: the factors could not be repointed.");
-            generation->adaptive_summary_evaluator = generation->flat_summary_evaluator;
+            generation->adaptive_summary_evaluator = generation->flat_summary_evaluator.get();
             generation->adaptive_summary_index = index;
             generation->adaptive_summary_state = 1;
           });
@@ -672,17 +666,18 @@ void SMC::simulate_generation_in_chunks(SMCOutput *current_state,
             {
               number_of_records = slot.factor_variables->number_of_compact_values();
               generation->flat_points.set_number_of_extra_columns(number_of_records);
-              generation->flat_record_writer = slot.factor_variables->duplicate();
+              generation->flat_record_writer.reset(slot.factor_variables->duplicate());
               generation->flat_record_writer->set_particle(NULL);
               // summarised points have not been weighted yet: their records
               // are recomputed once the target has been chosen
               generation->flat_records_from_summaries = summarise;
-              if ((mode == copies) && !generation->flat_record_writer->repoint_to(this->factors))
+              if ((mode == copies) && !generation->flat_record_writer->repoint_to(this->factors.get()))
                 Rcpp::stop("SMC::simulate_generation_in_chunks: the factors could not be repointed.");
             }
             else
             {
-              generation->flat_factor_variables.assign(N, NULL);
+              generation->flat_factor_variables.clear();
+              generation->flat_factor_variables.resize(N);
             }
           }
           generation->flat_points.prepare(slot.parameters, N);
@@ -701,10 +696,9 @@ void SMC::simulate_generation_in_chunks(SMCOutput *current_state,
             // keep this point's factor outputs whole (repointed to the main
             // factors, which outlive the group's copy); the slot gets new ones
             slot.factor_variables->set_particle(NULL);
-            if ((mode == copies) && !slot.factor_variables->repoint_to(this->factors))
+            if ((mode == copies) && !slot.factor_variables->repoint_to(this->factors.get()))
               Rcpp::stop("SMC::simulate_generation_in_chunks: the factors could not be repointed.");
-            generation->flat_factor_variables[point] = slot.factor_variables;
-            slot.factor_variables = NULL;
+            generation->flat_factor_variables[point] = std::move(slot.factor_variables);
           }
         }
       }
@@ -750,7 +744,7 @@ void SMC::weight_from_summaries_if_possible(const Index* index,
                                             Particles &current_particles)
 {
   if (this->force_rich_generations ||
-      (dynamic_cast<SequentialSMCWorker*>(this->the_worker) == NULL) ||
+      (dynamic_cast<SequentialSMCWorker*>(this->the_worker.get()) == NULL) ||
       !current_particles.prepare_adaptive_summaries(index))
   {
     this->the_worker->smcadaptive_given_smcfixed_weight(index, current_particles);
@@ -820,7 +814,7 @@ void SMC::finish_weighting_from_summaries(const Index* index,
         (current_particles.flat_record_writer != NULL) &&
         (current_particles.adaptive_summary_state == 1))
     {
-      FactorVariables* writer = current_particles.flat_record_writer;
+      FactorVariables* writer = current_particles.flat_record_writer.get();
       std::vector<double> records(writer->number_of_compact_values());
       for (size_t i = 0; i < current_particles.size(); ++i)
       {
@@ -856,7 +850,7 @@ void SMC::simulate_proposal(SMCOutput* current_state)
   {
     next_particles->setup(this->initial_particles,
                           this->log_probabilities_of_initial_values,
-                          this->factors,
+                          this->factors.get(),
                           &this->proposals_to_transform_for,
                           &this->proposals_to_find_gradient_for,
                           this->sequencer.schedule_parameters);
@@ -875,11 +869,11 @@ SMCOutput* SMC::initialise_smc(const Parameters &conditioned_on_parameters)
   /*
    Particle new_particle;
    Parameters dummy_parameters = this->particle_simulator->simulate(*this->rng,
-   this->factors,
+   this->factors.get(),
    conditioned_on_parameters).parameters;
    
    //Parameters dummy_parameters = this->particle_simulator->simulate(*this->rng,
-   //                                                                 this->factors,
+   //                                                                 this->factors.get(),
    //                                                                 conditioned_on_parameters).parameters;
    this->vector_variables = dummy_parameters.get_vector_variables();
    this->any_variables = dummy_parameters.get_any_variables();
@@ -909,7 +903,7 @@ void SMC::simulate_proposal(SMCOutput* current_state,
   {
     next_particles->setup(this->initial_particles,
                           this->log_probabilities_of_initial_values,
-                          this->factors,
+                          this->factors.get(),
                           &this->proposals_to_transform_for,
                           &this->proposals_to_find_gradient_for,
                           conditioned_on_parameters,
@@ -924,7 +918,7 @@ void SMC::resample(SMCOutput* current_state)
   auto current_particles_iterator = current_state->end()-1;
   
   // Check criterion to see if we resample.
-  if ((*this->resampling_criterion)(*current_particles_iterator)<0.0)
+  if ((*this->resampling_criterion.get())(*current_particles_iterator)<0.0)
   {
     // Sample ancestor variables.
     current_particles_iterator->resampled_flag = true;

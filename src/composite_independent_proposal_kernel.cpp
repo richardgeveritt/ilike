@@ -16,19 +16,21 @@ CompositeIndependentProposalKernel::CompositeIndependentProposalKernel()
 
 CompositeIndependentProposalKernel::~CompositeIndependentProposalKernel()
 {
-  for (std::vector<IndependentProposalKernel*>::iterator i=this->all_kernels.begin();
+  for (auto i=this->all_kernels.begin();
        i!=this->all_kernels.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
 }
 
 CompositeIndependentProposalKernel::CompositeIndependentProposalKernel(const std::vector<IndependentProposalKernel*> &all_kernels_in)
 :IndependentProposalKernel()
 {
-  this->all_kernels = all_kernels_in;
+  this->all_kernels.reserve(all_kernels_in.size());
+  for (auto k : all_kernels_in)
+    this->all_kernels.emplace_back(k);
 }
 
 CompositeIndependentProposalKernel::CompositeIndependentProposalKernel(const CompositeIndependentProposalKernel &another)
@@ -42,12 +44,12 @@ void CompositeIndependentProposalKernel::operator=(const CompositeIndependentPro
   if(this == &another)
     return;
   
-  for (std::vector<IndependentProposalKernel*>::iterator i=this->all_kernels.begin();
+  for (auto i=this->all_kernels.begin();
        i!=this->all_kernels.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   this->all_kernels.clear();
   
@@ -72,14 +74,14 @@ IndependentProposalKernel* CompositeIndependentProposalKernel::independent_propo
 
 void CompositeIndependentProposalKernel::make_copy(const CompositeIndependentProposalKernel &another)
 {
-  for (std::vector<IndependentProposalKernel*>::const_iterator i=another.all_kernels.begin();
+  for (auto i=another.all_kernels.begin();
        i!=another.all_kernels.end();
        ++i)
   {
     if (*i!=NULL)
-      this->all_kernels.push_back((*i)->independent_proposal_kernel_duplicate());
+      this->all_kernels.emplace_back((*i)->independent_proposal_kernel_duplicate());
     else
-      this->all_kernels.push_back(NULL);
+      this->all_kernels.emplace_back();
   }
 }
 

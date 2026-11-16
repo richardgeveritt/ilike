@@ -1,6 +1,7 @@
 #include <numeric>
 #include <algorithm>
 #include "smc_mcmc_move.h"
+#include "ensemble_factor_variables.h"
 #include "chunk_parallel.h"
 #include "progress_reporter.h"
 #include <sstream>
@@ -49,9 +50,9 @@ static Index* make_cancelled_index(const Index* full_index,
 SMCMCMCMove::SMCMCMCMove()
 :SMC()
 {
-  this->mcmc = NULL;
-  this->index = NULL;
-  this->cancelled_index = NULL;
+  this->mcmc.reset();
+  this->index.reset();
+  this->cancelled_index.reset();
 }
 
 // Multiple MCMC chains.
@@ -98,11 +99,11 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                                                                evaluate_log_likelihood_in,
                                                                true));
   indices.push_back(0);
-  this->index = new VectorIndex(indices);
+  this->index.reset(new VectorIndex(indices));
   
-  this->factors = new VectorFactors(likelihood_estimators);
+  this->factors.reset(new VectorFactors(likelihood_estimators));
   
-  this->particle_simulator = NULL;
+  this->particle_simulator.reset();
   
   this->initial_particles = initial_points_in;
   this->log_probabilities_of_initial_values = log_probabilities_of_initial_values_in;
@@ -115,21 +116,21 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   //                                                                              this->model_and_algorithm.likelihood_estimators);
   
   this->parallel = parallel_in;
-  this->the_worker = new SequentialSMCWorker(this);
+  this->the_worker.reset(new SequentialSMCWorker(this));
   
   std::vector<double> schedule_in;
   schedule_in.push_back(0.0);
   schedule_in.push_back(1.0);
   std::string variable_in = "power";
   SMCCriterion* smc_criterion = new CESSSMCCriterion(-1.0);
-  this->sequencer = Sequencer(this->the_worker,
+  this->sequencer = Sequencer(this->the_worker.get(),
                               schedule_in,
                               variable_in,
                               25,
                               smc_criterion);
   
-  this->mcmc = mcmc_in;
-  this->cancelled_index = NULL;
+  this->mcmc.reset(mcmc_in);
+  this->cancelled_index.reset();
   VectorIndex mcmc_index(indices); // set_index copies it
   this->mcmc->set_index(&mcmc_index);
   this->mcmc_at_last_step = true;
@@ -175,13 +176,13 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   //indices.reserve(likelihood_estimators_in.size());
   //for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
   //  indices.push_back(i);
-  //this->index = new VectorIndex(indices);
-  this->index = without_cancelled_index;
+  //this->index.reset(new VectorIndex(indices));
+  this->index.reset(without_cancelled_index);
   
-  this->factors = new VectorFactors(likelihood_estimators_in);
+  this->factors.reset(new VectorFactors(likelihood_estimators_in));
   
-  this->particle_simulator = new ParameterParticleSimulator(proposal_in,
-                                                            likelihood_estimators_in);
+  this->particle_simulator.reset(new ParameterParticleSimulator(proposal_in,
+                                                            likelihood_estimators_in));
   
   this->proposed_particles_inputted = false;
   
@@ -189,24 +190,24 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   //                                                                              this->model_and_algorithm.likelihood_estimators);
   
   this->parallel = parallel_in;
-  this->the_worker = new SequentialSMCWorker(this);
+  this->the_worker.reset(new SequentialSMCWorker(this));
   
   std::vector<double> schedule_in;
   schedule_in.push_back(0.0);
   schedule_in.push_back(1.0);
   std::string variable_in = "power";
   SMCCriterion* smc_criterion = new CESSSMCCriterion(-1.0);
-  this->sequencer = Sequencer(this->the_worker,
+  this->sequencer = Sequencer(this->the_worker.get(),
                               schedule_in,
                               variable_in,
                               25,
                               smc_criterion);
   
-  this->mcmc = mcmc_in;
-  this->cancelled_index = NULL;
+  this->mcmc.reset(mcmc_in);
+  this->cancelled_index.reset();
   if (this->mcmc!=NULL)
     this->mcmc->set_index_if_null(full_index);
-  this->cancelled_index = make_cancelled_index(full_index, without_cancelled_index);
+  this->cancelled_index.reset(make_cancelled_index(full_index, without_cancelled_index));
   this->mcmc_at_last_step = true;
 }
 
@@ -248,12 +249,12 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   //indices.reserve(likelihood_estimators_in.size());
   //for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
   //  indices.push_back(i);
-  //this->index = new VectorIndex(indices);
-  this->index = without_cancelled_index;
+  //this->index.reset(new VectorIndex(indices));
+  this->index.reset(without_cancelled_index);
   
-  this->factors = new VectorFactors(likelihood_estimators_in);
+  this->factors.reset(new VectorFactors(likelihood_estimators_in));
   
-  this->particle_simulator = NULL;
+  this->particle_simulator.reset();
   
   this->initial_particles = initial_points_in;
   
@@ -268,24 +269,24 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   //                                                                              this->model_and_algorithm.likelihood_estimators);
   
   this->parallel = parallel_in;
-  this->the_worker = new SequentialSMCWorker(this);
+  this->the_worker.reset(new SequentialSMCWorker(this));
   
   std::vector<double> schedule_in;
   schedule_in.push_back(0.0);
   schedule_in.push_back(1.0);
   std::string variable_in = "power";
   SMCCriterion* smc_criterion = new CESSSMCCriterion(-1.0);
-  this->sequencer = Sequencer(this->the_worker,
+  this->sequencer = Sequencer(this->the_worker.get(),
                               schedule_in,
                               variable_in,
                               100,
                               smc_criterion);
   
-  this->mcmc = mcmc_in;
-  this->cancelled_index = NULL;
+  this->mcmc.reset(mcmc_in);
+  this->cancelled_index.reset();
   if (this->mcmc!=NULL)
     this->mcmc->set_index_if_null(full_index);
-  this->cancelled_index = make_cancelled_index(full_index, without_cancelled_index);
+  this->cancelled_index.reset(make_cancelled_index(full_index, without_cancelled_index));
   this->mcmc_at_last_step = true;
 }
 
@@ -326,13 +327,13 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                                                                evaluate_log_likelihood_in,
                                                                true));
   indices.push_back(0);
-  this->index = new VectorIndex(indices);
+  this->index.reset(new VectorIndex(indices));
   
-  this->factors = new VectorFactors(likelihood_estimators);
+  this->factors.reset(new VectorFactors(likelihood_estimators));
   
   // Need to construct LikelihoodEstimator to read in to this constructor.
-  this->particle_simulator = new ParameterParticleSimulator(proposal,
-                                                            likelihood_estimators);
+  this->particle_simulator.reset(new ParameterParticleSimulator(proposal,
+                                                            likelihood_estimators));
   
   /*
    for (auto i=likelihood_estimators.begin();
@@ -344,21 +345,21 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
    */
   
   this->parallel = parallel_in;
-  this->the_worker = new SequentialSMCWorker(this);
+  this->the_worker.reset(new SequentialSMCWorker(this));
   
   std::vector<double> schedule_in;
   schedule_in.push_back(0.0);
   schedule_in.push_back(1.0);
   std::string variable_in = "power";
   SMCCriterion* smc_criterion = new CESSSMCCriterion(-1.0);
-  this->sequencer = Sequencer(this->the_worker,
+  this->sequencer = Sequencer(this->the_worker.get(),
                               schedule_in,
                               variable_in,
                               25,
                               smc_criterion);
   
-  this->mcmc = mcmc_in;
-  this->cancelled_index = NULL;
+  this->mcmc.reset(mcmc_in);
+  this->cancelled_index.reset();
   VectorIndex mcmc_index(indices); // set_index copies it
   this->mcmc->set_index(&mcmc_index);
   this->mcmc_at_last_step = mcmc_at_last_step_in;
@@ -392,9 +393,9 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
  }
  else
  {
- this->the_worker = new SequentialSMCWorker(this,
+ this->the_worker.reset(new SequentialSMCWorker(this,
  this->model_and_algorithm.particle_simulator,
- this->model_and_algorithm.likelihood_estimators);
+ this->model_and_algorithm.likelihood_estimators));
  }
  
  std::vector<double> schedule_in;
@@ -403,13 +404,13 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
  std::string variable_in = "power";
  this->model_and_algorithm.smc_criterion = new CESSSMCCriterion(-1.0);
  this->model_and_algorithm.smc_termination = NULL;
- this->sequencer = Sequencer(this->the_worker,
+ this->sequencer = Sequencer(this->the_worker.get(),
  schedule_in,
  variable_in,
  this->model_and_algorithm.smc_criterion,
  this->model_and_algorithm.smc_termination);
  
- this->mcmc = mcmc_in;
+ this->mcmc.reset(mcmc_in);
  }
  */
 
@@ -487,7 +488,7 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                                                                   false));
   
   indices.push_back(1);
-  this->index = new VectorIndex(indices);
+  this->index.reset(new VectorIndex(indices));
   
   /*
    for (auto i=likelihood_estimators.begin();
@@ -498,29 +499,29 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
    }
    */
   
-  this->factors = new VectorFactors(likelihood_estimators);
+  this->factors.reset(new VectorFactors(likelihood_estimators));
   
   // Need to construct LikelihoodEstimator to read in to this constructor.
-  this->particle_simulator = new ParameterParticleSimulator(proposal,
-                                                            likelihood_estimators);
+  this->particle_simulator.reset(new ParameterParticleSimulator(proposal,
+                                                            likelihood_estimators));
   
   this->parallel = parallel_in;
-  this->the_worker = new SequentialSMCWorker(this);
+  this->the_worker.reset(new SequentialSMCWorker(this));
   
   std::vector<double> schedule_in;
   schedule_in.push_back(0.0);
   schedule_in.push_back(1.0);
   SMCCriterion* smc_criterion = new CESSSMCCriterion(annealing_desired_cess_in);
   //this->model_and_algorithm.smc_termination = NULL;
-  this->sequencer = Sequencer(this->the_worker,
+  this->sequencer = Sequencer(this->the_worker.get(),
                               schedule_in,
                               variable_in,
                               number_of_bisections_in,
                               smc_criterion);
   //this->sequencer_parameters = &this->sequencer.schedule_parameters;
   
-  this->mcmc = mcmc_in;
-  this->cancelled_index = NULL;
+  this->mcmc.reset(mcmc_in);
+  this->cancelled_index.reset();
   VectorIndex mcmc_index(indices); // set_index copies it
   this->mcmc->set_index(&mcmc_index);
   this->mcmc_at_last_step = mcmc_at_last_step_in;
@@ -599,9 +600,9 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                                                                   false));
   
   indices.push_back(1);
-  this->index = new VectorIndex(indices);
+  this->index.reset(new VectorIndex(indices));
   
-  this->factors = new VectorFactors(likelihood_estimators);
+  this->factors.reset(new VectorFactors(likelihood_estimators));
   
   /*
    for (auto i=likelihood_estimators.begin();
@@ -613,11 +614,11 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
    */
   
   // Need to construct LikelihoodEstimator to read in to this constructor.
-  this->particle_simulator = new ParameterParticleSimulator(proposal,
-                                                            likelihood_estimators);
+  this->particle_simulator.reset(new ParameterParticleSimulator(proposal,
+                                                            likelihood_estimators));
   
   this->parallel = parallel_in;
-  this->the_worker = new SequentialSMCWorker(this);
+  this->the_worker.reset(new SequentialSMCWorker(this));
   
   std::vector<double> schedule_in;
   schedule_in.reserve(temperatures_in.size()+1);
@@ -629,15 +630,15 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   
   SMCCriterion* smc_criterion = new CESSSMCCriterion(annealing_desired_cess_in);
   //this->model_and_algorithm.smc_termination = NULL;
-  this->sequencer = Sequencer(this->the_worker,
+  this->sequencer = Sequencer(this->the_worker.get(),
                               schedule_in,
                               variable_in,
                               number_of_bisections_in,
                               smc_criterion);
   //this->sequencer_parameters = &this->sequencer.schedule_parameters;
   
-  this->mcmc = mcmc_in;
-  this->cancelled_index = NULL;
+  this->mcmc.reset(mcmc_in);
+  this->cancelled_index.reset();
   VectorIndex mcmc_index(indices); // set_index copies it
   this->mcmc->set_index(&mcmc_index);
   this->mcmc_at_last_step = mcmc_at_last_step_in;
@@ -679,9 +680,9 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   indices.reserve(likelihood_estimators_in.size());
   for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
     indices.push_back(i);
-  this->index = new VectorIndex(indices);
+  this->index.reset(new VectorIndex(indices));
   
-  this->factors = new VectorFactors(likelihood_estimators_in);
+  this->factors.reset(new VectorFactors(likelihood_estimators_in));
   
   /*
    for (auto i=likelihood_estimators.begin();
@@ -693,15 +694,15 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
    */
   
   // Need to construct LikelihoodEstimator to read in to this constructor.
-  this->particle_simulator = new ParameterParticleSimulator(proposal_in,
-                                                            likelihood_estimators_in);
+  this->particle_simulator.reset(new ParameterParticleSimulator(proposal_in,
+                                                            likelihood_estimators_in));
   
   this->parallel = parallel_in;
-  this->the_worker = new SequentialSMCWorker(this);
+  this->the_worker.reset(new SequentialSMCWorker(this));
   
   SMCCriterion* smc_criterion = new CESSSMCCriterion(annealing_desired_cess_in);
   //this->model_and_algorithm.smc_termination = NULL;
-  this->sequencer = Sequencer(this->the_worker,
+  this->sequencer = Sequencer(this->the_worker.get(),
                               schedule_in,
                               sequence_variable_in,
                               number_of_bisections_in,
@@ -709,8 +710,8 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                               termination_in);
   //this->sequencer_parameters = &this->sequencer.schedule_parameters;
   
-  this->mcmc = mcmc_in;
-  this->cancelled_index = NULL;
+  this->mcmc.reset(mcmc_in);
+  this->cancelled_index.reset();
   if (this->mcmc!=NULL)
   {
     VectorIndex mcmc_index(indices); // set_index_if_null copies it
@@ -757,10 +758,10 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
   //indices.reserve(likelihood_estimators_in.size());
   //for (size_t i=0; i<likelihood_estimators_in.size(); ++i)
   //  indices.push_back(i);
-  //this->index = new VectorIndex(indices);
-  this->index = without_cancelled_index;
+  //this->index.reset(new VectorIndex(indices));
+  this->index.reset(without_cancelled_index);
   
-  this->factors = new VectorFactors(likelihood_estimators_in);
+  this->factors.reset(new VectorFactors(likelihood_estimators_in));
   
   /*
    for (auto i=likelihood_estimators.begin();
@@ -772,16 +773,16 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
    */
   
   // Need to construct LikelihoodEstimator to read in to this constructor.
-  this->particle_simulator = new ParameterParticleSimulator(proposal_in,
-                                                            likelihood_estimators_in);
+  this->particle_simulator.reset(new ParameterParticleSimulator(proposal_in,
+                                                            likelihood_estimators_in));
   
   
   this->parallel = parallel_in;
-  this->the_worker = new SequentialSMCWorker(this);
+  this->the_worker.reset(new SequentialSMCWorker(this));
   
   SMCCriterion* smc_criterion = adaptive_target_in;
   //this->model_and_algorithm.smc_termination = NULL;
-  this->sequencer = Sequencer(this->the_worker,
+  this->sequencer = Sequencer(this->the_worker.get(),
                               schedules_in,
                               sequence_variables_in,
                               number_of_bisections_in,
@@ -789,11 +790,11 @@ SMCMCMCMove::SMCMCMCMove(RandomNumberGenerator* rng_in,
                               termination_in);
   //this->sequencer_parameters = &this->sequencer.schedule_parameters;
   
-  this->mcmc = mcmc_in;
-  this->cancelled_index = NULL;
+  this->mcmc.reset(mcmc_in);
+  this->cancelled_index.reset();
   if (this->mcmc!=NULL)
     this->mcmc->set_index_if_null(full_index);
-  this->cancelled_index = make_cancelled_index(full_index, without_cancelled_index);
+  this->cancelled_index.reset(make_cancelled_index(full_index, without_cancelled_index));
   
   this->mcmc_at_last_step = mcmc_at_last_step_in;
 }
@@ -808,14 +809,11 @@ SMCMCMCMove::SMCMCMCMove(const SMCMCMCMove &another)
 //Destructor for the SMCMCMCMove class.
 SMCMCMCMove::~SMCMCMCMove()
 {
-  if (this->mcmc!=NULL)
-    delete this->mcmc;
+  this->mcmc.reset();
   
-  if (this->index!=NULL)
-    delete this->index;
+  this->index.reset();
   
-  if (this->cancelled_index!=NULL)
-    delete this->cancelled_index;
+  this->cancelled_index.reset();
 }
 
 void SMCMCMCMove::operator=(const SMCMCMCMove &another)
@@ -824,14 +822,11 @@ void SMCMCMCMove::operator=(const SMCMCMCMove &another)
     return;
   }
   
-  if (this->mcmc!=NULL)
-    delete this->mcmc;
+  this->mcmc.reset();
   
-  if (this->index!=NULL)
-    delete this->index;
+  this->index.reset();
   
-  if (this->cancelled_index!=NULL)
-    delete this->cancelled_index;
+  this->cancelled_index.reset();
   
   SMC::operator=(another);
   this->make_copy(another);
@@ -850,19 +845,19 @@ LikelihoodEstimator* SMCMCMCMove::duplicate() const
 void SMCMCMCMove::make_copy(const SMCMCMCMove &another)
 {
   if (another.mcmc!=NULL)
-    this->mcmc = another.mcmc->mcmc_duplicate();
+    this->mcmc.reset(another.mcmc->mcmc_duplicate());
   else
-    this->mcmc = NULL;
+    this->mcmc.reset();
   
   if (another.index!=NULL)
-    this->index = another.index->duplicate();
+    this->index.reset(another.index->duplicate());
   else
-    this->index = NULL;
+    this->index.reset();
   
   if (another.cancelled_index!=NULL)
-    this->cancelled_index = another.cancelled_index->duplicate();
+    this->cancelled_index.reset(another.cancelled_index->duplicate());
   else
-    this->cancelled_index = NULL;
+    this->cancelled_index.reset();
   
   this->mcmc_at_last_step = another.mcmc_at_last_step;
 }
@@ -906,7 +901,7 @@ SMCOutput* SMCMCMCMove::specific_initialise_smc()
 
 int SMCMCMCMove::rich_chunk_mode() const
 {
-  if ((dynamic_cast<const SequentialSMCWorker*>(this->the_worker) == NULL) ||
+  if ((dynamic_cast<const SequentialSMCWorker*>(this->the_worker.get()) == NULL) ||
       (this->mcmc == NULL) || (this->factors == NULL))
     return 0;
   if (this->factors->supports_parallel_chunks())
@@ -925,14 +920,15 @@ void SMCMCMCMove::move_rich_in_chunks(Particles* next_particles,
   // stream, each particle's MoveOutput put in its own slot. A kernel that
   // adapts is copied for every chain (C98), which touches a static counter
   // of the kernels: such runs are chunked but not parallel.
-  SMCWorker* worker = this->the_worker;
+  SMCWorker* worker = this->the_worker.get();
   size_t N = this->number_of_particles;
   size_t B = ((this->chunk_size == 0) || (this->chunk_size > N)) ? N : this->chunk_size;
   size_t K = (N + B - 1)/B;
   bool in_parallel = this->parallel && !this->mcmc->adapts();
   if (this->parallel && !in_parallel)
     this->parallel_refused = true;
-  next_particles->particles.assign(N, NULL);
+  next_particles->particles.clear();
+  next_particles->particles.resize(N);
 
   RandomNumberGenerator first_stream(*worker->get_rng());
   first_stream.seed(worker->get_seed());
@@ -946,7 +942,7 @@ void SMCMCMCMove::move_rich_in_chunks(Particles* next_particles,
                      std::unique_ptr<Factors> own_factors;
                      RandomNumberGenerator group_rng;
                      size_t group_seed = 0;
-                     const Factors* factors_for_group = this->factors;
+                     const Factors* factors_for_group = this->factors.get();
                      if (copies)
                      {
                        own_factors.reset(this->factors->duplicate());
@@ -970,7 +966,7 @@ void SMCMCMCMove::move_rich_in_chunks(Particles* next_particles,
                              Rcpp::stop("SMCMCMCMove::move_rich_in_chunks: the factors could not be repointed.");
                            moved = this->move(local_rng, start);
                            // what is kept outlives the group's copy
-                           if (!moved->repoint_to(this->factors))
+                           if (!moved->repoint_to(this->factors.get()))
                              Rcpp::stop("SMCMCMCMove::move_rich_in_chunks: the factors could not be repointed.");
                          }
                          else
@@ -978,7 +974,7 @@ void SMCMCMCMove::move_rich_in_chunks(Particles* next_particles,
                            moved = this->move(local_rng, ancestor);
                          }
                          moved->back().previous_self = &ancestor;
-                         next_particles->particles[i] = moved;
+                         next_particles->particles[i].reset(moved);
                        }
                      }
                    },
@@ -1005,7 +1001,7 @@ bool SMCMCMCMove::can_simulate_flat() const
   // give summaries, and the particles are simulated (not given)
   return !this->proposed_particles_inputted && (this->particle_simulator != NULL) &&
     (this->number_of_particles > 0) && this->can_move_flat() &&
-    this->factors->supports_flat_generations(this->index);
+    this->factors->supports_flat_generations(this->index.get());
 }
 
 bool SMCMCMCMove::can_move_flat() const
@@ -1018,13 +1014,13 @@ bool SMCMCMCMove::can_move_flat() const
   // reinitialisable (the cancelled ones).
   if (this->force_rich_generations)
     return false;
-  if (dynamic_cast<const SequentialSMCWorker*>(this->the_worker) == NULL)
+  if (dynamic_cast<const SequentialSMCWorker*>(this->the_worker.get()) == NULL)
     return false;
   if ((this->mcmc == NULL) || !this->mcmc->reads_cached_factors() || this->mcmc->adapts())
     return false;
   if (this->mcmc->known_number_of_iterations() == 0)
     return false;
-  if ((this->factors == NULL) || !this->factors->supports_flat_moves(this->index, this->cancelled_index))
+  if ((this->factors == NULL) || !this->factors->supports_flat_moves(this->index.get(), this->cancelled_index.get()))
     return false;
   return true;
 }
@@ -1047,17 +1043,17 @@ void SMCMCMCMove::restore_particle(Particle &particle,
                                                                         : generation.flat_points;
   points.assign_into(row, particle.parameters);
   if (particle.factor_variables == NULL)
-    particle.factor_variables = this->factors->simulate_factor_variables(particle.parameters);
+    particle.factor_variables.reset(this->factors->simulate_factor_variables(particle.parameters));
   particle.factor_variables->set_particle(&particle);
-  if (!particle.factor_variables->restore_from_summary(this->index,
-                                                      this->cancelled_index,
+  if (!particle.factor_variables->restore_from_summary(this->index.get(),
+                                                      this->cancelled_index.get(),
                                                       generation.adaptive_summaries.colptr(row),
                                                       restore_parameters))
     Rcpp::stop("SMCMCMCMove::restore_particle: the factors of a particle could not be restored.");
   if (particle.ensemble_factor_variables != NULL)
   {
-    delete particle.ensemble_factor_variables;
-    particle.ensemble_factor_variables = NULL;
+    particle.ensemble_factor_variables.reset();
+    particle.ensemble_factor_variables.reset();
   }
   particle.current_proposal_store.clear();
   particle.simulate_proposal_variables(&this->proposals_to_transform_for,
@@ -1087,7 +1083,7 @@ void SMCMCMCMove::move_waste_free(Particles* next_particles,
   // summary and its target over the SMC's index, the next weights' previous
   // target). The ancestor of particle m*P + s is a_m. Chunks are groups of
   // chains, each with its own stream; in parallel when asked.
-  SMCWorker* worker = this->the_worker;
+  SMCWorker* worker = this->the_worker.get();
   size_t N = this->number_of_particles;
   size_t M = this->waste_free_chains;
   if ((M == 0) || (M > N) || ((N % M) != 0))
@@ -1139,8 +1135,8 @@ void SMCMCMCMove::move_waste_free(Particles* next_particles,
 
   auto keep_state = [&](Particle &state, size_t row, std::vector<double> &records)
   {
-    const FactorVariables* factor_variables = state.factor_variables;
-    int size = (factor_variables == NULL) ? -1 : factor_variables->adaptive_summary_size(this->index);
+    const FactorVariables* factor_variables = state.factor_variables.get();
+    int size = (factor_variables == NULL) ? -1 : factor_variables->adaptive_summary_size(this->index.get());
     std::call_once(setup, [&]()
     {
       if (keep_records && (state.factor_variables != NULL))
@@ -1149,7 +1145,7 @@ void SMCMCMCMove::move_waste_free(Particles* next_particles,
           Rcpp::stop("SMCMCMCMove::move_waste_free: a factor has no compact record.");
         number_of_records = state.factor_variables->number_of_compact_values();
         next_particles->flat_points.set_number_of_extra_columns(number_of_records);
-        next_particles->flat_record_writer = state.factor_variables->duplicate();
+        next_particles->flat_record_writer.reset(state.factor_variables->duplicate());
         next_particles->flat_record_writer->set_particle(NULL);
       }
       next_particles->flat_points.prepare(state.parameters, N);
@@ -1157,10 +1153,10 @@ void SMCMCMCMove::move_waste_free(Particles* next_particles,
         Rcpp::stop("SMCMCMCMove::move_waste_free: a factor has no adaptive summary.");
       summary_size = size;
       next_particles->adaptive_summaries.set_size(size_t(summary_size), N);
-      next_particles->flat_summary_evaluator = factor_variables->duplicate();
+      next_particles->flat_summary_evaluator.reset(factor_variables->duplicate());
       next_particles->flat_summary_evaluator->set_particle(NULL);
-      next_particles->adaptive_summary_evaluator = next_particles->flat_summary_evaluator;
-      next_particles->adaptive_summary_index = this->index;
+      next_particles->adaptive_summary_evaluator = next_particles->flat_summary_evaluator.get();
+      next_particles->adaptive_summary_index = this->index.get();
       next_particles->adaptive_summary_state = 1;
     });
     if (size != summary_size)
@@ -1176,8 +1172,8 @@ void SMCMCMCMove::move_waste_free(Particles* next_particles,
       next_particles->flat_points.set_point(row, state.parameters);
     }
     if (summary_size > 0)
-      factor_variables->adaptive_summary(this->index, next_particles->adaptive_summaries.colptr(row));
-    next_particles->adaptive_previous_targets[row] = state.get_cached_likelihoods(this->index);
+      factor_variables->adaptive_summary(this->index.get(), next_particles->adaptive_summaries.colptr(row));
+    next_particles->adaptive_previous_targets[row] = state.get_cached_likelihoods(this->index.get());
   };
 
   run_chunk_groups(0, K, this->parallel, this->number_of_threads,
@@ -1199,7 +1195,7 @@ void SMCMCMCMove::move_waste_free(Particles* next_particles,
                          else
                            current = (*current_particles)[ancestor]->back();
                          if (this->cancelled_index != NULL)
-                           current.evaluate_likelihoods(this->cancelled_index);
+                           current.evaluate_likelihoods(this->cancelled_index.get());
                          keep_state(current, m*P, records);
                          for (size_t s = 1; s < P; ++s)
                          {
@@ -1227,7 +1223,7 @@ void SMCMCMCMove::move_flat(Particles* next_particles,
   // stream and writing only its own particles' rows: a chain of
   // `iterations` moves stores iterations/thin states, so particle i's states
   // are rows [i*m, (i+1)*m) of the chain store.
-  SMCWorker* worker = this->the_worker;
+  SMCWorker* worker = this->the_worker.get();
   size_t N = this->number_of_particles;
   size_t B = ((this->chunk_size == 0) || (this->chunk_size > N)) ? N : this->chunk_size;
   size_t K = (N + B - 1)/B;
@@ -1274,7 +1270,7 @@ void SMCMCMCMove::move_flat(Particles* next_particles,
 
       // as move(): the cancelled factors, then the run
       if (this->cancelled_index != NULL)
-        current.evaluate_likelihoods(this->cancelled_index);
+        current.evaluate_likelihoods(this->cancelled_index.get());
 
       size_t stored = 0;
       for (size_t iteration = 1; iteration <= iterations; ++iteration)
@@ -1298,7 +1294,7 @@ void SMCMCMCMove::move_flat(Particles* next_particles,
               Rcpp::stop("SMCMCMCMove::move_flat: a factor has no compact record.");
             number_of_records = current.factor_variables->number_of_compact_values();
             next_particles->flat_points.set_number_of_extra_columns(number_of_records);
-            next_particles->flat_record_writer = current.factor_variables->duplicate();
+            next_particles->flat_record_writer.reset(current.factor_variables->duplicate());
             next_particles->flat_record_writer->set_particle(NULL);
           }
           next_particles->flat_points.prepare(current.parameters, N*m);
@@ -1319,9 +1315,9 @@ void SMCMCMCMove::move_flat(Particles* next_particles,
 
       // as move(): the target over the SMC's index, which becomes the
       // particle's previous target (set_previous_target_evaluated_to_target_evaluated)
-      double target = current.get_cached_likelihoods(this->index);
-      const FactorVariables* factor_variables = current.factor_variables;
-      int size = (factor_variables == NULL) ? -1 : factor_variables->adaptive_summary_size(this->index);
+      double target = current.get_cached_likelihoods(this->index.get());
+      const FactorVariables* factor_variables = current.factor_variables.get();
+      int size = (factor_variables == NULL) ? -1 : factor_variables->adaptive_summary_size(this->index.get());
       std::call_once(final_setup, [&]()
       {
         next_particles->flat_final_points.prepare(current.parameters, N);
@@ -1329,10 +1325,10 @@ void SMCMCMCMove::move_flat(Particles* next_particles,
           Rcpp::stop("SMCMCMCMove::move_flat: a factor has no adaptive summary.");
         summary_size = size;
         next_particles->adaptive_summaries.set_size(size_t(summary_size), N);
-        next_particles->flat_summary_evaluator = factor_variables->duplicate();
+        next_particles->flat_summary_evaluator.reset(factor_variables->duplicate());
         next_particles->flat_summary_evaluator->set_particle(NULL);
-        next_particles->adaptive_summary_evaluator = next_particles->flat_summary_evaluator;
-        next_particles->adaptive_summary_index = this->index;
+        next_particles->adaptive_summary_evaluator = next_particles->flat_summary_evaluator.get();
+        next_particles->adaptive_summary_index = this->index.get();
         next_particles->adaptive_summary_state = 1;
       });
       next_particles->flat_final_points.set_point(i, current.parameters);
@@ -1341,7 +1337,7 @@ void SMCMCMCMove::move_flat(Particles* next_particles,
         Rcpp::stop("SMCMCMCMove::move_flat: the particles' adaptive summaries differ in size.");
       }
       if (summary_size > 0)
-        factor_variables->adaptive_summary(this->index, next_particles->adaptive_summaries.colptr(i));
+        factor_variables->adaptive_summary(this->index.get(), next_particles->adaptive_summaries.colptr(i));
       next_particles->adaptive_previous_targets[i] = target;
     }
   };
@@ -1383,7 +1379,7 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state)
     // generation (dev/plan.md 2.6a; the points are kept to be moved)
     if (this->can_simulate_flat())
     {
-      this->simulate_generation_in_chunks(current_state, NULL, true, this->index, true);
+      this->simulate_generation_in_chunks(current_state, NULL, true, this->index.get(), true);
     }
     else
     {
@@ -1449,7 +1445,7 @@ void SMCMCMCMove::evaluate_smcfixed_part_smc(SMCOutput* current_state)
   // a flat generation's smcfixed parts were evaluated when it was simulated
   if (current_state->back().is_flat())
     return;
-  this->the_worker->smcfixed_weight(this->index,
+  this->the_worker->smcfixed_weight(this->index.get(),
                                     current_state->back());
   //current_state->initialise_next_step();
 }
@@ -1467,8 +1463,8 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
     check_interrupt(); // between SMC steps (dev/plan.md 3.11)
     this->sequencer.find_desired_criterion(current_state);
     // (involves evaluating adaptive weights, using Sequencer)
-    this->sequencer.find_next_target_bisection(current_state,this->index);
-    this->finish_weighting_from_summaries(this->index, current_state->back());
+    this->sequencer.find_next_target_bisection(current_state,this->index.get());
+    this->finish_weighting_from_summaries(this->index.get(), current_state->back());
     if (this->show_progress && !this->progress_counts_iterations)
     {
       std::string status;
@@ -1533,7 +1529,7 @@ MoveOutput* SMCMCMCMove::move(RandomNumberGenerator &rng,
   if (this->cancelled_index!=NULL)
   {
     Particle start = particle;
-    start.evaluate_likelihoods(this->cancelled_index);
+    start.evaluate_likelihoods(this->cancelled_index.get());
     output = this->mcmc->run(rng, start);
   }
   else
@@ -1544,13 +1540,13 @@ MoveOutput* SMCMCMCMove::move(RandomNumberGenerator &rng,
   // The SMC uses target_evaluated (over its own index) in its next weight
   // update, so set it from the cache rather than leaving whatever the last
   // move happened to store there.
-  output->back().target_evaluated = output->back().get_cached_likelihoods(this->index);
+  output->back().target_evaluated = output->back().get_cached_likelihoods(this->index.get());
   return output;
 }
 
 //void SMCMCMCMove::weight_for_adapting_sequence(Particles &current_particles)
 //{
-//  this->the_worker->smcadaptive_given_smcfixed_weight(this->index,
+//  this->the_worker->smcadaptive_given_smcfixed_weight(this->index.get(),
 //                                                      current_particles);
 //}
 
@@ -1627,19 +1623,19 @@ void SMCMCMCMove::evaluate_smcfixed_part_smc(SMCOutput* current_state,
    if (this->sequencer_parameters!=NULL)
    {
    Parameters all_parameters = conditioned_on_parameters.merge(*this->sequencer_parameters);
-   this->the_worker->smcfixed_weight(this->index,
+   this->the_worker->smcfixed_weight(this->index.get(),
    current_state->back(),
    all_parameters);
    }
    else
    {
-   this->the_worker->smcfixed_weight(this->index,
+   this->the_worker->smcfixed_weight(this->index.get(),
    current_state->back(),
    conditioned_on_parameters);
    }
    */
   
-  this->the_worker->smcfixed_weight(this->index,
+  this->the_worker->smcfixed_weight(this->index.get(),
                                     current_state->back());
   //current_state->initialise_next_step();
 }
@@ -1662,8 +1658,8 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
     
     // (involves evaluating adaptive weights, using Sequencer)
     this->sequencer.find_next_target_bisection(current_state,
-                                               this->index);
-    this->finish_weighting_from_summaries(this->index, current_state->back());
+                                               this->index.get());
+    this->finish_weighting_from_summaries(this->index.get(), current_state->back());
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
     current_state->set_llhd(current_state->log_likelihood);
     
@@ -1774,18 +1770,18 @@ void SMCMCMCMove::subsample_evaluate_smcfixed_part_smc(SMCOutput* current_state)
    if (this->sequencer_parameters!=NULL)
    {
    Parameters all_parameters = conditioned_on_parameters.merge(*this->sequencer_parameters);
-   this->the_worker->subsample_smcfixed_weight(this->index,
+   this->the_worker->subsample_smcfixed_weight(this->index.get(),
    current_state->back(),
    all_parameters);
    }
    else
    {
-   this->the_worker->subsample_smcfixed_weight(this->index,
+   this->the_worker->subsample_smcfixed_weight(this->index.get(),
    current_state->back(),
    conditioned_on_parameters);
    }
    */
-  this->the_worker->subsample_smcfixed_weight(this->index,
+  this->the_worker->subsample_smcfixed_weight(this->index.get(),
                                               current_state->back());
   //current_state->initialise_next_step();
 }
@@ -1797,18 +1793,18 @@ void SMCMCMCMove::subsample_evaluate_smcfixed_part_smc(SMCOutput* current_state,
    if (this->sequencer_parameters!=NULL)
    {
    Parameters all_parameters = conditioned_on_parameters.merge(*this->sequencer_parameters);
-   this->the_worker->subsample_smcfixed_weight(this->index,
+   this->the_worker->subsample_smcfixed_weight(this->index.get(),
    current_state->back(),
    all_parameters);
    }
    else
    {
-   this->the_worker->subsample_smcfixed_weight(this->index,
+   this->the_worker->subsample_smcfixed_weight(this->index.get(),
    current_state->back(),
    conditioned_on_parameters);
    }
    */
-  this->the_worker->subsample_smcfixed_weight(this->index,
+  this->the_worker->subsample_smcfixed_weight(this->index.get(),
                                               current_state->back());
   //current_state->initialise_next_step();
 }
@@ -1832,7 +1828,7 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
     
     // (involves evaluating adaptive weights, using Sequencer)
     this->sequencer.subsample_find_next_target_bisection(current_state,
-                                                         this->index);
+                                                         this->index.get());
     
     current_state->subsample_log_likelihood = current_state->subsample_log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
     
@@ -1893,7 +1889,7 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
     
     // (involves evaluating adaptive weights, using Sequencer)
     this->sequencer.subsample_find_next_target_bisection(current_state,
-                                                         this->index);
+                                                         this->index.get());
     
     current_state->subsample_log_likelihood = current_state->subsample_log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
     
@@ -1947,7 +1943,7 @@ void SMCMCMCMove::weight_for_adapting_sequence(const Index* index,
 {
   // from the generation's adaptive summaries when available (dev/plan.md
   // 2.6a, G2; the bisection calls this once per trial target)
-  this->weight_from_summaries_if_possible(this->index,
+  this->weight_from_summaries_if_possible(this->index.get(),
                                           current_particles);
 }
 
@@ -1956,7 +1952,7 @@ void SMCMCMCMove::weight_for_adapting_sequence(const Index* index,
  Particles &current_particles,
  const Parameters &conditioned_on_parameters)
  {
- this->the_worker->smcadaptive_given_smcfixed_weight(this->index,
+ this->the_worker->smcadaptive_given_smcfixed_weight(this->index.get(),
  current_particles,
  conditioned_on_parameters);
  }
@@ -1983,7 +1979,7 @@ MoveOutput* SMCMCMCMove::subsample_move(RandomNumberGenerator &rng,
 void SMCMCMCMove::subsample_weight_for_adapting_sequence(const Index* index,
                                                          Particles &current_particles)
 {
-  this->the_worker->subsample_smcadaptive_given_smcfixed_weight(this->index,
+  this->the_worker->subsample_smcadaptive_given_smcfixed_weight(this->index.get(),
                                                                 current_particles);
 }
 
@@ -1992,7 +1988,7 @@ void SMCMCMCMove::subsample_weight_for_adapting_sequence(const Index* index,
  Particles &current_particles,
  const Parameters &conditioned_on_parameters)
  {
- this->the_worker->subsample_smcadaptive_given_smcfixed_weight(this->index,
+ this->the_worker->subsample_smcadaptive_given_smcfixed_weight(this->index.get(),
  current_particles,
  conditioned_on_parameters);
  }

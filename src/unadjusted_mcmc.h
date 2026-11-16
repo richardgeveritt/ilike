@@ -2,6 +2,7 @@
 #define UNADJUSTEDMCMC_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -155,7 +156,8 @@ protected:
   
   // stored here
   /** @brief The proposal. */
-  ProposalKernel* proposal;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<ProposalKernel> proposal;
   
   /**
    * @brief Copies the state of another EnsembleKalmanOutput into this object.
@@ -166,7 +168,8 @@ protected:
   
   // stored here (change to shared pointer so that memory is not duplicated)
   /** @brief The index. */
-  Index* index;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<Index> index;
   
 };
 }

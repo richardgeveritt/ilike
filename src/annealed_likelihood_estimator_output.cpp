@@ -16,13 +16,12 @@ AnnealedLikelihoodEstimatorOutput::AnnealedLikelihoodEstimatorOutput(AnnealedLik
 :LikelihoodEstimatorOutput()
 {
   this->estimator = estimator_in;
-  this->estimator_output = estimator_output_in;
+  this->estimator_output.reset(estimator_output_in);
 }
 
 AnnealedLikelihoodEstimatorOutput::~AnnealedLikelihoodEstimatorOutput()
 {
-  if (this->estimator_output!=NULL)
-    delete this->estimator_output;
+  this->estimator_output.reset();
 }
 
 //Copy constructor for the AnnealedLikelihoodEstimatorOutput class.
@@ -38,8 +37,7 @@ void AnnealedLikelihoodEstimatorOutput::operator=(const AnnealedLikelihoodEstima
     return;
   }
   
-  if (this->estimator_output!=NULL)
-    delete this->estimator_output;
+  this->estimator_output.reset();
   
   LikelihoodEstimatorOutput::operator=(another);
   this->make_copy(another);
@@ -54,9 +52,9 @@ void AnnealedLikelihoodEstimatorOutput::make_copy(const AnnealedLikelihoodEstima
 {
   this->estimator = another.estimator;
   if (another.estimator_output!=NULL)
-    this->estimator_output = another.estimator_output->duplicate();
+    this->estimator_output.reset(another.estimator_output->duplicate());
   else
-    this->estimator_output = NULL;
+    this->estimator_output.reset();
 }
 
 void AnnealedLikelihoodEstimatorOutput::simulate()
@@ -366,7 +364,7 @@ bool AnnealedLikelihoodEstimatorOutput::repoint_estimator(LikelihoodEstimator* e
     return false;
   this->estimator = annealed;
   if (this->estimator_output != NULL)
-    return this->estimator_output->repoint_estimator(annealed->estimator);
+    return this->estimator_output->repoint_estimator(annealed->estimator.get());
   return true;
 }
 

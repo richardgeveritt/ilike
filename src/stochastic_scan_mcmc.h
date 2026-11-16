@@ -2,6 +2,7 @@
 #define STOCHASTICSCANMCMC_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -186,7 +187,8 @@ protected:
   
   // Stored here.
   /** @brief The moves. */
-  std::vector<MCMC*> moves;
+  // owned (dev/plan.md 3.5, CH3)
+  std::vector<std::unique_ptr<MCMC>> moves;
   
   /** @brief The probabilities. */
   arma::colvec probabilities;

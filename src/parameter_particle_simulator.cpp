@@ -16,7 +16,7 @@ namespace ilike
 ParameterParticleSimulator::ParameterParticleSimulator()
 :ParticleSimulator()
 {
-  this->proposal = NULL;
+  this->proposal.reset();
 }
 
 /*
@@ -34,7 +34,7 @@ ParameterParticleSimulator::ParameterParticleSimulator(const IndependentProposal
                                                        const std::vector<LikelihoodEstimator*> &likelihood_estimators_in)
 :ParticleSimulator()
 {
-  this->proposal = proposal_in;
+  this->proposal.reset(proposal_in);
   this->likelihood_estimators = likelihood_estimators_in;
 }
 
@@ -48,8 +48,7 @@ ParameterParticleSimulator::ParameterParticleSimulator(const ParameterParticleSi
 //Destructor for the ParameterParticleSimulator class.
 ParameterParticleSimulator::~ParameterParticleSimulator()
 {
-  if (this->proposal!=NULL)
-    delete this->proposal;
+  this->proposal.reset();
 }
 
 void ParameterParticleSimulator::operator=(const ParameterParticleSimulator &another)
@@ -58,8 +57,7 @@ void ParameterParticleSimulator::operator=(const ParameterParticleSimulator &ano
     return;
   }
   
-  if (this->proposal!=NULL)
-    delete this->proposal;
+  this->proposal.reset();
   
   this->likelihood_estimators.clear();
   
@@ -75,9 +73,9 @@ ParticleSimulator* ParameterParticleSimulator::duplicate() const
 void ParameterParticleSimulator::make_copy(const ParameterParticleSimulator &another)
 {
   if (another.proposal!=NULL)
-    this->proposal = another.proposal->independent_proposal_kernel_duplicate();
+    this->proposal.reset(another.proposal->independent_proposal_kernel_duplicate());
   else
-    this->proposal = NULL;
+    this->proposal.reset();
   this->likelihood_estimators = another.likelihood_estimators;
 }
 

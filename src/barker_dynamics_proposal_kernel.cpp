@@ -14,21 +14,18 @@ namespace ilike
   BarkerDynamicsProposalKernel::BarkerDynamicsProposalKernel()
       : ProposalKernel()
   {
-    this->gradient_estimator = NULL;
-    this->proposal_simulate = NULL;
-    this->index = NULL;
+    this->gradient_estimator.reset();
+    this->proposal_simulate.reset();
+    this->index.reset();
   }
 
   BarkerDynamicsProposalKernel::~BarkerDynamicsProposalKernel()
   {
-    if (this->gradient_estimator != NULL)
-      delete this->gradient_estimator;
+    this->gradient_estimator.reset();
 
-    if (this->proposal_simulate != NULL)
-      delete this->proposal_simulate;
+    this->proposal_simulate.reset();
 
-    if (this->index != NULL)
-      delete index;
+    this->index.reset();
   }
 
   /*
@@ -36,10 +33,10 @@ namespace ilike
                                                                GradientEstimator *gradient_estimator_in)
         : ProposalKernel()
     {
-      this->gradient_estimator = gradient_estimator_in;
+      this->gradient_estimator.reset(gradient_estimator_in);
       this->gradient_estimator->set_proposal(this);
-      this->proposal_simulate = NULL;
-      this->index = NULL;
+      this->proposal_simulate.reset();
+      this->index.reset();
 
       for (auto i = variable_names_in.begin();
            i != variable_names_in.end();
@@ -55,15 +52,15 @@ namespace ilike
                                                              GradientEstimator *gradient_estimator_in)
       : ProposalKernel()
   {
-    this->gradient_estimator = gradient_estimator_in;
+    this->gradient_estimator.reset(gradient_estimator_in);
     this->gradient_estimator->set_proposal(this);
-    this->index = NULL;
+    this->index.reset();
     arma::colvec mean = arma::zeros<arma::colvec>(covariance_in.n_rows);
     // Create an identity matrix for the covariance
     arma::mat identity = arma::eye<arma::mat>(covariance_in.n_rows, covariance_in.n_rows);
-    this->proposal_simulate = new GaussianIndependentProposalKernel(variable_name_in,
+    this->proposal_simulate.reset(new GaussianIndependentProposalKernel(variable_name_in,
                                                                     mean,
-                                                                    identity);
+                                                                    identity));
 
     this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in);
   }
@@ -74,15 +71,15 @@ namespace ilike
                                                              GradientEstimator *gradient_estimator_in)
       : ProposalKernel()
   {
-    this->gradient_estimator = gradient_estimator_in;
+    this->gradient_estimator.reset(gradient_estimator_in);
     this->gradient_estimator->set_proposal(this);
-    this->index = NULL;
+    this->index.reset();
     arma::colvec mean = arma::zeros<arma::colvec>(covariance_in.n_rows);
     // Create an identity matrix for the covariance
     arma::mat identity = arma::eye<arma::mat>(covariance_in.n_rows, covariance_in.n_rows);
-    this->proposal_simulate = new GaussianIndependentProposalKernel(variable_name_in,
+    this->proposal_simulate.reset(new GaussianIndependentProposalKernel(variable_name_in,
                                                                     mean,
-                                                                    identity);
+                                                                    identity));
 
     this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in,
                                                                  scale_in);
@@ -93,9 +90,9 @@ namespace ilike
                                                              GradientEstimator *gradient_estimator_in)
       : ProposalKernel()
   {
-    this->gradient_estimator = gradient_estimator_in;
+    this->gradient_estimator.reset(gradient_estimator_in);
     this->gradient_estimator->set_proposal(this);
-    this->index = NULL;
+    this->index.reset();
 
     // make a vector of zero means and a vector of identity matrices
 
@@ -112,9 +109,9 @@ namespace ilike
       identity_matrices.push_back(arma::eye<arma::mat>(covariances_in[i].n_rows, covariances_in[i].n_rows));
       this->proposal_info[variable_names_in[i]] = GaussianProposalInfo(covariances_in[i]);
     }
-    this->proposal_simulate = new GaussianIndependentProposalKernel(variable_names_in,
+    this->proposal_simulate.reset(new GaussianIndependentProposalKernel(variable_names_in,
                                                                     zero_means,
-                                                                    identity_matrices);
+                                                                    identity_matrices));
   }
 
   BarkerDynamicsProposalKernel::BarkerDynamicsProposalKernel(const std::string &variable_name_in,
@@ -122,13 +119,13 @@ namespace ilike
                                                              GradientEstimator *gradient_estimator_in)
       : ProposalKernel()
   {
-    this->gradient_estimator = gradient_estimator_in;
+    this->gradient_estimator.reset(gradient_estimator_in);
     this->gradient_estimator->set_proposal(this);
-    this->index = NULL;
+    this->index.reset();
 
-    this->proposal_simulate = new GaussianIndependentProposalKernel(variable_name_in,
+    this->proposal_simulate.reset(new GaussianIndependentProposalKernel(variable_name_in,
                                                                     0.0,
-                                                                    1.0);
+                                                                    1.0));
 
     this->proposal_info[variable_name_in] = GaussianProposalInfo(sd_in);
   }
@@ -144,14 +141,11 @@ namespace ilike
     if (this == &another)
       return;
 
-    if (this->gradient_estimator != NULL)
-      delete this->gradient_estimator;
+    this->gradient_estimator.reset();
 
-    if (this->proposal_simulate != NULL)
-      delete this->proposal_simulate;
+    this->proposal_simulate.reset();
 
-    if (this->index != NULL)
-      delete index;
+    this->index.reset();
 
     ProposalKernel::operator=(another);
     this->make_copy(another);
@@ -172,18 +166,18 @@ namespace ilike
     this->proposal_info = another.proposal_info;
     this->proposal_store = another.proposal_store;
     if (another.gradient_estimator != NULL)
-      this->gradient_estimator = another.gradient_estimator->duplicate();
+      this->gradient_estimator.reset(another.gradient_estimator->duplicate());
     else
-      this->gradient_estimator = NULL;
+      this->gradient_estimator.reset();
     if (another.proposal_simulate != NULL)
-      this->proposal_simulate = another.proposal_simulate->independent_proposal_kernel_duplicate();
+      this->proposal_simulate.reset(another.proposal_simulate->independent_proposal_kernel_duplicate());
     else
-      this->proposal_simulate = NULL;
+      this->proposal_simulate.reset();
 
     if (another.index != NULL)
-      this->index = another.index->duplicate();
+      this->index.reset(another.index->duplicate());
     else
-      this->index = NULL;
+      this->index.reset();
   }
 
   double BarkerDynamicsProposalKernel::specific_evaluate_kernel(const Particle &proposed_particle,
@@ -196,7 +190,7 @@ namespace ilike
          i != this->proposal_info.end();
          ++i)
     {
-      arma::colvec current_chol_gradient_prod = sqrt(i->second.get_double_scale()) * i->second.get_chol() * arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first, this->index, old_particle));
+      arma::colvec current_chol_gradient_prod = sqrt(i->second.get_double_scale()) * i->second.get_chol() * arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first, this->index.get(), old_particle));
 
       arma::mat proposed_mat = proposed_particle.get_transformed_parameters(this)[i->first];
       arma::mat old_mat = old_particle.get_transformed_parameters(this)[i->first];
@@ -252,7 +246,7 @@ namespace ilike
          i != this->proposal_info.end();
          ++i)
     {
-      arma::colvec current_chol_gradient_prod = sqrt(i->second.get_double_scale()) * i->second.get_chol() * arma::vectorise(gradient_estimator_output->subsample_get_gradient_of_log(i->first, this->index, old_particle));
+      arma::colvec current_chol_gradient_prod = sqrt(i->second.get_double_scale()) * i->second.get_chol() * arma::vectorise(gradient_estimator_output->subsample_get_gradient_of_log(i->first, this->index.get(), old_particle));
 
       arma::mat proposed_mat = proposed_particle.get_transformed_parameters(this)[i->first];
       arma::mat old_mat = old_particle.get_transformed_parameters(this)[i->first];
@@ -312,7 +306,7 @@ namespace ilike
          i != this->proposal_info.end();
          ++i)
     {
-      arma::colvec current_chol_gradient_prod = sqrt(i->second.get_double_scale()) * i->second.get_chol() * arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first, this->index, current_particle));
+      arma::colvec current_chol_gradient_prod = sqrt(i->second.get_double_scale()) * i->second.get_chol() * arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first, this->index.get(), current_particle));
 
       arma::mat initial_proposed = proposed[i->first];
       arma::rowvec current_proposed = arma::vectorise(initial_proposed).t();
@@ -511,18 +505,17 @@ namespace ilike
   // would lead to it being deleted twice.
   void BarkerDynamicsProposalKernel::set_index(Index *index_in)
   {
-    if (this->index != NULL)
-      delete this->index;
+    this->index.reset();
     if (index_in != NULL)
-      this->index = index_in->duplicate();
+      this->index.reset(index_in->duplicate());
     else
-      this->index = NULL;
+      this->index.reset();
   }
 
   void BarkerDynamicsProposalKernel::set_index_if_null(Index *index_in)
   {
     if ((this->index == NULL) && (index_in != NULL))
-      this->index = index_in->duplicate();
+      this->index.reset(index_in->duplicate());
   }
 
   bool BarkerDynamicsProposalKernel::can_be_evaluated() const

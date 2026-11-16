@@ -181,7 +181,7 @@ namespace ilike
     // likelihood's) can be copied per thread when its generations are flat
     // (nothing of a run points to its rich particles) and not stored.
     bool supports_parallel_copies() const;
-    const Index* get_weighting_index() const { return this->index; }
+    const Index* get_weighting_index() const { return this->index.get(); }
     bool reweights_at_caller_target() const { return !this->sequencer_limit_is_fixed; }
 
     MoveOutput *move(RandomNumberGenerator &rng,
@@ -357,7 +357,8 @@ namespace ilike
     void make_copy(const ImportanceSampler &another);
 
     // stored here
-    Index *index;
+    // owned (dev/plan.md 3.5, CH3)
+    std::unique_ptr<Index> index;
 
     // void smc_step();
     //

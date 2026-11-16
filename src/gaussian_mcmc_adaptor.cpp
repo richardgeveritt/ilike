@@ -14,28 +14,28 @@ GaussianMCMCAdaptor::GaussianMCMCAdaptor()
 
 GaussianMCMCAdaptor::~GaussianMCMCAdaptor()
 {
-  for (std::vector<VectorRecursiveParameterEstimator*>::iterator i=this->mean_estimators.begin();
+  for (auto i=this->mean_estimators.begin();
        i!=this->mean_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   
-  for (std::vector<GaussianRecursiveParameterEstimator*>::iterator i=this->gaussian_estimators.begin();
+  for (auto i=this->gaussian_estimators.begin();
        i!=this->gaussian_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   
-  for (std::vector<ScaleRecursiveParameterEstimator*>::iterator i=this->scale_estimators.begin();
+  for (auto i=this->scale_estimators.begin();
        i!=this->scale_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
 }
 
@@ -50,30 +50,30 @@ void GaussianMCMCAdaptor::operator=(const GaussianMCMCAdaptor &another)
   if(this == &another)
     return;
   
-  for (std::vector<VectorRecursiveParameterEstimator*>::iterator i=this->mean_estimators.begin();
+  for (auto i=this->mean_estimators.begin();
        i!=this->mean_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   this->mean_estimators.clear();
   
-  for (std::vector<GaussianRecursiveParameterEstimator*>::iterator i=this->gaussian_estimators.begin();
+  for (auto i=this->gaussian_estimators.begin();
        i!=this->gaussian_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   this->gaussian_estimators.clear();
   
-  for (std::vector<ScaleRecursiveParameterEstimator*>::iterator i=this->scale_estimators.begin();
+  for (auto i=this->scale_estimators.begin();
        i!=this->scale_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   this->scale_estimators.clear();
   
@@ -89,38 +89,38 @@ void GaussianMCMCAdaptor::make_copy(const GaussianMCMCAdaptor &another)
   
   this->mean_estimators.resize(0);
   this->mean_estimators.reserve(another.mean_estimators.size());
-  for (std::vector<VectorRecursiveParameterEstimator*>::const_iterator i=another.mean_estimators.begin();
+  for (auto i=another.mean_estimators.begin();
        i!=another.mean_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      this->mean_estimators.push_back((*i)->vector_duplicate());
+      this->mean_estimators.emplace_back((*i)->vector_duplicate());
     else
-      this->mean_estimators.push_back(NULL);
+      this->mean_estimators.emplace_back();
   }
   
   this->gaussian_estimators.resize(0);
   this->gaussian_estimators.reserve(another.gaussian_estimators.size());
-  for (std::vector<GaussianRecursiveParameterEstimator*>::const_iterator i=another.gaussian_estimators.begin();
+  for (auto i=another.gaussian_estimators.begin();
        i!=another.gaussian_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      this->gaussian_estimators.push_back((*i)->gaussian_duplicate());
+      this->gaussian_estimators.emplace_back((*i)->gaussian_duplicate());
     else
-      this->gaussian_estimators.push_back(NULL);
+      this->gaussian_estimators.emplace_back();
   }
   
   this->scale_estimators.resize(0);
   this->scale_estimators.reserve(another.scale_estimators.size());
-  for (std::vector<ScaleRecursiveParameterEstimator*>::const_iterator i=another.scale_estimators.begin();
+  for (auto i=another.scale_estimators.begin();
        i!=another.scale_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      this->scale_estimators.push_back((*i)->scale_duplicate());
+      this->scale_estimators.emplace_back((*i)->scale_duplicate());
     else
-      this->scale_estimators.push_back(NULL);
+      this->scale_estimators.emplace_back();
   }
 }
 

@@ -2,6 +2,7 @@
 #define GAUSSIANMCMCADAPTOR_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -89,11 +90,11 @@ protected:
   
   // stored here
   /** @brief The scale estimators. */
-  std::vector<ScaleRecursiveParameterEstimator*> scale_estimators;
+  std::vector<std::unique_ptr<ScaleRecursiveParameterEstimator>> scale_estimators;
   /** @brief The mean estimators. */
-  std::vector<VectorRecursiveParameterEstimator*> mean_estimators;
+  std::vector<std::unique_ptr<VectorRecursiveParameterEstimator>> mean_estimators;
   /** @brief The gaussian estimators. */
-  std::vector<GaussianRecursiveParameterEstimator*> gaussian_estimators;
+  std::vector<std::unique_ptr<GaussianRecursiveParameterEstimator>> gaussian_estimators;
   
 };
 }

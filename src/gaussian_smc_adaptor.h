@@ -2,6 +2,7 @@
 #define GAUSSIANSMCADAPTOR_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -98,9 +99,9 @@ protected:
   /** @brief The scales. */
   std::vector<Scale> scales;
   /** @brief The mean estimators. */
-  std::vector<VectorParameterEstimator*> mean_estimators;
+  std::vector<std::unique_ptr<VectorParameterEstimator>> mean_estimators;
   /** @brief The covariance estimators. */
-  std::vector<MatrixParameterEstimator*> covariance_estimators;
+  std::vector<std::unique_ptr<MatrixParameterEstimator>> covariance_estimators;
   
 };
 }

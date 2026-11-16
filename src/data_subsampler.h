@@ -2,6 +2,7 @@
 #define DATASUBSAMPLER_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -78,7 +79,7 @@ public:
   // At some point, we want to subclass data, where we simply point to elements of the data.
   // Need to check if we can do this, and pass this class structure to R.
   // Need to check if we can still have the user write functions that take (const Data &data_in)
-  Data* small_data;
+  std::unique_ptr<Data> small_data;
   
   double ratio;
   
@@ -101,7 +102,7 @@ protected:
   
   // Stored here.
   /** @brief The subsetters. */
-  std::vector<DataSubsetter*> subsetters;
+  std::vector<std::unique_ptr<DataSubsetter>> subsetters;
   
 };
 }

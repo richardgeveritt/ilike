@@ -2,6 +2,7 @@
 #define ENSEMBLEKALMANOUTPUT_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <deque>
@@ -294,7 +295,7 @@ protected:
   // Stored in Factors.
   // Moving to be stored here (May 2024).
   /** @brief The estimator. */
-  EnsembleKalman* estimator;
+  std::unique_ptr<EnsembleKalman> estimator;
   
   /** @brief The enk iteration. */
   size_t enk_iteration;

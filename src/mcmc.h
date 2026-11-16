@@ -2,6 +2,7 @@
 #define MCMC_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include "kernel.h"
@@ -222,14 +223,17 @@ protected:
   
   // Stored here.
   /** @brief The termination. */
-  MCMCTermination* termination;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<MCMCTermination> termination;
 
   // Owned copy of the cut factors (NULL: none).
-  Index* cut_index;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<Index> cut_index;
 
   // Owned union of the move's index and cut_index (NULL when there is no cut):
   // the factors that get new outputs in a proposed particle.
-  Index* index_with_cut;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<Index> index_with_cut;
 
   // Recompute index_with_cut from the move's index; call whenever either
   // index changes.

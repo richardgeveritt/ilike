@@ -12,26 +12,28 @@ HMMEnsembleFactors::HMMEnsembleFactors()
 {
   this->measurement_covariance_estimators.resize(0);
   this->measurement_covariance_estimator_temp_data.resize(0);
-  this->transition_kernel = NULL;
+  this->transition_kernel.reset();
 }
 
 HMMEnsembleFactors::HMMEnsembleFactors(ProposalKernel* transition_kernel_in,
                                        const std::vector<MeasurementCovarianceEstimator*> &measurement_covariance_estimators_in)
 :EnsembleFactors()
 {
-  this->transition_kernel = transition_kernel_in;
-  this->measurement_covariance_estimators = measurement_covariance_estimators_in;
+  this->transition_kernel.reset(transition_kernel_in);
+  this->measurement_covariance_estimators.reserve(measurement_covariance_estimators_in.size());
+  for (auto k : measurement_covariance_estimators_in)
+    this->measurement_covariance_estimators.emplace_back(k);
   this->measurement_covariance_estimator_temp_data.resize(0);
 }
 
 HMMEnsembleFactors::~HMMEnsembleFactors()
 {
-  for (std::vector<MeasurementCovarianceEstimator*>::iterator i=this->measurement_covariance_estimators.begin();
+  for (auto i=this->measurement_covariance_estimators.begin();
        i!=this->measurement_covariance_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   
   /*
@@ -40,12 +42,11 @@ HMMEnsembleFactors::~HMMEnsembleFactors()
    ++i)
    {
    if (*i!=NULL)
-   delete *i;
+   (*i).reset();
    }
    */
   
-  if (this->transition_kernel!=NULL)
-    delete this->transition_kernel;
+  this->transition_kernel.reset();
 }
 
 //Copy constructor for the HMMEnsembleFactors class.
@@ -61,15 +62,14 @@ void HMMEnsembleFactors::operator=(const HMMEnsembleFactors &another)
     return;
   }
   
-  if (this->transition_kernel!=NULL)
-    delete this->transition_kernel;
+  this->transition_kernel.reset();
   
-  for (std::vector<MeasurementCovarianceEstimator*>::iterator i=this->measurement_covariance_estimators.begin();
+  for (auto i=this->measurement_covariance_estimators.begin();
        i!=this->measurement_covariance_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   this->measurement_covariance_estimators.clear();
   
@@ -79,7 +79,7 @@ void HMMEnsembleFactors::operator=(const HMMEnsembleFactors &another)
    ++i)
    {
    if (*i!=NULL)
-   delete *i;
+   (*i).reset();
    }
    this->measurement_covariance_estimator_temp_data.clear();
    */
@@ -96,20 +96,20 @@ EnsembleFactors* HMMEnsembleFactors::duplicate() const
 void HMMEnsembleFactors::make_copy(const HMMEnsembleFactors &another)
 {
   if (another.transition_kernel!=NULL)
-    this->transition_kernel = another.transition_kernel->proposal_kernel_duplicate();
+    this->transition_kernel.reset(another.transition_kernel->proposal_kernel_duplicate());
   else
-    this->transition_kernel = NULL;
+    this->transition_kernel.reset();
   
   this->measurement_covariance_estimators.resize(0);
   this->measurement_covariance_estimators.reserve(another.measurement_covariance_estimators.size());
-  for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i=another.measurement_covariance_estimators.begin();
+  for (auto i=another.measurement_covariance_estimators.begin();
        i!=another.measurement_covariance_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      this->measurement_covariance_estimators.push_back((*i)->duplicate());
+      this->measurement_covariance_estimators.emplace_back((*i)->duplicate());
     else
-      this->measurement_covariance_estimators.push_back(NULL);
+      this->measurement_covariance_estimators.emplace_back();
   }
   
   this->measurement_covariance_estimator_temp_data = another.measurement_covariance_estimator_temp_data;
@@ -185,7 +185,7 @@ EnsembleFactorVariables* HMMEnsembleFactors::simulate_ensemble_factor_variables(
   std::vector<MeasurementCovarianceEstimatorOutput*> outputs;
   outputs.reserve(this->measurement_covariance_estimators.size());
   
-  for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+  for (auto i=this->measurement_covariance_estimators.begin();
        i != this->measurement_covariance_estimators.end();
        ++i)
   {
@@ -206,7 +206,7 @@ EnsembleFactorVariables* HMMEnsembleFactors::simulate_ensemble_factor_variables(
  
  Parameters all_parameters = simulated_parameters.merge(conditioned_on_parameters);
  
- for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+ for (auto i=this->measurement_covariance_estimators.begin();
  i != this->measurement_covariance_estimators.end();
  ++i)
  {
@@ -224,7 +224,7 @@ EnsembleFactorVariables* HMMEnsembleFactors::subsample_simulate_ensemble_factor_
   std::vector<MeasurementCovarianceEstimatorOutput*> outputs;
   outputs.reserve(this->measurement_covariance_estimators.size());
   
-  for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+  for (auto i=this->measurement_covariance_estimators.begin();
        i != this->measurement_covariance_estimators.end();
        ++i)
   {
@@ -245,7 +245,7 @@ EnsembleFactorVariables* HMMEnsembleFactors::subsample_simulate_ensemble_factor_
  
  Parameters all_parameters = simulated_parameters.merge(conditioned_on_parameters);
  
- for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+ for (auto i=this->measurement_covariance_estimators.begin();
  i != this->measurement_covariance_estimators.end();
  ++i)
  {
@@ -263,7 +263,7 @@ std::vector<arma::colvec*> HMMEnsembleFactors::get_measurements()
   std::vector<arma::colvec*> measurements;
   measurements.reserve(this->measurement_covariance_estimators.size());
   
-  for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+  for (auto i=this->measurement_covariance_estimators.begin();
        i != this->measurement_covariance_estimators.end();
        ++i)
   {
@@ -279,7 +279,7 @@ std::vector<arma::colvec*> HMMEnsembleFactors::get_measurements()
  {
  std::vector<arma::mat> output;
  output.reserve(this->measurement_covariance_estimators.size());
- for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+ for (auto i=this->measurement_covariance_estimators.begin();
  i != this->measurement_covariance_estimators.end();
  ++i)
  {
@@ -292,7 +292,7 @@ std::vector<arma::colvec*> HMMEnsembleFactors::get_measurements()
  {
  std::vector<arma::mat> output;
  output.reserve(this->measurement_covariance_estimators.size());
- for (std::vector<MeasurementCovarianceEstimator*>::const_iterator i = this->measurement_covariance_estimators.begin();
+ for (auto i=this->measurement_covariance_estimators.begin();
  i != this->measurement_covariance_estimators.end();
  ++i)
  {
@@ -586,4 +586,10 @@ void HMMEnsembleFactors::precompute_gaussian_covariance(double inverse_increment
     log_det_precomps.push_back(log_det_precomp);
   }
 }
+
+ProposalKernel* HMMEnsembleFactors::get_transition_kernel() const
+{
+  return this->transition_kernel.get();
+}
+
 }

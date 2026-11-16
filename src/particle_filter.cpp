@@ -36,7 +36,7 @@ namespace ilike
 ParticleFilter::ParticleFilter()
 :SMC()
 {
-  this->index = NULL;
+  this->index.reset();
 }
 
 ParticleFilter::ParticleFilter(RandomNumberGenerator* rng_in,
@@ -85,22 +85,22 @@ ParticleFilter::ParticleFilter(RandomNumberGenerator* rng_in,
   this->current_time = initial_time_in;
   this->current_index = this->first_index;
   
-  this->index = new HMMIndex(evaluated_in_initial_weight_update->get_indices(),
+  this->index.reset(new HMMIndex(evaluated_in_initial_weight_update->get_indices(),
                              evaluated_in_pf_weight_update->get_indices(),
                              transition_proposal_is_evaluated_in,
-                             this->first_index);
+                             this->first_index));
   
-  this->factors = new HMMFactors(transition_model_in,
-                                 likelihood_estimators_in);
+  this->factors.reset(new HMMFactors(transition_model_in,
+                                 likelihood_estimators_in));
   
-  this->particle_simulator = new ParameterParticleSimulator(proposal_in,
-                                                            likelihood_estimators_in);
+  this->particle_simulator.reset(new ParameterParticleSimulator(proposal_in,
+                                                            likelihood_estimators_in));
   
-  this->transition_proposal = transition_proposal_in;
+  this->transition_proposal.reset(transition_proposal_in);
   
   this->parallel = parallel_in;
   this->chunk_size = grain_size_in;
-  this->the_worker = new SequentialSMCWorker(this);
+  this->the_worker.reset(new SequentialSMCWorker(this));
   
   this->transition_proposal_is_evaluated = transition_proposal_is_evaluated_in;
   
@@ -122,7 +122,7 @@ ParticleFilter::ParticleFilter(RandomNumberGenerator* rng_in,
    */
   
   /*
-   this->sequencer = Sequencer(this->the_worker,
+   this->sequencer = Sequencer(this->the_worker.get(),
    schedules_in,
    sequence_variables_in,
    100,
@@ -133,7 +133,7 @@ ParticleFilter::ParticleFilter(RandomNumberGenerator* rng_in,
   schedule_in.push_back(0.0);
   schedule_in.push_back(1.0);
   SMCCriterion* smc_criterion = new PositiveSMCCriterion();
-  this->sequencer = Sequencer(this->the_worker,
+  this->sequencer = Sequencer(this->the_worker.get(),
                               schedule_in,
                               "",
                               25,
@@ -193,21 +193,21 @@ ParticleFilter::ParticleFilter(RandomNumberGenerator* rng_in,
    
    if (parallel_in==TRUE)
    {
-   //this->the_worker = new RcppParallelSMCWorker(this,
+   //this->the_worker.reset(new RcppParallelSMCWorker(this,
    //this->model_and_algorithm.particle_simulator,
-   //grain_size_in);
+   //grain_size_in));
    }
    else
    {
-   this->the_worker = new SequentialSMCWorker(this,
+   this->the_worker.reset(new SequentialSMCWorker(this,
    this->model_and_algorithm.particle_simulator,
-   this->model_and_algorithm.likelihood_estimators);
+   this->model_and_algorithm.likelihood_estimators));
    }
    
    //std::string variable_in = "power";
    this->model_and_algorithm.smc_criterion = NULL;//new PositiveSMCCriterion();
    this->model_and_algorithm.smc_termination = NULL;
-   //this->sequencer = Sequencer(this->the_worker,
+   //this->sequencer = Sequencer(this->the_worker.get(),
    //                            temperatures_in,
    //                            variable_in,
    //                            this->model_and_algorithm.smc_criterion,
@@ -227,11 +227,9 @@ ParticleFilter::ParticleFilter(const ParticleFilter &another)
 //Destructor for the ParticleFilter class.
 ParticleFilter::~ParticleFilter()
 {
-  if (this->transition_proposal!=NULL)
-    delete this->transition_proposal;
+  this->transition_proposal.reset();
   
-  if (this->index!=NULL)
-    delete this->index;
+  this->index.reset();
 }
 
 void ParticleFilter::operator=(const ParticleFilter &another)
@@ -240,11 +238,9 @@ void ParticleFilter::operator=(const ParticleFilter &another)
     return;
   }
   
-  if (this->transition_proposal!=NULL)
-    delete this->transition_proposal;
+  this->transition_proposal.reset();
   
-  if (this->index!=NULL)
-    delete this->index;
+  this->index.reset();
   
   SMC::operator=(another);
   this->make_copy(another);
@@ -264,14 +260,14 @@ void ParticleFilter::make_copy(const ParticleFilter &another)
 {
   // B29: the copy owns its own transition proposal (the destructor deletes it)
   if (another.transition_proposal!=NULL)
-    this->transition_proposal = another.transition_proposal->proposal_kernel_duplicate();
+    this->transition_proposal.reset(another.transition_proposal->proposal_kernel_duplicate());
   else
-    this->transition_proposal = NULL;
+    this->transition_proposal.reset();
   
   if (another.index!=NULL)
-    this->index = another.index->hmm_index_duplicate();
+    this->index.reset(another.index->hmm_index_duplicate());
   else
-    this->index = NULL;
+    this->index.reset();
   
   this->index_name = another.index_name;
   this->time_name = another.time_name;
@@ -392,7 +388,7 @@ void ParticleFilter::evaluate_smc(SMCOutput* current_state)
 void ParticleFilter::evaluate_smcfixed_part_smc(SMCOutput* current_state)
 {
   //VectorIndex index(this->current_index);
-  this->the_worker->smcfixed_weight(this->index,
+  this->the_worker->smcfixed_weight(this->index.get(),
                                     current_state->back());
   
   /*
@@ -499,7 +495,7 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
     }
     else if (current_state->number_of_smc_iterations()==1)
     {
-      this->the_worker->weight(this->index,
+      this->the_worker->weight(this->index.get(),
                                current_state->back());
     }
     else
@@ -508,14 +504,14 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
       
       if (this->transition_proposal_is_evaluated)
       {
-        this->the_worker->pf_weight(this->index,
+        this->the_worker->pf_weight(this->index.get(),
                                     current_state->back(),
                                     *(current_state->end()-2),
-                                    this->transition_proposal);
+                                    this->transition_proposal.get());
       }
       else
       {
-        this->the_worker->pf_weight(this->index,
+        this->the_worker->pf_weight(this->index.get(),
                                     current_state->back(),
                                     *(current_state->end()-2),
                                     NULL);
@@ -671,7 +667,7 @@ void ParticleFilter::evaluate_smcfixed_part_smc(SMCOutput* current_state,
                                                 const Parameters &conditioned_on_parameters)
 {
   //VectorIndex index(this->current_index);
-  this->the_worker->smcfixed_weight(this->index,
+  this->the_worker->smcfixed_weight(this->index.get(),
                                     current_state->back());
   
   /*
@@ -718,7 +714,7 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
     else if (current_state->number_of_smc_iterations()==1)
     {
       //this->the_worker->pf_initial_weight(current_state->back());
-      this->the_worker->weight(this->index,
+      this->the_worker->weight(this->index.get(),
                                current_state->back());
     }
     else
@@ -727,22 +723,22 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
       
       if (this->transition_proposal_is_evaluated)
       {
-        this->the_worker->pf_weight(this->index,
+        this->the_worker->pf_weight(this->index.get(),
                                     current_state->back(),
                                     *(current_state->end()-2),
-                                    this->transition_proposal);
+                                    this->transition_proposal.get());
         
         /*
          this->the_worker->pf_weight(&index,
          current_state->back(),
          *(current_state->end()-2),
-         this->transition_proposal,
+         this->transition_proposal.get(),
          conditioned_on_parameters);
          */
       }
       else
       {
-        this->the_worker->pf_weight(this->index,
+        this->the_worker->pf_weight(this->index.get(),
                                     current_state->back(),
                                     *(current_state->end()-2),
                                     NULL);
@@ -865,7 +861,7 @@ void ParticleFilter::subsample_evaluate_smcfixed_part_smc(SMCOutput* current_sta
    conditioned_on_parameters);
    }
    */
-  this->the_worker->subsample_smcfixed_weight(this->index,
+  this->the_worker->subsample_smcfixed_weight(this->index.get(),
                                               current_state->back());
   //current_state->initialise_next_step();
 }
@@ -885,7 +881,7 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
     
     if (current_state->number_of_smc_iterations()==1)
     {
-      this->the_worker->subsample_weight(this->index,
+      this->the_worker->subsample_weight(this->index.get(),
                                          current_state->back());
       //this->the_worker->subsample_pf_initial_weight(current_state->back());
       /*
@@ -899,21 +895,21 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
       //VectorIndex index(this->current_index);
       if (this->transition_proposal_is_evaluated)
       {
-        this->the_worker->subsample_pf_weight(this->index,
+        this->the_worker->subsample_pf_weight(this->index.get(),
                                               current_state->back(),
                                               *(current_state->end()-2),
-                                              this->transition_proposal);
+                                              this->transition_proposal.get());
         /*
          this->the_worker->subsample_pf_weight(&index,
          current_state->back(),
          *(current_state->end()-2),
-         this->transition_proposal,
+         this->transition_proposal.get(),
          conditioned_on_parameters);
          */
       }
       else
       {
-        this->the_worker->subsample_pf_weight(this->index,
+        this->the_worker->subsample_pf_weight(this->index.get(),
                                               current_state->back(),
                                               *(current_state->end()-2),
                                               NULL);
@@ -1038,7 +1034,7 @@ void ParticleFilter::subsample_evaluate_smcfixed_part_smc(SMCOutput* current_sta
    conditioned_on_parameters);
    }
    */
-  this->the_worker->subsample_smcfixed_weight(this->index,
+  this->the_worker->subsample_smcfixed_weight(this->index.get(),
                                               current_state->back());
   //current_state->initialise_next_step();
 }
@@ -1066,7 +1062,7 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
     {
       //this->the_worker->subsample_pf_initial_weight(current_state->back());
       
-      this->the_worker->subsample_weight(this->index,
+      this->the_worker->subsample_weight(this->index.get(),
                                          current_state->back());
       
       /*
@@ -1080,21 +1076,21 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
       //VectorIndex index(this->current_index);
       if (this->transition_proposal_is_evaluated)
       {
-        this->the_worker->subsample_pf_weight(this->index,
+        this->the_worker->subsample_pf_weight(this->index.get(),
                                               current_state->back(),
                                               *(current_state->end()-2),
-                                              this->transition_proposal);
+                                              this->transition_proposal.get());
         /*
          this->the_worker->subsample_pf_weight(&index,
          current_state->back(),
          *(current_state->end()-2),
-         this->transition_proposal,
+         this->transition_proposal.get(),
          conditioned_on_parameters);
          */
       }
       else
       {
-        this->the_worker->subsample_pf_weight(this->index,
+        this->the_worker->subsample_pf_weight(this->index.get(),
                                               current_state->back(),
                                               *(current_state->end()-2),
                                               NULL);
@@ -1304,7 +1300,7 @@ bool ParticleFilter::can_move_in_chunks() const
 {
   return (this->factors!=NULL) && this->factors->supports_parallel_chunks() &&
     (this->transition_proposal!=NULL) &&
-    (dynamic_cast<const SequentialSMCWorker*>(this->the_worker)!=NULL);
+    (dynamic_cast<const SequentialSMCWorker*>(this->the_worker.get())!=NULL);
 }
 
 void ParticleFilter::move_in_chunks(Particles* next_particles,
@@ -1314,17 +1310,18 @@ void ParticleFilter::move_in_chunks(Particles* next_particles,
   // SMCWorker::move, grain_size particles at a time: each chunk with its own
   // stream, writing only its own particles' slots (spares, the dropped
   // generation's objects, are handed out by index).
-  SMCWorker* worker = this->the_worker;
+  SMCWorker* worker = this->the_worker.get();
   size_t N = this->number_of_particles;
   size_t B = ((this->chunk_size == 0) || (this->chunk_size > N)) ? N : this->chunk_size;
   size_t K = (N + B - 1)/B;
   this->transition_proposal->set_data(this->factors->get_current_data());
 
-  std::vector<MoveOutput*> spares;
+  std::vector<std::unique_ptr<MoveOutput>> spares;
   spares.swap(next_particles->spare);
   if (spares.size() < N)
-    spares.resize(N, NULL);
-  next_particles->particles.assign(N, NULL);
+    spares.resize(N);
+  next_particles->particles.clear();
+  next_particles->particles.resize(N);
 
   RandomNumberGenerator first_stream(*worker->get_rng());
   first_stream.seed(worker->get_seed());
@@ -1341,21 +1338,15 @@ void ParticleFilter::move_in_chunks(Particles* next_particles,
                        for (size_t i = first; i < first + n; ++i)
                        {
                          const Particle &ancestor = (*current_particles)[current_particles->ancestor_variables[i]]->back();
-                         MoveOutput* spare = spares[i];
-                         spares[i] = NULL;
+                         MoveOutput* spare = spares[i].release();
                          MoveOutput* moved = (spare != NULL) ?
                            this->move_reusing_with_data_set(local_rng, ancestor, spare) :
                            this->move_with_data_set(local_rng, ancestor);
                          moved->back().previous_self = &ancestor;
-                         next_particles->particles[i] = moved;
+                         next_particles->particles[i].reset(moved);
                        }
                      }
                    });
-  for (size_t i = N; i < spares.size(); ++i)
-  {
-    if (spares[i] != NULL)
-      delete spares[i];
-  }
 
   worker->set_seed(worker->get_seed() + N);
   this->rng->seed(worker->get_seed());
@@ -1373,7 +1364,7 @@ void ParticleFilter::weight_in_chunks(SMCOutput* current_state)
   Particles &current = current_state->back();
   bool first_step = (current_state->number_of_smc_iterations()==1);
   Particles* previous = first_step ? NULL : &*(current_state->end()-2);
-  const ProposalKernel* kernel = this->transition_proposal_is_evaluated ? this->transition_proposal : NULL;
+  const ProposalKernel* kernel = this->transition_proposal_is_evaluated ? this->transition_proposal.get() : NULL;
   arma::colvec weights(N);
   run_chunk_groups(0, K, this->parallel, this->number_of_threads,
                    [&](size_t group, size_t first_chunk, size_t end_chunk)
@@ -1383,11 +1374,11 @@ void ParticleFilter::weight_in_chunks(SMCOutput* current_state)
                        Particle &particle = current[i]->back();
                        if (first_step)
                        {
-                         weights[i] = particle.evaluate_likelihoods(this->index) - particle.previous_target_evaluated;
+                         weights[i] = particle.evaluate_likelihoods(this->index.get()) - particle.previous_target_evaluated;
                        }
                        else
                        {
-                         weights[i] = particle.evaluate_likelihoods(this->index);
+                         weights[i] = particle.evaluate_likelihoods(this->index.get());
                          if (kernel != NULL)
                            weights[i] = weights[i] - kernel->evaluate_kernel(particle,
                                                                             (*previous)[previous->ancestor_variables[i]]->back());

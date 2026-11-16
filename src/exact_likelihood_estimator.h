@@ -238,11 +238,13 @@ protected:
   
   // stored here
   /** @brief The numerator distribution factors. */
-  std::vector<DistributionFactor*> numerator_distribution_factors;
+  // owned (dev/plan.md 3.5, CH3)
+  std::vector<std::unique_ptr<DistributionFactor>> numerator_distribution_factors;
   
   // stored here
   /** @brief The numerator likelihood factors. */
-  std::vector<LikelihoodFactor*> numerator_likelihood_factors;
+  // owned (dev/plan.md 3.5, CH3)
+  std::vector<std::unique_ptr<LikelihoodFactor>> numerator_likelihood_factors;
   
   // not stored here
   /** @brief The numerator proposals. */

@@ -11,16 +11,16 @@ namespace ilike
 UnadjustedMCMC::UnadjustedMCMC()
 :MCMC()
 {
-  this->index = NULL;
-  this->proposal = NULL;
+  this->index.reset();
+  this->proposal.reset();
 }
 
 UnadjustedMCMC::UnadjustedMCMC(size_t number_of_iterations_in,
                                ProposalKernel* proposal_in)
 :MCMC(number_of_iterations_in)
 {
-  this->proposal = proposal_in;
-  this->index = NULL;
+  this->proposal.reset(proposal_in);
+  this->index.reset();
 }
 
 UnadjustedMCMC::UnadjustedMCMC(size_t number_of_iterations_in,
@@ -28,29 +28,27 @@ UnadjustedMCMC::UnadjustedMCMC(size_t number_of_iterations_in,
                                const Parameters &proposal_variances_in)
 :MCMC(number_of_iterations_in)
 {
-  this->index = NULL;
-  this->proposal = NULL;
+  this->index.reset();
+  this->proposal.reset();
   // default to Gaussian random walk
-  //this->proposal = ProposalKernel(EvaluateLogMCMCProposalPtr proposal_evaluate_in,
+  //this->proposal.reset(ProposalKernel(EvaluateLogMCMCProposalPtr proposal_evaluate_in,
   //                                SimulateMCMCProposalPtr proposal_simulate_in,
-  //                                proposal_variances_in);
+  //                                proposal_variances_in));
 }
 
 UnadjustedMCMC::UnadjustedMCMC(MCMCTermination* termination_in,
                                ProposalKernel* proposal_in)
 :MCMC(termination_in)
 {
-  this->proposal = proposal_in;
-  this->index = NULL;
+  this->proposal.reset(proposal_in);
+  this->index.reset();
 }
 
 UnadjustedMCMC::~UnadjustedMCMC()
 {
-  if (this->proposal!=NULL)
-    delete this->proposal;
+  this->proposal.reset();
   
-  if (this->index!=NULL)
-    delete index;
+  this->index.reset();
 }
 
 //Copy constructor for the UnadjustedMCMC class.
@@ -66,11 +64,9 @@ void UnadjustedMCMC::operator=(const UnadjustedMCMC &another)
     return;
   }
   
-  if (this->proposal!=NULL)
-    delete this->proposal;
+  this->proposal.reset();
   
-  if (this->index!=NULL)
-    delete index;
+  this->index.reset();
   
   MCMC::operator=(another);
   this->make_copy(another);
@@ -94,14 +90,14 @@ UnadjustedMCMC* UnadjustedMCMC::unadjusted_mcmc_duplicate() const
 void UnadjustedMCMC::make_copy(const UnadjustedMCMC &another)
 {
   if (another.proposal!=NULL)
-    this->proposal = another.proposal->proposal_kernel_duplicate();
+    this->proposal.reset(another.proposal->proposal_kernel_duplicate());
   else
-    this->proposal = NULL;
+    this->proposal.reset();
   
   if (another.index!=NULL)
-    this->index = another.index->duplicate();
+    this->index.reset(another.index->duplicate());
   else
-    this->index = NULL;
+    this->index.reset();
 }
 
 Particle UnadjustedMCMC::move(RandomNumberGenerator &rng,
@@ -115,7 +111,7 @@ Particle UnadjustedMCMC::move(RandomNumberGenerator &rng,
   // values (check_unadjusted_compatibility).
   return this->proposal->move(rng,
                               particle,
-                              this->get_new_outputs_index(this->index));
+                              this->get_new_outputs_index(this->index.get()));
 }
 
 /*
@@ -129,16 +125,16 @@ Particle UnadjustedMCMC::move(RandomNumberGenerator &rng,
  
  double log_u = log(runif(rng));
  
- if (log_u < proposed_particle.evaluate_likelihoods(this->index,
+ if (log_u < proposed_particle.evaluate_likelihoods(this->index.get(),
  conditioned_on_parameters) -
  particle.target_evaluated)
  {
- proposed_particle.set_acceptance(this->proposal,true);
+ proposed_particle.set_acceptance(this->proposal.get(),true);
  return proposed_particle;
  }
  else
  {
- proposed_particle.set_acceptance(this->proposal,false);
+ proposed_particle.set_acceptance(this->proposal.get(),false);
  return particle;
  }
  
@@ -162,7 +158,7 @@ Particle UnadjustedMCMC::subsample_move(RandomNumberGenerator &rng,
  
  double log_u = log(runif(rng));
  
- if (log_u < proposed_particle.subsample_evaluate_likelihoods(this->index,
+ if (log_u < proposed_particle.subsample_evaluate_likelihoods(this->index.get(),
  conditioned_on_parameters) -
  particle.subsample_target_evaluated)
  {
@@ -200,21 +196,20 @@ void UnadjustedMCMC::specific_mcmc_adapt(const Particle &current_particle,
 // the moves of a sweep) each destructor deleted it -> double free.
 void UnadjustedMCMC::set_index(Index* index_in)
 {
-  if (this->index!=NULL)
-    delete this->index;
-  this->index = (index_in!=NULL) ? index_in->duplicate() : NULL;
+  this->index.reset();
+  this->index.reset((index_in!=NULL) ? index_in->duplicate() : NULL);
   if (this->proposal!=NULL)
     this->proposal->set_index(index_in);
-  this->update_index_with_cut(this->index);
+  this->update_index_with_cut(this->index.get());
 }
 
 void UnadjustedMCMC::set_index_if_null(Index* index_in)
 {
   if ( (this->index==NULL) && (index_in!=NULL) )
-    this->index = index_in->duplicate();
+    this->index.reset(index_in->duplicate());
   if (this->proposal!=NULL)
     this->proposal->set_index_if_null(index_in);
-  this->update_index_with_cut(this->index);
+  this->update_index_with_cut(this->index.get());
 }
 
 bool UnadjustedMCMC::reads_cached_factors() const
@@ -225,7 +220,7 @@ bool UnadjustedMCMC::reads_cached_factors() const
 void UnadjustedMCMC::set_cut_index(const Index* cut_index_in)
 {
   this->store_cut_index(cut_index_in);
-  this->update_index_with_cut(this->index);
+  this->update_index_with_cut(this->index.get());
 }
 
 void UnadjustedMCMC::set_proposal_parameters(Parameters* proposal_parameters_in)
@@ -236,7 +231,7 @@ void UnadjustedMCMC::set_proposal_parameters(Parameters* proposal_parameters_in)
 std::vector<const ProposalKernel*> UnadjustedMCMC::get_proposals() const
 {
   std::vector<const ProposalKernel*> proposals = this->proposal->get_proposals();
-  //proposals.push_back(this->proposal);
+  //proposals.push_back(this->proposal.get());
   return proposals;
 }
 

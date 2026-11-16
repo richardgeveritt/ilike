@@ -11,18 +11,16 @@ namespace ilike
 {
   Sequencer::Sequencer()
   {
-    this->criterion = NULL;
-    this->termination = NULL;
+    this->criterion.reset();
+    this->termination.reset();
     this->number_of_bisections = 100;
     this->find_scale = false;
   }
 
   Sequencer::~Sequencer()
   {
-    if (this->criterion != NULL)
-      delete this->criterion;
-    if (this->termination != NULL)
-      delete this->termination;
+    this->criterion.reset();
+    this->termination.reset();
   }
 
   // Sequencer::Sequencer(const std::vector<double> &schedule_in,
@@ -89,8 +87,8 @@ namespace ilike
     this->the_worker = the_worker_in;
     this->schedules = schedules_in;
     this->variable_names = variable_names_in;
-    this->criterion = criterion_in;
-    this->termination = termination_in;
+    this->criterion.reset(criterion_in);
+    this->termination.reset(termination_in);
 
     this->number_of_bisections = number_of_bisections_in;
 
@@ -184,10 +182,8 @@ namespace ilike
     this->variable_names.clear();
     // this->current_values.clear();
 
-    if (this->criterion != NULL)
-      delete this->criterion;
-    if (this->termination != NULL)
-      delete this->termination;
+    this->criterion.reset();
+    this->termination.reset();
 
     this->make_copy(another);
 
@@ -199,8 +195,8 @@ namespace ilike
     this->schedules = another.schedules;
     this->variable_names = another.variable_names;
     this->use_final = another.use_final;
-    // this->criterion = another.criterion;
-    // this->termination = another.termination;
+    // this->criterion.reset(another.criterion.get());
+    // this->termination.reset(another.termination.get());
     this->direction = another.direction;
     // this->current_values = another.current_values;
     this->mileometer = another.mileometer;
@@ -210,13 +206,13 @@ namespace ilike
     // this->extra_bit = another.extra_bit;
     this->the_worker = another.the_worker;
     if (another.criterion != NULL)
-      this->criterion = another.criterion->duplicate();
+      this->criterion.reset(another.criterion->duplicate());
     else
-      this->criterion = NULL;
+      this->criterion.reset();
     if (another.termination != NULL)
-      this->termination = another.termination->duplicate();
+      this->termination.reset(another.termination->duplicate());
     else
-      this->termination = NULL;
+      this->termination.reset();
     this->number_of_bisections = another.number_of_bisections;
     this->schedule_difference = another.schedule_difference;
     this->schedule_parameters = another.schedule_parameters;
@@ -239,10 +235,8 @@ namespace ilike
     this->variable_names.clear();
     // this->current_values.clear();
 
-    if (this->criterion != NULL)
-      delete this->criterion;
-    if (this->termination != NULL)
-      delete this->termination;
+    this->criterion.reset();
+    this->termination.reset();
 
     this->make_copy(std::move(another));
 
@@ -254,8 +248,8 @@ namespace ilike
     this->schedules = std::move(another.schedules);
     this->variable_names = std::move(another.variable_names);
     this->use_final = std::move(another.use_final);
-    // this->criterion = another.criterion;
-    // this->termination = another.termination;
+    // this->criterion.reset(another.criterion.get());
+    // this->termination.reset(another.termination.get());
     this->direction = std::move(another.direction);
     // this->current_values = std::move(another.current_values);
     this->mileometer = std::move(another.mileometer);
@@ -265,14 +259,8 @@ namespace ilike
     this->number_of_bisections = another.number_of_bisections;
     // this->extra_bit = another.extra_bit;
     this->the_worker = std::move(another.the_worker);
-    if (another.criterion != NULL)
-      this->criterion = another.criterion;
-    else
-      this->criterion = NULL;
-    if (another.termination != NULL)
-      this->termination = another.termination;
-    else
-      this->termination = NULL;
+    this->criterion = std::move(another.criterion);
+    this->termination = std::move(another.termination);
     this->schedule_parameters = std::move(another.schedule_parameters);
     this->find_scale = std::move(another.find_scale);
     this->scale_variable = std::move(another.scale_variable);
@@ -286,8 +274,8 @@ namespace ilike
     another.previous_bisect_value = 0.0;
     another.current_score = 0.0;
     another.the_worker = NULL;
-    another.criterion = NULL;
-    another.termination = NULL;
+    another.criterion.reset();
+    another.termination.reset();
     another.schedule_parameters = another.schedule_parameters;
     another.number_of_bisections = 0;
     another.find_scale = false;
@@ -349,7 +337,7 @@ namespace ilike
                                                               current_state->back());
       current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
 
-      this->current_score = (*this->criterion)(current_state->back());
+      this->current_score = (*this->criterion.get())(current_state->back());
 
       if (this->current_score >= 0.0)
       {
@@ -393,7 +381,7 @@ namespace ilike
                                                                   current_state->back());
           current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
 
-          this->current_score = (*this->criterion)(current_state->back());
+          this->current_score = (*this->criterion.get())(current_state->back());
 
           this->current_bisect_value = new_bisect_value;
 
@@ -466,7 +454,7 @@ namespace ilike
                                                               current_state->back());
       current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
 
-      this->current_score = (*this->criterion)(current_state->back());
+      this->current_score = (*this->criterion.get())(current_state->back());
 
       current_direction = std::copysign(1.0, this->current_score) * this->direction;
 
@@ -529,7 +517,7 @@ namespace ilike
      current_state->back());
      current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
 
-     this->current_score = (*this->criterion)(current_state->back());
+     this->current_score = (*this->criterion.get())(current_state->back());
      if (this->current_score>=0.0)
      {
      this->set_schedule_parameters();
@@ -590,7 +578,7 @@ namespace ilike
    all_parameters);
    current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
 
-   this->current_score = (*this->criterion)(current_state->back());
+   this->current_score = (*this->criterion.get())(current_state->back());
    if (this->current_score>0.0)
    {
    //incremental_log_weights = this->the_worker->get_unnormalised_log_incremental_weights();
@@ -629,7 +617,7 @@ namespace ilike
    all_parameters);
    current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
 
-   this->current_score = (*this->criterion)(current_state->back());
+   this->current_score = (*this->criterion.get())(current_state->back());
 
    if (this->current_score>=0.0)
    {
@@ -681,7 +669,7 @@ namespace ilike
    all_parameters);
    current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
 
-   this->current_score = (*this->criterion)(current_state->back());
+   this->current_score = (*this->criterion.get())(current_state->back());
 
    current_direction = std::copysign(1.0,this->current_score)*this->direction;
 
@@ -739,7 +727,7 @@ namespace ilike
    all_parameters);
    current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
 
-   this->current_score = (*this->criterion)(current_state->back());
+   this->current_score = (*this->criterion.get())(current_state->back());
    if (this->current_score>0.0)
    {
    //incremental_log_weights = this->the_worker->get_unnormalised_log_incremental_weights();
@@ -798,7 +786,7 @@ namespace ilike
                                                                         current_state->back());
       current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
 
-      this->current_score = (*this->criterion)(current_state->back());
+      this->current_score = (*this->criterion.get())(current_state->back());
       if (this->current_score >= 0.0)
       {
         this->schedule_difference = this->schedules.back()[this->mileometer.back()] - this->previous_bisect_value; // this->schedules.back()[this->mileometer.back()-1];
@@ -840,7 +828,7 @@ namespace ilike
                                                                             current_state->back());
           current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
 
-          this->current_score = (*this->criterion)(current_state->back());
+          this->current_score = (*this->criterion.get())(current_state->back());
 
           this->current_bisect_value = new_bisect_value;
 
@@ -913,7 +901,7 @@ namespace ilike
                                                                         current_state->back());
       current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
 
-      this->current_score = (*this->criterion)(current_state->back());
+      this->current_score = (*this->criterion.get())(current_state->back());
 
       current_direction = std::copysign(1.0, this->current_score) * this->direction;
 
@@ -974,7 +962,7 @@ namespace ilike
      current_state->back());
      current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
 
-     this->current_score = (*this->criterion)(current_state->back());
+     this->current_score = (*this->criterion.get())(current_state->back());
      if (this->current_score>0.0)
      {
      //incremental_log_weights = this->the_worker->get_unnormalised_log_incremental_weights();

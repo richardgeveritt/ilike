@@ -8,21 +8,20 @@ namespace ilike
 {
 DataSubsampler::DataSubsampler()
 {
-  this->small_data = NULL;
+  this->small_data.reset();
 }
 
 DataSubsampler::~DataSubsampler()
 {
-  for (std::vector<DataSubsetter*>::iterator i=this->subsetters.begin();
+  for (auto i=this->subsetters.begin();
        i!=this->subsetters.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   
-  if (this->small_data!=NULL)
-    delete this->small_data;
+  this->small_data.reset();
 }
 
 DataSubsampler::DataSubsampler(const DataSubsampler &another)
@@ -35,18 +34,17 @@ void DataSubsampler::operator=(const DataSubsampler &another)
   if(this == &another)
     return;
   
-  for (std::vector<DataSubsetter*>::iterator i=this->subsetters.begin();
+  for (auto i=this->subsetters.begin();
        i!=this->subsetters.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   
   this->subsetters.clear();
   
-  if (this->small_data!=NULL)
-    delete this->small_data;
+  this->small_data.reset();
   
   this->make_copy(another);
 }
@@ -57,30 +55,29 @@ void DataSubsampler::make_copy(const DataSubsampler &another)
   
   this->subsetters.resize(0);
   this->subsetters.reserve(another.subsetters.size());
-  for (std::vector<DataSubsetter*>::const_iterator i=another.subsetters.begin();
+  for (auto i=another.subsetters.begin();
        i!=another.subsetters.end();
        ++i)
   {
     if (*i!=NULL)
-      this->subsetters.push_back((*i)->duplicate());
+      this->subsetters.emplace_back((*i)->duplicate());
     else
-      this->subsetters.push_back(NULL);
+      this->subsetters.emplace_back();
   }
   
   if (another.small_data!=NULL)
-    this->small_data = another.small_data->duplicate();
+    this->small_data.reset(another.small_data->duplicate());
   else
-    this->small_data = NULL;
+    this->small_data.reset();
   
   this->ratio = another.ratio;
 }
 
 void DataSubsampler::subsample(size_t num_pieces)
 {
-  if (this->small_data!=NULL)
-    delete small_data;
+  this->small_data.reset();
   
-  this->small_data = new Data();
+  this->small_data.reset(new Data());
   
   for (auto i=this->subsetters.begin();
        i!=this->subsetters.end();

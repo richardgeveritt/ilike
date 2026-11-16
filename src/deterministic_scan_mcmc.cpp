@@ -11,7 +11,10 @@ DeterministicScanMCMC::DeterministicScanMCMC()
 DeterministicScanMCMC::DeterministicScanMCMC(const std::vector<MCMC*> &moves_in)
 :MCMC()
 {
-  this->moves = moves_in;
+  // takes ownership
+  this->moves.clear();
+  for (auto i=moves_in.begin(); i!=moves_in.end(); ++i)
+    this->moves.emplace_back(*i);
   this->order.clear();
   this->order.reserve(this->moves.size());
   for (size_t i=0; i<this->moves.size(); ++i)
@@ -24,7 +27,10 @@ DeterministicScanMCMC::DeterministicScanMCMC(MCMCTermination* termination_in,
                                              const std::vector<MCMC*> &moves_in)
 :MCMC(termination_in)
 {
-  this->moves = moves_in;
+  // takes ownership
+  this->moves.clear();
+  for (auto i=moves_in.begin(); i!=moves_in.end(); ++i)
+    this->moves.emplace_back(*i);
   this->order.clear();
   this->order.reserve(this->moves.size());
   for (size_t i=0; i<this->moves.size(); ++i)
@@ -35,13 +41,6 @@ DeterministicScanMCMC::DeterministicScanMCMC(MCMCTermination* termination_in,
 
 DeterministicScanMCMC::~DeterministicScanMCMC()
 {
-  for (std::vector<MCMC*>::iterator i=this->moves.begin();
-       i!=this->moves.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
-  }
 }
 
 //Copy constructor for the DeterministicScanMCMC class.
@@ -55,14 +54,6 @@ void DeterministicScanMCMC::operator=(const DeterministicScanMCMC &another)
 {
   if(this == &another){ //if a==a
     return;
-  }
-  
-  for (std::vector<MCMC*>::iterator i=this->moves.begin();
-       i!=this->moves.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      delete *i;
   }
   this->moves.clear();
   this->order.clear();
@@ -90,14 +81,14 @@ void DeterministicScanMCMC::make_copy(const DeterministicScanMCMC &another)
 {
   this->moves.resize(0);
   this->moves.reserve(another.moves.size());
-  for (std::vector<MCMC*>::const_iterator i=another.moves.begin();
+  for (auto i=another.moves.begin();
        i!=another.moves.end();
        ++i)
   {
     if (*i!=NULL)
-      this->moves.push_back((*i)->mcmc_duplicate());
+      this->moves.emplace_back((*i)->mcmc_duplicate());
     else
-      this->moves.push_back(NULL);
+      this->moves.emplace_back(nullptr);
   }
   
   this->order = another.order;
@@ -180,7 +171,7 @@ Particle DeterministicScanMCMC::subsample_move(RandomNumberGenerator &rng,
 
 void DeterministicScanMCMC::smc_adapt(SMCOutput* current_state)
 {
-  for (std::vector<MCMC*>::iterator i=this->moves.begin();
+  for (auto i=this->moves.begin();
        i!=this->moves.end();
        ++i)
   {
@@ -190,7 +181,7 @@ void DeterministicScanMCMC::smc_adapt(SMCOutput* current_state)
 
 void DeterministicScanMCMC::ensemble_adapt(EnsembleKalmanOutput* current_state)
 {
-  for (std::vector<MCMC*>::iterator i=this->moves.begin();
+  for (auto i=this->moves.begin();
        i!=this->moves.end();
        ++i)
   {
@@ -201,7 +192,7 @@ void DeterministicScanMCMC::ensemble_adapt(EnsembleKalmanOutput* current_state)
 void DeterministicScanMCMC::specific_mcmc_adapt(const Particle &current_particle,
                                                 size_t iteration_counter)
 {
-  for (std::vector<MCMC*>::iterator i=this->moves.begin();
+  for (auto i=this->moves.begin();
        i!=this->moves.end();
        ++i)
   {
@@ -272,7 +263,7 @@ std::vector<MCMC*> DeterministicScanMCMC::get_duplicate_moves() const
   std::vector<MCMC*> duplicate_moves;
   duplicate_moves.reserve(this->moves.size());
   
-  for (std::vector<MCMC*>::const_iterator i=this->moves.begin();
+  for (auto i=this->moves.begin();
        i!=this->moves.end();
        ++i)
   {

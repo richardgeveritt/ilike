@@ -2,6 +2,7 @@
 #define PROPOSALSTORE_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -108,7 +109,7 @@ protected:
   
   // stored here
   /** @brief The gradient estimator output. */
-  GradientEstimatorOutput* gradient_estimator_output;
+  std::unique_ptr<GradientEstimatorOutput> gradient_estimator_output;
   
   /**
    * @brief Copies the state of another GradientEstimatorOutput into this object.

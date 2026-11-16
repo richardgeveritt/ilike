@@ -14,20 +14,20 @@ GaussianSMCAdaptor::GaussianSMCAdaptor()
 
 GaussianSMCAdaptor::~GaussianSMCAdaptor()
 {
-  for (std::vector<VectorParameterEstimator*>::iterator i=this->mean_estimators.begin();
+  for (auto i=this->mean_estimators.begin();
        i!=this->mean_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   
-  for (std::vector<MatrixParameterEstimator*>::iterator i=this->covariance_estimators.begin();
+  for (auto i=this->covariance_estimators.begin();
        i!=this->covariance_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
 }
 
@@ -42,21 +42,21 @@ void GaussianSMCAdaptor::operator=(const GaussianSMCAdaptor &another)
   if(this == &another)
     return;
   
-  for (std::vector<VectorParameterEstimator*>::iterator i=this->mean_estimators.begin();
+  for (auto i=this->mean_estimators.begin();
        i!=this->mean_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   this->mean_estimators.clear();
   
-  for (std::vector<MatrixParameterEstimator*>::iterator i=this->covariance_estimators.begin();
+  for (auto i=this->covariance_estimators.begin();
        i!=this->covariance_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   this->covariance_estimators.clear();
   
@@ -72,26 +72,26 @@ void GaussianSMCAdaptor::make_copy(const GaussianSMCAdaptor &another)
   
   this->mean_estimators.resize(0);
   this->mean_estimators.reserve(another.mean_estimators.size());
-  for (std::vector<VectorParameterEstimator*>::const_iterator i=another.mean_estimators.begin();
+  for (auto i=another.mean_estimators.begin();
        i!=another.mean_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      this->mean_estimators.push_back((*i)->duplicate());
+      this->mean_estimators.emplace_back((*i)->duplicate());
     else
-      this->mean_estimators.push_back(NULL);
+      this->mean_estimators.emplace_back();
   }
   
   this->covariance_estimators.resize(0);
   this->covariance_estimators.reserve(another.covariance_estimators.size());
-  for (std::vector<MatrixParameterEstimator*>::const_iterator i=another.covariance_estimators.begin();
+  for (auto i=another.covariance_estimators.begin();
        i!=another.covariance_estimators.end();
        ++i)
   {
     if (*i!=NULL)
-      this->covariance_estimators.push_back((*i)->duplicate());
+      this->covariance_estimators.emplace_back((*i)->duplicate());
     else
-      this->covariance_estimators.push_back(NULL);
+      this->covariance_estimators.emplace_back();
   }
 }
 
@@ -107,12 +107,16 @@ void GaussianSMCAdaptor::smc_adapt(SMCOutput* current_state)
   if (current_state->back().is_flat())
     Rcpp::stop("GaussianSMCAdaptor::smc_adapt: not available for a generation stored flat.");
   arma::colvec wt = exp(current_state->back().normalised_log_weights);
+  // the estimators take the particles as plain pointers (not owned)
+  std::vector<MoveOutput*> points;
+  for (auto i = current_state->back().particles.begin(); i != current_state->back().particles.end(); ++i)
+    points.push_back(i->get());
   for (size_t i=0; i<this->variable_names.size(); ++i)
   {
     if (this->mean_estimators[i]!=NULL)
     {
       this->mean_estimators[i]->fit(variable_names[i],
-                                    current_state->back().particles,
+                                    points,
                                     wt);
       this->gaussian_info_pointers[i]->get_mean() = this->mean_estimators[i]->estimated;
     }
@@ -120,7 +124,7 @@ void GaussianSMCAdaptor::smc_adapt(SMCOutput* current_state)
     if (this->covariance_estimators[i]!=NULL)
     {
       this->covariance_estimators[i]->fit(variable_names[i],
-                                          current_state->back().particles,
+                                          points,
                                           wt);
       this->gaussian_info_pointers[i]->get_covariance() = covariance_estimators[i]->estimated;
     }
@@ -140,12 +144,17 @@ void GaussianSMCAdaptor::ensemble_adapt(EnsembleKalmanOutput* current_state)
 {
   arma::colvec wt(current_state->back().size());
   wt.fill(-log(double(current_state->back().size())));
+  // the estimators take the ensemble members as plain pointers (not owned)
+  std::vector<MoveOutput*> points;
+  points.reserve(current_state->back().members.size());
+  for (auto i = current_state->back().members.begin(); i != current_state->back().members.end(); ++i)
+    points.push_back(i->get());
   for (size_t i=0; i<this->variable_names.size(); ++i)
   {
     if (this->mean_estimators[i]!=NULL)
     {
       this->mean_estimators[i]->fit(variable_names[i],
-                                    current_state->back().members,
+                                    points,
                                     wt);
       this->gaussian_info_pointers[i]->get_mean() = this->mean_estimators[i]->estimated;
     }
@@ -153,7 +162,7 @@ void GaussianSMCAdaptor::ensemble_adapt(EnsembleKalmanOutput* current_state)
     if (this->covariance_estimators[i]!=NULL)
     {
       this->covariance_estimators[i]->fit(variable_names[i],
-                                          current_state->back().members,
+                                          points,
                                           wt);
       this->gaussian_info_pointers[i]->get_covariance() = covariance_estimators[i]->estimated;
     }

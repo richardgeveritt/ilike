@@ -115,7 +115,8 @@ private:
   
   // Stored here.
   /** @brief The abc kernel. */
-  ABCKernelFactor* abc_kernel;
+  // owned (dev/plan.md 3.5, CH3)
+  std::unique_ptr<ABCKernelFactor> abc_kernel;
   
   /** @brief HDF5 output file (kept open for the duration of a run). */
   std::shared_ptr<HighFive::File> h5_file;

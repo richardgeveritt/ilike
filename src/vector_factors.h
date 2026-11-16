@@ -2,6 +2,7 @@
 #define VECTORFACTORS_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -137,7 +138,8 @@ protected:
   
   // stored here
   /** @brief The likelihood estimators. */
-  std::vector<LikelihoodEstimator*> likelihood_estimators;
+  // owned (dev/plan.md 3.5, CH3)
+  std::vector<std::unique_ptr<LikelihoodEstimator>> likelihood_estimators;
   
   // stored here
   // data temporarily used in a likelihood estimator

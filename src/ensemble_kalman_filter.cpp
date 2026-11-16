@@ -24,7 +24,7 @@ EnsembleKalmanFilter::EnsembleKalmanFilter()
 :EnsembleKalman()
 {
   //this->proposal_kernel = NULL;
-  this->index = NULL;
+  this->index.reset();
 }
 
 EnsembleKalmanFilter::EnsembleKalmanFilter(RandomNumberGenerator* rng_in,
@@ -77,7 +77,7 @@ EnsembleKalmanFilter::EnsembleKalmanFilter(RandomNumberGenerator* rng_in,
   this->current_time = initial_time_in;
   this->current_index = this->first_index;
   
-  this->proposal = prior_in;
+  this->proposal.reset(prior_in);
   this->proposal->set_proposal_parameters(&this->algorithm_parameters);
   
   std::vector<MeasurementCovarianceEstimator*> measurement_covariance_estimators = measurement_covariance_estimators_in;
@@ -92,22 +92,22 @@ EnsembleKalmanFilter::EnsembleKalmanFilter(RandomNumberGenerator* rng_in,
     indices.push_back(i);
   }
   
-  this->index = new VectorIndex(indices);
+  this->index.reset(new VectorIndex(indices));
   
   this->transition_model_kernel = transition_model_in;
   
-  this->ensemble_factors = new HMMEnsembleFactors(transition_model_in,
-                                                  measurement_covariance_estimators);
+  this->ensemble_factors.reset(new HMMEnsembleFactors(transition_model_in,
+                                                  measurement_covariance_estimators));
   
   if (parallel_in==TRUE)
   {
-    //this->the_worker = new RcppParallelSMCWorker(this,
+    //this->the_worker.reset(new RcppParallelSMCWorker(this,
     //this->model_and_algorithm.particle_simulator,
-    //grain_size_in);
+    //grain_size_in));
   }
   else
   {
-    this->the_worker = new SequentialEnsembleKalmanWorker(this);
+    this->the_worker.reset(new SequentialEnsembleKalmanWorker(this));
   }
   
   /*
@@ -118,7 +118,7 @@ EnsembleKalmanFilter::EnsembleKalmanFilter(RandomNumberGenerator* rng_in,
    schedule_in.push_back(this->first_index+i);
    }
    
-   this->sequencer = EnsembleSequencer(this->the_worker,
+   this->sequencer = EnsembleSequencer(this->the_worker.get(),
    schedule_in,
    this->index_name,
    100,
@@ -135,8 +135,7 @@ EnsembleKalmanFilter::~EnsembleKalmanFilter()
   //if (this->proposal_kernel!=NULL)
   //  delete this->proposal_kernel;
   
-  if (this->index!=NULL)
-    delete this->index;
+  this->index.reset();
 }
 
 //Copy constructor for the EnsembleKalmanFilter class.
@@ -155,8 +154,7 @@ void EnsembleKalmanFilter::operator=(const EnsembleKalmanFilter &another)
   //if (this->proposal_kernel!=NULL)
   //  delete this->proposal_kernel;
   
-  if (this->index!=NULL)
-    delete this->index;
+  this->index.reset();
   
   EnsembleKalman::operator=(another);
   this->make_copy(another);
@@ -175,12 +173,16 @@ EnsembleKalman* EnsembleKalmanFilter::ensemble_kalman_duplicate() const
 void EnsembleKalmanFilter::make_copy(const EnsembleKalmanFilter &another)
 {
   //if (another.proposal_kernel!=NULL)
-  this->transition_model_kernel = another.transition_model_kernel;
+  // the transition kernel is owned by this filter's own HMMEnsembleFactors
+  // (duplicated by EnsembleKalman::make_copy), not by the filter copied from
+  this->transition_model_kernel = NULL;
+  if (another.transition_model_kernel!=NULL)
+    this->transition_model_kernel = dynamic_cast<HMMEnsembleFactors*>(this->ensemble_factors.get())->get_transition_kernel();
   
   if (another.index!=NULL)
-    this->index = another.index->duplicate();
+    this->index.reset(another.index->duplicate());
   else
-    this->index = NULL;
+    this->index.reset();
   
   this->index_name = another.index_name;
   //this->measurements_names = another.measurements_names;
@@ -248,7 +250,7 @@ void EnsembleKalmanFilter::ensemble_kalman_simulate(EnsembleKalmanOutput* curren
   {
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Ensemble* current_ensemble = &current_state->back();
-    Ensemble* next_ensemble = current_state->add_ensemble(this->ensemble_factors);
+    Ensemble* next_ensemble = current_state->add_ensemble(this->ensemble_factors.get());
     
     this->the_worker->move(next_ensemble,
                            current_ensemble);
@@ -417,7 +419,7 @@ void EnsembleKalmanFilter::ensemble_kalman_simulate(EnsembleKalmanOutput* curren
   {
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Ensemble* current_ensemble = &current_state->back();
-    Ensemble* next_ensemble = current_state->add_ensemble(this->ensemble_factors);
+    Ensemble* next_ensemble = current_state->add_ensemble(this->ensemble_factors.get());
     
     this->the_worker->move(next_ensemble,
                            current_ensemble);
@@ -713,7 +715,7 @@ void EnsembleKalmanFilter::ensemble_kalman_subsample_simulate(EnsembleKalmanOutp
   {
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Ensemble* current_ensemble = &current_state->back();
-    Ensemble* next_ensemble = current_state->add_ensemble(this->ensemble_factors);
+    Ensemble* next_ensemble = current_state->add_ensemble(this->ensemble_factors.get());
     
     this->the_worker->subsample_move(next_ensemble,
                                      current_ensemble);
@@ -739,7 +741,7 @@ void EnsembleKalmanFilter::ensemble_kalman_subsample_simulate(EnsembleKalmanOutp
   {
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Ensemble* current_ensemble = &current_state->back();
-    Ensemble* next_ensemble = current_state->add_ensemble(this->ensemble_factors);
+    Ensemble* next_ensemble = current_state->add_ensemble(this->ensemble_factors.get());
     //this->the_worker->subsample_move(next_ensemble,
     //                                 current_ensemble,
     //                                 conditioned_on_parameters);

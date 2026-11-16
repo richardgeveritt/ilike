@@ -13,17 +13,15 @@ LangevinProposalKernel::LangevinProposalKernel()
 :ProposalKernel()
 {
   //this->unused_variables_kept = true;
-  this->index = NULL;
-  this->gradient_estimator = NULL;
+  this->index.reset();
+  this->gradient_estimator.reset();
 }
 
 LangevinProposalKernel::~LangevinProposalKernel()
 {
-  if (this->gradient_estimator!=NULL)
-    delete this->gradient_estimator;
+  this->gradient_estimator.reset();
   
-  if (this->index!=NULL)
-    delete index;
+  this->index.reset();
 }
 
 LangevinProposalKernel::LangevinProposalKernel(const std::vector<std::string> &variable_names_in,
@@ -32,9 +30,9 @@ LangevinProposalKernel::LangevinProposalKernel(const std::vector<std::string> &v
 {
   //this->unused_variables_kept = true;
   
-  this->gradient_estimator = gradient_estimator_in;
+  this->gradient_estimator.reset(gradient_estimator_in);
   this->gradient_estimator->set_proposal(this);
-  this->index = NULL;
+  this->index.reset();
   
   for (auto i=variable_names_in.begin();
        i!=variable_names_in.end();
@@ -51,9 +49,9 @@ LangevinProposalKernel::LangevinProposalKernel(const std::string &variable_name_
 {
   //this->unused_variables_kept = true;
   
-  this->gradient_estimator = gradient_estimator_in;
+  this->gradient_estimator.reset(gradient_estimator_in);
   this->gradient_estimator->set_proposal(this);
-  this->index = NULL;
+  this->index.reset();
   
   this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in);
 }
@@ -66,9 +64,9 @@ LangevinProposalKernel::LangevinProposalKernel(const std::string &variable_name_
 {
   //this->unused_variables_kept = true;
   
-  this->gradient_estimator = gradient_estimator_in;
+  this->gradient_estimator.reset(gradient_estimator_in);
   this->gradient_estimator->set_proposal(this);
-  this->index = NULL;
+  this->index.reset();
   
   this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in,
                                                                scale_in);
@@ -81,9 +79,9 @@ LangevinProposalKernel::LangevinProposalKernel(const std::string &variable_name_
 {
   //this->unused_variables_kept = true;
   
-  this->gradient_estimator = gradient_estimator_in;
+  this->gradient_estimator.reset(gradient_estimator_in);
   this->gradient_estimator->set_proposal(this);
-  this->index = NULL;
+  this->index.reset();
   
   this->proposal_info[variable_name_in] = GaussianProposalInfo(sd_in);
 }
@@ -95,9 +93,9 @@ LangevinProposalKernel::LangevinProposalKernel(const std::vector<std::string> &v
 {
   //this->unused_variables_kept = true;
   
-  this->gradient_estimator = gradient_estimator_in;
+  this->gradient_estimator.reset(gradient_estimator_in);
   this->gradient_estimator->set_proposal(this);
-  this->index = NULL;
+  this->index.reset();
   
   for (size_t i=0;
        i<variable_names_in.size();
@@ -118,11 +116,9 @@ void LangevinProposalKernel::operator=(const LangevinProposalKernel &another)
   if(this == &another)
     return;
   
-  if (this->gradient_estimator!=NULL)
-    delete this->gradient_estimator;
+  this->gradient_estimator.reset();
   
-  if (this->index!=NULL)
-    delete index;
+  this->index.reset();
   
   ProposalKernel::operator=(another);
   this->make_copy(another);
@@ -143,14 +139,14 @@ void LangevinProposalKernel::make_copy(const LangevinProposalKernel &another)
   //this->unused_variables_kept = another.unused_variables_kept;
   this->proposal_info = another.proposal_info;
   if (another.gradient_estimator!=NULL)
-    this->gradient_estimator = another.gradient_estimator->duplicate();
+    this->gradient_estimator.reset(another.gradient_estimator->duplicate());
   else
-    this->gradient_estimator = NULL;
+    this->gradient_estimator.reset();
   
   if (another.index!=NULL)
-    this->index = another.index->duplicate();
+    this->index.reset(another.index->duplicate());
   else
-    this->index = NULL;
+    this->index.reset();
 }
 
 double LangevinProposalKernel::specific_evaluate_kernel(const Particle &proposed_particle,
@@ -167,7 +163,7 @@ double LangevinProposalKernel::specific_evaluate_kernel(const Particle &proposed
     double scale = i->second.get_double_scale();
     double dim = double(mean.n_rows);
     output = output + dmvnorm_using_precomp(proposed_particle.get_transformed_parameters(this).get_colvec(i->first),
-                                            mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first,this->index,old_particle))/2.0,
+                                            mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first,this->index.get(),old_particle))/2.0,
                                             (1.0/i->second.get_double_scale())*i->second.get_inv(),
                                             dim*log(scale)+i->second.get_logdet());
   }
@@ -224,7 +220,7 @@ double LangevinProposalKernel::specific_subsample_evaluate_kernel(const Particle
     double scale = i->second.get_double_scale();
     double dim = double(mean.n_rows);
     output = output + dmvnorm_using_precomp(proposed_particle.get_transformed_parameters(this).get_colvec(i->first),
-                                            mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first,this->index,old_particle))/2.0,
+                                            mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first,this->index.get(),old_particle))/2.0,
                                             (1.0/i->second.get_double_scale())*i->second.get_inv(),
                                             dim*log(scale)+i->second.get_logdet());
   }
@@ -269,7 +265,7 @@ void LangevinProposalKernel::simulate_into(RandomNumberGenerator &rng,
     arma::colvec mean = particle.get_transformed_parameters(this).get_colvec(i->first);
     double scale = i->second.get_double_scale();
     target.matrix(i->first) = rmvnorm_using_lower_chol(rng,
-                                                       mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first,this->index,particle))/2.0,
+                                                       mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first,this->index.get(),particle))/2.0,
                                                        i->second.get_chol_lower(), sqrt(scale));
   }
 }
@@ -302,7 +298,7 @@ Parameters LangevinProposalKernel::simulate(RandomNumberGenerator &rng,
     double scale = i->second.get_double_scale();
     //double dim = double(mean.n_rows);
     output[i->first] = rmvnorm_using_lower_chol(rng,
-                                          mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first,this->index,particle))/2.0,
+                                          mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first,this->index.get(),particle))/2.0,
                                           i->second.get_chol_lower(), sqrt(scale));
   }
   return output;
@@ -366,7 +362,7 @@ Parameters LangevinProposalKernel::subsample_simulate(RandomNumberGenerator &rng
     double scale = i->second.get_double_scale();
     //double dim = double(mean.n_rows);
     output[i->first] = rmvnorm_using_lower_chol(rng,
-                                          mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->subsample_get_gradient_of_log(i->first,this->index,particle))/2.0,
+                                          mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->subsample_get_gradient_of_log(i->first,this->index.get(),particle))/2.0,
                                           i->second.get_chol_lower(), sqrt(scale));
   }
   return output;
@@ -430,7 +426,7 @@ Parameters LangevinProposalKernel::subsample_simulate(RandomNumberGenerator &rng
   double scale = found->second.get_double_scale();
   //double dim = double(mean.n_rows);
   output[found->first] = rmvnorm_using_lower_chol(rng,
-                                            mean + scale*found->second.get_covariance()*arma::vectorise(gradient_estimator_output->subsample_get_gradient_of_log(found->first,this->index,particle))/2.0,
+                                            mean + scale*found->second.get_covariance()*arma::vectorise(gradient_estimator_output->subsample_get_gradient_of_log(found->first,this->index.get(),particle))/2.0,
                                             found->second.get_chol_lower(), sqrt(scale));
   return output;
 }
@@ -519,18 +515,17 @@ std::vector<const ProposalKernel*> LangevinProposalKernel::get_proposals() const
 // lead to it being deleted twice.
 void LangevinProposalKernel::set_index(Index* index_in)
 {
-  if (this->index!=NULL)
-    delete this->index;
+  this->index.reset();
   if (index_in!=NULL)
-    this->index = index_in->duplicate();
+    this->index.reset(index_in->duplicate());
   else
-    this->index = NULL;
+    this->index.reset();
 }
 
 void LangevinProposalKernel::set_index_if_null(Index* index_in)
 {
   if ( (this->index==NULL) && (index_in!=NULL) )
-    this->index = index_in->duplicate();
+    this->index.reset(index_in->duplicate());
 }
 
 bool LangevinProposalKernel::can_be_evaluated() const

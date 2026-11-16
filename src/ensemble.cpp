@@ -28,21 +28,21 @@ Ensemble::Ensemble()
 Ensemble::~Ensemble()
 {
   // Delete all the pointers owned by this class.
-  for (std::vector<MoveOutput*>::iterator i=this->members.begin();
+  for (auto i=this->members.begin();
        i!=this->members.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   
   // Delete all the pointers owned by this class.
-  for (std::vector<MoveOutput*>::iterator i=this->predicted_members.begin();
+  for (auto i=this->predicted_members.begin();
        i!=this->predicted_members.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
 }
 
@@ -138,26 +138,26 @@ void Ensemble::make_copy(const Ensemble &another)
   
   this->members.resize(0);
   this->members.reserve(another.members.size());
-  for (std::vector<MoveOutput*>::const_iterator i=another.members.begin();
+  for (auto i=another.members.begin();
        i!=another.members.end();
        ++i)
   {
     if (*i!=NULL)
-      this->members.push_back((*i)->duplicate());
+      this->members.emplace_back((*i)->duplicate());
     else
-      this->members.push_back(NULL);
+      this->members.emplace_back();
   }
   
   this->predicted_members.resize(0);
   this->predicted_members.reserve(another.predicted_members.size());
-  for (std::vector<MoveOutput*>::const_iterator i=another.predicted_members.begin();
+  for (auto i=another.predicted_members.begin();
        i!=another.predicted_members.end();
        ++i)
   {
     if (*i!=NULL)
-      this->predicted_members.push_back((*i)->duplicate());
+      this->predicted_members.emplace_back((*i)->duplicate());
     else
-      this->predicted_members.push_back(NULL);
+      this->predicted_members.emplace_back();
   }
   
   //this->members = another.members;
@@ -192,29 +192,8 @@ void Ensemble::make_copy(Ensemble &&another)
 {
   // Copy all members, duplicating the memory where appropriate.
   
-  this->members.resize(0);
-  this->members.reserve(another.members.size());
-  for (std::vector<MoveOutput*>::const_iterator i=another.members.begin();
-       i!=another.members.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      this->members.push_back(*i);
-    else
-      this->members.push_back(NULL);
-  }
-  
-  this->predicted_members.resize(0);
-  this->predicted_members.reserve(another.predicted_members.size());
-  for (std::vector<MoveOutput*>::const_iterator i=another.predicted_members.begin();
-       i!=another.predicted_members.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      this->predicted_members.push_back(*i);
-    else
-      this->predicted_members.push_back(NULL);
-  }
+  this->members = std::move(another.members);
+  this->predicted_members = std::move(another.predicted_members);
   
   //this->members = another.members;
   this->packed_members = std::move(another.packed_members);
@@ -243,11 +222,11 @@ void Ensemble::make_copy(Ensemble &&another)
   this->log_measurement_likelihood_variances = std::move(another.log_measurement_likelihood_variances);
   //this->partially_packed_measurement_random_shifts = another.partially_packed_measurement_random_shifts;
   
-  another.members = std::vector<MoveOutput*>();
+  another.members.clear();
   
   //another.members = another.members;
   another.packed_members = arma::mat();
-  another.predicted_members = std::vector<MoveOutput*>();
+  another.predicted_members.clear();
   another.partially_packed_members_row = std::vector<arma::rowvec>();
   another.partially_packed_members_col = std::vector<arma::colvec>();
   another.partially_packed_predicted_members_col = std::vector<arma::colvec>();
@@ -277,21 +256,21 @@ Ensemble& Ensemble::operator=(const Ensemble &another)
   if(this==&another)//a==a
     return *this;
   
-  for (std::vector<MoveOutput*>::iterator i=this->members.begin();
+  for (auto i=this->members.begin();
        i!=this->members.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   
   // Delete all the pointers owned by this class.
-  for (std::vector<MoveOutput*>::iterator i=this->predicted_members.begin();
+  for (auto i=this->predicted_members.begin();
        i!=this->predicted_members.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   
   this->members.clear();
@@ -307,21 +286,21 @@ Ensemble& Ensemble::operator=(Ensemble &&another)
   if(this==&another)//a==a
     return *this;
   
-  for (std::vector<MoveOutput*>::iterator i=this->members.begin();
+  for (auto i=this->members.begin();
        i!=this->members.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   
   // Delete all the pointers owned by this class.
-  for (std::vector<MoveOutput*>::iterator i=this->predicted_members.begin();
+  for (auto i=this->predicted_members.begin();
        i!=this->predicted_members.end();
        ++i)
   {
     if (*i!=NULL)
-      delete *i;
+      (*i).reset();
   }
   
   this->members.clear();
@@ -341,7 +320,7 @@ void Ensemble::reserve(size_t number_of_ensemble_members_in)
 void Ensemble::push_back(Particle &&particle_in)
 {
   MoveOutput* single_particle = new SinglePointMoveOutput(std::move(particle_in));
-  this->members.push_back(single_particle);
+  this->members.emplace_back(single_particle);
 }
 
 void Ensemble::push_back(Parameters &&parameters_in,
@@ -349,39 +328,39 @@ void Ensemble::push_back(Parameters &&parameters_in,
 {
   MoveOutput* single_particle = new SinglePointMoveOutput(std::move(parameters_in),
                                                           factors_in);
-  this->members.push_back(single_particle);
+  this->members.emplace_back(single_particle);
 }
 
 void Ensemble::push_back(MoveOutput* move_output_in)
 {
-  this->members.push_back(move_output_in);
+  this->members.emplace_back(move_output_in);
 }
 
 Particle* Ensemble::add_ensemble_member()
 {
   MoveOutput* single_particle = new SinglePointMoveOutput();
-  this->members.push_back(single_particle);
+  this->members.emplace_back(single_particle);
   return &this->members.back()->back();
 }
 
 MoveOutput* Ensemble::operator[](const size_t &i)
 {
-  return(this->members[i]);
+  return(this->members[i].get());
 }
 
 MoveOutput* Ensemble::operator[](const size_t &i) const
 {
-  return(this->members[i]);
+  return(this->members[i].get());
 }
 
 MoveOutput* Ensemble::back()
 {
-  return this->members.back();
+  return this->members.back().get();
 }
 
 MoveOutput* Ensemble::back() const
 {
-  return this->members.back();
+  return this->members.back().get();
 }
 
 size_t Ensemble::size() const
@@ -568,7 +547,7 @@ void Ensemble::close_ofstreams()
 /*
  void Ensemble::set_previous_target_evaluated_to_target_evaluated()
  {
- for (std::vector<MoveOutput*>::iterator i = this->members.begin();
+ for (auto i=this->members.begin();
  i != this->members.end();
  ++i)
  {
@@ -580,7 +559,7 @@ void Ensemble::close_ofstreams()
  
  void Ensemble::subsample_set_previous_target_evaluated_to_target_evaluated()
  {
- for (std::vector<MoveOutput*>::iterator i = this->members.begin();
+ for (auto i=this->members.begin();
  i != this->members.end();
  ++i)
  {

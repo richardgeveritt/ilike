@@ -2,6 +2,7 @@
 #define DOUBLESCALERECURSIVEPARAMETERESTIMATOR_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 //#include <vector>
@@ -74,7 +75,7 @@ protected:
   
   // stored here
   /** @brief The recursive estimator. */
-  DoubleRecursiveParameterEstimator* recursive_estimator;
+  std::unique_ptr<DoubleRecursiveParameterEstimator> recursive_estimator;
   
   /**
    * @brief Copies the state of another DoubleRecursiveParameterEstimator into this object.

@@ -274,8 +274,8 @@ public:
   double log_normalising_constant_ratio;
   
   // stored here
-  std::vector<MoveOutput*> members;
-  std::vector<MoveOutput*> predicted_members;
+  std::vector<std::unique_ptr<MoveOutput>> members;
+  std::vector<std::unique_ptr<MoveOutput>> predicted_members;
   
   // only here for output
   Parameters schedule_parameters;

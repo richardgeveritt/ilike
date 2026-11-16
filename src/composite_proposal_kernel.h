@@ -2,6 +2,7 @@
 #define COMPOSITEPROPOSALKERNEL_H
 
 #include <RcppArmadillo.h>
+#include <memory>
 using namespace Rcpp;
 
 #include <vector>
@@ -208,7 +209,7 @@ protected:
   
   // stored here
   /** @brief The all kernels. */
-  std::vector<ProposalKernel*> all_kernels;
+  std::vector<std::unique_ptr<ProposalKernel>> all_kernels;
   
 };
 }

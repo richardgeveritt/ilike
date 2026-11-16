@@ -10,14 +10,14 @@ namespace ilike
 ZigZagMCMC::ZigZagMCMC()
 :MCMC()
 {
-  this->proposal = NULL;
+  this->proposal.reset();
 }
 
 ZigZagMCMC::ZigZagMCMC(size_t number_of_iterations_in,
                        ProposalKernel* proposal_in)
 :MCMC(number_of_iterations_in)
 {
-  this->proposal = proposal_in;
+  this->proposal.reset(proposal_in);
 }
 
 ZigZagMCMC::ZigZagMCMC(size_t number_of_iterations_in,
@@ -25,17 +25,16 @@ ZigZagMCMC::ZigZagMCMC(size_t number_of_iterations_in,
                        const Parameters &proposal_variances_in)
 :MCMC(number_of_iterations_in)
 {
-  this->proposal = NULL;
+  this->proposal.reset();
   // default to Gaussian random walk
-  //this->proposal = ProposalKernel(EvaluateLogMCMCProposalPtr proposal_evaluate_in,
+  //this->proposal.reset(ProposalKernel(EvaluateLogMCMCProposalPtr proposal_evaluate_in,
   //                                SimulateMCMCProposalPtr proposal_simulate_in,
-  //                                proposal_variances_in);
+  //                                proposal_variances_in));
 }
 
 ZigZagMCMC::~ZigZagMCMC()
 {
-  if (this->proposal!=NULL)
-    delete this->proposal;
+  this->proposal.reset();
 }
 
 //Copy constructor for the ZigZagMCMC class.
@@ -51,8 +50,7 @@ void ZigZagMCMC::operator=(const ZigZagMCMC &another)
     return;
   }
   
-  if (this->proposal!=NULL)
-    delete this->proposal;
+  this->proposal.reset();
   
   MCMC::operator=(another);
   this->make_copy(another);
@@ -70,11 +68,10 @@ MCMC* ZigZagMCMC::mcmc_duplicate() const
 
 void ZigZagMCMC::make_copy(const ZigZagMCMC &another)
 {
-  this->proposal = another.proposal;
   if (another.proposal!=NULL)
-    this->proposal = another.proposal->proposal_kernel_duplicate();
+    this->proposal.reset(another.proposal->proposal_kernel_duplicate());
   else
-    this->proposal = NULL;
+    this->proposal.reset();
 }
 
 Particle ZigZagMCMC::move(RandomNumberGenerator &rng,
