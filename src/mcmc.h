@@ -115,6 +115,11 @@ public:
 
   // Store every thin-th iteration of a run (MCMC(..., thin); default 1).
   void set_thin(size_t thin_in);
+  size_t get_thin() const { return this->thin; }
+
+  // The number of iterations a run makes, when the termination fixes it in
+  // advance (iterations(n)); 0 otherwise.
+  size_t known_number_of_iterations() const;
 
   // Whether the move adapts its kernel as it runs (a proposal with an MCMC
   // adaptor). If not, the particles' outputs share one kernel.

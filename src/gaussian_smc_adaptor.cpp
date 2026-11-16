@@ -102,6 +102,10 @@ SMCAdaptor* GaussianSMCAdaptor::duplicate() const
 
 void GaussianSMCAdaptor::smc_adapt(SMCOutput* current_state)
 {
+  // reads the generation's particles one by one: not available for a
+  // generation stored flat (dev/plan.md 2.6a; no adaptor is set from R)
+  if (current_state->back().is_flat())
+    Rcpp::stop("GaussianSMCAdaptor::smc_adapt: not available for a generation stored flat.");
   arma::colvec wt = exp(current_state->back().normalised_log_weights);
   for (size_t i=0; i<this->variable_names.size(); ++i)
   {

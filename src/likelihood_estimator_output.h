@@ -237,6 +237,34 @@ protected:
   virtual bool assign_from(const LikelihoodEstimatorOutput &another) { return false; }
 
   virtual size_t compact_size() const { return 0; }
+
+  // Adaptive summaries (dev/plan.md 2.6a, G2). Once the smcfixed part has
+  // been evaluated, adaptive_summary() gives adaptive_summary_size() numbers
+  // from which smcadaptive_from_summary(values, parameters) computes exactly
+  // what evaluate_smcadaptive_part_given_smcfixed(parameters) would set
+  // log_likelihood to (same expression), reading from parameters only the
+  // SMC sequence variables (annealing power, ABC tolerance). This lets an
+  // SMC adapt its next target, or reweight, from a block of numbers instead
+  // of the rich particles. smcadaptive_from_summary reads only the summary
+  // and the (shared, read-only) estimator, never this output's own state.
+  // -1 (the default): not available; the rich path is then used.
+  virtual int adaptive_summary_size() const { return -1; }
+  virtual void adaptive_summary(double *values) const {}
+  virtual double smcadaptive_from_summary(const double *values,
+                                          const Parameters &parameters) const
+  {
+    Rcpp::stop("LikelihoodEstimatorOutput::smcadaptive_from_summary: not available for this output.");
+  }
+
+  // Put this output in the state its last evaluation left it in (smcfixed
+  // part, then the adaptive part at `parameters`), given that evaluation's
+  // adaptive summary (dev/plan.md 2.6a, G3). Only for outputs whose
+  // estimator supports_restore_from_summary().
+  virtual void restore_from_summary(const double *values,
+                                    const Parameters &parameters)
+  {
+    Rcpp::stop("LikelihoodEstimatorOutput::restore_from_summary: not available for this output.");
+  }
   virtual void compact_values(double *values) const {}
   virtual void write_compact_values(const std::string &directory_name,
                                     const std::string &index,

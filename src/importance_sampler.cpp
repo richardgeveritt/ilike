@@ -13,6 +13,9 @@
 #include "vector_factors.h"
 #include "vector_index.h"
 #include "positive_smc_criterion.h"
+#include "factor_variables.h"
+#include "particle_simulator.h"
+#include <memory>
 // #include "rcppparallel_smc_worker.h"
 
 namespace ilike
@@ -38,6 +41,7 @@ namespace ilike
                                        const std::string &results_name_in)
       : SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, size_t(store_output), 0, std::vector<const ProposalKernel *>(), double(number_of_particles_in), false, smcfixed_flag_in, true, transform_proposed_particles, results_name_in)
   {
+    this->chunk_size = grain_size_in;
     IndependentProposalKernel *proposal = new CustomDistributionProposalKernel(simulate_prior_in);
     proposal->set_proposal_parameters(&this->algorithm_parameters);
     // Parameters candidate_parameters = proposal->independent_simulate(*this->rng);
@@ -96,6 +100,7 @@ namespace ilike
                                        const std::string &results_name_in)
       : SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, size_t(store_output), 0, std::vector<const ProposalKernel *>(), double(number_of_particles_in), true, smcfixed_flag_in, true, transform_proposed_particles, results_name_in)
   {
+    this->chunk_size = grain_size_in;
     IndependentProposalKernel *proposal = new CustomDistributionProposalKernel(simulate_proposal_in,
                                                                                evaluate_log_proposal_in);
     proposal->set_proposal_parameters(&this->algorithm_parameters);
@@ -167,6 +172,7 @@ namespace ilike
                                        const std::string &results_name_in)
       : SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, size_t(store_output), 0, std::vector<const ProposalKernel *>(), double(number_of_particles_in), true, smcfixed_flag_in, true, transform_proposed_particles, results_name_in)
   {
+    this->chunk_size = grain_size_in;
     proposal_in->set_proposal_parameters(&this->algorithm_parameters);
     // Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
     std::vector<size_t> indices;
@@ -230,6 +236,7 @@ namespace ilike
                                        const std::string &results_name_in)
       : SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, size_t(store_output), 0, std::vector<const ProposalKernel *>(), double(number_of_particles_in), proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, transform_proposed_particles, results_name_in)
   {
+    this->chunk_size = grain_size_in;
     proposal_in->set_proposal_parameters(&this->algorithm_parameters);
 
     // Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
@@ -299,6 +306,7 @@ namespace ilike
                                        const std::string &results_name_in)
       : SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, size_t(store_output), 0, std::vector<const ProposalKernel *>(), double(number_of_particles_in), proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, transform_proposed_particles, results_name_in)
   {
+    this->chunk_size = grain_size_in;
     proposal_in->set_proposal_parameters(&this->algorithm_parameters);
 
     // Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
@@ -370,6 +378,7 @@ namespace ilike
                                        const std::string &results_name_in)
       : SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, size_t(store_output), 0, std::vector<const ProposalKernel *>(), double(number_of_particles_in), proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, transform_proposed_particles, results_name_in)
   {
+    this->chunk_size = grain_size_in;
     proposal_in->set_proposal_parameters(&this->algorithm_parameters);
 
     // Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
@@ -476,6 +485,7 @@ namespace ilike
                                        const std::string &results_name_in)
       : SMC(rng_in, seed_in, data_in, algorithm_parameters_in, number_of_particles_in, size_t(store_output), 0, std::vector<const ProposalKernel *>(), double(number_of_particles_in), proposal_is_evaluated_in, smcfixed_flag_in, sequencer_limit_is_fixed_in, transform_proposed_particles, results_name_in)
   {
+    this->chunk_size = grain_size_in;
     proposal_in->set_proposal_parameters(&this->algorithm_parameters);
 
     // Parameters candidate_parameters = proposal_in->independent_simulate(*this->rng);
@@ -671,10 +681,226 @@ namespace ilike
   SMCOutput *ImportanceSampler::specific_run()
   {
     SMCOutput *simulation = this->initialise_smc();
-    this->simulate_smc(simulation);
-    this->evaluate_smc(simulation);
+    if (this->can_run_in_chunks())
+    {
+      this->simulate_and_weight_in_chunks(simulation);
+      this->evaluate_smcadaptive_part_given_smcfixed_smc(simulation);
+    }
+    else
+    {
+      this->simulate_smc(simulation);
+      this->evaluate_smc(simulation);
+    }
     simulation->normalise_and_resample_weights();
     return simulation;
+  }
+
+  bool ImportanceSampler::can_run_in_chunks() const
+  {
+    // The weights computed while a chunk is simulated must be the final ones,
+    // so the target must be fixed: one schedule point and a criterion that
+    // always accepts it (no bisection), and no scale computed from all the
+    // points (ABC). Weighting at other targets is G2 (adaptive summaries).
+    if (this->force_rich_generations || this->proposed_particles_inputted)
+      return false;
+    if ((this->particle_simulator == NULL) || (this->number_of_particles == 0))
+      return false;
+    if (dynamic_cast<const SequentialSMCWorker*>(this->the_worker) == NULL)
+      return false;
+    if (!this->sequencer_limit_is_fixed || this->sequencer.find_scale)
+      return false;
+    if ((this->sequencer.schedules.size() != 1) || (this->sequencer.schedules.back().size() != 1))
+      return false;
+    if (dynamic_cast<const PositiveSMCCriterion*>(this->sequencer.criterion) == NULL)
+      return false;
+    return true;
+  }
+
+  void ImportanceSampler::simulate_and_weight_in_chunks(SMCOutput *current_state)
+  {
+    this->simulate_in_chunks(current_state, NULL, false);
+  }
+
+  bool ImportanceSampler::can_run_flat_conditioned() const
+  {
+    // Moving the smcfixed part to simulation time leaves every random number
+    // unchanged only if that part uses none (checked per estimator), and
+    // weighting from summaries needs every factor of the index to have one.
+    if (this->force_rich_generations || this->proposed_particles_inputted)
+      return false;
+    if ((this->particle_simulator == NULL) || (this->number_of_particles == 0))
+      return false;
+    if (dynamic_cast<const SequentialSMCWorker*>(this->the_worker) == NULL)
+      return false;
+    if (this->sequencer.find_scale)
+      return false;
+    if ((this->factors == NULL) || !this->factors->supports_flat_generations(this->index))
+      return false;
+    return true;
+  }
+
+  void ImportanceSampler::simulate_in_chunks(SMCOutput *current_state,
+                                             const Parameters* conditioned_on_parameters,
+                                             bool summarise)
+  {
+    // What simulate_smc + evaluate_smcfixed_part_smc + the weighting step of
+    // the bisection do (SequentialSMCWorker::specific_simulate,
+    // SMCWorker::simulate, smcfixed_weight, smcadaptive_given_smcfixed_weight),
+    // B points at a time. Per chunk the phases keep their order (simulate all
+    // B, then the smcfixed parts, then the weights), so with one chunk
+    // (chunk_size >= N) every call happens in the same order as before and
+    // the results are identical. Chunk k uses its own random-number stream:
+    // the stream of chunk 0 (the generator seeded as before) jumped k times
+    // (2^192 steps each), so streams never overlap and depend only on the
+    // seed and k.
+    SMCWorker* worker = this->the_worker;
+    size_t N = this->number_of_particles;
+    size_t B = ((this->chunk_size == 0) || (this->chunk_size > N)) ? N : this->chunk_size;
+
+    Particles* generation = current_state->add_particles();
+    generation->flat = true;
+    generation->flat_size = N;
+    if (!summarise)
+      generation->flat_incremental_log_weights.set_size(N);
+
+    // What is kept of each point: its variables and factor outputs only if
+    // the output stores generations (lag 0: an estimator inside a factor,
+    // whose generations are never written).
+    bool keep_points = (this->lag > 0);
+    bool keep_factor_output = keep_points && this->write_factor_output;
+    int summary_size = -1;
+    bool compact_records = false;
+    std::vector<double> records;
+
+    std::vector<Particle> slots(B);
+    RandomNumberGenerator chunk_start(*worker->get_rng());
+    chunk_start.seed(worker->get_seed());
+
+    size_t point = 0;
+    for (size_t first = 0, k = 0; first < N; first += B, ++k)
+    {
+      size_t n = std::min(B, N - first);
+      if (k > 0)
+      {
+        std::unique_ptr<dqrng::random_64bit_generator> next = chunk_start.clone(1);
+        chunk_start = *dynamic_cast<RandomNumberGenerator*>(next.get());
+      }
+      RandomNumberGenerator local_rng(chunk_start);
+
+      for (size_t j = 0; j < n; ++j)
+      {
+        if (conditioned_on_parameters == NULL)
+          this->particle_simulator->simulate_into(local_rng,
+                                                  slots[j],
+                                                  this->factors,
+                                                  &this->proposals_to_transform_for,
+                                                  &this->proposals_to_find_gradient_for,
+                                                  this->sequencer.schedule_parameters);
+        else
+          this->particle_simulator->simulate_into(local_rng,
+                                                  slots[j],
+                                                  this->factors,
+                                                  &this->proposals_to_transform_for,
+                                                  &this->proposals_to_find_gradient_for,
+                                                  *conditioned_on_parameters,
+                                                  this->sequencer.schedule_parameters);
+        if (this->proposal_is_evaluated == true)
+          slots[j].previous_target_evaluated = this->particle_simulator->evaluate(slots[j]);
+      }
+
+      if (k == 0)
+      {
+        // the seed bookkeeping and resampling variables of SMCWorker::simulate,
+        // at the point where it happened before when there is one chunk
+        worker->set_seed(worker->get_seed() + N);
+        this->rng->seed(worker->get_seed());
+        generation->simulate_resampling_variables(*this->rng);
+        worker->set_seed(worker->get_seed() + N);
+      }
+
+      for (size_t j = 0; j < n; ++j)
+        slots[j].evaluate_smcfixed_part_of_likelihoods(this->index);
+
+      if (summarise)
+      {
+        for (size_t j = 0; j < n; ++j)
+        {
+          const FactorVariables* factor_variables = slots[j].factor_variables;
+          int size = (factor_variables == NULL) ? -1 : factor_variables->adaptive_summary_size(this->index);
+          if (first + j == 0)
+          {
+            if (size < 0)
+              Rcpp::stop("ImportanceSampler::simulate_in_chunks: a factor has no adaptive summary.");
+            summary_size = size;
+            generation->adaptive_summaries.set_size(size_t(summary_size), N);
+            generation->adaptive_previous_targets.set_size(N);
+            generation->flat_summary_evaluator = factor_variables->duplicate();
+            generation->flat_summary_evaluator->set_particle(NULL);
+            generation->adaptive_summary_evaluator = generation->flat_summary_evaluator;
+            generation->adaptive_summary_index = this->index;
+            generation->adaptive_summary_state = 1;
+          }
+          else if (size != summary_size)
+          {
+            Rcpp::stop("ImportanceSampler::simulate_in_chunks: the points' adaptive summaries differ in size.");
+          }
+          if (summary_size > 0)
+            factor_variables->adaptive_summary(this->index, generation->adaptive_summaries.colptr(first + j));
+          generation->adaptive_previous_targets[first + j] = slots[j].previous_target_evaluated;
+        }
+      }
+      else
+      {
+        for (size_t j = 0; j < n; ++j)
+        {
+          double a = slots[j].evaluate_smcadaptive_part_given_smcfixed_likelihoods(this->index);
+          double b = slots[j].previous_target_evaluated;
+          generation->flat_incremental_log_weights[first + j] = (a == -arma::datum::inf) ? -arma::datum::inf : a - b;
+        }
+      }
+
+      for (size_t j = 0; (j < n) && keep_points; ++j, ++point)
+      {
+        Particle &slot = slots[j];
+        if (point == 0)
+        {
+          if (keep_factor_output && (slot.factor_variables != NULL))
+          {
+            compact_records = slot.factor_variables->has_compact_values();
+            if (compact_records)
+            {
+              generation->flat_points.set_number_of_extra_columns(slot.factor_variables->number_of_compact_values());
+              records.resize(slot.factor_variables->number_of_compact_values());
+              generation->flat_record_writer = slot.factor_variables->duplicate();
+              generation->flat_record_writer->set_particle(NULL);
+            }
+            else
+            {
+              generation->flat_factor_variables.reserve(N);
+            }
+          }
+          generation->flat_points.reserve_after_first(N);
+        }
+        if (compact_records)
+        {
+          slot.factor_variables->compact_values(records.data());
+          generation->flat_points.append(slot.parameters, records.data());
+        }
+        else
+        {
+          generation->flat_points.append(slot.parameters);
+          if (keep_factor_output && (slot.factor_variables != NULL))
+          {
+            // keep this point's factor outputs whole; the slot gets new ones
+            slot.factor_variables->set_particle(NULL);
+            generation->flat_factor_variables.push_back(slot.factor_variables);
+            slot.factor_variables = NULL;
+          }
+        }
+      }
+    }
+
+    generation->initialise_weights();
   }
 
   /*
@@ -779,6 +1005,21 @@ namespace ilike
   void ImportanceSampler::weight_for_adapting_sequence(const Index *index,
                                                        Particles &current_particles)
   {
+    if (current_particles.is_flat())
+    {
+      if (current_particles.adaptive_summary_state == 1)
+      {
+        // from the adaptive summaries kept when it was simulated
+        this->weight_from_summaries_if_possible(index, current_particles);
+      }
+      else
+      {
+        // weights computed while the generation was simulated (at its only
+        // target: see can_run_in_chunks)
+        this->the_worker->set_unnormalised_log_incremental_weights(current_particles.flat_incremental_log_weights);
+      }
+      return;
+    }
     this->the_worker->smcadaptive_given_smcfixed_weight(index,
                                                         current_particles);
   }
@@ -825,7 +1066,10 @@ namespace ilike
   void ImportanceSampler::simulate_smc(SMCOutput *current_state,
                                        const Parameters &conditioned_on_parameters)
   {
-    this->simulate_proposal(current_state, conditioned_on_parameters);
+    if (this->can_run_flat_conditioned())
+      this->simulate_in_chunks(current_state, &conditioned_on_parameters, true);
+    else
+      this->simulate_proposal(current_state, conditioned_on_parameters);
   }
 
   void ImportanceSampler::evaluate_smc(SMCOutput *current_state,
@@ -854,6 +1098,9 @@ namespace ilike
   void ImportanceSampler::evaluate_smcfixed_part_smc(SMCOutput *current_state,
                                                      const Parameters &conditioned_on_parameters)
   {
+    // a flat generation's smcfixed parts were evaluated when it was simulated
+    if (current_state->back().is_flat())
+      return;
     // this->smcfixed_weight(current_state, conditioned_on_parameters);
     /*
      if (this->sequencer_parameters!=NULL)
@@ -887,8 +1134,8 @@ namespace ilike
       // particle of the calling algorithm).
       this->set_target_from_parameters(conditioned_on_parameters);
       this->set_abc_scale(&current_state->back());
-      this->the_worker->smcadaptive_given_smcfixed_weight(this->index,
-                                                          current_state->back());
+      this->weight_for_adapting_sequence(this->index,
+                                         current_state->back());
       current_state->back().update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
     }
     else

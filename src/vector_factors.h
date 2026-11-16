@@ -82,6 +82,8 @@ public:
    * @return The result.
    */
   FactorVariables* simulate_factor_variables(const Parameters &simulated_parameters) const;
+  bool supports_flat_generations(const Index* index) const;
+  bool supports_flat_moves(const Index* index, const Index* other_index) const;
 
   // The estimator for factor i (0-based).
   LikelihoodEstimator* get_likelihood_estimator(size_t i) const;

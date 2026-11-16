@@ -551,4 +551,23 @@ void EnsembleKalmanOutput::close_ofstreams(size_t deque_index)
 {
   this->all_ensembles[deque_index].close_ofstreams();
 }
+
+// Adaptive summary (dev/plan.md 2.6a): only when smcfixed, where the adaptive
+// part leaves log_likelihood as the smcfixed part set it.
+int EnsembleKalmanOutput::adaptive_summary_size() const
+{
+  return this->estimator->smcfixed_flag ? 1 : -1;
+}
+
+void EnsembleKalmanOutput::adaptive_summary(double *values) const
+{
+  values[0] = this->log_likelihood;
+}
+
+double EnsembleKalmanOutput::smcadaptive_from_summary(const double *values,
+                                     const Parameters &parameters) const
+{
+  return values[0];
+}
+
 }

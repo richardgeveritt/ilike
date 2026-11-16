@@ -76,6 +76,11 @@ arma::colvec SequentialSMCWorker::get_unnormalised_log_incremental_weights() con
   return this->log_unnormalised_incremental_weights;
 }
 
+void SequentialSMCWorker::set_unnormalised_log_incremental_weights(const arma::colvec &weights)
+{
+  this->log_unnormalised_incremental_weights = weights;
+}
+
 void SequentialSMCWorker::specific_simulate(Particles* next_particles)
 {
   RandomNumberGenerator local_rng(*this->get_rng());

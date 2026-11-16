@@ -185,4 +185,36 @@ void ABCLikelihoodEstimatorOutput::close_ofstreams()
   this->estimator->h5_file_path.clear();
 }
 
+
+// Adaptive summary (dev/plan.md 2.6a): the distance and scale constant found
+// in the smcfixed part; the kernel at the current tolerance is then
+// evaluate_kernel_given_distance. When smcfixed, the value itself.
+int ABCLikelihoodEstimatorOutput::adaptive_summary_size() const
+{
+  return this->estimator->smcfixed_flag ? 1 : 2;
+}
+
+void ABCLikelihoodEstimatorOutput::adaptive_summary(double *values) const
+{
+  if (this->estimator->smcfixed_flag)
+  {
+    values[0] = this->log_likelihood;
+  }
+  else
+  {
+    values[0] = this->distance;
+    values[1] = this->scale_constant;
+  }
+}
+
+double ABCLikelihoodEstimatorOutput::smcadaptive_from_summary(const double *values,
+                                                              const Parameters &parameters) const
+{
+  if (this->estimator->smcfixed_flag)
+    return values[0];
+  return this->estimator->abc_kernel->evaluate_kernel_given_distance(parameters,
+                                                                     values[0],
+                                                                     values[1]);
+}
+
 }

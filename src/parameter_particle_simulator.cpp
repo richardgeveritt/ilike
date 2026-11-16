@@ -324,6 +324,39 @@ Particle ParameterParticleSimulator::subsample_simulate(RandomNumberGenerator &r
  }
  */
 
+void ParameterParticleSimulator::simulate_into(RandomNumberGenerator &rng,
+                                               Particle &target,
+                                               const Factors* factors,
+                                               const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                                               const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for,
+                                               const Parameters &sequencer_parameters) const
+{
+  // as simulate(...): Particle(simulated, factors, ..., sequencer_parameters)
+  target.refill(this->proposal->independent_simulate(rng),
+                factors,
+                proposals_to_transform_for,
+                proposals_to_find_gradient_for,
+                sequencer_parameters);
+}
+
+void ParameterParticleSimulator::simulate_into(RandomNumberGenerator &rng,
+                                               Particle &target,
+                                               const Factors* factors,
+                                               const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                                               const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for,
+                                               const Parameters &conditioned_on_parameters,
+                                               const Parameters &sequencer_parameters) const
+{
+  // as simulate(..., conditioned_on_parameters, sequencer_parameters)
+  target.refill(this->proposal->independent_simulate(rng,
+                                                     conditioned_on_parameters),
+                factors,
+                proposals_to_transform_for,
+                proposals_to_find_gradient_for,
+                conditioned_on_parameters,
+                &sequencer_parameters);
+}
+
 double ParameterParticleSimulator::evaluate(const Particle &input) const
 {
   // could generalise to evaluating the proposals for the likelihoodestimators

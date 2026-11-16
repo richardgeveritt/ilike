@@ -399,6 +399,23 @@ protected:
    * @param another The SMCOutput instance to copy from.
    */
   void make_copy(const SMCMCMCMove &another);
+
+  // MCMC moves on flat generations (dev/plan.md 2.6a, G3). When every factor
+  // can be restored from its adaptive summary, the moved generation is kept
+  // as numbers: every stored chain state (as the per-particle MCMC outputs
+  // would have stored them), each chain's final state and that state's
+  // adaptive summary. A move then loads its ancestor into one reused
+  // particle object (from the numbers, or by copy from a rich generation),
+  // runs the chain in place and appends the results. The random numbers and
+  // every value are those of the per-particle path (one chunk); chunks of
+  // chunk_size particles use their own streams, as in importance sampling.
+  bool can_move_flat() const;
+  void move_flat(Particles* next_particles,
+                 Particles* current_particles);
+  void restore_particle(Particle &particle,
+                        const Particles &generation,
+                        size_t row,
+                        const Parameters &restore_parameters) const;
   
   // Stored here.
   /** @brief The mcmc. */

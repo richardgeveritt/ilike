@@ -192,6 +192,7 @@ public:
    * @return The result.
    */
   arma::colvec get_unnormalised_log_incremental_weights() const;
+  void set_unnormalised_log_incremental_weights(const arma::colvec &weights);
   
 protected:
   

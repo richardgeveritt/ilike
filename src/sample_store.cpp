@@ -255,6 +255,50 @@ Parameters SampleStore::parameters_at(size_t i) const
   return output;
 }
 
+void SampleStore::assign_into(size_t i, Parameters &target) const
+{
+  if (i >= this->number_of_points)
+    Rcpp::stop("SampleStore::assign_into: index out of range.");
+  const double *column = this->values.colptr(i);
+  for (size_t k = 0; k < this->vector_names.size(); ++k)
+  {
+    const std::string &name = this->vector_names[k];
+    arma::uword n_rows = this->vector_n_rows[k];
+    arma::uword n_cols = this->vector_n_cols[k];
+    arma::mat* destination = NULL;
+    bool found = false;
+    for (auto v = target.vector_begin(); v != target.vector_end(); ++v)
+    {
+      if (v->first != name)
+        continue;
+      found = true;
+      if (v->second.second)
+        break; // fixed: not ours to write
+      if ((v->second.first.use_count() != 1) ||
+          (v->second.first->n_rows != n_rows) || (v->second.first->n_cols != n_cols))
+        v->second.first = std::make_shared<arma::mat>(n_rows, n_cols);
+      destination = v->second.first.get();
+      break;
+    }
+    if (!found)
+    {
+      target[name] = arma::mat(n_rows, n_cols);
+      destination = &target[name];
+    }
+    if (destination == NULL)
+      continue;
+    // element order of as_row(): row by row
+    size_t offset = this->vector_offsets[k];
+    for (arma::uword r = 0; r < n_rows; ++r)
+      for (arma::uword c = 0; c < n_cols; ++c)
+        (*destination)(r, c) = column[offset++];
+  }
+  for (size_t k = 0; k < this->any_names.size(); ++k)
+  {
+    target(this->any_names[k]) = this->any_values[k][i];
+  }
+}
+
 double SampleStore::extra_at(size_t i, size_t j) const
 {
   if ((i >= this->number_of_points) || (j >= this->number_of_extra_columns))

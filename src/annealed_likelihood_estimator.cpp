@@ -125,5 +125,14 @@ void AnnealedLikelihoodEstimator::specific_change_data(Data* new_data)
 {
   this->estimator->change_data_with_raw_pointer(new_data);
 }
+
+bool AnnealedLikelihoodEstimator::supports_restore_from_summary() const
+{
+  // the summary is the inner output's value (inner smcfixed) or the inner
+  // output's own summary; either way restoring the inner output restores it
+  return (this->estimator!=NULL) &&
+    this->estimator->supports_restore_from_summary();
+}
+
 }
 

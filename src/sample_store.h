@@ -74,6 +74,14 @@ public:
   // The stored point at index i, rebuilt as a Parameters object.
   Parameters parameters_at(size_t i) const;
 
+  // Write the stored point at index i into target (dev/plan.md 2.6a, G3):
+  // a variable that target holds as fixed is left alone (it is shared with
+  // whoever owns it, e.g. the SMC sequence variables); a matrix that target
+  // owns alone and that has the right shape is overwritten in place; any
+  // other is replaced by a new matrix (so that no matrix shared with another
+  // Parameters is changed); missing variables are added.
+  void assign_into(size_t i, Parameters &target) const;
+
   // Extra value j of point i.
   double extra_at(size_t i, size_t j) const;
 

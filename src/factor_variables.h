@@ -200,6 +200,29 @@ public:
                                         const Parameters &new_parameters,
                                         const Index* new_outputs_index) { return false; }
 
+  // Adaptive summaries over the factors of an index (dev/plan.md 2.6a, G2):
+  // smcadaptive_from_summary returns exactly what
+  // evaluate_smcadaptive_part_given_smcfixed_likelihoods(index) would (the
+  // sum over the index of each output's value, in index order). Size -1 (the
+  // default): not available.
+  virtual int adaptive_summary_size(const Index* index) const { return -1; }
+  virtual void adaptive_summary(const Index* index, double* values) const {}
+  virtual double smcadaptive_from_summary(const Index* index,
+                                          const double* values,
+                                          const Parameters &parameters) const
+  {
+    Rcpp::stop("FactorVariables::smcadaptive_from_summary: not available.");
+  }
+
+  // Put the outputs in the state of a particle whose factors of index were
+  // last evaluated with this adaptive summary (restore_from_summary at
+  // parameters) and whose factors of other_index are new (reinitialise);
+  // false if not possible (dev/plan.md 2.6a, G3). Default: not possible.
+  virtual bool restore_from_summary(const Index* index,
+                                    const Index* other_index,
+                                    const double* values,
+                                    const Parameters &parameters) { return false; }
+
   virtual bool has_compact_values() const { return false; }
   virtual size_t number_of_compact_values() const { return 0; }
   virtual void compact_values(double *values) const {}

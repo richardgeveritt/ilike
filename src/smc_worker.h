@@ -95,6 +95,14 @@ public:
    * @param seed_in The seed.
    */
   void set_seed(size_t seed_in);
+
+  // Use these as the incremental log weights of the current weighting (for a
+  // generation whose weights were computed while it was simulated in chunks,
+  // dev/plan.md 2.6a). Default: not supported.
+  virtual void set_unnormalised_log_incremental_weights(const arma::colvec &weights)
+  {
+    Rcpp::stop("SMCWorker::set_unnormalised_log_incremental_weights: not available for this worker.");
+  }
   
   /**
    * @brief Simulates the required variables.

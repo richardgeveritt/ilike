@@ -93,6 +93,15 @@ public:
    * @return The result.
    */
   virtual FactorVariables* simulate_factor_variables(const Parameters &simulated_parameters) const=0;
+
+  // True if every estimator of the index supports flat generations
+  // (LikelihoodEstimator::supports_flat_generations). Default: false.
+  virtual bool supports_flat_generations(const Index* index) const { return false; }
+
+  // True if every factor is in index or in other_index (other_index may be
+  // NULL), the estimators of index support restore_from_summary and those of
+  // other_index support reinitialise (dev/plan.md 2.6a, G3). Default: false.
+  virtual bool supports_flat_moves(const Index* index, const Index* other_index) const { return false; }
   
   /*
    virtual FactorVariables* simulate_factor_variables(const Parameters &simulated_parameters,

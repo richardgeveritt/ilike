@@ -161,6 +161,12 @@ public:
    * @return The result.
    */
   LikelihoodEstimatorOutput* initialise();
+
+  // the model is evaluated without random numbers; a summary exists when
+  // smcfixed (dev/plan.md 2.6a)
+  bool supports_flat_generations() const { return this->smcfixed_flag; }
+  bool supports_restore_from_summary() const { return this->smcfixed_flag; }
+  bool supports_reinitialise() const { return true; }
   /**
    * @brief Initialises the estimator with given parameters and returns an output object.
    *

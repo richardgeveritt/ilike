@@ -9,6 +9,7 @@ using namespace Rcpp;
 //using namespace RcppParallel;
 
 #include "particle.h"
+#include "sample_store.h"
 #include "distributions.h"
 
 namespace ilike
@@ -29,6 +30,8 @@ class SMC;
 class SequentialSMCWorker;
 class MoveOutput;
 class Factors;
+class FactorVariables;
+class Index;
 
 class Particles
 {
@@ -312,6 +315,62 @@ public:
   
   // NaN until computed (MCMC output used to write uninitialised memory here).
   double ess = arma::datum::nan;
+
+  // Flat form of a generation (dev/plan.md 2.6a): the points kept as numbers
+  // instead of one MoveOutput (a rich Particle) each. Used by algorithms that
+  // simulate and weight a generation in chunks with reused particle objects
+  // (chunked importance sampling). In the flat form `particles` is empty, and
+  // the accessors that hand out a rich particle (operator[], back()) stop, so
+  // that a reader the flat form does not serve is found by a message.
+  //  - flat_points: the variables of every point (and, as extra columns, the
+  //    compact factor records, when the factor output is to be written and
+  //    every factor has one);
+  //  - flat_factor_variables: when the factor output is to be written but a
+  //    factor has no compact record, each point's factor variables, kept whole
+  //    (owned; detached from any particle);
+  //  - flat_record_writer: a factor-variables object of the same factors, used
+  //    only to write the compact records (owned);
+  //  - flat_incremental_log_weights: each point's incremental log weight at
+  //    the generation's target (what weight_for_adapting_sequence returns).
+  bool flat = false;
+  size_t flat_size = 0;
+  SampleStore flat_points;
+  std::vector<FactorVariables*> flat_factor_variables;
+  FactorVariables* flat_record_writer = NULL;
+  arma::colvec flat_incremental_log_weights;
+  //  - for a generation made by MCMC moves (dev/plan.md 2.6a, G3):
+  //    flat_points holds every stored chain state, particle by particle,
+  //    flat_output_lengths the number stored for each particle, and
+  //    flat_final_points the final state of each particle's chain (from
+  //    which the next moves start, with the adaptive summaries below).
+  std::vector<double> flat_output_lengths;
+  SampleStore flat_final_points;
+  bool is_flat() const { return this->flat; }
+  void clear_flat();
+
+  // Adaptive summaries of this generation's points (dev/plan.md 2.6a, G2):
+  // each point's adaptive summary over an index (one column per point) and
+  // its previous_target_evaluated, so that weights at a trial target are a
+  // loop over these numbers (SMC::weight_from_summaries_if_possible).
+  // Extracted once, on first use, from the rich particles (whose factor
+  // values must be up to date); for a flat generation, filled while it is
+  // simulated. Derived data: not copied (a copy extracts them again).
+  //  - adaptive_summary_state: 0 not tried, 1 available, -1 not available;
+  //  - adaptive_summary_evaluator: factor variables of the same factors used
+  //    to evaluate summaries (one of the particles', or flat_summary_evaluator);
+  //  - adaptive_summaries_used / last_trial_schedule: weights were last
+  //    computed from summaries, at these schedule parameters (so that the
+  //    particles' cached values can be brought to that state afterwards).
+  arma::mat adaptive_summaries;
+  arma::colvec adaptive_previous_targets;
+  const Index* adaptive_summary_index = NULL;
+  int adaptive_summary_state = 0;
+  const FactorVariables* adaptive_summary_evaluator = NULL;
+  FactorVariables* flat_summary_evaluator = NULL; // owned
+  bool adaptive_summaries_used = false;
+  Parameters last_trial_schedule;
+  bool prepare_adaptive_summaries(const Index* index);
+  void forget_adaptive_summaries();
   
   /**
    * @brief Closes any open file streams.

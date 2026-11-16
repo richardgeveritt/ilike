@@ -210,6 +210,10 @@ namespace ilike
                        const std::string &index = "");
 
     size_t compact_size() const;
+  int adaptive_summary_size() const;
+  void adaptive_summary(double *values) const;
+  double smcadaptive_from_summary(const double *values,
+                                  const Parameters &parameters) const;
     void compact_values(double *values) const;
     void write_compact_values(const std::string &directory_name,
                               const std::string &index,

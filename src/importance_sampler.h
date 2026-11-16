@@ -215,6 +215,28 @@ namespace ilike
 
   protected:
     SMCOutput *specific_run();
+
+    // Chunked importance sampling (dev/plan.md 2.6a, G1): when the target is
+    // fixed, the points are simulated and weighted in chunks of chunk_size
+    // with one set of reused particle objects, and the generation is kept in
+    // flat form (numbers) instead of one rich particle per point.
+    bool can_run_in_chunks() const;
+    void simulate_and_weight_in_chunks(SMCOutput *current_state);
+
+    // The same for a run conditioned on parameters whose target may change
+    // after simulation (dev/plan.md 2.6a, G2: the importance sampler inside
+    // an ABC likelihood, reweighted at every new tolerance): each point's
+    // smcfixed part is evaluated as soon as it is simulated and its adaptive
+    // summary kept, so that the generation is flat and every weighting is
+    // done from the summaries.
+    bool can_run_flat_conditioned() const;
+
+    // The chunk loop. conditioned_on_parameters: NULL for an unconditioned
+    // run. summarise: keep adaptive summaries (otherwise the weights at the
+    // fixed target).
+    void simulate_in_chunks(SMCOutput *current_state,
+                            const Parameters* conditioned_on_parameters,
+                            bool summarise);
     // SMCOutput* specific_run(const std::string &directory_name);
 
     SMCOutput *specific_initialise_smc();

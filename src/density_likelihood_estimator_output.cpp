@@ -294,4 +294,22 @@ void DensityLikelihoodEstimatorOutput::close_ofstreams()
   this->estimator->h5_file.reset();
   this->estimator->h5_file_path.clear();
 }
+
+// Adaptive summary (dev/plan.md 2.6a): only when smcfixed (the cached value).
+int DensityLikelihoodEstimatorOutput::adaptive_summary_size() const
+{
+  return this->estimator->smcfixed_flag ? 1 : -1;
+}
+
+void DensityLikelihoodEstimatorOutput::adaptive_summary(double *values) const
+{
+  values[0] = this->log_likelihood_smcfixed_part;
+}
+
+double DensityLikelihoodEstimatorOutput::smcadaptive_from_summary(const double *values,
+                                                                  const Parameters &parameters) const
+{
+  return values[0];
+}
+
 }

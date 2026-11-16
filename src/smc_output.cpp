@@ -2,6 +2,7 @@
 #include <numeric>
 #include <sstream>
 #include "smc_output.h"
+#include "factor_variables.h"
 #include "smc.h"
 #include "importance_sampler.h"
 #include "smc_mcmc_move.h"
@@ -459,6 +460,9 @@ void SMCOutput::compact()
     size_t total = size_t(arma::accu(ol));
     generation.points_transposed.set_size(ncols, total);
     size_t column = 0;
+    if (particles.is_flat() && (total > 0))
+      particles.flat_points.fill_transposed(this->estimator->vector_variables,
+                                            generation.points_transposed, 0);
     for (auto &p : particles.particles)
       column += p->fill_vector_points_transposed(this->estimator->vector_variables,
                                                  generation.points_transposed, column);
@@ -632,6 +636,13 @@ void SMCOutput::write_to_file(const std::string &dir_name,
           // one column per point; written as a (points x columns) dataset
           arma::mat combined_transposed(ncols, total_rows);
           size_t column_offset = 0;
+          if (this->all_particles[deque_index].is_flat())
+          {
+            this->all_particles[deque_index].flat_points.fill_transposed(this->estimator->vector_variables,
+                                                                         combined_transposed,
+                                                                         0);
+            column_offset = total_rows;
+          }
           for (auto& p : this->all_particles[deque_index].particles)
           {
             size_t remaining = total_rows - column_offset;
@@ -674,12 +685,43 @@ void SMCOutput::write_to_file(const std::string &dir_name,
       {
         make_directory(smc_iteration_directory);
       }
+      Particles &generation = this->all_particles[deque_index];
+      if (generation.is_flat())
+      {
+        // as write_factors would have written for each particle
+        if (generation.flat_record_writer!=NULL)
+        {
+          // each particle's stored points in turn (one for importance
+          // sampling, a chain's stored states after MCMC moves), all under
+          // the particle's index
+          arma::rowvec lengths = generation.get_output_lengths();
+          size_t row = 0;
+          for (size_t i = 0; i<generation.size(); ++i)
+          {
+            std::string particle_index = std::to_string(i);
+            for (size_t j = 0; j<size_t(lengths[i]); ++j, ++row)
+              generation.flat_record_writer->write_compact_values(smc_iteration_directory,
+                                                                  particle_index,
+                                                                  generation.flat_points.extras_of(row));
+          }
+        }
+        else if (generation.flat_factor_variables.size()==generation.size())
+        {
+          for (size_t i = 0; i<generation.size(); ++i)
+            generation.flat_factor_variables[i]->write_to_file(smc_iteration_directory,
+                                                              std::to_string(i));
+        }
+        else if (generation.size()>0)
+        {
+          Rcpp::stop("SMCOutput::write_to_file: the factor outputs of this generation were not kept.");
+        }
+      }
       for (size_t i = 0;
-           i<this->all_particles[deque_index].particles.size();
+           i<generation.particles.size();
            ++i)
       {
-        this->all_particles[deque_index].particles[i]->write_factors(smc_iteration_directory,
-                                                                     std::to_string(i));
+        generation.particles[i]->write_factors(smc_iteration_directory,
+                                               std::to_string(i));
       }
       }
       
@@ -776,4 +818,23 @@ void SMCOutput::print(std::ostream &os) const
    os << std::endl << ")" << std::endl;
    */
 }
+
+// Adaptive summary (dev/plan.md 2.6a): only when smcfixed, where the adaptive
+// part leaves log_likelihood as the smcfixed part set it.
+int SMCOutput::adaptive_summary_size() const
+{
+  return this->estimator->smcfixed_flag ? 1 : -1;
+}
+
+void SMCOutput::adaptive_summary(double *values) const
+{
+  values[0] = this->log_likelihood;
+}
+
+double SMCOutput::smcadaptive_from_summary(const double *values,
+                                     const Parameters &parameters) const
+{
+  return values[0];
+}
+
 }

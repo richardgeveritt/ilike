@@ -993,6 +993,56 @@ void Particle::simulate_ensemble_factor_variables()
   }
 }
 
+void Particle::refill(Parameters &&parameters_in,
+                      const Factors* factors_in,
+                      const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+                      const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in,
+                      const Parameters &conditioned_on_parameters,
+                      const Parameters* second_conditioned_on_parameters)
+{
+  // as the constructors: merge_with_fixed(conditioned) or
+  // merge_with_fixed(conditioned, sequencer)
+  this->parameters = std::move(parameters_in);
+  if (second_conditioned_on_parameters==NULL)
+    this->parameters.merge_with_fixed(conditioned_on_parameters);
+  else
+    this->parameters.merge_with_fixed(conditioned_on_parameters, *second_conditioned_on_parameters);
+
+  bool recycled = false;
+  if ((factors_in!=NULL) && (this->factor_variables!=NULL) &&
+      (this->factor_variables->get_factors()==factors_in))
+    recycled = this->factor_variables->recycle_all_outputs(factors_in, this->parameters);
+  if (!recycled)
+  {
+    if (this->factor_variables!=NULL)
+      delete this->factor_variables;
+    this->factor_variables = NULL;
+    if (factors_in!=NULL)
+      this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
+  }
+  if (this->factor_variables!=NULL)
+    this->factor_variables->set_particle(this);
+  if (this->ensemble_factor_variables!=NULL)
+  {
+    delete this->ensemble_factor_variables;
+    this->ensemble_factor_variables = NULL;
+  }
+
+  // as a new Particle
+  this->current_proposal_store.clear();
+  this->accepted_outputs.clear();
+  this->previous_self = NULL;
+  this->simulate_proposal_variables(proposals_to_transform_for_in, proposals_to_find_gradient_for_in);
+  this->previous_target_evaluated = 0.0;
+  this->target_evaluated = 0.0;
+  this->subsample_previous_target_evaluated = 0.0;
+  this->subsample_target_evaluated = 0.0;
+  this->previous_ensemble_target_evaluated = 0.0;
+  this->subsample_previous_ensemble_target_evaluated = 0.0;
+  this->ensemble_target_evaluated = 0.0;
+  this->subsample_ensemble_target_evaluated = 0.0;
+}
+
 void Particle::simulate_proposal_variables(const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
                                            const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in)
 {

@@ -77,6 +77,10 @@ public:
    * @return The result.
    */
   LikelihoodEstimatorOutput* initialise();
+
+  // the distance is found without random numbers (the simulation is done
+  // when the point is simulated); summary: the distance (dev/plan.md 2.6a)
+  bool supports_flat_generations() const { return true; }
   /**
    * @brief Initialises the estimator with given parameters and returns an output object.
    *

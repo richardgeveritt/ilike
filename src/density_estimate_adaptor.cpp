@@ -40,6 +40,10 @@ SMCAdaptor* DensityEstimateAdaptor::duplicate() const
 
 void DensityEstimateAdaptor::smc_adapt(SMCOutput* current_state)
 {
+  // reads the generation's particles one by one: not available for a
+  // generation stored flat (dev/plan.md 2.6a; no adaptor is set from R)
+  if (current_state->back().is_flat())
+    Rcpp::stop("DensityEstimateAdaptor::smc_adapt: not available for a generation stored flat.");
 }
 
 void DensityEstimateAdaptor::ensemble_adapt(EnsembleKalmanOutput* current_state)

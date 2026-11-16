@@ -5000,6 +5000,9 @@ ImportanceSampler *get_importance_sampler(
 static void apply_output_options(const List &model, SMC *alg) {
   if (model.containsElementNamed("write_factor_output"))
     alg->set_write_factor_output(as<bool>(model["write_factor_output"]));
+  // testing switch: never keep a generation in flat form (dev/plan.md 2.6a)
+  if (model.containsElementNamed("force_rich_generations"))
+    alg->set_force_rich_generations(as<bool>(model["force_rich_generations"]));
 }
 
 // [[Rcpp::export]]
@@ -5020,6 +5023,9 @@ double do_importance_sampler(const List &model, const List &parameters,
       data_created_in_measurement_covariance_estimators);
 
   apply_output_options(model, alg);
+  // nothing will be written: the factor outputs need not be kept
+  if (strcmp(results_name_in.get_cstring(), "") == 0)
+    alg->set_write_factor_output(false);
 
   SMCOutput *output = alg->run();
 

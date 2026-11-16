@@ -198,4 +198,35 @@ void ExactLikelihoodEstimatorOutput::close_ofstreams()
   this->estimator->h5_file.reset();
   this->estimator->h5_file_path.clear();
 }
+
+// Adaptive summary (dev/plan.md 2.6a): when the estimator is smcfixed the
+// adaptive part is the cached smcfixed value; otherwise the model is
+// evaluated again at the new target (no summary).
+int ExactLikelihoodEstimatorOutput::adaptive_summary_size() const
+{
+  return this->estimator->smcfixed_flag ? 1 : -1;
+}
+
+void ExactLikelihoodEstimatorOutput::adaptive_summary(double *values) const
+{
+  values[0] = this->log_likelihood_smcfixed_part;
+}
+
+double ExactLikelihoodEstimatorOutput::smcadaptive_from_summary(const double *values,
+                                                                const Parameters &parameters) const
+{
+  return values[0];
+}
+
+
+void ExactLikelihoodEstimatorOutput::restore_from_summary(const double *values,
+                                                         const Parameters &parameters)
+{
+  // after evaluate_smcfixed_part and evaluate_smcadaptive_part_given_smcfixed
+  // of an smcfixed estimator: both parts hold the model's value
+  this->reinitialise(parameters);
+  this->log_likelihood_smcfixed_part = values[0];
+  this->log_likelihood = values[0];
+}
+
 }

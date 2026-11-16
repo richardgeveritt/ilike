@@ -175,6 +175,10 @@ public:
    * @param conditioned_on_parameters The conditioned on parameters.
    */
   void evaluate_smcadaptive_part_given_smcfixed(const Parameters &conditioned_on_parameters);
+  int adaptive_summary_size() const;
+  void adaptive_summary(double *values) const;
+  double smcadaptive_from_summary(const double *values,
+                                  const Parameters &parameters) const;
   
   
   /**

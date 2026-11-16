@@ -20,7 +20,7 @@ IS(
   verify_cpp_function_types = FALSE,
   keep_temporary_recipe_code = FALSE,
   seed = NULL,
-  grain_size = 1e+05
+  grain_size = 256
 )
 }
 \arguments{
@@ -54,7 +54,7 @@ IS(
 
 \item{seed}{(optional) The seed for the random number generator.}
 
-\item{grain_size}{(optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).}
+\item{grain_size}{(optional) The number of points simulated and weighted together (default 256). Each chunk of points has its own random-number stream, determined by the seed and the chunk's position, so results depend on the seed and on grain_size (and will not depend on whether the run is parallel). Larger chunks use more memory when the likelihood is estimated by an inner algorithm (each point of a chunk keeps its inner particles until the chunk is weighted); a chunk larger than the number of points gives the results of a single generation.}
 }
 \value{
 Estimate of the marginal likelihood.

@@ -42,6 +42,8 @@ public:
 
   void set_write_factor_output(bool write_factor_output_in) { this->write_factor_output = write_factor_output_in; }
   void set_compact_stored_output(bool compact_stored_output_in) { this->compact_stored_output = compact_stored_output_in; }
+  void set_chunk_size(size_t chunk_size_in) { this->chunk_size = chunk_size_in; }
+  void set_force_rich_generations(bool force_rich_generations_in) { this->force_rich_generations = force_rich_generations_in; }
   
   /**
    * @brief Performs the smc operation.
@@ -252,6 +254,20 @@ public:
   //EvaluateLogDistributionPtr evaluate_log_proposal;
   
 protected:
+
+  // Weighting at a trial target from adaptive summaries (dev/plan.md 2.6a,
+  // G2): the incremental log weights of current_particles at the sequencer's
+  // current schedule parameters, computed from the generation's summaries
+  // when every factor of the index has one (otherwise the worker's rich
+  // pass, as before). The weights are bit-for-bit those of the rich pass
+  // (same expressions, same order of summation); only the particles' cached
+  // factor values are not touched, so after the target has been chosen,
+  // finish_weighting_from_summaries brings them to the state the rich passes
+  // would have left them in (one rich pass at the last trial's values).
+  void weight_from_summaries_if_possible(const Index* index,
+                                         Particles &current_particles);
+  void finish_weighting_from_summaries(const Index* index,
+                                       Particles &current_particles);
   
   /**
    * @brief Class-specific implementation for change data.
@@ -495,6 +511,15 @@ protected:
   // and written concatenated over the outer points (dev/plan.md, nested
   // output design).
   bool compact_stored_output = false;
+
+  // Chunked generations (dev/plan.md 2.6a): the number of points simulated
+  // and weighted together with one set of reused particle objects and one
+  // random-number stream (the R argument grain_size); 0 = the whole
+  // generation. Results depend on it (not on whether a run is parallel).
+  size_t chunk_size = 0;
+
+  // Testing switch (recipe$force_rich_generations): never use the flat form.
+  bool force_rich_generations = false;
 
   //Parameters single_particle_is_step() const;
   

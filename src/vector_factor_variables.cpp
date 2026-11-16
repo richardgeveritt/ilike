@@ -584,6 +584,31 @@ void VectorFactorVariables::forget_you_were_already_written_to_file()
   }
 }
 
+bool VectorFactorVariables::recycle_all_outputs(const Factors* factors,
+                                                const Parameters &new_parameters)
+{
+  // what factors->simulate_factor_variables(new_parameters) returns: every
+  // output initialised and simulated at new_parameters. All outputs are
+  // reinitialised before any is simulated, so that a failure (an output that
+  // cannot be reused) happens before any random numbers are used: the caller
+  // then makes new objects, which use exactly the random numbers new objects
+  // would.
+  if ((factors == NULL) || (factors != this->vector_factors))
+    return false;
+  for (size_t i=0; i<this->likelihood_estimator_outputs.size(); ++i)
+  {
+    LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[i];
+    if ((output == NULL) || !output->reinitialise(new_parameters))
+      return false;
+  }
+  for (size_t i=0; i<this->likelihood_estimator_outputs.size(); ++i)
+  {
+    this->likelihood_estimator_outputs[i]->simulate(new_parameters);
+    this->likelihood_estimator_outputs[i]->write_to_file_flag = false;
+  }
+  return true;
+}
+
 bool VectorFactorVariables::recycle_with_new_outputs(const FactorVariables* source_in,
                                                      const Parameters &new_parameters,
                                                      const Index* new_outputs_index)
@@ -613,6 +638,80 @@ bool VectorFactorVariables::recycle_with_new_outputs(const FactorVariables* sour
     else if (output != NULL)
     {
       return false;
+    }
+  }
+  return true;
+}
+
+int VectorFactorVariables::adaptive_summary_size(const Index* index) const
+{
+  if (index==NULL)
+    return -1;
+  int size = 0;
+  for (auto i=index->begin(); i!=index->end(); ++i)
+  {
+    const LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i];
+    if (output==NULL)
+      return -1;
+    int n = output->adaptive_summary_size();
+    if (n < 0)
+      return -1;
+    size = size + n;
+  }
+  return size;
+}
+
+void VectorFactorVariables::adaptive_summary(const Index* index, double* values) const
+{
+  size_t offset = 0;
+  for (auto i=index->begin(); i!=index->end(); ++i)
+  {
+    const LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i];
+    output->adaptive_summary(values + offset);
+    offset = offset + size_t(output->adaptive_summary_size());
+  }
+}
+
+double VectorFactorVariables::smcadaptive_from_summary(const Index* index,
+                                                       const double* values,
+                                                       const Parameters &parameters) const
+{
+  // as evaluate_smcadaptive_part_given_smcfixed_likelihoods: the same sum in
+  // the same order
+  double result = 0.0;
+  size_t offset = 0;
+  for (auto i=index->begin(); i!=index->end(); ++i)
+  {
+    const LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i];
+    result = result + output->smcadaptive_from_summary(values + offset, parameters);
+    offset = offset + size_t(output->adaptive_summary_size());
+  }
+  return result;
+}
+
+bool VectorFactorVariables::restore_from_summary(const Index* index,
+                                                const Index* other_index,
+                                                const double* values,
+                                                const Parameters &parameters)
+{
+  size_t offset = 0;
+  for (auto i=index->begin(); i!=index->end(); ++i)
+  {
+    LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i];
+    if (output==NULL)
+      return false;
+    output->restore_from_summary(values + offset, parameters);
+    offset = offset + size_t(output->adaptive_summary_size());
+  }
+  if (other_index!=NULL)
+  {
+    for (auto i=other_index->begin(); i!=other_index->end(); ++i)
+    {
+      LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i];
+      if ((output==NULL) || !output->reinitialise(this->particle->parameters))
+        return false;
+      output->simulate(this->particle->parameters);
+      output->write_to_file_flag = false;
     }
   }
   return true;

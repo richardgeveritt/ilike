@@ -166,6 +166,12 @@ protected:
 
   
   size_t compact_size() const;
+  int adaptive_summary_size() const;
+  void adaptive_summary(double *values) const;
+  double smcadaptive_from_summary(const double *values,
+                                  const Parameters &parameters) const;
+  void restore_from_summary(const double *values,
+                            const Parameters &parameters);
   
   void compact_values(double *values) const;
   

@@ -160,6 +160,20 @@ public:
                                 const Parameters &new_parameters,
                                 const Index* new_outputs_index);
 
+  bool recycle_all_outputs(const Factors* factors,
+                           const Parameters &new_parameters);
+
+  int adaptive_summary_size(const Index* index) const;
+  void adaptive_summary(const Index* index, double* values) const;
+  double smcadaptive_from_summary(const Index* index,
+                                  const double* values,
+                                  const Parameters &parameters) const;
+
+  bool restore_from_summary(const Index* index,
+                            const Index* other_index,
+                            const double* values,
+                            const Parameters &parameters);
+
   bool has_compact_values() const;
   size_t number_of_compact_values() const;
   void compact_values(double *values) const;

@@ -218,6 +218,8 @@ void SMC::make_copy(const SMC &another)
 {
   this->write_factor_output = another.write_factor_output;
   this->compact_stored_output = another.compact_stored_output;
+  this->chunk_size = another.chunk_size;
+  this->force_rich_generations = another.force_rich_generations;
 
   if (another.the_worker!=NULL)
     this->the_worker = another.the_worker->duplicate();
@@ -461,6 +463,63 @@ void SMC::setup_variables(const Parameters &parameters)
  }
  }
  */
+
+void SMC::weight_from_summaries_if_possible(const Index* index,
+                                            Particles &current_particles)
+{
+  if (this->force_rich_generations ||
+      (dynamic_cast<SequentialSMCWorker*>(this->the_worker) == NULL) ||
+      !current_particles.prepare_adaptive_summaries(index))
+  {
+    this->the_worker->smcadaptive_given_smcfixed_weight(index, current_particles);
+    return;
+  }
+  // as SequentialSMCWorker::smcadaptive_given_smcfixed_weight
+  size_t n = current_particles.size();
+  arma::colvec weights(n);
+  const FactorVariables* evaluator = current_particles.adaptive_summary_evaluator;
+  const Parameters &schedule_parameters = this->sequencer.schedule_parameters;
+  for (size_t i = 0; i < n; ++i)
+  {
+    double a = evaluator->smcadaptive_from_summary(index,
+                                                   current_particles.adaptive_summaries.colptr(i),
+                                                   schedule_parameters);
+    double b = current_particles.adaptive_previous_targets[i];
+    if (a==-arma::datum::inf)
+      weights[i] = -arma::datum::inf;
+    else
+      weights[i] = a - b;
+  }
+  this->the_worker->set_unnormalised_log_incremental_weights(weights);
+  current_particles.adaptive_summaries_used = true;
+  current_particles.last_trial_schedule = schedule_parameters.deep_copy();
+}
+
+// Write the values of `values` into the matrices of `target` (in place: the
+// particles share the sequencer's schedule-variable matrices).
+static void assign_schedule_values(Parameters &target, const Parameters &values)
+{
+  std::vector<std::string> names = values.get_vector_variables();
+  for (auto i = names.begin(); i != names.end(); ++i)
+    target[*i] = values[*i];
+}
+
+void SMC::finish_weighting_from_summaries(const Index* index,
+                                          Particles &current_particles)
+{
+  if (!current_particles.adaptive_summaries_used)
+    return;
+  // a flat generation has no cached values to bring up to date; it keeps
+  // last_trial_schedule, at which its next moves restore its factor values
+  if (current_particles.is_flat())
+    return;
+  current_particles.adaptive_summaries_used = false;
+  Parameters chosen = this->sequencer.schedule_parameters.deep_copy();
+  assign_schedule_values(this->sequencer.schedule_parameters, current_particles.last_trial_schedule);
+  this->the_worker->smcadaptive_given_smcfixed_weight(index, current_particles);
+  current_particles.update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
+  assign_schedule_values(this->sequencer.schedule_parameters, chosen);
+}
 
 void SMC::simulate_proposal(SMCOutput* current_state)
 {

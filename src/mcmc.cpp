@@ -1,4 +1,5 @@
 #include "mcmc.h"
+#include "mcmc_termination.h"
 #include "iterations_mcmc_termination.h"
 #include "move_output.h"
 #include "standard_mcmc_output.h"
@@ -198,6 +199,13 @@ MoveOutput* MCMC::run(RandomNumberGenerator &rng,
   mcmc_output->set_current(std::move(current_particle));
   mcmc_output->reset_counter();
   return mcmc_output;
+}
+
+size_t MCMC::known_number_of_iterations() const
+{
+  if (this->termination==NULL)
+    return 0;
+  return this->termination->get_known_number_of_iterations();
 }
 
 void MCMC::set_thin(size_t thin_in)

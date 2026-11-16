@@ -143,6 +143,22 @@ public:
    * @return The result.
    */
   bool get_smcfixed_flag() const;
+
+  // True if this estimator's outputs can be kept in a flat generation
+  // (dev/plan.md 2.6a, G2): their smcfixed part uses no random numbers (so it
+  // may be evaluated as soon as a point is simulated without changing any
+  // random numbers) and they give adaptive summaries. Default: false.
+  virtual bool supports_flat_generations() const { return false; }
+
+  // For SMC generations kept flat between MCMC moves (dev/plan.md 2.6a, G3):
+  // supports_restore_from_summary: an output can be put back, from its
+  // adaptive summary, in the state it had after its last evaluation (the
+  // output's simulate uses no random numbers, so new output objects can be
+  // made for the purpose); supports_reinitialise: an output can be reset to
+  // a new one's state (LikelihoodEstimatorOutput::reinitialise). Default:
+  // neither.
+  virtual bool supports_restore_from_summary() const { return false; }
+  virtual bool supports_reinitialise() const { return false; }
   
   Parameters algorithm_parameters;
   

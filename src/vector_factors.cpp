@@ -143,6 +143,49 @@ LikelihoodEstimator* VectorFactors::get_likelihood_estimator(size_t i) const
   return this->likelihood_estimators[i];
 }
 
+bool VectorFactors::supports_flat_moves(const Index* index, const Index* other_index) const
+{
+  if (index==NULL)
+    return false;
+  std::vector<int> role(this->likelihood_estimators.size(), 0);
+  for (auto i=index->begin(); i!=index->end(); ++i)
+  {
+    if ((*i >= role.size()) || (this->likelihood_estimators[*i]==NULL) ||
+        !this->likelihood_estimators[*i]->supports_restore_from_summary())
+      return false;
+    role[*i] = 1;
+  }
+  if (other_index!=NULL)
+  {
+    for (auto i=other_index->begin(); i!=other_index->end(); ++i)
+    {
+      if ((*i >= role.size()) || (role[*i]!=0) || (this->likelihood_estimators[*i]==NULL) ||
+          !this->likelihood_estimators[*i]->supports_reinitialise())
+        return false;
+      role[*i] = 2;
+    }
+  }
+  for (auto r=role.begin(); r!=role.end(); ++r)
+  {
+    if (*r==0)
+      return false;
+  }
+  return true;
+}
+
+bool VectorFactors::supports_flat_generations(const Index* index) const
+{
+  if (index==NULL)
+    return false;
+  for (auto i=index->begin(); i!=index->end(); ++i)
+  {
+    if ((*i >= this->likelihood_estimators.size()) || (this->likelihood_estimators[*i]==NULL) ||
+        !this->likelihood_estimators[*i]->supports_flat_generations())
+      return false;
+  }
+  return true;
+}
+
 FactorVariables* VectorFactors::simulate_factor_variables(const Parameters &simulated_parameters) const
 {
   std::vector<LikelihoodEstimatorOutput*> outputs;

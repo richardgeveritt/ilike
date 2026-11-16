@@ -108,6 +108,10 @@ public:
    * @param parameters The parameters.
    */
   void evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters);
+  int adaptive_summary_size() const;
+  void adaptive_summary(double *values) const;
+  double smcadaptive_from_summary(const double *values,
+                                  const Parameters &parameters) const;
   
   /**
    * @brief Performs the subsample simulate operation.

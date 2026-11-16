@@ -118,6 +118,21 @@ public:
    const Parameters &conditioned_on_parameters) const;
    */
   
+  void simulate_into(RandomNumberGenerator &rng,
+                     Particle &target,
+                     const Factors* factors,
+                     const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                     const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for,
+                     const Parameters &sequencer_parameters) const;
+
+  void simulate_into(RandomNumberGenerator &rng,
+                     Particle &target,
+                     const Factors* factors,
+                     const std::vector<const ProposalKernel*>* proposals_to_transform_for,
+                     const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for,
+                     const Parameters &conditioned_on_parameters,
+                     const Parameters &sequencer_parameters) const;
+
   double evaluate(const Particle &input) const;
   
   /**

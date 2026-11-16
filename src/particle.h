@@ -266,6 +266,19 @@ public:
    * @brief Simulates ensemble factor variables.
    */
   void simulate_ensemble_factor_variables();
+  // Make this particle what Particle(std::move(parameters_in), factors_in,
+  // proposals_to_transform_for_in, proposals_to_find_gradient_for_in,
+  // conditioned_on_parameters) would be, reusing its factor-variable and
+  // output objects where they support it (dev/plan.md 2.6a: the reused
+  // particle objects of a chunk). The outputs receive exactly the calls a new
+  // object's would.
+  void refill(Parameters &&parameters_in,
+              const Factors* factors_in,
+              const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
+              const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in,
+              const Parameters &conditioned_on_parameters,
+              const Parameters* second_conditioned_on_parameters = NULL);
+
   void simulate_proposal_variables(const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
                                    const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
   

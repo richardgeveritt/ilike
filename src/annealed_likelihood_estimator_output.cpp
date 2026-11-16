@@ -302,4 +302,60 @@ void AnnealedLikelihoodEstimatorOutput::close_ofstreams()
   this->estimator->h5_file_path.clear();
   this->estimator_output->close_ofstreams();
 }
+
+// Adaptive summary (dev/plan.md 2.6a): the inner output's value (when the
+// inner estimator is smcfixed) or the inner output's own summary; the value
+// is then the power at the current target times the inner value, with the
+// same rule as evaluate_smcadaptive_part_given_smcfixed for power 0.
+int AnnealedLikelihoodEstimatorOutput::adaptive_summary_size() const
+{
+  if (this->estimator->smcfixed_flag)
+    return 1;
+  return this->estimator_output->adaptive_summary_size();
+}
+
+void AnnealedLikelihoodEstimatorOutput::adaptive_summary(double *values) const
+{
+  if (this->estimator->smcfixed_flag)
+    values[0] = this->estimator_output->log_likelihood;
+  else
+    this->estimator_output->adaptive_summary(values);
+}
+
+double AnnealedLikelihoodEstimatorOutput::smcadaptive_from_summary(const double *values,
+                                                                   const Parameters &parameters) const
+{
+  double inner;
+  if (this->estimator->smcfixed_flag)
+    inner = values[0];
+  else
+    inner = this->estimator_output->smcadaptive_from_summary(values, parameters);
+  if (this->estimator->use_constant)
+  {
+    if (this->estimator->constant_power!=0.0)
+      return this->estimator->constant_power * inner;
+    else
+      return 0.0;
+  }
+  else
+  {
+    double current_power = this->estimator->function_power(parameters,
+                                                           this->estimator->power_variable);
+    if (current_power!=0.0)
+      return current_power * inner;
+    else
+      return 0.0;
+  }
+}
+
+
+void AnnealedLikelihoodEstimatorOutput::restore_from_summary(const double *values,
+                                                             const Parameters &parameters)
+{
+  // the inner output as its full evaluation left it (summary: its value),
+  // then this output's value at the power given by parameters
+  this->estimator_output->restore_from_summary(values, parameters);
+  this->log_likelihood = this->smcadaptive_from_summary(values, parameters);
+}
+
 }

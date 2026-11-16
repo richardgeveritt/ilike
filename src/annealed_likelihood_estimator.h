@@ -139,6 +139,9 @@ public:
    * @return The result.
    */
   LikelihoodEstimator* duplicate() const;
+
+  // restorable when the inner estimator is (dev/plan.md 2.6a, G3)
+  bool supports_restore_from_summary() const;
   
   // double estimate_log_likelihood(const List &inputs,
   //                                const List &auxiliary_variables) const;
