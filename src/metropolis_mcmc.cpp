@@ -2,6 +2,7 @@
 #include "distributions.h"
 #include "utils.h"
 #include "metropolis_mcmc.h"
+#include "mcmc_adaptor.h"
 #include "symmetric_proposal_kernel.h"
 #include "ensemble_kalman_output.h"
 #include "metropolis_standard_mcmc_output.h"
@@ -344,4 +345,55 @@ StandardMCMCOutput* MetropolisMCMC::initialise_mcmc_output() const
     return new MetropolisStandardMCMCOutput(this->metropolis_mcmc_duplicate());
   return new MetropolisStandardMCMCOutput(const_cast<MetropolisMCMC*>(this), false);
 }
+
+void MetropolisMCMC::adaptive_move_in_place(RandomNumberGenerator &rng,
+                                Particle &particle,
+                                Particle &scratch)
+{
+  // As move_in_place(rng, particle, scratch) (same random numbers), and then
+  // the adaptation step (dev/plan.md 3.2): alpha = min(1, ratio), 0 when
+  // either density is 0.
+  this->proposal->prepare_mcmc_adaptation();
+  this->proposal->move_into(rng,
+                            particle,
+                            this->get_new_outputs_index(this->index.get()),
+                            scratch);
+  double log_u = log(runif(rng));
+  double numerator = scratch.evaluate_likelihoods(this->index.get());
+  double denominator = particle.get_cached_likelihoods(this->index.get());
+  bool accepted = false;
+  double acceptance_probability = 0.0;
+  if ( (numerator!=-arma::datum::inf) && (denominator!=-arma::datum::inf) )
+  {
+    double log_ratio = numerator - denominator;
+    if (log_ratio >= 0.0)
+      acceptance_probability = 1.0;
+    else if (!std::isnan(log_ratio))
+      acceptance_probability = exp(log_ratio);
+    if (log_u < log_ratio)
+    {
+      scratch.set_acceptance(this->proposal.get(),true);
+      this->refresh_cut_factors(scratch);
+      this->check_carried_over_factors(scratch, this->index.get());
+      particle.swap(scratch);
+      accepted = true;
+    }
+  }
+  // after an acceptance the previous state is in scratch
+  AdaptationStep step;
+  step.previous = accepted ? &scratch : &particle;
+  step.proposed = accepted ? &particle : &scratch;
+  step.current = &particle;
+  step.acceptance_probability = acceptance_probability;
+  this->proposal->mcmc_adapt(step);
+}
+
+void MetropolisMCMC::append_adaptation_state(std::vector<std::string> *names,
+                                 std::vector<double> *values,
+                                 bool final,
+                                 const std::string &prefix) const
+{
+  this->proposal->append_adaptation_state(names, values, final, prefix);
+}
+
 }

@@ -103,6 +103,16 @@ public:
                      Particle &scratch) const;
 
 
+  void adaptive_move_in_place(RandomNumberGenerator &rng,
+                              Particle &particle,
+                              Particle &scratch);
+
+  void append_adaptation_state(std::vector<std::string> *names,
+                               std::vector<double> *values,
+                               bool final,
+                               const std::string &prefix) const;
+
+
   
   bool adapts() const;
   

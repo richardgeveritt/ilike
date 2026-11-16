@@ -175,4 +175,10 @@ void CustomGuidedProposalKernel::set_data(Data* data_in)
 {
   this->data = data_in;
 }
+
+Parameters* CustomGuidedProposalKernel::get_proposal_parameters() const
+{
+  return this->proposal_parameters;
+}
+
 }

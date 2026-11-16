@@ -92,6 +92,16 @@ typedef Data (*SimulateModelPtr)(RandomNumberGenerator &rng,
 
 typedef double (*GainPtr)(size_t n);
 
+// A user's adaptation function for a proposal's named parameters (adaptive
+// MCMC, Andrieu & Thoms 2008 (23)): returns H, and each proposal parameter
+// named in H moves by gain * H. parameters is X_i, proposed_parameters
+// Y_{i+1}, new_parameters X_{i+1}.
+typedef Parameters (*AdaptProposalPtr)(const Parameters &proposal_parameters,
+                                       const Parameters &parameters,
+                                       const Parameters &proposed_parameters,
+                                       const Parameters &new_parameters,
+                                       double acceptance_probability);
+
 typedef Parameters (*TransformPtr)(const Parameters &inputs);
 
 typedef Data (*TransformToDataPtr)(const Parameters &inputs);
@@ -188,6 +198,8 @@ typedef std::string (*StringPtr)();
  EvaluateLogMCMCProposalPtr load_evaluate_log_mcmc_proposal(const SEXP &evaluate_log_mcmc_proposal_SEXP);
  
  SimulateMCMCProposalPtr load_simulate_mcmc_proposal(const SEXP &simulate_mcmc_proposal_SEXP);
+
+ AdaptProposalPtr load_adapt_proposal(const SEXP &adapt_proposal_SEXP);
  
  EvaluateLogGuidedMCMCProposalPtr load_evaluate_log_guided_mcmc_proposal(const SEXP &evaluate_log_guided_mcmc_proposal_SEXP);
  
@@ -343,6 +355,12 @@ inline EvaluateLogMCMCProposalPtr load_evaluate_log_mcmc_proposal(const SEXP &ev
 {
   XPtr<EvaluateLogMCMCProposalPtr> evaluate_log_mcmc_proposal_XPtr(evaluate_log_mcmc_proposal_SEXP);
   return *evaluate_log_mcmc_proposal_XPtr;
+}
+
+inline AdaptProposalPtr load_adapt_proposal(const SEXP &adapt_proposal_SEXP)
+{
+  XPtr<AdaptProposalPtr> adapt_proposal_XPtr(adapt_proposal_SEXP);
+  return *adapt_proposal_XPtr;
 }
 
 inline SimulateMCMCProposalPtr load_simulate_mcmc_proposal(const SEXP &simulate_mcmc_proposal_SEXP)

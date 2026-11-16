@@ -293,4 +293,28 @@ StandardMCMCOutput* StochasticScanMCMC::initialise_mcmc_output() const
     return new StochasticScanStandardMCMCOutput(this->stochastic_scan_mcmc_duplicate());
   return new StochasticScanStandardMCMCOutput(const_cast<StochasticScanMCMC*>(this), false);
 }
+
+void StochasticScanMCMC::adaptive_move_in_place(RandomNumberGenerator &rng,
+                                                Particle &particle,
+                                                Particle &scratch)
+{
+  // the move chosen adapts its own kernel, if it adapts (dev/plan.md 3.2)
+  size_t chosen = rdis(rng, this->probabilities);
+  if (this->moves[chosen]->adapts())
+    this->moves[chosen]->adaptive_move_in_place(rng, particle, scratch);
+  else
+    this->moves[chosen]->move_in_place(rng, particle, scratch);
+}
+
+void StochasticScanMCMC::append_adaptation_state(std::vector<std::string> *names,
+                                 std::vector<double> *values,
+                                 bool final,
+                                 const std::string &prefix) const
+{
+  // each move's columns are prefixed with its position in the sweep
+  for (size_t k=0; k<this->moves.size(); ++k)
+    this->moves[k]->append_adaptation_state(names, values, final,
+                                            prefix + "move" + std::to_string(k+1) + ".");
+}
+
 }

@@ -75,6 +75,10 @@ void StandardMCMCOutput::make_copy(const StandardMCMCOutput &another)
   this->rich_storage = another.rich_storage;
   this->thin = another.thin;
   this->number_of_iterations_seen = another.number_of_iterations_seen;
+  this->records_adaptation = another.records_adaptation;
+  this->adaptation_columns = another.adaptation_columns;
+  this->adaptation_trace = another.adaptation_trace;
+  this->adaptation_final = another.adaptation_final;
 }
 
 void StandardMCMCOutput::push_back(const Particle &particle_in)
@@ -89,6 +93,14 @@ void StandardMCMCOutput::record(const Particle &particle_in)
   if ((this->thin > 1) && ((this->number_of_iterations_seen % this->thin) != 0))
   {
       return;
+  }
+
+  // a stored iteration: with it, the adaptation state after this iteration
+  if (this->records_adaptation)
+  {
+    size_t before = this->adaptation_trace.size();
+    this->get_mcmc()->append_adaptation_state(NULL, &this->adaptation_trace, false, "");
+    this->adaptation_columns = this->adaptation_trace.size() - before;
   }
 
   if (!this->storage_decided)
@@ -388,6 +400,62 @@ bool StandardMCMCOutput::repoint_to(const Factors* factors)
       return false;
   }
   return true;
+}
+
+void StandardMCMCOutput::start_recording_adaptation()
+{
+  this->records_adaptation = true;
+  this->adaptation_trace.clear();
+  this->adaptation_final.clear();
+  this->adaptation_columns = 0;
+}
+
+void StandardMCMCOutput::finish_adaptation()
+{
+  this->adaptation_final.clear();
+  this->get_mcmc()->append_adaptation_state(NULL, &this->adaptation_final, true, "");
+}
+
+size_t StandardMCMCOutput::adaptation_trace_columns() const
+{
+  return this->records_adaptation ? this->adaptation_columns : 0;
+}
+
+size_t StandardMCMCOutput::adaptation_final_columns() const
+{
+  return this->records_adaptation ? this->adaptation_final.size() : 0;
+}
+
+size_t StandardMCMCOutput::fill_adaptation_trace_transposed(arma::mat &destination,
+                                                            size_t first_column) const
+{
+  if (this->adaptation_columns==0)
+    return 0;
+  size_t rows = this->adaptation_trace.size()/this->adaptation_columns;
+  if (destination.n_rows!=this->adaptation_columns)
+    Rcpp::stop("StandardMCMCOutput: chains with different adaptation outputs cannot be written together.");
+  for (size_t r=0; r<rows; ++r)
+    for (size_t c=0; c<this->adaptation_columns; ++c)
+      destination(c, first_column + r) = this->adaptation_trace[r*this->adaptation_columns + c];
+  return rows;
+}
+
+void StandardMCMCOutput::fill_adaptation_final(arma::mat &destination,
+                                               size_t column) const
+{
+  if (destination.n_rows!=this->adaptation_final.size())
+    Rcpp::stop("StandardMCMCOutput: chains with different adaptation outputs cannot be written together.");
+  for (size_t c=0; c<this->adaptation_final.size(); ++c)
+    destination(c, column) = this->adaptation_final[c];
+}
+
+void StandardMCMCOutput::adaptation_names(std::vector<std::string> &trace_names,
+                                          std::vector<std::string> &final_names) const
+{
+  // const: the names do not change the move
+  MCMC* mcmc = const_cast<StandardMCMCOutput*>(this)->get_mcmc();
+  mcmc->append_adaptation_state(&trace_names, NULL, false, "");
+  mcmc->append_adaptation_state(&final_names, NULL, true, "");
 }
 
 }

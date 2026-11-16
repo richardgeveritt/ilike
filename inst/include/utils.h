@@ -126,7 +126,7 @@ inline arma::mat vector_of_parameters_to_mat(const std::string &variable,
   
   arma::rowvec first_vector = arma::conv_to<arma::rowvec>::from(param_vec.begin()->get_colvec(variable));
   
-  arma::mat output(param_vec.size(),first_vector.n_rows);
+  arma::mat output(param_vec.size(),first_vector.n_elem);
   output.row(0) = first_vector;
   for (size_t i=1; i<param_vec.size(); ++i)
   {

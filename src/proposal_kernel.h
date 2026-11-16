@@ -30,6 +30,9 @@ namespace ilike
 
 
 class MCMCAdaptor;
+struct AdaptationStep;
+class GaussianProposalInfo;
+struct PrincipalComponentsInfo;
 class SMCAdaptor;
 class Transform;
 
@@ -178,6 +181,33 @@ public:
   
   void mcmc_adapt(const Particle &current_particle,
                   size_t iteration_counter);
+
+  // Adaptation (dev/plan.md 3.2): attaches an adaptor (owned) and points it
+  // at this kernel; one adaptation step from a Metropolis(-Hastings) move.
+  void set_mcmc_adaptor(MCMCAdaptor* adaptor_in);
+  void mcmc_adapt(const AdaptationStep &step);
+  void prepare_mcmc_adaptation();
+  void append_adaptation_state(std::vector<std::string> *names,
+                               std::vector<double> *values,
+                               bool final,
+                               const std::string &prefix) const;
+
+  // The proposal parameters of kernels written by the user (NULL otherwise).
+  virtual Parameters* get_proposal_parameters() const;
+
+  // Whether the Gaussian mean is part of the proposal (mirror), so that an
+  // adaptor sets it to its running estimate of the target's mean.
+  virtual bool proposal_uses_gaussian_mean() const;
+
+  // The Gaussian parameters (mean, covariance, scale) of a variable, for
+  // kernels that have them (random walk, Langevin, Barker); NULL otherwise.
+  virtual GaussianProposalInfo* get_gaussian_proposal_info(const std::string &variable);
+
+  // Per-component scales of a componentwise kernel (Algorithm 5); NULL otherwise.
+  virtual arma::colvec* get_component_scales(const std::string &variable);
+
+  // The principal directions of a principal-components kernel (Algorithm 8); NULL otherwise.
+  virtual PrincipalComponentsInfo* get_principal_components(const std::string &variable);
   
   //void use_transform(const Particle &particle);
   

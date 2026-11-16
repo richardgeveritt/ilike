@@ -106,7 +106,8 @@ void GaussianSMCAdaptor::smc_adapt(SMCOutput* current_state)
   // generation stored flat (dev/plan.md 2.6a; no adaptor is set from R)
   if (current_state->back().is_flat())
     Rcpp::stop("GaussianSMCAdaptor::smc_adapt: not available for a generation stored flat.");
-  arma::colvec wt = exp(current_state->back().normalised_log_weights);
+  // the estimators take normalised log weights (they exponentiate them)
+  arma::colvec wt = current_state->back().normalised_log_weights;
   // the estimators take the particles as plain pointers (not owned)
   std::vector<MoveOutput*> points;
   for (auto i = current_state->back().particles.begin(); i != current_state->back().particles.end(); ++i)

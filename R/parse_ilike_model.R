@@ -897,7 +897,7 @@ mh_proposal_processing = function(mh_proposal_number,blocks,block_name,line_coun
 
     # A factor index block that follows a complete proposal belongs to that
     # proposal, so it does not start a new one.
-    if ( ("mh_proposal" %in% names(current_mh_proposal_info)) && !(block_name %in% c("mh_factor_index","mh_cut_factor_index")) )
+    if ( ("mh_proposal" %in% names(current_mh_proposal_info)) && !(block_name %in% c("mh_factor_index","mh_cut_factor_index","mh_adaptor","adapt_mh_proposal")) )
     {
       # mh_proposal is complete
       if (print_block_ends)
@@ -923,7 +923,7 @@ mh_proposal_processing = function(mh_proposal_number,blocks,block_name,line_coun
       else
       {
         # mh_proposal is complete
-        if ( ("evaluate_log_mh_proposal" %in% names(current_mh_proposal_info)) && ("simulate_mh_proposal" %in% names(current_mh_proposal_info)) && !(block_name %in% c("mh_factor_index","mh_cut_factor_index")) )
+        if ( ("evaluate_log_mh_proposal" %in% names(current_mh_proposal_info)) && ("simulate_mh_proposal" %in% names(current_mh_proposal_info)) && !(block_name %in% c("mh_factor_index","mh_cut_factor_index","mh_adaptor","adapt_mh_proposal")) )
         {
           if (print_block_ends)
           {
@@ -1085,7 +1085,7 @@ m_proposal_processing = function(m_proposal_number,blocks,block_name,line_counte
 
     # A factor index block that follows a complete proposal belongs to that
     # proposal, so it does not start a new one.
-    if ( ("m_proposal" %in% names(current_m_proposal_info)) && !(block_name %in% c("m_factor_index","m_cut_factor_index")) )
+    if ( ("m_proposal" %in% names(current_m_proposal_info)) && !(block_name %in% c("m_factor_index","m_cut_factor_index","m_adaptor","adapt_m_proposal")) )
     {
       # m_proposal is complete
       if (print_block_ends)
@@ -1111,7 +1111,7 @@ m_proposal_processing = function(m_proposal_number,blocks,block_name,line_counte
       else
       {
         # m_proposal is complete
-        if ( ("simulate_m_proposal" %in% names(current_m_proposal_info)) && !(block_name %in% c("m_factor_index","m_cut_factor_index")) )
+        if ( ("simulate_m_proposal" %in% names(current_m_proposal_info)) && !(block_name %in% c("m_factor_index","m_cut_factor_index","m_adaptor","adapt_m_proposal")) )
         {
           if (print_block_ends)
           {
@@ -1505,10 +1505,10 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
   potential_function_types = c(custom_potential_function_types,ilike_potential_function_types)
   data_function_types = c("data")
   is_proposal_types = c("simulate_is_proposal","evaluate_log_is_proposal","is_proposal")
-  mh_proposal_types = c("simulate_mh_proposal","evaluate_log_mh_proposal","mh_proposal","mh_transform","mh_inverse_transform","mh_transform_jacobian_matrix","mh_factor_index","mh_cut_factor_index")
+  mh_proposal_types = c("simulate_mh_proposal","evaluate_log_mh_proposal","mh_proposal","mh_transform","mh_inverse_transform","mh_transform_jacobian_matrix","mh_factor_index","mh_cut_factor_index","mh_adaptor","adapt_mh_proposal")
   unadjusted_proposal_types = c("simulate_unadjusted_proposal","unadjusted_proposal","unadjusted_transform","unadjusted_inverse_transform","unadjusted_transform_jacobian_matrix","unadjusted_factor_index","unadjusted_cut_factor_index")
   imh_proposal_types = c("simulate_imh_proposal","evaluate_log_imh_proposal","imh_proposal","imh_transform","imh_inverse_transform","imh_transform_jacobian_matrix","imh_factor_index","imh_cut_factor_index")
-  m_proposal_types = c("simulate_m_proposal","m_proposal","m_transform","m_inverse_transform","m_transform_jacobian_matrix","m_factor_index","m_cut_factor_index")
+  m_proposal_types = c("simulate_m_proposal","m_proposal","m_transform","m_inverse_transform","m_transform_jacobian_matrix","m_factor_index","m_cut_factor_index","m_adaptor","adapt_m_proposal")
   transition_proposal_types = c("simulate_transition_proposal","evaluate_log_transition_proposal")
   enk_transform_types = c("enk_transform","enk_inverse_transform")
   #reinforce_gradient = c("reinforce_gradient")
@@ -3407,6 +3407,19 @@ return_types_for_cpp <- function(block_name,line_counter,which_proposed_paramete
     R_args = "parameters"
 
   }
+  else if (block_name %in% c("adapt_m_proposal","adapt_mh_proposal"))
+  {
+    # adaptive MCMC (dev/plan.md 3.2): returns H; each proposal parameter
+    # named in H moves by gain * H (Andrieu & Thoms 2008, (23))
+    return_type = "Parameters"
+    arguments = c()
+    arguments[1] = "const Parameters &proposal_parameters"
+    arguments[2] = "const Parameters &parameters"
+    arguments[3] = "const Parameters &proposed_parameters"
+    arguments[4] = "const Parameters &new_parameters"
+    arguments[5] = "double acceptance_probability"
+    R_args = ""
+  }
   else
   {
     stop(paste('Block ',block_name,', line number ',line_counter,': block is of unknown type. Did you specify an ilike function? If so, include "ilike::" before the function name.',sep=""))
@@ -3529,6 +3542,8 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
       # (a call, a string, a number, an if/else, optionally assigned with
       # name=expression). Whitespace is only removed for ilike functions, so
       # that strings in R expressions are kept intact.
+      if (block_name %in% c("adapt_m_proposal","adapt_mh_proposal"))
+        stop(paste("Block ",block_name,", line number ",line_counter,": an adaptation function must be written in C++.",sep=""))
       block_function <- trimws(block_function)
       compact_block_function <- gsub("\\s+", "", block_function)
 
@@ -3574,7 +3589,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
       if (is_like_function==TRUE)
       {
-        if ( (block_name=="prior") || (block_name=="is_proposal") || (block_name=="imh_proposal") || (block_name=="mh_proposal") || (block_name=="unadjusted_proposal") || (block_name=="m_proposal") || (block_name=="smc_sequence") || (block_name=="linear_gaussian_transition_model") || (block_name=="nonlinear_gaussian_transition_model") || (block_name=="linear_gaussian_data_model") || (block_name=="nonlinear_gaussian_data_model") )
+        if ( (block_name=="prior") || (block_name=="is_proposal") || (block_name=="imh_proposal") || (block_name=="mh_proposal") || (block_name=="unadjusted_proposal") || (block_name=="m_proposal") || (block_name=="m_adaptor") || (block_name=="mh_adaptor") || (block_name=="smc_sequence") || (block_name=="linear_gaussian_transition_model") || (block_name=="nonlinear_gaussian_transition_model") || (block_name=="linear_gaussian_data_model") || (block_name=="nonlinear_gaussian_data_model") )
         {
           split_arg_string = split_string_at_comma_ignoring_parentheses(arg_string)
 

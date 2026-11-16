@@ -8,28 +8,24 @@ namespace ilike
 UnadjustedStandardMCMCOutput::UnadjustedStandardMCMCOutput()
 :StandardMCMCOutput()
 {
-  this->mcmc = NULL;
 }
 
 UnadjustedStandardMCMCOutput::UnadjustedStandardMCMCOutput(UnadjustedMCMC* mcmc_in)
 :StandardMCMCOutput(mcmc_in->get_duplicated_termination())
 {
-  this->mcmc = mcmc_in;
+  this->mcmc = std::unique_ptr<UnadjustedMCMC, OptionalDelete>(mcmc_in, OptionalDelete(true));
   this->termination->set_parameters(this);
 }
 
 UnadjustedStandardMCMCOutput::UnadjustedStandardMCMCOutput(UnadjustedMCMC* mcmc_in, bool owns_mcmc_in)
 :StandardMCMCOutput(mcmc_in->get_duplicated_termination())
 {
-  this->mcmc = mcmc_in;
-  this->owns_mcmc = owns_mcmc_in;
+  this->mcmc = std::unique_ptr<UnadjustedMCMC, OptionalDelete>(mcmc_in, OptionalDelete(owns_mcmc_in));
   this->termination->set_parameters(this);
 }
 
 UnadjustedStandardMCMCOutput::~UnadjustedStandardMCMCOutput()
 {
-  if ((this->mcmc!=NULL) && this->owns_mcmc)
-    delete this->mcmc;
 }
 
 //Copy constructor for the UnadjustedStandardMCMCOutput class.
@@ -45,8 +41,6 @@ void UnadjustedStandardMCMCOutput::operator=(const UnadjustedStandardMCMCOutput 
     return;
   }
   
-  if ((this->mcmc!=NULL) && this->owns_mcmc)
-    delete this->mcmc;
   
   StandardMCMCOutput::operator=(another);
   this->make_copy(another);
@@ -59,22 +53,21 @@ MoveOutput* UnadjustedStandardMCMCOutput::duplicate() const
 
 void UnadjustedStandardMCMCOutput::make_copy(const UnadjustedStandardMCMCOutput &another)
 {
-  this->owns_mcmc = another.owns_mcmc;
   if (another.mcmc==NULL)
-    this->mcmc = NULL;
-  else if (another.owns_mcmc)
-    this->mcmc = another.mcmc->unadjusted_mcmc_duplicate();
+    this->mcmc = std::unique_ptr<UnadjustedMCMC, OptionalDelete>(nullptr, OptionalDelete(true));
+  else if (another.mcmc.get_deleter().owns)
+    this->mcmc = std::unique_ptr<UnadjustedMCMC, OptionalDelete>(another.mcmc->unadjusted_mcmc_duplicate(), OptionalDelete(true));
   else
-    this->mcmc = another.mcmc;
+    this->mcmc = std::unique_ptr<UnadjustedMCMC, OptionalDelete>(another.mcmc.get(), OptionalDelete(false));
 }
 
 MCMC* UnadjustedStandardMCMCOutput::get_mcmc()
 {
-  return this->mcmc;
+  return this->mcmc.get();
 }
 
 const MCMC* UnadjustedStandardMCMCOutput::get_mcmc() const
 {
-  return this->mcmc;
+  return this->mcmc.get();
 }
 }

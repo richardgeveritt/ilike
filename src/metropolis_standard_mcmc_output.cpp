@@ -8,28 +8,24 @@ namespace ilike
 MetropolisStandardMCMCOutput::MetropolisStandardMCMCOutput()
 :StandardMCMCOutput()
 {
-  this->mcmc = NULL;
 }
 
 MetropolisStandardMCMCOutput::MetropolisStandardMCMCOutput(MetropolisMCMC* mcmc_in)
 :StandardMCMCOutput(mcmc_in->get_duplicated_termination())
 {
-  this->mcmc = mcmc_in;
+  this->mcmc = std::unique_ptr<MetropolisMCMC, OptionalDelete>(mcmc_in, OptionalDelete(true));
   this->termination->set_parameters(this);
 }
 
 MetropolisStandardMCMCOutput::MetropolisStandardMCMCOutput(MetropolisMCMC* mcmc_in, bool owns_mcmc_in)
 :StandardMCMCOutput(mcmc_in->get_duplicated_termination())
 {
-  this->mcmc = mcmc_in;
-  this->owns_mcmc = owns_mcmc_in;
+  this->mcmc = std::unique_ptr<MetropolisMCMC, OptionalDelete>(mcmc_in, OptionalDelete(owns_mcmc_in));
   this->termination->set_parameters(this);
 }
 
 MetropolisStandardMCMCOutput::~MetropolisStandardMCMCOutput()
 {
-  if ((this->mcmc!=NULL) && this->owns_mcmc)
-    delete this->mcmc;
 }
 
 //Copy constructor for the MetropolisStandardMCMCOutput class.
@@ -45,8 +41,6 @@ void MetropolisStandardMCMCOutput::operator=(const MetropolisStandardMCMCOutput 
     return;
   }
   
-  if ((this->mcmc!=NULL) && this->owns_mcmc)
-    delete this->mcmc;
   
   StandardMCMCOutput::operator=(another);
   this->make_copy(another);
@@ -59,22 +53,21 @@ MoveOutput* MetropolisStandardMCMCOutput::duplicate() const
 
 void MetropolisStandardMCMCOutput::make_copy(const MetropolisStandardMCMCOutput &another)
 {
-  this->owns_mcmc = another.owns_mcmc;
   if (another.mcmc==NULL)
-    this->mcmc = NULL;
-  else if (another.owns_mcmc)
-    this->mcmc = another.mcmc->metropolis_mcmc_duplicate();
+    this->mcmc = std::unique_ptr<MetropolisMCMC, OptionalDelete>(nullptr, OptionalDelete(true));
+  else if (another.mcmc.get_deleter().owns)
+    this->mcmc = std::unique_ptr<MetropolisMCMC, OptionalDelete>(another.mcmc->metropolis_mcmc_duplicate(), OptionalDelete(true));
   else
-    this->mcmc = another.mcmc;
+    this->mcmc = std::unique_ptr<MetropolisMCMC, OptionalDelete>(another.mcmc.get(), OptionalDelete(false));
 }
 
 MCMC* MetropolisStandardMCMCOutput::get_mcmc()
 {
-  return this->mcmc;
+  return this->mcmc.get();
 }
 
 const MCMC* MetropolisStandardMCMCOutput::get_mcmc() const
 {
-  return this->mcmc;
+  return this->mcmc.get();
 }
 }

@@ -69,6 +69,10 @@ do_evaluate_log_with_fixed_params <- function(model, model_parameters, algorithm
     .Call(`_ilike_do_evaluate_log_with_fixed_params`, model, model_parameters, algorithm_parameter_list, fixed_parameter_list, parameters_in, index_in, results_name_in, seed)
 }
 
+shared_point_weights_check <- function(points_per_particle, normalised_log_weights) {
+    .Call(`_ilike_shared_point_weights_check`, points_per_particle, normalised_log_weights)
+}
+
 copy_audit <- function(model, parameters, algorithm_parameter_list, mcmc_termination_method, mcmc_weights_method, seed_value) {
     .Call(`_ilike_copy_audit`, model, parameters, algorithm_parameter_list, mcmc_termination_method, mcmc_weights_method, seed_value)
 }

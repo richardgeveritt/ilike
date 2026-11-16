@@ -189,8 +189,27 @@ public:
    * @return The result.
    */
   Parameters get_current_algorithm_parameters() const;
+
+  // Adaptation output (dev/plan.md 3.2): from start_recording_adaptation on,
+  // each stored iteration also stores the move's adaptation trace;
+  // finish_adaptation stores its final state.
+  void start_recording_adaptation();
+  void finish_adaptation();
+  size_t adaptation_trace_columns() const;
+  size_t adaptation_final_columns() const;
+  size_t fill_adaptation_trace_transposed(arma::mat &destination,
+                                          size_t first_column) const;
+  void fill_adaptation_final(arma::mat &destination,
+                             size_t column) const;
+  void adaptation_names(std::vector<std::string> &trace_names,
+                        std::vector<std::string> &final_names) const;
   
 protected:
+
+  bool records_adaptation = false;
+  size_t adaptation_columns = 0;
+  std::vector<double> adaptation_trace; // stored iterations, row after row
+  std::vector<double> adaptation_final;
   
   //virtual void specific_mcmc_adapt()=0;
   

@@ -8,28 +8,24 @@ namespace ilike
 DeterministicScanStandardMCMCOutput::DeterministicScanStandardMCMCOutput()
 :StandardMCMCOutput()
 {
-  this->mcmc = NULL;
 }
 
 DeterministicScanStandardMCMCOutput::DeterministicScanStandardMCMCOutput(DeterministicScanMCMC* mcmc_in)
 :StandardMCMCOutput(mcmc_in->get_duplicated_termination())
 {
-  this->mcmc = mcmc_in;
+  this->mcmc = std::unique_ptr<DeterministicScanMCMC, OptionalDelete>(mcmc_in, OptionalDelete(true));
   this->termination->set_parameters(this);
 }
 
 DeterministicScanStandardMCMCOutput::DeterministicScanStandardMCMCOutput(DeterministicScanMCMC* mcmc_in, bool owns_mcmc_in)
 :StandardMCMCOutput(mcmc_in->get_duplicated_termination())
 {
-  this->mcmc = mcmc_in;
-  this->owns_mcmc = owns_mcmc_in;
+  this->mcmc = std::unique_ptr<DeterministicScanMCMC, OptionalDelete>(mcmc_in, OptionalDelete(owns_mcmc_in));
   this->termination->set_parameters(this);
 }
 
 DeterministicScanStandardMCMCOutput::~DeterministicScanStandardMCMCOutput()
 {
-  if ((this->mcmc!=NULL) && this->owns_mcmc)
-    delete this->mcmc;
 }
 
 //Copy constructor for the DeterministicScanStandardMCMCOutput class.
@@ -45,8 +41,6 @@ void DeterministicScanStandardMCMCOutput::operator=(const DeterministicScanStand
     return;
   }
   
-  if ((this->mcmc!=NULL) && this->owns_mcmc)
-    delete this->mcmc;
   
   StandardMCMCOutput::operator=(another);
   this->make_copy(another);
@@ -59,13 +53,12 @@ MoveOutput* DeterministicScanStandardMCMCOutput::duplicate() const
 
 void DeterministicScanStandardMCMCOutput::make_copy(const DeterministicScanStandardMCMCOutput &another)
 {
-  this->owns_mcmc = another.owns_mcmc;
   if (another.mcmc==NULL)
-    this->mcmc = NULL;
-  else if (another.owns_mcmc)
-    this->mcmc = another.mcmc->deterministic_scan_mcmc_duplicate();
+    this->mcmc = std::unique_ptr<DeterministicScanMCMC, OptionalDelete>(nullptr, OptionalDelete(true));
+  else if (another.mcmc.get_deleter().owns)
+    this->mcmc = std::unique_ptr<DeterministicScanMCMC, OptionalDelete>(another.mcmc->deterministic_scan_mcmc_duplicate(), OptionalDelete(true));
   else
-    this->mcmc = another.mcmc;
+    this->mcmc = std::unique_ptr<DeterministicScanMCMC, OptionalDelete>(another.mcmc.get(), OptionalDelete(false));
 }
 
 /*
@@ -113,11 +106,11 @@ void DeterministicScanStandardMCMCOutput::make_copy(const DeterministicScanStand
 
 MCMC* DeterministicScanStandardMCMCOutput::get_mcmc()
 {
-  return this->mcmc;
+  return this->mcmc.get();
 }
 
 const MCMC* DeterministicScanStandardMCMCOutput::get_mcmc() const
 {
-  return this->mcmc;
+  return this->mcmc.get();
 }
 }

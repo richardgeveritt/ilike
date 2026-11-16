@@ -162,6 +162,10 @@ public:
   // Stochastic has some weights.
   // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.
   // Proposal needs to call simulate in all llhdoutputs
+
+  GaussianProposalInfo* get_gaussian_proposal_info(const std::string &variable);
+  bool proposal_uses_gaussian_mean() const;
+
   
 protected:
   

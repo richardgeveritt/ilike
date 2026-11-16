@@ -526,4 +526,13 @@ namespace ilike
   void BarkerDynamicsProposalKernel::set_data(Data *data_in)
   {
   }
+
+GaussianProposalInfo* BarkerDynamicsProposalKernel::get_gaussian_proposal_info(const std::string &variable)
+{
+  auto found = this->proposal_info.find(variable);
+  if (found==this->proposal_info.end())
+    return NULL;
+  return &found->second;
+}
+
 }

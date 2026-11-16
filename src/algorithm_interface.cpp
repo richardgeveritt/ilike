@@ -51,6 +51,10 @@
 #include "gaussian_distribution_factor.h"
 #include "gaussian_independent_proposal_kernel.h"
 #include "gaussian_random_walk_proposal_kernel.h"
+#include "gaussian_mcmc_adaptor.h"
+#include "componentwise_random_walk_proposal_kernel.h"
+#include "principal_components_proposal_kernel.h"
+#include "proposal_parameter_adaptor.h"
 #include "generic_measurement_covariance_estimator.h"
 #include "hmc_proposal_kernel.h"
 #include "importance_sampler.h"
@@ -111,6 +115,7 @@ void reset_informs()
 #include "unadjusted_mcmc.h"
 #include "uniform_random_walk_proposal_kernel.h"
 #include "utils.h"
+#include "shared_point_weights.h"
 #include "vector_index.h"
 #include "vector_factors.h"
 #include "factor_variables.h"
@@ -4054,6 +4059,44 @@ SymmetricProposalKernel *get_m_proposal(const List &current_proposal,
           double sd = info[1];
 
           proposal = new GaussianRandomWalkProposalKernel(variable, sd);
+        } else if (iequals(type, "pc_rw")) {
+          // (variable, Sigma[, s^2[, m]]): moves along one of the first m
+          // principal directions of Sigma at a time (Andrieu & Thoms 2008,
+          // Algorithm 8); m = 0 or absent: all of them
+          size_t number_of_directions = 0;
+          List pc_info = clone(proposal_info);
+          if (pc_info.containsElementNamed("parameters")) {
+            List pc_parameters = pc_info["parameters"];
+            if (pc_parameters.size() > 3)
+              stop("ilike::pc_rw: too many arguments.");
+            if (pc_parameters.size() == 3) {
+              double m = extract_double_parameter(pc_parameters, model_parameters, 2);
+              if ((m < 0.0) || (m != floor(m)))
+                stop("ilike::pc_rw: the number of directions must be a whole number.");
+              number_of_directions = size_t(m);
+              pc_info["parameters"] = List::create(pc_parameters[0], pc_parameters[1]);
+            }
+          }
+          List info =
+              get_single_variable_matrix_and_optional_double_parameter_info(
+                  model_parameters, pc_info, type, 1.0);
+          std::string variable = info[0];
+          arma::mat cov = info[1];
+          double scale = info[2];
+          proposal = new PrincipalComponentsProposalKernel(variable, cov, scale,
+                                                           number_of_directions);
+        } else if (iequals(type, "componentwise_rw")) {
+          // (variable, Sigma) or (variable, Sigma, s^2): one component k at
+          // a time, N(0, s^2 [Sigma]_kk) (Andrieu & Thoms 2008, Algorithm 5)
+          List info =
+              get_single_variable_matrix_and_optional_double_parameter_info(
+                  model_parameters, proposal_info, type, 1.0);
+
+          std::string variable = info[0];
+          arma::mat cov = info[1];
+          double scale = info[2];
+
+          proposal = new ComponentwiseRandomWalkProposalKernel(variable, cov, scale);
         } else if (iequals(type, "mvnorm_rw")) {
           // (variable, Sigma) or (variable, Sigma, s^2); s^2 defaults to 1.
           List info =
@@ -4321,6 +4364,206 @@ static void check_unadjusted_compatibility(const std::vector<MoveFactors> &moves
   }
 }
 
+// Adaptive MCMC (dev/plan.md 3.2): what adapts the proposal just built.
+// Either a built-in adaptor block after the proposal
+// (/***m_adaptor,ilike::scaled_am(theta,0.234)***/, stored in the proposal's
+// part of the recipe under "<prefix>_adaptor"), or the user's adaptation
+// function (/***adapt_m_proposal***/, under "adapt_<prefix>_proposal").
+// Built-in adaptors; the arguments after the first are optional:
+//   scaled_am(theta, target, kappa, C, r)        Algorithm 4
+//   am(theta, kappa, C, r)                       Algorithm 2
+//   rb_am(theta, kappa, C, r)                    Algorithm 3
+//   scale(theta, target, kappa, C)               the scale recursion of Algorithm 4
+//   componentwise_am(theta, target, kappa, C, r) Algorithm 5 (proposal componentwise_rw)
+//   pc_am(theta, target, kappa, C, r)            Algorithm 8, eigen-decomposition
+//                                                every r iterations (proposal pc_rw)
+//   online_pc_am(theta, target, kappa, C, r)     Algorithm 8, the online PCA
+//                                                recursion every r iterations
+//   acceptance_rate(name, target, kappa, C)      a named proposal parameter of
+//                                                a proposal written by the user
+// target: acceptance rate (default 0.234 for random walks and named
+// parameters, 0.44 for componentwise and principal-components moves, for the
+// mirror proposal a rate depending on the dimension (0.50 for d = 1 down to
+// 0.23 for d >= 50, found by experiment), 0.574 for Langevin, 0.4 for Barker); gain
+// C (n+1)^(-kappa) (defaults kappa = 0.6, C = 1); r: refresh interval
+// (default 0: every d iterations; every iteration for online_pc_am). The
+// mirror proposal (ilike::mirror) takes scaled_am, am, rb_am and scale, and
+// its mean is set to the running estimate of the target's mean.
+// Averaging (Polyak & Juditsky 1992): the argument "averaged", anywhere
+// after the first, makes the kernel use the averages of the recursion's
+// iterates; for a user's adaptation function, the block
+// /***m_adaptor,ilike::averaged()***/ does the same.
+void attach_mcmc_adaptor(ProposalKernel *proposal, const List &proposal_info,
+                         const std::string &prefix,
+                         const List &model_parameters) {
+  std::string adaptor_name = prefix + "_adaptor";
+  std::string function_name = "adapt_" + prefix + "_proposal";
+  bool has_block = proposal_info.containsElementNamed(adaptor_name.c_str());
+  bool has_function = proposal_info.containsElementNamed(function_name.c_str());
+  if (has_function) {
+    // the only block allowed with a user's function: ilike::averaged()
+    bool function_averaging = false;
+    if (has_block) {
+      List block_info = proposal_info[adaptor_name];
+      std::string block_type = block_info["type"];
+      if (!iequals(block_type, "averaged"))
+        stop("A proposal with an " + function_name + " function can have only "
+             "the block " + adaptor_name + ",ilike::averaged() with it.");
+      function_averaging = true;
+    }
+    SEXP adapt_SEXP = proposal_info[function_name];
+    proposal->set_mcmc_adaptor(new ProposalParameterAdaptor(
+        load_adapt_proposal(adapt_SEXP), 0.6, 1.0, function_averaging));
+    return;
+  }
+  if (!has_block)
+    return;
+
+  std::string proposal_type = "";
+  std::string proposal_name = prefix + "_proposal";
+  if (proposal_info.containsElementNamed(proposal_name.c_str())) {
+    SEXP proposal_SEXP = proposal_info[proposal_name];
+    if (Rf_isNewList(proposal_SEXP)) {
+      List proposal_list(proposal_SEXP);
+      if (proposal_list.containsElementNamed("type"))
+        proposal_type = as<std::string>(proposal_list["type"]);
+    }
+  }
+
+  List adaptor_info = proposal_info[adaptor_name];
+  std::string type = adaptor_info["type"];
+  if (iequals(type, "averaged"))
+    stop(adaptor_name + ",ilike::averaged() goes with an " + function_name +
+         " function; for built-in adaptors, give \"averaged\" as an argument "
+         "(e.g. ilike::scaled_am(theta,averaged)).");
+  std::string variable = adaptor_info["variables"];
+  List given_parameters;
+  if (adaptor_info.containsElementNamed("parameters"))
+    given_parameters = adaptor_info["parameters"];
+  // the keyword "averaged" (Polyak-Juditsky averaging) may be anywhere
+  bool averaging = false;
+  List parameters;
+  for (R_xlen_t a = 0; a < given_parameters.size(); ++a) {
+    std::string argument = as<std::string>(given_parameters[a]);
+    if (iequals(argument, "averaged"))
+      averaging = true;
+    else
+      parameters.push_back(given_parameters[a]);
+  }
+
+  bool random_walk = iequals(proposal_type, "norm_rw") ||
+                     iequals(proposal_type, "mvnorm_rw");
+  bool componentwise = iequals(proposal_type, "componentwise_rw");
+  bool principal_components = iequals(proposal_type, "pc_rw");
+  bool mirror = iequals(proposal_type, "mirror");
+  bool gradient = iequals(proposal_type, "langevin") ||
+                  iequals(proposal_type, "barker");
+  bool user_written = (proposal_type == "");
+
+  double default_target = 0.234;
+  if (componentwise || principal_components)
+    default_target = 0.44;
+  else if (mirror)
+    default_target = 0.0; // by the variable's dimension (mirror_default_target_acceptance)
+  else if (iequals(proposal_type, "langevin"))
+    default_target = 0.574;
+  else if (iequals(proposal_type, "barker"))
+    default_target = 0.4;
+
+  // the methods each proposal takes
+  std::string fits;
+  bool fit = false;
+  if (iequals(type, "scaled_am") || iequals(type, "am") || iequals(type, "rb_am")) {
+    fit = random_walk || mirror;
+    fits = "the proposals ilike::norm_rw, ilike::mvnorm_rw and ilike::mirror";
+  } else if (iequals(type, "scale")) {
+    fit = random_walk || mirror || gradient;
+    fits = "the proposals ilike::norm_rw, ilike::mvnorm_rw, ilike::mirror, ilike::langevin and ilike::barker";
+  } else if (iequals(type, "componentwise_am")) {
+    fit = componentwise;
+    fits = "the proposal ilike::componentwise_rw";
+  } else if (iequals(type, "pc_am") || iequals(type, "online_pc_am")) {
+    fit = principal_components;
+    fits = "the proposal ilike::pc_rw";
+  } else if (iequals(type, "acceptance_rate")) {
+    fit = user_written;
+    fits = "proposals written by the user (with proposal_parameters)";
+  } else {
+    stop("Unknown MCMC adaptor ilike::" + type +
+         " (available: ilike::scaled_am, ilike::am, ilike::rb_am, ilike::scale, "
+         "ilike::componentwise_am, ilike::pc_am, ilike::online_pc_am, "
+         "ilike::acceptance_rate).");
+  }
+  if (!fit) {
+    if (componentwise)
+      stop(adaptor_name + ",ilike::" + type + ": the proposal "
+           "ilike::componentwise_rw is adapted by ilike::componentwise_am.");
+    if (principal_components)
+      stop(adaptor_name + ",ilike::" + type + ": the proposal "
+           "ilike::pc_rw is adapted by ilike::pc_am or ilike::online_pc_am.");
+    stop(adaptor_name + ",ilike::" + type + ": applies to " + fits + ".");
+  }
+
+  bool has_target = !(iequals(type, "am") || iequals(type, "rb_am"));
+  bool has_refresh = !(iequals(type, "scale") || iequals(type, "acceptance_rate"));
+  size_t maximum_arguments = (has_target ? 1 : 0) + 2 + (has_refresh ? 1 : 0);
+  if (size_t(parameters.size()) > maximum_arguments)
+    stop(adaptor_name + ",ilike::" + type + ": too many arguments.");
+
+  size_t k = 0;
+  double target = default_target;
+  if (has_target) {
+    if (size_t(parameters.size()) > k) {
+      target = extract_double_parameter(parameters, model_parameters, k);
+      if ((target <= 0.0) || (target >= 1.0))
+        stop(adaptor_name + ": the target acceptance rate must be between 0 and 1.");
+    }
+    k = k + 1;
+  }
+  double kappa = 0.6;
+  double constant = 1.0;
+  double refresh = 0.0;
+  if (size_t(parameters.size()) > k)
+    kappa = extract_double_parameter(parameters, model_parameters, k);
+  if (size_t(parameters.size()) > k + 1)
+    constant = extract_double_parameter(parameters, model_parameters, k + 1);
+  if (has_refresh && (size_t(parameters.size()) > k + 2))
+    refresh = extract_double_parameter(parameters, model_parameters, k + 2);
+
+  if (constant * pow(2.0, -kappa) >= 1.0)
+    stop(adaptor_name + ": the gain C (n+1)^(-kappa) must be below 1 from the "
+         "first update (C 2^(-kappa) < 1).");
+  if ((refresh < 0.0) || (refresh != floor(refresh)))
+    stop(adaptor_name + ": the refresh interval must be a whole number (0: the "
+         "default).");
+
+  std::vector<std::string> variables;
+  variables.push_back(variable);
+
+  if (iequals(type, "acceptance_rate")) {
+    proposal->set_mcmc_adaptor(new ProposalParameterAdaptor(
+        variables, target, kappa, constant, averaging));
+    return;
+  }
+
+  GaussianAdaptationMethod method = GaussianAdaptationMethod::SCALED_AM;
+  if (iequals(type, "am"))
+    method = GaussianAdaptationMethod::AM;
+  else if (iequals(type, "rb_am"))
+    method = GaussianAdaptationMethod::RB_AM;
+  else if (iequals(type, "scale"))
+    method = GaussianAdaptationMethod::SCALE;
+  else if (iequals(type, "componentwise_am"))
+    method = GaussianAdaptationMethod::COMPONENTWISE_AM;
+  else if (iequals(type, "pc_am"))
+    method = GaussianAdaptationMethod::PC_EIGEN;
+  else if (iequals(type, "online_pc_am"))
+    method = GaussianAdaptationMethod::PC_ONLINE;
+
+  proposal->set_mcmc_adaptor(new GaussianMCMCAdaptor(
+      variables, method, target, kappa, constant, size_t(refresh), averaging));
+}
+
 MCMC *make_mcmc(const List &model, const List &model_parameters, Data *data,
                 const List &mcmc_termination_method,
                 const List &mcmc_weights_method, Index *full_index) {
@@ -4362,6 +4605,9 @@ MCMC *make_mcmc(const List &model, const List &model_parameters, Data *data,
             proposal =
                 get_mh_proposal(proposal_infos[simulate_mh_proposal_index],
                                 model_parameters, data);
+            attach_mcmc_adaptor(proposal,
+                                proposal_infos[simulate_mh_proposal_index],
+                                "mh", model_parameters);
           } else {
             stop("Error in mcmc proposals part of model file.");
           }
@@ -4423,6 +4669,9 @@ MCMC *make_mcmc(const List &model, const List &model_parameters, Data *data,
           if (Rf_isNewList(proposal_infos[simulate_m_proposal_index])) {
             proposal = get_m_proposal(proposal_infos[simulate_m_proposal_index],
                                       model_parameters, data);
+            attach_mcmc_adaptor(proposal,
+                                proposal_infos[simulate_m_proposal_index],
+                                "m", model_parameters);
           } else {
             stop("Error in mcmc proposals part of model file.");
           }
@@ -6626,6 +6875,30 @@ static double audit_evaluate(LikelihoodEstimator *estimator,
   double value = output->log_likelihood;
   delete output;
   return value;
+}
+
+// Internal check of shared_point_weights (used by the parameter estimators'
+// fit from MoveOutputs, which R cannot reach): particle i's points are the
+// rows of points_per_particle[[i]] (variable "x"). Returns the points (one
+// per row) and their normalised log weights.
+// [[Rcpp::export]]
+List shared_point_weights_check(const List &points_per_particle,
+                                const arma::colvec &normalised_log_weights) {
+  std::vector< std::vector<Parameters> > points(points_per_particle.size());
+  for (size_t i = 0; i < points.size(); ++i) {
+    arma::mat m = Rcpp::as<arma::mat>(points_per_particle[i]);
+    for (size_t r = 0; r < m.n_rows; ++r) {
+      Parameters p;
+      p["x"] = arma::colvec(m.row(r).t());
+      points[i].push_back(p);
+    }
+  }
+  std::vector<Parameters> all_points;
+  arma::colvec all_normalised_log_weights;
+  shared_point_weights(points, normalised_log_weights, all_points,
+                       all_normalised_log_weights);
+  return List::create(Named("points") = vector_of_parameters_to_mat("x", all_points),
+                      Named("log_weights") = all_normalised_log_weights);
 }
 
 // [[Rcpp::export]]

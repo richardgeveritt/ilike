@@ -659,6 +659,50 @@ void SMCOutput::write_to_file(const std::string &dir_name,
         }
       }
       
+      // adaptation output of adapting MCMC moves (dev/plan.md 3.2): a trace
+      // row for each stored point (aligned with vector_points) and the
+      // state at the end of each chain; column names as root attributes
+      {
+        const auto &particles = this->all_particles[deque_index].particles;
+        const MoveOutput* first_adapting = NULL;
+        for (auto &p : particles)
+        {
+          if (p->adaptation_trace_columns() > 0)
+          {
+            first_adapting = p.get();
+            break;
+          }
+        }
+        if ( (first_adapting!=NULL) && !this->all_particles[deque_index].is_flat() )
+        {
+          size_t trace_columns = first_adapting->adaptation_trace_columns();
+          size_t final_columns = first_adapting->adaptation_final_columns();
+          size_t total_rows = 0;
+          for (auto &p : particles)
+            total_rows += p->length();
+          arma::mat trace_transposed(trace_columns, total_rows, arma::fill::zeros);
+          arma::mat final_transposed(final_columns, particles.size(), arma::fill::zeros);
+          size_t column_offset = 0;
+          for (size_t i=0; i<particles.size(); ++i)
+          {
+            if (particles[i]->adaptation_trace_columns()!=trace_columns)
+              Rcpp::stop("SMCOutput::write_to_file: not every chain has the same adaptation output.");
+            size_t rows = particles[i]->fill_adaptation_trace_transposed(trace_transposed, column_offset);
+            if (rows!=particles[i]->length())
+              Rcpp::stop("SMCOutput::write_to_file: a chain's adaptation trace does not match its stored points.");
+            column_offset += rows;
+            particles[i]->fill_adaptation_final(final_transposed, i);
+          }
+          h5_write_mat_transposed(iter_grp, "adaptation_trace", trace_transposed);
+          h5_write_mat_transposed(iter_grp, "adaptation_final", final_transposed);
+          std::vector<std::string> trace_names, final_names;
+          first_adapting->adaptation_names(trace_names, final_names);
+          auto root = hf.getGroup("/");
+          h5_set_str_attr(root, "adaptation_trace_names", trace_names);
+          h5_set_str_attr(root, "adaptation_final_names", final_names);
+        }
+      }
+
       // weights
       h5_write_vec(iter_grp, "normalised_log_weights",
                    this->all_particles[deque_index].normalised_log_weights);

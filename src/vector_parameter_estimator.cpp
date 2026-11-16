@@ -1,4 +1,5 @@
 #include "vector_parameter_estimator.h"
+#include "shared_point_weights.h"
 #include "utils.h"
 #include "move_output.h"
 
@@ -58,26 +59,20 @@ void VectorParameterEstimator::fit(const std::string &variable,
                                    const std::vector<MoveOutput*> &points,
                                    const arma::colvec &normalised_log_weights)
 {
-  std::vector<Parameters> all_points;
-  std::vector<Parameters> current_parameters = (*points.begin())->get_vector_of_parameters();
-  // assume that all MoveOutput* give the same number of points.
-  all_points.reserve(points.size()*current_parameters.size());
-  arma::colvec all_normalised_log_weights(points.size()*current_parameters.size());
-  
-  size_t total_counter = 0;
-  size_t outer_counter = 0;
+  // each MoveOutput is one particle, which may hold several points: its
+  // weight is shared between them (shared_point_weights.h)
+  std::vector< std::vector<Parameters> > points_per_particle;
+  points_per_particle.reserve(points.size());
   for (auto i=points.begin(); i!=points.end(); ++i)
-  {
-    std::vector<Parameters> current_parameters = (*i)->get_vector_of_parameters();
-    for (auto j=current_parameters.begin(); j!=current_parameters.end(); ++j)
-    {
-      all_points.push_back(*j);
-      all_normalised_log_weights[total_counter] = normalised_log_weights[outer_counter];
-    }
-    outer_counter = outer_counter + 1;
-  }
+    points_per_particle.push_back((*i)->get_vector_of_parameters());
+  std::vector<Parameters> all_points;
+  arma::colvec all_normalised_log_weights;
+  shared_point_weights(points_per_particle,
+                       normalised_log_weights,
+                       all_points,
+                       all_normalised_log_weights);
   arma::mat matrix_points = vector_of_parameters_to_mat(variable,
                                                         all_points);
-  this->fit(matrix_points,exp(normalised_log_weights));
+  this->fit(matrix_points,exp(all_normalised_log_weights));
 }
 }

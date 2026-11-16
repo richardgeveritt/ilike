@@ -8,28 +8,24 @@ namespace ilike
 StochasticScanStandardMCMCOutput::StochasticScanStandardMCMCOutput()
 :StandardMCMCOutput()
 {
-  this->mcmc = NULL;
 }
 
 StochasticScanStandardMCMCOutput::StochasticScanStandardMCMCOutput(StochasticScanMCMC* mcmc_in)
 :StandardMCMCOutput(mcmc_in->get_duplicated_termination())
 {
-  this->mcmc = mcmc_in;
+  this->mcmc = std::unique_ptr<StochasticScanMCMC, OptionalDelete>(mcmc_in, OptionalDelete(true));
   this->termination->set_parameters(this);
 }
 
 StochasticScanStandardMCMCOutput::StochasticScanStandardMCMCOutput(StochasticScanMCMC* mcmc_in, bool owns_mcmc_in)
 :StandardMCMCOutput(mcmc_in->get_duplicated_termination())
 {
-  this->mcmc = mcmc_in;
-  this->owns_mcmc = owns_mcmc_in;
+  this->mcmc = std::unique_ptr<StochasticScanMCMC, OptionalDelete>(mcmc_in, OptionalDelete(owns_mcmc_in));
   this->termination->set_parameters(this);
 }
 
 StochasticScanStandardMCMCOutput::~StochasticScanStandardMCMCOutput()
 {
-  if ((this->mcmc!=NULL) && this->owns_mcmc)
-    delete this->mcmc;
 }
 
 //Copy constructor for the StochasticScanStandardMCMCOutput class.
@@ -45,8 +41,6 @@ void StochasticScanStandardMCMCOutput::operator=(const StochasticScanStandardMCM
     return;
   }
   
-  if ((this->mcmc!=NULL) && this->owns_mcmc)
-    delete this->mcmc;
   
   StandardMCMCOutput::operator=(another);
   this->make_copy(another);
@@ -59,13 +53,12 @@ MoveOutput* StochasticScanStandardMCMCOutput::duplicate() const
 
 void StochasticScanStandardMCMCOutput::make_copy(const StochasticScanStandardMCMCOutput &another)
 {
-  this->owns_mcmc = another.owns_mcmc;
   if (another.mcmc==NULL)
-    this->mcmc = NULL;
-  else if (another.owns_mcmc)
-    this->mcmc = another.mcmc->stochastic_scan_mcmc_duplicate();
+    this->mcmc = std::unique_ptr<StochasticScanMCMC, OptionalDelete>(nullptr, OptionalDelete(true));
+  else if (another.mcmc.get_deleter().owns)
+    this->mcmc = std::unique_ptr<StochasticScanMCMC, OptionalDelete>(another.mcmc->stochastic_scan_mcmc_duplicate(), OptionalDelete(true));
   else
-    this->mcmc = another.mcmc;
+    this->mcmc = std::unique_ptr<StochasticScanMCMC, OptionalDelete>(another.mcmc.get(), OptionalDelete(false));
 }
 
 /*
@@ -99,11 +92,11 @@ void StochasticScanStandardMCMCOutput::make_copy(const StochasticScanStandardMCM
 
 MCMC* StochasticScanStandardMCMCOutput::get_mcmc()
 {
-  return this->mcmc;
+  return this->mcmc.get();
 }
 
 const MCMC* StochasticScanStandardMCMCOutput::get_mcmc() const
 {
-  return this->mcmc;
+  return this->mcmc.get();
 }
 }

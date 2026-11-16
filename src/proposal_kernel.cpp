@@ -65,7 +65,11 @@ void ProposalKernel::operator=(const ProposalKernel &another)
 void ProposalKernel::make_copy(const ProposalKernel &another)
 {
   if (another.mcmc_adaptor!=NULL)
+  {
+    // the copy's adaptor adapts the copy, not the kernel copied from
     this->mcmc_adaptor.reset(another.mcmc_adaptor->duplicate());
+    this->mcmc_adaptor->set_proposal(this);
+  }
   else
     this->mcmc_adaptor.reset();
   
@@ -669,6 +673,59 @@ void ProposalKernel::smc_adapt(SMCOutput* current_state)
 {
   if (this->smc_adaptor!=NULL)
     this->smc_adaptor->smc_adapt(current_state);
+}
+
+void ProposalKernel::set_mcmc_adaptor(MCMCAdaptor* adaptor_in)
+{
+  this->mcmc_adaptor.reset(adaptor_in);
+  if (this->mcmc_adaptor!=NULL)
+    this->mcmc_adaptor->set_proposal(this);
+}
+
+void ProposalKernel::mcmc_adapt(const AdaptationStep &step)
+{
+  if (this->mcmc_adaptor!=NULL)
+    this->mcmc_adaptor->adapt(step);
+}
+
+void ProposalKernel::prepare_mcmc_adaptation()
+{
+  if (this->mcmc_adaptor!=NULL)
+    this->mcmc_adaptor->prepare_for_move();
+}
+
+void ProposalKernel::append_adaptation_state(std::vector<std::string> *names,
+                                             std::vector<double> *values,
+                                             bool final,
+                                             const std::string &prefix) const
+{
+  if (this->mcmc_adaptor!=NULL)
+    this->mcmc_adaptor->append_state(names, values, final, prefix);
+}
+
+Parameters* ProposalKernel::get_proposal_parameters() const
+{
+  return NULL;
+}
+
+bool ProposalKernel::proposal_uses_gaussian_mean() const
+{
+  return false;
+}
+
+GaussianProposalInfo* ProposalKernel::get_gaussian_proposal_info(const std::string &variable)
+{
+  return NULL;
+}
+
+arma::colvec* ProposalKernel::get_component_scales(const std::string &variable)
+{
+  return NULL;
+}
+
+PrincipalComponentsInfo* ProposalKernel::get_principal_components(const std::string &variable)
+{
+  return NULL;
 }
 
 void ProposalKernel::mcmc_adapt(const Particle &current_particle,

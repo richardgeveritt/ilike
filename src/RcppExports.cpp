@@ -344,6 +344,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// shared_point_weights_check
+List shared_point_weights_check(const List& points_per_particle, const arma::colvec& normalised_log_weights);
+RcppExport SEXP _ilike_shared_point_weights_check(SEXP points_per_particleSEXP, SEXP normalised_log_weightsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const List& >::type points_per_particle(points_per_particleSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type normalised_log_weights(normalised_log_weightsSEXP);
+    rcpp_result_gen = Rcpp::wrap(shared_point_weights_check(points_per_particle, normalised_log_weights));
+    return rcpp_result_gen;
+END_RCPP
+}
 // copy_audit
 List copy_audit(const List& model, const List& parameters, const List& algorithm_parameter_list, const List& mcmc_termination_method, const List& mcmc_weights_method, size_t seed_value);
 RcppExport SEXP _ilike_copy_audit(SEXP modelSEXP, SEXP parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP mcmc_termination_methodSEXP, SEXP mcmc_weights_methodSEXP, SEXP seed_valueSEXP) {
@@ -389,6 +401,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ilike_do_particle_filter_with_fixed_params", (DL_FUNC) &_ilike_do_particle_filter_with_fixed_params, 11},
     {"_ilike_do_evaluate_log", (DL_FUNC) &_ilike_do_evaluate_log, 7},
     {"_ilike_do_evaluate_log_with_fixed_params", (DL_FUNC) &_ilike_do_evaluate_log_with_fixed_params, 8},
+    {"_ilike_shared_point_weights_check", (DL_FUNC) &_ilike_shared_point_weights_check, 2},
     {"_ilike_copy_audit", (DL_FUNC) &_ilike_copy_audit, 6},
     {"_ilike_sample_store_check", (DL_FUNC) &_ilike_sample_store_check, 0},
     {NULL, NULL, 0}

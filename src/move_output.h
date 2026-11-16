@@ -105,6 +105,18 @@ public:
     return m.n_rows;
   }
   
+  // The adaptation trace (one row per stored point, columns as named by
+  // adaptation_names) and the state at the end of the chain (one row), for
+  // outputs of moves that adapt (dev/plan.md 3.2); none by default.
+  virtual size_t adaptation_trace_columns() const { return 0; }
+  virtual size_t adaptation_final_columns() const { return 0; }
+  virtual size_t fill_adaptation_trace_transposed(arma::mat &destination,
+                                                  size_t first_column) const { return 0; }
+  virtual void fill_adaptation_final(arma::mat &destination,
+                                     size_t column) const {}
+  virtual void adaptation_names(std::vector<std::string> &trace_names,
+                                std::vector<std::string> &final_names) const {}
+
   virtual void write_factors(const std::string &directory_name,
                              const std::string &index) const=0;
   virtual void write_ensemble_factors(const std::string &directory_name,

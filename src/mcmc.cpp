@@ -175,13 +175,18 @@ MoveOutput* MCMC::run(RandomNumberGenerator &rng,
   
   mcmc_output->set_thin(this->thin);
   bool adapting = this->adapts();
+  if (adapting)
+    mcmc_output->start_recording_adaptation();
   Particle current_particle = particle;
   // proposals are built here, reusing its objects (Stage 3 (a))
   Particle scratch;
   while (!mcmc_output->terminate())
   {
     // In place: a rejected proposal no longer copies the current state.
-    mcmc_output->get_mcmc()->move_in_place(rng, current_particle, scratch);
+    if (adapting)
+      mcmc_output->get_mcmc()->adaptive_move_in_place(rng, current_particle, scratch);
+    else
+      mcmc_output->get_mcmc()->move_in_place(rng, current_particle, scratch);
     mcmc_output->increment_counter();
     if ((*mcmc_output->get_iteration_counter_pointer() % 1024) == 0)
       check_interrupt(); // in long chains (dev/plan.md 3.11)
@@ -189,9 +194,9 @@ MoveOutput* MCMC::run(RandomNumberGenerator &rng,
     // Store the iteration compactly (its values and factor records), not a
     // copy of the particle; the state itself is handed over at the end.
     mcmc_output->record(current_particle);
-    if (adapting)
-      mcmc_output->mcmc_adapt(current_particle);
   }
+  if (adapting)
+    mcmc_output->finish_adaptation();
   mcmc_output->set_current(std::move(current_particle));
   mcmc_output->reset_counter();
   return mcmc_output;
@@ -216,6 +221,21 @@ void MCMC::move_in_place(RandomNumberGenerator &rng,
                          Particle &scratch) const
 {
   this->move_in_place(rng, particle);
+}
+
+void MCMC::append_adaptation_state(std::vector<std::string> *names,
+                                   std::vector<double> *values,
+                                   bool final,
+                                   const std::string &prefix) const
+{
+}
+
+void MCMC::adaptive_move_in_place(RandomNumberGenerator &rng,
+                                  Particle &particle,
+                                  Particle &scratch)
+{
+  this->move_in_place(rng, particle, scratch);
+  this->mcmc_adapt(particle, 0);
 }
 
 void MCMC::move_in_place(RandomNumberGenerator &rng,

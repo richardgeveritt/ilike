@@ -130,6 +130,9 @@ public:
   // Stochastic has some weights.
   // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.
   // Proposal needs to call simulate in all llhdoutputs
+
+  Parameters* get_proposal_parameters() const;
+
   
 protected:
   

@@ -114,6 +114,22 @@ public:
                              Particle &particle,
                              Particle &scratch) const;
 
+  // As move_in_place(rng, particle, scratch), then one step of adaptation of
+  // this chain's own copy of the move (dev/plan.md 3.2): used by run() only
+  // when the move adapts. Metropolis and Metropolis-Hastings moves give the
+  // adaptor the previous, proposed and current states and the acceptance
+  // probability; the default refuses (MCMCAdaptor::mcmc_adapt).
+  virtual void adaptive_move_in_place(RandomNumberGenerator &rng,
+                                      Particle &particle,
+                                      Particle &scratch);
+
+  // The adaptation state of this move's kernels (MCMCAdaptor::append_state);
+  // nothing for moves that do not adapt.
+  virtual void append_adaptation_state(std::vector<std::string> *names,
+                                       std::vector<double> *values,
+                                       bool final,
+                                       const std::string &prefix) const;
+
   // Store every thin-th iteration of a run (MCMC(..., thin); default 1).
   void set_thin(size_t thin_in);
   size_t get_thin() const { return this->thin; }

@@ -11,79 +11,70 @@ using namespace Rcpp;
 
 namespace ilike
 {
-  /**
-   * @file mcmc_adaptor.h
-   * @brief Defines the MCMCOutput class.
-   *
-   * Stores and manages the output produced by MCMC. Holds results such as log-likelihood estimates, samples, or diagnostics returned after running the associated algorithm.
-   *
-   * @namespace ilike
-   * @class MCMCOutput
-   * @brief The mcmc output class.
-   */
 
+class ProposalKernel;
 
-class MCMCOutput;
+// What one iteration of a Metropolis(-Hastings) move gives an adaptor
+// (dev/plan.md 3.2, A1): the state before the move X_i, the proposed point
+// Y_{i+1}, the state after it X_{i+1} (one of the two), and the acceptance
+// probability alpha(X_i, Y_{i+1}) = min(1, ratio) (0 if either density is 0).
+struct AdaptationStep
+{
+  const Particle *previous;
+  const Particle *proposed;
+  const Particle *current;
+  double acceptance_probability;
+};
 
+// Adapts the parameters of the proposal kernel that owns it, from the chain
+// (Andrieu & Thoms 2008). Each chain adapts its own copy of the kernel (C98),
+// so the adaptor is copied with the kernel and then pointed at the copy.
 class MCMCAdaptor
 {
-  
+
 public:
-  
-  /**
-   * @brief Performs the mcmcadaptor operation.
-   */
+
   MCMCAdaptor();
-  /**
-   * @brief Performs the ~mcmcadaptor operation.
-   */
   virtual ~MCMCAdaptor();
-  
-  /**
-   * @brief Performs the mcmcadaptor operation.
-   *
-   * @param another The MCMCOutput instance to copy from.
-   */
+
   MCMCAdaptor(const MCMCAdaptor &another);
-  
-  /**
-   * @brief Assignment operator for MCMCOutput.
-   *
-   * @param another The MCMCOutput instance to copy from.
-   */
   void operator=(const MCMCAdaptor &another);
-  /**
-   * @brief Creates a deep copy of this MCMCOutput object.
-   *
-   * @return The result.
-   */
   virtual MCMCAdaptor* duplicate() const=0;
-  
+
+  // The kernel adapted: called when the adaptor is attached, and again on the
+  // kernel's copy after the kernel is duplicated.
+  virtual void set_proposal(ProposalKernel* proposal_in);
+
+  // One step of adaptation after each iteration of the move.
+  virtual void adapt(const AdaptationStep &step)=0;
+
+  // The adaptation state written to the output (dev/plan.md 3.2): with
+  // final false, the trace written at every stored iteration (scales and
+  // means: O(d)); with final true, the state at the end of a chain (also
+  // covariances and directions). Appends the column names (names != NULL)
+  // or the values (values != NULL); prefix goes before each name.
+  virtual void append_state(std::vector<std::string> *names,
+                            std::vector<double> *values,
+                            bool final,
+                            const std::string &prefix) const=0;
+
+  // Called before each move (some adaptors point the kernel at their own
+  // parameters, which a copy of the kernel does not yet know about).
+  virtual void prepare_for_move();
+
+  // Moves that do not report an AdaptationStep cannot be adapted.
   void mcmc_adapt(const Particle &latest_particle,
                   size_t iteration_counter);
-  
-  // MH has its own parameters.
-  // Stochastic has some weights.
-  // MH has sim prop and eval prop, take in params. Use current value in acceptance, Set current value if accepted.
-  // Proposal needs to call simulate in all llhdoutputs
-  
+
 protected:
-  
-  virtual void specific_mcmc_adapt(const Particle &latest_particle,
-                                   size_t iteration_counter)=0;
-  
-  // not stored here
-  /** @brief The proposal. */
-  ProposalKernel* proposal;
-  
-  /**
-   * @brief Copies the state of another MCMCOutput into this object.
-   *
-   * @param another The MCMCOutput instance to copy from.
-   */
+
   void make_copy(const MCMCAdaptor &another);
-  
+
+  // Not owned: the kernel that owns this adaptor.
+  ProposalKernel* proposal;
+
 };
+
 }
 
 #endif

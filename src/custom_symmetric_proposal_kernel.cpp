@@ -151,4 +151,10 @@ void CustomSymmetricProposalKernel::set_data(Data* data_in)
 {
   
 }
+
+Parameters* CustomSymmetricProposalKernel::get_proposal_parameters() const
+{
+  return this->proposal_parameters;
+}
+
 }

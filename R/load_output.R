@@ -670,3 +670,71 @@ load_enk_output = function(results_directory,
 #'   output = dplyr::distinct(output)
 #'   return(tidyr::pivot_wider(output,names_from=Parameter,values_from=Value))
 #' }
+
+#' Loading the adaptation of adaptive MCMC moves into R memory.
+#'
+#' For MCMC moves with an adaptor (an m_adaptor or mh_adaptor block, or an
+#' adapt_m_proposal or adapt_mh_proposal function), each chain records the
+#' adapted parameters of its proposal: at every stored iteration, the scales
+#' and the running estimate of the target's mean (the trace); and at the end
+#' of the chain, also the estimated covariance (its upper triangle) and, for
+#' principal-components moves, the eigenvalues and directions (the final
+#' state). Parameter names are prefixed with "moveK." when the MCMC consists
+#' of several moves.
+#'
+#' @param results_directory The folder in which the results are stored.
+#' @param target (optional) The stored SMC iteration to read (default: the last one, which for MCMC holds the chains).
+#' @return A list with data frames trace (columns Chain, Iteration, Parameter, Value; Iteration counts stored iterations, as in load_mcmc_output) and final (columns Chain, Parameter, Value).
+#' @export
+load_mcmc_adaptation = function(results_directory,
+                                target = NULL)
+{
+  h5_path <- file.path(results_directory, "ilike_smc", "output.h5")
+  if (!file.exists(h5_path))
+    stop(paste("HDF5 output file not found:", h5_path))
+  h5f <- hdf5r::H5File$new(h5_path, mode = "r")
+  on.exit(try(h5f$close_all(), silent = TRUE), add = TRUE)
+  if (!("adaptation_trace_names" %in% hdf5r::h5attr_names(h5f)))
+    stop("load_mcmc_adaptation: the output holds no adaptation (no adaptive MCMC move was used).")
+  trace_names <- h5f$attr_open("adaptation_trace_names")$read()
+  final_names <- h5f$attr_open("adaptation_final_names")$read()
+
+  targets <- sort(as.integer(names(h5f[["iteration"]])))
+  if (is.null(target))
+    target <- max(targets)
+  group <- h5f[[paste0("iteration/", target)]]
+  if (!("adaptation_trace" %in% names(group)))
+    stop("load_mcmc_adaptation: iteration ", target, " holds no adaptation.")
+
+  # stored as [rows x columns]; hdf5r returns the transpose (and drops
+  # dimensions of size 1)
+  read_rows <- function(dataset, number_of_columns)
+  {
+    raw <- dataset$read()
+    if (is.matrix(raw))
+      return(t(raw))
+    matrix(raw, ncol = number_of_columns, byrow = TRUE)
+  }
+  trace <- read_rows(group[["adaptation_trace"]], length(trace_names))
+  final <- read_rows(group[["adaptation_final"]], length(final_names))
+
+  # the stored points of chain k are rows sum(lengths[1:(k-1)]) + 1, ...
+  ol <- h5f[["output_lengths"]]
+  ol_dims <- ol$dims
+  ol_mat <- matrix(as.numeric(ol$read()), nrow = ol_dims[2], ncol = ol_dims[1], byrow = TRUE)
+  lengths <- ol_mat[which(targets == target), ]
+  if (sum(lengths) != nrow(trace))
+    stop("load_mcmc_adaptation: the adaptation trace does not match the stored points.")
+  chain <- rep(seq_along(lengths), lengths)
+  iteration <- sequence(lengths)
+
+  list(trace = data.frame(Chain = rep(chain, times = length(trace_names)),
+                          Iteration = rep(iteration, times = length(trace_names)),
+                          Parameter = rep(trace_names, each = nrow(trace)),
+                          Value = as.vector(trace),
+                          stringsAsFactors = FALSE),
+       final = data.frame(Chain = rep(seq_len(nrow(final)), times = length(final_names)),
+                          Parameter = rep(final_names, each = nrow(final)),
+                          Value = as.vector(final),
+                          stringsAsFactors = FALSE))
+}

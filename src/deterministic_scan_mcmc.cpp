@@ -302,4 +302,32 @@ StandardMCMCOutput* DeterministicScanMCMC::initialise_mcmc_output() const
     return new DeterministicScanStandardMCMCOutput(this->deterministic_scan_mcmc_duplicate());
   return new DeterministicScanStandardMCMCOutput(const_cast<DeterministicScanMCMC*>(this), false);
 }
+
+void DeterministicScanMCMC::adaptive_move_in_place(RandomNumberGenerator &rng,
+                                                   Particle &particle,
+                                                   Particle &scratch)
+{
+  // each move that adapts adapts its own kernel (dev/plan.md 3.2)
+  for (std::vector<size_t>::const_iterator i=this->order.begin();
+       i!=this->order.end();
+       ++i)
+  {
+    if (this->moves[*i]->adapts())
+      this->moves[*i]->adaptive_move_in_place(rng, particle, scratch);
+    else
+      this->moves[*i]->move_in_place(rng, particle, scratch);
+  }
+}
+
+void DeterministicScanMCMC::append_adaptation_state(std::vector<std::string> *names,
+                                 std::vector<double> *values,
+                                 bool final,
+                                 const std::string &prefix) const
+{
+  // each move's columns are prefixed with its position in the sweep
+  for (size_t k=0; k<this->moves.size(); ++k)
+    this->moves[k]->append_adaptation_state(names, values, final,
+                                            prefix + "move" + std::to_string(k+1) + ".");
+}
+
 }
