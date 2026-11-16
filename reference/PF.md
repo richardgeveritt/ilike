@@ -23,7 +23,8 @@ PF(
   verify_cpp_function_types = FALSE,
   keep_temporary_recipe_code = FALSE,
   seed = NULL,
-  grain_size = 64
+  grain_size = 64,
+  progress = getOption("ilike.progress", interactive())
 )
 ```
 
@@ -110,6 +111,12 @@ PF(
 - seed:
 
   (optional) The seed for the random number generator.
+
+- progress:
+
+  (optional) If TRUE, show a progress bar (cli) while the algorithm
+  runs. Default getOption("ilike.progress", interactive()): shown in
+  interactive sessions only.
 
 - grain_size:
 

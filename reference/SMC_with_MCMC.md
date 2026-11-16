@@ -24,7 +24,9 @@ SMC_with_MCMC(
   keep_temporary_recipe_code = FALSE,
   seed = NULL,
   grain_size = 64,
-  check_factor_index = FALSE
+  check_factor_index = FALSE,
+  waste_free_chains = 0,
+  progress = getOption("ilike.progress", interactive())
 )
 ```
 
@@ -65,7 +67,9 @@ SMC_with_MCMC(
   written in C++ or with ilike:: built-in functions (not R, Python or
   Julia), exact or annealed factors, and an MCMC termination with a
   fixed number of iterations; otherwise the moves are sequential, with a
-  warning. The initial simulation and the weighting are sequential.
+  warning. The simulation of the first generation and the choice of each
+  next target run in parallel too when the moves can; resampling and
+  writing output are sequential.
 
 - smc_iterations_to_store:
 
@@ -118,6 +122,12 @@ SMC_with_MCMC(
 
   (optional) The seed for the random number generator.
 
+- progress:
+
+  (optional) If TRUE, show a progress bar (cli) while the algorithm
+  runs. Default getOption("ilike.progress", interactive()): shown in
+  interactive sessions only.
+
 - grain_size:
 
   (optional) The number of particles moved together (default 64). Each
@@ -133,6 +143,17 @@ SMC_with_MCMC(
   (neither in its factor index nor its cut factor index) and stop if any
   changed value, i.e. did not cancel in the acceptance ratio. Slower;
   for checking a model file. Default FALSE.
+
+- waste_free_chains:
+
+  (optional) If greater than 0 (M), run waste-free SMC (Dau and Chopin,
+  2022): at every step M particles are resampled and each is run as an
+  MCMC chain of number_of_particles/M states (itself and
+  number_of_particles/M - 1 moves, whatever mcmc_termination says), and
+  all the states form the next generation. Must divide
+  number_of_particles. Needs exact or annealed factors, a move that does
+  not adapt, and mcmc_termination ilike::iterations. Default 0: standard
+  SMC.
 
 ## Value
 

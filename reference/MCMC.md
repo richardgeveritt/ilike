@@ -24,7 +24,8 @@ MCMC(
   seed = NULL,
   grain_size = 64,
   check_factor_index = FALSE,
-  thin = 1
+  thin = 1,
+  progress = getOption("ilike.progress", interactive())
 )
 ```
 
@@ -111,6 +112,12 @@ MCMC(
 - seed:
 
   (optional) The seed for the random number generator.
+
+- progress:
+
+  (optional) If TRUE, show a progress bar (cli) while the algorithm
+  runs. Default getOption("ilike.progress", interactive()): shown in
+  interactive sessions only.
 
 - grain_size:
 
