@@ -149,6 +149,22 @@ double UniformRandomWalkProposalKernel::specific_subsample_evaluate_kernel(const
  }
  */
 
+// simulate, written into the target (same random numbers and values)
+void UniformRandomWalkProposalKernel::simulate_into(RandomNumberGenerator &rng,
+                                                    const Particle &particle,
+                                                    ProposalTarget &target) const
+{
+  for (auto i=this->proposal_info.begin();
+       i!=this->proposal_info.end();
+       ++i)
+  {
+    const arma::mat &current_position = (particle.get_transformed_parameters(this))[i->first];
+    target.matrix(i->first) = runif(rng,
+                                    current_position-i->second,
+                                    current_position+i->second);
+  }
+}
+
 Parameters UniformRandomWalkProposalKernel::simulate(RandomNumberGenerator &rng,
                                                      const Particle &particle) const
 {

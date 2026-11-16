@@ -168,6 +168,10 @@ protected:
   Parameters simulate(RandomNumberGenerator &rng,
                       const Particle &particle) const;
   
+  void simulate_into(RandomNumberGenerator &rng,
+                     const Particle &particle,
+                     ProposalTarget &target) const;
+  
   /*
    Parameters simulate(RandomNumberGenerator &rng,
    Particle &particle,

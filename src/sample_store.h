@@ -106,6 +106,13 @@ protected:
   size_t number_of_points;
   size_t pending_reserve = 0;
 
+  // Where each stored variable was found in the last Parameters appended
+  // (its position among the variables), so that append looks there first
+  // instead of searching by name (dev/plan.md, Stage 3 item 7, in the store
+  // only). Checked by name on every use; a miss searches and updates it.
+  std::vector<size_t> vector_positions;
+  const arma::mat& find_vector_variable(const Parameters &parameters, size_t k);
+
   // (total_dimension x capacity) and (number_of_extra_columns x capacity):
   // one column per point
   arma::mat values;

@@ -11,6 +11,7 @@ using namespace Rcpp;
 //#include "ensemble_member.h"
 #include "distributions.h"
 #include "ilike_header.h"
+#include "proposal_target.h"
 
 namespace ilike
 {
@@ -37,6 +38,23 @@ class CompositeProposalKernel;
 class CompositeIndependentProposalKernel;
 class ReinforceGradientEstimator;
 class DirectGradientEstimatorOutput;
+
+// log N(x; mu, scale * Sigma) from Sigma^{-1} and log|Sigma|: the expression
+// the Gaussian kernels used, dmvnorm_using_precomp(x, mu, (1/scale)*inv,
+// dim*log(scale)+logdet), without building the scaled d x d inverse when the
+// scale is 1 (multiplying by 1.0 is exact, so the value is the same).
+inline double dmvnorm_scaled_precomp(const arma::colvec &x,
+                                     const arma::colvec &mu,
+                                     const arma::mat &inv,
+                                     double scale,
+                                     double logdet)
+{
+  double dim = double(mu.n_rows);
+  if (scale == 1.0)
+    return dmvnorm_using_precomp(x, mu, inv, dim*log(scale)+logdet);
+  else
+    return dmvnorm_using_precomp(x, mu, (1.0/scale)*inv, dim*log(scale)+logdet);
+}
 
 class ProposalKernel : public Kernel
 {
@@ -164,6 +182,13 @@ public:
   
   double evaluate_kernel(const Particle &proposed_particle,
                          const Particle &old_particle) const;
+  // The same for two sets of parameters (e.g. a data model evaluated at the
+  // data given a particle's state). Before this overload existed, such calls
+  // converted both arguments to Particles; that is still what happens by
+  // default (specific_evaluate_kernel_from_parameters), unless the kernel
+  // evaluates the parameters directly.
+  double evaluate_kernel(const Parameters &proposed_parameters,
+                         const Parameters &old_parameters) const;
   double subsample_evaluate_kernel(const Particle &proposed_particle,
                                    const Particle &old_particle) const;
   
@@ -200,7 +225,16 @@ public:
   
   virtual Parameters simulate(RandomNumberGenerator &rng,
                               const Particle &particle) const=0;
-  
+
+  // simulate, writing each proposed variable into target.matrix(name) instead
+  // of returning a new Parameters (used by move_into when there is no
+  // transform). Default: target.write_all(simulate(rng, particle)). Kernels
+  // override it with the body of their simulate, writing into the target;
+  // the random numbers and the values must be those of simulate.
+  virtual void simulate_into(RandomNumberGenerator &rng,
+                             const Particle &particle,
+                             ProposalTarget &target) const;
+
   /*
    virtual Parameters simulate(RandomNumberGenerator &rng,
    Particle &particle,
@@ -299,7 +333,14 @@ protected:
   
   virtual double specific_evaluate_kernel(const Particle &proposed_particle,
                                           const Particle &old_particle) const=0;
-  
+
+  // Called by evaluate_kernel(Parameters, Parameters) when the kernel has no
+  // transform. Default: build the two Particles and call
+  // specific_evaluate_kernel. Kernels whose density depends only on the
+  // (untransformed) parameters override it to skip building the Particles.
+  virtual double specific_evaluate_kernel_from_parameters(const Parameters &proposed_parameters,
+                                                          const Parameters &old_parameters) const;
+
   /*
    virtual double specific_evaluate_kernel(Particle &proposed_particle,
    Particle &old_particle,

@@ -183,9 +183,9 @@ FactorVariables* HMMFactors::simulate_factor_variables(const Parameters &simulat
     outputs.back()->simulate(simulated_parameters);
     outputs.back()->write_to_file_flag = false;
   }
-  
+
   return new HMMFactorVariables(this,
-                                outputs);
+                                std::move(outputs));
 }
 
 /*
@@ -224,9 +224,9 @@ FactorVariables* HMMFactors::subsample_simulate_factor_variables(const Parameter
     outputs.back()->subsample_simulate(simulated_parameters);
     outputs.back()->write_to_file_flag = false;
   }
-  
+
   return new HMMFactorVariables(this,
-                                outputs);
+                                std::move(outputs));
 }
 
 /*

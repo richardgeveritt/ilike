@@ -151,17 +151,21 @@ void ProposalKernel::move_into(RandomNumberGenerator &rng,
                                const Index* new_outputs_index,
                                Particle &scratch) const
 {
-  // the steps of move(), in place
-  scratch.parameters = particle.parameters;
+  // the steps of move(), in place: the parameters are the current ones with
+  // the proposed variables overwritten, written into scratch's own matrices
+  // (ProposalTarget; simulate reads only the current particle, so the result
+  // and the random numbers are those of move())
+  ProposalTarget target(scratch.parameters, particle.parameters);
   if (this->transform==NULL)
   {
-    scratch.parameters.deep_overwrite_with_variables_in_argument(this->simulate(rng,particle));
+    this->simulate_into(rng, particle, target);
   }
   else
   {
     Parameters proposed_parameters_in_transformed_space = this->simulate(rng,particle);
-    scratch.parameters.deep_overwrite_with_variables_in_argument(this->transform->inverse_transform(proposed_parameters_in_transformed_space));
+    target.write_all(this->transform->inverse_transform(proposed_parameters_in_transformed_space));
   }
+  target.finish();
 
   bool recycled = false;
   if ((particle.factor_variables!=NULL) && (scratch.factor_variables!=NULL))
@@ -712,6 +716,28 @@ double ProposalKernel::evaluate_kernel(const Particle &proposed_particle,
     // need to include absolute value of Jacobian determinant
     return this->specific_evaluate_kernel(proposed_particle, old_particle) + this->transform->log_abs_jacobian_determinant(proposed_particle.parameters);
   }
+}
+
+void ProposalKernel::simulate_into(RandomNumberGenerator &rng,
+                                   const Particle &particle,
+                                   ProposalTarget &target) const
+{
+  target.write_all(this->simulate(rng, particle));
+}
+
+double ProposalKernel::evaluate_kernel(const Parameters &proposed_parameters,
+                                       const Parameters &old_parameters) const
+{
+  if (this->transform==NULL)
+    return this->specific_evaluate_kernel_from_parameters(proposed_parameters, old_parameters);
+  else
+    return this->evaluate_kernel(Particle(proposed_parameters), Particle(old_parameters));
+}
+
+double ProposalKernel::specific_evaluate_kernel_from_parameters(const Parameters &proposed_parameters,
+                                                                const Parameters &old_parameters) const
+{
+  return this->specific_evaluate_kernel(Particle(proposed_parameters), Particle(old_parameters));
 }
 
 /*

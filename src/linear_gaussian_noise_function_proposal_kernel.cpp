@@ -82,22 +82,26 @@ void LinearGaussianNoiseFunctionProposalKernel::make_copy(const LinearGaussianNo
 double LinearGaussianNoiseFunctionProposalKernel::specific_evaluate_kernel(const Particle &proposed_particle,
                                                                            const Particle &old_particle) const
 {
+  return this->specific_evaluate_kernel_from_parameters(proposed_particle.get_transformed_parameters(this),
+                                                        old_particle.get_transformed_parameters(this));
+}
+
+double LinearGaussianNoiseFunctionProposalKernel::specific_evaluate_kernel_from_parameters(const Parameters &proposed_parameters,
+                                                                                           const Parameters &old_parameters) const
+{
   double output = 0.0;
-  
-  Parameters current_parameters = old_particle.get_transformed_parameters(this);
+
+  const Parameters &current_parameters = old_parameters;
   for (auto i=this->proposal_info.begin();
        i!=this->proposal_info.end();
        ++i)
   {
     arma::colvec mean = i->second.get_A(current_parameters)*current_parameters.get_colvec(this->conditioned_on_variable_names);
-    
-    double scale = i->second.get_double_scale();
-    double dim = double(mean.n_rows);
-    
-    output = output + dmvnorm_using_precomp(proposed_particle.get_transformed_parameters(this).get_colvec(i->first),
-                                            mean,
-                                            (1.0/scale)*i->second.get_inv(current_parameters),
-                                            dim*log(scale)+i->second.get_logdet(current_parameters));
+    output = output + dmvnorm_scaled_precomp(proposed_parameters.get_colvec(i->first),
+                                             mean,
+                                             i->second.get_inv(current_parameters),
+                                             i->second.get_double_scale(),
+                                             i->second.get_logdet(current_parameters));
   }
   return output;
 }

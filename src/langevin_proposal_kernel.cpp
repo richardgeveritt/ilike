@@ -256,6 +256,24 @@ double LangevinProposalKernel::specific_subsample_evaluate_kernel(const Particle
  }
  */
 
+// simulate, written into the target (same random numbers and values)
+void LangevinProposalKernel::simulate_into(RandomNumberGenerator &rng,
+                                           const Particle &particle,
+                                           ProposalTarget &target) const
+{
+  GradientEstimatorOutput* gradient_estimator_output = particle.get_gradient_estimator_output(this);
+  for (auto i=this->proposal_info.begin();
+       i!=this->proposal_info.end();
+       ++i)
+  {
+    arma::colvec mean = particle.get_transformed_parameters(this).get_colvec(i->first);
+    double scale = i->second.get_double_scale();
+    target.matrix(i->first) = rmvnorm_using_lower_chol(rng,
+                                                       mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first,this->index,particle))/2.0,
+                                                       i->second.get_chol_lower(), sqrt(scale));
+  }
+}
+
 Parameters LangevinProposalKernel::simulate(RandomNumberGenerator &rng,
                                             const Particle &particle) const
 {

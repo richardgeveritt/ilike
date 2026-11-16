@@ -27,21 +27,23 @@ VectorFactorVariables::~VectorFactorVariables()
   }
 }
 
+// The outputs vector is taken by value and moved in: callers that pass a
+// temporary or std::move their vector no longer have it copied.
 VectorFactorVariables::VectorFactorVariables(const VectorFactors* vector_factors_in,
-                                             const std::vector<LikelihoodEstimatorOutput*> &likelihood_estimator_outputs_in)
+                                             std::vector<LikelihoodEstimatorOutput*> likelihood_estimator_outputs_in)
 :FactorVariables()
 {
   this->vector_factors = vector_factors_in;
-  this->likelihood_estimator_outputs = likelihood_estimator_outputs_in;
+  this->likelihood_estimator_outputs = std::move(likelihood_estimator_outputs_in);
 }
 
 VectorFactorVariables::VectorFactorVariables(VectorFactors* vector_factors_in,
-                                             const std::vector<LikelihoodEstimatorOutput*> &likelihood_estimator_outputs_in,
+                                             std::vector<LikelihoodEstimatorOutput*> likelihood_estimator_outputs_in,
                                              Particle* particle_in)
 :FactorVariables(particle_in)
 {
   this->vector_factors = vector_factors_in;
-  this->likelihood_estimator_outputs = likelihood_estimator_outputs_in;
+  this->likelihood_estimator_outputs = std::move(likelihood_estimator_outputs_in);
 }
 
 //Copy constructor for the VectorFactorVariables class.
@@ -96,7 +98,7 @@ FactorVariables* VectorFactorVariables::copy_with_new_outputs(const Parameters &
     }
   }
   return new VectorFactorVariables(this->vector_factors,
-                                   outputs);
+                                   std::move(outputs));
 }
 
 FactorVariables* VectorFactorVariables::duplicate() const
@@ -648,12 +650,22 @@ void VectorFactorVariables::write_compact_values(const std::string &directory_na
                                                  const std::string &index,
                                                  const double *values) const
 {
-  // the same directories as write_to_file
+  // the same directories as write_to_file, built once per directory
+  if (!this->factor_directories)
+    this->factor_directories.reset(new FactorDirectories());
+  FactorDirectories &cache = *this->factor_directories;
+  if ( (cache.names.size() != this->likelihood_estimator_outputs.size()) ||
+       (cache.directory != directory_name) )
+  {
+    cache.directory = directory_name;
+    cache.names.clear();
+    for (size_t i=0; i<this->likelihood_estimator_outputs.size(); ++i)
+      cache.names.push_back(directory_name + "/factor" + std::to_string(i+1));
+  }
   size_t offset = 0;
   for (size_t i=0; i<this->likelihood_estimator_outputs.size(); ++i)
   {
-    std::string factor_directory_name = directory_name + "/factor" + toString(i+1);
-    this->likelihood_estimator_outputs[i]->write_compact_values(factor_directory_name, index, values + offset);
+    this->likelihood_estimator_outputs[i]->write_compact_values(cache.names[i], index, values + offset);
     offset += this->likelihood_estimator_outputs[i]->compact_size();
   }
 }
@@ -665,7 +677,7 @@ void VectorFactorVariables::write_to_file(const std::string &directory_name,
        i<this->likelihood_estimator_outputs.size();
        ++i)
   {
-    std::string factor_directory_name = directory_name + "/factor" + toString(i+1);
+    std::string factor_directory_name = directory_name + "/factor" + std::to_string(i+1);
     this->likelihood_estimator_outputs[i]->write_to_file(factor_directory_name,
                                                          index);
   }

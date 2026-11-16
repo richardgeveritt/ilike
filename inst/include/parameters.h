@@ -360,6 +360,13 @@ public:
   void merge_with_fixed(const Parameters &conditioned_on_parameters);
 
   /**
+   * @brief merge_with_fixed with two sets of fixed parameters in turn, with
+   * room for both made once.
+   */
+  void merge_with_fixed(const Parameters &first_conditioned_on_parameters,
+                        const Parameters &second_conditioned_on_parameters);
+
+  /**
    * @brief Creates a deep copy of the current Parameters object.
    * @return Deep copied Parameters object.
    */
@@ -715,8 +722,9 @@ inline void Parameters::make_copy(Parameters &&another)
   this->vector_parameters = std::move(another.vector_parameters);
   this->any_parameters = std::move(another.any_parameters);
 
-  another.vector_parameters = VectorParameterMap();
-  another.any_parameters = AnyParameterMap();
+  // leave the source empty without constructing temporary maps
+  another.vector_parameters.clear();
+  another.any_parameters.clear();
 }
 
 inline arma::mat &Parameters::operator[](const std::string &variable)
@@ -828,6 +836,13 @@ inline Parameters Parameters::merge(const Parameters &another) const
 
 inline void Parameters::merge_with_fixed(const Parameters &conditioned_on_parameters)
 {
+  // room for the new variables in one allocation (more than needed if some
+  // names are already here)
+  if (conditioned_on_parameters.vector_parameters.size() > 0)
+    this->vector_parameters.reserve(this->vector_parameters.size() + conditioned_on_parameters.vector_parameters.size());
+  if (conditioned_on_parameters.any_parameters.size() > 0)
+    this->any_parameters.reserve(this->any_parameters.size() + conditioned_on_parameters.any_parameters.size());
+
   for (auto i = conditioned_on_parameters.vector_begin(); i != conditioned_on_parameters.vector_end(); ++i)
   {
     this->vector_parameters[i->first] = std::pair<std::shared_ptr<arma::mat>, bool>(i->second.first, true);
@@ -837,6 +852,19 @@ inline void Parameters::merge_with_fixed(const Parameters &conditioned_on_parame
   {
     this->any_parameters[i->first] = std::pair<std::shared_ptr<boost::any>, bool>(i->second.first, true);
   }
+}
+
+inline void Parameters::merge_with_fixed(const Parameters &first_conditioned_on_parameters,
+                                         const Parameters &second_conditioned_on_parameters)
+{
+  this->vector_parameters.reserve(this->vector_parameters.size() +
+                                  first_conditioned_on_parameters.vector_parameters.size() +
+                                  second_conditioned_on_parameters.vector_parameters.size());
+  this->any_parameters.reserve(this->any_parameters.size() +
+                               first_conditioned_on_parameters.any_parameters.size() +
+                               second_conditioned_on_parameters.any_parameters.size());
+  this->merge_with_fixed(first_conditioned_on_parameters);
+  this->merge_with_fixed(second_conditioned_on_parameters);
 }
 
 inline Parameters Parameters::deep_copy() const
@@ -948,8 +976,19 @@ inline void Parameters::deep_overwrite_with_variables_in_argument(const Paramete
     {
       if (found->second.second == false)
       {
-        // if does exist, and is not fixed, just pass reference to memory that the shard pointer points to
-        found->second.first = std::make_shared<arma::mat>(*i->second.first);
+        // If does exist, and is not fixed: replace the values. A new matrix is
+        // needed only when the old one is shared with another Parameters
+        // object (which must not see the change) or has another shape; a
+        // matrix owned by this object alone is overwritten in place, which
+        // gives the same values without an allocation.
+        std::shared_ptr<arma::mat> &old_matrix = found->second.first;
+        const arma::mat &new_matrix = *i->second.first;
+        if ( (old_matrix.use_count() == 1) &&
+             (old_matrix->n_rows == new_matrix.n_rows) &&
+             (old_matrix->n_cols == new_matrix.n_cols) )
+          *old_matrix = new_matrix;
+        else
+          old_matrix = std::make_shared<arma::mat>(new_matrix);
       }
       else
       {

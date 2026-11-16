@@ -37,6 +37,42 @@ class EnsembleFactors;
 class FactorVariables;
 class EnsembleFactorVariables;
 
+// Whether the last proposal of each proposal kernel was accepted, keyed by the
+// kernel's instance index (read by MCMC adaptors). A particle meets a handful
+// of kernels at most, so a vector searched linearly replaces the hash map
+// used before: copying an empty record allocates nothing, and a particle is
+// copied at every proposal (dev/plan.md, Stage 3 item 2).
+class AcceptanceRecords
+{
+public:
+  typedef std::vector<std::pair<int, bool>>::const_iterator const_iterator;
+
+  bool& operator[](int key)
+  {
+    for (auto i = this->records.begin(); i != this->records.end(); ++i)
+      if (i->first == key)
+        return i->second;
+    this->records.emplace_back(key, false);
+    return this->records.back().second;
+  }
+
+  const_iterator find(int key) const
+  {
+    for (auto i = this->records.begin(); i != this->records.end(); ++i)
+      if (i->first == key)
+        return i;
+    return this->records.end();
+  }
+
+  const_iterator begin() const { return this->records.begin(); }
+  const_iterator end() const { return this->records.end(); }
+  size_t size() const { return this->records.size(); }
+  void clear() { this->records.clear(); }
+
+private:
+  std::vector<std::pair<int, bool>> records;
+};
+
 class Particle
 {
   
@@ -447,7 +483,7 @@ public:
   //                    const Parameters &proposed_transformed);
   
   // Proposal kernel is pointed to
-  boost::unordered_map< int, bool> accepted_outputs;
+  AcceptanceRecords accepted_outputs;
   //boost::unordered_map< const ProposalKernel*, bool> accepted_outputs;
   
   void set_acceptance(const ProposalKernel* proposal_in,

@@ -102,19 +102,24 @@ void NonLinearGaussianNoiseProposalKernel::make_copy(const NonLinearGaussianNois
 double NonLinearGaussianNoiseProposalKernel::specific_evaluate_kernel(const Particle &proposed_particle,
                                                                       const Particle &old_particle) const
 {
+  return this->specific_evaluate_kernel_from_parameters(proposed_particle.get_transformed_parameters(this),
+                                                        old_particle.get_transformed_parameters(this));
+}
+
+double NonLinearGaussianNoiseProposalKernel::specific_evaluate_kernel_from_parameters(const Parameters &proposed_parameters,
+                                                                                      const Parameters &old_parameters) const
+{
   double output = 0.0;
-  Parameters transformed = this->transform->transform(old_particle.get_transformed_parameters(this));
+  Parameters transformed = this->transform->transform(old_parameters);
   for (auto i=this->proposal_info.begin();
        i!=this->proposal_info.end();
        ++i)
   {
-    arma::colvec mean = transformed.get_colvec(i->first);
-    double scale = i->second.get_double_scale();
-    double dim = double(mean.n_rows);
-    output = output + dmvnorm_using_precomp(proposed_particle.get_transformed_parameters(this).get_colvec(i->first),
-                                            mean,
-                                            (1.0/scale)*i->second.get_inv(),
-                                            dim*log(scale)+i->second.get_logdet());
+    output = output + dmvnorm_scaled_precomp(proposed_parameters.get_colvec(i->first),
+                                             transformed.get_colvec(i->first),
+                                             i->second.get_inv(),
+                                             i->second.get_double_scale(),
+                                             i->second.get_logdet());
   }
   return output;
 }
@@ -159,6 +164,23 @@ arma::mat NonLinearGaussianNoiseProposalKernel::get_inverse_covariance(const std
 arma::mat NonLinearGaussianNoiseProposalKernel::get_covariance(const std::string &variable)
 {
   return this->proposal_info[variable].get_covariance();
+}
+
+// simulate, written into the target (same random numbers and values)
+void NonLinearGaussianNoiseProposalKernel::simulate_into(RandomNumberGenerator &rng,
+                                                         const Particle &particle,
+                                                         ProposalTarget &target) const
+{
+  Parameters transformed = this->transform->transform(particle.get_transformed_parameters(this));
+  for (auto i=this->proposal_info.begin();
+       i!=this->proposal_info.end();
+       ++i)
+  {
+    double scale = i->second.get_double_scale();
+    target.matrix(i->first) = rmvnorm_using_lower_chol(rng,
+                                                       transformed.get_colvec(i->first),
+                                                       i->second.get_chol_lower(), sqrt(scale));
+  }
 }
 
 Parameters NonLinearGaussianNoiseProposalKernel::simulate(RandomNumberGenerator &rng,

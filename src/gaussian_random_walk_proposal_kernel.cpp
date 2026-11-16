@@ -106,18 +106,23 @@ void GaussianRandomWalkProposalKernel::make_copy(const GaussianRandomWalkProposa
 double GaussianRandomWalkProposalKernel::specific_evaluate_kernel(const Particle &proposed_particle,
                                                                   const Particle &old_particle) const
 {
+  return this->specific_evaluate_kernel_from_parameters(proposed_particle.get_transformed_parameters(this),
+                                                        old_particle.get_transformed_parameters(this));
+}
+
+double GaussianRandomWalkProposalKernel::specific_evaluate_kernel_from_parameters(const Parameters &proposed_parameters,
+                                                                                  const Parameters &old_parameters) const
+{
   double output = 0.0;
   for (auto i=this->proposal_info.begin();
        i!=this->proposal_info.end();
        ++i)
   {
-    arma::colvec mean = old_particle.get_transformed_parameters(this).get_colvec(i->first);
-    double scale = i->second.get_double_scale();
-    double dim = double(mean.n_rows);
-    output = output + dmvnorm_using_precomp(proposed_particle.get_transformed_parameters(this).get_colvec(i->first),
-                                            mean,
-                                            (1.0/scale)*i->second.get_inv(),
-                                            dim*log(scale)+i->second.get_logdet());
+    output = output + dmvnorm_scaled_precomp(proposed_parameters.get_colvec(i->first),
+                                             old_parameters.get_colvec(i->first),
+                                             i->second.get_inv(),
+                                             i->second.get_double_scale(),
+                                             i->second.get_logdet());
   }
   return output;
 }
@@ -162,6 +167,22 @@ arma::mat GaussianRandomWalkProposalKernel::get_inverse_covariance(const std::st
 arma::mat GaussianRandomWalkProposalKernel::get_covariance(const std::string &variable)
 {
   return this->proposal_info[variable].get_covariance();
+}
+
+// simulate, written into the target (same random numbers and values)
+void GaussianRandomWalkProposalKernel::simulate_into(RandomNumberGenerator &rng,
+                                                     const Particle &particle,
+                                                     ProposalTarget &target) const
+{
+  for (auto i=this->proposal_info.begin();
+       i!=this->proposal_info.end();
+       ++i)
+  {
+    double scale = i->second.get_double_scale();
+    target.matrix(i->first) = rmvnorm_using_lower_chol(rng,
+                                                       particle.get_transformed_parameters(this).get_colvec(i->first),
+                                                       i->second.get_chol_lower(), sqrt(scale));
+  }
 }
 
 Parameters GaussianRandomWalkProposalKernel::simulate(RandomNumberGenerator &rng,

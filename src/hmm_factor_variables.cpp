@@ -16,21 +16,22 @@ HMMFactorVariables::HMMFactorVariables()
   this->hmm_factors = NULL;
 }
 
+// outputs taken by value and moved in (as VectorFactorVariables)
 HMMFactorVariables::HMMFactorVariables(const HMMFactors* hmm_factors_in,
-                                       const std::vector<LikelihoodEstimatorOutput*> &likelihood_estimator_outputs_in)
+                                       std::vector<LikelihoodEstimatorOutput*> likelihood_estimator_outputs_in)
 :FactorVariables()
 {
   this->hmm_factors = hmm_factors_in;
-  this->likelihood_estimator_outputs = likelihood_estimator_outputs_in;
+  this->likelihood_estimator_outputs = std::move(likelihood_estimator_outputs_in);
 }
 
 HMMFactorVariables::HMMFactorVariables(const HMMFactors* hmm_factors_in,
-                                       const std::vector<LikelihoodEstimatorOutput*> &likelihood_estimator_outputs_in,
+                                       std::vector<LikelihoodEstimatorOutput*> likelihood_estimator_outputs_in,
                                        Particle* particle_in)
 :FactorVariables(particle_in)
 {
   this->hmm_factors = hmm_factors_in;
-  this->likelihood_estimator_outputs = likelihood_estimator_outputs_in;
+  this->likelihood_estimator_outputs = std::move(likelihood_estimator_outputs_in);
 }
 
 HMMFactorVariables::~HMMFactorVariables()
@@ -90,7 +91,10 @@ FactorVariables* HMMFactorVariables::duplicate() const
 void HMMFactorVariables::make_copy(const HMMFactorVariables &another)
 {
   this->hmm_factors = another.hmm_factors;
-  
+  // a copy keeps the cached transition density, as its outputs keep their
+  // cached log-likelihoods (B27: it was not copied)
+  this->dynamic_smcfixed_part = another.dynamic_smcfixed_part;
+
   this->likelihood_estimator_outputs.resize(0);
   this->likelihood_estimator_outputs.reserve(another.likelihood_estimator_outputs.size());
   for (std::vector<LikelihoodEstimatorOutput*>::const_iterator i=another.likelihood_estimator_outputs.begin();

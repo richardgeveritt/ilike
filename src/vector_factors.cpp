@@ -156,9 +156,9 @@ FactorVariables* VectorFactors::simulate_factor_variables(const Parameters &simu
     outputs.back()->simulate(simulated_parameters);
     outputs.back()->write_to_file_flag = false;
   }
-  
+
   return new VectorFactorVariables(this,
-                                   outputs);
+                                   std::move(outputs));
 }
 
 /*
@@ -197,9 +197,9 @@ FactorVariables* VectorFactors::subsample_simulate_factor_variables(const Parame
     outputs.back()->subsample_simulate(simulated_parameters);
     outputs.back()->write_to_file_flag = false;
   }
-  
+
   return new VectorFactorVariables(this,
-                                   outputs);
+                                   std::move(outputs));
 }
 
 /*

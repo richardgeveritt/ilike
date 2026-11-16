@@ -38,10 +38,10 @@ public:
   HMMFactorVariables();
   
   HMMFactorVariables(const HMMFactors* factors_in,
-                     const std::vector<LikelihoodEstimatorOutput*> &likelihood_estimator_outputs_in);
-  
+                     std::vector<LikelihoodEstimatorOutput*> likelihood_estimator_outputs_in);
+
   HMMFactorVariables(const HMMFactors* factors_in,
-                     const std::vector<LikelihoodEstimatorOutput*> &likelihood_estimator_outputs_in,
+                     std::vector<LikelihoodEstimatorOutput*> likelihood_estimator_outputs_in,
                      Particle* particle_in);
   
   /**
@@ -168,8 +168,9 @@ protected:
   /** @brief The hmm factors. */
   const HMMFactors* hmm_factors;
   
-  /** @brief The dynamic smcfixed part. */
-  double dynamic_smcfixed_part;
+  // The transition density cached by evaluate_smcfixed_part_of_likelihoods.
+  // 0 unless set: two constructors left it uninitialised (B27).
+  double dynamic_smcfixed_part = 0.0;
   
   /**
    * @brief Copies the state of another HMMFactors into this object.

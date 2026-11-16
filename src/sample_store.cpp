@@ -38,7 +38,7 @@ void SampleStore::setup_layout(const Parameters &parameters)
   this->total_dimension = 0;
   for (auto i = this->vector_names.begin(); i != this->vector_names.end(); ++i)
   {
-    const arma::mat m = parameters[*i];
+    const arma::mat &m = parameters[*i];
     this->vector_offsets.push_back(this->total_dimension);
     this->vector_n_rows.push_back(m.n_rows);
     this->vector_n_cols.push_back(m.n_cols);
@@ -60,7 +60,7 @@ bool SampleStore::compatible(const Parameters &parameters) const
   {
     if (std::find(names.begin(), names.end(), this->vector_names[k]) == names.end())
       return false;
-    const arma::mat m = parameters[this->vector_names[k]];
+    const arma::mat &m = parameters[this->vector_names[k]];
     if ((m.n_rows != this->vector_n_rows[k]) || (m.n_cols != this->vector_n_cols[k]))
       return false;
   }
@@ -85,6 +85,32 @@ void SampleStore::grow(size_t minimum_capacity)
   this->extras.resize(this->number_of_extra_columns, new_capacity);
 }
 
+const arma::mat& SampleStore::find_vector_variable(const Parameters &parameters,
+                                                   size_t k)
+{
+  if (this->vector_positions.size() != this->vector_names.size())
+    this->vector_positions.assign(this->vector_names.size(), 0);
+  const std::string &name = this->vector_names[k];
+  size_t position = this->vector_positions[k];
+  if (position < parameters.vector_size())
+  {
+    auto i = parameters.vector_begin() + position;
+    if (i->first == name)
+      return *i->second.first;
+  }
+  size_t j = 0;
+  for (auto i = parameters.vector_begin(); i != parameters.vector_end(); ++i, ++j)
+  {
+    if (i->first == name)
+    {
+      this->vector_positions[k] = j;
+      return *i->second.first;
+    }
+  }
+  // as before: a missing variable stops
+  return parameters[name];
+}
+
 void SampleStore::append(const Parameters &parameters,
                          const double *extra_values)
 {
@@ -106,7 +132,7 @@ void SampleStore::append(const Parameters &parameters,
   for (size_t k = 0; k < this->vector_names.size(); ++k)
   {
     // element order of as_row(): row by row
-    const arma::mat m = parameters[this->vector_names[k]];
+    const arma::mat &m = this->find_vector_variable(parameters, k);
     if ((m.n_rows != this->vector_n_rows[k]) || (m.n_cols != this->vector_n_cols[k]))
       Rcpp::stop("SampleStore::append: variable '" + this->vector_names[k] + "' changed size.");
     size_t offset = this->vector_offsets[k];

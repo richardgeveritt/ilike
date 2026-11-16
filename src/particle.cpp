@@ -128,8 +128,8 @@ Particle::Particle(const Parameters &parameters_in,
 : parameters(parameters_in)
 //move_transformed_parameters()
 {
-  this->parameters.merge_with_fixed(conditioned_on_parameters);
-  this->parameters.merge_with_fixed(sequencer_parameters);
+  this->parameters.merge_with_fixed(conditioned_on_parameters,
+                                    sequencer_parameters);
   
   if (factors_in!=NULL)
   {
@@ -271,8 +271,8 @@ Particle::Particle(const Parameters &parameters_in,
 {
   this->parameters = parameters_in;
   
-  this->parameters.merge_with_fixed(conditioned_on_parameters);
-  this->parameters.merge_with_fixed(sequencer_parameters);
+  this->parameters.merge_with_fixed(conditioned_on_parameters,
+                                    sequencer_parameters);
   
   //this->move_transformed_parameters = Parameters();
   //this->move_transform = NULL;
@@ -422,8 +422,8 @@ Particle::Particle(Parameters &&parameters_in,
 : parameters(std::move(parameters_in))
 //move_transformed_parameters()
 {
-  this->parameters.merge_with_fixed(conditioned_on_parameters);
-  this->parameters.merge_with_fixed(sequencer_parameters);
+  this->parameters.merge_with_fixed(conditioned_on_parameters,
+                                    sequencer_parameters);
   
   if (factors_in!=NULL)
   {
@@ -565,8 +565,8 @@ Particle::Particle(Parameters &&parameters_in,
 {
   this->parameters = std::move(parameters_in);
   
-  this->parameters.merge_with_fixed(conditioned_on_parameters);
-  this->parameters.merge_with_fixed(sequencer_parameters);
+  this->parameters.merge_with_fixed(conditioned_on_parameters,
+                                    sequencer_parameters);
   
   //this->move_transformed_parameters = Parameters();
   //this->move_transform = NULL;
@@ -644,8 +644,8 @@ void Particle::setup(Factors* factors_in,
                      const Parameters &conditioned_on_parameters,
                      const Parameters &sequencer_parameters)
 {
-  this->parameters.merge_with_fixed(conditioned_on_parameters);
-  this->parameters.merge_with_fixed(sequencer_parameters);
+  this->parameters.merge_with_fixed(conditioned_on_parameters,
+                                    sequencer_parameters);
   
   this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
   //this->move_parameters = &this->parameters;
@@ -679,8 +679,8 @@ void Particle::setup(const Parameters &parameters_in,
                      const Parameters &sequencer_parameters)
 {
   this->parameters = parameters_in;
-  this->parameters.merge_with_fixed(conditioned_on_parameters);
-  this->parameters.merge_with_fixed(sequencer_parameters);
+  this->parameters.merge_with_fixed(conditioned_on_parameters,
+                                    sequencer_parameters);
   
   this->factor_variables = factors_in->simulate_factor_variables(this->parameters);
   //this->move_parameters = &this->parameters;
@@ -713,8 +713,8 @@ void Particle::setup(const Parameters &parameters_in,
                      const Parameters &sequencer_parameters)
 {
   this->parameters = parameters_in;
-  this->parameters.merge_with_fixed(conditioned_on_parameters);
-  this->parameters.merge_with_fixed(sequencer_parameters);
+  this->parameters.merge_with_fixed(conditioned_on_parameters,
+                                    sequencer_parameters);
   
   this->ensemble_factor_variables = ensemble_factors_in->simulate_ensemble_factor_variables(this->parameters);
   //this->move_parameters = &this->parameters;
@@ -963,18 +963,12 @@ void Particle::make_copy(Particle &&another)
   another.ensemble_target_evaluated = 0.0;
   another.subsample_previous_ensemble_target_evaluated = 0.0;
   another.subsample_ensemble_target_evaluated = 0.0;
-  another.parameters = Parameters();
-  /*
-   another.gradient_estimator_outputs = boost::unordered_map<const ProposalKernel*, GradientEstimatorOutput*>();
-   another.move_transformed_parameters = Parameters();
-   another.move_transform = NULL;
-   another.move_parameters = NULL;
-   */
-  //another.accepted_outputs = boost::unordered_map< const ProposalKernel*, bool>();
-  another.accepted_outputs = boost::unordered_map< int, bool>();
+  // The moved-from containers are emptied with clear(), not by assigning
+  // newly constructed ones (a temporary built and destroyed per move).
+  // another.parameters was emptied by its own move above.
+  another.accepted_outputs.clear();
   another.previous_self = NULL;
-  //another.current_proposal_store = boost::unordered_map<const ProposalKernel*, ProposalStore>();
-  another.current_proposal_store = boost::unordered_map<int, ProposalStore>();
+  another.current_proposal_store.clear();
   //another.previous_proposal_store = boost::unordered_map<const ProposalKernel*, ProposalStore>();
   
   another.proposals_to_transform_for_pointer = NULL;

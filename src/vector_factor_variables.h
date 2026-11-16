@@ -5,6 +5,8 @@
 using namespace Rcpp;
 
 #include <vector>
+#include <memory>
+#include <string>
 #include "factor_variables.h"
 
 namespace ilike
@@ -36,10 +38,10 @@ public:
   VectorFactorVariables();
   
   VectorFactorVariables(const VectorFactors* vector_factors,
-                        const std::vector<LikelihoodEstimatorOutput*> &likelihood_estimator_outputs_in);
-  
+                        std::vector<LikelihoodEstimatorOutput*> likelihood_estimator_outputs_in);
+
   VectorFactorVariables(VectorFactors* vector_factors,
-                        const std::vector<LikelihoodEstimatorOutput*> &likelihood_estimator_outputs_in,
+                        std::vector<LikelihoodEstimatorOutput*> likelihood_estimator_outputs_in,
                         Particle* particle_in);
   
   /**
@@ -186,7 +188,20 @@ protected:
   // stored here
   /** @brief The likelihood estimator outputs. */
   std::vector<LikelihoodEstimatorOutput*> likelihood_estimator_outputs;
-  
+
+  // The factor directory names (directory + "/factorK") for the directory
+  // they were last built for: write_compact_values is called once per stored
+  // iteration with the same directory, and building the names each time was
+  // most of the cost of writing a chain's factor records. Not copied. Behind
+  // a pointer (NULL until first used) so that the many particles that never
+  // write compact records (IS, SMC) carry 8 bytes, not two containers.
+  struct FactorDirectories
+  {
+    std::string directory;
+    std::vector<std::string> names;
+  };
+  mutable std::unique_ptr<FactorDirectories> factor_directories;
+
 };
 }
 

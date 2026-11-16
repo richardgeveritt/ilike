@@ -172,6 +172,21 @@ arma::mat MirrorProposalKernel::get_inverse_covariance(const std::string &variab
   return this->proposal_info[variable].get_inv();
 }
 
+// simulate, written into the target (same random numbers and values)
+void MirrorProposalKernel::simulate_into(RandomNumberGenerator &rng,
+                                         const Particle &particle,
+                                         ProposalTarget &target) const
+{
+  for (auto i=this->proposal_info.begin();
+       i!=this->proposal_info.end();
+       ++i)
+  {
+    target.matrix(i->first) = rmvnorm_using_lower_chol(rng,
+                                                       2.0*i->second.get_mean()-particle.get_transformed_parameters(this).get_colvec(i->first),
+                                                       i->second.get_chol_lower(), sqrt(i->second.get_double_scale()));
+  }
+}
+
 Parameters MirrorProposalKernel::simulate(RandomNumberGenerator &rng,
                                           const Particle &particle) const
 {

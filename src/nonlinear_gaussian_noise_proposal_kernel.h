@@ -164,7 +164,10 @@ protected:
   
   double specific_evaluate_kernel(const Particle &proposed_particle,
                                   const Particle &old_particle) const;
-  
+
+  double specific_evaluate_kernel_from_parameters(const Parameters &proposed_parameters,
+                                                  const Parameters &old_parameters) const;
+
   /*
    double specific_evaluate_kernel(Particle &proposed_particle,
    Particle &old_particle,
@@ -182,6 +185,10 @@ protected:
   
   Parameters simulate(RandomNumberGenerator &rng,
                       const Particle &particle) const;
+  
+  void simulate_into(RandomNumberGenerator &rng,
+                     const Particle &particle,
+                     ProposalTarget &target) const;
   
   /*
    Parameters simulate(RandomNumberGenerator &rng,
