@@ -410,6 +410,7 @@ protected:
   // every value are those of the per-particle path (one chunk); chunks of
   // chunk_size particles use their own streams, as in importance sampling.
   bool can_move_flat() const;
+  bool can_simulate_flat() const;
   const Index* get_weighting_index() const { return this->index; }
 
   // The per-particle (rich) move path in chunks (dev/plan.md 2.6b, G5): 0
@@ -423,6 +424,10 @@ protected:
                            bool copies);
   void move_flat(Particles* next_particles,
                  Particles* current_particles);
+  // waste-free SMC (dev/plan.md 2.7): M ancestors, each run as a chain of
+  // N/M states, all of them the next generation
+  void move_waste_free(Particles* next_particles,
+                       Particles* current_particles);
   void restore_particle(Particle &particle,
                         const Particles &generation,
                         size_t row,

@@ -149,7 +149,7 @@ Parameters CompositeProposalKernel::simulate(RandomNumberGenerator &rng,
        ++i)
   {
     Parameters proposed_parameters_in_transformed_space = (*i)->simulate(rng,output);
-    output.parameters.deep_overwrite_with_variables_in_argument((*i)->transform->inverse_transform(proposed_parameters_in_transformed_space));
+    output.parameters.deep_overwrite_with_variables_in_argument(((*i)->transform != NULL ? (*i)->transform->inverse_transform(proposed_parameters_in_transformed_space) : proposed_parameters_in_transformed_space));
   }
   return output.parameters;
 }
@@ -179,7 +179,7 @@ Parameters CompositeProposalKernel::subsample_simulate(RandomNumberGenerator &rn
        ++i)
   {
     Parameters proposed_parameters_in_transformed_space = (*i)->subsample_simulate(rng,output);
-    output.parameters.deep_overwrite_with_variables_in_argument((*i)->transform->inverse_transform(proposed_parameters_in_transformed_space));
+    output.parameters.deep_overwrite_with_variables_in_argument(((*i)->transform != NULL ? (*i)->transform->inverse_transform(proposed_parameters_in_transformed_space) : proposed_parameters_in_transformed_space));
   }
   return output.parameters;
 }
@@ -210,7 +210,7 @@ Parameters CompositeProposalKernel::subsample_simulate(RandomNumberGenerator &rn
        ++i)
   {
     Parameters proposed_parameters_in_transformed_space = (*i)->subsample_simulate(rng,variable,output);
-    output.parameters.deep_overwrite_with_variables_in_argument((*i)->transform->inverse_transform(proposed_parameters_in_transformed_space));
+    output.parameters.deep_overwrite_with_variables_in_argument(((*i)->transform != NULL ? (*i)->transform->inverse_transform(proposed_parameters_in_transformed_space) : proposed_parameters_in_transformed_space));
   }
   return output.parameters;
 }

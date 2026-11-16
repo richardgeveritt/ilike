@@ -241,3 +241,32 @@ test_that("an inner particle filter can run in parallel inside a single-chain PM
   mcmc = function(name) { o = ilike::load_mcmc_output(name); o[, setdiff(names(o), "Time")] }
   expect_identical(mcmc("g5_pm_p"), mcmc("g5_pm_s"))
 })
+
+# Waste-free SMC (Dau and Chopin; dev/plan.md 2.7): M chains of N/M states
+# per step, all states the next generation.
+test_that("waste-free SMC targets the posterior and gives the evidence, the same in parallel", {
+  skip_on_cran() # slow (over 3 s); runs on CI and locally
+
+  on.exit(unlink(c("wf_s", "wf_p"), recursive = TRUE), add = TRUE)
+  algorithm = tempfile(fileext = ".ilike")
+  writeLines(c("/***m_proposal,ilike::norm_rw(theta,1)***/", "", "/***mcmc_termination,ilike::iterations(1)***/", "",
+               "/***smc_sequence,ilike::annealing(power,c(0,1))***/", "", "/***adaptive_target,ilike::cess(0.9)***/"), algorithm)
+  recipe = ilike::compile(c(system.file("extdata", "test_gaussian_posterior.ilike", package = "ilike"), algorithm))
+  z = ilike::SMC_with_MCMC(recipe, results_name = "wf_s", number_of_particles = 2000, waste_free_chains = 200,
+                           smc_iterations_to_store = 100, seed = 2, grain_size = 16)
+  expect_equal(z, dnorm(1, 1, sqrt(2), log = TRUE), tolerance = 0.02)
+  o = ilike::load_smc_output("wf_s")
+  final = o[o$Target == max(o$Target), ]
+  expect_equal(nrow(final), 2000)
+  moments = weighted_moments(final)
+  expect_equal(unname(moments["mean"]), 1, tolerance = 0.1)
+  expect_equal(unname(moments["var"]), 0.5, tolerance = 0.1)
+
+  z_par = ilike::SMC_with_MCMC(recipe, results_name = "wf_p", number_of_particles = 2000, waste_free_chains = 200,
+                               smc_iterations_to_store = 100, seed = 2, grain_size = 16, parallel = TRUE)
+  expect_identical(z_par, z)
+  expect_identical(loaded_without_time("wf_p"), loaded_without_time("wf_s"))
+
+  expect_error(ilike::SMC_with_MCMC(recipe, number_of_particles = 2000, waste_free_chains = 300, seed = 2),
+               "must divide the number of particles")
+})

@@ -344,6 +344,12 @@ public:
   //    flat_final_points the final state of each particle's chain (from
   //    which the next moves start, with the adaptive summaries below).
   std::vector<double> flat_output_lengths;
+  //  - flat_records_from_summaries: the compact factor records were taken
+  //    before the generation's target was chosen (a first SMC generation),
+  //    and are recomputed from the summaries once it has been
+  //    (SMC::finish_weighting_from_summaries), as the per-particle path wrote
+  //    the values its last weighting left.
+  bool flat_records_from_summaries = false;
   SampleStore flat_final_points;
   bool is_flat() const { return this->flat; }
   void clear_flat();

@@ -15,8 +15,8 @@ SystemRequirements: GNU make, hdf5
 Roxygen: list(markdown = TRUE)
 URL: https://github.com/richardgeveritt/ilike, https://richardgeveritt.github.io/ilike/
 BugReports: https://github.com/richardgeveritt/ilike/issues
-LinkingTo: Rcpp, RcppArmadillo, RcppParallel, BH, dqrng, sitmo, HighFive
-Imports: Rcpp, RcppXPtrUtils, RcppParallel, reticulate, JuliaCall, poorman, utils, stats, hdf5r
+LinkingTo: Rcpp, RcppArmadillo, RcppParallel, BH, dqrng, sitmo, HighFive, cli
+Imports: Rcpp, RcppXPtrUtils, RcppParallel, reticulate, JuliaCall, poorman, utils, stats, hdf5r, cli
 Suggests: knitr, rmarkdown, testthat (>= 3.0.0)
 Config/testthat/edition: 3
 VignetteBuilder: knitr

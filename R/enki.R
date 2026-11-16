@@ -35,6 +35,8 @@ IENKI = function(recipe,
                 seed = NULL,
                 grain_size = 100000)
 {
+  # a new run: its start-of-run notes are printed once each (dev/plan.md 3.11)
+  reset_informs()
   stop_if_parallel(parallel)
 
   if (is.character(recipe))
@@ -65,7 +67,7 @@ IENKI = function(recipe,
 
   if (is.null(mcmc_termination_method))
   {
-    print("No MCMC termination method provided: using default of 1 iteration.")
+    message("No MCMC termination method provided: using default of 1 iteration.")
     mcmc_termination_method = list(method="iterations",values=list(as.character(1)))
   }
 
@@ -74,7 +76,7 @@ IENKI = function(recipe,
 
   if (is.null(adaptive_target_method))
   {
-    print("No method set for adaptive sequence of target distributions in EnK: defaulting to moving directly from one distribution to another.")
+    message("No method set for adaptive sequence of target distributions in EnK: defaulting to moving directly from one distribution to another.")
     adaptive_target_method = list(method='positive')
   }
 
@@ -83,7 +85,7 @@ IENKI = function(recipe,
 
   if (is.null(enk_sequencer_method))
   {
-    print("No EnK sequence set. Defaulting to moving directly from prior to posterior.")
+    message("No EnK sequence set. Defaulting to moving directly from prior to posterior.")
     enk_sequencer_method = list(types=c("annealing"),variables=c("power"),schedules=c(0,1))
   }
 

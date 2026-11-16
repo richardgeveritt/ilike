@@ -120,7 +120,8 @@ void KalmanFilter::operator=(const KalmanFilter &another)
 void KalmanFilter::make_copy(const KalmanFilter &another)
 {
   this->prior_mean = another.prior_mean;
-  this->prior_covariance = another.prior_mean;
+  // B31: the covariance (the copy took the prior mean as its covariance)
+  this->prior_covariance = another.prior_covariance;
   this->state_name = another.state_name;
   this->state_dimension = another.state_dimension;
   this->index_name = another.index_name;
@@ -137,7 +138,8 @@ void KalmanFilter::make_copy(const KalmanFilter &another)
   this->lag = another.lag;
   this->results_name = another.results_name;
   
-  this->schedule_parameters = another.schedule_parameters;
+  // its own matrices (the filter writes its time variables in place)
+  this->schedule_parameters = another.schedule_parameters.deep_copy();
   
   for (auto i=another.updaters.begin();
        i!=another.updaters.end();

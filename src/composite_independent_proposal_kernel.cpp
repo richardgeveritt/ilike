@@ -109,7 +109,7 @@ Parameters CompositeIndependentProposalKernel::independent_simulate(RandomNumber
        ++i)
   {
     Parameters proposed_parameters_in_transformed_space = (*i)->independent_simulate(rng,output.parameters);
-    output.parameters.deep_overwrite_with_variables_in_argument((*i)->transform->inverse_transform(proposed_parameters_in_transformed_space));
+    output.parameters.deep_overwrite_with_variables_in_argument(((*i)->transform != NULL ? (*i)->transform->inverse_transform(proposed_parameters_in_transformed_space) : proposed_parameters_in_transformed_space));
   }
   return output.parameters;
 }
@@ -124,7 +124,7 @@ Parameters CompositeIndependentProposalKernel::independent_simulate(RandomNumber
        ++i)
   {
     Parameters proposed_parameters_in_transformed_space = (*i)->independent_simulate(rng,output.parameters);
-    output.parameters.deep_overwrite_with_variables_in_argument((*i)->transform->inverse_transform(proposed_parameters_in_transformed_space));
+    output.parameters.deep_overwrite_with_variables_in_argument(((*i)->transform != NULL ? (*i)->transform->inverse_transform(proposed_parameters_in_transformed_space) : proposed_parameters_in_transformed_space));
   }
   return output.parameters;
 }
@@ -137,7 +137,7 @@ Parameters CompositeIndependentProposalKernel::subsample_independent_simulate(Ra
        ++i)
   {
     Parameters proposed_parameters_in_transformed_space = (*i)->subsample_independent_simulate(rng,output.parameters);
-    output.parameters.deep_overwrite_with_variables_in_argument((*i)->transform->inverse_transform(proposed_parameters_in_transformed_space));
+    output.parameters.deep_overwrite_with_variables_in_argument(((*i)->transform != NULL ? (*i)->transform->inverse_transform(proposed_parameters_in_transformed_space) : proposed_parameters_in_transformed_space));
   }
   return output.parameters;
 }
@@ -152,7 +152,7 @@ Parameters CompositeIndependentProposalKernel::subsample_independent_simulate(Ra
        ++i)
   {
     Parameters proposed_parameters_in_transformed_space = (*i)->subsample_independent_simulate(rng,output.parameters);
-    output.parameters.deep_overwrite_with_variables_in_argument((*i)->transform->inverse_transform(proposed_parameters_in_transformed_space));
+    output.parameters.deep_overwrite_with_variables_in_argument(((*i)->transform != NULL ? (*i)->transform->inverse_transform(proposed_parameters_in_transformed_space) : proposed_parameters_in_transformed_space));
   }
   return output.parameters;
 }
@@ -166,7 +166,7 @@ Parameters CompositeIndependentProposalKernel::subsample_independent_simulate(Ra
        ++i)
   {
     Parameters proposed_parameters_in_transformed_space = (*i)->subsample_independent_simulate(rng,variable,output.parameters);
-    output.parameters.deep_overwrite_with_variables_in_argument((*i)->transform->inverse_transform(proposed_parameters_in_transformed_space));
+    output.parameters.deep_overwrite_with_variables_in_argument(((*i)->transform != NULL ? (*i)->transform->inverse_transform(proposed_parameters_in_transformed_space) : proposed_parameters_in_transformed_space));
   }
   return output.parameters;
 }
@@ -182,7 +182,7 @@ Parameters CompositeIndependentProposalKernel::subsample_independent_simulate(Ra
        ++i)
   {
     Parameters proposed_parameters_in_transformed_space = (*i)->subsample_independent_simulate(rng,variable,output.parameters);
-    output.parameters.deep_overwrite_with_variables_in_argument((*i)->transform->inverse_transform(proposed_parameters_in_transformed_space));
+    output.parameters.deep_overwrite_with_variables_in_argument(((*i)->transform != NULL ? (*i)->transform->inverse_transform(proposed_parameters_in_transformed_space) : proposed_parameters_in_transformed_space));
   }
   return output.parameters;
 }

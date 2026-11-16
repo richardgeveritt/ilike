@@ -22,7 +22,8 @@ PF(
   verify_cpp_function_types = FALSE,
   keep_temporary_recipe_code = FALSE,
   seed = NULL,
-  grain_size = 64
+  grain_size = 64,
+  progress = getOption("ilike.progress", interactive())
 )
 }
 \arguments{
@@ -59,6 +60,8 @@ PF(
 \item{keep_temporary_recipe_code}{(optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE,}
 
 \item{seed}{(optional) The seed for the random number generator.}
+
+\item{progress}{(optional) If TRUE, show a progress bar (cli) while the algorithm runs. Default getOption("ilike.progress", interactive()): shown in interactive sessions only.}
 
 \item{grain_size}{(optional) The number of particles moved and weighted together (default 64). Each chunk of particles has its own random-number stream, determined by the seed and the chunk's position, so results depend on the seed and on grain_size when there are more particles than grain_size (and not on whether the run is parallel).}
 }

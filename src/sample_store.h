@@ -92,6 +92,9 @@ public:
   // Parameters is changed); missing variables are added.
   void assign_into(size_t i, Parameters &target) const;
 
+  // Overwrite the extra values of point i.
+  void set_extras(size_t i, const double *extra_values);
+
   // Extra value j of point i.
   double extra_at(size_t i, size_t j) const;
 

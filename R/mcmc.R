@@ -18,6 +18,7 @@
 #' @param check_factor_index (optional) If TRUE, after every accepted MCMC move that has a factor index, re-evaluate the exact factors that were left out of the move (neither in its factor index nor its cut factor index) and stop if any changed value, i.e. did not cancel in the acceptance ratio. Slower; for checking a model file. Default FALSE.
 #' @param thin (optional) Store every thin-th iteration of each chain (default 1: every iteration). There is no burn-in option: discard iterations when analysing the output.
 #' @param seed (optional) The seed for the random number generator.
+#' @param progress (optional) If TRUE, show a progress bar (cli) while the algorithm runs. Default getOption("ilike.progress", interactive()): shown in interactive sessions only.
 #' @param grain_size (optional) The number of chains run together (default 64). Each chunk of chains has its own random-number stream, determined by the seed and the chunk's position, so results depend on the seed and on grain_size when there are more chains than grain_size (and will not depend on whether the run is parallel).
 #' @return Nothing: output can be found in the output_directory.
 #' @export
@@ -39,7 +40,8 @@ MCMC = function(recipe,
                 seed = NULL,
                 grain_size = 64,
                 check_factor_index = FALSE,
-                thin = 1)
+                thin = 1,
+                progress = getOption("ilike.progress", interactive()))
 {
 
   if (is.character(recipe))
@@ -55,6 +57,9 @@ MCMC = function(recipe,
 
   # parallel = TRUE: refuse models that call R; pass the number of threads
   recipe = prepare_parallel(recipe, parallel)
+  # progress bar for this run, counting iterations (apply_output_options)
+  recipe$show_progress = isTRUE(progress)
+  recipe$progress_counts_iterations = TRUE
 
   # Read in C++ (apply_output_options).
   recipe$write_factor_output = write_factor_output
@@ -76,7 +81,7 @@ MCMC = function(recipe,
 
   if (is.null(mcmc_termination_method))
   {
-    print("No MCMC termination method provided: using default of 10^5 iterations.")
+    message("No MCMC termination method provided: using default of 10^5 iterations.")
     mcmc_termination_method = list(method="iterations",values=list(as.character(100000)))
   }
 
@@ -88,7 +93,7 @@ MCMC = function(recipe,
   {
     if (length(initial_values)!=number_of_chains)
     {
-      print("Initial values provided: number of chains determined by the number of initial values.")
+      message("Initial values provided: number of chains determined by the number of initial values.")
       number_of_chains = length(initial_values)
     }
   }

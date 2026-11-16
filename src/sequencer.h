@@ -143,6 +143,11 @@ namespace ilike
      */
     bool check_termination();
 
+    // Progress along the (last) schedule for a progress bar (dev/plan.md
+    // 3.11): fraction in [0,1] of the way from its start to its end, or a
+    // negative value when an end is infinite; status: "variable=value".
+    double progress_fraction(std::string &status) const;
+
     /**
      * @brief Sets the next with parameter.
      *

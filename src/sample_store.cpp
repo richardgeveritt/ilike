@@ -353,6 +353,15 @@ void SampleStore::assign_into(size_t i, Parameters &target) const
   }
 }
 
+void SampleStore::set_extras(size_t i, const double *extra_values)
+{
+  if (i >= this->number_of_points)
+    Rcpp::stop("SampleStore::set_extras: index out of range.");
+  double *extra_column = this->extras.colptr(i);
+  for (size_t j = 0; j < this->number_of_extra_columns; ++j)
+    extra_column[j] = extra_values[j];
+}
+
 double SampleStore::extra_at(size_t i, size_t j) const
 {
   if ((i >= this->number_of_points) || (j >= this->number_of_extra_columns))

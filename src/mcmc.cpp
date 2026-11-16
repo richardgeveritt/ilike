@@ -1,4 +1,5 @@
 #include "mcmc.h"
+#include "chunk_parallel.h"
 #include "mcmc_termination.h"
 #include "iterations_mcmc_termination.h"
 #include "move_output.h"
@@ -189,6 +190,8 @@ MoveOutput* MCMC::run(RandomNumberGenerator &rng,
     // In place: a rejected proposal no longer copies the current state.
     mcmc_output->get_mcmc()->move_in_place(rng, current_particle, scratch);
     mcmc_output->increment_counter();
+    if ((*mcmc_output->get_iteration_counter_pointer() % 1024) == 0)
+      check_interrupt(); // in long chains (dev/plan.md 3.11)
     current_particle.tell_factors_to_forget_they_were_already_written_to_file();
     // Store the iteration compactly (its values and factor records), not a
     // copy of the particle; the state itself is handed over at the end.
@@ -263,6 +266,8 @@ MoveOutput* MCMC::subsample_run(RandomNumberGenerator &rng,
     current_particle = this->subsample_move(rng,
                                             current_particle);
     mcmc_output->increment_counter();
+    if ((*mcmc_output->get_iteration_counter_pointer() % 1024) == 0)
+      check_interrupt(); // in long chains (dev/plan.md 3.11)
     if (&current_particle==old_pointer)
     {
       current_particle.tell_factors_to_forget_they_were_already_written_to_file();

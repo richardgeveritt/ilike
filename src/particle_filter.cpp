@@ -2,6 +2,7 @@
 #include "particle_filter.h"
 #include "factors.h"
 #include "chunk_parallel.h"
+#include "progress_reporter.h"
 #include "smc_output.h"
 #include "cess_smc_criterion.h"
 #include "exact_likelihood_estimator.h"
@@ -290,6 +291,9 @@ void ParticleFilter::make_copy(const ParticleFilter &another)
 SMCOutput* ParticleFilter::specific_run()
 {
   SMCOutput* simulation = this->initialise_smc();
+  ProgressScope progress(this->show_progress,
+                         (this->last_index >= this->first_index) ? double(this->last_index - this->first_index + 1) : -1.0,
+                         "Particle filter");
   this->simulate_smc(simulation);
   this->evaluate_smc(simulation);
   simulation->normalise_and_resample_weights();
@@ -485,6 +489,9 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
   bool terminate = FALSE;
   while (terminate==FALSE)
   {
+    check_interrupt(); // between SMC steps (dev/plan.md 3.11)
+    if (this->show_progress)
+      ProgressReporter::instance().update(double(this->current_index - this->first_index + 1));
     
     if (this->parallel && this->can_move_in_chunks())
     {
@@ -700,6 +707,9 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
   bool terminate = FALSE;
   while (terminate==FALSE)
   {
+    check_interrupt(); // between SMC steps (dev/plan.md 3.11)
+    if (this->show_progress)
+      ProgressReporter::instance().update(double(this->current_index - this->first_index + 1));
     
     if (this->parallel && this->can_move_in_chunks())
     {
@@ -869,6 +879,9 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
   bool terminate = FALSE;
   while (terminate==FALSE)
   {
+    check_interrupt(); // between SMC steps (dev/plan.md 3.11)
+    if (this->show_progress)
+      ProgressReporter::instance().update(double(this->current_index - this->first_index + 1));
     
     if (current_state->number_of_smc_iterations()==1)
     {
@@ -1045,6 +1058,9 @@ void ParticleFilter::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCO
   bool terminate = FALSE;
   while (terminate==FALSE)
   {
+    check_interrupt(); // between SMC steps (dev/plan.md 3.11)
+    if (this->show_progress)
+      ProgressReporter::instance().update(double(this->current_index - this->first_index + 1));
     
     if (current_state->number_of_smc_iterations()==1)
     {

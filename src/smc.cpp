@@ -1,4 +1,6 @@
 #include "smc.h"
+#include "progress_reporter.h"
+#include <mutex>
 #include "chunk_parallel.h"
 
 //#include "function_pointers.h"
@@ -223,6 +225,7 @@ void SMC::make_copy(const SMC &another)
   this->force_rich_generations = another.force_rich_generations;
   this->parallel = another.parallel;
   this->number_of_threads = another.number_of_threads;
+  this->waste_free_chains = another.waste_free_chains;
 
   if (another.the_worker!=NULL)
     this->the_worker = another.the_worker->duplicate();
@@ -474,6 +477,275 @@ void SMC::setup_variables(const Parameters &parameters)
  }
  */
 
+void SMC::simulate_generation_in_chunks(SMCOutput *current_state,
+                                       const Parameters* conditioned_on_parameters,
+                                       bool summarise,
+                                       const Index* index,
+                                       bool keep_points)
+  {
+    // What simulate_smc + evaluate_smcfixed_part_smc + the weighting step of
+    // the bisection do (SequentialSMCWorker::specific_simulate,
+    // SMCWorker::simulate, smcfixed_weight, smcadaptive_given_smcfixed_weight),
+    // B points at a time. Per chunk the phases keep their order (simulate all
+    // B, then the smcfixed parts, then the weights or summaries). Chunk k uses
+    // its own random-number stream (chunk_streams). Three modes (dev/plan.md
+    // 2.6a G4, 2.6b G5):
+    //  - independent: no factor uses random numbers or keeps run state; every
+    //    chunk (chunk 0 included) may run in parallel, sharing the factors;
+    //  - copies: some factors run an inner algorithm; each group of chunks
+    //    gets its own copy of the factors, drawing from its own generator, and
+    //    each point's inner runs draw from a seed counter set from the point's
+    //    chunk stream (and kept with the point between its simulation and its
+    //    smcfixed part), so the results do not depend on the threads;
+    //  - shared: anything else; sequential, in the original order (the seed
+    //    bookkeeping of SMCWorker::simulate after chunk 0's simulations), so
+    //    that with one chunk the results are those of the per-particle path.
+    // In the first two modes the seed bookkeeping is done first (after the
+    // chunk streams have been taken from the seed: it does not touch them),
+    // and the first point to be kept fixes the layout of what is kept.
+    SMCWorker* worker = this->the_worker;
+    size_t N = this->number_of_particles;
+    size_t B = ((this->chunk_size == 0) || (this->chunk_size > N)) ? N : this->chunk_size;
+    size_t K = (N + B - 1)/B;
+
+    enum Mode { independent, copies, shared };
+    Mode mode = shared;
+    if ((this->factors != NULL) && this->factors->supports_parallel_chunks())
+      mode = independent;
+    else if ((this->factors != NULL) && this->factors->supports_parallel_copies())
+      mode = copies;
+    bool in_parallel = this->parallel && (mode != shared);
+    if (this->parallel && !in_parallel)
+      this->parallel_refused = true;
+
+    Particles* generation = current_state->add_particles();
+    generation->flat = true;
+    generation->flat_size = N;
+    if (!summarise)
+      generation->flat_incremental_log_weights.set_size(N);
+
+    // What is kept of each point: its variables and factor outputs only if
+    // keep_points (an estimator inside a factor stores no generations; an SMC
+    // keeps its first generation's points to move them).
+    bool keep_factor_output = keep_points && this->write_factor_output;
+    bool compact_records = false;
+    size_t number_of_records = 0;
+    int summary_size = -1;
+    std::once_flag store_setup;
+    std::once_flag summary_setup;
+
+    RandomNumberGenerator first_stream(*worker->get_rng());
+    first_stream.seed(worker->get_seed());
+    std::vector<RandomNumberGenerator> streams = chunk_streams(first_stream, K);
+
+    auto seed_bookkeeping = [&]()
+    {
+      // the seed bookkeeping and resampling variables of SMCWorker::simulate
+      worker->set_seed(worker->get_seed() + N);
+      this->rng->seed(worker->get_seed());
+      generation->simulate_resampling_variables(*this->rng);
+      worker->set_seed(worker->get_seed() + N);
+    };
+
+    // What a group of chunks works with: the factors (the main ones, or the
+    // group's copy), its particle objects, and in copies mode the generator
+    // and seed counter its copy draws from.
+    struct Workspace
+    {
+      std::unique_ptr<Factors> own_factors;
+      const Factors* factors = NULL;
+      RandomNumberGenerator rng;
+      size_t seed = 0;
+      std::vector<size_t> point_seeds;
+      std::vector<Particle> slots;
+      std::vector<double> records;
+    };
+    auto make_workspace = [&](Workspace &w)
+    {
+      if (mode == copies)
+      {
+        w.own_factors.reset(this->factors->duplicate());
+        w.own_factors->redirect_random_numbers(&w.rng, &w.seed);
+        w.factors = w.own_factors.get();
+        w.point_seeds.assign(B, 0);
+      }
+      else
+      {
+        w.factors = this->factors;
+      }
+      w.slots.resize(B);
+    };
+
+    // One chunk: simulate, evaluate and keep points [first, first + n).
+    auto run_chunk = [&](size_t k, Workspace &w)
+    {
+      size_t first = k*B;
+      size_t n = std::min(B, N - first);
+      RandomNumberGenerator local_rng(streams[k]);
+      std::vector<Particle> &slots = w.slots;
+
+      for (size_t j = 0; j < n; ++j)
+      {
+        if (mode == copies)
+          w.seed = size_t(local_rng());
+        if (conditioned_on_parameters == NULL)
+          this->particle_simulator->simulate_into(local_rng,
+                                                  slots[j],
+                                                  w.factors,
+                                                  &this->proposals_to_transform_for,
+                                                  &this->proposals_to_find_gradient_for,
+                                                  this->sequencer.schedule_parameters);
+        else
+          this->particle_simulator->simulate_into(local_rng,
+                                                  slots[j],
+                                                  w.factors,
+                                                  &this->proposals_to_transform_for,
+                                                  &this->proposals_to_find_gradient_for,
+                                                  *conditioned_on_parameters,
+                                                  this->sequencer.schedule_parameters);
+        if (this->proposal_is_evaluated == true)
+          slots[j].previous_target_evaluated = this->particle_simulator->evaluate(slots[j]);
+        if (mode == copies)
+          w.point_seeds[j] = w.seed;
+      }
+
+      if ((mode == shared) && (k == 0))
+        seed_bookkeeping();
+
+      for (size_t j = 0; j < n; ++j)
+      {
+        if (mode == copies)
+          w.seed = w.point_seeds[j];
+        slots[j].evaluate_smcfixed_part_of_likelihoods(index);
+      }
+
+      if (summarise)
+      {
+        for (size_t j = 0; j < n; ++j)
+        {
+          const FactorVariables* factor_variables = slots[j].factor_variables;
+          int size = (factor_variables == NULL) ? -1 : factor_variables->adaptive_summary_size(index);
+          std::call_once(summary_setup, [&]()
+          {
+            if (size < 0)
+              Rcpp::stop("SMC::simulate_generation_in_chunks: a factor has no adaptive summary.");
+            summary_size = size;
+            generation->adaptive_summaries.set_size(size_t(summary_size), N);
+            generation->adaptive_previous_targets.set_size(N);
+            generation->flat_summary_evaluator = factor_variables->duplicate();
+            generation->flat_summary_evaluator->set_particle(NULL);
+            if ((mode == copies) && !generation->flat_summary_evaluator->repoint_to(this->factors))
+              Rcpp::stop("SMC::simulate_generation_in_chunks: the factors could not be repointed.");
+            generation->adaptive_summary_evaluator = generation->flat_summary_evaluator;
+            generation->adaptive_summary_index = index;
+            generation->adaptive_summary_state = 1;
+          });
+          if (size != summary_size)
+            Rcpp::stop("SMC::simulate_generation_in_chunks: the points' adaptive summaries differ in size.");
+          if (summary_size > 0)
+            factor_variables->adaptive_summary(index, generation->adaptive_summaries.colptr(first + j));
+          generation->adaptive_previous_targets[first + j] = slots[j].previous_target_evaluated;
+        }
+      }
+      else
+      {
+        for (size_t j = 0; j < n; ++j)
+        {
+          double a = slots[j].evaluate_smcadaptive_part_given_smcfixed_likelihoods(index);
+          double b = slots[j].previous_target_evaluated;
+          generation->flat_incremental_log_weights[first + j] = (a == -arma::datum::inf) ? -arma::datum::inf : a - b;
+        }
+      }
+
+      if (!keep_points)
+        return;
+      for (size_t j = 0; j < n; ++j)
+      {
+        Particle &slot = slots[j];
+        size_t point = first + j;
+        std::call_once(store_setup, [&]()
+        {
+          if (keep_factor_output && (slot.factor_variables != NULL))
+          {
+            compact_records = slot.factor_variables->has_compact_values();
+            if (compact_records)
+            {
+              number_of_records = slot.factor_variables->number_of_compact_values();
+              generation->flat_points.set_number_of_extra_columns(number_of_records);
+              generation->flat_record_writer = slot.factor_variables->duplicate();
+              generation->flat_record_writer->set_particle(NULL);
+              // summarised points have not been weighted yet: their records
+              // are recomputed once the target has been chosen
+              generation->flat_records_from_summaries = summarise;
+              if ((mode == copies) && !generation->flat_record_writer->repoint_to(this->factors))
+                Rcpp::stop("SMC::simulate_generation_in_chunks: the factors could not be repointed.");
+            }
+            else
+            {
+              generation->flat_factor_variables.assign(N, NULL);
+            }
+          }
+          generation->flat_points.prepare(slot.parameters, N);
+        });
+        if (compact_records)
+        {
+          w.records.resize(number_of_records);
+          slot.factor_variables->compact_values(w.records.data());
+          generation->flat_points.set_point(point, slot.parameters, w.records.data());
+        }
+        else
+        {
+          generation->flat_points.set_point(point, slot.parameters);
+          if (keep_factor_output && (slot.factor_variables != NULL))
+          {
+            // keep this point's factor outputs whole (repointed to the main
+            // factors, which outlive the group's copy); the slot gets new ones
+            slot.factor_variables->set_particle(NULL);
+            if ((mode == copies) && !slot.factor_variables->repoint_to(this->factors))
+              Rcpp::stop("SMC::simulate_generation_in_chunks: the factors could not be repointed.");
+            generation->flat_factor_variables[point] = slot.factor_variables;
+            slot.factor_variables = NULL;
+          }
+        }
+      }
+    };
+
+    if (mode == shared)
+    {
+      Workspace w;
+      make_workspace(w);
+      for (size_t k = 0; k < K; ++k)
+      {
+        run_chunk(k, w);
+        if (this->progress_counts_points)
+          ProgressReporter::instance().update(double(std::min(N, (k + 1)*B)));
+        check_interrupt();
+      }
+    }
+    else
+    {
+      seed_bookkeeping();
+      std::function<void(size_t)> after_wave;
+      if (this->progress_counts_points)
+        after_wave = [&](size_t chunks_done) { ProgressReporter::instance().update(double(std::min(N, chunks_done*B))); };
+      run_chunk_groups(0, K, in_parallel, this->number_of_threads,
+                       [&](size_t group, size_t first_chunk, size_t end_chunk)
+                       {
+                         Workspace w;
+                         make_workspace(w);
+                         for (size_t k = first_chunk; k < end_chunk; ++k)
+                           run_chunk(k, w);
+                         // the slots' factor variables belong to the group's
+                         // copy of the factors: delete them first
+                         w.slots.clear();
+                       },
+                       after_wave);
+    }
+
+    generation->initialise_weights();
+  }
+
+
 void SMC::weight_from_summaries_if_possible(const Index* index,
                                             Particles &current_particles)
 {
@@ -539,9 +811,30 @@ void SMC::finish_weighting_from_summaries(const Index* index,
   if (!current_particles.adaptive_summaries_used)
     return;
   // a flat generation has no cached values to bring up to date; it keeps
-  // last_trial_schedule, at which its next moves restore its factor values
+  // last_trial_schedule, at which its next moves restore its factor values;
+  // records taken before its target was chosen are recomputed as the values
+  // the last weighting would have left (factors restored from the summaries)
   if (current_particles.is_flat())
+  {
+    if (current_particles.flat_records_from_summaries &&
+        (current_particles.flat_record_writer != NULL) &&
+        (current_particles.adaptive_summary_state == 1))
+    {
+      FactorVariables* writer = current_particles.flat_record_writer;
+      std::vector<double> records(writer->number_of_compact_values());
+      for (size_t i = 0; i < current_particles.size(); ++i)
+      {
+        if (!writer->restore_from_summary(index,
+                                          NULL,
+                                          current_particles.adaptive_summaries.colptr(i),
+                                          current_particles.last_trial_schedule))
+          Rcpp::stop("SMC::finish_weighting_from_summaries: the factor records could not be recomputed.");
+        writer->compact_values(records.data());
+        current_particles.flat_points.set_extras(i, records.data());
+      }
+    }
     return;
+  }
   current_particles.adaptive_summaries_used = false;
   Parameters chosen = this->sequencer.schedule_parameters.deep_copy();
   assign_schedule_values(this->sequencer.schedule_parameters, current_particles.last_trial_schedule);

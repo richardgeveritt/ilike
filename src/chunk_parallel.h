@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <thread>
+#include <atomic>
 #include "distributions.h"
 
 namespace ilike
@@ -15,6 +17,29 @@ namespace ilike
 
 // Chunked generations (dev/plan.md 2.6a, G4).
 //
+// User interrupts (dev/plan.md 3.11). R may only be asked from its main
+// thread, and not while worker threads are running (a parallel region):
+// check_interrupt() does nothing elsewhere. The main thread is recorded when
+// the package is loaded (ilike_record_main_thread, an Rcpp init hook). An
+// interrupt unwinds the C++ stack (Rcpp's InterruptedException).
+inline std::thread::id& ilike_main_thread()
+{
+  static std::thread::id id;
+  return id;
+}
+
+inline std::atomic<int>& ilike_parallel_depth()
+{
+  static std::atomic<int> depth(0);
+  return depth;
+}
+
+inline void check_interrupt()
+{
+  if ((std::this_thread::get_id() == ilike_main_thread()) && (ilike_parallel_depth() == 0))
+    Rcpp::checkUserInterrupt();
+}
+
 // chunk_streams: the random-number generator of each chunk k = 0, ..., K-1:
 // first (seeded as the sequential code seeds its generator) jumped k times
 // (one dqrng long jump each, 2^192 steps), prepared serially, so that each
@@ -83,31 +108,54 @@ inline void run_chunk_groups(size_t first,
                              size_t end,
                              bool parallel,
                              size_t number_of_groups,
-                             const std::function<void(size_t, size_t, size_t)> &group_body)
+                             const std::function<void(size_t, size_t, size_t)> &group_body,
+                             const std::function<void(size_t)> &after_wave = std::function<void(size_t)>())
 {
+  // The chunks are processed in waves, with a check for a user interrupt
+  // after each (on the main thread, between parallel regions): 16 chunks per
+  // wave sequentially, 8 per group in parallel. A wave's chunks are split
+  // into contiguous groups as before; the grouping does not change results.
   if (end <= first)
     return;
-  size_t number_of_chunks = end - first;
-  if (!parallel || (number_of_groups <= 1) || (number_of_chunks <= 1))
+  bool in_parallel = parallel && (number_of_groups > 1) && (end - first > 1);
+  if (!in_parallel)
   {
-    group_body(0, first, end);
+    const size_t wave = 16;
+    for (size_t a = first; a < end; a += wave)
+    {
+      group_body(0, a, std::min(end, a + wave));
+      if (after_wave)
+        after_wave(std::min(end, a + wave));
+      check_interrupt();
+    }
     return;
   }
-  size_t groups = std::min(number_of_groups, number_of_chunks);
-  size_t chunks_per_group = (number_of_chunks + groups - 1)/groups;
-  groups = (number_of_chunks + chunks_per_group - 1)/chunks_per_group;
-  std::vector<std::string> messages(groups);
-  ChunkGroupWorker worker;
-  worker.body = &group_body;
-  worker.first = first;
-  worker.chunks_per_group = chunks_per_group;
-  worker.end = end;
-  worker.messages = &messages;
-  RcppParallel::parallelFor(0, groups, worker, 1);
-  for (size_t g = 0; g < groups; ++g)
+  size_t wave = 8*number_of_groups;
+  for (size_t wave_first = first; wave_first < end; wave_first += wave)
   {
-    if (!messages[g].empty())
-      Rcpp::stop(messages[g]);
+    size_t wave_end = std::min(end, wave_first + wave);
+    size_t number_of_chunks = wave_end - wave_first;
+    size_t groups = std::min(number_of_groups, number_of_chunks);
+    size_t chunks_per_group = (number_of_chunks + groups - 1)/groups;
+    groups = (number_of_chunks + chunks_per_group - 1)/chunks_per_group;
+    std::vector<std::string> messages(groups);
+    ChunkGroupWorker worker;
+    worker.body = &group_body;
+    worker.first = wave_first;
+    worker.chunks_per_group = chunks_per_group;
+    worker.end = wave_end;
+    worker.messages = &messages;
+    ilike_parallel_depth()++;
+    RcppParallel::parallelFor(0, groups, worker, 1);
+    ilike_parallel_depth()--;
+    for (size_t g = 0; g < groups; ++g)
+    {
+      if (!messages[g].empty())
+        Rcpp::stop(messages[g]);
+    }
+    if (after_wave)
+      after_wave(wave_end);
+    check_interrupt();
   }
 }
 

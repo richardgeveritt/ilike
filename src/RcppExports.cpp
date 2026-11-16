@@ -12,6 +12,15 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// reset_informs
+void reset_informs();
+RcppExport SEXP _ilike_reset_informs() {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    reset_informs();
+    return R_NilValue;
+END_RCPP
+}
 // ilike_rdtsc
 size_t ilike_rdtsc();
 RcppExport SEXP _ilike_ilike_rdtsc() {
@@ -335,6 +344,22 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// copy_audit
+List copy_audit(const List& model, const List& parameters, const List& algorithm_parameter_list, const List& mcmc_termination_method, const List& mcmc_weights_method, size_t seed_value);
+RcppExport SEXP _ilike_copy_audit(SEXP modelSEXP, SEXP parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP mcmc_termination_methodSEXP, SEXP mcmc_weights_methodSEXP, SEXP seed_valueSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
+    Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
+    Rcpp::traits::input_parameter< const List& >::type algorithm_parameter_list(algorithm_parameter_listSEXP);
+    Rcpp::traits::input_parameter< const List& >::type mcmc_termination_method(mcmc_termination_methodSEXP);
+    Rcpp::traits::input_parameter< const List& >::type mcmc_weights_method(mcmc_weights_methodSEXP);
+    Rcpp::traits::input_parameter< size_t >::type seed_value(seed_valueSEXP);
+    rcpp_result_gen = Rcpp::wrap(copy_audit(model, parameters, algorithm_parameter_list, mcmc_termination_method, mcmc_weights_method, seed_value));
+    return rcpp_result_gen;
+END_RCPP
+}
 // sample_store_check
 List sample_store_check();
 RcppExport SEXP _ilike_sample_store_check() {
@@ -347,6 +372,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_ilike_reset_informs", (DL_FUNC) &_ilike_reset_informs, 0},
     {"_ilike_ilike_rdtsc", (DL_FUNC) &_ilike_ilike_rdtsc, 0},
     {"_ilike_do_importance_sampler", (DL_FUNC) &_ilike_do_importance_sampler, 8},
     {"_ilike_do_importance_sampler_with_fixed_params", (DL_FUNC) &_ilike_do_importance_sampler_with_fixed_params, 9},
@@ -363,11 +389,14 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ilike_do_particle_filter_with_fixed_params", (DL_FUNC) &_ilike_do_particle_filter_with_fixed_params, 11},
     {"_ilike_do_evaluate_log", (DL_FUNC) &_ilike_do_evaluate_log, 7},
     {"_ilike_do_evaluate_log_with_fixed_params", (DL_FUNC) &_ilike_do_evaluate_log_with_fixed_params, 8},
+    {"_ilike_copy_audit", (DL_FUNC) &_ilike_copy_audit, 6},
     {"_ilike_sample_store_check", (DL_FUNC) &_ilike_sample_store_check, 0},
     {NULL, NULL, 0}
 };
 
+void ilike_record_main_thread(DllInfo* dll);
 RcppExport void R_init_ilike(DllInfo *dll) {
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
+    ilike_record_main_thread(dll);
 }

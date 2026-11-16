@@ -261,6 +261,8 @@ recipe_uses_r_functions = function(recipe)
 # threads RcppParallel is set to use (RcppParallel::setThreadOptions).
 prepare_parallel = function(recipe, parallel)
 {
+  # a new run: its start-of-run notes are printed once each (dev/plan.md 3.11)
+  reset_informs()
   # the number of threads is passed even when parallel = FALSE: an inner
   # particle filter may be asked to run in parallel (ilike::pf(..., TRUE))
   threads = suppressWarnings(as.integer(Sys.getenv("RCPP_PARALLEL_NUM_THREADS", "")))

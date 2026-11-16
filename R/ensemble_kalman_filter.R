@@ -37,6 +37,8 @@ EnKF = function(recipe,
                                   seed = NULL,
                                   grain_size = 100000)
 {
+  # a new run: its start-of-run notes are printed once each (dev/plan.md 3.11)
+  reset_informs()
   stop_if_parallel(parallel)
 
   if (is.character(recipe))

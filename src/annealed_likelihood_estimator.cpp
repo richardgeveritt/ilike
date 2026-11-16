@@ -154,5 +154,13 @@ void AnnealedLikelihoodEstimator::redirect_random_numbers(RandomNumberGenerator*
     this->estimator->redirect_random_numbers(rng_in, seed_in);
 }
 
+
+bool AnnealedLikelihoodEstimator::supports_flat_generations() const
+{
+  // its smcfixed part is the inner estimator's (evaluated in full when the
+  // inner one is smcfixed), and its summary the inner one's
+  return (this->estimator!=NULL) && this->estimator->supports_flat_generations();
+}
+
 }
 

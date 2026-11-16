@@ -45,6 +45,12 @@ public:
   void set_chunk_size(size_t chunk_size_in) { this->chunk_size = chunk_size_in; }
   void set_force_rich_generations(bool force_rich_generations_in) { this->force_rich_generations = force_rich_generations_in; }
   void set_number_of_threads(size_t number_of_threads_in) { this->number_of_threads = number_of_threads_in; }
+  void set_show_progress(bool show_progress_in, bool progress_counts_iterations_in)
+  {
+    this->show_progress = show_progress_in;
+    this->progress_counts_iterations = progress_counts_iterations_in;
+  }
+  void set_waste_free_chains(size_t waste_free_chains_in) { this->waste_free_chains = waste_free_chains_in; }
   // parallel = TRUE was asked for but some step ran sequentially (G4)
   bool parallel_was_refused() const { return this->parallel_refused; }
   // The index over which this SMC weights (for repointing a flat
@@ -275,6 +281,17 @@ protected:
   // factor values are not touched, so after the target has been chosen,
   // finish_weighting_from_summaries brings them to the state the rich passes
   // would have left them in (one rich pass at the last trial's values).
+  // A generation simulated from the proposal in chunks and kept flat
+  // (dev/plan.md 2.6a G1/G2, 2.6b G5; formerly ImportanceSampler's): each
+  // point simulated, its smcfixed part over `index` evaluated, then either
+  // its weight at the fixed target or its adaptive summary kept; its
+  // variables (and factor records) kept if keep_points.
+  void simulate_generation_in_chunks(SMCOutput *current_state,
+                                     const Parameters* conditioned_on_parameters,
+                                     bool summarise,
+                                     const Index* index,
+                                     bool keep_points);
+
   void weight_from_summaries_if_possible(const Index* index,
                                          Particles &current_particles);
   void finish_weighting_from_summaries(const Index* index,
@@ -538,6 +555,21 @@ protected:
   // sequential run with the same seed and chunk size.
   bool parallel = false;
   size_t number_of_threads = 1;
+
+  // Waste-free SMC (Dau & Chopin 2020; dev/plan.md 2.7): when > 0 (M), each
+  // step resamples M ancestors and runs each as a chain of
+  // number_of_particles/M states (the ancestor and that many minus one MCMC
+  // moves), all of which form the next generation. 0: standard SMC.
+  size_t waste_free_chains = 0;
+
+  // Progress bar (dev/plan.md 3.11): only for the top-level algorithm (set
+  // from the recipe by the R wrappers; never copied to inner estimators).
+  // progress_counts_iterations: the bar counts MCMC iterations (MCMC()).
+  // progress_counts_points: set while a chunked generation's points are what
+  // the bar counts (IS).
+  bool show_progress = false;
+  bool progress_counts_iterations = false;
+  bool progress_counts_points = false;
   bool parallel_refused = false;
 
   //Parameters single_particle_is_step() const;

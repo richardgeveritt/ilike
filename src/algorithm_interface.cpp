@@ -1,3 +1,4 @@
+#include <set>
 #include <algorithm> // std::equal
 #include <cctype>    // std::tolower
 #include <chrono>
@@ -58,6 +59,34 @@
 #include "kalman_filter_output.h"
 #include "langevin_proposal_kernel.h"
 #include "likelihood_maker.h"
+#include "chunk_parallel.h"
+
+// Start-of-run notes (dev/plan.md 3.11): each printed once per run, as a
+// message (suppressMessages() hides them) — inner algorithms repeated them
+// for every outer point. reset_informs() starts a new run (the R wrappers
+// call it).
+static std::set<std::string>& informed_notes()
+{
+  static std::set<std::string> notes;
+  return notes;
+}
+
+static void inform_once(const std::string &note)
+{
+  if (informed_notes().insert(note).second)
+  {
+    Rcpp::Function message("message");
+    message(note);
+  }
+}
+
+// [[Rcpp::export]]
+void reset_informs()
+{
+  informed_notes().clear();
+}
+#include <memory>
+#include <thread>
 #include "linear_gaussian_noise_function_proposal_kernel.h"
 #include "linear_gaussian_noise_proposal_kernel.h"
 #include "loggaussian_distribution_factor.h"
@@ -4596,9 +4625,7 @@ SMCCriterion *get_resampling_method(const List &model,
     }
   }
 
-  Rcout << "No method set for adaptive resampling: defaulting to resampling "
-           "whenever the ESS drops below the number of particles."
-        << std::endl;
+  inform_once("No method set for adaptive resampling: defaulting to resampling whenever the ESS drops below the number of particles.");
   return new ESSSMCCriterion(double(number_of_particles));
 }
 
@@ -4749,9 +4776,7 @@ EnsembleShifter *get_enk_shifter_method(const List &model,
     }
   }
 
-  Rcout << "No method set for shifting ensemble in EnK: defaulting to "
-           "stochastic approach."
-        << std::endl;
+  inform_once("No method set for shifting ensemble in EnK: defaulting to stochastic approach.");
   return new StochasticEnsembleShifter();
 }
 
@@ -4765,8 +4790,7 @@ List get_smc_sequencer_info(const List &model, const List &model_parameters,
       List values = smc_sequencer_method["bisections"];
       number_of_bisections = extract_int_parameter(values, model_parameters, 0);
     } else {
-      Rcout << "Bisections not set in adaptive target method, using 100."
-            << std::endl;
+      inform_once("Bisections not set in adaptive target method, using 100.");
       number_of_bisections = 100;
     }
 
@@ -4977,8 +5001,7 @@ ImportanceSampler *get_importance_sampler(
 
     proposal_is_evaluated_in = true;
   } else {
-    Rcout << "No importance sampling proposal specified; using prior."
-          << std::endl;
+    inform_once("No importance sampling proposal specified; using prior.");
 
     proposal_in = get_prior_as_simulate_only_proposal(model, parameters);
 
@@ -5013,6 +5036,14 @@ static void apply_output_options(const List &model, SMC *alg) {
   // threads for parallel runs (set by the R wrappers from RcppParallel)
   if (model.containsElementNamed("number_of_threads"))
     alg->set_number_of_threads(size_t(as<double>(model["number_of_threads"])));
+  // progress bar for this run (not for inner estimators)
+  if (model.containsElementNamed("show_progress"))
+    alg->set_show_progress(as<bool>(model["show_progress"]),
+                           model.containsElementNamed("progress_counts_iterations") &&
+                           as<bool>(model["progress_counts_iterations"]));
+  // waste-free SMC (SMC_with_MCMC only)
+  if (model.containsElementNamed("waste_free_chains"))
+    alg->set_waste_free_chains(size_t(as<double>(model["waste_free_chains"])));
 }
 
 // After a run with parallel = TRUE (dev/plan.md 2.6a, G4).
@@ -5045,7 +5076,10 @@ double do_importance_sampler(const List &model, const List &parameters,
   if (strcmp(results_name_in.get_cstring(), "") == 0)
     alg->set_write_factor_output(false);
 
+  // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
+  std::unique_ptr<SMC> alg_owner(alg);
   SMCOutput *output = alg->run();
+  std::unique_ptr<SMCOutput> output_owner(output);
 
   warn_if_parallel_refused(alg);
 
@@ -5053,8 +5087,6 @@ double do_importance_sampler(const List &model, const List &parameters,
     output->write(results_name_in.get_cstring());
 
   double log_likelihood = output->log_likelihood;
-  delete output;
-  delete alg;
 
   return log_likelihood;
 }
@@ -5078,7 +5110,10 @@ double do_importance_sampler_with_fixed_params(
 
   apply_output_options(model, alg);
 
+  // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
+  std::unique_ptr<SMC> alg_owner(alg);
   SMCOutput *output = alg->run(list_to_parameters(fixed_parameter_list));
+  std::unique_ptr<SMCOutput> output_owner(output);
 
   warn_if_parallel_refused(alg);
 
@@ -5087,8 +5122,6 @@ double do_importance_sampler_with_fixed_params(
 
   double log_likelihood = output->log_likelihood;
 
-  delete output;
-  delete alg;
 
   return log_likelihood;
 }
@@ -5199,15 +5232,16 @@ void do_mcmc(const List &model, const List &parameters,
 
   apply_output_options(model, alg);
 
+  // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
+  std::unique_ptr<SMC> alg_owner(alg);
   SMCOutput *output = alg->run();
+  std::unique_ptr<SMCOutput> output_owner(output);
 
   warn_if_parallel_refused(alg);
 
   if (strcmp(results_name_in.get_cstring(), "") != 0)
     output->write(results_name_in.get_cstring());
 
-  delete output;
-  delete alg;
   delete full_index; // MCMC moves keep their own copies of it
 }
 
@@ -5317,16 +5351,17 @@ void do_mcmc_with_fixed_params(
 
   apply_output_options(model, alg);
 
+  // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
+  std::unique_ptr<SMC> alg_owner(alg);
   SMCOutput *output = alg->run(list_to_parameters(fixed_parameter_list));
+  std::unique_ptr<SMCOutput> output_owner(output);
 
   warn_if_parallel_refused(alg);
 
   if (strcmp(results_name_in.get_cstring(), "") != 0)
     output->write(results_name_in.get_cstring());
 
-  delete output;
 
-  delete alg;
   delete full_index; // MCMC moves keep their own copies of it
 }
 
@@ -5377,8 +5412,7 @@ SMCMCMCMove *get_smc_mcmc_move(
 
     proposal_is_evaluated_in = true;
   } else {
-    Rcout << "No importance sampling proposal specified; using prior."
-          << std::endl;
+    inform_once("No importance sampling proposal specified; using prior.");
 
     proposal_in = get_prior_as_simulate_only_proposal(model, parameters);
 
@@ -5473,7 +5507,10 @@ double do_smc_mcmc_move(
 
   apply_output_options(model, alg);
 
+  // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
+  std::unique_ptr<SMC> alg_owner(alg);
   SMCOutput *output = alg->run();
+  std::unique_ptr<SMCOutput> output_owner(output);
 
   warn_if_parallel_refused(alg);
 
@@ -5484,8 +5521,6 @@ double do_smc_mcmc_move(
 
   double log_likelihood = output->log_likelihood;
 
-  delete output;
-  delete alg;
 
   return log_likelihood;
 }
@@ -5517,7 +5552,10 @@ double do_smc_mcmc_move_with_fixed_params(
 
   apply_output_options(model, alg);
 
+  // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
+  std::unique_ptr<SMC> alg_owner(alg);
   SMCOutput *output = alg->run(list_to_parameters(fixed_parameter_list));
+  std::unique_ptr<SMCOutput> output_owner(output);
 
   warn_if_parallel_refused(alg);
 
@@ -5528,8 +5566,6 @@ double do_smc_mcmc_move_with_fixed_params(
 
   double log_likelihood = output->log_likelihood;
 
-  delete output;
-  delete alg;
 
   return log_likelihood;
 }
@@ -5739,8 +5775,7 @@ do_enkmfds(const List &model, const List &parameters,
 
     proposal_is_evaluated_in = true;
   } else {
-    Rcout << "No importance sampling proposal specified; using prior."
-          << std::endl;
+    inform_once("No importance sampling proposal specified; using prior.");
 
     proposal_in = get_prior_as_simulate_only_proposal(model, parameters);
 
@@ -5796,14 +5831,15 @@ do_enkmfds(const List &model, const List &parameters,
 
     apply_output_options(model, alg);
 
+    // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
+    std::unique_ptr<SMC> alg_owner(alg);
     SMCOutput *output = alg->run();
+    std::unique_ptr<SMCOutput> output_owner(output);
 
     warn_if_parallel_refused(alg);
 
     double log_likelihood = output->log_likelihood;
 
-    delete output;
-    delete alg;
     delete full_index; // MCMC moves keep their own copies of it
 
     return log_likelihood;
@@ -5819,7 +5855,10 @@ do_enkmfds(const List &model, const List &parameters,
 
     apply_output_options(model, alg);
 
+    // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
+    std::unique_ptr<SMC> alg_owner(alg);
     SMCOutput *output = alg->run();
+    std::unique_ptr<SMCOutput> output_owner(output);
 
     warn_if_parallel_refused(alg);
 
@@ -5828,8 +5867,6 @@ do_enkmfds(const List &model, const List &parameters,
 
     double log_likelihood = output->log_likelihood;
 
-    delete output;
-    delete alg;
     delete full_index; // MCMC moves keep their own copies of it
 
     return log_likelihood;
@@ -6181,8 +6218,7 @@ ParticleFilter *get_particle_filter(
     proposal_is_evaluated_in = true;
   } else {
 
-    Rcout << "No importance sampling proposal specified; using prior."
-          << std::endl;
+    inform_once("No importance sampling proposal specified; using prior.");
 
     proposal_in = get_prior_as_simulate_only_proposal(model, parameters);
 
@@ -6240,8 +6276,7 @@ ParticleFilter *get_particle_filter(
 
   bool transition_proposal_is_evaluated_in;
   if (transition_proposal == NULL) {
-    Rcout << "No transition proposal specified; using transition model."
-          << std::endl;
+    inform_once("No transition proposal specified; using transition model.");
 
     transition_proposal_is_evaluated_in = false;
 
@@ -6305,7 +6340,10 @@ double do_particle_filter(const List &model, const List &parameters,
 
   apply_output_options(model, alg);
 
+  // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
+  std::unique_ptr<SMC> alg_owner(alg);
   SMCOutput *output = alg->run();
+  std::unique_ptr<SMCOutput> output_owner(output);
 
   warn_if_parallel_refused(alg);
 
@@ -6316,8 +6354,6 @@ double do_particle_filter(const List &model, const List &parameters,
 
   double log_likelihood = output->log_likelihood;
 
-  delete output;
-  delete alg;
 
   return log_likelihood;
 }
@@ -6346,7 +6382,10 @@ double do_particle_filter_with_fixed_params(
 
   apply_output_options(model, alg);
 
+  // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
+  std::unique_ptr<SMC> alg_owner(alg);
   SMCOutput *output = alg->run(list_to_parameters(fixed_parameter_list));
+  std::unique_ptr<SMCOutput> output_owner(output);
 
   warn_if_parallel_refused(alg);
 
@@ -6357,8 +6396,6 @@ double do_particle_filter_with_fixed_params(
 
   double log_likelihood = output->log_likelihood;
 
-  delete output;
-  delete alg;
 
   return log_likelihood;
 }
@@ -6565,4 +6602,142 @@ double do_evaluate_log_with_fixed_params(const List &model,
   }
 
   return output;
+}
+
+// Copy audit (dev/plan.md 3.5, CH1). Builds the likelihood estimators of a
+// recipe as MCMC() does and, for each, evaluates it at a point simulated
+// from the prior (the SMC sequence variables at the last value of their
+// schedules), duplicates it, evaluates the copy, deletes the copy and
+// evaluates the original again, all with the same seed: the three values
+// must be identical. Then, if an MCMC move can be built, one move from the
+// same state with the same seed by the move and by its copy (the copy then
+// deleted, and the move run again). Returns a list of results; a step that
+// stops is reported with its message. For tests (with AddressSanitizer).
+static double audit_evaluate(LikelihoodEstimator *estimator,
+                             const Parameters &parameters,
+                             RandomNumberGenerator &rng, size_t *seed,
+                             size_t seed_value) {
+  *seed = seed_value;
+  rng.seed(seed_value);
+  LikelihoodEstimatorOutput *output = estimator->initialise(parameters);
+  output->simulate(parameters);
+  output->evaluate_smcfixed_part(parameters);
+  output->evaluate_smcadaptive_part_given_smcfixed(parameters);
+  double value = output->log_likelihood;
+  delete output;
+  return value;
+}
+
+// [[Rcpp::export]]
+List copy_audit(const List &model, const List &parameters,
+                const List &algorithm_parameter_list,
+                const List &mcmc_termination_method,
+                const List &mcmc_weights_method, size_t seed_value) {
+  RandomNumberGenerator rng;
+  size_t seed = seed_value;
+  Data the_data = get_data(model);
+  std::vector<Data> data_created_in_get_likelihood_estimators;
+  std::vector<Data> data_created_in_get_measurement_covariance_estimators;
+
+  List sequencer_info = get_smc_sequencer_info(model, parameters, List());
+  std::vector<std::string> sequencer_types = sequencer_info[0];
+  std::vector<std::string> sequencer_variables = sequencer_info[1];
+  std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
+  std::vector<int> factors_affected_by_smc_sequence;
+  if (sequencer_info.length() == 5) {
+    NumericVector temp = sequencer_info[4];
+    temp = temp - 1;
+    factors_affected_by_smc_sequence = as<std::vector<int>>(temp);
+  }
+
+  VectorIndex *without_cancelled_index = NULL;
+  VectorIndex *without_priors_index = NULL;
+  VectorIndex *full_index = NULL;
+  bool any_annealing = false;
+  std::vector<LikelihoodEstimator *> likelihood_estimators = get_likelihood_estimators(
+      &rng, &seed, &the_data, model, parameters, algorithm_parameter_list, true,
+      sequencer_types, sequencer_variables, sequencer_schedules, NULL,
+      without_cancelled_index, without_priors_index, full_index, any_annealing,
+      factors_affected_by_smc_sequence, data_created_in_get_likelihood_estimators,
+      data_created_in_get_measurement_covariance_estimators);
+
+  // a point from the prior, with the sequence variables at their final values
+  IndependentProposalKernel *prior = get_prior_as_simulate_only_proposal(model, parameters);
+  rng.seed(seed_value);
+  Parameters point = prior->independent_simulate(rng);
+  delete prior;
+  for (size_t i = 0; i < sequencer_variables.size(); ++i) {
+    if (sequencer_schedules[i].size() > 0)
+      point[sequencer_variables[i]] = sequencer_schedules[i].back();
+  }
+
+  std::vector<std::string> messages;
+  NumericVector original(likelihood_estimators.size(), NA_REAL);
+  NumericVector copy(likelihood_estimators.size(), NA_REAL);
+  NumericVector original_again(likelihood_estimators.size(), NA_REAL);
+  for (size_t i = 0; i < likelihood_estimators.size(); ++i) {
+    std::string message = "";
+    try {
+      // a first evaluation may set the estimator up (and use random numbers
+      // doing so): compare from the second on
+      audit_evaluate(likelihood_estimators[i], point, rng, &seed, seed_value);
+      original[i] = audit_evaluate(likelihood_estimators[i], point, rng, &seed, seed_value);
+      LikelihoodEstimator *duplicate = likelihood_estimators[i]->duplicate();
+      copy[i] = audit_evaluate(duplicate, point, rng, &seed, seed_value);
+      delete duplicate;
+      original_again[i] = audit_evaluate(likelihood_estimators[i], point, rng, &seed, seed_value);
+    } catch (std::exception &e) {
+      message = e.what();
+    }
+    messages.push_back(message);
+  }
+
+  // one MCMC move by the move and by its copy
+  std::string mcmc_message = "";
+  NumericVector mcmc_values(3, NA_REAL);
+  VectorFactors *factors = new VectorFactors(likelihood_estimators);
+  if (mcmc_termination_method.size() > 0) {
+    try {
+      MCMC *the_mcmc = make_mcmc(model, parameters, &the_data, mcmc_termination_method,
+                                 mcmc_weights_method, full_index);
+      // the kernels that need transforms or gradients of the particle (as
+      // the algorithms pass them)
+      std::vector<const ProposalKernel *> proposals = the_mcmc->get_proposals();
+      Particle start(point.deep_copy(), factors, &proposals, &proposals);
+      start.evaluate_likelihoods(full_index);
+      auto one_move = [&](MCMC *mcmc) {
+        Particle moved = start;
+        Particle scratch;
+        rng.seed(seed_value);
+        seed = seed_value;
+        mcmc->move_in_place(rng, moved, scratch);
+        return moved.get_cached_likelihoods(full_index) + arma::accu(moved.parameters.get_colvec(moved.parameters.get_vector_variables()));
+      };
+      mcmc_values[0] = one_move(the_mcmc);
+      MCMC *duplicate = the_mcmc->mcmc_duplicate();
+      mcmc_values[1] = one_move(duplicate);
+      delete duplicate;
+      mcmc_values[2] = one_move(the_mcmc);
+      delete the_mcmc;
+    } catch (std::exception &e) {
+      mcmc_message = e.what();
+    }
+  }
+  delete factors;
+  if (full_index != NULL)
+    delete full_index;
+
+  return List::create(Named("original") = original, Named("copy") = copy,
+                      Named("original_again") = original_again,
+                      Named("messages") = messages,
+                      Named("mcmc") = mcmc_values,
+                      Named("mcmc_message") = mcmc_message);
+}
+
+
+// Record R's main thread when the package is loaded, for the interrupt
+// checks (check_interrupt in chunk_parallel.h; dev/plan.md 3.11).
+// [[Rcpp::init]]
+void ilike_record_main_thread(DllInfo* dll) {
+  ilike::ilike_main_thread() = std::this_thread::get_id();
 }

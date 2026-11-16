@@ -1,3 +1,4 @@
+#include <sstream>
 #include "sequencer.h"
 #include "smc_criterion.h"
 #include "smc_termination.h"
@@ -992,6 +993,23 @@ namespace ilike
      */
 
     Rcpp::stop("Sequencer::find_next_target_quantile - not yet implemented.");
+  }
+
+  double Sequencer::progress_fraction(std::string &status) const
+  {
+    if (this->variable_names.empty() || this->schedules.empty() || this->schedules.back().empty())
+      return -1.0;
+    const std::string &name = this->variable_names.back();
+    double current = this->schedule_parameters[name][0];
+    std::ostringstream text;
+    text << name << " = " << current;
+    status = text.str();
+    double start = this->schedules.back().front();
+    double end = this->schedules.back().back();
+    if (std::isinf(start) || std::isinf(end) || std::isinf(current) || (start == end))
+      return -1.0;
+    double fraction = (current - start)/(end - start);
+    return std::min(1.0, std::max(0.0, fraction));
   }
 
   bool Sequencer::check_termination()

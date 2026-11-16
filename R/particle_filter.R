@@ -17,6 +17,7 @@
 #' @param verify_cpp_function_types (optional) If TRUE, check the types of the parameters of user-defined .cpp functions. If FALSE (default), types are not checked.
 #' @param keep_temporary_recipe_code (optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE,
 #' @param seed (optional) The seed for the random number generator.
+#' @param progress (optional) If TRUE, show a progress bar (cli) while the algorithm runs. Default getOption("ilike.progress", interactive()): shown in interactive sessions only.
 #' @param grain_size (optional) The number of particles moved and weighted together (default 64). Each chunk of particles has its own random-number stream, determined by the seed and the chunk's position, so results depend on the seed and on grain_size when there are more particles than grain_size (and not on whether the run is parallel).
 #' @return Estimate of the marginal likelihood.
 #' @export
@@ -37,7 +38,8 @@ PF = function(recipe,
                            verify_cpp_function_types=FALSE,
                            keep_temporary_recipe_code=FALSE,
                            seed = NULL,
-                           grain_size = 64)
+                           grain_size = 64,
+                           progress = getOption("ilike.progress", interactive()))
 {
 
   if (is.character(recipe))
@@ -53,6 +55,8 @@ PF = function(recipe,
 
   # parallel = TRUE: refuse models that call R; pass the number of threads
   recipe = prepare_parallel(recipe, parallel)
+  # progress bar for this run (read in C++, apply_output_options)
+  recipe$show_progress = isTRUE(progress)
 
   # Read in C++ (apply_output_options).
   recipe$write_factor_output = write_factor_output

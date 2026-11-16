@@ -27,6 +27,8 @@ KF = function(recipe,
                          verify_cpp_function_types=FALSE,
                          keep_temporary_recipe_code=FALSE)
 {
+  # a new run: its start-of-run notes are printed once each (dev/plan.md 3.11)
+  reset_informs()
   if (is.character(recipe))
     recipe = compile(filenames = recipe,
                      model_parameter_list = model_parameter_list,

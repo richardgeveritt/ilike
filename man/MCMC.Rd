@@ -23,7 +23,8 @@ MCMC(
   seed = NULL,
   grain_size = 64,
   check_factor_index = FALSE,
-  thin = 1
+  thin = 1,
+  progress = getOption("ilike.progress", interactive())
 )
 }
 \arguments{
@@ -58,6 +59,8 @@ MCMC(
 \item{keep_temporary_recipe_code}{(optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE, this file is left in the working directory.}
 
 \item{seed}{(optional) The seed for the random number generator.}
+
+\item{progress}{(optional) If TRUE, show a progress bar (cli) while the algorithm runs. Default getOption("ilike.progress", interactive()): shown in interactive sessions only.}
 
 \item{grain_size}{(optional) The number of chains run together (default 64). Each chunk of chains has its own random-number stream, determined by the seed and the chunk's position, so results depend on the seed and on grain_size when there are more chains than grain_size (and will not depend on whether the run is parallel).}
 

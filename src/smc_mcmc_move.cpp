@@ -2,6 +2,8 @@
 #include <algorithm>
 #include "smc_mcmc_move.h"
 #include "chunk_parallel.h"
+#include "progress_reporter.h"
+#include <sstream>
 #include <mutex>
 #include <memory>
 #include "factors.h"
@@ -868,6 +870,17 @@ void SMCMCMCMove::make_copy(const SMCMCMCMove &another)
 SMCOutput* SMCMCMCMove::specific_run()
 {
   SMCOutput* simulation = this->initialise_smc();
+  // progress (dev/plan.md 3.11): MCMC() counts iterations over the chains;
+  // SMC shows the position along its sequence of targets (percent)
+  double progress_total = 100.0;
+  std::string progress_name = "SMC";
+  if (this->progress_counts_iterations)
+  {
+    size_t iterations = (this->mcmc != NULL) ? this->mcmc->known_number_of_iterations() : 0;
+    progress_total = (iterations > 0) ? double(iterations)*double(this->number_of_particles) : -1.0;
+    progress_name = "MCMC";
+  }
+  ProgressScope progress(this->show_progress, progress_total, progress_name);
   this->simulate_smc(simulation);
   this->evaluate_smc(simulation);
   simulation->normalise_and_resample_weights();
@@ -968,6 +981,14 @@ void SMCMCMCMove::move_rich_in_chunks(Particles* next_particles,
                          next_particles->particles[i] = moved;
                        }
                      }
+                   },
+                   [&](size_t chunks_done)
+                   {
+                     if (this->progress_counts_iterations)
+                     {
+                       size_t iterations = this->mcmc->known_number_of_iterations();
+                       ProgressReporter::instance().update(double(std::min(N, chunks_done*B))*double(iterations));
+                     }
                    });
 
   // as SMCWorker::move
@@ -975,6 +996,16 @@ void SMCMCMCMove::move_rich_in_chunks(Particles* next_particles,
   this->rng->seed(worker->get_seed());
   next_particles->simulate_resampling_variables(*this->rng);
   worker->set_seed(worker->get_seed() + N);
+}
+
+bool SMCMCMCMove::can_simulate_flat() const
+{
+  // the first generation can be simulated flat when the moves can start
+  // from it (can_move_flat), its smcfixed parts use no random numbers and
+  // give summaries, and the particles are simulated (not given)
+  return !this->proposed_particles_inputted && (this->particle_simulator != NULL) &&
+    (this->number_of_particles > 0) && this->can_move_flat() &&
+    this->factors->supports_flat_generations(this->index);
 }
 
 bool SMCMCMCMove::can_move_flat() const
@@ -1010,7 +1041,11 @@ void SMCMCMCMove::restore_particle(Particle &particle,
   // transforms are recomputed from the variables when needed).
   if (particle.parameters.vector_size() == 0)
     particle.parameters.merge_with_fixed(this->sequencer.schedule_parameters);
-  generation.flat_final_points.assign_into(row, particle.parameters);
+  // a generation made by moves keeps its chains' final states; one simulated
+  // from the proposal keeps its points (one per particle)
+  const SampleStore &points = (generation.flat_final_points.size() > 0) ? generation.flat_final_points
+                                                                        : generation.flat_points;
+  points.assign_into(row, particle.parameters);
   if (particle.factor_variables == NULL)
     particle.factor_variables = this->factors->simulate_factor_variables(particle.parameters);
   particle.factor_variables->set_particle(&particle);
@@ -1037,6 +1072,150 @@ void SMCMCMCMove::restore_particle(Particle &particle,
   particle.subsample_previous_ensemble_target_evaluated = 0.0;
   particle.ensemble_target_evaluated = 0.0;
   particle.subsample_ensemble_target_evaluated = 0.0;
+}
+
+void SMCMCMCMove::move_waste_free(Particles* next_particles,
+                                  Particles* current_particles)
+{
+  // Waste-free SMC (Dau & Chopin 2020, Algorithm 2; dev/plan.md 2.7). The N
+  // weighted points of the current generation give M ancestors, by
+  // stratified resampling with the generation's first M resampling
+  // variables; chain m starts at ancestor a_m and makes P - 1 = N/M - 1 MCMC
+  // moves (the MCMC termination is not used); all its P states, the
+  // ancestor included, are particles of the next generation, each with the
+  // values a moved particle carries (its variables, factor records, adaptive
+  // summary and its target over the SMC's index, the next weights' previous
+  // target). The ancestor of particle m*P + s is a_m. Chunks are groups of
+  // chains, each with its own stream; in parallel when asked.
+  SMCWorker* worker = this->the_worker;
+  size_t N = this->number_of_particles;
+  size_t M = this->waste_free_chains;
+  if ((M == 0) || (M > N) || ((N % M) != 0))
+    Rcpp::stop("SMC_with_MCMC: waste_free_chains must divide the number of particles.");
+  size_t P = N/M;
+  size_t B = ((this->chunk_size == 0) || (this->chunk_size > M)) ? M : this->chunk_size;
+  size_t K = (M + B - 1)/B;
+  bool from_flat = current_particles->is_flat();
+  const Parameters &restore_parameters =
+    (from_flat && current_particles->adaptive_summaries_used) ? current_particles->last_trial_schedule
+                                                               : this->sequencer.schedule_parameters;
+
+  // M ancestors from the N weighted points (stratified), and the ancestor of
+  // every particle of the next generation (for the output)
+  arma::colvec weights = exp(current_particles->normalised_log_weights - log_sum_exp(current_particles->normalised_log_weights));
+  arma::colvec cumulative = cumsum(weights/arma::accu(weights));
+  std::vector<size_t> chain_ancestors(M);
+  size_t j = 0;
+  for (size_t m = 0; m < M; ++m)
+  {
+    double v = (current_particles->resampling_variables[m] + double(m))/double(M);
+    while ((j < N - 1) && (cumulative[j] < v))
+      j = j + 1;
+    chain_ancestors[m] = j;
+  }
+  current_particles->ancestor_variables.assign(N, 0);
+  for (size_t m = 0; m < M; ++m)
+    for (size_t s = 0; s < P; ++s)
+      current_particles->ancestor_variables[m*P + s] = chain_ancestors[m];
+  current_particles->resampled_flag = true;
+  // every step resamples: the new particles start with equal weights
+  // (add_particles copied the current weights if the resampling criterion
+  // had not resampled)
+  next_particles->previous_normalised_log_weights.set_size(N);
+  next_particles->previous_normalised_log_weights.fill(-log(double(N)));
+
+  next_particles->flat = true;
+  next_particles->flat_size = N;
+  next_particles->adaptive_previous_targets.set_size(N);
+
+  bool keep_records = this->write_factor_output;
+  size_t number_of_records = 0;
+  int summary_size = -1;
+  std::once_flag setup;
+
+  RandomNumberGenerator first_stream(*worker->get_rng());
+  first_stream.seed(worker->get_seed());
+  std::vector<RandomNumberGenerator> streams = chunk_streams(first_stream, K);
+
+  auto keep_state = [&](Particle &state, size_t row, std::vector<double> &records)
+  {
+    const FactorVariables* factor_variables = state.factor_variables;
+    int size = (factor_variables == NULL) ? -1 : factor_variables->adaptive_summary_size(this->index);
+    std::call_once(setup, [&]()
+    {
+      if (keep_records && (state.factor_variables != NULL))
+      {
+        if (!state.factor_variables->has_compact_values())
+          Rcpp::stop("SMCMCMCMove::move_waste_free: a factor has no compact record.");
+        number_of_records = state.factor_variables->number_of_compact_values();
+        next_particles->flat_points.set_number_of_extra_columns(number_of_records);
+        next_particles->flat_record_writer = state.factor_variables->duplicate();
+        next_particles->flat_record_writer->set_particle(NULL);
+      }
+      next_particles->flat_points.prepare(state.parameters, N);
+      if (size < 0)
+        Rcpp::stop("SMCMCMCMove::move_waste_free: a factor has no adaptive summary.");
+      summary_size = size;
+      next_particles->adaptive_summaries.set_size(size_t(summary_size), N);
+      next_particles->flat_summary_evaluator = factor_variables->duplicate();
+      next_particles->flat_summary_evaluator->set_particle(NULL);
+      next_particles->adaptive_summary_evaluator = next_particles->flat_summary_evaluator;
+      next_particles->adaptive_summary_index = this->index;
+      next_particles->adaptive_summary_state = 1;
+    });
+    if (size != summary_size)
+      Rcpp::stop("SMCMCMCMove::move_waste_free: the particles' adaptive summaries differ in size.");
+    if (number_of_records > 0)
+    {
+      records.resize(number_of_records);
+      state.factor_variables->compact_values(records.data());
+      next_particles->flat_points.set_point(row, state.parameters, records.data());
+    }
+    else
+    {
+      next_particles->flat_points.set_point(row, state.parameters);
+    }
+    if (summary_size > 0)
+      factor_variables->adaptive_summary(this->index, next_particles->adaptive_summaries.colptr(row));
+    next_particles->adaptive_previous_targets[row] = state.get_cached_likelihoods(this->index);
+  };
+
+  run_chunk_groups(0, K, this->parallel, this->number_of_threads,
+                   [&](size_t group, size_t first_chunk, size_t end_chunk)
+                   {
+                     Particle current;
+                     Particle scratch;
+                     std::vector<double> records;
+                     for (size_t k = first_chunk; k < end_chunk; ++k)
+                     {
+                       size_t first = k*B;
+                       size_t n = std::min(B, M - first);
+                       RandomNumberGenerator local_rng(streams[k]);
+                       for (size_t m = first; m < first + n; ++m)
+                       {
+                         size_t ancestor = chain_ancestors[m];
+                         if (from_flat)
+                           this->restore_particle(current, *current_particles, ancestor, restore_parameters);
+                         else
+                           current = (*current_particles)[ancestor]->back();
+                         if (this->cancelled_index != NULL)
+                           current.evaluate_likelihoods(this->cancelled_index);
+                         keep_state(current, m*P, records);
+                         for (size_t s = 1; s < P; ++s)
+                         {
+                           this->mcmc->move_in_place(local_rng, current, scratch);
+                           current.tell_factors_to_forget_they_were_already_written_to_file();
+                           keep_state(current, m*P + s, records);
+                         }
+                       }
+                     }
+                   });
+
+  // as SMCWorker::move
+  worker->set_seed(worker->get_seed() + N);
+  this->rng->seed(worker->get_seed());
+  next_particles->simulate_resampling_variables(*this->rng);
+  worker->set_seed(worker->get_seed() + N);
 }
 
 void SMCMCMCMove::move_flat(Particles* next_particles,
@@ -1102,6 +1281,12 @@ void SMCMCMCMove::move_flat(Particles* next_particles,
       {
         this->mcmc->move_in_place(local_rng, current, scratch);
         current.tell_factors_to_forget_they_were_already_written_to_file();
+        if ((iteration % 1024) == 0)
+        {
+          check_interrupt(); // in long chains (dev/plan.md 3.11)
+          if (this->progress_counts_iterations)
+            ProgressReporter::instance().update(double(i)*double(iterations) + double(iteration));
+        }
         if ((thin > 1) && ((iteration % thin) != 0))
           continue;
         // as StandardMCMCOutput::record
@@ -1175,6 +1360,11 @@ void SMCMCMCMove::move_flat(Particles* next_particles,
                      std::vector<double> records;
                      for (size_t k = first_chunk; k < end_chunk; ++k)
                        run_chunk(k, current, scratch, records);
+                   },
+                   [&](size_t chunks_done)
+                   {
+                     if (this->progress_counts_iterations)
+                       ProgressReporter::instance().update(double(std::min(N, chunks_done*B))*double(iterations));
                    });
 
   // as SMCWorker::move
@@ -1188,8 +1378,19 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state)
 {
   if (current_state->number_of_smc_iterations()==0)
   {
-    // Simulate from the proposal.
-    this->simulate_proposal(current_state);
+    // Simulate from the proposal: in chunks, kept flat with each point's
+    // adaptive summary, when the moves that follow can start from a flat
+    // generation (dev/plan.md 2.6a; the points are kept to be moved)
+    if (this->can_simulate_flat())
+    {
+      this->simulate_generation_in_chunks(current_state, NULL, true, this->index, true);
+    }
+    else
+    {
+      if (this->parallel)
+        this->parallel_refused = true;
+      this->simulate_proposal(current_state);
+    }
   }
   else
   {
@@ -1203,7 +1404,14 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state)
     Particles* current_particles = &current_state->back();
     Particles* next_particles = current_state->add_particles(current_particles);
     
-    if (this->can_move_flat())
+    if (this->waste_free_chains > 0)
+    {
+      if (!this->can_move_flat())
+        Rcpp::stop("SMC_with_MCMC: waste_free_chains needs exact or annealed factors, a move that does not adapt and a fixed number of MCMC iterations.");
+      this->move_waste_free(next_particles,
+                            current_particles);
+    }
+    else if (this->can_move_flat())
     {
       this->move_flat(next_particles,
                       current_particles);
@@ -1238,6 +1446,9 @@ void SMCMCMCMove::evaluate_smc(SMCOutput* current_state)
 
 void SMCMCMCMove::evaluate_smcfixed_part_smc(SMCOutput* current_state)
 {
+  // a flat generation's smcfixed parts were evaluated when it was simulated
+  if (current_state->back().is_flat())
+    return;
   this->the_worker->smcfixed_weight(this->index,
                                     current_state->back());
   //current_state->initialise_next_step();
@@ -1253,10 +1464,20 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
   bool terminate = FALSE;
   while (terminate==FALSE)
   {
+    check_interrupt(); // between SMC steps (dev/plan.md 3.11)
     this->sequencer.find_desired_criterion(current_state);
     // (involves evaluating adaptive weights, using Sequencer)
     this->sequencer.find_next_target_bisection(current_state,this->index);
     this->finish_weighting_from_summaries(this->index, current_state->back());
+    if (this->show_progress && !this->progress_counts_iterations)
+    {
+      std::string status;
+      double fraction = this->sequencer.progress_fraction(status);
+      std::ostringstream text;
+      text << "target " << current_state->number_of_smc_iterations() + 1 << ", " << status
+           << ", ESS " << int(current_state->back().ess);
+      ProgressReporter::instance().update((fraction < 0.0) ? 0.0 : 100.0*fraction, text.str());
+    }
     
     current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
     // One log-likelihood and one time per stored particle set: recorded here,
@@ -1436,6 +1657,7 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
   bool terminate = FALSE;
   while (terminate==FALSE)
   {
+    check_interrupt(); // between SMC steps (dev/plan.md 3.11)
     this->sequencer.find_desired_criterion(current_state);
     
     // (involves evaluating adaptive weights, using Sequencer)
@@ -1605,6 +1827,7 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
   bool terminate = FALSE;
   while (terminate==FALSE)
   {
+    check_interrupt(); // between SMC steps (dev/plan.md 3.11)
     this->sequencer.find_desired_criterion(current_state);
     
     // (involves evaluating adaptive weights, using Sequencer)
@@ -1665,6 +1888,7 @@ void SMCMCMCMove::subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutp
   bool terminate = FALSE;
   while (terminate==FALSE)
   {
+    check_interrupt(); // between SMC steps (dev/plan.md 3.11)
     this->sequencer.find_desired_criterion(current_state);
     
     // (involves evaluating adaptive weights, using Sequencer)
