@@ -114,8 +114,11 @@ SMC_with_MCMC(
 
 - grain_size:
 
-  (optional) Sets a minimum chunk size for parallelisation (see
-  https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).
+  (optional) The number of particles moved together (default 100000).
+  Each chunk of particles has its own random-number stream, determined
+  by the seed and the chunk's position, so results depend on the seed
+  and on grain_size when there are more particles than grain_size (and
+  will not depend on whether the run is parallel).
 
 - check_factor_index:
 

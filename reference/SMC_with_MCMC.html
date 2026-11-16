@@ -138,7 +138,7 @@
 
 
 <dt id="arg-grain-size">grain_size<a class="anchor" aria-label="anchor" href="#arg-grain-size"></a></dt>
-<dd><p>(optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).</p></dd>
+<dd><p>(optional) The number of particles moved together (default 100000). Each chunk of particles has its own random-number stream, determined by the seed and the chunk's position, so results depend on the seed and on grain_size when there are more particles than grain_size (and will not depend on whether the run is parallel).</p></dd>
 
 
 <dt id="arg-check-factor-index">check_factor_index<a class="anchor" aria-label="anchor" href="#arg-check-factor-index"></a></dt>
