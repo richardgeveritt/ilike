@@ -60,7 +60,9 @@ MCMC(
 - initial_values:
 
   (optional) A list of lists containing the initial values for the
-  chains.
+  chains. If not given, each of the number_of_chains chains starts at an
+  independent draw from the recipe's is_proposal, or from the prior if
+  the recipe has no is_proposal.
 
 - parallel:
 
