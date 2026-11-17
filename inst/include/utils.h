@@ -268,13 +268,15 @@ inline Parameters list_to_parameters(const Rcpp::List &list)
     
     for (size_t i=0; i<names.size(); ++i)
     {
-      if (Rf_isVector(list[i]))
-      {
-        output[Rcpp::as<std::string>(names[i])] = arma::mat(Rcpp::as<arma::vec>(Rcpp::as<NumericVector>(list[i])));
-      }
-      else if (Rf_isMatrix(list[i]))
+      // (a matrix first: Rf_isVector is also true for a matrix, which then
+      // lost its shape)
+      if (Rf_isMatrix(list[i]))
       {
         output[Rcpp::as<std::string>(names[i])] = Rcpp::as<arma::mat>(list[i]);
+      }
+      else if (Rf_isVector(list[i]))
+      {
+        output[Rcpp::as<std::string>(names[i])] = arma::mat(Rcpp::as<arma::vec>(Rcpp::as<NumericVector>(list[i])));
       }
       else
       {

@@ -1,0 +1,27 @@
+ilike 1.0
+// a matrix parameter, a stochastic index, and a proposal that changes one element
+data { y = [0.3, -0.2, 1.1, 0.8, 2.0, 1.4]; v = [[0.1, 0.4], [0.3, -0.5], [1.2, 0.9]] }
+model {
+  for (k in 1:2) alpha[k] ~ norm(0, 2)
+  z ~ unif(1, 3)
+  for (i in 1:3) for (j in 1:2) x[i, j] ~ norm(alpha[j], 1)
+  for (i in 1:3) for (j in 1:2) v[i, j] ~ norm(x[i, j], 0.5)
+  for (i in 1:6) y[i] ~ norm(alpha[max(1, min(2, z))], 1)
+}
+cpp {
+Parameters one_element(RandomNumberGenerator &rng, const Parameters &parameters)
+{
+  Parameters proposed;
+  arma::mat x = parameters["x"];
+  int k = (int)std::floor(runif(rng) * 6.0);
+  x(k) = x(k) + rnorm(rng, 0.0, 0.5);
+  proposed["x"] = x;
+  return proposed;
+}
+}
+algorithm mcmc {
+  move a = metropolis(mvnorm_rw(alpha, diag(2), scale = 0.5))
+  move b = metropolis(norm_rw(z, 0.5))
+  move c = metropolis(cpp::one_element)
+  termination = iterations(5000)
+}

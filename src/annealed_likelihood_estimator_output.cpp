@@ -366,4 +366,13 @@ bool AnnealedLikelihoodEstimatorOutput::repoint_estimator(LikelihoodEstimator* e
   return true;
 }
 
+void AnnealedLikelihoodEstimatorOutput::carry_over_from(const LikelihoodEstimatorOutput &previous,
+                                                        const Parameters &previous_parameters,
+                                                        const Parameters &new_parameters)
+{
+  const AnnealedLikelihoodEstimatorOutput* source = dynamic_cast<const AnnealedLikelihoodEstimatorOutput*>(&previous);
+  if ((source != NULL) && (source->estimator_output != NULL) && (this->estimator_output != NULL))
+    this->estimator_output->carry_over_from(*source->estimator_output, previous_parameters, new_parameters);
+}
+
 }

@@ -1,4 +1,5 @@
 #include "recipe_internal.h"
+#include "plate_likelihood_estimator.h"
 
 // Error for annealing a prior that is also the importance proposal: it
 // cancels in the weights, so it is not part of the target and its power would
@@ -8,6 +9,26 @@ std::string prior_cannot_be_annealed(size_t factor_index) {
          " is a prior that is also used as the importance proposal, so it "
          "cancels and cannot be annealed. Remove it from the factors to "
          "anneal, or give an is_proposal.";
+}
+
+// A factor written as model statements (I4b): a plate of terms, when its
+// entry has "plate"; otherwise the exact estimator of its whole function.
+LikelihoodEstimator *make_model_statement_estimator(
+    const RecipeValue &factor, const RecipeValue &model,
+    RandomNumberGenerator *rng_in, size_t *seed_in, Data *data_in,
+    bool smcfixed) {
+  const RecipeValue &plate = factor["plate"];
+  std::vector<std::string> variables;
+  const RecipeValue &names = plate["variables"];
+  for (size_t k = 0; k < names.size(); ++k)
+    variables.push_back(names[k].as_string());
+  bool check = model.contains("check_factor_index") &&
+               model["check_factor_index"].as_bool();
+  return new PlateLikelihoodEstimator(
+      rng_in, seed_in, data_in,
+      plate["structure"].function_pointer<PlateStructurePtr>(),
+      plate["term"].function_pointer<PlateTermPtr>(), variables,
+      plate["name"].as_string(), check, smcfixed);
 }
 
 std::vector<LikelihoodEstimator *> get_likelihood_estimators(
@@ -145,9 +166,17 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
             new_factor = new CustomDistributionFactor(
                 (evaluate_log_prior_value).function_pointer<EvaluateLogDistributionPtr>());
           }
-          LikelihoodEstimator *new_likelihood_estimator =
-              new ExactLikelihoodEstimator(rng_in, seed_in, data_in, new_factor,
-                                           factor_is_fixed_in_smc);
+          LikelihoodEstimator *new_likelihood_estimator;
+          if (current_factor.contains("plate")) {
+            delete new_factor;
+            new_likelihood_estimator = make_model_statement_estimator(
+                current_factor, model, rng_in, seed_in, data_in,
+                factor_is_fixed_in_smc);
+          } else {
+            new_likelihood_estimator =
+                new ExactLikelihoodEstimator(rng_in, seed_in, data_in, new_factor,
+                                             factor_is_fixed_in_smc);
+          }
           full_index_vector.push_back(likelihood_estimators.size());
 
           if (include_priors) {
@@ -191,9 +220,17 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                 (evaluate_log_likelihood_value).function_pointer<EvaluateLogLikelihoodPtr>(),
                 data_in);
           }
-          LikelihoodEstimator *new_likelihood_estimator =
-              new ExactLikelihoodEstimator(rng_in, seed_in, data_in, new_factor,
-                                           factor_is_fixed_in_smc);
+          LikelihoodEstimator *new_likelihood_estimator;
+          if (current_factor.contains("plate")) {
+            delete new_factor;
+            new_likelihood_estimator = make_model_statement_estimator(
+                current_factor, model, rng_in, seed_in, data_in,
+                factor_is_fixed_in_smc);
+          } else {
+            new_likelihood_estimator =
+                new ExactLikelihoodEstimator(rng_in, seed_in, data_in, new_factor,
+                                             factor_is_fixed_in_smc);
+          }
 
           full_index_vector.push_back(likelihood_estimators.size());
           without_cancelled_index_vector.push_back(

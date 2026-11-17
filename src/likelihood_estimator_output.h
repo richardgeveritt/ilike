@@ -107,6 +107,15 @@ protected:
   // if the output does not support this (the default): a new object is then
   // made, as before.
   virtual bool reinitialise(const Parameters &parameters) { return false; }
+
+  // Called on the new output of a proposed particle, just made for
+  // new_parameters, with the current particle's output of the same factor and
+  // its parameters: an output may keep what does not change between the two
+  // (a plate factor's terms that read no changed element, dev/plan.md I4b).
+  // Default: nothing kept.
+  virtual void carry_over_from(const LikelihoodEstimatorOutput &previous,
+                               const Parameters &previous_parameters,
+                               const Parameters &new_parameters) {}
   virtual bool assign_from(const LikelihoodEstimatorOutput &another) { return false; }
 
   virtual size_t compact_size() const { return 0; }

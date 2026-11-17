@@ -88,3 +88,81 @@ test_that("model statements give clear errors", {
                      "  for (i in 1:2) m = metropolis(norm_rw(a, 1))", "}")),
                "4:3: loops \\(for\\) are only allowed in the model section, not in an algorithm section")
 })
+
+# Plates (I4b): each factor from model statements keeps its terms' values, and
+# a move recomputes only the terms reading an element it changed; a move on
+# known variables evaluates only the factors that may read them. The factor's
+# value is always the sum of all its terms in order, so runs are identical to
+# evaluating each factor whole (options(ilike.plate_factors = FALSE), I4a).
+
+model_mcmc_values = function(file, name, initial_values, ...)
+{
+  on.exit(unlink(name, recursive = TRUE), add = TRUE)
+  ilike::MCMC(ilike::compile(model_file(file)), results_name = name, initial_values = initial_values, seed = 2, ...)
+  ilike::load_mcmc_output(name)$Value
+}
+
+without_plates = function(code)
+{
+  old = options(ilike.plate_factors = FALSE)
+  on.exit(options(old), add = TRUE)
+  code
+}
+
+test_that("plates and automatic move indices give the same runs as whole factors", {
+  skip_on_cran()
+  init = list(list(mu = 0, theta = rep(0, 8)))
+  with_plates = model_mcmc_values("lang_model_schools.ilike", "plates_a", init)
+  expect_identical(with_plates, without_plates(model_mcmc_values("lang_model_schools.ilike", "plates_b", init)))
+  # the move on mu reads only the prior: its automatic index is factor 1
+  # (model_prior), leaving out the likelihood of y
+  f = model_file("lang_model_schools.ilike")
+  lowered = ilike:::ilike_language_lower(paste(readLines(f), collapse = "\n"), f)
+  expect_match(lowered$generated_code, "NumericVector::create\\(1\\);")
+})
+
+test_that("partial evaluations are right: elements, matrices and stochastic indices", {
+  skip_on_cran()
+  # a proposal changing one element of a matrix parameter (so only the terms
+  # reading that element are recomputed), and an index that is a parameter
+  # (alpha read whole); check_factor_index recomputes every term after each
+  # partial evaluation and stops if one that was kept changed
+  init = list(list(alpha = c(0, 0), z = 2, x = matrix(0, 3, 2)))
+  checked = model_mcmc_values("lang_model_stress.ilike", "plates_c", init, check_factor_index = TRUE)
+  expect_identical(checked, model_mcmc_values("lang_model_stress.ilike", "plates_d", init))
+  expect_identical(checked, without_plates(model_mcmc_values("lang_model_stress.ilike", "plates_e", init)))
+  y = c(0.3, -0.2, 1.1, 0.8, 2.0, 1.4); v = matrix(c(0.1, 0.3, 1.2, 0.4, -0.5, 0.9), 3)
+  alpha = c(0.5, 1.5); z = 2.4; x = matrix(c(0.2, 0.1, 0.9, 1.1, -0.3, 0.8), 3)
+  exact = sum(dnorm(alpha, 0, 2, log = TRUE)) + dunif(z, 1, 3, log = TRUE) +
+    sum(dnorm(x, matrix(alpha, 3, 2, byrow = TRUE), 1, log = TRUE)) + sum(dnorm(v, x, 0.5, log = TRUE)) +
+    sum(dnorm(y, alpha[2], 1, log = TRUE))
+  recipe = ilike::compile(model_file("lang_model_stress.ilike"))
+  expect_equal(ilike::evaluate_log(recipe, parameters = list(alpha = alpha, z = z, x = x)), exact, tolerance = 1e-10)
+})
+
+test_that("SMC with annealed plates gives the same run as whole factors", {
+  skip_on_cran()
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(f), add = TRUE)
+  lines = readLines(model_file("lang_model_schools.ilike"))
+  writeLines(c(lines[seq_len(grep("^algorithm", lines) - 1)],
+               "algorithm smc {", "  move m1 = metropolis(norm_rw(mu, 3))",
+               "  move m2 = metropolis(mvnorm_rw(theta, diag(8), scale = 4))", "  termination = iterations(3)",
+               "  sequence = annealing(power, [0, 0.25, 0.5, 1])", "}"), f)
+  run = function(name)
+  {
+    on.exit(unlink(name, recursive = TRUE), add = TRUE)
+    ilike::SMC_with_MCMC(ilike::compile(f), results_name = name, number_of_particles = 500, seed = 1)
+  }
+  expect_identical(run("plates_smc_a"), without_plates(run("plates_smc_b")))
+})
+
+test_that("deterministic nodes read literal data in the prior, and use other nodes", {
+  skip_on_cran()
+  recipe = ilike::compile(model_file("lang_model_nodes.ilike"))
+  alpha = c(3, 5, 8); w = 1:3; y = c(0.5, 1.5, 2.5)
+  exact = sum(dnorm(alpha, 2 * w + pmin(1, w), 1, log = TRUE)) + sum(dnorm(y, alpha - 2 * w, 1, log = TRUE))
+  expect_equal(ilike::evaluate_log(recipe, parameters = list(alpha = alpha)), exact, tolerance = 1e-10)
+  draws = model_is_draws(recipe, "model_nodes_is")
+  expect_equal(mean(draws("alpha", 3)), 7, tolerance = 0.02)
+})

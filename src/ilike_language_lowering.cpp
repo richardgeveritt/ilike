@@ -245,6 +245,11 @@ private:
   bool generation_decided = false;
   std::map<std::string, size_t> model_factor_position; // "model_prior" or a data variable -> factor entry
   std::set<std::string> model_constants_used;
+  // plates (I4b): the parameters numbered for the plates' lists of reads, and
+  // the parameters each generated factor reads (by factor number)
+  std::map<std::string, size_t> plate_variable_ids;
+  std::vector<std::string> plate_variable_names;
+  std::map<size_t, std::set<std::string>> generated_factor_reads;
   std::string model_header;            // static literal data
   std::string model_code;              // helpers and declarations
   std::string deferred_node_code;      // deterministic nodes
@@ -767,6 +772,52 @@ private:
     return RecipeValue(output);
   }
 
+  std::string generate_factor_index_numbers(const std::vector<size_t> &numbers)
+  {
+    std::string list;
+    for (size_t n : numbers)
+      list = list + (list.empty() ? "" : ", ") + std::to_string(n);
+    std::string name = "ilike_generated_factor_index_" + std::to_string(++this->generated_count);
+    this->generated_code += "NumericVector " + name + "()\n{\n  return NumericVector::create(" + list + ");\n}\n\n";
+    return name;
+  }
+
+  // the factors a move on `variables` (a built-in proposal's, separated by ;
+  // or ,) must evaluate: empty when that is every factor (or not known)
+  std::vector<size_t> automatic_factor_index(const std::string &variables)
+  {
+    std::vector<size_t> numbers;
+    if (variables.empty() || this->generated_factor_reads.empty())
+      return numbers;
+    std::set<std::string> moved;
+    std::string current;
+    for (char c : variables + ";")
+    {
+      if (c == ';' || c == ',')
+      {
+        if (!current.empty()) moved.insert(current);
+        current.clear();
+      }
+      else if (c != ' ')
+        current += c;
+    }
+    size_t total = this->factor_entries.size();
+    for (size_t n = 1; n <= total; ++n)
+    {
+      auto found = this->generated_factor_reads.find(n);
+      bool include = (found == this->generated_factor_reads.end());
+      if (!include)
+        for (const std::string &v : moved)
+          if (found->second.count(v))
+            include = true;
+      if (include)
+        numbers.push_back(n);
+    }
+    if (numbers.size() == total)
+      numbers.clear();
+    return numbers;
+  }
+
   std::string generate_factor_index(const RecipeValue &names_expression)
   {
     std::vector<std::string> names;
@@ -1154,6 +1205,7 @@ private:
     bool prior = false;                 // in the prior's functions (no runtime data)
     std::set<std::string> indices;      // loop indices in scope
     std::string data = "data";          // how the runtime data are reached ("data" or "(*data)")
+    bool node = false;                  // in a deterministic node's function (data is a pointer, nullptr in the prior)
   };
 
   bool is_deterministic(const std::string &name) const
@@ -1173,13 +1225,21 @@ private:
   }
 
   // literal data, as a static matrix in the generated code (for priors)
+  bool is_literal_data(const std::string &name) const
+  {
+    for (const auto &item : this->literal_data)
+      if (item.first == name)
+        return true;
+    return false;
+  }
+
   std::string literal_data_matrix(const std::string &name, const RecipeValue &node)
   {
     for (const auto &item : this->literal_data)
       if (item.first == name)
       {
         std::string symbol = "ilike_data_" + name;
-        if (this->generated_code.find("static arma::mat " + symbol + "_make") == std::string::npos)
+        if (this->model_header.find("static arma::mat " + symbol + "_make") == std::string::npos)
         {
           arma::mat value = item.second.as_matrix();
           std::string code = "static arma::mat " + symbol + "_make()\n{\n  arma::mat value(" + std::to_string(value.n_rows) +
@@ -1207,6 +1267,11 @@ private:
     {
       if (context.prior)
         return this->literal_data_matrix(name, node);
+      // a node is also called by the prior, with no data: literal data are
+      // then read from their values compiled in (data given by a function
+      // cannot reach the prior, deterministic_call)
+      if (context.node && this->is_literal_data(name))
+        return "(data != nullptr ? (*data)[" + quoted(name) + "] : " + this->literal_data_matrix(name, node) + ")";
       return context.data + "[" + quoted(name) + "]";
     }
     if (this->is_deterministic(name))
@@ -1298,7 +1363,8 @@ private:
       if (f == "min" || f == "max")
       {
         if (arguments.size() != 2) this->error(expression, f + " takes two arguments.");
-        return "std::" + f + "(" + argument(0) + ", " + argument(1) + ")";
+        // (both double: a number such as 2 is written as an int literal)
+        return "std::" + f + "((double)" + argument(0) + ", (double)" + argument(1) + ")";
       }
       this->error(expression, "unknown function " + f + " in a model statement (functions: exp, log, sqrt, abs, pow, "
                   "inv_logit, logit, lgamma, log1p, expm1, sin, cos, tanh, min, max).");
@@ -1369,7 +1435,14 @@ private:
         if (!visited.count(name))
         {
           visited.insert(name);
-          this->read_parameters(this->deterministic_statement(name).value, found, visited);
+          // (the node's own indices are not parameters)
+          const ModelStatement &node = this->deterministic_statement(name);
+          std::set<std::string> inner;
+          this->read_parameters(node.value, inner, visited);
+          for (size_t k = 0; k < node.indices.size(); ++k)
+            if (kind_of(node.indices[k]) == "name")
+              inner.erase(node.indices[k]["name"].as_string());
+          found.insert(inner.begin(), inner.end());
         }
       }
       else if (!this->data_names.count(name) && !this->constant_names.count(name))
@@ -1390,7 +1463,9 @@ private:
       this->error(node, "the deterministic node " + name + " takes " + std::to_string(st.indices.size()) + " index(es).");
     if (context.prior && this->uses_runtime_data(st.value))
       this->error(node, "the deterministic node " + name + " reads data given by a function, so it cannot be used in the prior.");
-    std::string call = "ilike_model_node_" + name + "(parameters, " + (context.prior ? std::string("nullptr") : std::string("&data"));
+    // (inside a node's function, data is already a pointer)
+    std::string data = context.prior ? std::string("nullptr") : (context.node ? std::string("data") : std::string("&data"));
+    std::string call = "ilike_model_node_" + name + "(parameters, " + data;
     for (size_t k = 0; k < indices.size(); ++k)
       call += ", (int)(" + this->scalar_code(indices[k], context) + ")";
     return call + ")";
@@ -1489,6 +1564,215 @@ private:
     return open + inner + close;
   }
 
+  // --- plates (I4b): what each term reads, and one term at a time ---------------
+
+  size_t plate_variable_id(const std::string &name)
+  {
+    auto found = this->plate_variable_ids.find(name);
+    if (found != this->plate_variable_ids.end())
+      return found->second;
+    size_t id = this->plate_variable_names.size();
+    this->plate_variable_ids[name] = id;
+    this->plate_variable_names.push_back(name);
+    return id;
+  }
+
+  std::string read_code(const std::string &name, const std::string &row, const std::string &col)
+  {
+    return "ilike_model_read(reads, term, " + std::to_string(this->plate_variable_id(name)) + ", " + row + ", " + col + ");\n";
+  }
+
+  // the parameters an expression reads, other than the loop indices in scope
+  std::set<std::string> parameters_read(const RecipeValue &expression, const CodeContext &context) const
+  {
+    std::set<std::string> found;
+    this->read_parameters(expression, found);
+    for (const std::string &index : context.indices)
+      found.erase(index);
+    return found;
+  }
+
+  // C++ recording what an expression reads, for the plate's structure
+  // function: an element (row, column, 0-based) or a whole variable (-1, -1).
+  // It mirrors scalar_code (and matrix_code when whole). An index that reads
+  // parameters (stochastic indexing) cannot be evaluated without them, so the
+  // indexed variable is then read whole.
+  std::string reads_code(const RecipeValue &expression, const CodeContext &context, bool whole)
+  {
+    std::string kind = kind_of(expression);
+    if (kind == "name")
+    {
+      if (!expression["namespace"].as_string().empty())
+        return "";
+      std::string name = expression["name"].as_string();
+      if (context.indices.count(name) || this->constant_names.count(name) || this->data_names.count(name))
+        return "";
+      if (this->is_deterministic(name))
+        return this->node_reads_call(name, RecipeValue::list(), context);
+      return whole ? this->read_code(name, "-1", "-1") : this->read_code(name, "0", "0");
+    }
+    if (kind == "index")
+    {
+      const RecipeValue &target = expression["target"];
+      std::string name = target["name"].as_string();
+      const RecipeValue &indices = expression["indices"];
+      std::string code;
+      bool stochastic = false;
+      for (size_t k = 0; k < indices.size(); ++k)
+      {
+        code += this->reads_code(indices[k], context, false);
+        if (!this->parameters_read(indices[k], context).empty())
+          stochastic = true;
+      }
+      if (this->is_deterministic(name))
+      {
+        if (stochastic)
+          return code + this->node_reads_whole(name);
+        return code + this->node_reads_call(name, indices, context);
+      }
+      if (this->constant_names.count(name) || this->data_names.count(name))
+        return code;
+      if (stochastic)
+        return code + this->read_code(name, "-1", "-1");
+      std::string row = this->index_code(indices[0], context);
+      std::string col = (indices.size() == 2) ? this->index_code(indices[1], context) : std::string("0");
+      return code + this->read_code(name, row, col);
+    }
+    if (!expression.is_list())
+      return "";
+    std::string code;
+    for (size_t k = 0; k < expression.size(); ++k)
+      if (expression[k].is_list())
+        code += this->reads_code(expression[k], context, false);
+    return code;
+  }
+
+  // every parameter a deterministic node reads, whole
+  std::string node_reads_whole(const std::string &name)
+  {
+    std::set<std::string> found;
+    this->read_parameters(this->deterministic_statement(name).value, found);
+    const ModelStatement &st = this->deterministic_statement(name);
+    for (size_t k = 0; k < st.indices.size(); ++k)
+      found.erase(st.indices[k]["name"].as_string());
+    std::string code;
+    for (const std::string &p : found)
+      code += this->read_code(p, "-1", "-1");
+    return code;
+  }
+
+  std::string node_reads_call(const std::string &name, const RecipeValue &indices, const CodeContext &context)
+  {
+    const ModelStatement &st = this->deterministic_statement(name);
+    if (indices.size() != st.indices.size())
+      return this->node_reads_whole(name);
+    std::string data = context.prior ? std::string("nullptr") : (context.node ? std::string("data") : std::string("&data"));
+    std::string call = "ilike_model_node_reads_" + name + "(reads, term, " + data;
+    for (size_t k = 0; k < indices.size(); ++k)
+      call += ", (int)(" + this->scalar_code(indices[k], context) + ")";
+    return call + ");\n";
+  }
+
+  // the reads of a statement: its target (a parameter) and its distribution's arguments
+  std::string statement_reads_code(const ModelStatement &st, const CodeContext &context)
+  {
+    std::string code;
+    bool mvnorm = st.value["function"].as_string() == "mvnorm";
+    if (!st.observed)
+    {
+      if (mvnorm || st.indices.size() == 0)
+        code += mvnorm ? this->read_code(st.variable, "-1", "-1") : this->read_code(st.variable, "0", "0");
+      else
+        code += this->read_code(st.variable, this->index_code(st.indices[0], context),
+                                (st.indices.size() == 2) ? this->index_code(st.indices[1], context) : std::string("0"));
+    }
+    const RecipeValue &arguments = st.value["arguments"];
+    for (size_t k = 0; k < arguments.size(); ++k)
+      code += this->reads_code(arguments[k], context, mvnorm);
+    return code;
+  }
+
+  // a plate needs a number of terms that does not depend on the parameters
+  bool plate_possible(const std::vector<const ModelStatement*> &statements) const
+  {
+    for (const ModelStatement* st : statements)
+      for (const ModelLoop &loop : st->loops)
+      {
+        std::set<std::string> found;
+        this->read_parameters(loop.from, found);
+        this->read_parameters(loop.to, found);
+        for (const ModelLoop &other : st->loops) found.erase(other.index);
+        if (!found.empty())
+          return false;
+      }
+    return true;
+  }
+
+  // the structure and term functions of the plate of a factor whose terms are
+  // the statements' loops, in this order (the order of the factor's sum)
+  void generate_plate(const std::string &suffix, const std::vector<const ModelStatement*> &statements, bool prior)
+  {
+    size_t width = 1;
+    for (const ModelStatement* st : statements)
+      width = std::max(width, st->loops.size() + 1);
+    std::string structure = "Data ilike_model_plate_" + suffix + "(const Data &data)\n{\n"
+                            "  std::vector<double> terms, reads;\n  double term = 0.0;\n"
+                            "  Parameters parameters; // (no index read here depends on the parameters)\n";
+    std::string term = "double ilike_model_term_" + suffix +
+                       "(const Parameters &parameters, const Data &data, const arma::mat &terms, size_t term)\n{\n"
+                       "  switch ((int)terms(term, 0))\n  {\n";
+    for (size_t s = 0; s < statements.size(); ++s)
+    {
+      const ModelStatement &st = *statements[s];
+      CodeContext context;
+      context.prior = prior;
+      for (const ModelLoop &loop : st.loops) context.indices.insert(loop.index);
+      std::string body = "terms.push_back(" + std::to_string(s) + ");\n";
+      for (const ModelLoop &loop : st.loops) body += "terms.push_back((double)" + loop.index + ");\n";
+      for (size_t k = st.loops.size() + 1; k < width; ++k) body += "terms.push_back(0.0);\n";
+      body += this->statement_reads_code(st, context);
+      body += "term += 1.0;\n";
+      CodeContext fresh;
+      fresh.prior = prior;
+      structure += this->loops_code(st, fresh, body, "  ");
+
+      term += "    case " + std::to_string(s) + ":\n    {\n";
+      for (size_t k = 0; k < st.loops.size(); ++k)
+        term += "      int " + st.loops[k].index + " = (int)terms(term, " + std::to_string(k + 1) + ");\n";
+      term += "      return " + this->density_code(st, this->target_code(st, context, false), context) + ";\n    }\n";
+    }
+    structure += "  Data result;\n  result[\"terms\"] = ilike_model_table(terms, " + std::to_string(width) + ");\n"
+                 "  result[\"reads\"] = ilike_model_table(reads, 4);\n  return result;\n}\n\n";
+    term += "  }\n  return 0.0;\n}\n\n";
+    this->deferred_function_code += structure + term;
+  }
+
+  // the parameters a factor's statements read (with the prior's targets)
+  std::set<std::string> statements_read(const std::vector<const ModelStatement*> &statements) const
+  {
+    std::set<std::string> found;
+    for (const ModelStatement* st : statements)
+    {
+      std::set<std::string> one;
+      this->read_parameters(st->value, one);
+      for (size_t i = 0; i < st->indices.size(); ++i) this->read_parameters(st->indices[i], one);
+      for (const ModelLoop &loop : st->loops) { this->read_parameters(loop.from, one); this->read_parameters(loop.to, one); }
+      for (const ModelLoop &loop : st->loops) one.erase(loop.index);
+      if (!st->observed) one.insert(st->variable);
+      found.insert(one.begin(), one.end());
+    }
+    return found;
+  }
+
+  RecipeValue plate_entry(const std::string &suffix, const std::string &factor_name)
+  {
+    RecipeValue plate = RecipeValue::list();
+    plate.push_back(this->placeholder("ilike_model_plate_" + suffix, "plate_structure"), "structure");
+    plate.push_back(this->placeholder("ilike_model_term_" + suffix, "plate_term"), "term");
+    plate.push_back(RecipeValue(factor_name), "name");
+    return plate;
+  }
+
   void finish_model_statements()
   {
     if (this->model_statements.empty())
@@ -1510,6 +1794,18 @@ inline double ilike_model_dbern(double x, double p)
   if (x == 0.0) return std::log(1.0 - p);
   return -std::numeric_limits<double>::infinity();
 }
+inline void ilike_model_read(std::vector<double> &reads, double term, double variable, double row, double col)
+{
+  reads.push_back(term); reads.push_back(variable); reads.push_back(row); reads.push_back(col);
+}
+inline arma::mat ilike_model_table(const std::vector<double> &values, size_t width)
+{
+  arma::mat table(values.size()/width, width);
+  for (size_t r = 0; r < table.n_rows; ++r)
+    for (size_t c = 0; c < width; ++c)
+      table(r, c) = values[r*width + c];
+  return table;
+}
 inline double ilike_model_dbinom(double x, double n, double p)
 {
   if (x < 0.0 || x > n || x != std::floor(x)) return -std::numeric_limits<double>::infinity();
@@ -1529,6 +1825,7 @@ inline double ilike_model_dbinom(double x, double n, double p)
       deterministic_done.insert(st.variable);
       CodeContext context;
       context.data = "(*data)";
+      context.node = true;
       std::string signature = "inline double ilike_model_node_" + st.variable + "(const Parameters &parameters, const Data *data";
       for (size_t k = 0; k < st.indices.size(); ++k)
       {
@@ -1541,10 +1838,20 @@ inline double ilike_model_dbinom(double x, double n, double p)
       node_code += signature + ");\n";
       std::string body = signature + ")\n{\n  return " + this->scalar_code(st.value, context) + ";\n}\n\n";
       this->deferred_node_code += body;
+      // what the node reads (I4b), with the same arguments
+      std::string reads_signature = "inline void ilike_model_node_reads_" + st.variable +
+                                    "(std::vector<double> &reads, double term, const Data *data";
+      for (size_t k = 0; k < st.indices.size(); ++k)
+        reads_signature += ", int " + st.indices[k]["name"].as_string();
+      node_code += reads_signature + ");\n";
+      this->deferred_node_code += reads_signature + ")\n{\n  Parameters parameters; // (no index read here depends on the parameters)\n" +
+                                  this->reads_code(st.value, context, false) + "}\n\n";
     }
     code += node_code + "\n";
 
     // the likelihood factors: one per observed variable
+    struct PendingPlate { size_t position; std::string suffix; std::string name; };
+    std::vector<PendingPlate> plates;
     std::vector<std::string> observed_done;
     for (const ModelStatement &first : this->model_statements)
     {
@@ -1574,6 +1881,18 @@ inline double ilike_model_dbinom(double x, double n, double p)
       RecipeValue factor = RecipeValue::list();
       factor.push_back(this->placeholder(function, "evaluate_log_likelihood"), "evaluate_log_likelihood");
       this->factor_entries[this->model_factor_position.at(first.variable)] = factor;
+
+      // its plate (I4b): the same terms, in the same order
+      std::vector<const ModelStatement*> statements;
+      for (const ModelStatement &st : this->model_statements)
+        if (st.op == "~" && st.variable == first.variable)
+          statements.push_back(&st);
+      this->generated_factor_reads[this->factor_numbers.at(first.variable)] = this->statements_read(statements);
+      if (this->plate_possible(statements))
+      {
+        this->generate_plate("likelihood_" + first.variable, statements, false);
+        plates.push_back({this->model_factor_position.at(first.variable), "likelihood_" + first.variable, first.variable});
+      }
     }
 
     // the joint prior: its log density, and its simulation in dependency order
@@ -1706,6 +2025,27 @@ inline double ilike_model_dbinom(double x, double n, double p)
       factor.push_back(this->placeholder("ilike_model_log_prior", "evaluate_log_prior"), "evaluate_log_prior");
       factor.push_back(this->placeholder("ilike_model_simulate_prior", "simulate_prior"), "simulate_prior");
       this->factor_entries[this->model_factor_position.at("model_prior")] = factor;
+
+      std::vector<const ModelStatement*> statements;
+      for (size_t k : order)
+        statements.push_back(&this->model_statements[k]);
+      this->generated_factor_reads[this->factor_numbers.at("model_prior")] = this->statements_read(statements);
+      if (this->plate_possible(statements))
+      {
+        this->generate_plate("prior", statements, true);
+        plates.push_back({this->model_factor_position.at("model_prior"), "prior", "model_prior"});
+      }
+    }
+
+    // the plates' entries, now that every parameter read has its number
+    for (const PendingPlate &plate : plates)
+    {
+      RecipeValue entry = this->plate_entry(plate.suffix, plate.name);
+      RecipeValue variables = RecipeValue::list();
+      for (const std::string &name : this->plate_variable_names)
+        variables.push_back(RecipeValue(name));
+      entry.push_back(variables, "variables");
+      this->factor_entries[plate.position].push_back(entry, "plate");
     }
 
     // a deterministic node defined but never used is harmless; a parameter
@@ -2060,6 +2400,16 @@ inline double ilike_model_dbinom(double x, double n, double p)
     if (arguments.has("factors"))
       entry.push_back(this->placeholder(this->generate_factor_index(arguments.named["factors"]), p + "_factor_index"),
                       p + "_factor_index");
+    else
+    {
+      // (I4b) a move on known variables evaluates only the factors that may
+      // read them: those from model statements reading one of them, and every
+      // other factor (what it reads is not known)
+      std::vector<size_t> numbers = this->automatic_factor_index(variable);
+      if (!numbers.empty())
+        entry.push_back(this->placeholder(this->generate_factor_index_numbers(numbers), p + "_factor_index"),
+                        p + "_factor_index");
+    }
     if (arguments.has("cut_factors"))
       entry.push_back(this->placeholder(this->generate_factor_index(arguments.named["cut_factors"]), p + "_cut_factor_index"),
                       p + "_cut_factor_index");

@@ -20,6 +20,12 @@ collect_placeholders <- function(x, found = list())
   found
 }
 
+# Roles of functions the language generates itself (return type, arguments):
+# the plates of model statements (src/plate_likelihood_estimator.h, I4b)
+internal_roles <- list(
+  plate_structure = c("Data", "const Data &data"),
+  plate_term = c("double", "const Parameters &parameters, const Data &data, const arma::mat &terms, size_t term"))
+
 # The getter's name for a function used in a role
 placeholder_getter <- function(function_name, role)
 {
@@ -66,6 +72,12 @@ compile_ilike_language <- function(filenames, texts, keep_temporary_recipe_code 
 {
   lowered = ilike_language_lower(texts, filenames)
   code_for_signatures = paste(lowered$user_code, lowered$generated_code, sep = "\n")
+  # (internal, for tests and as a way out: options(ilike.plate_factors = FALSE)
+  # evaluates factors from model statements whole, as in I4a)
+  if (!isTRUE(getOption("ilike.plate_factors", TRUE)) && is.list(lowered$recipe$factor))
+    for (k in seq_along(lowered$recipe$factor))
+      if (is.list(lowered$recipe$factor[[k]]))
+        lowered$recipe$factor[[k]]$plate = NULL
 
   # functions in other languages (I5): their code loaded into R (Python
   # through reticulate, Julia through JuliaCall), and the C++ wrappers that
@@ -118,6 +130,20 @@ compile_ilike_language <- function(filenames, texts, keep_temporary_recipe_code 
     signature = ilike_find_cpp_function_signature(code_for_signatures, p$ilike_function)
     if (signature == "")
       stop(paste("The C++ function ", p$ilike_function, " is not defined.", sep = ""))
+    # functions generated for model statements' plates (I4b): fixed signatures
+    internal = internal_roles[[p$role]]
+    if (!is.null(internal))
+    {
+      types[[getter]] = 0
+      getters = c(getters,
+                  "// [[Rcpp::export]]",
+                  paste("SEXP ", getter, "() {", sep = ""),
+                  paste("  typedef", internal[1], "(*funcPtr)(", internal[2], ");"),
+                  paste("  return XPtr<funcPtr>(new funcPtr(&", p$ilike_function, "));"),
+                  "}",
+                  "")
+      next
+    }
     # (the old format's checks; their messages are given for the function)
     rt = tryCatch({
       pt = parameter_types_for_cpp(signature)

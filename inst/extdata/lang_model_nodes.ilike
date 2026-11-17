@@ -1,0 +1,12 @@
+ilike 1.0
+// deterministic nodes: one reading literal data, used by the prior (whose
+// functions receive no data), and one using another
+data { w = [1, 2, 3]; y = [0.5, 1.5, 2.5] }
+model {
+  for (k in 1:3) {
+    m[k] <- 2 * w[k]
+    s[k] <- m[k] + min(1, w[k])
+    alpha[k] ~ norm(s[k], 1)
+    y[k] ~ norm(alpha[k] - m[k], 1)
+  }
+}

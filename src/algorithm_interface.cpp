@@ -16,7 +16,12 @@ std::vector<Parameters> make_initial_points(const Rcpp::List &initial_values) {
         CharacterVector names = list_params.names();
 
         for (size_t i = 0; i < names.size(); ++i) {
-          if (isDoubleInList(recipe_from_R(list_params), Rcpp::as<std::string>(names[i]))) {
+          // (a matrix first: the vector test is also true for a matrix,
+          // which then lost its shape)
+          if (Rf_isMatrix(list_params[Rcpp::as<std::string>(names[i])])) {
+            arma::mat param = list_params[Rcpp::as<std::string>(names[i])];
+            current_parameters[Rcpp::as<std::string>(names[i])] = param;
+          } else if (isDoubleInList(recipe_from_R(list_params), Rcpp::as<std::string>(names[i]))) {
             double param = list_params[Rcpp::as<std::string>(names[i])];
             current_parameters[Rcpp::as<std::string>(names[i])] = param;
           } else if (isNumericVectorInList(recipe_from_R(list_params),

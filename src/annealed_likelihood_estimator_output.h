@@ -44,6 +44,11 @@ public:
                                           const Parameters &x);
   
   void close_ofstreams();
+
+  // passed on to the annealed output (dev/plan.md I4b)
+  void carry_over_from(const LikelihoodEstimatorOutput &previous,
+                       const Parameters &previous_parameters,
+                       const Parameters &new_parameters);
   
   void forget_you_were_already_written_to_file();
   
