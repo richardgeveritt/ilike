@@ -57,11 +57,24 @@ void AdjustmentEnsembleShifter::setup(Ensemble* ensemble,
   this->mean_position = arma::mean(ensemble->packed_members,0).as_col();
   this->Zf = (1.0/sqrt(ensemble->size()-1.0))*(ensemble->packed_members.each_row() - this->mean_position.t()).t();
   
-  arma::vec Dhathalf_vec;
-  arma::svd(this->P,Dhathalf_vec,this->Vtranspose,this->Zf);
-  this->Dhathalf = arma::mat(this->Zf.n_rows,this->Zf.n_cols);
-  
-  this->Dhathalf.diag() = Dhathalf_vec;
+  // the compact SVD Zf = P Dhat^(1/2) V^T, with only the r non-zero singular
+  // values (Anderson 2001; Huang et al., arXiv-2204.04386, the EAKI): P is
+  // d x r, Dhat^(1/2) r x r, and the matrix stored is V^T (r x J), as the
+  // estimators' get_adjustment use it (V^T M V, an r x r matrix). (Before:
+  // the full SVD, and V stored as if it were V^T, so the adjustment used
+  // V M V^T over all J directions and collapsed the ensemble.)
+  arma::mat U_full;
+  arma::vec singular_values;
+  arma::mat V_full;
+  arma::svd_econ(U_full, singular_values, V_full, this->Zf);
+  double tolerance = (singular_values.n_elem > 0) ?
+    singular_values.max() * double(std::max(this->Zf.n_rows, this->Zf.n_cols)) * arma::datum::eps : 0.0;
+  arma::uword rank = arma::accu(singular_values > tolerance);
+  if (rank == 0)
+    Rcpp::stop("AdjustmentEnsembleShifter: the ensemble has no spread.");
+  this->P = U_full.cols(0, rank - 1);
+  this->Vtranspose = V_full.cols(0, rank - 1).t();
+  this->Dhathalf = arma::diagmat(singular_values.subvec(0, rank - 1));
   
   this->Yhats.clear();
   this->Yhats.reserve(ensemble->Cxys.size());

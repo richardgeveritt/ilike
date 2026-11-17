@@ -1,0 +1,8 @@
+ilike 1.0
+// test_python_functions.ilike in the language
+import "test_python_functions.py" as py
+data { y = py::my_ones(3L) }
+model {
+  prior p = py::my_log_prior(tau)
+  factor lik = py::my_log_llhd(parameters, data)
+}

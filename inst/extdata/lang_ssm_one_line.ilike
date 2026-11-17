@@ -1,0 +1,10 @@
+ilike 1.0
+// test_ssm_one_line.ilike: numbers, so the one-line built-ins
+data { y = [0.5, 1.0, 0.2, -0.3, 0.8] }
+model {
+  x ~ norm(0, 1)
+  transition x = linear_gaussian(0.9, 0.5)
+  factor obs = linear_gaussian(y, x, 1, 1)
+  time = ssm(index = i, first_index = 0, last_index = 4, time = t, initial_time = 0,
+             time_difference = dt, time_step = 1, predictions_per_update = 1)
+}

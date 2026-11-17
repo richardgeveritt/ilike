@@ -8,6 +8,9 @@
 audit_fixture <- function(files)
 {
   recipe = suppressMessages(ilike::compile(system.file("extdata", files, package = "ilike")))
+  # (old files are read through the converter: the recipe's algorithm is put
+  # into it as the algorithm functions do)
+  recipe = ilike:::prepare_recipe(recipe, NULL, list())$recipe
   termination = ilike:::get_method(recipe, "mcmc_termination")
   if (is.null(termination))
     termination = list()

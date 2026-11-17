@@ -1,10 +1,62 @@
 #include "recipe_internal.h"
+#include "recipe_from_r.h"
+
+// R binding (dev/plan.md 3.14, I1): R lists of values for the state
+// (initial values, algorithm parameters) become Parameters here; Parameters
+// keeps every kind of value it supports, including "any" values.
+std::vector<Parameters> make_initial_points(const Rcpp::List &initial_values) {
+  std::vector<Parameters> output;
+  output.reserve(initial_values.size());
+
+  for (size_t i = 0; i < initial_values.size(); ++i) {
+    Parameters current_parameters;
+    if (Rf_isNewList(initial_values[i])) {
+      Rcpp::List list_params = initial_values[i];
+      if (list_params.size() > 0) {
+        CharacterVector names = list_params.names();
+
+        for (size_t i = 0; i < names.size(); ++i) {
+          if (isDoubleInList(recipe_from_R(list_params), Rcpp::as<std::string>(names[i]))) {
+            double param = list_params[Rcpp::as<std::string>(names[i])];
+            current_parameters[Rcpp::as<std::string>(names[i])] = param;
+          } else if (isNumericVectorInList(recipe_from_R(list_params),
+                                           Rcpp::as<std::string>(names[i]))) {
+            NumericVector param = list_params[Rcpp::as<std::string>(names[i])];
+            current_parameters[Rcpp::as<std::string>(names[i])] =
+                as<arma::colvec>(param);
+          } else if (isNumericMatrixInList(recipe_from_R(list_params),
+                                           Rcpp::as<std::string>(names[i]))) {
+            arma::mat param = list_params[Rcpp::as<std::string>(names[i])];
+            current_parameters[Rcpp::as<std::string>(names[i])] = param;
+          } else {
+            stop("Initial value must be a float/double, vector or matrix.");
+          }
+        }
+      } else {
+        Rcpp::stop("List of initial values has empty entries.");
+      }
+
+      output.push_back(current_parameters);
+    } else {
+      Rcpp::stop("List of initial values must be a list (over chains) of "
+                 "lists, each of which contain the initial parameters.");
+    }
+  }
+
+  return output;
+}
+
+Parameters make_algorithm_parameters(const Rcpp::List &algorithm_parameter_list) {
+
+  return list_to_parameters(algorithm_parameter_list);
+}
+
 
 ImportanceSampler *get_importance_sampler(
-    RandomNumberGenerator *rng, Data *the_data, const List &model,
-    const List &parameters, const List &algorithm_parameter_list,
+    RandomNumberGenerator *rng, Data *the_data, const RecipeValue &model,
+    const RecipeValue &parameters, const Parameters &algorithm_parameters,
     size_t number_of_importance_points, bool parallel_in, size_t grain_size_in,
-    const String &results_name_in, size_t *seed,
+    const std::string &results_name_in, size_t *seed,
     std::vector<Data> &data_created_in_get_likelihood_estimators,
     std::vector<Data> &data_created_in_get_measurement_covariance_estimators) {
   // May need to alter for cases where the likelihood needs to be tuned
@@ -17,17 +69,16 @@ ImportanceSampler *get_importance_sampler(
   IndependentProposalKernel *proposal_in;
   bool proposal_is_evaluated_in;
 
-  List sequencer_info = get_smc_sequencer_info(model, parameters, List());
+  RecipeValue sequencer_info = get_smc_sequencer_info(model, parameters, RecipeValue::list());
   std::vector<std::string> sequencer_types = sequencer_info[0];
   std::vector<std::string> sequencer_variables = sequencer_info[1];
   std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
 
   std::vector<int> factors_affected_by_smc_sequence;
   if (sequencer_info.length() == 5) {
-    NumericVector factors_affected_by_smc_sequence_temp = sequencer_info[4];
-    factors_affected_by_smc_sequence_temp = factors_affected_by_smc_sequence_temp - 1;
-    factors_affected_by_smc_sequence =
-        as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
+    std::vector<int> factors_affected_by_smc_sequence_temp = sequencer_info[4];
+    for (auto &k : factors_affected_by_smc_sequence_temp) k = k - 1;
+    factors_affected_by_smc_sequence = factors_affected_by_smc_sequence_temp;
   }
 
   VectorIndex *without_cancelled_index = NULL;
@@ -35,12 +86,12 @@ ImportanceSampler *get_importance_sampler(
   VectorIndex *full_index = NULL;
   bool any_annealing = false;
 
-  if (model.containsElementNamed("is_proposal")) {
+  if (model.contains("is_proposal")) {
 
     proposal_in = get_proposal(model, parameters, the_data);
 
     likelihood_estimators = get_likelihood_estimators(
-        rng, seed, the_data, model, parameters, algorithm_parameter_list, true,
+        rng, seed, the_data, model, parameters, algorithm_parameters, true,
         sequencer_types, sequencer_variables, sequencer_schedules, proposal_in,
         without_cancelled_index, without_priors_index, full_index,
         any_annealing, factors_affected_by_smc_sequence,
@@ -54,7 +105,7 @@ ImportanceSampler *get_importance_sampler(
     proposal_in = get_prior_as_simulate_only_proposal(model, parameters);
 
     likelihood_estimators = get_likelihood_estimators(
-        rng, seed, the_data, model, parameters, algorithm_parameter_list, false,
+        rng, seed, the_data, model, parameters, algorithm_parameters, false,
         sequencer_types, sequencer_variables, sequencer_schedules, proposal_in,
         without_cancelled_index, without_priors_index, full_index,
         any_annealing, factors_affected_by_smc_sequence,
@@ -64,8 +115,6 @@ ImportanceSampler *get_importance_sampler(
     proposal_is_evaluated_in = false;
   }
 
-  Parameters algorithm_parameters =
-      make_algorithm_parameters(algorithm_parameter_list);
 
   return new ImportanceSampler(
       rng, seed, the_data, algorithm_parameters, number_of_importance_points,
@@ -74,23 +123,23 @@ ImportanceSampler *get_importance_sampler(
 }
 
 // Output options set by the R wrappers as elements of the recipe.
-static void apply_output_options(const List &model, SMC *alg) {
-  if (model.containsElementNamed("write_factor_output"))
-    alg->set_write_factor_output(as<bool>(model["write_factor_output"]));
+static void apply_output_options(const RecipeValue &model, SMC *alg) {
+  if (model.contains("write_factor_output"))
+    alg->set_write_factor_output((model["write_factor_output"]).as_bool());
   // testing switch: never keep a generation in flat form (dev/plan.md 2.6a)
-  if (model.containsElementNamed("force_rich_generations"))
-    alg->set_force_rich_generations(as<bool>(model["force_rich_generations"]));
+  if (model.contains("force_rich_generations"))
+    alg->set_force_rich_generations((model["force_rich_generations"]).as_bool());
   // threads for parallel runs (set by the R wrappers from RcppParallel)
-  if (model.containsElementNamed("number_of_threads"))
-    alg->set_number_of_threads(size_t(as<double>(model["number_of_threads"])));
+  if (model.contains("number_of_threads"))
+    alg->set_number_of_threads(size_t((model["number_of_threads"]).as_double()));
   // progress bar for this run (not for inner estimators)
-  if (model.containsElementNamed("show_progress"))
-    alg->set_show_progress(as<bool>(model["show_progress"]),
-                           model.containsElementNamed("progress_counts_iterations") &&
-                           as<bool>(model["progress_counts_iterations"]));
+  if (model.contains("show_progress"))
+    alg->set_show_progress((model["show_progress"]).as_bool(),
+                           model.contains("progress_counts_iterations") &&
+                           (model["progress_counts_iterations"]).as_bool());
   // waste-free SMC (SMC_with_MCMC only)
-  if (model.containsElementNamed("waste_free_chains"))
-    alg->set_waste_free_chains(size_t(as<double>(model["waste_free_chains"])));
+  if (model.contains("waste_free_chains"))
+    alg->set_waste_free_chains(size_t((model["waste_free_chains"]).as_double()));
 }
 
 // After a run with parallel = TRUE (dev/plan.md 2.6a, G4).
@@ -102,25 +151,29 @@ static void warn_if_parallel_refused(const SMC *alg) {
 }
 
 // [[Rcpp::export]]
-double do_importance_sampler(const List &model, const List &parameters,
-                             const List &algorithm_parameter_list,
+double do_importance_sampler(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
+                             const Rcpp::List &algorithm_parameter_list_R,
                              size_t number_of_importance_points,
                              bool parallel_in, size_t grain_size_in,
-                             const String &results_name_in, size_t seed) {
+                             const std::string &results_name_in, size_t seed) {
+  RecipeValue model = recipe_from_R(model_R);
+  RecipeValue parameters = recipe_from_R(parameters_R);
+  Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list_R);
+
   RandomNumberGenerator rng;
   Data the_data = get_data(model);
   std::vector<Data> data_created_in_get_likelihood_estimators;
   std::vector<Data> data_created_in_measurement_covariance_estimators;
 
   ImportanceSampler *alg = get_importance_sampler(
-      &rng, &the_data, model, parameters, algorithm_parameter_list,
+      &rng, &the_data, model, parameters, algorithm_parameters,
       number_of_importance_points, parallel_in, grain_size_in, results_name_in,
       &seed, data_created_in_get_likelihood_estimators,
       data_created_in_measurement_covariance_estimators);
 
   apply_output_options(model, alg);
   // nothing will be written: the factor outputs need not be kept
-  if (strcmp(results_name_in.get_cstring(), "") == 0)
+  if (strcmp(results_name_in.c_str(), "") == 0)
     alg->set_write_factor_output(false);
 
   // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
@@ -130,8 +183,8 @@ double do_importance_sampler(const List &model, const List &parameters,
 
   warn_if_parallel_refused(alg);
 
-  if (strcmp(results_name_in.get_cstring(), "") != 0)
-    output->write(results_name_in.get_cstring());
+  if (strcmp(results_name_in.c_str(), "") != 0)
+    output->write(results_name_in.c_str());
 
   double log_likelihood = output->log_likelihood;
 
@@ -140,17 +193,21 @@ double do_importance_sampler(const List &model, const List &parameters,
 
 // [[Rcpp::export]]
 double do_importance_sampler_with_fixed_params(
-    const List &model, const List &parameters,
-    const List &algorithm_parameter_list, const List &fixed_parameter_list,
+    const Rcpp::List &model_R, const Rcpp::List &parameters_R,
+    const Rcpp::List &algorithm_parameter_list_R, const Rcpp::List &fixed_parameter_list,
     size_t number_of_importance_points, bool parallel_in, size_t grain_size_in,
-    const String &results_name_in, size_t seed) {
+    const std::string &results_name_in, size_t seed) {
+  RecipeValue model = recipe_from_R(model_R);
+  RecipeValue parameters = recipe_from_R(parameters_R);
+  Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list_R);
+
   RandomNumberGenerator rng;
   Data the_data = get_data(model);
   std::vector<Data> data_created_in_get_likelihood_estimators;
   std::vector<Data> data_created_in_measurement_covariance_estimators;
 
   ImportanceSampler *alg = get_importance_sampler(
-      &rng, &the_data, model, parameters, algorithm_parameter_list,
+      &rng, &the_data, model, parameters, algorithm_parameters,
       number_of_importance_points, parallel_in, grain_size_in, results_name_in,
       &seed, data_created_in_get_likelihood_estimators,
       data_created_in_measurement_covariance_estimators);
@@ -164,8 +221,8 @@ double do_importance_sampler_with_fixed_params(
 
   warn_if_parallel_refused(alg);
 
-  if (strcmp(results_name_in.get_cstring(), "") != 0)
-    output->write(results_name_in.get_cstring());
+  if (strcmp(results_name_in.c_str(), "") != 0)
+    output->write(results_name_in.c_str());
 
   double log_likelihood = output->log_likelihood;
 
@@ -173,12 +230,18 @@ double do_importance_sampler_with_fixed_params(
 }
 
 // [[Rcpp::export]]
-void do_mcmc(const List &model, const List &parameters,
-             const List &algorithm_parameter_list, const List &initial_values,
-             const List &mcmc_termination_method,
-             const List &mcmc_weights_method, size_t number_of_chains,
+void do_mcmc(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
+             const Rcpp::List &algorithm_parameter_list_R, const Rcpp::List &initial_values,
+             const Rcpp::List &mcmc_termination_method_R,
+             const Rcpp::List &mcmc_weights_method_R, size_t number_of_chains,
              bool parallel_in, size_t grain_size_in,
-             const String &results_name_in, size_t seed) {
+             const std::string &results_name_in, size_t seed) {
+  RecipeValue model = recipe_from_R(model_R);
+  RecipeValue parameters = recipe_from_R(parameters_R);
+  Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list_R);
+  RecipeValue mcmc_termination_method = recipe_from_R(mcmc_termination_method_R);
+  RecipeValue mcmc_weights_method = recipe_from_R(mcmc_weights_method_R);
+
   // could specify with mhproposalkernels
   // if more than one, need to specify type of sweep
   // for each need to specify if g, m or mh proposal, also which factors
@@ -199,17 +262,16 @@ void do_mcmc(const List &model, const List &parameters,
   // Check if the prior is the proposal: affects what llhd_estimators we
   // include.
 
-  List sequencer_info = get_smc_sequencer_info(model, parameters, List());
+  RecipeValue sequencer_info = get_smc_sequencer_info(model, parameters, RecipeValue::list());
   std::vector<std::string> sequencer_types = sequencer_info[0];
   std::vector<std::string> sequencer_variables = sequencer_info[1];
   std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
 
   std::vector<int> factors_affected_by_smc_sequence;
   if (sequencer_info.length() == 5) {
-    NumericVector factors_affected_by_smc_sequence_temp = sequencer_info[4];
-    factors_affected_by_smc_sequence_temp = factors_affected_by_smc_sequence_temp - 1;
-    factors_affected_by_smc_sequence =
-        as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
+    std::vector<int> factors_affected_by_smc_sequence_temp = sequencer_info[4];
+    for (auto &k : factors_affected_by_smc_sequence_temp) k = k - 1;
+    factors_affected_by_smc_sequence = factors_affected_by_smc_sequence_temp;
   }
 
   VectorIndex *without_cancelled_index = NULL;
@@ -219,15 +281,12 @@ void do_mcmc(const List &model, const List &parameters,
 
   std::vector<LikelihoodEstimator *> likelihood_estimators;
   likelihood_estimators = get_likelihood_estimators(
-      &rng, &seed, &the_data, model, parameters, algorithm_parameter_list, true,
+      &rng, &seed, &the_data, model, parameters, algorithm_parameters, true,
       sequencer_types, sequencer_variables, sequencer_schedules, NULL,
       without_cancelled_index, without_priors_index, full_index, any_annealing,
       factors_affected_by_smc_sequence,
       data_created_in_get_likelihood_estimators,
       data_created_in_get_measurement_covariance_estimators);
-
-  Parameters algorithm_parameters =
-      make_algorithm_parameters(algorithm_parameter_list);
 
   MCMC *the_mcmc =
       make_mcmc(model, parameters, &the_data, mcmc_termination_method,
@@ -240,7 +299,7 @@ void do_mcmc(const List &model, const List &parameters,
     // no initial values: the chains start at independent draws from the
     // recipe's is_proposal if it has one, otherwise from the prior
     IndependentProposalKernel *proposal_in =
-        model.containsElementNamed("is_proposal")
+        model.contains("is_proposal")
             ? get_proposal(model, parameters, &the_data)
             : get_prior_as_proposal(model, parameters);
 
@@ -270,19 +329,25 @@ void do_mcmc(const List &model, const List &parameters,
 
   warn_if_parallel_refused(alg);
 
-  if (strcmp(results_name_in.get_cstring(), "") != 0)
-    output->write(results_name_in.get_cstring());
+  if (strcmp(results_name_in.c_str(), "") != 0)
+    output->write(results_name_in.c_str());
 
   delete full_index; // MCMC moves keep their own copies of it
 }
 
 // [[Rcpp::export]]
 void do_mcmc_with_fixed_params(
-    const List &model, const List &parameters,
-    const List &algorithm_parameter_list, const List &fixed_parameter_list,
-    const List &initial_values, const List &mcmc_termination_method,
-    const List &mcmc_weights_method, size_t number_of_chains, bool parallel_in,
-    size_t grain_size_in, const String &results_name_in, size_t seed) {
+    const Rcpp::List &model_R, const Rcpp::List &parameters_R,
+    const Rcpp::List &algorithm_parameter_list_R, const Rcpp::List &fixed_parameter_list,
+    const Rcpp::List &initial_values, const Rcpp::List &mcmc_termination_method_R,
+    const Rcpp::List &mcmc_weights_method_R, size_t number_of_chains, bool parallel_in,
+    size_t grain_size_in, const std::string &results_name_in, size_t seed) {
+  RecipeValue model = recipe_from_R(model_R);
+  RecipeValue parameters = recipe_from_R(parameters_R);
+  Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list_R);
+  RecipeValue mcmc_termination_method = recipe_from_R(mcmc_termination_method_R);
+  RecipeValue mcmc_weights_method = recipe_from_R(mcmc_weights_method_R);
+
   // could specify with mhproposalkernels
   // if more than one, need to specify type of sweep
   // for each need to specify if g, m or mh proposal, also which factors
@@ -303,17 +368,16 @@ void do_mcmc_with_fixed_params(
   // Check if the prior is the proposal: affects what llhd_estimators we
   // include.
 
-  List sequencer_info = get_smc_sequencer_info(model, parameters, List());
+  RecipeValue sequencer_info = get_smc_sequencer_info(model, parameters, RecipeValue::list());
   std::vector<std::string> sequencer_types = sequencer_info[0];
   std::vector<std::string> sequencer_variables = sequencer_info[1];
   std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
 
   std::vector<int> factors_affected_by_smc_sequence;
   if (sequencer_info.length() == 5) {
-    NumericVector factors_affected_by_smc_sequence_temp = sequencer_info[4];
-    factors_affected_by_smc_sequence_temp = factors_affected_by_smc_sequence_temp - 1;
-    factors_affected_by_smc_sequence =
-        as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
+    std::vector<int> factors_affected_by_smc_sequence_temp = sequencer_info[4];
+    for (auto &k : factors_affected_by_smc_sequence_temp) k = k - 1;
+    factors_affected_by_smc_sequence = factors_affected_by_smc_sequence_temp;
   }
 
   VectorIndex *without_cancelled_index = NULL;
@@ -323,15 +387,12 @@ void do_mcmc_with_fixed_params(
 
   std::vector<LikelihoodEstimator *> likelihood_estimators;
   likelihood_estimators = get_likelihood_estimators(
-      &rng, &seed, &the_data, model, parameters, algorithm_parameter_list, true,
+      &rng, &seed, &the_data, model, parameters, algorithm_parameters, true,
       sequencer_types, sequencer_variables, sequencer_schedules, NULL,
       without_cancelled_index, without_priors_index, full_index, any_annealing,
       factors_affected_by_smc_sequence,
       data_created_in_get_likelihood_estimators,
       data_created_in_get_measurement_covariance_estimators);
-
-  Parameters algorithm_parameters =
-      make_algorithm_parameters(algorithm_parameter_list);
 
   MCMC *the_mcmc =
       make_mcmc(model, parameters, &the_data, mcmc_termination_method,
@@ -344,7 +405,7 @@ void do_mcmc_with_fixed_params(
     // no initial values: the chains start at independent draws from the
     // recipe's is_proposal if it has one, otherwise from the prior
     IndependentProposalKernel *proposal_in =
-        model.containsElementNamed("is_proposal")
+        model.contains("is_proposal")
             ? get_proposal(model, parameters, &the_data)
             : get_prior_as_proposal(model, parameters);
 
@@ -374,27 +435,27 @@ void do_mcmc_with_fixed_params(
 
   warn_if_parallel_refused(alg);
 
-  if (strcmp(results_name_in.get_cstring(), "") != 0)
-    output->write(results_name_in.get_cstring());
+  if (strcmp(results_name_in.c_str(), "") != 0)
+    output->write(results_name_in.c_str());
 
   delete full_index; // MCMC moves keep their own copies of it
 }
 
 SMCMCMCMove *get_smc_mcmc_move(
-    RandomNumberGenerator *rng, Data *the_data, const List &model,
-    const List &parameters, const List &algorithm_parameter_list,
-    size_t number_of_particles, const List &mcmc_termination_method,
-    const List &mcmc_weights_method, const List &smc_sequencer_method,
-    const List &adaptive_target_method, const List &smc_termination_method,
+    RandomNumberGenerator *rng, Data *the_data, const RecipeValue &model,
+    const RecipeValue &parameters, const Parameters &algorithm_parameters,
+    size_t number_of_particles, const RecipeValue &mcmc_termination_method,
+    const RecipeValue &mcmc_weights_method, const RecipeValue &smc_sequencer_method,
+    const RecipeValue &adaptive_target_method, const RecipeValue &smc_termination_method,
     size_t smc_iterations_to_store, bool write_to_file_at_each_iteration,
-    bool parallel_in, size_t grain_size_in, const String &results_name_in,
+    bool parallel_in, size_t grain_size_in, const std::string &results_name_in,
     size_t *seed, std::vector<Data> &data_created_in_get_likelihood_estimators,
     std::vector<Data> &data_created_in_get_measurement_covariance_estimators) {
   std::vector<LikelihoodEstimator *> likelihood_estimators;
   IndependentProposalKernel *proposal_in;
   bool proposal_is_evaluated_in;
 
-  List sequencer_info =
+  RecipeValue sequencer_info =
       get_smc_sequencer_info(model, parameters, smc_sequencer_method);
   std::vector<std::string> sequencer_types = sequencer_info[0];
   std::vector<std::string> sequencer_variables = sequencer_info[1];
@@ -402,10 +463,9 @@ SMCMCMCMove *get_smc_mcmc_move(
 
   std::vector<int> factors_affected_by_smc_sequence;
   if (sequencer_info.length() == 5) {
-    NumericVector factors_affected_by_smc_sequence_temp = sequencer_info[4];
-    factors_affected_by_smc_sequence_temp = factors_affected_by_smc_sequence_temp - 1;
-    factors_affected_by_smc_sequence =
-        as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
+    std::vector<int> factors_affected_by_smc_sequence_temp = sequencer_info[4];
+    for (auto &k : factors_affected_by_smc_sequence_temp) k = k - 1;
+    factors_affected_by_smc_sequence = factors_affected_by_smc_sequence_temp;
   }
 
   VectorIndex *without_cancelled_index = NULL;
@@ -414,11 +474,11 @@ SMCMCMCMove *get_smc_mcmc_move(
 
   bool any_annealing = false;
 
-  if (model.containsElementNamed("is_proposal")) {
+  if (model.contains("is_proposal")) {
     proposal_in = get_proposal(model, parameters, the_data);
 
     likelihood_estimators = get_likelihood_estimators(
-        rng, seed, the_data, model, parameters, algorithm_parameter_list, true,
+        rng, seed, the_data, model, parameters, algorithm_parameters, true,
         sequencer_types, sequencer_variables, sequencer_schedules, proposal_in,
         without_cancelled_index, without_priors_index, full_index,
         any_annealing, factors_affected_by_smc_sequence,
@@ -432,7 +492,7 @@ SMCMCMCMove *get_smc_mcmc_move(
     proposal_in = get_prior_as_simulate_only_proposal(model, parameters);
 
     likelihood_estimators = get_likelihood_estimators(
-        rng, seed, the_data, model, parameters, algorithm_parameter_list, false,
+        rng, seed, the_data, model, parameters, algorithm_parameters, false,
         sequencer_types, sequencer_variables, sequencer_schedules, proposal_in,
         without_cancelled_index, without_priors_index, full_index,
         any_annealing, factors_affected_by_smc_sequence,
@@ -445,8 +505,6 @@ SMCMCMCMove *get_smc_mcmc_move(
   // note that this will always result in the temperature being adapted in the
   // SMC algorithm (not smcfixed)
 
-  Parameters algorithm_parameters =
-      make_algorithm_parameters(algorithm_parameter_list);
 
   MCMC *the_mcmc =
       make_mcmc(model, parameters, the_data, mcmc_termination_method,
@@ -470,7 +528,7 @@ SMCMCMCMove *get_smc_mcmc_move(
         smc_termination, sequencer_variables, sequencer_schedules,
         likelihood_estimators, proposal_in, without_cancelled_index, full_index,
         proposal_is_evaluated_in, true, true, false, false, parallel_in,
-        grain_size_in, results_name_in.get_cstring());
+        grain_size_in, results_name_in.c_str());
   } else {
     alg = new SMCMCMCMove(
         rng, seed, the_data, algorithm_parameters, number_of_particles,
@@ -487,13 +545,22 @@ SMCMCMCMove *get_smc_mcmc_move(
 
 // [[Rcpp::export]]
 double do_smc_mcmc_move(
-    const List &model, const List &parameters,
-    const List &algorithm_parameter_list, size_t number_of_particles,
-    const List &mcmc_termination_method, const List &mcmc_weights_method,
-    const List &smc_sequencer_method, const List &adaptive_target_method,
-    const List &smc_termination_method, size_t smc_iterations_to_store,
+    const Rcpp::List &model_R, const Rcpp::List &parameters_R,
+    const Rcpp::List &algorithm_parameter_list_R, size_t number_of_particles,
+    const Rcpp::List &mcmc_termination_method_R, const Rcpp::List &mcmc_weights_method_R,
+    const Rcpp::List &smc_sequencer_method_R, const Rcpp::List &adaptive_target_method_R,
+    const Rcpp::List &smc_termination_method_R, size_t smc_iterations_to_store,
     bool write_to_file_at_each_iteration, bool parallel_in,
-    size_t grain_size_in, const String &results_name_in, size_t seed) {
+    size_t grain_size_in, const std::string &results_name_in, size_t seed) {
+  RecipeValue model = recipe_from_R(model_R);
+  RecipeValue parameters = recipe_from_R(parameters_R);
+  Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list_R);
+  RecipeValue mcmc_termination_method = recipe_from_R(mcmc_termination_method_R);
+  RecipeValue mcmc_weights_method = recipe_from_R(mcmc_weights_method_R);
+  RecipeValue smc_sequencer_method = recipe_from_R(smc_sequencer_method_R);
+  RecipeValue adaptive_target_method = recipe_from_R(adaptive_target_method_R);
+  RecipeValue smc_termination_method = recipe_from_R(smc_termination_method_R);
+
 
   RandomNumberGenerator rng;
 
@@ -502,7 +569,7 @@ double do_smc_mcmc_move(
   std::vector<Data> data_created_in_get_measurement_covariance_estimators;
 
   SMCMCMCMove *alg = get_smc_mcmc_move(
-      &rng, &the_data, model, parameters, algorithm_parameter_list,
+      &rng, &the_data, model, parameters, algorithm_parameters,
       number_of_particles, mcmc_termination_method, mcmc_weights_method,
       smc_sequencer_method, adaptive_target_method, smc_termination_method,
       smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in,
@@ -520,8 +587,8 @@ double do_smc_mcmc_move(
   warn_if_parallel_refused(alg);
 
   if (!write_to_file_at_each_iteration) {
-    if (strcmp(results_name_in.get_cstring(), "") != 0)
-      output->write(results_name_in.get_cstring());
+    if (strcmp(results_name_in.c_str(), "") != 0)
+      output->write(results_name_in.c_str());
   }
 
   double log_likelihood = output->log_likelihood;
@@ -531,13 +598,22 @@ double do_smc_mcmc_move(
 
 // [[Rcpp::export]]
 double do_smc_mcmc_move_with_fixed_params(
-                        const List &model, const List &parameters,
-                        const List &algorithm_parameter_list, const List &fixed_parameter_list, size_t number_of_particles,
-                        const List &mcmc_termination_method, const List &mcmc_weights_method,
-                        const List &smc_sequencer_method, const List &adaptive_target_method,
-                        const List &smc_termination_method, size_t smc_iterations_to_store,
+                        const Rcpp::List &model_R, const Rcpp::List &parameters_R,
+                        const Rcpp::List &algorithm_parameter_list_R, const Rcpp::List &fixed_parameter_list, size_t number_of_particles,
+                        const Rcpp::List &mcmc_termination_method_R, const Rcpp::List &mcmc_weights_method_R,
+                        const Rcpp::List &smc_sequencer_method_R, const Rcpp::List &adaptive_target_method_R,
+                        const Rcpp::List &smc_termination_method_R, size_t smc_iterations_to_store,
                         bool write_to_file_at_each_iteration, bool parallel_in,
-                        size_t grain_size_in, const String &results_name_in, size_t seed) {
+                        size_t grain_size_in, const std::string &results_name_in, size_t seed) {
+  RecipeValue model = recipe_from_R(model_R);
+  RecipeValue parameters = recipe_from_R(parameters_R);
+  Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list_R);
+  RecipeValue mcmc_termination_method = recipe_from_R(mcmc_termination_method_R);
+  RecipeValue mcmc_weights_method = recipe_from_R(mcmc_weights_method_R);
+  RecipeValue smc_sequencer_method = recipe_from_R(smc_sequencer_method_R);
+  RecipeValue adaptive_target_method = recipe_from_R(adaptive_target_method_R);
+  RecipeValue smc_termination_method = recipe_from_R(smc_termination_method_R);
+
 
   RandomNumberGenerator rng;
 
@@ -546,7 +622,7 @@ double do_smc_mcmc_move_with_fixed_params(
   std::vector<Data> data_created_in_get_measurement_covariance_estimators;
 
   SMCMCMCMove *alg = get_smc_mcmc_move(
-                                       &rng, &the_data, model, parameters, algorithm_parameter_list,
+                                       &rng, &the_data, model, parameters, algorithm_parameters,
                                        number_of_particles, mcmc_termination_method, mcmc_weights_method,
                                        smc_sequencer_method, adaptive_target_method, smc_termination_method,
                                        smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in,
@@ -564,8 +640,8 @@ double do_smc_mcmc_move_with_fixed_params(
   warn_if_parallel_refused(alg);
 
   if (!write_to_file_at_each_iteration) {
-    if (strcmp(results_name_in.get_cstring(), "") != 0)
-      output->write(results_name_in.get_cstring());
+    if (strcmp(results_name_in.c_str(), "") != 0)
+      output->write(results_name_in.c_str());
   }
 
   double log_likelihood = output->log_likelihood;
@@ -574,31 +650,31 @@ double do_smc_mcmc_move_with_fixed_params(
 }
 
 EnsembleKalmanInversion *get_enki(
-    RandomNumberGenerator *rng, Data *the_data, const List &model,
-    const List &parameters, const List &algorithm_parameter_list,
-    size_t number_of_ensemble_members, const List &mcmc_termination_method,
-    const List &mcmc_weights_method, const List &enk_sequencer_method,
-    const List &adaptive_target_method, const List &enk_termination_method,
+    RandomNumberGenerator *rng, Data *the_data, const RecipeValue &model,
+    const RecipeValue &parameters, const Parameters &algorithm_parameters,
+    size_t number_of_ensemble_members, const RecipeValue &mcmc_termination_method,
+    const RecipeValue &mcmc_weights_method, const RecipeValue &enk_sequencer_method,
+    const RecipeValue &adaptive_target_method, const RecipeValue &enk_termination_method,
     size_t enk_iterations_to_store, bool write_to_file_at_each_iteration,
-    bool parallel_in, size_t grain_size_in, const String &results_name_in,
+    bool parallel_in, size_t grain_size_in, const std::string &results_name_in,
     size_t *seed, std::vector<Data> &data_created_in_get_likelihood_estimators,
     std::vector<Data> &data_created_in_get_measurement_covariance_estimators) {
   std::vector<LikelihoodEstimator *> likelihood_estimators;
   std::vector<MeasurementCovarianceEstimator *> estimators;
   IndependentProposalKernel *proposal_in;
 
-  List sequencer_info =
-      get_smc_sequencer_info(model, parameters, enk_sequencer_method);
+  RecipeValue sequencer_info =
+      get_smc_sequencer_info(model, parameters, enk_sequencer_method,
+                             BuiltinRole::EnKSequence);
   std::vector<std::string> sequencer_types = sequencer_info[0];
   std::vector<std::string> sequencer_variables = sequencer_info[1];
   std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
 
   std::vector<int> factors_affected_by_smc_sequence;
   if (sequencer_info.length() == 5) {
-    NumericVector factors_affected_by_smc_sequence_temp = sequencer_info[4];
-    factors_affected_by_smc_sequence_temp = factors_affected_by_smc_sequence_temp - 1;
-    factors_affected_by_smc_sequence =
-        as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
+    std::vector<int> factors_affected_by_smc_sequence_temp = sequencer_info[4];
+    for (auto &k : factors_affected_by_smc_sequence_temp) k = k - 1;
+    factors_affected_by_smc_sequence = factors_affected_by_smc_sequence_temp;
   }
 
   VectorIndex *without_cancelled_index = NULL;
@@ -615,7 +691,7 @@ EnsembleKalmanInversion *get_enki(
       get_enk_likelihood_indices(model, parameters);
 
   likelihood_estimators = get_likelihood_estimators(
-      rng, seed, the_data, model, parameters, algorithm_parameter_list, true,
+      rng, seed, the_data, model, parameters, algorithm_parameters, true,
       sequencer_types, sequencer_variables, sequencer_schedules, proposal_in,
       without_cancelled_index, without_priors_index, full_index, any_annealing,
       factors_affected_by_smc_sequence,
@@ -628,9 +704,6 @@ EnsembleKalmanInversion *get_enki(
 
   // note that this will always result in the temperature being adapted in the
   // SMC algorithm (not smcfixed)
-
-  Parameters algorithm_parameters =
-      make_algorithm_parameters(algorithm_parameter_list);
 
   MCMC *the_mcmc =
       make_mcmc(model, parameters, the_data, mcmc_termination_method,
@@ -653,7 +726,7 @@ EnsembleKalmanInversion *get_enki(
         sequencer_variables[sequencer_variables.size() - 1],
         sequencer_schedules[sequencer_schedules.size() - 1], proposal_in,
         likelihood_estimators, estimators, transform, 1.0, 0, parallel_in,
-        grain_size_in, results_name_in.get_cstring());
+        grain_size_in, results_name_in.c_str());
   } else {
     alg = new EnsembleKalmanInversion(
         rng, seed, the_data, number_of_ensemble_members,
@@ -670,13 +743,22 @@ EnsembleKalmanInversion *get_enki(
 
 // [[Rcpp::export]]
 double
-do_enki(const List &model, const List &parameters,
-        const List &algorithm_parameter_list, size_t number_of_ensemble_members,
-        const List &mcmc_termination_method, const List &mcmc_weights_method,
-        const List &enk_sequencer_method, const List &adaptive_target_method,
-        const List &enk_termination_method, size_t enk_iterations_to_store,
+do_enki(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
+        const Rcpp::List &algorithm_parameter_list_R, size_t number_of_ensemble_members,
+        const Rcpp::List &mcmc_termination_method_R, const Rcpp::List &mcmc_weights_method_R,
+        const Rcpp::List &enk_sequencer_method_R, const Rcpp::List &adaptive_target_method_R,
+        const Rcpp::List &enk_termination_method_R, size_t enk_iterations_to_store,
         bool write_to_file_at_each_iteration, bool parallel_in,
-        size_t grain_size_in, const String &results_name_in, size_t seed) {
+        size_t grain_size_in, const std::string &results_name_in, size_t seed) {
+  RecipeValue model = recipe_from_R(model_R);
+  RecipeValue parameters = recipe_from_R(parameters_R);
+  Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list_R);
+  RecipeValue mcmc_termination_method = recipe_from_R(mcmc_termination_method_R);
+  RecipeValue mcmc_weights_method = recipe_from_R(mcmc_weights_method_R);
+  RecipeValue enk_sequencer_method = recipe_from_R(enk_sequencer_method_R);
+  RecipeValue adaptive_target_method = recipe_from_R(adaptive_target_method_R);
+  RecipeValue enk_termination_method = recipe_from_R(enk_termination_method_R);
+
   RandomNumberGenerator rng;
 
   Data the_data = get_data(model);
@@ -684,7 +766,7 @@ do_enki(const List &model, const List &parameters,
   std::vector<Data> data_created_in_get_measurement_covariance_estimators;
 
   EnsembleKalmanInversion *alg = get_enki(
-      &rng, &the_data, model, parameters, algorithm_parameter_list,
+      &rng, &the_data, model, parameters, algorithm_parameters,
       number_of_ensemble_members, mcmc_termination_method, mcmc_weights_method,
       enk_sequencer_method, adaptive_target_method, enk_termination_method,
       enk_iterations_to_store, write_to_file_at_each_iteration, parallel_in,
@@ -695,8 +777,8 @@ do_enki(const List &model, const List &parameters,
   EnsembleKalmanOutput *output = alg->run();
 
   if (!write_to_file_at_each_iteration) {
-    if (strcmp(results_name_in.get_cstring(), "") != 0)
-      output->write(results_name_in.get_cstring());
+    if (strcmp(results_name_in.c_str(), "") != 0)
+      output->write(results_name_in.c_str());
   }
 
   double log_likelihood = output->log_likelihood;
@@ -707,161 +789,95 @@ do_enki(const List &model, const List &parameters,
   return log_likelihood;
 }
 
+// MFDS: the ensemble Kalman method of Huang, Huang, Reich & Stuart
+// (arXiv-2204.04386v2; dev/plan.md 3.16). The posterior is the fixed point of
+// a filtering problem: each iteration inflates the ensemble about its mean
+// (prediction) and updates it with the augmented observation [y; prior mean]
+// of [simulated data; theta], whose noise is scaled by 1/delta_t (analysis).
+// The prior must be built-in Gaussian; the likelihood is a simulator
+// (simulate_data_model, data_variable, optional summary_statistics). The
+// shifter (enk_shifter) is stochastic (EKI, default) or adjustment (EAKI).
+// There is no evidence estimate.
 // [[Rcpp::export]]
-double
-do_enkmfds(const List &model, const List &parameters,
-           const List &algorithm_parameter_list, size_t number_of_particles,
-           double Delta_t, const List &mcmc_termination_method,
-           const List &mcmc_weights_method, const List &smc_sequencer_method,
-           const List &adaptive_target_method,
-           const List &smc_termination_method, size_t smc_iterations_to_store,
-           bool write_to_file_at_each_iteration, bool parallel_in,
-           size_t grain_size_in, const String &results_name_in, size_t seed) {
+void do_enkmfds(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
+                size_t number_of_ensemble_members, size_t number_of_iterations,
+                double delta_t, size_t iterations_to_store,
+                const std::string &results_name_in, size_t seed) {
+  RecipeValue model = recipe_from_R(model_R);
+  RecipeValue parameters = recipe_from_R(parameters_R);
+
+  if (!((delta_t > 0.0) && (delta_t < 1.0)))
+    stop("MFDS: delta_t must be between 0 and 1.");
+  if (number_of_iterations < 1)
+    stop("MFDS: number_of_iterations must be at least 1.");
+  if (number_of_ensemble_members < 2)
+    stop("MFDS: at least two ensemble members are needed.");
 
   RandomNumberGenerator rng;
-
   Data the_data = get_data(model);
-  std::vector<Data> data_created_in_get_likelihood_estimators;
-  std::vector<Data> data_created_in_get_measurement_covariance_estimators;
 
-  // May need to alter for cases where the likelihood needs to be tuned
-  // automatically (e.g. in ABC).
+  // the Gaussian prior: its means are the artificial observation of theta
+  Parameters prior_means;
+  Parameters prior_covariances;
+  get_gaussian_prior_moments(model, parameters, prior_means, prior_covariances);
 
-  // Check if the prior is the proposal: affects what llhd_estimators we
-  // include.
+  // the simulator of the data
+  SimulateModelPtr simulate_data_model = NULL;
+  std::vector<std::string> data_variables;
+  std::shared_ptr<Transform> summary_statistics = NULL;
+  if (model.contains("factor")) {
+    RecipeValue factors = model["factor"];
+    for (size_t i = 0; i < factors.size(); ++i) {
+      RecipeValue current_factor = factors[i];
+      if (!current_factor.contains("simulate_data_model"))
+        continue;
+      if (simulate_data_model != NULL)
+        stop("MFDS: only one simulate_data_model is allowed.");
+      simulate_data_model =
+          current_factor["simulate_data_model"].function_pointer<SimulateModelPtr>();
+      if (!current_factor.contains("data_variable"))
+        stop("MFDS: the factor with simulate_data_model must also have data_variable.");
+      data_variables = split(current_factor["data_variable"].function_pointer<StringPtr>()(), ';');
+      if (current_factor.contains("summary_statistics"))
+        summary_statistics = std::make_shared<Transform>(
+            current_factor["summary_statistics"].function_pointer<SummaryStatisticsPtr>());
+    }
+  }
+  if (simulate_data_model == NULL)
+    stop("MFDS: the model needs a simulate_data_model (and data_variable) for the likelihood.");
 
-  std::vector<LikelihoodEstimator *> likelihood_estimators;
-  IndependentProposalKernel *proposal_in;
-  bool proposal_is_evaluated_in;
+  // the initial ensemble, drawn from the prior (with the streams' convention
+  // of the ensemble workers: seed, then advance the seed by the ensemble size)
+  std::unique_ptr<IndependentProposalKernel> prior(get_prior_as_simulate_only_proposal(model, parameters));
+  rng.seed(seed);
+  std::vector<Parameters> initial_points;
+  initial_points.reserve(number_of_ensemble_members);
+  for (size_t i = 0; i < number_of_ensemble_members; ++i)
+    initial_points.push_back(prior->independent_simulate(rng));
+  seed = seed + number_of_ensemble_members;
 
-  List sequencer_info =
-      get_smc_sequencer_info(model, parameters, smc_sequencer_method);
-  std::vector<std::string> sequencer_types = sequencer_info[0];
-  std::vector<std::string> sequencer_variables = sequencer_info[1];
-  std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
-
-  std::vector<int> factors_affected_by_smc_sequence;
-  if (sequencer_info.length() == 5) {
-    NumericVector factors_affected_by_smc_sequence_temp = sequencer_info[4];
-    factors_affected_by_smc_sequence_temp = factors_affected_by_smc_sequence_temp - 1;
-    factors_affected_by_smc_sequence =
-        as<std::vector<int>>(factors_affected_by_smc_sequence_temp);
+  EnsembleShifter *shifter = get_enk_shifter_method(model, parameters);
+  if (dynamic_cast<SquareRootEnsembleShifter*>(shifter) != NULL) {
+    delete shifter;
+    stop("MFDS: enk_shifter ilike::sqrt is not available for MFDS; use ilike::stochastic or ilike::adjustment.");
   }
 
-  VectorIndex *without_cancelled_index = NULL;
-  VectorIndex *without_priors_index = NULL;
-  VectorIndex *full_index = NULL;
+  std::unique_ptr<EnsembleKalmanMFDS> alg(new EnsembleKalmanMFDS(
+      &rng, &seed, &the_data, iterations_to_store, initial_points, shifter, delta_t,
+      number_of_iterations, prior_means, prior_covariances, simulate_data_model,
+      2, // the joint update of the augmented observation
+      summary_statistics, NULL, data_variables, false, 100000, results_name_in));
 
-  bool any_annealing = false;
-
-  if (model.containsElementNamed("is_proposal")) {
-    proposal_in = get_proposal(model, parameters, &the_data);
-
-    likelihood_estimators = get_likelihood_estimators(
-        &rng, &seed, &the_data, model, parameters, algorithm_parameter_list,
-        true, sequencer_types, sequencer_variables, sequencer_schedules,
-        proposal_in, without_cancelled_index, without_priors_index, full_index,
-        any_annealing, factors_affected_by_smc_sequence,
-        data_created_in_get_likelihood_estimators,
-        data_created_in_get_measurement_covariance_estimators);
-
-    proposal_is_evaluated_in = true;
-  } else {
-    inform_once("No importance sampling proposal specified; using prior.");
-
-    proposal_in = get_prior_as_simulate_only_proposal(model, parameters);
-
-    likelihood_estimators = get_likelihood_estimators(
-        &rng, &seed, &the_data, model, parameters, algorithm_parameter_list,
-        false, sequencer_types, sequencer_variables, sequencer_schedules,
-        proposal_in, without_cancelled_index, without_priors_index, full_index,
-        any_annealing, factors_affected_by_smc_sequence,
-        data_created_in_get_likelihood_estimators,
-        data_created_in_get_measurement_covariance_estimators);
-
-    proposal_is_evaluated_in = false;
-  }
-
-  // note that this will always result in the temperature being adapted in the
-  // SMC algorithm (not smcfixed)
-
-  Parameters algorithm_parameters =
-      make_algorithm_parameters(algorithm_parameter_list);
-
-  MCMC *the_mcmc =
-      make_mcmc(model, parameters, &the_data, mcmc_termination_method,
-                mcmc_weights_method, full_index);
-
-  SMCCriterion *resampling_criterion =
-      get_resampling_method(model, parameters, number_of_particles);
-
-  SMCCriterion *adaptive_target_criterion = get_adaptive_target_method(
-      model, parameters, adaptive_target_method, number_of_particles);
-
-  SMCTermination *smc_termination =
-      get_smc_termination_method(model, parameters, smc_termination_method);
-
-  if (write_to_file_at_each_iteration) {
-    SMCMCMCMove *alg = new SMCMCMCMove(
-        &rng, &seed, &the_data, algorithm_parameters, number_of_particles,
-        smc_iterations_to_store, smc_iterations_to_store, the_mcmc,
-        resampling_criterion, adaptive_target_criterion, sequencer_info[3],
-        smc_termination, sequencer_variables, sequencer_schedules,
-        likelihood_estimators, proposal_in, without_cancelled_index, full_index,
-        proposal_is_evaluated_in, true, true, false, false, parallel_in,
-        grain_size_in, results_name_in.get_cstring());
-
-    apply_output_options(model, alg);
-
-    // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
-    std::unique_ptr<SMC> alg_owner(alg);
-    SMCOutput *output = alg->run();
-    std::unique_ptr<SMCOutput> output_owner(output);
-
-    warn_if_parallel_refused(alg);
-
-    double log_likelihood = output->log_likelihood;
-
-    delete full_index; // MCMC moves keep their own copies of it
-
-    return log_likelihood;
-  } else {
-    SMCMCMCMove *alg = new SMCMCMCMove(
-        &rng, &seed, &the_data, algorithm_parameters, number_of_particles,
-        smc_iterations_to_store, smc_iterations_to_store, the_mcmc,
-        resampling_criterion, adaptive_target_criterion, sequencer_info[3],
-        smc_termination, sequencer_variables, sequencer_schedules,
-        likelihood_estimators, proposal_in, without_cancelled_index, full_index,
-        proposal_is_evaluated_in, true, true, false, false, parallel_in,
-        grain_size_in, "");
-
-    apply_output_options(model, alg);
-
-    // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
-    std::unique_ptr<SMC> alg_owner(alg);
-    SMCOutput *output = alg->run();
-    std::unique_ptr<SMCOutput> output_owner(output);
-
-    warn_if_parallel_refused(alg);
-
-    if (strcmp(results_name_in.get_cstring(), "") != 0)
-      output->write(results_name_in.get_cstring());
-
-    double log_likelihood = output->log_likelihood;
-
-    delete full_index; // MCMC moves keep their own copies of it
-
-    return log_likelihood;
-  }
+  std::unique_ptr<EnsembleKalmanOutput> output(alg->run());
 }
 
-KalmanFilter *get_kalman_filter(Data *the_data, const List &model,
-                                const List &parameters,
-                                const List &algorithm_parameter_list,
+KalmanFilter *get_kalman_filter(Data *the_data, const RecipeValue &model,
+                                const RecipeValue &parameters,
+                                const Parameters &algorithm_parameters,
                                 size_t kf_iterations_to_store,
                                 bool write_to_file_at_each_iteration,
                                 const std::string &results_name_in) {
-  List prior_mean_and_covariance =
+  RecipeValue prior_mean_and_covariance =
       get_prior_mean_and_covariance(model, parameters);
 
   arma::colvec prior_mean_in = prior_mean_and_covariance[0];
@@ -872,7 +888,7 @@ KalmanFilter *get_kalman_filter(Data *the_data, const List &model,
   std::vector<KalmanUpdater *> updaters_in =
       get_kalman_updaters(model, parameters);
 
-  List filtering_info = get_ssm_info(model, parameters);
+  RecipeValue filtering_info = get_ssm_info(model, parameters);
 
   std::string index_name_in = filtering_info[0];
   size_t first_index_in = filtering_info[1];
@@ -903,8 +919,6 @@ KalmanFilter *get_kalman_filter(Data *the_data, const List &model,
   // KalmanUpdater* updater_in = new ExactKalmanUpdater(measurement_model_H,
   //                                                    measurement_model_R);
 
-  Parameters algorithm_parameters =
-      make_algorithm_parameters(algorithm_parameter_list);
 
   if (write_to_file_at_each_iteration) {
     return new KalmanFilter(the_data, kf_iterations_to_store,
@@ -926,24 +940,28 @@ KalmanFilter *get_kalman_filter(Data *the_data, const List &model,
 }
 
 // [[Rcpp::export]]
-double do_kalman_filter(const List &model, const List &parameters,
-                        const List &algorithm_parameter_list,
+double do_kalman_filter(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
+                        const Rcpp::List &algorithm_parameter_list_R,
                         size_t kf_iterations_to_store,
                         bool write_to_file_at_each_iteration,
-                        const String &results_name_in) {
+                        const std::string &results_name_in) {
+  RecipeValue model = recipe_from_R(model_R);
+  RecipeValue parameters = recipe_from_R(parameters_R);
+  Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list_R);
+
 
   Data the_data = get_data(model);
 
   KalmanFilter *alg =
-      get_kalman_filter(&the_data, model, parameters, algorithm_parameter_list,
+      get_kalman_filter(&the_data, model, parameters, algorithm_parameters,
                         kf_iterations_to_store, write_to_file_at_each_iteration,
-                        results_name_in.get_cstring());
+                        results_name_in.c_str());
 
   KalmanFilterOutput *output = alg->run();
 
   if (!write_to_file_at_each_iteration) {
-    if (strcmp(results_name_in.get_cstring(), "") != 0)
-      output->write(results_name_in.get_cstring());
+    if (strcmp(results_name_in.c_str(), "") != 0)
+      output->write(results_name_in.c_str());
   }
 
   double log_likelihood = output->log_likelihood;
@@ -955,13 +973,13 @@ double do_kalman_filter(const List &model, const List &parameters,
 }
 
 EnsembleKalmanFilter *get_ensemble_kalman_filter(
-    RandomNumberGenerator *rng, Data *the_data, const List &model,
-    const List &parameters, const List &algorithm_parameter_list,
+    RandomNumberGenerator *rng, Data *the_data, const RecipeValue &model,
+    const RecipeValue &parameters, const Parameters &algorithm_parameters,
     size_t number_of_ensemble_members, EnsembleShifter *shifter,
-    // const List &enk_likelihood_index_method,
-    // const List &enk_shifter_method,
+    // const RecipeValue &enk_likelihood_index_method,
+    // const RecipeValue &enk_shifter_method,
     size_t enk_iterations_to_store, bool write_to_file_at_each_iteration,
-    bool parallel_in, size_t grain_size_in, const String &results_name_in,
+    bool parallel_in, size_t grain_size_in, const std::string &results_name_in,
     size_t *seed,
     std::vector<Data> &data_created_in_get_measurement_covariance_estimators) {
 
@@ -975,7 +993,7 @@ EnsembleKalmanFilter *get_ensemble_kalman_filter(
 
   bool smcfixed_flag = true;
 
-  List filtering_info = get_ssm_info(model, parameters);
+  RecipeValue filtering_info = get_ssm_info(model, parameters);
 
   std::string index_name_in = filtering_info[0];
   size_t first_index_in = filtering_info[1];
@@ -989,9 +1007,6 @@ EnsembleKalmanFilter *get_ensemble_kalman_filter(
   if (first_index_in > last_index_in)
     stop("Cannot construct a filter where the first index is bigger than the "
          "last.");
-
-  Parameters algorithm_parameters =
-      make_algorithm_parameters(algorithm_parameter_list);
 
   ProposalKernel *transition = get_transition_model(model, parameters);
 
@@ -1029,7 +1044,7 @@ EnsembleKalmanFilter *get_ensemble_kalman_filter(
         predictions_per_update_in, update_time_step_in, initial_time_in,
         number_of_ensemble_members, shifter, NULL, proposal_in, transition,
         measurement_covariance_estimators_in, smcfixed_flag, true, parallel_in,
-        grain_size_in, results_name_in.get_cstring());
+        grain_size_in, results_name_in.c_str());
   } else {
     return new EnsembleKalmanFilter(
         rng, seed, the_data, enk_iterations_to_store, index_name_in,
@@ -1042,13 +1057,17 @@ EnsembleKalmanFilter *get_ensemble_kalman_filter(
 }
 
 // [[Rcpp::export]]
-double do_ensemble_kalman_filter(const List &model, const List &parameters,
-                                 const List &algorithm_parameter_list,
+double do_ensemble_kalman_filter(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
+                                 const Rcpp::List &algorithm_parameter_list_R,
                                  size_t number_of_ensemble_members,
                                  size_t enk_iterations_to_store,
                                  bool write_to_file_at_each_iteration,
                                  bool parallel_in, size_t grain_size_in,
-                                 const String &results_name_in, size_t seed) {
+                                 const std::string &results_name_in, size_t seed) {
+  RecipeValue model = recipe_from_R(model_R);
+  RecipeValue parameters = recipe_from_R(parameters_R);
+  Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list_R);
+
 
   RandomNumberGenerator rng;
 
@@ -1059,7 +1078,7 @@ double do_ensemble_kalman_filter(const List &model, const List &parameters,
   EnsembleShifter *shifter = get_enk_shifter_method(model, parameters);
 
   EnsembleKalmanFilter *alg = get_ensemble_kalman_filter(
-      &rng, &the_data, model, parameters, algorithm_parameter_list,
+      &rng, &the_data, model, parameters, algorithm_parameters,
       number_of_ensemble_members, shifter, enk_iterations_to_store,
       write_to_file_at_each_iteration, parallel_in, grain_size_in,
       results_name_in, &seed,
@@ -1068,8 +1087,8 @@ double do_ensemble_kalman_filter(const List &model, const List &parameters,
   EnsembleKalmanOutput *output = alg->run();
 
   if (!write_to_file_at_each_iteration) {
-    if (strcmp(results_name_in.get_cstring(), "") != 0)
-      output->write(results_name_in.get_cstring());
+    if (strcmp(results_name_in.c_str(), "") != 0)
+      output->write(results_name_in.c_str());
   }
 
   double log_likelihood = output->log_likelihood;
@@ -1082,11 +1101,15 @@ double do_ensemble_kalman_filter(const List &model, const List &parameters,
 
 // [[Rcpp::export]]
 double do_ensemble_kalman_filter_with_fixed_params(
-    const List &model, const List &parameters,
-    const List &algorithm_parameter_list, const List &fixed_parameter_list,
+    const Rcpp::List &model_R, const Rcpp::List &parameters_R,
+    const Rcpp::List &algorithm_parameter_list_R, const Rcpp::List &fixed_parameter_list,
     size_t number_of_ensemble_members, size_t enk_iterations_to_store,
     bool write_to_file_at_each_iteration, bool parallel_in,
-    size_t grain_size_in, const String &results_name_in, size_t seed) {
+    size_t grain_size_in, const std::string &results_name_in, size_t seed) {
+  RecipeValue model = recipe_from_R(model_R);
+  RecipeValue parameters = recipe_from_R(parameters_R);
+  Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list_R);
+
 
   RandomNumberGenerator rng;
 
@@ -1097,7 +1120,7 @@ double do_ensemble_kalman_filter_with_fixed_params(
   EnsembleShifter *shifter = get_enk_shifter_method(model, parameters);
 
   EnsembleKalmanFilter *alg = get_ensemble_kalman_filter(
-      &rng, &the_data, model, parameters, algorithm_parameter_list,
+      &rng, &the_data, model, parameters, algorithm_parameters,
       number_of_ensemble_members, shifter, enk_iterations_to_store,
       write_to_file_at_each_iteration, parallel_in, grain_size_in,
       results_name_in, &seed,
@@ -1107,8 +1130,8 @@ double do_ensemble_kalman_filter_with_fixed_params(
       alg->run(list_to_parameters(fixed_parameter_list));
 
   if (!write_to_file_at_each_iteration) {
-    if (strcmp(results_name_in.get_cstring(), "") != 0)
-      output->write(results_name_in.get_cstring());
+    if (strcmp(results_name_in.c_str(), "") != 0)
+      output->write(results_name_in.c_str());
   }
 
   double log_likelihood = output->log_likelihood;
@@ -1120,11 +1143,11 @@ double do_ensemble_kalman_filter_with_fixed_params(
 }
 
 ParticleFilter *get_particle_filter(
-    RandomNumberGenerator *rng, Data *the_data, const List &model,
-    const List &parameters, const List &algorithm_parameter_list,
+    RandomNumberGenerator *rng, Data *the_data, const RecipeValue &model,
+    const RecipeValue &parameters, const Parameters &algorithm_parameters,
     size_t number_of_particles, size_t smc_iterations_to_store,
     bool write_to_file_at_each_iteration, bool parallel_in,
-    size_t grain_size_in, const String &results_name_in, size_t *seed,
+    size_t grain_size_in, const std::string &results_name_in, size_t *seed,
     std::vector<Data> &data_created_in_get_likelihood_estimators,
     std::vector<Data> &data_created_in_get_measurement_covariance_estimators) {
   std::vector<LikelihoodEstimator *> likelihood_estimators;
@@ -1143,12 +1166,12 @@ ParticleFilter *get_particle_filter(
 
   bool any_annealing;
 
-  if (model.containsElementNamed("is_proposal")) {
+  if (model.contains("is_proposal")) {
 
     proposal_in = get_proposal(model, parameters, the_data);
 
     likelihood_estimators = get_likelihood_estimators(
-        rng, seed, the_data, model, parameters, algorithm_parameter_list, true,
+        rng, seed, the_data, model, parameters, algorithm_parameters, true,
         sequencer_types, sequencer_variables, sequencer_schedules, proposal_in,
         evaluated_in_initial_weight_update, evaluated_in_pf_weight_update,
         full_index, any_annealing, factors_affected_by_smc_sequence,
@@ -1163,7 +1186,7 @@ ParticleFilter *get_particle_filter(
     proposal_in = get_prior_as_simulate_only_proposal(model, parameters);
 
     likelihood_estimators = get_likelihood_estimators(
-        rng, seed, the_data, model, parameters, algorithm_parameter_list, false,
+        rng, seed, the_data, model, parameters, algorithm_parameters, false,
         sequencer_types, sequencer_variables, sequencer_schedules, proposal_in,
         evaluated_in_initial_weight_update, evaluated_in_pf_weight_update,
         full_index, any_annealing, factors_affected_by_smc_sequence,
@@ -1178,7 +1201,7 @@ ParticleFilter *get_particle_filter(
   SMCCriterion *resampling_criterion =
       get_resampling_method(model, parameters, number_of_particles);
 
-  List filtering_info = get_ssm_info(model, parameters);
+  RecipeValue filtering_info = get_ssm_info(model, parameters);
 
   std::string index_name_in = filtering_info[0];
   size_t first_index_in = filtering_info[1];
@@ -1195,9 +1218,6 @@ ParticleFilter *get_particle_filter(
 
   // Commented out with the intention to replace - issue is that we no longer
   // store the measurement name.
-
-  Parameters algorithm_parameters =
-      make_algorithm_parameters(algorithm_parameter_list);
 
   ProposalKernel *transition_model = get_transition_model(model, parameters);
 
@@ -1230,7 +1250,7 @@ ParticleFilter *get_particle_filter(
         evaluated_in_initial_weight_update, evaluated_in_pf_weight_update,
         proposal_is_evaluated_in, transition_proposal_is_evaluated_in,
         smcfixed_flag, true, false, parallel_in, grain_size_in,
-        results_name_in.get_cstring());
+        results_name_in.c_str());
   } else {
     return new ParticleFilter(
         rng, seed, the_data, Parameters(), number_of_particles,
@@ -1246,13 +1266,17 @@ ParticleFilter *get_particle_filter(
 }
 
 // [[Rcpp::export]]
-double do_particle_filter(const List &model, const List &parameters,
-                          const List &algorithm_parameter_list,
+double do_particle_filter(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
+                          const Rcpp::List &algorithm_parameter_list_R,
                           size_t number_of_particles,
                           size_t smc_iterations_to_store,
                           bool write_to_file_at_each_iteration,
                           bool parallel_in, size_t grain_size_in,
-                          const String &results_name_in, size_t seed) {
+                          const std::string &results_name_in, size_t seed) {
+  RecipeValue model = recipe_from_R(model_R);
+  RecipeValue parameters = recipe_from_R(parameters_R);
+  Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list_R);
+
 
   RandomNumberGenerator rng;
 
@@ -1262,7 +1286,7 @@ double do_particle_filter(const List &model, const List &parameters,
   std::vector<Data> data_created_in_get_measurement_covariance_estimators;
 
   ParticleFilter *alg = get_particle_filter(
-      &rng, &the_data, model, parameters, algorithm_parameter_list,
+      &rng, &the_data, model, parameters, algorithm_parameters,
       number_of_particles, smc_iterations_to_store,
       write_to_file_at_each_iteration, parallel_in, grain_size_in,
       results_name_in, &seed, data_created_in_get_likelihood_estimators,
@@ -1278,8 +1302,8 @@ double do_particle_filter(const List &model, const List &parameters,
   warn_if_parallel_refused(alg);
 
   if (!write_to_file_at_each_iteration) {
-    if (strcmp(results_name_in.get_cstring(), "") != 0)
-      output->write(results_name_in.get_cstring());
+    if (strcmp(results_name_in.c_str(), "") != 0)
+      output->write(results_name_in.c_str());
   }
 
   double log_likelihood = output->log_likelihood;
@@ -1289,11 +1313,15 @@ double do_particle_filter(const List &model, const List &parameters,
 
 // [[Rcpp::export]]
 double do_particle_filter_with_fixed_params(
-    const List &model, const List &parameters,
-    const List &algorithm_parameter_list, const List &fixed_parameter_list,
+    const Rcpp::List &model_R, const Rcpp::List &parameters_R,
+    const Rcpp::List &algorithm_parameter_list_R, const Rcpp::List &fixed_parameter_list,
     size_t number_of_particles, size_t smc_iterations_to_store,
     bool write_to_file_at_each_iteration, bool parallel_in,
-    size_t grain_size_in, const String &results_name_in, size_t seed) {
+    size_t grain_size_in, const std::string &results_name_in, size_t seed) {
+  RecipeValue model = recipe_from_R(model_R);
+  RecipeValue parameters = recipe_from_R(parameters_R);
+  Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list_R);
+
 
   RandomNumberGenerator rng;
 
@@ -1303,7 +1331,7 @@ double do_particle_filter_with_fixed_params(
   std::vector<Data> data_created_in_get_measurement_covariance_estimators;
 
   ParticleFilter *alg = get_particle_filter(
-      &rng, &the_data, model, parameters, algorithm_parameter_list,
+      &rng, &the_data, model, parameters, algorithm_parameters,
       number_of_particles, smc_iterations_to_store,
       write_to_file_at_each_iteration, parallel_in, grain_size_in,
       results_name_in, &seed, data_created_in_get_likelihood_estimators,
@@ -1319,8 +1347,8 @@ double do_particle_filter_with_fixed_params(
   warn_if_parallel_refused(alg);
 
   if (!write_to_file_at_each_iteration) {
-    if (strcmp(results_name_in.get_cstring(), "") != 0)
-      output->write(results_name_in.get_cstring());
+    if (strcmp(results_name_in.c_str(), "") != 0)
+      output->write(results_name_in.c_str());
   }
 
   double log_likelihood = output->log_likelihood;
@@ -1345,14 +1373,18 @@ VectorIndex* user_factor_index(const IntegerVector &index_in,
 }
 
 // [[Rcpp::export]]
-double do_evaluate_log(const List &model,
-                       const List &model_parameters,
-                       const List &algorithm_parameter_list,
-                       const List &parameters_in,
+double do_evaluate_log(const Rcpp::List &model_R,
+                       const Rcpp::List &model_parameters_R,
+                       const Rcpp::List &algorithm_parameter_list_R,
+                       const Rcpp::List &parameters_in,
                        const IntegerVector &index_in,
-                       const String &results_name_in,
+                       const std::string &results_name_in,
                        size_t seed)
 {
+  RecipeValue model = recipe_from_R(model_R);
+  RecipeValue model_parameters = recipe_from_R(model_parameters_R);
+  Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list_R);
+
 
   Parameters parameters = list_to_parameters(parameters_in);
 
@@ -1374,15 +1406,12 @@ double do_evaluate_log(const List &model,
 
   std::vector<LikelihoodEstimator *> likelihood_estimators;
   likelihood_estimators = get_likelihood_estimators(
-      &rng, &seed, &the_data, model, model_parameters, algorithm_parameter_list, true,
+      &rng, &seed, &the_data, model, model_parameters, algorithm_parameters, true,
       sequencer_types, sequencer_variables, sequencer_schedules, NULL,
       without_cancelled_index, without_priors_index, full_index, any_annealing,
       factors_affected_by_smc_sequence,
       data_created_in_get_likelihood_estimators,
       data_created_in_get_measurement_covariance_estimators);
-
-  Parameters algorithm_parameters =
-      make_algorithm_parameters(algorithm_parameter_list);
 
   Factors* factors = new VectorFactors(likelihood_estimators);
 
@@ -1415,9 +1444,9 @@ double do_evaluate_log(const List &model,
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed_time = end_time - start_time;
 
-  if (strcmp(results_name_in.get_cstring(), "") != 0)
+  if (strcmp(results_name_in.c_str(), "") != 0)
   {
-    std::string directory_name_in = results_name_in.get_cstring();
+    std::string directory_name_in = results_name_in.c_str();
     std::string directory_name = directory_name_in + "_evaluate";
 
     if (!directory_exists(directory_name))
@@ -1439,15 +1468,19 @@ double do_evaluate_log(const List &model,
 }
 
 // [[Rcpp::export]]
-double do_evaluate_log_with_fixed_params(const List &model,
-                       const List &model_parameters,
-                       const List &algorithm_parameter_list,
-                       const List &fixed_parameter_list,
-                       const List &parameters_in,
+double do_evaluate_log_with_fixed_params(const Rcpp::List &model_R,
+                       const Rcpp::List &model_parameters_R,
+                       const Rcpp::List &algorithm_parameter_list_R,
+                       const Rcpp::List &fixed_parameter_list,
+                       const Rcpp::List &parameters_in,
                        const IntegerVector &index_in,
-                       const String &results_name_in,
+                       const std::string &results_name_in,
                        size_t seed)
 {
+  RecipeValue model = recipe_from_R(model_R);
+  RecipeValue model_parameters = recipe_from_R(model_parameters_R);
+  Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list_R);
+
   RandomNumberGenerator rng;
   Data the_data = get_data(model);
   std::vector<Data> data_created_in_get_likelihood_estimators;
@@ -1466,15 +1499,12 @@ double do_evaluate_log_with_fixed_params(const List &model,
 
   std::vector<LikelihoodEstimator *> likelihood_estimators;
   likelihood_estimators = get_likelihood_estimators(
-                                                    &rng, &seed, &the_data, model, model_parameters, algorithm_parameter_list, true,
+                                                    &rng, &seed, &the_data, model, model_parameters, algorithm_parameters, true,
                                                     sequencer_types, sequencer_variables, sequencer_schedules, NULL,
                                                     without_cancelled_index, without_priors_index, full_index, any_annealing,
                                                     factors_affected_by_smc_sequence,
                                                     data_created_in_get_likelihood_estimators,
                                                     data_created_in_get_measurement_covariance_estimators);
-
-  Parameters algorithm_parameters =
-  make_algorithm_parameters(algorithm_parameter_list);
 
   Factors* factors = new VectorFactors(likelihood_estimators);
 
@@ -1508,9 +1538,9 @@ double do_evaluate_log_with_fixed_params(const List &model,
   std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> elapsed_time = end_time - start_time;
 
-  if (strcmp(results_name_in.get_cstring(), "") != 0)
+  if (strcmp(results_name_in.c_str(), "") != 0)
   {
-    std::string directory_name_in = results_name_in.get_cstring();
+    std::string directory_name_in = results_name_in.c_str();
     std::string directory_name = directory_name_in + "_evaluate";
 
     if (!directory_exists(directory_name))
@@ -1560,8 +1590,9 @@ static double audit_evaluate(LikelihoodEstimator *estimator,
 // rows of points_per_particle[[i]] (variable "x"). Returns the points (one
 // per row) and their normalised log weights.
 // [[Rcpp::export]]
-List shared_point_weights_check(const List &points_per_particle,
+Rcpp::List shared_point_weights_check(const Rcpp::List &points_per_particle,
                                 const arma::colvec &normalised_log_weights) {
+
   std::vector< std::vector<Parameters> > points(points_per_particle.size());
   for (size_t i = 0; i < points.size(); ++i) {
     arma::mat m = Rcpp::as<arma::mat>(points_per_particle[i]);
@@ -1575,30 +1606,36 @@ List shared_point_weights_check(const List &points_per_particle,
   arma::colvec all_normalised_log_weights;
   shared_point_weights(points, normalised_log_weights, all_points,
                        all_normalised_log_weights);
-  return List::create(Named("points") = vector_of_parameters_to_mat("x", all_points),
+  return Rcpp::List::create(Named("points") = vector_of_parameters_to_mat("x", all_points),
                       Named("log_weights") = all_normalised_log_weights);
 }
 
 // [[Rcpp::export]]
-List copy_audit(const List &model, const List &parameters,
-                const List &algorithm_parameter_list,
-                const List &mcmc_termination_method,
-                const List &mcmc_weights_method, size_t seed_value) {
+Rcpp::List copy_audit(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
+                const Rcpp::List &algorithm_parameter_list_R,
+                const Rcpp::List &mcmc_termination_method_R,
+                const Rcpp::List &mcmc_weights_method_R, size_t seed_value) {
+  RecipeValue model = recipe_from_R(model_R);
+  RecipeValue parameters = recipe_from_R(parameters_R);
+  Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list_R);
+  RecipeValue mcmc_termination_method = recipe_from_R(mcmc_termination_method_R);
+  RecipeValue mcmc_weights_method = recipe_from_R(mcmc_weights_method_R);
+
   RandomNumberGenerator rng;
   size_t seed = seed_value;
   Data the_data = get_data(model);
   std::vector<Data> data_created_in_get_likelihood_estimators;
   std::vector<Data> data_created_in_get_measurement_covariance_estimators;
 
-  List sequencer_info = get_smc_sequencer_info(model, parameters, List());
+  RecipeValue sequencer_info = get_smc_sequencer_info(model, parameters, RecipeValue::list());
   std::vector<std::string> sequencer_types = sequencer_info[0];
   std::vector<std::string> sequencer_variables = sequencer_info[1];
   std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
   std::vector<int> factors_affected_by_smc_sequence;
   if (sequencer_info.length() == 5) {
-    NumericVector temp = sequencer_info[4];
-    temp = temp - 1;
-    factors_affected_by_smc_sequence = as<std::vector<int>>(temp);
+    std::vector<int> temp = sequencer_info[4];
+    for (auto &k : temp) k = k - 1;
+    factors_affected_by_smc_sequence = temp;
   }
 
   VectorIndex *without_cancelled_index = NULL;
@@ -1606,7 +1643,7 @@ List copy_audit(const List &model, const List &parameters,
   VectorIndex *full_index = NULL;
   bool any_annealing = false;
   std::vector<LikelihoodEstimator *> likelihood_estimators = get_likelihood_estimators(
-      &rng, &seed, &the_data, model, parameters, algorithm_parameter_list, true,
+      &rng, &seed, &the_data, model, parameters, algorithm_parameters, true,
       sequencer_types, sequencer_variables, sequencer_schedules, NULL,
       without_cancelled_index, without_priors_index, full_index, any_annealing,
       factors_affected_by_smc_sequence, data_created_in_get_likelihood_estimators,
@@ -1678,7 +1715,7 @@ List copy_audit(const List &model, const List &parameters,
   if (full_index != NULL)
     delete full_index;
 
-  return List::create(Named("original") = original, Named("copy") = copy,
+  return Rcpp::List::create(Named("original") = original, Named("copy") = copy,
                       Named("original_again") = original_again,
                       Named("messages") = messages,
                       Named("mcmc") = mcmc_values,

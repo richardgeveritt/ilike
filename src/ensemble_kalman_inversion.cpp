@@ -679,6 +679,11 @@ namespace ilike
       std::vector<double> initial_log_measurement_likelihood_variances;
       if (this->estimator_type == 0)
       {
+        // the Monte Carlo estimate of the increment does not give the Kalman
+        // gains that the shift below needs (without them the ensemble never
+        // moves); computed first, since calculate_kalman_gains also sets the
+        // ESS, which the Monte Carlo estimate then sets from its weights
+        current_state->calculate_kalman_gains(1.0 / this->sequencer.schedule_difference);
         current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_mc_inversion_latest_log_normalising_constant_ratio(this->index.get(),
                                                                                                                                                     1.0 / this->sequencer.schedule_difference);
       }
@@ -903,8 +908,9 @@ namespace ilike
       std::vector<double> initial_log_measurement_likelihood_variances;
       if (this->estimator_type == 0)
       {
-        current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_mc_inversion_latest_log_normalising_constant_ratio(this->index.get(),1.0 / this->sequencer.schedule_difference);
+        // (gains first: see the unconditioned version above)
         current_state->calculate_kalman_gains(1.0 / this->sequencer.schedule_difference);
+        current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_mc_inversion_latest_log_normalising_constant_ratio(this->index.get(),1.0 / this->sequencer.schedule_difference);
       }
       else if (this->estimator_type == 1)
       {
@@ -1116,6 +1122,8 @@ namespace ilike
       std::vector<double> initial_log_measurement_likelihood_variances;
       if (this->estimator_type == 0)
       {
+        // (gains first: see the unconditioned version above)
+        current_state->calculate_kalman_gains(1.0 / this->sequencer.schedule_difference);
         current_state->subsample_log_likelihood = current_state->subsample_log_likelihood + current_state->calculate_mc_inversion_latest_log_normalising_constant_ratio(this->index.get(),
                                                                                                                                                                         1.0 / this->sequencer.schedule_difference);
       }

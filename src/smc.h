@@ -118,11 +118,7 @@ public:
   virtual bool reuses_particle_objects() const { return false; }
   virtual MoveOutput* move_reusing(RandomNumberGenerator &rng,
                                    const Particle &particle,
-                                   MoveOutput* spare) const
-  {
-    delete spare;
-    return this->move(rng, particle);
-  }
+                                   MoveOutput* spare) const;
 
   virtual void weight_for_adapting_sequence(const Index* index,
                                             Particles &current_particles)=0;

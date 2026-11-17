@@ -1,0 +1,73 @@
+ilike 1.0
+// the model of test_gaussian_posterior.ilike in the ilike language
+
+data {
+  data = cpp::set_data
+}
+
+model {
+  prior theta_prior = density(log = cpp::evaluate_log_prior,
+                              simulate = cpp::simulate_prior,
+                              gradient = cpp::prior_gradient_eval)
+  factor lik = density(log = cpp::evaluate_likelihood,
+                       gradient = cpp::likelihood_gradient_eval)
+}
+
+cpp {
+double prior_mean = 1.0;
+double prior_sd = 1.0;
+double obs_sd = 1.0;
+
+Data set_data() {
+  arma::colvec x(1);
+  x(0) = 1.0;
+  return Data("x", x);
+}
+
+double evaluate_log_prior(const Parameters &params) {
+  return dnorm(params["theta"][0], prior_mean, prior_sd);
+}
+
+Parameters simulate_prior(RandomNumberGenerator &rng) {
+  return Parameters("theta", rnorm(rng, prior_mean, prior_sd));
+}
+
+arma::mat prior_gradient_eval(const std::string &variable,
+                              const Parameters &parameters) {
+  if (variable == "theta") {
+    arma::mat grad(1, 1);
+    grad(0, 0) = -(parameters["theta"][0] - prior_mean) / (prior_sd * prior_sd);
+    return grad;
+  } else {
+    Rcpp::stop("Unknown variable in prior gradient.");
+  }
+}
+
+double evaluate_likelihood(const Parameters &params, const Data &data) {
+  return dnorm(data["x"][0], params["theta"][0], obs_sd);
+}
+
+arma::mat likelihood_gradient_eval(const std::string &variable,
+                                   const Parameters &parameters,
+                                   const Data &data) {
+  if (variable == "theta") {
+    arma::colvec y = data["x"];
+    arma::mat grad(1, 1);
+    grad(0, 0) = arma::sum((y - parameters["theta"][0]) / (obs_sd * obs_sd));
+    return grad;
+  } else {
+    Rcpp::stop("Unknown variable in likelihood gradient.");
+  }
+}
+}
+
+algorithm mcmc {
+  move m1 = metropolis(norm_rw(theta, 1))
+  termination = iterations(10000)
+}
+
+algorithm smc {
+  move = metropolis(norm_rw(theta, 1))
+  termination = iterations(5)
+  sequence = annealing(power, [0, 0.25, 0.5, 0.75, 1])
+}

@@ -115,6 +115,16 @@ SMC::SMC(const SMC &another)
   this->make_copy(another);
 }
 
+// (defined here, not in smc.h, where MoveOutput is only declared: deleting
+// through an incomplete type would not run its virtual destructor)
+MoveOutput* SMC::move_reusing(RandomNumberGenerator &rng,
+                              const Particle &particle,
+                              MoveOutput* spare) const
+{
+  delete spare;
+  return this->move(rng, particle);
+}
+
 SMC::~SMC()
 {
   

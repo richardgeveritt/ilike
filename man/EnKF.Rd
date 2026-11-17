@@ -21,7 +21,8 @@ EnKF(
   verify_cpp_function_types = FALSE,
   keep_temporary_recipe_code = FALSE,
   seed = NULL,
-  grain_size = 1e+05
+  grain_size = 1e+05,
+  algorithm = NULL
 )
 }
 \arguments{
@@ -58,6 +59,8 @@ EnKF(
 \item{seed}{(optional) The seed for the random number generator.}
 
 \item{grain_size}{(optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).}
+
+\item{algorithm}{(optional) For a recipe in the ilike language: the name of the algorithm section to run (needed when the recipe has several).}
 }
 \value{
 Estimate of the marginal likelihood.

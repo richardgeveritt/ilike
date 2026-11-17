@@ -1,0 +1,12 @@
+ilike 1.0
+// test_algorithmic_pf.ilike: a ~ U(0,1), likelihood by a particle filter on an imported file
+import "lang_algorithmic_inner.ilike" as inner
+data { y = [0.5, 1.0, 0.2, -0.3, 0.8] }
+model {
+  prior p = density(log = cpp::evaluate_log_prior, simulate = cpp::simulate_prior)
+  factor filt = pf(inner)          // particles = 500 from inner's algorithm section
+}
+cpp {
+double evaluate_log_prior(const Parameters &parameters) { return dunif(parameters["a"][0], 0.0, 1.0); }
+Parameters simulate_prior(RandomNumberGenerator &rng) { return Parameters("a", runif(rng, 0.0, 1.0)); }
+}

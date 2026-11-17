@@ -19,6 +19,7 @@
 #' @param seed (optional) The seed for the random number generator.
 #' @param progress (optional) If TRUE, show a progress bar (cli) while the algorithm runs. Default getOption("ilike.progress", interactive()): shown in interactive sessions only.
 #' @param grain_size (optional) The number of particles moved and weighted together (default 64). Each chunk of particles has its own random-number stream, determined by the seed and the chunk's position, so results depend on the seed and on grain_size when there are more particles than grain_size (and not on whether the run is parallel).
+#' @param algorithm (optional) For a recipe in the ilike language: the name of the algorithm section to run (needed when the recipe has several).
 #' @return Estimate of the marginal likelihood.
 #' @export
 PF = function(recipe,
@@ -39,7 +40,8 @@ PF = function(recipe,
                            keep_temporary_recipe_code=FALSE,
                            seed = NULL,
                            grain_size = 64,
-                           progress = getOption("ilike.progress", interactive()))
+                           progress = getOption("ilike.progress", interactive()),
+                           algorithm = NULL)
 {
 
   if (is.character(recipe))
@@ -52,6 +54,13 @@ PF = function(recipe,
                      keep_temporary_recipe_code = keep_temporary_recipe_code)
   else if (!is.list(recipe))
     stop('"Receipe" argument must be either a compiled ilike recipe, the filename of an ilike file, or a vector of filenames of ilike files.')
+
+  # a recipe in the ilike language: the algorithm to run, and the constants
+  # with the file's defaults (dev/ilike-language.md)
+  prepared = prepare_recipe(recipe, algorithm, model_parameter_list)
+  recipe = prepared$recipe
+  model_parameter_list = prepared$model_parameter_list
+  apply_algorithm_settings(prepared$settings, names(match.call())[-1], environment(), names(formals(sys.function())))
 
   # parallel = TRUE: refuse models that call R; pass the number of threads
   recipe = prepare_parallel(recipe, parallel)

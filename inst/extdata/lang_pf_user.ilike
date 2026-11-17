@@ -1,0 +1,26 @@
+ilike 1.0
+// test_pf_user_transition.ilike and test_pf_transition_proposal.ilike
+data { y = [0.5, 1.0, 0.2, -0.3, 0.8] }
+model {
+  prior p = density(log = cpp::evaluate_log_prior, simulate = cpp::simulate_prior)
+  transition x = density(simulate = cpp::simulate_state, log = cpp::log_transition_density)
+  factor obs = linear_gaussian(data = y, state = x, matrix = 1, covariance = cpp::data_covariance)
+  time = ssm(i, 0, 4, t, 0, dt, 1, 1)
+}
+algorithm filter { }
+algorithm proposal_filter {
+  transition_proposal = density(simulate = cpp::simulate_proposal_state, log = cpp::log_proposal_density)
+}
+cpp {
+double evaluate_log_prior(const Parameters &parameters) { return dnorm(parameters["x"][0], 0.0, 1.0); }
+Parameters simulate_prior(RandomNumberGenerator &rng) { return Parameters("x", rnorm(rng, 0.0, 1.0)); }
+Parameters simulate_state(RandomNumberGenerator &rng, const Parameters &parameters) {
+  return Parameters("x", rnorm(rng, 0.9*parameters["x"][0], sqrt(0.5))); }
+double log_transition_density(const Parameters &proposed_parameters, const Parameters &parameters) {
+  return dnorm(proposed_parameters["x"][0], 0.9*parameters["x"][0], sqrt(0.5)); }
+Parameters simulate_proposal_state(RandomNumberGenerator &rng, const Parameters &parameters, const Data &data) {
+  return Parameters("x", rnorm(rng, 0.9*parameters["x"][0], 1.0)); }
+double log_proposal_density(const Parameters &proposed_parameters, const Parameters &parameters, const Data &data) {
+  return dnorm(proposed_parameters["x"][0], 0.9*parameters["x"][0], 1.0); }
+arma::mat data_covariance(const Parameters &parameters) { arma::mat R(1,1); R(0,0) = 1.0; return R; }
+}

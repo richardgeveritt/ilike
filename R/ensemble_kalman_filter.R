@@ -17,6 +17,7 @@
 #' @param keep_temporary_recipe_code (optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE,
 #' @param seed (optional) The seed for the random number generator.
 #' @param grain_size (optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).
+#' @param algorithm (optional) For a recipe in the ilike language: the name of the algorithm section to run (needed when the recipe has several).
 #' @return Estimate of the marginal likelihood.
 #' @export
 EnKF = function(recipe,
@@ -35,7 +36,8 @@ EnKF = function(recipe,
                                   verify_cpp_function_types=FALSE,
                                   keep_temporary_recipe_code=FALSE,
                                   seed = NULL,
-                                  grain_size = 100000)
+                                  grain_size = 100000,
+                                  algorithm = NULL)
 {
   # a new run: its start-of-run notes are printed once each (dev/plan.md 3.11)
   reset_informs()
@@ -51,6 +53,13 @@ EnKF = function(recipe,
                      keep_temporary_recipe_code = keep_temporary_recipe_code)
   else if (!is.list(recipe))
     stop('"Receipe" argument must be either a compiled ilike recipe, the filename of an ilike file, or a vector of filenames of ilike files.')
+
+  # a recipe in the ilike language: the algorithm to run, and the constants
+  # with the file's defaults (dev/ilike-language.md)
+  prepared = prepare_recipe(recipe, algorithm, model_parameter_list)
+  recipe = prepared$recipe
+  model_parameter_list = prepared$model_parameter_list
+  apply_algorithm_settings(prepared$settings, names(match.call())[-1], environment(), names(formals(sys.function())))
 
   if (!results_name == "")
     results_directory = make_results_directory(results_name,results_path)

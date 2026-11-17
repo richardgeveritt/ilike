@@ -13,343 +13,403 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // do_importance_sampler
-double do_importance_sampler(const List& model, const List& parameters, const List& algorithm_parameter_list, size_t number_of_importance_points, bool parallel_in, size_t grain_size_in, const String& results_name_in, size_t seed);
-RcppExport SEXP _ilike_do_importance_sampler(SEXP modelSEXP, SEXP parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP number_of_importance_pointsSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
+double do_importance_sampler(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, size_t number_of_importance_points, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
+RcppExport SEXP _ilike_do_importance_sampler(SEXP model_RSEXP, SEXP parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP number_of_importance_pointsSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
-    Rcpp::traits::input_parameter< const List& >::type algorithm_parameter_list(algorithm_parameter_listSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_R(model_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type parameters_R(parameters_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type algorithm_parameter_list_R(algorithm_parameter_list_RSEXP);
     Rcpp::traits::input_parameter< size_t >::type number_of_importance_points(number_of_importance_pointsSEXP);
     Rcpp::traits::input_parameter< bool >::type parallel_in(parallel_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type grain_size_in(grain_size_inSEXP);
-    Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type results_name_in(results_name_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
-    rcpp_result_gen = Rcpp::wrap(do_importance_sampler(model, parameters, algorithm_parameter_list, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed));
+    rcpp_result_gen = Rcpp::wrap(do_importance_sampler(model_R, parameters_R, algorithm_parameter_list_R, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed));
     return rcpp_result_gen;
 END_RCPP
 }
 // do_importance_sampler_with_fixed_params
-double do_importance_sampler_with_fixed_params(const List& model, const List& parameters, const List& algorithm_parameter_list, const List& fixed_parameter_list, size_t number_of_importance_points, bool parallel_in, size_t grain_size_in, const String& results_name_in, size_t seed);
-RcppExport SEXP _ilike_do_importance_sampler_with_fixed_params(SEXP modelSEXP, SEXP parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP fixed_parameter_listSEXP, SEXP number_of_importance_pointsSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
+double do_importance_sampler_with_fixed_params(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, const Rcpp::List& fixed_parameter_list, size_t number_of_importance_points, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
+RcppExport SEXP _ilike_do_importance_sampler_with_fixed_params(SEXP model_RSEXP, SEXP parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP fixed_parameter_listSEXP, SEXP number_of_importance_pointsSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
-    Rcpp::traits::input_parameter< const List& >::type algorithm_parameter_list(algorithm_parameter_listSEXP);
-    Rcpp::traits::input_parameter< const List& >::type fixed_parameter_list(fixed_parameter_listSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_R(model_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type parameters_R(parameters_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type algorithm_parameter_list_R(algorithm_parameter_list_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type fixed_parameter_list(fixed_parameter_listSEXP);
     Rcpp::traits::input_parameter< size_t >::type number_of_importance_points(number_of_importance_pointsSEXP);
     Rcpp::traits::input_parameter< bool >::type parallel_in(parallel_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type grain_size_in(grain_size_inSEXP);
-    Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type results_name_in(results_name_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
-    rcpp_result_gen = Rcpp::wrap(do_importance_sampler_with_fixed_params(model, parameters, algorithm_parameter_list, fixed_parameter_list, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed));
+    rcpp_result_gen = Rcpp::wrap(do_importance_sampler_with_fixed_params(model_R, parameters_R, algorithm_parameter_list_R, fixed_parameter_list, number_of_importance_points, parallel_in, grain_size_in, results_name_in, seed));
     return rcpp_result_gen;
 END_RCPP
 }
 // do_mcmc
-void do_mcmc(const List& model, const List& parameters, const List& algorithm_parameter_list, const List& initial_values, const List& mcmc_termination_method, const List& mcmc_weights_method, size_t number_of_chains, bool parallel_in, size_t grain_size_in, const String& results_name_in, size_t seed);
-RcppExport SEXP _ilike_do_mcmc(SEXP modelSEXP, SEXP parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP initial_valuesSEXP, SEXP mcmc_termination_methodSEXP, SEXP mcmc_weights_methodSEXP, SEXP number_of_chainsSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
+void do_mcmc(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, const Rcpp::List& initial_values, const Rcpp::List& mcmc_termination_method_R, const Rcpp::List& mcmc_weights_method_R, size_t number_of_chains, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
+RcppExport SEXP _ilike_do_mcmc(SEXP model_RSEXP, SEXP parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP initial_valuesSEXP, SEXP mcmc_termination_method_RSEXP, SEXP mcmc_weights_method_RSEXP, SEXP number_of_chainsSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
-    Rcpp::traits::input_parameter< const List& >::type algorithm_parameter_list(algorithm_parameter_listSEXP);
-    Rcpp::traits::input_parameter< const List& >::type initial_values(initial_valuesSEXP);
-    Rcpp::traits::input_parameter< const List& >::type mcmc_termination_method(mcmc_termination_methodSEXP);
-    Rcpp::traits::input_parameter< const List& >::type mcmc_weights_method(mcmc_weights_methodSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_R(model_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type parameters_R(parameters_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type algorithm_parameter_list_R(algorithm_parameter_list_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type initial_values(initial_valuesSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type mcmc_termination_method_R(mcmc_termination_method_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type mcmc_weights_method_R(mcmc_weights_method_RSEXP);
     Rcpp::traits::input_parameter< size_t >::type number_of_chains(number_of_chainsSEXP);
     Rcpp::traits::input_parameter< bool >::type parallel_in(parallel_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type grain_size_in(grain_size_inSEXP);
-    Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type results_name_in(results_name_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
-    do_mcmc(model, parameters, algorithm_parameter_list, initial_values, mcmc_termination_method, mcmc_weights_method, number_of_chains, parallel_in, grain_size_in, results_name_in, seed);
+    do_mcmc(model_R, parameters_R, algorithm_parameter_list_R, initial_values, mcmc_termination_method_R, mcmc_weights_method_R, number_of_chains, parallel_in, grain_size_in, results_name_in, seed);
     return R_NilValue;
 END_RCPP
 }
 // do_mcmc_with_fixed_params
-void do_mcmc_with_fixed_params(const List& model, const List& parameters, const List& algorithm_parameter_list, const List& fixed_parameter_list, const List& initial_values, const List& mcmc_termination_method, const List& mcmc_weights_method, size_t number_of_chains, bool parallel_in, size_t grain_size_in, const String& results_name_in, size_t seed);
-RcppExport SEXP _ilike_do_mcmc_with_fixed_params(SEXP modelSEXP, SEXP parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP fixed_parameter_listSEXP, SEXP initial_valuesSEXP, SEXP mcmc_termination_methodSEXP, SEXP mcmc_weights_methodSEXP, SEXP number_of_chainsSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
+void do_mcmc_with_fixed_params(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, const Rcpp::List& fixed_parameter_list, const Rcpp::List& initial_values, const Rcpp::List& mcmc_termination_method_R, const Rcpp::List& mcmc_weights_method_R, size_t number_of_chains, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
+RcppExport SEXP _ilike_do_mcmc_with_fixed_params(SEXP model_RSEXP, SEXP parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP fixed_parameter_listSEXP, SEXP initial_valuesSEXP, SEXP mcmc_termination_method_RSEXP, SEXP mcmc_weights_method_RSEXP, SEXP number_of_chainsSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
-    Rcpp::traits::input_parameter< const List& >::type algorithm_parameter_list(algorithm_parameter_listSEXP);
-    Rcpp::traits::input_parameter< const List& >::type fixed_parameter_list(fixed_parameter_listSEXP);
-    Rcpp::traits::input_parameter< const List& >::type initial_values(initial_valuesSEXP);
-    Rcpp::traits::input_parameter< const List& >::type mcmc_termination_method(mcmc_termination_methodSEXP);
-    Rcpp::traits::input_parameter< const List& >::type mcmc_weights_method(mcmc_weights_methodSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_R(model_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type parameters_R(parameters_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type algorithm_parameter_list_R(algorithm_parameter_list_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type fixed_parameter_list(fixed_parameter_listSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type initial_values(initial_valuesSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type mcmc_termination_method_R(mcmc_termination_method_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type mcmc_weights_method_R(mcmc_weights_method_RSEXP);
     Rcpp::traits::input_parameter< size_t >::type number_of_chains(number_of_chainsSEXP);
     Rcpp::traits::input_parameter< bool >::type parallel_in(parallel_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type grain_size_in(grain_size_inSEXP);
-    Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type results_name_in(results_name_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
-    do_mcmc_with_fixed_params(model, parameters, algorithm_parameter_list, fixed_parameter_list, initial_values, mcmc_termination_method, mcmc_weights_method, number_of_chains, parallel_in, grain_size_in, results_name_in, seed);
+    do_mcmc_with_fixed_params(model_R, parameters_R, algorithm_parameter_list_R, fixed_parameter_list, initial_values, mcmc_termination_method_R, mcmc_weights_method_R, number_of_chains, parallel_in, grain_size_in, results_name_in, seed);
     return R_NilValue;
 END_RCPP
 }
 // do_smc_mcmc_move
-double do_smc_mcmc_move(const List& model, const List& parameters, const List& algorithm_parameter_list, size_t number_of_particles, const List& mcmc_termination_method, const List& mcmc_weights_method, const List& smc_sequencer_method, const List& adaptive_target_method, const List& smc_termination_method, size_t smc_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const String& results_name_in, size_t seed);
-RcppExport SEXP _ilike_do_smc_mcmc_move(SEXP modelSEXP, SEXP parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP number_of_particlesSEXP, SEXP mcmc_termination_methodSEXP, SEXP mcmc_weights_methodSEXP, SEXP smc_sequencer_methodSEXP, SEXP adaptive_target_methodSEXP, SEXP smc_termination_methodSEXP, SEXP smc_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
+double do_smc_mcmc_move(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, size_t number_of_particles, const Rcpp::List& mcmc_termination_method_R, const Rcpp::List& mcmc_weights_method_R, const Rcpp::List& smc_sequencer_method_R, const Rcpp::List& adaptive_target_method_R, const Rcpp::List& smc_termination_method_R, size_t smc_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
+RcppExport SEXP _ilike_do_smc_mcmc_move(SEXP model_RSEXP, SEXP parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP number_of_particlesSEXP, SEXP mcmc_termination_method_RSEXP, SEXP mcmc_weights_method_RSEXP, SEXP smc_sequencer_method_RSEXP, SEXP adaptive_target_method_RSEXP, SEXP smc_termination_method_RSEXP, SEXP smc_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
-    Rcpp::traits::input_parameter< const List& >::type algorithm_parameter_list(algorithm_parameter_listSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_R(model_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type parameters_R(parameters_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type algorithm_parameter_list_R(algorithm_parameter_list_RSEXP);
     Rcpp::traits::input_parameter< size_t >::type number_of_particles(number_of_particlesSEXP);
-    Rcpp::traits::input_parameter< const List& >::type mcmc_termination_method(mcmc_termination_methodSEXP);
-    Rcpp::traits::input_parameter< const List& >::type mcmc_weights_method(mcmc_weights_methodSEXP);
-    Rcpp::traits::input_parameter< const List& >::type smc_sequencer_method(smc_sequencer_methodSEXP);
-    Rcpp::traits::input_parameter< const List& >::type adaptive_target_method(adaptive_target_methodSEXP);
-    Rcpp::traits::input_parameter< const List& >::type smc_termination_method(smc_termination_methodSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type mcmc_termination_method_R(mcmc_termination_method_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type mcmc_weights_method_R(mcmc_weights_method_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type smc_sequencer_method_R(smc_sequencer_method_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type adaptive_target_method_R(adaptive_target_method_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type smc_termination_method_R(smc_termination_method_RSEXP);
     Rcpp::traits::input_parameter< size_t >::type smc_iterations_to_store(smc_iterations_to_storeSEXP);
     Rcpp::traits::input_parameter< bool >::type write_to_file_at_each_iteration(write_to_file_at_each_iterationSEXP);
     Rcpp::traits::input_parameter< bool >::type parallel_in(parallel_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type grain_size_in(grain_size_inSEXP);
-    Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type results_name_in(results_name_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
-    rcpp_result_gen = Rcpp::wrap(do_smc_mcmc_move(model, parameters, algorithm_parameter_list, number_of_particles, mcmc_termination_method, mcmc_weights_method, smc_sequencer_method, adaptive_target_method, smc_termination_method, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed));
+    rcpp_result_gen = Rcpp::wrap(do_smc_mcmc_move(model_R, parameters_R, algorithm_parameter_list_R, number_of_particles, mcmc_termination_method_R, mcmc_weights_method_R, smc_sequencer_method_R, adaptive_target_method_R, smc_termination_method_R, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed));
     return rcpp_result_gen;
 END_RCPP
 }
 // do_smc_mcmc_move_with_fixed_params
-double do_smc_mcmc_move_with_fixed_params(const List& model, const List& parameters, const List& algorithm_parameter_list, const List& fixed_parameter_list, size_t number_of_particles, const List& mcmc_termination_method, const List& mcmc_weights_method, const List& smc_sequencer_method, const List& adaptive_target_method, const List& smc_termination_method, size_t smc_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const String& results_name_in, size_t seed);
-RcppExport SEXP _ilike_do_smc_mcmc_move_with_fixed_params(SEXP modelSEXP, SEXP parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP fixed_parameter_listSEXP, SEXP number_of_particlesSEXP, SEXP mcmc_termination_methodSEXP, SEXP mcmc_weights_methodSEXP, SEXP smc_sequencer_methodSEXP, SEXP adaptive_target_methodSEXP, SEXP smc_termination_methodSEXP, SEXP smc_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
+double do_smc_mcmc_move_with_fixed_params(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, const Rcpp::List& fixed_parameter_list, size_t number_of_particles, const Rcpp::List& mcmc_termination_method_R, const Rcpp::List& mcmc_weights_method_R, const Rcpp::List& smc_sequencer_method_R, const Rcpp::List& adaptive_target_method_R, const Rcpp::List& smc_termination_method_R, size_t smc_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
+RcppExport SEXP _ilike_do_smc_mcmc_move_with_fixed_params(SEXP model_RSEXP, SEXP parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP fixed_parameter_listSEXP, SEXP number_of_particlesSEXP, SEXP mcmc_termination_method_RSEXP, SEXP mcmc_weights_method_RSEXP, SEXP smc_sequencer_method_RSEXP, SEXP adaptive_target_method_RSEXP, SEXP smc_termination_method_RSEXP, SEXP smc_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
-    Rcpp::traits::input_parameter< const List& >::type algorithm_parameter_list(algorithm_parameter_listSEXP);
-    Rcpp::traits::input_parameter< const List& >::type fixed_parameter_list(fixed_parameter_listSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_R(model_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type parameters_R(parameters_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type algorithm_parameter_list_R(algorithm_parameter_list_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type fixed_parameter_list(fixed_parameter_listSEXP);
     Rcpp::traits::input_parameter< size_t >::type number_of_particles(number_of_particlesSEXP);
-    Rcpp::traits::input_parameter< const List& >::type mcmc_termination_method(mcmc_termination_methodSEXP);
-    Rcpp::traits::input_parameter< const List& >::type mcmc_weights_method(mcmc_weights_methodSEXP);
-    Rcpp::traits::input_parameter< const List& >::type smc_sequencer_method(smc_sequencer_methodSEXP);
-    Rcpp::traits::input_parameter< const List& >::type adaptive_target_method(adaptive_target_methodSEXP);
-    Rcpp::traits::input_parameter< const List& >::type smc_termination_method(smc_termination_methodSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type mcmc_termination_method_R(mcmc_termination_method_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type mcmc_weights_method_R(mcmc_weights_method_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type smc_sequencer_method_R(smc_sequencer_method_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type adaptive_target_method_R(adaptive_target_method_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type smc_termination_method_R(smc_termination_method_RSEXP);
     Rcpp::traits::input_parameter< size_t >::type smc_iterations_to_store(smc_iterations_to_storeSEXP);
     Rcpp::traits::input_parameter< bool >::type write_to_file_at_each_iteration(write_to_file_at_each_iterationSEXP);
     Rcpp::traits::input_parameter< bool >::type parallel_in(parallel_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type grain_size_in(grain_size_inSEXP);
-    Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type results_name_in(results_name_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
-    rcpp_result_gen = Rcpp::wrap(do_smc_mcmc_move_with_fixed_params(model, parameters, algorithm_parameter_list, fixed_parameter_list, number_of_particles, mcmc_termination_method, mcmc_weights_method, smc_sequencer_method, adaptive_target_method, smc_termination_method, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed));
+    rcpp_result_gen = Rcpp::wrap(do_smc_mcmc_move_with_fixed_params(model_R, parameters_R, algorithm_parameter_list_R, fixed_parameter_list, number_of_particles, mcmc_termination_method_R, mcmc_weights_method_R, smc_sequencer_method_R, adaptive_target_method_R, smc_termination_method_R, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed));
     return rcpp_result_gen;
 END_RCPP
 }
 // do_enki
-double do_enki(const List& model, const List& parameters, const List& algorithm_parameter_list, size_t number_of_ensemble_members, const List& mcmc_termination_method, const List& mcmc_weights_method, const List& enk_sequencer_method, const List& adaptive_target_method, const List& enk_termination_method, size_t enk_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const String& results_name_in, size_t seed);
-RcppExport SEXP _ilike_do_enki(SEXP modelSEXP, SEXP parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP number_of_ensemble_membersSEXP, SEXP mcmc_termination_methodSEXP, SEXP mcmc_weights_methodSEXP, SEXP enk_sequencer_methodSEXP, SEXP adaptive_target_methodSEXP, SEXP enk_termination_methodSEXP, SEXP enk_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
+double do_enki(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, size_t number_of_ensemble_members, const Rcpp::List& mcmc_termination_method_R, const Rcpp::List& mcmc_weights_method_R, const Rcpp::List& enk_sequencer_method_R, const Rcpp::List& adaptive_target_method_R, const Rcpp::List& enk_termination_method_R, size_t enk_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
+RcppExport SEXP _ilike_do_enki(SEXP model_RSEXP, SEXP parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP number_of_ensemble_membersSEXP, SEXP mcmc_termination_method_RSEXP, SEXP mcmc_weights_method_RSEXP, SEXP enk_sequencer_method_RSEXP, SEXP adaptive_target_method_RSEXP, SEXP enk_termination_method_RSEXP, SEXP enk_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
-    Rcpp::traits::input_parameter< const List& >::type algorithm_parameter_list(algorithm_parameter_listSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_R(model_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type parameters_R(parameters_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type algorithm_parameter_list_R(algorithm_parameter_list_RSEXP);
     Rcpp::traits::input_parameter< size_t >::type number_of_ensemble_members(number_of_ensemble_membersSEXP);
-    Rcpp::traits::input_parameter< const List& >::type mcmc_termination_method(mcmc_termination_methodSEXP);
-    Rcpp::traits::input_parameter< const List& >::type mcmc_weights_method(mcmc_weights_methodSEXP);
-    Rcpp::traits::input_parameter< const List& >::type enk_sequencer_method(enk_sequencer_methodSEXP);
-    Rcpp::traits::input_parameter< const List& >::type adaptive_target_method(adaptive_target_methodSEXP);
-    Rcpp::traits::input_parameter< const List& >::type enk_termination_method(enk_termination_methodSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type mcmc_termination_method_R(mcmc_termination_method_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type mcmc_weights_method_R(mcmc_weights_method_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type enk_sequencer_method_R(enk_sequencer_method_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type adaptive_target_method_R(adaptive_target_method_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type enk_termination_method_R(enk_termination_method_RSEXP);
     Rcpp::traits::input_parameter< size_t >::type enk_iterations_to_store(enk_iterations_to_storeSEXP);
     Rcpp::traits::input_parameter< bool >::type write_to_file_at_each_iteration(write_to_file_at_each_iterationSEXP);
     Rcpp::traits::input_parameter< bool >::type parallel_in(parallel_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type grain_size_in(grain_size_inSEXP);
-    Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type results_name_in(results_name_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
-    rcpp_result_gen = Rcpp::wrap(do_enki(model, parameters, algorithm_parameter_list, number_of_ensemble_members, mcmc_termination_method, mcmc_weights_method, enk_sequencer_method, adaptive_target_method, enk_termination_method, enk_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed));
+    rcpp_result_gen = Rcpp::wrap(do_enki(model_R, parameters_R, algorithm_parameter_list_R, number_of_ensemble_members, mcmc_termination_method_R, mcmc_weights_method_R, enk_sequencer_method_R, adaptive_target_method_R, enk_termination_method_R, enk_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed));
     return rcpp_result_gen;
 END_RCPP
 }
 // do_enkmfds
-double do_enkmfds(const List& model, const List& parameters, const List& algorithm_parameter_list, size_t number_of_particles, double Delta_t, const List& mcmc_termination_method, const List& mcmc_weights_method, const List& smc_sequencer_method, const List& adaptive_target_method, const List& smc_termination_method, size_t smc_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const String& results_name_in, size_t seed);
-RcppExport SEXP _ilike_do_enkmfds(SEXP modelSEXP, SEXP parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP number_of_particlesSEXP, SEXP Delta_tSEXP, SEXP mcmc_termination_methodSEXP, SEXP mcmc_weights_methodSEXP, SEXP smc_sequencer_methodSEXP, SEXP adaptive_target_methodSEXP, SEXP smc_termination_methodSEXP, SEXP smc_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
+void do_enkmfds(const Rcpp::List& model_R, const Rcpp::List& parameters_R, size_t number_of_ensemble_members, size_t number_of_iterations, double delta_t, size_t iterations_to_store, const std::string& results_name_in, size_t seed);
+RcppExport SEXP _ilike_do_enkmfds(SEXP model_RSEXP, SEXP parameters_RSEXP, SEXP number_of_ensemble_membersSEXP, SEXP number_of_iterationsSEXP, SEXP delta_tSEXP, SEXP iterations_to_storeSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
-    Rcpp::traits::input_parameter< const List& >::type algorithm_parameter_list(algorithm_parameter_listSEXP);
-    Rcpp::traits::input_parameter< size_t >::type number_of_particles(number_of_particlesSEXP);
-    Rcpp::traits::input_parameter< double >::type Delta_t(Delta_tSEXP);
-    Rcpp::traits::input_parameter< const List& >::type mcmc_termination_method(mcmc_termination_methodSEXP);
-    Rcpp::traits::input_parameter< const List& >::type mcmc_weights_method(mcmc_weights_methodSEXP);
-    Rcpp::traits::input_parameter< const List& >::type smc_sequencer_method(smc_sequencer_methodSEXP);
-    Rcpp::traits::input_parameter< const List& >::type adaptive_target_method(adaptive_target_methodSEXP);
-    Rcpp::traits::input_parameter< const List& >::type smc_termination_method(smc_termination_methodSEXP);
-    Rcpp::traits::input_parameter< size_t >::type smc_iterations_to_store(smc_iterations_to_storeSEXP);
-    Rcpp::traits::input_parameter< bool >::type write_to_file_at_each_iteration(write_to_file_at_each_iterationSEXP);
-    Rcpp::traits::input_parameter< bool >::type parallel_in(parallel_inSEXP);
-    Rcpp::traits::input_parameter< size_t >::type grain_size_in(grain_size_inSEXP);
-    Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_R(model_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type parameters_R(parameters_RSEXP);
+    Rcpp::traits::input_parameter< size_t >::type number_of_ensemble_members(number_of_ensemble_membersSEXP);
+    Rcpp::traits::input_parameter< size_t >::type number_of_iterations(number_of_iterationsSEXP);
+    Rcpp::traits::input_parameter< double >::type delta_t(delta_tSEXP);
+    Rcpp::traits::input_parameter< size_t >::type iterations_to_store(iterations_to_storeSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type results_name_in(results_name_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
-    rcpp_result_gen = Rcpp::wrap(do_enkmfds(model, parameters, algorithm_parameter_list, number_of_particles, Delta_t, mcmc_termination_method, mcmc_weights_method, smc_sequencer_method, adaptive_target_method, smc_termination_method, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed));
-    return rcpp_result_gen;
+    do_enkmfds(model_R, parameters_R, number_of_ensemble_members, number_of_iterations, delta_t, iterations_to_store, results_name_in, seed);
+    return R_NilValue;
 END_RCPP
 }
 // do_kalman_filter
-double do_kalman_filter(const List& model, const List& parameters, const List& algorithm_parameter_list, size_t kf_iterations_to_store, bool write_to_file_at_each_iteration, const String& results_name_in);
-RcppExport SEXP _ilike_do_kalman_filter(SEXP modelSEXP, SEXP parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP kf_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP results_name_inSEXP) {
+double do_kalman_filter(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, size_t kf_iterations_to_store, bool write_to_file_at_each_iteration, const std::string& results_name_in);
+RcppExport SEXP _ilike_do_kalman_filter(SEXP model_RSEXP, SEXP parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP kf_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP results_name_inSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
-    Rcpp::traits::input_parameter< const List& >::type algorithm_parameter_list(algorithm_parameter_listSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_R(model_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type parameters_R(parameters_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type algorithm_parameter_list_R(algorithm_parameter_list_RSEXP);
     Rcpp::traits::input_parameter< size_t >::type kf_iterations_to_store(kf_iterations_to_storeSEXP);
     Rcpp::traits::input_parameter< bool >::type write_to_file_at_each_iteration(write_to_file_at_each_iterationSEXP);
-    Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
-    rcpp_result_gen = Rcpp::wrap(do_kalman_filter(model, parameters, algorithm_parameter_list, kf_iterations_to_store, write_to_file_at_each_iteration, results_name_in));
+    Rcpp::traits::input_parameter< const std::string& >::type results_name_in(results_name_inSEXP);
+    rcpp_result_gen = Rcpp::wrap(do_kalman_filter(model_R, parameters_R, algorithm_parameter_list_R, kf_iterations_to_store, write_to_file_at_each_iteration, results_name_in));
     return rcpp_result_gen;
 END_RCPP
 }
 // do_ensemble_kalman_filter
-double do_ensemble_kalman_filter(const List& model, const List& parameters, const List& algorithm_parameter_list, size_t number_of_ensemble_members, size_t enk_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const String& results_name_in, size_t seed);
-RcppExport SEXP _ilike_do_ensemble_kalman_filter(SEXP modelSEXP, SEXP parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP number_of_ensemble_membersSEXP, SEXP enk_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
+double do_ensemble_kalman_filter(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, size_t number_of_ensemble_members, size_t enk_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
+RcppExport SEXP _ilike_do_ensemble_kalman_filter(SEXP model_RSEXP, SEXP parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP number_of_ensemble_membersSEXP, SEXP enk_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
-    Rcpp::traits::input_parameter< const List& >::type algorithm_parameter_list(algorithm_parameter_listSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_R(model_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type parameters_R(parameters_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type algorithm_parameter_list_R(algorithm_parameter_list_RSEXP);
     Rcpp::traits::input_parameter< size_t >::type number_of_ensemble_members(number_of_ensemble_membersSEXP);
     Rcpp::traits::input_parameter< size_t >::type enk_iterations_to_store(enk_iterations_to_storeSEXP);
     Rcpp::traits::input_parameter< bool >::type write_to_file_at_each_iteration(write_to_file_at_each_iterationSEXP);
     Rcpp::traits::input_parameter< bool >::type parallel_in(parallel_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type grain_size_in(grain_size_inSEXP);
-    Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type results_name_in(results_name_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
-    rcpp_result_gen = Rcpp::wrap(do_ensemble_kalman_filter(model, parameters, algorithm_parameter_list, number_of_ensemble_members, enk_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed));
+    rcpp_result_gen = Rcpp::wrap(do_ensemble_kalman_filter(model_R, parameters_R, algorithm_parameter_list_R, number_of_ensemble_members, enk_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed));
     return rcpp_result_gen;
 END_RCPP
 }
 // do_ensemble_kalman_filter_with_fixed_params
-double do_ensemble_kalman_filter_with_fixed_params(const List& model, const List& parameters, const List& algorithm_parameter_list, const List& fixed_parameter_list, size_t number_of_ensemble_members, size_t enk_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const String& results_name_in, size_t seed);
-RcppExport SEXP _ilike_do_ensemble_kalman_filter_with_fixed_params(SEXP modelSEXP, SEXP parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP fixed_parameter_listSEXP, SEXP number_of_ensemble_membersSEXP, SEXP enk_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
+double do_ensemble_kalman_filter_with_fixed_params(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, const Rcpp::List& fixed_parameter_list, size_t number_of_ensemble_members, size_t enk_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
+RcppExport SEXP _ilike_do_ensemble_kalman_filter_with_fixed_params(SEXP model_RSEXP, SEXP parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP fixed_parameter_listSEXP, SEXP number_of_ensemble_membersSEXP, SEXP enk_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
-    Rcpp::traits::input_parameter< const List& >::type algorithm_parameter_list(algorithm_parameter_listSEXP);
-    Rcpp::traits::input_parameter< const List& >::type fixed_parameter_list(fixed_parameter_listSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_R(model_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type parameters_R(parameters_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type algorithm_parameter_list_R(algorithm_parameter_list_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type fixed_parameter_list(fixed_parameter_listSEXP);
     Rcpp::traits::input_parameter< size_t >::type number_of_ensemble_members(number_of_ensemble_membersSEXP);
     Rcpp::traits::input_parameter< size_t >::type enk_iterations_to_store(enk_iterations_to_storeSEXP);
     Rcpp::traits::input_parameter< bool >::type write_to_file_at_each_iteration(write_to_file_at_each_iterationSEXP);
     Rcpp::traits::input_parameter< bool >::type parallel_in(parallel_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type grain_size_in(grain_size_inSEXP);
-    Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type results_name_in(results_name_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
-    rcpp_result_gen = Rcpp::wrap(do_ensemble_kalman_filter_with_fixed_params(model, parameters, algorithm_parameter_list, fixed_parameter_list, number_of_ensemble_members, enk_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed));
+    rcpp_result_gen = Rcpp::wrap(do_ensemble_kalman_filter_with_fixed_params(model_R, parameters_R, algorithm_parameter_list_R, fixed_parameter_list, number_of_ensemble_members, enk_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed));
     return rcpp_result_gen;
 END_RCPP
 }
 // do_particle_filter
-double do_particle_filter(const List& model, const List& parameters, const List& algorithm_parameter_list, size_t number_of_particles, size_t smc_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const String& results_name_in, size_t seed);
-RcppExport SEXP _ilike_do_particle_filter(SEXP modelSEXP, SEXP parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP number_of_particlesSEXP, SEXP smc_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
+double do_particle_filter(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, size_t number_of_particles, size_t smc_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
+RcppExport SEXP _ilike_do_particle_filter(SEXP model_RSEXP, SEXP parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP number_of_particlesSEXP, SEXP smc_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
-    Rcpp::traits::input_parameter< const List& >::type algorithm_parameter_list(algorithm_parameter_listSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_R(model_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type parameters_R(parameters_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type algorithm_parameter_list_R(algorithm_parameter_list_RSEXP);
     Rcpp::traits::input_parameter< size_t >::type number_of_particles(number_of_particlesSEXP);
     Rcpp::traits::input_parameter< size_t >::type smc_iterations_to_store(smc_iterations_to_storeSEXP);
     Rcpp::traits::input_parameter< bool >::type write_to_file_at_each_iteration(write_to_file_at_each_iterationSEXP);
     Rcpp::traits::input_parameter< bool >::type parallel_in(parallel_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type grain_size_in(grain_size_inSEXP);
-    Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type results_name_in(results_name_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
-    rcpp_result_gen = Rcpp::wrap(do_particle_filter(model, parameters, algorithm_parameter_list, number_of_particles, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed));
+    rcpp_result_gen = Rcpp::wrap(do_particle_filter(model_R, parameters_R, algorithm_parameter_list_R, number_of_particles, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed));
     return rcpp_result_gen;
 END_RCPP
 }
 // do_particle_filter_with_fixed_params
-double do_particle_filter_with_fixed_params(const List& model, const List& parameters, const List& algorithm_parameter_list, const List& fixed_parameter_list, size_t number_of_particles, size_t smc_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const String& results_name_in, size_t seed);
-RcppExport SEXP _ilike_do_particle_filter_with_fixed_params(SEXP modelSEXP, SEXP parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP fixed_parameter_listSEXP, SEXP number_of_particlesSEXP, SEXP smc_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
+double do_particle_filter_with_fixed_params(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, const Rcpp::List& fixed_parameter_list, size_t number_of_particles, size_t smc_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
+RcppExport SEXP _ilike_do_particle_filter_with_fixed_params(SEXP model_RSEXP, SEXP parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP fixed_parameter_listSEXP, SEXP number_of_particlesSEXP, SEXP smc_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
-    Rcpp::traits::input_parameter< const List& >::type algorithm_parameter_list(algorithm_parameter_listSEXP);
-    Rcpp::traits::input_parameter< const List& >::type fixed_parameter_list(fixed_parameter_listSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_R(model_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type parameters_R(parameters_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type algorithm_parameter_list_R(algorithm_parameter_list_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type fixed_parameter_list(fixed_parameter_listSEXP);
     Rcpp::traits::input_parameter< size_t >::type number_of_particles(number_of_particlesSEXP);
     Rcpp::traits::input_parameter< size_t >::type smc_iterations_to_store(smc_iterations_to_storeSEXP);
     Rcpp::traits::input_parameter< bool >::type write_to_file_at_each_iteration(write_to_file_at_each_iterationSEXP);
     Rcpp::traits::input_parameter< bool >::type parallel_in(parallel_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type grain_size_in(grain_size_inSEXP);
-    Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type results_name_in(results_name_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
-    rcpp_result_gen = Rcpp::wrap(do_particle_filter_with_fixed_params(model, parameters, algorithm_parameter_list, fixed_parameter_list, number_of_particles, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed));
+    rcpp_result_gen = Rcpp::wrap(do_particle_filter_with_fixed_params(model_R, parameters_R, algorithm_parameter_list_R, fixed_parameter_list, number_of_particles, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed));
     return rcpp_result_gen;
 END_RCPP
 }
 // do_evaluate_log
-double do_evaluate_log(const List& model, const List& model_parameters, const List& algorithm_parameter_list, const List& parameters_in, const IntegerVector& index_in, const String& results_name_in, size_t seed);
-RcppExport SEXP _ilike_do_evaluate_log(SEXP modelSEXP, SEXP model_parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP parameters_inSEXP, SEXP index_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
+double do_evaluate_log(const Rcpp::List& model_R, const Rcpp::List& model_parameters_R, const Rcpp::List& algorithm_parameter_list_R, const Rcpp::List& parameters_in, const IntegerVector& index_in, const std::string& results_name_in, size_t seed);
+RcppExport SEXP _ilike_do_evaluate_log(SEXP model_RSEXP, SEXP model_parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP parameters_inSEXP, SEXP index_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< const List& >::type model_parameters(model_parametersSEXP);
-    Rcpp::traits::input_parameter< const List& >::type algorithm_parameter_list(algorithm_parameter_listSEXP);
-    Rcpp::traits::input_parameter< const List& >::type parameters_in(parameters_inSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_R(model_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_parameters_R(model_parameters_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type algorithm_parameter_list_R(algorithm_parameter_list_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type parameters_in(parameters_inSEXP);
     Rcpp::traits::input_parameter< const IntegerVector& >::type index_in(index_inSEXP);
-    Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type results_name_in(results_name_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
-    rcpp_result_gen = Rcpp::wrap(do_evaluate_log(model, model_parameters, algorithm_parameter_list, parameters_in, index_in, results_name_in, seed));
+    rcpp_result_gen = Rcpp::wrap(do_evaluate_log(model_R, model_parameters_R, algorithm_parameter_list_R, parameters_in, index_in, results_name_in, seed));
     return rcpp_result_gen;
 END_RCPP
 }
 // do_evaluate_log_with_fixed_params
-double do_evaluate_log_with_fixed_params(const List& model, const List& model_parameters, const List& algorithm_parameter_list, const List& fixed_parameter_list, const List& parameters_in, const IntegerVector& index_in, const String& results_name_in, size_t seed);
-RcppExport SEXP _ilike_do_evaluate_log_with_fixed_params(SEXP modelSEXP, SEXP model_parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP fixed_parameter_listSEXP, SEXP parameters_inSEXP, SEXP index_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
+double do_evaluate_log_with_fixed_params(const Rcpp::List& model_R, const Rcpp::List& model_parameters_R, const Rcpp::List& algorithm_parameter_list_R, const Rcpp::List& fixed_parameter_list, const Rcpp::List& parameters_in, const IntegerVector& index_in, const std::string& results_name_in, size_t seed);
+RcppExport SEXP _ilike_do_evaluate_log_with_fixed_params(SEXP model_RSEXP, SEXP model_parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP fixed_parameter_listSEXP, SEXP parameters_inSEXP, SEXP index_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< const List& >::type model_parameters(model_parametersSEXP);
-    Rcpp::traits::input_parameter< const List& >::type algorithm_parameter_list(algorithm_parameter_listSEXP);
-    Rcpp::traits::input_parameter< const List& >::type fixed_parameter_list(fixed_parameter_listSEXP);
-    Rcpp::traits::input_parameter< const List& >::type parameters_in(parameters_inSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_R(model_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_parameters_R(model_parameters_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type algorithm_parameter_list_R(algorithm_parameter_list_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type fixed_parameter_list(fixed_parameter_listSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type parameters_in(parameters_inSEXP);
     Rcpp::traits::input_parameter< const IntegerVector& >::type index_in(index_inSEXP);
-    Rcpp::traits::input_parameter< const String& >::type results_name_in(results_name_inSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type results_name_in(results_name_inSEXP);
     Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
-    rcpp_result_gen = Rcpp::wrap(do_evaluate_log_with_fixed_params(model, model_parameters, algorithm_parameter_list, fixed_parameter_list, parameters_in, index_in, results_name_in, seed));
+    rcpp_result_gen = Rcpp::wrap(do_evaluate_log_with_fixed_params(model_R, model_parameters_R, algorithm_parameter_list_R, fixed_parameter_list, parameters_in, index_in, results_name_in, seed));
     return rcpp_result_gen;
 END_RCPP
 }
 // shared_point_weights_check
-List shared_point_weights_check(const List& points_per_particle, const arma::colvec& normalised_log_weights);
+Rcpp::List shared_point_weights_check(const Rcpp::List& points_per_particle, const arma::colvec& normalised_log_weights);
 RcppExport SEXP _ilike_shared_point_weights_check(SEXP points_per_particleSEXP, SEXP normalised_log_weightsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List& >::type points_per_particle(points_per_particleSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type points_per_particle(points_per_particleSEXP);
     Rcpp::traits::input_parameter< const arma::colvec& >::type normalised_log_weights(normalised_log_weightsSEXP);
     rcpp_result_gen = Rcpp::wrap(shared_point_weights_check(points_per_particle, normalised_log_weights));
     return rcpp_result_gen;
 END_RCPP
 }
 // copy_audit
-List copy_audit(const List& model, const List& parameters, const List& algorithm_parameter_list, const List& mcmc_termination_method, const List& mcmc_weights_method, size_t seed_value);
-RcppExport SEXP _ilike_copy_audit(SEXP modelSEXP, SEXP parametersSEXP, SEXP algorithm_parameter_listSEXP, SEXP mcmc_termination_methodSEXP, SEXP mcmc_weights_methodSEXP, SEXP seed_valueSEXP) {
+Rcpp::List copy_audit(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, const Rcpp::List& mcmc_termination_method_R, const Rcpp::List& mcmc_weights_method_R, size_t seed_value);
+RcppExport SEXP _ilike_copy_audit(SEXP model_RSEXP, SEXP parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP mcmc_termination_method_RSEXP, SEXP mcmc_weights_method_RSEXP, SEXP seed_valueSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< const List& >::type model(modelSEXP);
-    Rcpp::traits::input_parameter< const List& >::type parameters(parametersSEXP);
-    Rcpp::traits::input_parameter< const List& >::type algorithm_parameter_list(algorithm_parameter_listSEXP);
-    Rcpp::traits::input_parameter< const List& >::type mcmc_termination_method(mcmc_termination_methodSEXP);
-    Rcpp::traits::input_parameter< const List& >::type mcmc_weights_method(mcmc_weights_methodSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_R(model_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type parameters_R(parameters_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type algorithm_parameter_list_R(algorithm_parameter_list_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type mcmc_termination_method_R(mcmc_termination_method_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type mcmc_weights_method_R(mcmc_weights_method_RSEXP);
     Rcpp::traits::input_parameter< size_t >::type seed_value(seed_valueSEXP);
-    rcpp_result_gen = Rcpp::wrap(copy_audit(model, parameters, algorithm_parameter_list, mcmc_termination_method, mcmc_weights_method, seed_value));
+    rcpp_result_gen = Rcpp::wrap(copy_audit(model_R, parameters_R, algorithm_parameter_list_R, mcmc_termination_method_R, mcmc_weights_method_R, seed_value));
+    return rcpp_result_gen;
+END_RCPP
+}
+// recipe_json
+std::string recipe_json(SEXP recipe);
+RcppExport SEXP _ilike_recipe_json(SEXP recipeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type recipe(recipeSEXP);
+    rcpp_result_gen = Rcpp::wrap(recipe_json(recipe));
+    return rcpp_result_gen;
+END_RCPP
+}
+// builtin_registry_table
+SEXP builtin_registry_table();
+RcppExport SEXP _ilike_builtin_registry_table() {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    rcpp_result_gen = Rcpp::wrap(builtin_registry_table());
+    return rcpp_result_gen;
+END_RCPP
+}
+// ilike_language_syntax_tree
+SEXP ilike_language_syntax_tree(const std::string& text, const std::string& file_name, bool json);
+RcppExport SEXP _ilike_ilike_language_syntax_tree(SEXP textSEXP, SEXP file_nameSEXP, SEXP jsonSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string& >::type text(textSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type file_name(file_nameSEXP);
+    Rcpp::traits::input_parameter< bool >::type json(jsonSEXP);
+    rcpp_result_gen = Rcpp::wrap(ilike_language_syntax_tree(text, file_name, json));
+    return rcpp_result_gen;
+END_RCPP
+}
+// is_ilike_language_text
+bool is_ilike_language_text(const std::string& text);
+RcppExport SEXP _ilike_is_ilike_language_text(SEXP textSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string& >::type text(textSEXP);
+    rcpp_result_gen = Rcpp::wrap(is_ilike_language_text(text));
+    return rcpp_result_gen;
+END_RCPP
+}
+// ilike_language_lower
+SEXP ilike_language_lower(const std::vector<std::string>& texts, const std::vector<std::string>& file_names);
+RcppExport SEXP _ilike_ilike_language_lower(SEXP textsSEXP, SEXP file_namesSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::vector<std::string>& >::type texts(textsSEXP);
+    Rcpp::traits::input_parameter< const std::vector<std::string>& >::type file_names(file_namesSEXP);
+    rcpp_result_gen = Rcpp::wrap(ilike_language_lower(texts, file_names));
+    return rcpp_result_gen;
+END_RCPP
+}
+// ilike_find_cpp_function_signature
+std::string ilike_find_cpp_function_signature(const std::string& code, const std::string& name);
+RcppExport SEXP _ilike_ilike_find_cpp_function_signature(SEXP codeSEXP, SEXP nameSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const std::string& >::type code(codeSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type name(nameSEXP);
+    rcpp_result_gen = Rcpp::wrap(ilike_find_cpp_function_signature(code, name));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -391,7 +451,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ilike_do_smc_mcmc_move", (DL_FUNC) &_ilike_do_smc_mcmc_move, 15},
     {"_ilike_do_smc_mcmc_move_with_fixed_params", (DL_FUNC) &_ilike_do_smc_mcmc_move_with_fixed_params, 16},
     {"_ilike_do_enki", (DL_FUNC) &_ilike_do_enki, 15},
-    {"_ilike_do_enkmfds", (DL_FUNC) &_ilike_do_enkmfds, 16},
+    {"_ilike_do_enkmfds", (DL_FUNC) &_ilike_do_enkmfds, 8},
     {"_ilike_do_kalman_filter", (DL_FUNC) &_ilike_do_kalman_filter, 6},
     {"_ilike_do_ensemble_kalman_filter", (DL_FUNC) &_ilike_do_ensemble_kalman_filter, 10},
     {"_ilike_do_ensemble_kalman_filter_with_fixed_params", (DL_FUNC) &_ilike_do_ensemble_kalman_filter_with_fixed_params, 11},
@@ -401,6 +461,12 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ilike_do_evaluate_log_with_fixed_params", (DL_FUNC) &_ilike_do_evaluate_log_with_fixed_params, 8},
     {"_ilike_shared_point_weights_check", (DL_FUNC) &_ilike_shared_point_weights_check, 2},
     {"_ilike_copy_audit", (DL_FUNC) &_ilike_copy_audit, 6},
+    {"_ilike_recipe_json", (DL_FUNC) &_ilike_recipe_json, 1},
+    {"_ilike_builtin_registry_table", (DL_FUNC) &_ilike_builtin_registry_table, 0},
+    {"_ilike_ilike_language_syntax_tree", (DL_FUNC) &_ilike_ilike_language_syntax_tree, 3},
+    {"_ilike_is_ilike_language_text", (DL_FUNC) &_ilike_is_ilike_language_text, 1},
+    {"_ilike_ilike_language_lower", (DL_FUNC) &_ilike_ilike_language_lower, 2},
+    {"_ilike_ilike_find_cpp_function_signature", (DL_FUNC) &_ilike_ilike_find_cpp_function_signature, 2},
     {"_ilike_ilike_rdtsc", (DL_FUNC) &_ilike_ilike_rdtsc, 0},
     {"_ilike_reset_informs", (DL_FUNC) &_ilike_reset_informs, 0},
     {"_ilike_sample_store_check", (DL_FUNC) &_ilike_sample_store_check, 0},

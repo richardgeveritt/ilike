@@ -1,0 +1,18 @@
+ilike 1.0
+// test_rforms_gaussian_posterior.ilike and test_rforms_mh_proposal.ilike in the language
+data { y = r::c(1) }
+model {
+  prior p = density(log = r::dnorm(θ, 1, 1, log = TRUE),
+                    simulate = r::list(θ = rnorm(1, 1, 1)),
+                    gradient = r::prior_gradient(variable, θ))
+  factor lik = density(log = r::sum(dnorm(y, θ, 1.0, log = TRUE)),
+                       gradient = r::likelihood_gradient(variable, θ, data$y))
+}
+r {
+prior_gradient = function(variable, theta) if (variable == "θ") -(theta - 1) else stop("Unknown variable in prior gradient.")
+likelihood_gradient = function(variable, theta, y) if (variable == "θ") sum((y - theta)/1.0) else stop("Unknown variable in likelihood gradient.")
+}
+algorithm mh {
+  move m1 = metropolis_hastings(r::list(θ = rnorm(1, θ, 1)), log = r::dnorm(proposed_parameters$θ, θ, 1, log = TRUE))
+  termination = iterations(10000)
+}

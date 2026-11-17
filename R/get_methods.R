@@ -15,7 +15,13 @@ method_parse <- function(input,
     {
       h = required_args[i]
 
-      if ( (nchar(h)>1) && (substr(h,1,1)=="p") && (!grepl("\\D",substr(h,2,nchar(h)))) )
+      if ( !is.null(names(parameter_list)) && (h %in% names(parameter_list)) )
+      {
+        # a run-time constant given by name (dev/plan.md 3.14, L-6)
+        parameter_arguments = c(parameter_arguments,h)
+        do.call("<-",list(h, parameter_list[[h]]))
+      }
+      else if ( (nchar(h)>1) && (substr(h,1,1)=="p") && (!grepl("\\D",substr(h,2,nchar(h)))) )
       {
         parameter_number = as.numeric(substr(h,2,nchar(h)))
         if (parameter_number<=length(parameter_list))
@@ -72,165 +78,99 @@ get_method = function(model,method_name)
   return(output_method)
 }
 
-get_smc_sequences = function(model,model_parameters)
+# "name = value" at the top level of an argument: list(name, value text);
+# otherwise list("", text)
+split_keyword_argument = function(text)
 {
-  method_name = "smc_sequence"
-
-  output_method = NULL
-
-  counter = 0
-
-  if ("method" %in% names(model))
-  {
-    methods = model[["method"]]
-    for (i in 1:length(methods))
-    {
-      if (method_name %in% names(methods[[i]]) && ("type" %in% names(methods[[i]][[method_name]])) && ("variables" %in% names(methods[[i]][[method_name]])) && ("parameters" %in% names(methods[[i]][[method_name]])) )
-      {
-        if (methods[[i]][[method_name]][["type"]]=="parameter")
-        {
-          sequence = methods[[i]][[method_name]][["parameters"]][[1]]
-
-          f_info = method_parse(sequence,model_parameters)
-
-          if (length(f_info[[2]])>0)
-          {
-            stop('SMC sequence must not have any variables (except for parameters "p1", "p2", etc.)')
-          }
-
-          # Optional third argument: the factors (1-based) that depend on the
-          # sequence variable. If it is not given, every factor is
-          # re-evaluated when the target changes.
-          if (length(methods[[i]][[method_name]][["parameters"]])>2)
-          {
-            stop('smc_sequence ilike::parameter: too many arguments (expected the variable name, the sequence of values and optionally the factors affected).')
-          }
-          factors_affected = NULL
-          if (length(methods[[i]][[method_name]][["parameters"]])==2)
-          {
-            factors_affected = method_parse(methods[[i]][[method_name]][["parameters"]][[2]],model_parameters)[[1]]()
-          }
-
-          if (counter==0)
-          {
-            schedule_list = list()
-            schedule_list[[1]] = f_info[[1]]()
-            output_method = list(types=methods[[i]][[method_name]][["type"]],variables=methods[[i]][[method_name]][["variables"]],schedules=schedule_list)
-          }
-          else
-          {
-            output_method[["types"]] = c(output_method[["types"]],methods[[i]][[method_name]][["type"]])
-            output_method[["variables"]] = c(output_method[["variables"]],methods[[i]][[method_name]][["variables"]])
-            output_method[["schedules"]] = append(output_method[["schedules"]],f_info[[1]]())
-          }
-          if (!is.null(factors_affected))
-          {
-            output_method[["factors_affected"]] = append(output_method[["factors_affected"]],factors_affected)
-          }
-        }
-        else
-        {
-          # Annealing/tempering: (variable, schedule) or (variable, schedule,
-          # factors). The optional factors (1-based) are the ones raised to the
-          # power; the others are not annealed.
-          sequence_parameters = methods[[i]][[method_name]][["parameters"]]
-          if (length(sequence_parameters)>2)
-          {
-            stop(paste('smc_sequence ilike::',methods[[i]][[method_name]][["type"]],': too many arguments (expected the variable name, the schedule and optionally the factors to anneal).',sep=""))
-          }
-          sequence = sequence_parameters[[1]]
-          factors_affected = NULL
-          if (length(sequence_parameters)==2)
-          {
-            factors_affected = method_parse(sequence_parameters[[2]],model_parameters)[[1]]()
-          }
-
-          f_info = method_parse(sequence,model_parameters)
-
-          if (length(f_info[[2]])>0)
-          {
-            stop('SMC sequence must not have any variables (except for parameters "p1", "p2", etc.)')
-          }
-
-          if (counter==0)
-          {
-            schedule_list = list()
-            schedule_list[[1]] = f_info[[1]]()
-            output_method = list(types=methods[[i]][[method_name]][["type"]],variables=methods[[i]][[method_name]][["variables"]],schedules=schedule_list)
-          }
-          else
-          {
-            output_method[["types"]] = c(output_method[["types"]],methods[[i]][[method_name]][["type"]])
-            output_method[["variables"]] = c(output_method[["variables"]],methods[[i]][[method_name]][["variables"]])
-            output_method[["schedules"]] = append(output_method[["schedules"]],f_info[[1]]())
-          }
-          if (!is.null(factors_affected))
-          {
-            output_method[["factors_affected"]] = append(output_method[["factors_affected"]],factors_affected)
-          }
-        }
-
-        counter = counter + 1
-
-      }
-    }
-  }
-  else
-  {
-    stop(paste("Model file needs to specify a valid method for ",method_name,".",sep=""))
-  }
-
-  return(output_method)
+  text = trimws(text)
+  m = regmatches(text, regexec("^([A-Za-z_.][A-Za-z0-9_.]*)\\s*=([^=].*)$", text))[[1]]
+  if (length(m) == 3)
+    return(list(trimws(m[2]), trimws(m[3])))
+  list("", text)
 }
 
+# The SMC sequences (/***smc_sequence,ilike::annealing(power,c(0,0.5,1))***/),
+# or with method_name = "enk_sequence" the EnK sequences (EnKI),
+# as one built-in call per sequence for the C++ registry (dev/plan.md 3.14,
+# I2b): list(sequences = list(list(builtin, arguments), ...)). The variable is
+# passed as text; the other arguments (the schedule, the factors) are R
+# expressions, evaluated here with the run-time constants (by name, or as
+# p1, p2, ...). The registry checks the names and numbers of arguments.
+get_smc_sequences = function(model,model_parameters,method_name="smc_sequence")
+{
+  # no method blocks: no sequence (the caller uses its default)
+  if (!("method" %in% names(model)))
+    return(NULL)
+
+  sequences = list()
+  for (method in model[["method"]])
+  {
+    if (!(method_name %in% names(method)))
+      next
+    block = method[[method_name]]
+    if (!all(c("type","variables","parameters") %in% names(block)))
+      next
+
+    # the variable, then the arguments: text from the old format (R
+    # expressions, evaluated here), or values from the ilike language
+    items = c(list(block[["variables"]]), block[["parameters"]])
+    item_names = c("", if (is.null(names(block[["parameters"]]))) rep("", length(block[["parameters"]])) else names(block[["parameters"]]))
+    arguments = list()
+    argument_names = character(0)
+    for (k in seq_along(items))
+    {
+      item = items[[k]]
+      if (!is.character(item) || length(item) != 1)
+      {
+        arguments[[length(arguments)+1]] = item
+        argument_names = c(argument_names, item_names[k])
+        next
+      }
+      if (nchar(trimws(item)) == 0)
+        next
+      kv = if (item_names[k] != "") list(item_names[k], item) else split_keyword_argument(item)
+      name = kv[[1]]
+      if ( (name == "variable") || ((name == "") && (k == 1)) )
+      {
+        value = kv[[2]]
+      }
+      else if (item_names[k] != "")
+      {
+        # a name given in the ilike language: a constant
+        value = if (!is.null(model_parameters[[kv[[2]]]])) model_parameters[[kv[[2]]]] else kv[[2]]
+      }
+      else
+      {
+        f_info = method_parse(kv[[2]],model_parameters)
+        if (length(f_info[[2]])>0)
+          stop(paste(method_name,' ilike::',block[["type"]],': ',kv[[2]],' uses ',paste(f_info[[2]],collapse=", "),
+                     ', which is not a run-time constant (in model_parameter_list).',sep=""))
+        value = f_info[[1]]()
+      }
+      arguments[[length(arguments)+1]] = value
+      argument_names = c(argument_names, name)
+    }
+    names(arguments) = argument_names
+    sequences[[length(sequences)+1]] = list(builtin = block[["type"]], arguments = arguments)
+  }
+
+  if (length(sequences) == 0)
+    return(NULL)
+  list(sequences = sequences)
+}
+
+# With no sequence given: anneal from the prior (power 0) to the posterior
+# (power 1) in one step.
+default_annealing_sequence = function()
+{
+  list(sequences = list(list(builtin = "annealing", arguments = list("power", c(0,1)))))
+}
+
+# The EnK sequences (/***enk_sequence,ilike::annealing(power,c(0,0.5,1))***/),
+# read as the SMC sequences; the C++ registry allows only ilike::annealing.
 get_enk_sequences = function(model,model_parameters)
 {
-  method_name = "enk_sequence"
-
-  output_method = NULL
-
-  counter = 0
-
-  if ("method" %in% names(model))
-  {
-    methods = model[["method"]]
-    for (i in 1:length(methods))
-    {
-      if (method_name %in% names(methods[[i]]) && ("type" %in% names(methods[[i]][[method_name]])) && ("variables" %in% names(methods[[i]][[method_name]])) && ("parameters" %in% names(methods[[i]][[method_name]])) )
-      {
-        sequence = methods[[i]][[method_name]][["parameters"]]
-
-        f_info = method_parse(sequence,model_parameters)
-
-        if (length(f_info[[2]])>0)
-        {
-          stop('SMC sequence must not have any variables (except for parameters "p1", "p2", etc.')
-        }
-
-        if (counter==0)
-        {
-          schedule_list = list()
-          schedule_list[[1]] = f_info[[1]]()
-          output_method = list(types=methods[[i]][[method_name]][["type"]],variables=methods[[i]][[method_name]][["variables"]],schedules=schedule_list)
-        }
-        else
-        {
-          output_method[["types"]] = c(output_method[["types"]],methods[[i]][[method_name]][["type"]])
-          output_method[["variables"]] = c(output_method[["variables"]],methods[[i]][[method_name]][["variables"]])
-          output_method[["schedules"]] = append(output_method[["schedules"]],f_info[[1]]())
-        }
-
-        counter = counter + 1
-
-      }
-    }
-  }
-  else
-  {
-    stop(paste("Model file needs to specify a valid method for ",method_name,".",sep=""))
-  }
-
-  return(output_method)
+  get_smc_sequences(model,model_parameters,"enk_sequence")
 }
 
 # The parallel workers (RcppParallelSMCWorker and the ensemble Kalman

@@ -25,7 +25,8 @@ SMC_with_MCMC(
   grain_size = 64,
   check_factor_index = FALSE,
   waste_free_chains = 0,
-  progress = getOption("ilike.progress", interactive())
+  progress = getOption("ilike.progress", interactive()),
+  algorithm = NULL
 )
 }
 \arguments{
@@ -70,6 +71,8 @@ SMC_with_MCMC(
 \item{check_factor_index}{(optional) If TRUE, after every accepted MCMC move that has a factor index, re-evaluate the exact factors that were left out of the move (neither in its factor index nor its cut factor index) and stop if any changed value, i.e. did not cancel in the acceptance ratio. Slower; for checking a model file. Default FALSE.}
 
 \item{waste_free_chains}{(optional) If greater than 0 (M), run waste-free SMC (Dau and Chopin, 2022): at every step M particles are resampled and each is run as an MCMC chain of number_of_particles/M states (itself and number_of_particles/M - 1 moves, whatever mcmc_termination says), and all the states form the next generation. Must divide number_of_particles. Needs exact or annealed factors, a move that does not adapt, and mcmc_termination ilike::iterations. Default 0: standard SMC.}
+
+\item{algorithm}{(optional) For a recipe in the ilike language: the name of the algorithm section to run (needed when the recipe has several).}
 }
 \value{
 Estimate of the marginal likelihood.

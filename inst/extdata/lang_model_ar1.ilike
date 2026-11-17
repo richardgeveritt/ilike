@@ -1,0 +1,11 @@
+ilike 1.0
+// latent AR(1): x[1] ~ N(0, 1), x[t] ~ N(phi x[t-1], s), y[t] ~ N(x[t], 1); phi ~ U(-1, 1), s ~ Gamma(2, 2)
+data { y = [0.5, 1.0, 0.2, -0.3, 0.8] }
+constants { int T = 5 }
+model {
+  phi ~ unif(-1, 1)
+  s ~ gamma(2, 2)
+  x[1] ~ norm(0, 1)
+  for (t in 2:T) x[t] ~ norm(phi * x[t-1], s)
+  for (t in 1:T) y[t] ~ norm(x[t], 1)
+}

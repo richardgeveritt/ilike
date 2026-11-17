@@ -106,4 +106,11 @@ test_that("KF and the stochastic and square-root EnKF handle a 2-D measurement w
                              model_parameter_list = pl)
   expect_lt(abs(ilike::EnKF(enkf, model_parameter_list = pl, number_of_ensemble_members = 20000, seed = 1) - truth), 0.15)
   expect_lt(abs(ilike::EnKF(sqrt_enkf, model_parameter_list = pl, number_of_ensemble_members = 20000, seed = 1) - truth), 0.15)
+  # the ensemble adjustment update (before C183 it used the full SVD with V
+  # in place of V^T, and a J x J inverse, too slow at this ensemble size)
+  adjustment = tempfile(fileext = ".ilike")
+  writeLines("/***enk_shifter,ilike::adjustment()***/", adjustment)
+  on.exit(unlink(adjustment), add = TRUE)
+  adjustment_enkf = ilike::compile(c(model, adjustment), model_parameter_list = pl)
+  expect_lt(abs(ilike::EnKF(adjustment_enkf, model_parameter_list = pl, number_of_ensemble_members = 20000, seed = 1) - truth), 0.15)
 })

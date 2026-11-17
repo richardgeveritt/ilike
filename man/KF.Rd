@@ -16,7 +16,8 @@ KF(
   julia_bin_dir = "",
   julia_required_libraries = c(),
   verify_cpp_function_types = FALSE,
-  keep_temporary_recipe_code = FALSE
+  keep_temporary_recipe_code = FALSE,
+  algorithm = NULL
 )
 }
 \arguments{
@@ -43,6 +44,8 @@ KF(
 \item{verify_cpp_function_types}{(optional) If TRUE, check the types of the parameters of user-defined .cpp functions. If FALSE (default), types are not checked.}
 
 \item{keep_temporary_recipe_code}{(optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE,}
+
+\item{algorithm}{(optional) For a recipe in the ilike language: the name of the algorithm section to run (needed when the recipe has several).}
 }
 \value{
 Estimate of the marginal likelihood.

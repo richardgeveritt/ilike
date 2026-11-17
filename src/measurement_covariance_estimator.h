@@ -14,6 +14,21 @@ namespace ilike
 
 class MeasurementCovarianceEstimator;
 class MeasurementCovarianceEstimatorOutput;
+
+// For the ensemble adjustment update (get_adjustment): V^T (I + Yhat S^-1
+// Yhat^T)^-1 V, with V^T (r x J) from the compact SVD of the ensemble
+// deviations and Yhat (J x d_y) the scaled deviations of the measurement
+// states. By the Woodbury identity (I + Y S^-1 Y^T)^-1 = I - Y (S + Y^T Y)^-1
+// Y^T, so no J x J matrix is formed (J, the ensemble size, may be large).
+inline arma::mat adjustment_inner_matrix(const arma::mat &Vtranspose,
+                                         const arma::mat &Yhat,
+                                         const arma::mat &S)
+{
+  arma::mat VY = Vtranspose*Yhat;
+  arma::mat output = Vtranspose*Vtranspose.t() -
+    VY*arma::solve(arma::symmatu(S + Yhat.t()*Yhat), VY.t());
+  return (output + output.t())/2.0;
+}
 class GenericMeasurementCovarianceEstimatorOutput;
 class DirectGaussianMeasurementCovarianceEstimatorOutput;
 class GaussianMeasurementCovarianceEstimatorOutput;

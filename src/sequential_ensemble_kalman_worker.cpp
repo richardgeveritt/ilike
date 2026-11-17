@@ -85,6 +85,10 @@ void SequentialEnsembleKalmanWorker::pack(Ensemble* ensemble)
 {
   ensemble->partially_packed_members_row.clear();
   ensemble->partially_packed_members_row.reserve(ensemble->members.size());
+  // (the columns too: shift and unpack index them by member, so packing the
+  // same ensemble twice must not append a second copy)
+  ensemble->partially_packed_members_col.clear();
+  ensemble->partially_packed_members_col.reserve(ensemble->members.size());
   
   ensemble->partially_packed_measurement_states.clear();
   ensemble->partially_packed_measurement_states.reserve(ensemble->members.size());

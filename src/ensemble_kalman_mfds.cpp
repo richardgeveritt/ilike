@@ -147,12 +147,6 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
 
   this->ensemble_factors.reset(new VectorEnsembleFactors(measurement_covariance_estimators));
   
-  Rcpp::stop("EMFDS - need alternative to set temperature.");
-  
-  // Need to construct LikelihoodEstimator to read in to this constructor.
-  //this->particle_simulator = new ParameterParticleSimulator(proposal,
-  //                                                          likelihood_estimators);
-  
   if (parallel_in==TRUE)
   {
   }
@@ -233,11 +227,9 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
 
   this->ensemble_factors.reset(new VectorEnsembleFactors(measurement_covariance_estimators));
   
-  Rcpp::stop("EMFDS - need alternative to set temperature.");
-  
-  // Need to construct LikelihoodEstimator to read in to this constructor.
-  //this->particle_simulator = new ParameterParticleSimulator(proposal,
-  //                                                          likelihood_estimators);
+  // Without the prior in the observation this is not the MFDS method of
+  // Huang et al. (the fixed point would not be the posterior); not used.
+  Rcpp::stop("EnsembleKalmanMFDS: this constructor (no prior in the augmented observation) is not available; use the one with prior means and covariances.");
   
   if (parallel_in==TRUE)
   {
@@ -317,7 +309,9 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
 
   this->ensemble_factors.reset(new VectorEnsembleFactors(measurement_covariance_estimators));
   
-  Rcpp::stop("EMFDS - need alternative to set temperature.");
+  // Without the prior in the observation this is not the MFDS method of
+  // Huang et al. (the fixed point would not be the posterior); not used.
+  Rcpp::stop("EnsembleKalmanMFDS: this constructor (no prior in the augmented observation) is not available; use the one with prior means and covariances.");
   
   if (parallel_in==TRUE)
   {
@@ -460,11 +454,13 @@ void EnsembleKalmanMFDS::ensemble_kalman_evaluate_smcadaptive_part_given_smcfixe
   {
     this->the_worker->pack(&current_state->back());
     this->find_measurement_covariances(current_state);
-    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
+    // the analysis: the noise of the augmented observation is scaled by
+    // 1/delta_t (dev/plan.md 3.16), so the gains are computed for that scale
+    // (there is no evidence estimate in MFDS)
+    current_state->calculate_kalman_gains(1.0/this->delta_t);
     this->the_worker->shift(&current_state->back(),
                             1.0/this->delta_t);
-    
-    Rcpp::stop("EMFDS - need alternative to set temperature.");
+    // the prediction for the next iteration: inflation about the mean
     this->predict(current_state);
     this->the_worker->unpack_with_predicted(&current_state->back());
     
@@ -607,9 +603,13 @@ void EnsembleKalmanMFDS::ensemble_kalman_evaluate_smcadaptive_part_given_smcfixe
     
     this->the_worker->pack(&current_state->back());
     this->find_measurement_covariances(current_state);
-    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
+    // the analysis: the noise of the augmented observation is scaled by
+    // 1/delta_t (dev/plan.md 3.16), so the gains are computed for that scale
+    // (there is no evidence estimate in MFDS)
+    current_state->calculate_kalman_gains(1.0/this->delta_t);
     this->the_worker->shift(&current_state->back(),
                             1.0/this->delta_t);
+    // the prediction for the next iteration: inflation about the mean
     this->predict(current_state);
     this->the_worker->unpack_with_predicted(&current_state->back());
     
@@ -718,9 +718,13 @@ void EnsembleKalmanMFDS::ensemble_kalman_subsample_evaluate_smcadaptive_part_giv
   {
     this->the_worker->pack(&current_state->back());
     this->find_measurement_covariances(current_state);
-    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
+    // the analysis: the noise of the augmented observation is scaled by
+    // 1/delta_t (dev/plan.md 3.16), so the gains are computed for that scale
+    // (there is no evidence estimate in MFDS)
+    current_state->calculate_kalman_gains(1.0/this->delta_t);
     this->the_worker->shift(&current_state->back(),
                             1.0/this->delta_t);
+    // the prediction for the next iteration: inflation about the mean
     this->predict(current_state);
     this->the_worker->unpack_with_predicted(&current_state->back());
     

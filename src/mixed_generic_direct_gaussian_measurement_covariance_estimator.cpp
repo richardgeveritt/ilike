@@ -163,10 +163,8 @@ arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_adjustme
   // follows https://arxiv.org/abs/2006.02941
   //arma::mat for_eig = V*((inverse_incremental_temperature-1.0)*this->Cygivenx + inverse_incremental_temperature*this->get_prior_measurement_covariance_embedded_in_full_space())*V.t();
   
-  arma::mat I;
-  I.eye(Vtranspose.n_cols,Vtranspose.n_cols);
   
-  arma::mat for_eig = Vtranspose*(arma::inv_sympd(I + Yhat*arma::inv_sympd((inverse_incremental_temperature-1.0)*this->get_Cygivenx() + inverse_incremental_temperature*this->get_prior_measurement_covariance_embedded_in_full_space())*Yhat.t()))*Vtranspose.t();
+  arma::mat for_eig = adjustment_inner_matrix(Vtranspose, Yhat, (inverse_incremental_temperature-1.0)*this->get_Cygivenx() + inverse_incremental_temperature*this->get_prior_measurement_covariance_embedded_in_full_space());
   
   arma::mat U;
   arma::vec diagD;

@@ -1,0 +1,21 @@
+ilike 1.0
+// built-in prior, literal data, named constants (step has no default) and an adaptive move
+constants {
+  real prior_sd = 1
+  real step
+}
+data { x = 1.0 }
+model {
+  theta ~ norm(1, prior_sd)
+  factor lik = cpp::loglik
+}
+cpp {
+double loglik(const Parameters &parameters, const Data &data)
+{
+  return dnorm(data["x"][0], parameters["theta"][0], 1.0);
+}
+}
+algorithm {
+  move m1 = metropolis(norm_rw(theta, step), adapt = scale(averaged), factors = [lik, theta])
+  termination = iterations(10000)
+}

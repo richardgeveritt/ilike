@@ -175,10 +175,8 @@ arma::mat DirectLinearGaussianMeasurementCovarianceEstimator::get_adjustment(con
 {
   
   // follows https://arxiv.org/abs/2006.02941
-  arma::mat I;
-  I.eye(Vtranspose.n_cols,Vtranspose.n_cols);
   
-  arma::mat for_eig = Vtranspose*(arma::inv_sympd(I + Yhat*arma::inv_sympd(inverse_incremental_temperature*this->get_measurement_covariance())*Yhat.t()))*Vtranspose.t();
+  arma::mat for_eig = adjustment_inner_matrix(Vtranspose, Yhat, inverse_incremental_temperature*this->get_measurement_covariance());
   
   for_eig = (for_eig+for_eig.t())/2.0;
   

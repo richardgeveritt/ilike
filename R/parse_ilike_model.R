@@ -1512,7 +1512,7 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
   transition_proposal_types = c("simulate_transition_proposal","evaluate_log_transition_proposal")
   enk_transform_types = c("enk_transform","enk_inverse_transform")
   #reinforce_gradient = c("reinforce_gradient")
-  method_function_types = c("mcmc_weights","mcmc_termination","adaptive_resampling","adaptive_target","smc_termination","smc_sequence","reinforce_gradient","enk_likelihood_index","enk_shifter","ssm")
+  method_function_types = c("mcmc_weights","mcmc_termination","adaptive_resampling","adaptive_target","smc_termination","smc_sequence","enk_sequence","reinforce_gradient","enk_likelihood_index","enk_shifter","ssm")
 
   # an smc_adaptor belongs to the proposal just before it, whatever its type
   # (adaptation of that proposal from the SMC particles, dev/plan.md 3.2, B2)
@@ -3471,6 +3471,11 @@ function_name_for_cpp <- function(block_code)
 
 extract_block <- function(blocks,block_type,block_name,factor_number,line_counter,block_code,block_function,is_custom,model_parameter_list,R_functions,external_packages,julia_bin_dir,julia_required_libraries,fileConn,verify_cpp_function_types,nesting_level,keep_temporary_recipe_code,print_block_ends,source_directories=character(0))
 {
+  # record-only mode, for convert_ilike_file(): note the block as the parser
+  # has grouped and numbered it
+  if (!is.null(.ilike_env$recorded_blocks))
+    record_block(block_type, block_name, factor_number, line_counter, block_code, block_function, is_custom)
+
 
   # Get information about the order in which MCMC moves are included.
   if ( (block_type=="mh_proposal") || (block_type=="unadjusted_proposal") || (block_type=="imh_proposal") || (block_type=="m_proposal") )
@@ -3621,7 +3626,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
       if (is_like_function==TRUE)
       {
-        if ( (block_name=="prior") || (block_name=="is_proposal") || (block_name=="imh_proposal") || (block_name=="mh_proposal") || (block_name=="unadjusted_proposal") || (block_name=="m_proposal") || (block_name=="m_adaptor") || (block_name=="mh_adaptor") || (block_name=="smc_adaptor") || (block_name=="smc_sequence") || (block_name=="linear_gaussian_transition_model") || (block_name=="nonlinear_gaussian_transition_model") || (block_name=="linear_gaussian_data_model") || (block_name=="nonlinear_gaussian_data_model") )
+        if ( (block_name=="prior") || (block_name=="is_proposal") || (block_name=="imh_proposal") || (block_name=="mh_proposal") || (block_name=="unadjusted_proposal") || (block_name=="m_proposal") || (block_name=="m_adaptor") || (block_name=="mh_adaptor") || (block_name=="smc_adaptor") || (block_name=="smc_sequence") || (block_name=="enk_sequence") || (block_name=="linear_gaussian_transition_model") || (block_name=="nonlinear_gaussian_transition_model") || (block_name=="linear_gaussian_data_model") || (block_name=="nonlinear_gaussian_data_model") )
         {
           split_arg_string = split_string_at_comma_ignoring_parentheses(arg_string)
 
@@ -3690,24 +3695,31 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
         {
           split_arg_string = split_string_at_comma_ignoring_parentheses(arg_string)
 
-          sub_filename = split_arg_string[1]
-
-          parameters = list()
-          if (length(split_arg_string)>1)
+          # the inner model file: the argument named model, or else the first
+          # (the other arguments are checked by the C++ registry, which reads
+          # the file name as its argument "model")
+          model_position = 1
+          for (k in seq_along(split_arg_string))
           {
-            for (k in 2:(length(split_arg_string)))
+            if (split_keyword_argument(split_arg_string[k])[[1]]=="model")
             {
-              parameters[[k-1]] = split_arg_string[k]
+              model_position = k
+              break
             }
           }
+          sub_filename = split_keyword_argument(split_arg_string[model_position])[[2]]
+
+          parameters = as.list(split_arg_string[-model_position])
 
           sub_nesting_level = nesting_level + 1
 
           sub_filename = gsub('"', '', sub_filename)
           sub_filename = gsub("'", '', sub_filename)
+          model_file = sub_filename
           sub_filename = resolve_included_file(sub_filename, source_directories, block_name, line_counter)
           my_list = list(list(type=ilike_type,
-                              model=ilike::compile(filename=sub_filename,model_parameter_list=model_parameter_list,external_packages=external_packages,julia_bin_dir=julia_bin_dir,julia_required_libraries=julia_required_libraries,verify_cpp_function_types=verify_cpp_function_types,keep_temporary_recipe_code=keep_temporary_recipe_code,nesting_level=sub_nesting_level,print_block_ends=print_block_ends),
+                              model_file=model_file,
+                              model=if (!is.null(.ilike_env$recorded_blocks)) NULL else ilike::compile(filename=sub_filename,model_parameter_list=model_parameter_list,external_packages=external_packages,julia_bin_dir=julia_bin_dir,julia_required_libraries=julia_required_libraries,verify_cpp_function_types=verify_cpp_function_types,keep_temporary_recipe_code=keep_temporary_recipe_code,nesting_level=sub_nesting_level,print_block_ends=print_block_ends),
                               parameters=parameters))
           names(my_list) = c(block_name)
 
@@ -6462,6 +6474,153 @@ strip_out_xptr_stuff <- function(blocks)
   return(blocks)
 }
 
+# Record-only mode of the parser, for convert_ilike_file(): one entry per block
+record_block <- function(block_type, block_name, number, line, code, block_function, is_custom)
+{
+  .ilike_env$recorded_blocks[[length(.ilike_env$recorded_blocks) + 1]] =
+    list(type = block_type, name = block_name, number = number, line = line, code = code,
+         block_function = block_function, custom = is_custom)
+}
+
+# Compile the generated C++ file of a recipe (the user's functions and the
+# getters of their pointers) with Rcpp::sourceCpp, through the persistent
+# cache; filenames: the recipe's files (their folders are on the include path).
+# Used by compile() for both the old format and the ilike language.
+source_generated_cpp <- function(model_for_compilation_name, filenames)
+{
+    # Strip ALL // [[Rcpp::depends(...)]] annotations so sourceCpp never calls
+    # find.package() or Rcpp:::.validatePackages() for any of them — both of
+    # which fail when LinkingTo-only packages are not on .libPaths() (R CMD
+    # check test phase).  Resolve every include path directly via the
+    # filesystem, without relying on find.package().
+    find_pkg_include = function(pkg) {
+      # system.file handles devtools-loaded packages (inst/include) and
+      # normally-installed packages (include) correctly.
+      inc = system.file("include", package = pkg)
+      if (nchar(inc) > 0 && dir.exists(inc)) return(inc)
+      # Rcpp is in Imports so find.package("Rcpp") always succeeds.  Its
+      # parent directory is the lib that contains ALL sibling packages
+      # (RcppArmadillo, BH, …), even when R CMD check has stripped .libPaths()
+      # back to just the check lib and .Library.
+      rcpp_lib = tryCatch(dirname(find.package("Rcpp")), error = function(e) "")
+      search_libs = unique(Filter(function(x) !is.na(x) && nchar(x) > 0, c(
+        .ilike_env$libname,
+        rcpp_lib,
+        .libPaths(),
+        .Library,
+        .Library.site,
+        strsplit(Sys.getenv("R_LIBS",      ""), .Platform$path.sep)[[1]],
+        strsplit(Sys.getenv("R_LIBS_USER", ""), .Platform$path.sep)[[1]],
+        strsplit(Sys.getenv("R_LIBS_SITE", ""), .Platform$path.sep)[[1]]
+      )))
+      for (lib in search_libs) {
+        candidate = file.path(lib, pkg, "include")
+        if (dir.exists(candidate)) return(candidate)
+      }
+      return("")
+    }
+
+    depends_pkgs = c("ilike", "Rcpp", "RcppArmadillo", "BH", "dqrng", "sitmo")
+    include_flags = character(0)
+    lib_flags = character(0)
+    for (pkg in depends_pkgs)
+    {
+      inc = find_pkg_include(pkg)
+      if (nchar(inc) > 0)
+        include_flags = c(include_flags, paste0("-I", inc))
+      if (pkg == "ilike")
+      {
+        # (ilike symbols are made globally visible at package load time in zzz.R
+        # so that user DLLs compiled by sourceCpp share the same vtables.)
+      }
+      if (pkg == "RcppArmadillo")
+      {
+        ld = tryCatch(
+          getExportedValue("RcppArmadillo", "RcppArmadilloLdFlags")(),
+          error = function(e) {
+            # getExportedValue failed (namespace not on .libPaths()).
+            # On Windows, LAPACK/BLAS must be linked explicitly.
+            # Search for Rlapack.dll in the most likely locations.
+            if (.Platform$OS.type == "windows") {
+              rlapack_dir = ""
+              r_arch = .Platform$r_arch
+              for (candidate in unique(Filter(nchar, c(
+                if (nchar(r_arch) > 0) file.path(R.home("bin"), r_arch) else NULL,
+                file.path(R.home("bin"), "x64"),
+                R.home("bin")
+              )))) {
+                if (dir.exists(candidate) &&
+                    file.exists(file.path(candidate, "Rlapack.dll"))) {
+                  rlapack_dir = normalizePath(candidate, winslash = "/")
+                  break
+                }
+              }
+              if (nchar(rlapack_dir) > 0)
+                paste0("-L", shQuote(rlapack_dir), " -lRlapack -lRblas")
+              else
+                ""
+            } else ""
+          }
+        )
+        if (nchar(ld) > 0)
+          lib_flags = c(lib_flags, ld)
+      }
+    }
+
+    src_lines = readLines(model_for_compilation_name)
+    # Strip Rcpp::depends annotations for LinkingTo-only packages (RcppArmadillo,
+    # BH, dqrng, sitmo) that are not on .libPaths() during R CMD check tests.
+    # KEEP ilike itself so sourceCpp links against the main package DLL — this
+    # is required on Linux/Windows where symbols are not resolved via flat namespace.
+    src_lines = src_lines[!grepl("^// *\\[\\[Rcpp::depends\\((?!ilike)", src_lines, perl = TRUE)]
+    writeLines(src_lines, model_for_compilation_name)
+
+    # Persistent compile cache: derive a stable file path from the content
+    # hash so that sourceCpp finds the same source/DLL across R sessions and
+    # skips recompilation when the generated code hasn't changed.
+    # Include the ilike package version so that upgrading ilike forces a fresh
+    # compilation (new headers may change the ABI of the resulting DLL).
+    # The key also includes a hash of the installed headers (inst/include),
+    # which the model code is compiled against, so that rebuilding ilike with
+    # changed headers but the same version cannot reuse a stale model DLL.
+    cache_dir  <- tools::R_user_dir("ilike", "cache")
+    pkg_ver    <- as.character(utils::packageVersion("ilike"))
+    header_files <- sort(list.files(system.file("include", package = "ilike"), full.names = TRUE))
+    header_list  <- tempfile()
+    writeLines(unname(tools::md5sum(header_files)), header_list)
+    header_hash  <- substr(tools::md5sum(header_list)[[1]], 1, 8)
+    unlink(header_list)
+    ver_dir    <- file.path(cache_dir, paste(pkg_ver, header_hash, sep = "-"))
+    dir.create(ver_dir, recursive = TRUE, showWarnings = FALSE)
+    content_hash <- tools::md5sum(model_for_compilation_name)[[1]]
+    cache_file   <- file.path(ver_dir, paste0("model_", content_hash, ".cpp"))
+    if (!file.exists(cache_file))
+      file.copy(model_for_compilation_name, cache_file)
+
+    old_cppflags = Sys.getenv("PKG_CPPFLAGS")
+    old_libs     = Sys.getenv("PKG_LIBS")
+    # Add the directory of each input .ilike file to the include path so that
+    # user headers (e.g. LV_step.h) sitting next to the .ilike file are found
+    # when sourceCpp compiles from the cache directory.
+    ilike_dirs = unique(normalizePath(dirname(filenames), mustWork = FALSE))
+    ilike_dir_flags = paste0("-I", shQuote(ilike_dirs))
+    new_cppflags = paste(c(include_flags, ilike_dir_flags), collapse = " ")
+    if (nchar(old_cppflags) > 0) new_cppflags = paste(new_cppflags, old_cppflags)
+    new_libs = paste(lib_flags, collapse = " ")
+    if (nchar(old_libs) > 0) new_libs = paste(new_libs, old_libs)
+    Sys.setenv(PKG_CPPFLAGS = new_cppflags, PKG_LIBS = new_libs)
+    on.exit({
+      Sys.setenv(PKG_CPPFLAGS = old_cppflags)
+      Sys.setenv(PKG_LIBS = old_libs)
+    }, add = TRUE)
+
+    # echo = FALSE: do not print the generated R functions (from R-expression
+    # blocks) as they are defined. cacheDir: sourceCpp keeps its build (the
+    # DLL) there; its default is the session's tempdir(), so without this every
+    # new R session recompiled the model despite the stable source path.
+    Rcpp::sourceCpp(cache_file, echo = FALSE, cacheDir = file.path(ver_dir, "sourceCpp"))
+}
+
 #' Parse .ilike file to give a compiled ilike "recipe".
 #'
 #' @param filenames The name (and path) of the .ilike files containing the recipe, stored in a vector if there is more than one.
@@ -6499,11 +6658,58 @@ compile <- function(filenames,
     }
   }
 
+  # Files in the ilike language (dev/ilike-language.md) begin with the version
+  # line "ilike 1.0"; they are read by the C++ parser (I3b).
+  texts = vapply(filenames, function(f) paste(readLines(f, warn = FALSE), collapse = "\n"), character(1))
+  in_language = vapply(texts, is_ilike_language_text, logical(1))
+  if (any(in_language))
+  {
+    if (!all(in_language))
+      stop(paste("The files ", paste(filenames[!in_language], collapse = ", "),
+                 " are in the old format and the others in the ilike language: convert the old ones first.", sep = ""))
+    return(compile_ilike_language(filenames, unname(texts), keep_temporary_recipe_code = keep_temporary_recipe_code,
+                                  model_parameter_list = model_parameter_list, external_packages = external_packages,
+                                  julia_bin_dir = julia_bin_dir, julia_required_libraries = julia_required_libraries))
+  }
+  if (is.null(.ilike_env$recorded_blocks) && nesting_level == 1 && !isTRUE(.ilike_env$old_format_message_shown))
+  {
+    .ilike_env$old_format_message_shown = TRUE
+    message("This recipe is in the old .ilike format, which is deprecated: convert_ilike_file() rewrites it in the ilike language (dev/ilike-language.md).")
+  }
+
+  # Old-format files are read through the converter (L-8): converted to the
+  # ilike language in a temporary folder and compiled from there. What the
+  # language cannot express yet (the converter's own refusals) is read by the
+  # old parser below; errors in the files themselves are reported as before.
+  if (is.null(.ilike_env$recorded_blocks) && !identical(getOption("ilike.old_format"), "parse"))
+  {
+    converted_file = file.path(tempfile("ilike_converted"), "recipe.ilike")
+    dir.create(dirname(converted_file))
+    # (a set the converter warns about, e.g. an algorithm file whose factor
+    # numbers refer to a model file not given, is read by the old parser)
+    converted = tryCatch({
+      warned = FALSE
+      withCallingHandlers(convert_ilike_file(filenames, converted_file),
+                          warning = function(w) { warned <<- TRUE; invokeRestart("muffleWarning") })
+      !warned
+    }, error = function(e) {
+      if (grepl("^convert_ilike_file:", conditionMessage(e)))
+        return(FALSE)
+      stop(e)
+    })
+    if (converted)
+      return(compile(converted_file, model_parameter_list = model_parameter_list, external_packages = external_packages,
+                     julia_bin_dir = julia_bin_dir, julia_required_libraries = julia_required_libraries,
+                     keep_temporary_recipe_code = keep_temporary_recipe_code))
+  }
+
   # Directories of the input files: files named inside them (e.g. the inner
   # model of an algorithmic_likelihood) are looked for here first.
   source_directories = unique(dirname(normalizePath(filenames)))
 
-  for (i in 1:length(filenames))
+  # (not when only recording blocks for the converter, which copies and
+  # imports these files instead)
+  for (i in seq_along(if (is.null(.ilike_env$recorded_blocks)) filenames else character(0)))
   {
     filename = filenames[i]
     basename = tools::file_path_sans_ext(filename)
@@ -6712,6 +6918,8 @@ compile <- function(filenames,
               fileConn)
 
             writeLines(block_code,fileConn)
+            if (!is.null(.ilike_env$recorded_blocks))
+              record_block("pre", "pre", 0, line_counter, block_code, "", TRUE)
 
             pre_blocks = FALSE
             block_code = ""
@@ -6855,6 +7063,9 @@ compile <- function(filenames,
 
   close(the_file); the_file_open = FALSE
 
+  if (!is.null(.ilike_env$recorded_blocks))
+    return(.ilike_env$recorded_blocks)
+
   if (verify_cpp_function_types)
   {
     blocks = check_types(blocks)
@@ -6878,139 +7089,7 @@ compile <- function(filenames,
     any(grepl("Environment::global_env()", readLines(model_for_compilation_name, warn = FALSE), fixed = TRUE))
 
   if (file.exists(model_for_compilation_name))
-  {
-    # Strip ALL // [[Rcpp::depends(...)]] annotations so sourceCpp never calls
-    # find.package() or Rcpp:::.validatePackages() for any of them — both of
-    # which fail when LinkingTo-only packages are not on .libPaths() (R CMD
-    # check test phase).  Resolve every include path directly via the
-    # filesystem, without relying on find.package().
-    find_pkg_include = function(pkg) {
-      # system.file handles devtools-loaded packages (inst/include) and
-      # normally-installed packages (include) correctly.
-      inc = system.file("include", package = pkg)
-      if (nchar(inc) > 0 && dir.exists(inc)) return(inc)
-      # Rcpp is in Imports so find.package("Rcpp") always succeeds.  Its
-      # parent directory is the lib that contains ALL sibling packages
-      # (RcppArmadillo, BH, …), even when R CMD check has stripped .libPaths()
-      # back to just the check lib and .Library.
-      rcpp_lib = tryCatch(dirname(find.package("Rcpp")), error = function(e) "")
-      search_libs = unique(Filter(function(x) !is.na(x) && nchar(x) > 0, c(
-        .ilike_env$libname,
-        rcpp_lib,
-        .libPaths(),
-        .Library,
-        .Library.site,
-        strsplit(Sys.getenv("R_LIBS",      ""), .Platform$path.sep)[[1]],
-        strsplit(Sys.getenv("R_LIBS_USER", ""), .Platform$path.sep)[[1]],
-        strsplit(Sys.getenv("R_LIBS_SITE", ""), .Platform$path.sep)[[1]]
-      )))
-      for (lib in search_libs) {
-        candidate = file.path(lib, pkg, "include")
-        if (dir.exists(candidate)) return(candidate)
-      }
-      return("")
-    }
-
-    depends_pkgs = c("ilike", "Rcpp", "RcppArmadillo", "BH", "dqrng", "sitmo")
-    include_flags = character(0)
-    lib_flags = character(0)
-    for (pkg in depends_pkgs)
-    {
-      inc = find_pkg_include(pkg)
-      if (nchar(inc) > 0)
-        include_flags = c(include_flags, paste0("-I", inc))
-      if (pkg == "ilike")
-      {
-        # (ilike symbols are made globally visible at package load time in zzz.R
-        # so that user DLLs compiled by sourceCpp share the same vtables.)
-      }
-      if (pkg == "RcppArmadillo")
-      {
-        ld = tryCatch(
-          getExportedValue("RcppArmadillo", "RcppArmadilloLdFlags")(),
-          error = function(e) {
-            # getExportedValue failed (namespace not on .libPaths()).
-            # On Windows, LAPACK/BLAS must be linked explicitly.
-            # Search for Rlapack.dll in the most likely locations.
-            if (.Platform$OS.type == "windows") {
-              rlapack_dir = ""
-              r_arch = .Platform$r_arch
-              for (candidate in unique(Filter(nchar, c(
-                if (nchar(r_arch) > 0) file.path(R.home("bin"), r_arch) else NULL,
-                file.path(R.home("bin"), "x64"),
-                R.home("bin")
-              )))) {
-                if (dir.exists(candidate) &&
-                    file.exists(file.path(candidate, "Rlapack.dll"))) {
-                  rlapack_dir = normalizePath(candidate, winslash = "/")
-                  break
-                }
-              }
-              if (nchar(rlapack_dir) > 0)
-                paste0("-L", shQuote(rlapack_dir), " -lRlapack -lRblas")
-              else
-                ""
-            } else ""
-          }
-        )
-        if (nchar(ld) > 0)
-          lib_flags = c(lib_flags, ld)
-      }
-    }
-
-    src_lines = readLines(model_for_compilation_name)
-    # Strip Rcpp::depends annotations for LinkingTo-only packages (RcppArmadillo,
-    # BH, dqrng, sitmo) that are not on .libPaths() during R CMD check tests.
-    # KEEP ilike itself so sourceCpp links against the main package DLL — this
-    # is required on Linux/Windows where symbols are not resolved via flat namespace.
-    src_lines = src_lines[!grepl("^// *\\[\\[Rcpp::depends\\((?!ilike)", src_lines, perl = TRUE)]
-    writeLines(src_lines, model_for_compilation_name)
-
-    # Persistent compile cache: derive a stable file path from the content
-    # hash so that sourceCpp finds the same source/DLL across R sessions and
-    # skips recompilation when the generated code hasn't changed.
-    # Include the ilike package version so that upgrading ilike forces a fresh
-    # compilation (new headers may change the ABI of the resulting DLL).
-    # The key also includes a hash of the installed headers (inst/include),
-    # which the model code is compiled against, so that rebuilding ilike with
-    # changed headers but the same version cannot reuse a stale model DLL.
-    cache_dir  <- tools::R_user_dir("ilike", "cache")
-    pkg_ver    <- as.character(utils::packageVersion("ilike"))
-    header_files <- sort(list.files(system.file("include", package = "ilike"), full.names = TRUE))
-    header_list  <- tempfile()
-    writeLines(unname(tools::md5sum(header_files)), header_list)
-    header_hash  <- substr(tools::md5sum(header_list)[[1]], 1, 8)
-    unlink(header_list)
-    ver_dir    <- file.path(cache_dir, paste(pkg_ver, header_hash, sep = "-"))
-    dir.create(ver_dir, recursive = TRUE, showWarnings = FALSE)
-    content_hash <- tools::md5sum(model_for_compilation_name)[[1]]
-    cache_file   <- file.path(ver_dir, paste0("model_", content_hash, ".cpp"))
-    if (!file.exists(cache_file))
-      file.copy(model_for_compilation_name, cache_file)
-
-    old_cppflags = Sys.getenv("PKG_CPPFLAGS")
-    old_libs     = Sys.getenv("PKG_LIBS")
-    # Add the directory of each input .ilike file to the include path so that
-    # user headers (e.g. LV_step.h) sitting next to the .ilike file are found
-    # when sourceCpp compiles from the cache directory.
-    ilike_dirs = unique(normalizePath(dirname(filenames), mustWork = FALSE))
-    ilike_dir_flags = paste0("-I", shQuote(ilike_dirs))
-    new_cppflags = paste(c(include_flags, ilike_dir_flags), collapse = " ")
-    if (nchar(old_cppflags) > 0) new_cppflags = paste(new_cppflags, old_cppflags)
-    new_libs = paste(lib_flags, collapse = " ")
-    if (nchar(old_libs) > 0) new_libs = paste(new_libs, old_libs)
-    Sys.setenv(PKG_CPPFLAGS = new_cppflags, PKG_LIBS = new_libs)
-    on.exit({
-      Sys.setenv(PKG_CPPFLAGS = old_cppflags)
-      Sys.setenv(PKG_LIBS = old_libs)
-    }, add = TRUE)
-
-    # echo = FALSE: do not print the generated R functions (from R-expression
-    # blocks) as they are defined. cacheDir: sourceCpp keeps its build (the
-    # DLL) there; its default is the session's tempdir(), so without this every
-    # new R session recompiled the model despite the stable source path.
-    Rcpp::sourceCpp(cache_file, echo = FALSE, cacheDir = file.path(ver_dir, "sourceCpp"))
-  }
+    source_generated_cpp(model_for_compilation_name, filenames)
 
   # Cleanup of temporary files is handled by on.exit() registered at creation.
 

@@ -23,7 +23,8 @@ PF(
   keep_temporary_recipe_code = FALSE,
   seed = NULL,
   grain_size = 64,
-  progress = getOption("ilike.progress", interactive())
+  progress = getOption("ilike.progress", interactive()),
+  algorithm = NULL
 )
 }
 \arguments{
@@ -64,6 +65,8 @@ PF(
 \item{progress}{(optional) If TRUE, show a progress bar (cli) while the algorithm runs. Default getOption("ilike.progress", interactive()): shown in interactive sessions only.}
 
 \item{grain_size}{(optional) The number of particles moved and weighted together (default 64). Each chunk of particles has its own random-number stream, determined by the seed and the chunk's position, so results depend on the seed and on grain_size when there are more particles than grain_size (and not on whether the run is parallel).}
+
+\item{algorithm}{(optional) For a recipe in the ilike language: the name of the algorithm section to run (needed when the recipe has several).}
 }
 \value{
 Estimate of the marginal likelihood.

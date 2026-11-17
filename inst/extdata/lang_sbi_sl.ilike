@@ -1,0 +1,21 @@
+ilike 1.0
+// the model of test_sbi_sl.ilike in the ilike language
+data { x = 1.0 }
+model {
+  prior p = density(log = cpp::evaluate_log_prior, simulate = cpp::simulate_prior)
+  factor sim = sbi(sl(100), simulate = cpp::simulate_data_model, data = x)
+}
+cpp {
+double evaluate_log_prior(const Parameters &params) {
+  return dnorm(params["theta"][0], 1.0, 1.0);
+}
+Parameters simulate_prior(RandomNumberGenerator &rng) {
+  return Parameters("theta", rnorm(rng, 1.0, 1.0));
+}
+Data simulate_data_model(RandomNumberGenerator &rng,
+                         const Parameters &parameters) {
+  arma::colvec x(1);
+  x(0) = rnorm(rng, parameters["theta"][0], 1.0);
+  return Data("x", x);
+}
+}

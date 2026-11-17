@@ -1,0 +1,22 @@
+ilike 1.0
+// eight schools with a known tau: y[j] ~ N(theta[j], s[j]), theta[j] ~ N(mu, tau), mu ~ N(0, 10)
+data {
+  y = [28, 8, -3, 7, -1, 1, 18, 12]
+  s = [15, 10, 16, 11, 9, 11, 10, 18]
+}
+constants {
+  int J = 8
+  real tau = 5
+}
+model {
+  mu ~ norm(0, 10)
+  for (j in 1:J) {
+    theta[j] ~ norm(mu, tau)
+    y[j] ~ norm(theta[j], s[j])
+  }
+}
+algorithm mcmc {
+  move m1 = metropolis(norm_rw(mu, 3))
+  move m2 = metropolis(mvnorm_rw(theta, diag(8), scale = 4))
+  termination = iterations(100000)
+}
