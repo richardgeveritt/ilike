@@ -26,7 +26,8 @@ SMC_with_MCMC(
   grain_size = 64,
   check_factor_index = FALSE,
   waste_free_chains = 0,
-  progress = getOption("ilike.progress", interactive())
+  progress = getOption("ilike.progress", interactive()),
+  algorithm = NULL
 )
 ```
 
@@ -154,6 +155,11 @@ SMC_with_MCMC(
   number_of_particles. Needs exact or annealed factors, a move that does
   not adapt, and mcmc_termination ilike::iterations. Default 0: standard
   SMC.
+
+- algorithm:
+
+  (optional) For a recipe in the ilike language: the name of the
+  algorithm section to run (needed when the recipe has several).
 
 ## Value
 

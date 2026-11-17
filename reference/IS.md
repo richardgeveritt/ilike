@@ -22,7 +22,8 @@ IS(
   keep_temporary_recipe_code = FALSE,
   seed = NULL,
   grain_size = 256,
-  progress = getOption("ilike.progress", interactive())
+  progress = getOption("ilike.progress", interactive()),
+  algorithm = NULL
 )
 ```
 
@@ -122,6 +123,11 @@ IS(
   estimated by an inner algorithm (each point of a chunk keeps its inner
   particles until the chunk is weighted); a chunk larger than the number
   of points gives the results of a single generation.
+
+- algorithm:
+
+  (optional) For a recipe in the ilike language: the name of the
+  algorithm section to run (needed when the recipe has several).
 
 ## Value
 

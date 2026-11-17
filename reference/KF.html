@@ -54,7 +54,8 @@
 <span>  julia_bin_dir <span class="op">=</span> <span class="st">""</span>,</span>
 <span>  julia_required_libraries <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  verify_cpp_function_types <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  keep_temporary_recipe_code <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  keep_temporary_recipe_code <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  algorithm <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -108,6 +109,10 @@
 
 <dt id="arg-keep-temporary-recipe-code">keep_temporary_recipe_code<a class="anchor" aria-label="anchor" href="#arg-keep-temporary-recipe-code"></a></dt>
 <dd><p>(optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE,</p></dd>
+
+
+<dt id="arg-algorithm">algorithm<a class="anchor" aria-label="anchor" href="#arg-algorithm"></a></dt>
+<dd><p>(optional) For a recipe in the ilike language: the name of the algorithm section to run (needed when the recipe has several).</p></dd>
 
 </dl></div>
     <div class="section level2">

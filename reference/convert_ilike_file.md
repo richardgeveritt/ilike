@@ -1,0 +1,46 @@
+# Convert a recipe from the old .ilike format to the ilike language
+
+Rewrites the files of a recipe written in the old format (with
+/\*\*\*...\*\*\*/ blocks) as one file in the ilike language (see the
+package's documentation of the language). The files are read as
+compile() reads them: blocks are grouped into factors, proposals and
+settings by the same rules, factors are named (a built-in prior by its
+variable, others f1, f2, ... by their number) and the old run-time
+constants p1, p2, ... are declared as constants of those names (an
+unnamed model_parameter_list is still matched to them in order). All
+moves and settings go into one algorithm section called main. The inner
+file of an algorithmic likelihood (ilike::pf("inner.ilike", ...)) is
+converted too, into the folder of the output, and imported.
+
+## Usage
+
+``` r
+convert_ilike_file(filenames, output, overwrite = FALSE)
+```
+
+## Arguments
+
+- filenames:
+
+  The file(s) of the recipe, as given to compile().
+
+- output:
+
+  The file to write.
+
+- overwrite:
+
+  (optional) If TRUE, an existing output file is replaced.
+
+## Value
+
+Invisibly, the converted text.
+
+## Details
+
+R expressions become calls in the language (r::f(...), or py::/jl:: for
+functions in the recipe's Python or Julia file, which is copied next to
+the output and imported); an expression the language cannot read
+directly becomes an R function in an r section. Recipes with potential
+functions, proposal transforms, EnK transforms or enk_likelihood_index
+blocks cannot be converted yet.

@@ -24,7 +24,8 @@ PF(
   keep_temporary_recipe_code = FALSE,
   seed = NULL,
   grain_size = 64,
-  progress = getOption("ilike.progress", interactive())
+  progress = getOption("ilike.progress", interactive()),
+  algorithm = NULL
 )
 ```
 
@@ -125,6 +126,11 @@ PF(
   stream, determined by the seed and the chunk's position, so results
   depend on the seed and on grain_size when there are more particles
   than grain_size (and not on whether the run is parallel).
+
+- algorithm:
+
+  (optional) For a recipe in the ilike language: the name of the
+  algorithm section to run (needed when the recipe has several).
 
 ## Value
 

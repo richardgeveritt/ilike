@@ -25,7 +25,8 @@ MCMC(
   grain_size = 64,
   check_factor_index = FALSE,
   thin = 1,
-  progress = getOption("ilike.progress", interactive())
+  progress = getOption("ilike.progress", interactive()),
+  algorithm = NULL
 )
 ```
 
@@ -142,6 +143,11 @@ MCMC(
   (optional) Store every thin-th iteration of each chain (default 1:
   every iteration). There is no burn-in option: discard iterations when
   analysing the output.
+
+- algorithm:
+
+  (optional) For a recipe in the ilike language: the name of the
+  algorithm section to run (needed when the recipe has several).
 
 ## Value
 

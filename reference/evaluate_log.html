@@ -57,7 +57,8 @@
 <span>  verify_cpp_function_types <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  keep_temporary_recipe_code <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  seed <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  grain_size <span class="op">=</span> <span class="fl">1e+05</span></span>
+<span>  grain_size <span class="op">=</span> <span class="fl">1e+05</span>,</span>
+<span>  algorithm <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -123,6 +124,10 @@
 
 <dt id="arg-grain-size">grain_size<a class="anchor" aria-label="anchor" href="#arg-grain-size"></a></dt>
 <dd><p>(optional) Sets a minimum chunk size for parallelisation (see https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Controlling_Chunking_os.html).</p></dd>
+
+
+<dt id="arg-algorithm">algorithm<a class="anchor" aria-label="anchor" href="#arg-algorithm"></a></dt>
+<dd><p>(optional) For a recipe in the ilike language: the name of the algorithm section to run (needed when the recipe has several).</p></dd>
 
 </dl></div>
     <div class="section level2">

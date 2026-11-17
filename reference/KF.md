@@ -17,7 +17,8 @@ KF(
   julia_bin_dir = "",
   julia_required_libraries = c(),
   verify_cpp_function_types = FALSE,
-  keep_temporary_recipe_code = FALSE
+  keep_temporary_recipe_code = FALSE,
+  algorithm = NULL
 )
 ```
 
@@ -80,6 +81,11 @@ KF(
 
   (optional) If FALSE (default), the .cpp file generated for compilation
   is deleted. If TRUE,
+
+- algorithm:
+
+  (optional) For a recipe in the ilike language: the name of the
+  algorithm section to run (needed when the recipe has several).
 
 ## Value
 

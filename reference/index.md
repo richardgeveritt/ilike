@@ -17,6 +17,9 @@
 - [`MCMC()`](https://richardgeveritt.github.io/ilike/reference/MCMC.md)
   : MCMC
 
+- [`MFDS()`](https://richardgeveritt.github.io/ilike/reference/MFDS.md)
+  : Mean-field dynamical system ensemble Kalman inversion (MFDS)
+
 - [`PF()`](https://richardgeveritt.github.io/ilike/reference/PF.md) :
   Particle filter
 
@@ -34,6 +37,9 @@
   : 10000 noisy observations (Gaussian noise, standard deviation 1) of
   10000 points simulated from a constant velocity linear-Gaussian
   dynamic model (process noise standard deviation = 1).
+
+- [`convert_ilike_file()`](https://richardgeveritt.github.io/ilike/reference/convert_ilike_file.md)
+  : Convert a recipe from the old .ilike format to the ilike language
 
 - [`evaluate_log()`](https://richardgeveritt.github.io/ilike/reference/evaluate_log.md)
   : Evaluate a model specified in a recipe.
