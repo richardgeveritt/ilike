@@ -38,7 +38,7 @@ MCMC(
 
 \item{number_of_chains}{(optional) The number of chains.}
 
-\item{initial_values}{(optional) A list of lists containing the initial values for the chains.}
+\item{initial_values}{(optional) A list of lists containing the initial values for the chains. If not given, each of the number_of_chains chains starts at an independent draw from the recipe's is_proposal, or from the prior if the recipe has no is_proposal.}
 
 \item{parallel}{(optional) If TRUE, chunks of grain_size chains run in parallel threads (the number set by RcppParallel::setThreadOptions); useful only with more chains than grain_size. The results are exactly those of the sequential run with the same seed and grain_size. Needs a model written in C++ or with ilike:: built-in functions, exact factors and a fixed number of iterations; otherwise the chains are run sequentially, with a warning.}
 

@@ -36,7 +36,6 @@ DensityLikelihoodEstimatorOutput::DensityLikelihoodEstimatorOutput(DensityLikeli
     this->subsample_density_estimator_output.reset(subsample_density_estimator_in->initialise());
   else
     this->subsample_density_estimator_output.reset();
-  //this->density_estimator = this->estimator->density_estimator->duplicate();
   
   this->log_likelihood_smcfixed_part = 0.0;
   this->subsample_log_likelihood_smcfixed_part = 0.0;
@@ -44,26 +43,10 @@ DensityLikelihoodEstimatorOutput::DensityLikelihoodEstimatorOutput(DensityLikeli
   this->start_time = std::chrono::high_resolution_clock::now();
   
   this->store_output = store_output_in;
-  //this->results_name = results_name_in;
 }
-
-/*
- DensityLikelihoodEstimatorOutput::DensityLikelihoodEstimatorOutput(DensityLikelihoodEstimator* estimator_in,
- const Parameters &conditioned_on_parameters)
- :LikelihoodEstimatorOutput()
- {
- this->estimator = estimator_in;
- //this->density_estimator = this->estimator->density_estimator->duplicate();
- this->log_likelihood_smcfixed_part = 0.0;
- this->subsample_log_likelihood_smcfixed_part = 0.0;
- //this->results_name = results_name_in;
- }
- */
 
 DensityLikelihoodEstimatorOutput::~DensityLikelihoodEstimatorOutput()
 {
-  //if (this->density_estimator!=NULL)
-  //  delete this->density_estimator;
 }
 
 //Copy constructor for the DensityLikelihoodEstimatorOutput class.
@@ -78,10 +61,7 @@ void DensityLikelihoodEstimatorOutput::operator=(const DensityLikelihoodEstimato
   if(this == &another){ //if a==a
     return;
   }
-  
-  //if (this->density_estimator!=NULL)
-  //  delete this->density_estimator;
-  
+
   LikelihoodEstimatorOutput::operator=(another);
   this->make_copy(another);
 }
@@ -106,11 +86,7 @@ void DensityLikelihoodEstimatorOutput::make_copy(const DensityLikelihoodEstimato
   this->estimator = another.estimator;
   this->log_likelihood_smcfixed_part = another.log_likelihood_smcfixed_part;
   this->subsample_log_likelihood_smcfixed_part = another.subsample_log_likelihood_smcfixed_part;
-  //if (another.density_estimator!=NULL)
-  //  this->density_estimator = another.density_estimator->duplicate();
   this->points = another.points;
-  //this->results_name = another.results_name;
-  //this->variables = another.variables;
   
   this->time = another.time;
   this->start_time = another.start_time;
@@ -121,18 +97,12 @@ void DensityLikelihoodEstimatorOutput::make_copy(const DensityLikelihoodEstimato
 void DensityLikelihoodEstimatorOutput::simulate()
 {
   this->estimator->the_worker->simulate(this);
-  //Particles particles(this->the_worker->get_particles());
-  //this->points = this->estimator->the_worker->get_points();
-  //this->density_estimator_output->fit(this->points);
 }
 
 void DensityLikelihoodEstimatorOutput::simulate(const Parameters &conditioned_on_parameters)
 {
   this->estimator->the_worker->simulate(this,
                                         conditioned_on_parameters);
-  //Particles particles(this->the_worker->get_particles());
-  //this->points = this->estimator->the_worker->get_points();
-  //this->density_estimator_output->fit(this->points);
 }
 
 void DensityLikelihoodEstimatorOutput::evaluate_smcfixed_part(const Parameters &parameters)
@@ -162,8 +132,6 @@ void DensityLikelihoodEstimatorOutput::subsample_simulate(const Parameters &cond
 {
   this->estimator->the_worker->subsample_simulate(this,
                                                   conditioned_on_parameters);
-  //Particles particles(this->the_worker->get_particles());
-  //this->points = this->estimator->the_worker->get_points();
   this->subsample_density_estimator_output->fit(this->points);
 }
 

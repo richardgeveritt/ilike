@@ -119,24 +119,6 @@ void DeterministicScanMCMC::move_in_place(RandomNumberGenerator &rng,
   }
 }
 
-/*
- Particle DeterministicScanMCMC::move(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- Particle current_particle = particle;
- for (std::vector<size_t>::const_iterator i=this->order.begin();
- i!=this->order.end();
- ++i)
- {
- current_particle = this->moves[*i]->move(rng,
- current_particle,
- conditioned_on_parameters);
- }
- return current_particle;
- }
- */
-
 Particle DeterministicScanMCMC::subsample_move(RandomNumberGenerator &rng,
                                                const Particle &particle) const
 {
@@ -150,24 +132,6 @@ Particle DeterministicScanMCMC::subsample_move(RandomNumberGenerator &rng,
   }
   return current_particle;
 }
-
-/*
- Particle DeterministicScanMCMC::subsample_move(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- Particle current_particle = particle;
- for (std::vector<size_t>::const_iterator i=this->order.begin();
- i!=this->order.end();
- ++i)
- {
- current_particle = this->moves[*i]->subsample_move(rng,
- current_particle,
- conditioned_on_parameters);
- }
- return current_particle;
- }
- */
 
 void DeterministicScanMCMC::smc_adapt(SMCOutput* current_state)
 {

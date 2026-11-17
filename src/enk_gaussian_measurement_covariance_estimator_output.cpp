@@ -47,18 +47,6 @@ void EnKGaussianMeasurementCovarianceEstimatorOutput::make_copy(const EnKGaussia
 {
 }
 
-/*
- arma::rowvec EnKGaussianMeasurementCovarianceEstimatorOutput::get_measurement_state_for_covariance()
- {
- return arma::rowvec();
- }
- 
- arma::rowvec EnKGaussianMeasurementCovarianceEstimatorOutput::get_measurement_random_shift()
- {
- return arma::rowvec();
- }
- */
-
 void EnKGaussianMeasurementCovarianceEstimatorOutput::specific_simulate(const Parameters &parameters)
 {
   

@@ -16,7 +16,6 @@ UnscentedKalmanPredictor::UnscentedKalmanPredictor(SimulateTransitionKernelPtr t
 {
   this->transition_kernel = transition_kernel_in;
   this->process_noise = process_noise_in;
-  //this->set_using_time = false;
   this->set_using_parameters = false;
   this->w0 = w0_in;
 }
@@ -27,26 +26,9 @@ UnscentedKalmanPredictor::UnscentedKalmanPredictor(SimulateTransitionKernelFromP
 {
   this->transition_kernel_function = transition_kernel_function_in;
   this->process_noise_function = process_noise_function_in;
-  //this->set_using_time = true;
   this->set_using_parameters = false;
   this->w0 = w0_in;
 }
-
-//GetProcessMatrixFromParametersPtr transition_matrix_parameters_function;
-//GetProcessMatrixFromParametersPtr process_noise_parameters_function;
-
-/*
- UnscentedKalmanPredictor::UnscentedKalmanPredictor(SimulateTransitionKernelFromTimeParametersPtr transition_kernel_time_parameters_function_in,
- GetProcessMatrixFromTimeParametersPtr process_noise_time_parameters_function_in,
- double w0_in)
- {
- this->transition_kernel_time_parameters_function = transition_kernel_time_parameters_function_in;
- this->process_noise_time_parameters_function = process_noise_time_parameters_function_in;
- this->set_using_time = true;
- this->set_using_parameters = true;
- this->w0 = w0_in;
- }
- */
 
 UnscentedKalmanPredictor::~UnscentedKalmanPredictor()
 {
@@ -78,16 +60,13 @@ void UnscentedKalmanPredictor::make_copy(const UnscentedKalmanPredictor &another
 {
   this->w0 = another.w0;
   this->transition_kernel = another.transition_kernel;
-  //this->transition_kernel_time_function = another.transition_kernel_time_function;
   this->transition_kernel_function = another.transition_kernel_function;
   this->process_noise = another.process_noise;
   this->process_noise_function = another.process_noise_function;
-  //this->process_noise_time_parameters_function = another.process_noise_time_parameters_function;
 }
 
 void UnscentedKalmanPredictor::predict(KalmanFilterOutput* current_state)
 {
-  //double time_diff = next_time-current_time;
   
   arma::mat sigma_points = get_sigma_points(current_state->posterior_mean_back(),
                                             current_state->posterior_covariance_back(),
@@ -132,17 +111,6 @@ void UnscentedKalmanPredictor::predict(KalmanFilterOutput* current_state)
 
 void UnscentedKalmanPredictor::set_parameters(const Parameters &conditioned_on_parameters_in)
 {
-  /*
-   if (this->set_using_parameters && !this->set_using_time)
-   {
-   this->transition_matrix = this->transition_matrix_parameters_function(conditioned_on_parameters_in);
-   this->process_noise = this->process_noise_parameters_function(conditioned_on_parameters_in);
-   }
-   else if (this->set_using_parameters && this->set_using_time)
-   {
-   this->conditioned_on_parameters = conditioned_on_parameters_in;
-   }
-   */
   
   if (this->set_using_parameters)
   {

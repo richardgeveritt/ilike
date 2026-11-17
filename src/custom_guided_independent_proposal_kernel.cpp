@@ -26,18 +26,6 @@ CustomGuidedIndependentProposalKernel::CustomGuidedIndependentProposalKernel(Sim
   this->data = NULL;
 }
 
-/*
- CustomGuidedIndependentProposalKernel::CustomGuidedIndependentProposalKernel(SimulateGuidedIndependentProposalPtr proposal_simulate_in,
- EvaluateLogGuidedIndependentProposalPtr proposal_evaluate_in)
- :IndependentProposalKernel()
- {
- this->proposal_evaluate = proposal_evaluate_in;
- this->proposal_simulate = proposal_simulate_in;
- this->proposal_parameters = NULL;
- this->data = NULL;
- }
- */
-
 CustomGuidedIndependentProposalKernel::CustomGuidedIndependentProposalKernel(SimulateGuidedIndependentProposalPtr proposal_simulate_in,
                                                                              EvaluateLogGuidedIndependentProposalPtr proposal_evaluate_in,
                                                                              Data* data_in)
@@ -106,15 +94,6 @@ double CustomGuidedIndependentProposalKernel::evaluate_independent_kernel(const 
   }
 }
 
-/*
- double CustomGuidedIndependentProposalKernel::evaluate_independent_kernel(const Parameters &proposed_particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->proposal_evaluate(proposed_particle.merge(conditioned_on_parameters),
- this->proposal_parameters);
- }
- */
-
 double CustomGuidedIndependentProposalKernel::subsample_evaluate_independent_kernel(const Parameters &proposed_particle) const
 {
   // no difference since size of data set does not impact on proposal
@@ -172,8 +151,6 @@ Parameters CustomGuidedIndependentProposalKernel::subsample_independent_simulate
 {
   // no difference since size of data set does not impact on proposal
   Rcpp::stop("CustomGuidedIndependentProposalKernel::subsample_independent_simulate - not written yet.");
-  //return this->proposal_simulate(rng,
-  //                               this->proposal_parameters);
 }
 
 Parameters CustomGuidedIndependentProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
@@ -182,8 +159,6 @@ Parameters CustomGuidedIndependentProposalKernel::subsample_independent_simulate
 {
   // no difference since size of data set does not impact on proposal
   Rcpp::stop("CustomGuidedIndependentProposalKernel::subsample_independent_simulate - not written yet.");
-  //return this->proposal_simulate(rng,
-  //                               this->proposal_parameters.merge(conditioned_on_parameters));
 }
 
 arma::mat CustomGuidedIndependentProposalKernel::independent_gradient_of_log(const std::string &variable,
@@ -192,29 +167,11 @@ arma::mat CustomGuidedIndependentProposalKernel::independent_gradient_of_log(con
   Rcpp::stop("CustomGuidedIndependentProposalKernel::independent_gradient_of_log - not written yet.");
 }
 
-/*
- arma::mat CustomGuidedIndependentProposalKernel::independent_gradient_of_log(const std::string &variable,
- Variables* proposed_particle,
- const Parameters &conditioned_on_parameters)
- {
- Rcpp::stop("CustomGuidedIndependentProposalKernel::independent_gradient_of_log - not written yet.");
- }
- */
-
 arma::mat CustomGuidedIndependentProposalKernel::subsample_independent_gradient_of_log(const std::string &variable,
                                                                                        const Parameters &proposed_particle)
 {
   Rcpp::stop("CustomGuidedIndependentProposalKernel::subsample_independent_gradient_of_log - not written yet.");
 }
-
-/*
- arma::mat CustomGuidedIndependentProposalKernel::subsample_independent_gradient_of_log(const std::string &variable,
- Variables* proposed_particle,
- const Parameters &conditioned_on_parameters)
- {
- Rcpp::stop("CustomGuidedIndependentProposalKernel::subsample_independent_gradient_of_log - not written yet.");
- }
- */
 
 GradientEstimatorOutput* CustomGuidedIndependentProposalKernel::simulate_gradient_estimator_output() const
 {

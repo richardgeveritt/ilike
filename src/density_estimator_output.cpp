@@ -28,7 +28,6 @@ void DensityEstimatorOutput::operator=(const DensityEstimatorOutput &another)
 void DensityEstimatorOutput::make_copy(const DensityEstimatorOutput &another)
 {
   this->n = another.n;
-  //this->variables = another.variables;
 }
 
 void DensityEstimatorOutput::fit(const std::vector<Parameters> &points)

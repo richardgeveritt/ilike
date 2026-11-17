@@ -61,14 +61,6 @@ HMCProposalKernel::HMCProposalKernel(const std::string &variable_name_in,
                                      GradientEstimator* gradient_estimator_in)
 :ProposalKernel()
 {
-  /*
-   this->unused_variables_kept = true;
-   
-   this->gradient_estimator = NULL;
-   this->index = NULL;
-   
-   this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in);
-   */
 }
 
 HMCProposalKernel::HMCProposalKernel(const std::string &variable_name_in,
@@ -76,14 +68,6 @@ HMCProposalKernel::HMCProposalKernel(const std::string &variable_name_in,
                                      GradientEstimator* gradient_estimator_in)
 :ProposalKernel()
 {
-  /*
-   this->unused_variables_kept = true;
-   
-   this->gradient_estimator = NULL;
-   this->index = NULL;
-   
-   this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in);
-   */
 }
 
 HMCProposalKernel::HMCProposalKernel(const std::vector<std::string> &variable_names_in,
@@ -129,97 +113,31 @@ double HMCProposalKernel::specific_evaluate_kernel(const Particle &proposed_part
                                                    const Particle &old_particle) const
 {
   double output = 0.0;
-  /*
-   for (size_t i=0; i<this->covariance_names.size(); ++i)
-   {
-   output = output + dmvnorm(proposed_particle.parameters.get_vector(this->variable_names[i]),
-   old_particle.parameters.get_vector(this->variable_names[i]),
-   this->proposal_parameters[this->covariance_names[i]]);
-   }
-   */
   return output;
 }
-
-/*
- double HMCProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters) const
- {
- double output = 0.0;
- return output;
- }
- */
 
 double HMCProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
                                                              const Particle &old_particle) const
 {
   // needs changing
   double output = 0.0;
-  /*
-   for (size_t i=0; i<this->covariance_names.size(); ++i)
-   {
-   output = output + dmvnorm(proposed_particle.parameters.get_vector(this->variable_names[i]),
-   old_particle.parameters.get_vector(this->variable_names[i]),
-   this->proposal_parameters[this->covariance_names[i]]);
-   }
-   */
   return output;
 }
-
-/*
- double HMCProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters) const
- {
- // needs changing
- double output = 0.0;
- return output;
- }
- */
 
 Parameters HMCProposalKernel::simulate(RandomNumberGenerator &rng,
                                        const Particle &particle) const
 {
   Parameters output;
-  //if (this->unused_variables_kept)
-  //  output = particle.get_transformed_parameters(this);
   return output;
 }
-
-/*
- Parameters HMCProposalKernel::simulate(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- Parameters output;
- if (this->unused_variables_kept)
- output = *particle.move_parameters;
- return output;
- }
- */
 
 Parameters HMCProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                  const Particle &particle) const
 {
   // needs changing
   Parameters output;
-  //if (this->unused_variables_kept)
-  //  output = particle.get_transformed_parameters(this);
   return output;
 }
-
-/*
- Parameters HMCProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- // needs changing
- Parameters output;
- if (this->unused_variables_kept)
- output = *particle.move_parameters;
- return output;
- }
- */
 
 Parameters HMCProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                  const std::string &variable,
@@ -227,24 +145,8 @@ Parameters HMCProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
 {
   // needs changing
   Parameters output;
-  //if (this->unused_variables_kept)
-  //  output = particle.get_transformed_parameters(this);
   return output;
 }
-
-/*
- Parameters HMCProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
- const std::string &variable,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- // needs changing
- Parameters output;
- if (this->unused_variables_kept)
- output = *particle.move_parameters;
- return output;
- }
- */
 
 arma::mat HMCProposalKernel::specific_gradient_of_log(const std::string &variable,
                                                       const Particle &proposed_particle,
@@ -253,32 +155,12 @@ arma::mat HMCProposalKernel::specific_gradient_of_log(const std::string &variabl
   Rcpp::stop("HMCProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
-/*
- arma::mat HMCProposalKernel::specific_gradient_of_log(const std::string &variable,
- Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters)
- {
- Rcpp::stop("HMCProposalKernel::specific_gradient_of_log - not written yet.");
- }
- */
-
 arma::mat HMCProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
                                                                 const Particle &proposed_particle,
                                                                 const Particle &old_particle)
 {
   Rcpp::stop("HMCProposalKernel::specific_gradient_of_log - not written yet.");
 }
-
-/*
- arma::mat HMCProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
- Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters)
- {
- Rcpp::stop("HMCProposalKernel::specific_gradient_of_log - not written yet.");
- }
- */
 
 void HMCProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
 {
@@ -287,9 +169,6 @@ void HMCProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_
 
 GradientEstimatorOutput* HMCProposalKernel::simulate_gradient_estimator_output() const
 {
-  //GradientEstimatorOutput* current_output = gradient_estimator->initialise();
-  //current_output->simulate_auxiliary_variables();
-  //return current_output;
   return NULL;
 }
 

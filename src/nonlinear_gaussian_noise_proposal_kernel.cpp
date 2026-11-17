@@ -9,7 +9,6 @@ namespace ilike
 NonLinearGaussianNoiseProposalKernel::NonLinearGaussianNoiseProposalKernel()
 :GaussianNoiseProposalKernel()
 {
-  //this->unused_variables_kept = true;
 }
 
 NonLinearGaussianNoiseProposalKernel::~NonLinearGaussianNoiseProposalKernel()
@@ -57,7 +56,6 @@ NonLinearGaussianNoiseProposalKernel::NonLinearGaussianNoiseProposalKernel(const
                                                                            const arma::mat &covariance_in)
 :GaussianNoiseProposalKernel()
 {
-  //this->unused_variables_kept = true;
   this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in);
   this->transform = transform_in;
 }
@@ -96,7 +94,6 @@ void NonLinearGaussianNoiseProposalKernel::make_copy(const NonLinearGaussianNois
 {
   this->proposal_info = another.proposal_info;
   this->transform = another.transform;
-  //this->unused_variables_kept = another.unused_variables_kept;
 }
 
 double NonLinearGaussianNoiseProposalKernel::specific_evaluate_kernel(const Particle &proposed_particle,
@@ -124,31 +121,12 @@ double NonLinearGaussianNoiseProposalKernel::specific_evaluate_kernel_from_param
   return output;
 }
 
-/*
- double NonLinearGaussianNoiseProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->specific_evaluate_kernel(proposed_particle, old_particle);
- }
- */
-
 double NonLinearGaussianNoiseProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
                                                                                 const Particle &old_particle) const
 {
   // no difference since size of data set does not impact on proposal
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
-
-/*
- double NonLinearGaussianNoiseProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters) const
- {
- // no difference since size of data set does not impact on proposal
- return this->specific_evaluate_kernel(proposed_particle, old_particle);
- }
- */
 
 void NonLinearGaussianNoiseProposalKernel::set_covariance(const std::string &variable,
                                                           const arma::mat &covariance_in)
@@ -187,17 +165,13 @@ Parameters NonLinearGaussianNoiseProposalKernel::simulate(RandomNumberGenerator 
                                                           const Particle &particle) const
 {
   Parameters output;
-  //if (this->unused_variables_kept)
-  //  output = *particle.move_parameters;
   
   Parameters transformed = this->transform->transform(particle.get_transformed_parameters(this));
   for (auto i=this->proposal_info.begin();
        i!=this->proposal_info.end();
        ++i)
   {
-    //arma::colvec mean = i->second.get_mean();
     double scale = i->second.get_double_scale();
-    //double dim = double(mean.n_rows);
     output[i->first] = rmvnorm_using_lower_chol(rng,
                                           transformed.get_colvec(i->first),
                                           i->second.get_chol_lower(), sqrt(scale));
@@ -205,31 +179,12 @@ Parameters NonLinearGaussianNoiseProposalKernel::simulate(RandomNumberGenerator 
   return output;
 }
 
-/*
- Parameters NonLinearGaussianNoiseProposalKernel::simulate(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->simulate(rng, particle);
- }
- */
-
 Parameters NonLinearGaussianNoiseProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                                     const Particle &particle) const
 {
   // no difference since size of data set does not impact on proposal
   return this->simulate(rng, particle);
 }
-
-/*
- Parameters NonLinearGaussianNoiseProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- // no difference since size of data set does not impact on proposal
- return this->simulate(rng, particle);
- }
- */
 
 Parameters NonLinearGaussianNoiseProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                                     const std::string &variable,
@@ -241,24 +196,11 @@ Parameters NonLinearGaussianNoiseProposalKernel::subsample_simulate(RandomNumber
   Parameters transformed = this->transform->transform(particle.get_transformed_parameters(this));
   
   Parameters output;
-  //if (this->unused_variables_kept)
-  //  output = *particle.move_parameters;
   output[variable] = rmvnorm_using_lower_chol(rng,
                                         transformed.get_colvec(variable),
                                         found->second.get_chol_lower(), sqrt(found->second.get_double_scale()));
   return output;
 }
-
-/*
- Parameters NonLinearGaussianNoiseProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
- const std::string &variable,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- // no difference since size of data set does not impact on proposal
- return this->subsample_simulate(rng, variable, particle);
- }
- */
 
 arma::mat NonLinearGaussianNoiseProposalKernel::specific_gradient_of_log(const std::string &variable,
                                                                          const Particle &proposed_particle,
@@ -267,32 +209,12 @@ arma::mat NonLinearGaussianNoiseProposalKernel::specific_gradient_of_log(const s
   Rcpp::stop("NonLinearGaussianNoiseProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
-/*
- arma::mat NonLinearGaussianNoiseProposalKernel::specific_gradient_of_log(const std::string &variable,
- Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters)
- {
- Rcpp::stop("NonLinearGaussianNoiseProposalKernel::specific_gradient_of_log - not written yet.");
- }
- */
-
 arma::mat NonLinearGaussianNoiseProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
                                                                                    const Particle &proposed_particle,
                                                                                    const Particle &old_particle)
 {
   Rcpp::stop("NonLinearGaussianNoiseProposalKernel::specific_gradient_of_log - not written yet.");
 }
-
-/*
- arma::mat NonLinearGaussianNoiseProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
- Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters)
- {
- Rcpp::stop("NonLinearGaussianNoiseProposalKernel::specific_gradient_of_log - not written yet.");
- }
- */
 
 void NonLinearGaussianNoiseProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
 {

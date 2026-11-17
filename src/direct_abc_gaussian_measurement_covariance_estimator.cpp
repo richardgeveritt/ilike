@@ -31,9 +31,7 @@ DirectABCGaussianMeasurementCovarianceEstimator::DirectABCGaussianMeasurementCov
   }
   
   this->set_using_parameters = true;
-  //this->measurement_variables = measurement_variables_in;
   this->min_epsilon = min_epsilon_in;
-  //this->tempering_variable = tempering_variable_in;
   this->scale_variable = scale_variable_in;
 }
 
@@ -68,46 +66,12 @@ GaussianMeasurementCovarianceEstimator* DirectABCGaussianMeasurementCovarianceEs
 
 void DirectABCGaussianMeasurementCovarianceEstimator::make_copy(const DirectABCGaussianMeasurementCovarianceEstimator &another)
 {
-  //this->measurement_kernel = another.measurement_kernel;
-  //this->kernel = another.kernel;
-  //this->measurement_noise = another.measurement_noise;
-  //this->measurement_kernel_function = another.measurement_kernel_function;
-  //this->tempering_variable = another.tempering_variable;
   this->scale_variable = another.scale_variable;
   this->min_epsilon = another.min_epsilon;
-  //this->conditioned_on_parameters = another.conditioned_on_parameters;
 }
-
-/*
- MeasurementCovarianceEstimatorOutput* DirectABCGaussianMeasurementCovarianceEstimator::initialise_measurement_covariance_estimator()
- {
- MeasurementCovarianceEstimatorOutput* output = new DirectABCGaussianMeasurementCovarianceEstimatorOutput(this);
- return output;
- }
- 
- MeasurementCovarianceEstimatorOutput* DirectABCGaussianMeasurementCovarianceEstimator::initialise_measurement_covariance_estimator(const Parameters &conditioned_on_parameters)
- {
- MeasurementCovarianceEstimatorOutput* output = new DirectABCGaussianMeasurementCovarianceEstimatorOutput(this);
- return output;
- }
- */
-
-/*
- void DirectABCGaussianMeasurementCovarianceEstimator::setup()
- {
- this->setup_measurement_variables();
- }
- 
- void DirectABCGaussianMeasurementCovarianceEstimator::setup(const Parameters &parameters)
- {
- this->setup_measurement_variables(parameters);
- }
- */
 
 void DirectABCGaussianMeasurementCovarianceEstimator::setup_measurement_variables()
 {
-  //Data dummy_data = this->transform_function(Parameters());
-  //this->measurement_variables = dummy_data.get_vector_variables();
   
   Rcpp::stop("DirectABCGaussianMeasurementCovarianceEstimator::setup_measurement_variables() - not yet written");
 }
@@ -115,9 +79,7 @@ void DirectABCGaussianMeasurementCovarianceEstimator::setup_measurement_variable
 void DirectABCGaussianMeasurementCovarianceEstimator::setup_measurement_variables(const Parameters &conditioned_on_parameters)
 {
   Data dummy_data;
-  
-  //double tempering = conditioned_on_parameters[this->tempering_variable][0];
-  
+
   if (this->summary_statistics==NULL)
   {
     dummy_data = conditioned_on_parameters;
@@ -156,7 +118,6 @@ void DirectABCGaussianMeasurementCovarianceEstimator::setup_measurement_variable
     current_index = current_index + current_dummy_data_size;
     
     arma::mat cov(scale.n_elem,scale.n_elem,arma::fill::zeros);
-    //arma::vec for_diag = (1.0/tempering)*arma::pow(this->min_epsilon*scale,2.0);
     arma::vec for_diag = arma::pow(this->min_epsilon*scale,2.0);
     cov.diag() = for_diag;
     
@@ -164,41 +125,12 @@ void DirectABCGaussianMeasurementCovarianceEstimator::setup_measurement_variable
                                 cov);
   }
   
-  /*
-   for (auto i=dummy_data.vector_begin();
-   i!=dummy_data.vector_end();
-   ++i)
-   {
-   this->kernel.set_mean(i->first,arma::colvec(i->second.first->n_elem));
-   }
-   */
-  //this->measurement_variables = dummy_data.get_vector_variables();
 }
-
-/*
- arma::mat DirectABCGaussianMeasurementCovarianceEstimator::get_measurement_covariance() const
- {
- return this->kernel.get_covariance(this->measurement_variables);
- }
- 
- arma::mat DirectABCGaussianMeasurementCovarianceEstimator::get_Cygivenx() const
- {
- return this->kernel.get_covariance(this->measurement_variables);
- }
- */
-
-/*
- arma::mat DirectABCGaussianMeasurementCovarianceEstimator::get_measurement_covariance() const
- {
- return this->kernel.get_covariance(this->measurement_variables);
- }
- */
 
 void DirectABCGaussianMeasurementCovarianceEstimator::set_parameters(const Parameters &conditioned_on_parameters_in)
 {
   if (this->set_using_parameters)
   {
-    //double tempering = conditioned_on_parameters_in[this->tempering_variable][0];
     
     arma::colvec total_scale;
     if (this->scale_variable!="")
@@ -206,7 +138,6 @@ void DirectABCGaussianMeasurementCovarianceEstimator::set_parameters(const Param
     
     size_t current_index = 0;
     
-    //this->conditioned_on_parameters = conditioned_on_parameters_in;
     for (size_t i=0;
          i<this->measurement_variables.size();
          ++i)
@@ -227,7 +158,6 @@ void DirectABCGaussianMeasurementCovarianceEstimator::set_parameters(const Param
       current_index = current_index + current_dummy_data_size;
       
       arma::mat cov(scale.n_elem,scale.n_elem,arma::fill::zeros);
-      //arma::vec for_diag = (1.0/tempering)*arma::pow(this->min_epsilon*scale,2.0);
       arma::vec for_diag = arma::pow(this->min_epsilon*scale,2.0);
       cov.diag() = for_diag;
       
@@ -242,13 +172,6 @@ Parameters DirectABCGaussianMeasurementCovarianceEstimator::get_measurement_stat
 {
   return parameters;
 }
-
-/*
- GaussianIndependentProposalKernel DirectABCGaussianMeasurementCovarianceEstimator::get_kernel() const
- {
- return this->kernel;
- }
- */
 
 arma::mat DirectABCGaussianMeasurementCovarianceEstimator::get_adjustment(const arma::mat &Zf,
                                                                           const arma::mat &Dhathalf,
@@ -275,17 +198,6 @@ arma::mat DirectABCGaussianMeasurementCovarianceEstimator::get_adjustment(const 
   
   return P*Dhathalf*U*Dsqrt*arma::pinv(Dhathalf)*P.t();
   
-  /*
-   arma::mat stacked_H = this->As[0];
-   if (this->As.size()>1)
-   {
-   for (size_t i=1; i<this->As.size(); ++i)
-   {
-   stacked_H = arma::join_cols(stacked_H, As[i]);
-   }
-   }
-   return (I-K*stacked_H);
-   */
 }
 
 arma::mat DirectABCGaussianMeasurementCovarianceEstimator::get_sqrt_adjustment(const arma::mat &Cxy,
@@ -316,25 +228,18 @@ arma::mat DirectABCGaussianMeasurementCovarianceEstimator::get_sqrt_adjustment(c
   }
   
   double ratio = arma::abs(arma::eig_gen(Cyy)).max()/min_nonzero_eig;
-  //double ratio = biggest_eig/second_biggest_eig;
   
   double scale = ratio/1e14;
   
   arma::mat A;
   A.eye(Cyy.n_rows,Cyy.n_cols);
   A = scale*A;
-  //arma::mat sqrtS3 = arma::chol(A+Cyy);
-  
-  //arma::mat sqrtS2 = arma::chol(inverse_incremental_temperature*this->get_measurement_covariance());
-  
+
   arma::mat sqrtS = arma::sqrtmat_sympd(A+Cyy + inverse_incremental_temperature*this->get_measurement_covariance());
-  
-  //arma::mat sqrtS = arma::sqrtmat_sympd(Cyy + inverse_incremental_temperature*this->get_measurement_covariance());
-  
+
   arma::mat stacked_H(Cyy.n_rows,Cxy.n_rows);
   stacked_H.eye();
   
-  //arma::mat K = Sigma*stacked_H.t() * arma::inv_sympd(sqrtS) * arma::inv_sympd(sqrtS + sqrtV);
   arma::mat K = Cxy * arma::inv_sympd(sqrtS) * arma::inv_sympd(sqrtS + sqrtV);
   
   arma::mat I;

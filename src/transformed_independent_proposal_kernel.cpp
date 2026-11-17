@@ -88,14 +88,6 @@ double TransformedIndependentProposalKernel::evaluate_independent_kernel(const P
   }
 }
 
-/*
- double TransformedIndependentProposalKernel::evaluate_independent_kernel(Variables* proposed_particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->evaluate_independent_kernel(proposed_particle);
- }
- */
-
 double TransformedIndependentProposalKernel::subsample_evaluate_independent_kernel(const Parameters &proposed_particle) const
 {
   if (this->distribution_on_transformed_space==true)

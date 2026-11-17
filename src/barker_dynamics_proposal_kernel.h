@@ -15,17 +15,6 @@ using namespace Rcpp;
 
 namespace ilike
 {
-  /**
-   * @file barker_dynamics_proposal_kernel.h
-   * @brief Defines the GradientEstimator class.
-   *
-   * Estimates the gradient for a given set of parameters. Implements the estimator interface for use inside SMC, MCMC, or importance-sampling algorithms.
-   *
-   * @namespace ilike
-   * @class GradientEstimator
-   * @brief The gradient estimator class.
-   */
-
 
   class GradientEstimator;
   class IndependentProposalKernel;
@@ -34,20 +23,10 @@ namespace ilike
   {
 
   public:
-    /**
-     * @brief Performs the barkerdynamicsproposalkernel operation.
-     */
     BarkerDynamicsProposalKernel();
-    /**
-     * @brief Performs the ~barkerdynamicsproposalkernel operation.
-     */
     virtual ~BarkerDynamicsProposalKernel();
 
     // find cov adaptively
-    /*
-    BarkerDynamicsProposalKernel(const std::vector<std::string> &variable_names_in,
-                                 GradientEstimator* gradient_estimator_in);
-                                 */
 
     BarkerDynamicsProposalKernel(const std::vector<std::string> &variable_names_in,
                                  const std::vector<arma::mat> &covariances_in,
@@ -66,63 +45,23 @@ namespace ilike
                                  const double &sd_in,
                                  GradientEstimator *gradient_estimator_in);
 
-    /**
-     * @brief Performs the barkerdynamicsproposalkernel operation.
-     *
-     * @param another The GradientEstimator instance to copy from.
-     */
     BarkerDynamicsProposalKernel(const BarkerDynamicsProposalKernel &another);
 
-    /**
-     * @brief Assignment operator for GradientEstimator.
-     *
-     * @param another The GradientEstimator instance to copy from.
-     */
     void operator=(const BarkerDynamicsProposalKernel &another);
     Kernel *duplicate() const;
     ProposalKernel *proposal_kernel_duplicate() const;
 
-    /**
-     * @brief Sets the proposal parameters.
-     *
-     * @param proposal_parameters_in The proposal parameters.
-     */
     void set_proposal_parameters(Parameters *proposal_parameters_in);
 
     GradientEstimatorOutput *simulate_gradient_estimator_output() const;
 
-    /**
-     * @brief Returns the proposals.
-     *
-     * @return The result.
-     */
     std::vector<const ProposalKernel *> get_proposals() const;
 
-    /**
-     * @brief Sets the index.
-     *
-     * @param index_in The index.
-     */
     void set_index(Index *index_in);
-    /**
-     * @brief Sets the index if null.
-     *
-     * @param index_in The index.
-     */
     void set_index_if_null(Index *index_in);
 
-    /**
-     * @brief Performs the can be evaluated operation.
-     *
-     * @return The result.
-     */
     bool can_be_evaluated() const;
 
-    /**
-     * @brief Sets the data.
-     *
-     * @param data_in The data.
-     */
     void set_data(Data *data_in);
 
     // Mh has its own parameters.
@@ -132,54 +71,22 @@ namespace ilike
 
   GaussianProposalInfo* get_gaussian_proposal_info(const std::string &variable);
 
-
   protected:
     double specific_evaluate_kernel(const Particle &proposed_particle,
                                     const Particle &old_particle) const;
 
-    /*
-     double specific_evaluate_kernel(Particle &proposed_particle,
-     Particle &old_particle,
-     const Parameters &conditioned_on_parameters) const;
-     */
-
     double specific_subsample_evaluate_kernel(const Particle &proposed_particle,
                                               const Particle &old_particle) const;
-
-    /*
-     double specific_subsample_evaluate_kernel(Particle &proposed_particle,
-     Particle &old_particle,
-     const Parameters &conditioned_on_parameters) const;
-     */
 
     Parameters simulate(RandomNumberGenerator &rng,
                         const Particle &particle) const;
 
-    /*
-     Parameters simulate(RandomNumberGenerator &rng,
-     Particle &particle,
-     const Parameters &conditioned_on_parameters) const;
-     */
-
     Parameters subsample_simulate(RandomNumberGenerator &rng,
                                   const Particle &particle) const;
-
-    /*
-     Parameters subsample_simulate(RandomNumberGenerator &rng,
-     Particle &particle,
-     const Parameters &conditioned_on_parameters) const;
-     */
 
     Parameters subsample_simulate(RandomNumberGenerator &rng,
                                   const std::string &variable,
                                   const Particle &particle) const;
-
-    /*
-     Parameters subsample_simulate(RandomNumberGenerator &rng,
-     const std::string &variable,
-     Particle &particle,
-     const Parameters &conditioned_on_parameters) const;
-     */
 
     arma::mat specific_gradient_of_log(const std::string &variable,
                                        const Particle &proposed_particle,
@@ -188,23 +95,6 @@ namespace ilike
     arma::mat specific_subsample_gradient_of_log(const std::string &variable,
                                                  const Particle &proposed_particle,
                                                  const Particle &old_particle);
-
-    /*
-     arma::mat specific_gradient_of_log(const std::string &variable,
-     Particle &proposed_particle,
-     Particle &old_particle,
-     const Parameters &conditioned_on_parameters);
-     */
-    // virtual arma::mat specific_subsample_gradient_of_log(const std::string &variable,
-    //                                                      Particle &proposed_particle,
-    //                                                      Particle &old_particle)=0;
-
-    /*
-     arma::mat specific_subsample_gradient_of_log(const std::string &variable,
-     Particle &proposed_particle,
-     Particle &old_particle,
-     const Parameters &conditioned_on_parameters);
-     */
 
     void make_copy(const BarkerDynamicsProposalKernel &another);
 

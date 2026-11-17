@@ -33,18 +33,6 @@ CustomIndependentProposalKernel::CustomIndependentProposalKernel(SimulateIndepen
   this->proposal_parameters = NULL;
 }
 
-/*
- CustomIndependentProposalKernel::CustomIndependentProposalKernel(SimulateIndependentProposalPtr proposal_simulate_in,
- EvaluateLogIndependentProposalPtr proposal_evaluate_in,
- Parameters* proposal_parameters_in)
- :IndependentProposalKernel()
- {
- this->proposal_evaluate = proposal_evaluate_in;
- this->proposal_simulate = proposal_simulate_in;
- this->proposal_parameters = proposal_parameters_in;
- }
- */
-
 CustomIndependentProposalKernel::CustomIndependentProposalKernel(const CustomIndependentProposalKernel &another)
 :IndependentProposalKernel(another)
 {
@@ -99,15 +87,6 @@ double CustomIndependentProposalKernel::evaluate_independent_kernel(const Parame
     stop("CustomIndependentProposalKernel::evaluate_independent_kernel - proposal parameters not set.");
   }
 }
-
-/*
- double CustomIndependentProposalKernel::evaluate_independent_kernel(const Parameters &proposed_particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->proposal_evaluate(proposed_particle.merge(conditioned_on_parameters),
- this->proposal_parameters);
- }
- */
 
 double CustomIndependentProposalKernel::subsample_evaluate_independent_kernel(const Parameters &proposed_particle) const
 {
@@ -218,29 +197,11 @@ arma::mat CustomIndependentProposalKernel::independent_gradient_of_log(const std
   Rcpp::stop("CustomIndependentProposalKernel::independent_gradient_of_log - not written yet.");
 }
 
-/*
- arma::mat CustomIndependentProposalKernel::independent_gradient_of_log(const std::string &variable,
- Variables* proposed_particle,
- const Parameters &conditioned_on_parameters)
- {
- Rcpp::stop("CustomIndependentProposalKernel::independent_gradient_of_log - not written yet.");
- }
- */
-
 arma::mat CustomIndependentProposalKernel::subsample_independent_gradient_of_log(const std::string &variable,
                                                                                  const Parameters &proposed_particle)
 {
   Rcpp::stop("CustomIndependentProposalKernel::subsample_independent_gradient_of_log - not written yet.");
 }
-
-/*
- arma::mat CustomIndependentProposalKernel::subsample_independent_gradient_of_log(const std::string &variable,
- Variables* proposed_particle,
- const Parameters &conditioned_on_parameters)
- {
- Rcpp::stop("CustomIndependentProposalKernel::subsample_independent_gradient_of_log - not written yet.");
- }
- */
 
 GradientEstimatorOutput* CustomIndependentProposalKernel::simulate_gradient_estimator_output() const
 {

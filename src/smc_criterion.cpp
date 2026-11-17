@@ -16,7 +16,6 @@ SMCCriterion::SMCCriterion(double desired_criterion_in)
   this->desired_criterion = desired_criterion_in;
 }
 
-
 SMCCriterion::SMCCriterion(const SMCCriterion &another)
 {
   this->make_copy(another);

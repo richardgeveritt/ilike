@@ -16,7 +16,6 @@ HMMIndex::HMMIndex(const std::vector<size_t> &likelihood_indices_time_zero_in,
 :Index()
 {
   this->likelihood_indices_time_zero = likelihood_indices_time_zero_in;
-  //this->evaluate_prior = evaluate_prior;
   this->likelihood_indices_time_not_zero = likelihood_indices_time_not_zero_in;
   
   this->evaluate_transition_model = evaluate_transition_model_in;
@@ -57,7 +56,6 @@ void HMMIndex::make_copy(const HMMIndex &another)
   this->time_index = another.time_index;
   this->first_time_index = another.first_time_index;
   this->likelihood_indices_time_zero = another.likelihood_indices_time_zero;
-  //this->evaluate_prior = another.evaluate_prior;
   this->likelihood_indices_time_not_zero = another.likelihood_indices_time_not_zero;
   this->evaluate_transition_model = another.evaluate_transition_model;
 }
@@ -131,27 +129,4 @@ bool HMMIndex::get_transition_model() const
     return this->evaluate_transition_model;
 }
 
-/*
- std::vector<size_t> HMMIndex::get_prior_indices() const
- {
- return this->prior_indices;
- }
- 
- std::vector<size_t> HMMIndex::get_transition_indices() const
- {
- return this->transition_indices;
- }
- 
- std::vector<size_t> HMMIndex::get_likelihood_indices() const
- {
- return this->likelihood_indices;
- }
- */
-
-/*
- void HMMIndex::add_index(const size_t &number)
- {
- this->indices.push_back(number);
- }
- */
 }

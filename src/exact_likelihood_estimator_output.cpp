@@ -218,7 +218,6 @@ double ExactLikelihoodEstimatorOutput::smcadaptive_from_summary(const double *va
   return values[0];
 }
 
-
 void ExactLikelihoodEstimatorOutput::restore_from_summary(const double *values,
                                                          const Parameters &parameters)
 {
@@ -228,7 +227,6 @@ void ExactLikelihoodEstimatorOutput::restore_from_summary(const double *values,
   this->log_likelihood_smcfixed_part = values[0];
   this->log_likelihood = values[0];
 }
-
 
 bool ExactLikelihoodEstimatorOutput::repoint_estimator(LikelihoodEstimator* estimator_in)
 {

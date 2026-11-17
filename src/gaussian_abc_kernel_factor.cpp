@@ -97,7 +97,6 @@ double GaussianABCKernelFactor::likelihood_evaluate(const Parameters &input) con
     
     double distance = arma::sum(arma::pow((input.get_colvec(this->data_variables)-this->data_colvec)/scale,2.0));
     return this->constant - 0.5*(1.0/epsilon2)*distance - 0.5*scale.n_elem*log(epsilon2) - 0.5*arma::sum(log(scale));
-    //double test_result = dmvnorm(this->data_colvec,input.get_colvec(this->data_variables),epsilon2*arma::mat(this->data_colvec.n_elem,this->data_colvec.n_elem,arma::fill::eye));
   }
 }
 
@@ -161,8 +160,7 @@ arma::mat GaussianABCKernelFactor::likelihood_evaluate_gradient(const std::strin
                                                                 const Parameters &input) const
 {
   double epsilon = input[this->epsilon_variable][0];
-  
-  
+
   if (this->scale_variable!="")
     return -(1.0/(epsilon*epsilon))*(input[variable]-this->data_colvec(arma::span(this->packing_instructions[variable].first,
                                                                                   this->packing_instructions[variable].second)));

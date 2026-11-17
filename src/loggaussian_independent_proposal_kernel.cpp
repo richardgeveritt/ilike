@@ -183,14 +183,6 @@ double LogGaussianIndependentProposalKernel::evaluate_independent_kernel(const P
   return output;
 }
 
-/*
- double LogGaussianIndependentProposalKernel::evaluate_independent_kernel(Variables* proposed_particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->evaluate_independent_kernel(proposed_particle);
- }
- */
-
 double LogGaussianIndependentProposalKernel::subsample_evaluate_independent_kernel(const Parameters &proposed_particle) const
 {
   // no difference since size of data set does not impact on proposal

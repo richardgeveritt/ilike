@@ -2,108 +2,61 @@
 #define GAUSSIANSMCADAPTOR_H
 
 #include <RcppArmadillo.h>
-#include <memory>
 using namespace Rcpp;
 
 #include <vector>
 #include <string>
 
 #include "smc_adaptor.h"
-#include "particle.h"
-#include "distributions.h"
-#include "scale.h"
 #include "gaussian_proposal_info.h"
+#include "principal_components_info.h"
 
 namespace ilike
 {
-  /**
-   * @file gaussian_smc_adaptor.h
-   * @brief Defines the SMCOutput class.
-   *
-   * Stores and manages the output produced by SMC. Holds results such as log-likelihood estimates, samples, or diagnostics returned after running the associated algorithm.
-   *
-   * @namespace ilike
-   * @class SMCOutput
-   * @brief The smc output class.
-   */
 
-
-class SMCOutput;
-class VectorParameterEstimator;
-class MatrixParameterEstimator;
-
+// Adaptation of a Gaussian proposal from the SMC particles (dev/plan.md 3.2,
+// B2): before each move, the proposal's covariance is set to the weighted
+// sample covariance of the particles (for a principal-components proposal,
+// its directions and variances to that covariance's eigenvectors and
+// eigenvalues); for a mirror proposal its centre to their weighted mean; and,
+// if a constant c is given, the scale to c^2/d (d the variable's dimension;
+// c^2 for proposals that move one component or direction at a time). The
+// weights are those of the particles for the current target, before
+// resampling. If the covariance is not positive definite (e.g. too few
+// distinct particles), the proposal keeps its previous covariance.
 class GaussianSMCAdaptor : public SMCAdaptor
 {
-  
+
 public:
-  
-  /**
-   * @brief Performs the gaussiansmcadaptor operation.
-   */
+
   GaussianSMCAdaptor();
-  /**
-   * @brief Performs the ~gaussiansmcadaptor operation.
-   */
+
+  // constant_in < 0: the scale is not changed
+  GaussianSMCAdaptor(const std::string &variable_in,
+                     double constant_in);
+
   virtual ~GaussianSMCAdaptor();
-  
-  /**
-   * @brief Performs the gaussiansmcadaptor operation.
-   *
-   * @param another The SMCOutput instance to copy from.
-   */
+
   GaussianSMCAdaptor(const GaussianSMCAdaptor &another);
-  
-  /**
-   * @brief Assignment operator for SMCOutput.
-   *
-   * @param another The SMCOutput instance to copy from.
-   */
   void operator=(const GaussianSMCAdaptor &another);
-  /**
-   * @brief Creates a deep copy of this SMCOutput object.
-   *
-   * @return The result.
-   */
   SMCAdaptor* duplicate() const;
-  
-  /**
-   * @brief Performs the smc adapt operation.
-   *
-   * @param current_state The current state.
-   */
+
   void smc_adapt(SMCOutput* current_state);
-  /**
-   * @brief Performs the ensemble adapt operation.
-   *
-   * @param current_state The current state.
-   */
   void ensemble_adapt(EnsembleKalmanOutput* current_state);
-  
+
 protected:
-  
-  /**
-   * @brief Copies the state of another SMCOutput into this object.
-   *
-   * @param another The SMCOutput instance to copy from.
-   */
+
   void make_copy(const GaussianSMCAdaptor &another);
-  
-  /** @brief The variable names. */
-  std::vector<std::string> variable_names;
-  
-  // not stored here
-  /** @brief The gaussian info pointers. */
-  std::vector<GaussianProposalInfo*> gaussian_info_pointers;
-  
-  // stored here
-  /** @brief The scales. */
-  std::vector<Scale> scales;
-  /** @brief The mean estimators. */
-  std::vector<std::unique_ptr<VectorParameterEstimator>> mean_estimators;
-  /** @brief The covariance estimators. */
-  std::vector<std::unique_ptr<MatrixParameterEstimator>> covariance_estimators;
-  
+
+  // the weighted moments of the points (one row per point) into the kernel
+  void adapt_from(const arma::mat &points,
+                  const arma::colvec &normalised_weights);
+
+  std::string variable;
+  double constant;
+
 };
+
 }
 
 #endif

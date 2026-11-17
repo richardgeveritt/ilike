@@ -9,7 +9,6 @@ namespace ilike
 GaussianRandomWalkProposalKernel::GaussianRandomWalkProposalKernel()
 :SymmetricProposalKernel()
 {
-  //this->unused_variables_kept = true;
 }
 
 GaussianRandomWalkProposalKernel::~GaussianRandomWalkProposalKernel()
@@ -19,7 +18,6 @@ GaussianRandomWalkProposalKernel::~GaussianRandomWalkProposalKernel()
 GaussianRandomWalkProposalKernel::GaussianRandomWalkProposalKernel(const std::vector<std::string> &variable_names_in)
 :SymmetricProposalKernel()
 {
-  //this->unused_variables_kept = true;
   for (auto i=variable_names_in.begin();
        i!=variable_names_in.end();
        ++i)
@@ -32,7 +30,6 @@ GaussianRandomWalkProposalKernel::GaussianRandomWalkProposalKernel(const std::ve
                                                                    const std::vector<arma::mat> &covariances_in)
 :SymmetricProposalKernel()
 {
-  //this->unused_variables_kept = true;
   for (size_t i=0;
        i<variable_names_in.size();
        ++i)
@@ -45,7 +42,6 @@ GaussianRandomWalkProposalKernel::GaussianRandomWalkProposalKernel(const std::st
                                                                    const double &sd_in)
 :SymmetricProposalKernel()
 {
-  //this->unused_variables_kept = true;
   this->proposal_info[variable_name_in] = GaussianProposalInfo(sd_in);
 }
 
@@ -53,7 +49,6 @@ GaussianRandomWalkProposalKernel::GaussianRandomWalkProposalKernel(const std::st
                                                                    const arma::mat &covariance_in)
 :SymmetricProposalKernel()
 {
-  //this->unused_variables_kept = true;
   this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in);
 }
 
@@ -62,7 +57,6 @@ GaussianRandomWalkProposalKernel::GaussianRandomWalkProposalKernel(const std::st
                                                                    double scale_in)
 :SymmetricProposalKernel()
 {
-  //this->unused_variables_kept = true;
   this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in,
                                                                scale_in);
 }
@@ -100,7 +94,6 @@ SymmetricProposalKernel* GaussianRandomWalkProposalKernel::symmetric_proposal_ke
 void GaussianRandomWalkProposalKernel::make_copy(const GaussianRandomWalkProposalKernel &another)
 {
   this->proposal_info = another.proposal_info;
-  //this->unused_variables_kept = another.unused_variables_kept;
 }
 
 double GaussianRandomWalkProposalKernel::specific_evaluate_kernel(const Particle &proposed_particle,
@@ -127,31 +120,12 @@ double GaussianRandomWalkProposalKernel::specific_evaluate_kernel_from_parameter
   return output;
 }
 
-/*
- double GaussianRandomWalkProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->specific_evaluate_kernel(proposed_particle, old_particle);
- }
- */
-
 double GaussianRandomWalkProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
                                                                             const Particle &old_particle) const
 {
   // no difference since size of data set does not impact on proposal
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
-
-/*
- double GaussianRandomWalkProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters) const
- {
- // no difference since size of data set does not impact on proposal
- return this->specific_evaluate_kernel(proposed_particle, old_particle);
- }
- */
 
 void GaussianRandomWalkProposalKernel::set_covariance(const std::string &variable,
                                                       const arma::mat &covariance_in)
@@ -189,15 +163,11 @@ Parameters GaussianRandomWalkProposalKernel::simulate(RandomNumberGenerator &rng
                                                       const Particle &particle) const
 {
   Parameters output;
-  //if (this->unused_variables_kept)
-  //  output = *particle.move_parameters;
   for (auto i=this->proposal_info.begin();
        i!=this->proposal_info.end();
        ++i)
   {
-    //arma::colvec mean = i->second.get_mean();
     double scale = i->second.get_double_scale();
-    //double dim = double(mean.n_rows);
     output[i->first] = rmvnorm_using_lower_chol(rng,
                                           particle.get_transformed_parameters(this).get_colvec(i->first),
                                           i->second.get_chol_lower(), sqrt(scale));
@@ -205,31 +175,12 @@ Parameters GaussianRandomWalkProposalKernel::simulate(RandomNumberGenerator &rng
   return output;
 }
 
-/*
- Parameters GaussianRandomWalkProposalKernel::simulate(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->simulate(rng, particle);
- }
- */
-
 Parameters GaussianRandomWalkProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                                 const Particle &particle) const
 {
   // no difference since size of data set does not impact on proposal
   return this->simulate(rng, particle);
 }
-
-/*
- Parameters GaussianRandomWalkProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- // no difference since size of data set does not impact on proposal
- return this->simulate(rng, particle);
- }
- */
 
 Parameters GaussianRandomWalkProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                                 const std::string &variable,
@@ -239,24 +190,11 @@ Parameters GaussianRandomWalkProposalKernel::subsample_simulate(RandomNumberGene
   auto found = this->proposal_info.find(variable);
   
   Parameters output;
-  //if (this->unused_variables_kept)
-  //  output = *particle.move_parameters;
   output[variable] = rmvnorm_using_lower_chol(rng,
                                         particle.get_transformed_parameters(this).get_colvec(variable),
                                         found->second.get_chol_lower(), sqrt(found->second.get_double_scale()));
   return output;
 }
-
-/*
- Parameters GaussianRandomWalkProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
- const std::string &variable,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- // no difference since size of data set does not impact on proposal
- return this->subsample_simulate(rng, variable, particle);
- }
- */
 
 arma::mat GaussianRandomWalkProposalKernel::specific_gradient_of_log(const std::string &variable,
                                                                      const Particle &proposed_particle,
@@ -265,32 +203,12 @@ arma::mat GaussianRandomWalkProposalKernel::specific_gradient_of_log(const std::
   Rcpp::stop("GaussianRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
-/*
- arma::mat GaussianRandomWalkProposalKernel::specific_gradient_of_log(const std::string &variable,
- Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters)
- {
- Rcpp::stop("GaussianRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
- }
- */
-
 arma::mat GaussianRandomWalkProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
                                                                                const Particle &proposed_particle,
                                                                                const Particle &old_particle)
 {
   Rcpp::stop("GaussianRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
 }
-
-/*
- arma::mat GaussianRandomWalkProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
- Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters)
- {
- Rcpp::stop("GaussianRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
- }
- */
 
 void GaussianRandomWalkProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
 {

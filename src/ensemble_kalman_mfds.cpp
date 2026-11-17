@@ -3,10 +3,7 @@
 #include "ensemble_kalman_output.h"
 #include "cess_smc_criterion.h"
 #include "exact_likelihood_estimator.h"
-//#include "annealed_likelihood_estimator.h"
 #include "utils.h"
-//#include "parameter_particle_simulator.h"
-//#include "rcppparallel_smc_worker.h"
 #include "sequential_ensemble_kalman_worker.h"
 #include "mcmc.h"
 #include "single_point_move_output.h"
@@ -18,8 +15,6 @@
 #include "custom_distribution_proposal_kernel.h"
 #include "vector_ensemble_factors.h"
 #include "positive_smc_criterion.h"
-//#include "standard_mcmc_output.h"
-//#include "custom_distribution_proposal_kernel.h""
 
 namespace ilike
 {
@@ -63,8 +58,6 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
   this->number_of_iterations = number_of_iterations_in;
   if (initial_points_in.size()==0)
     Rcpp::stop("EnsembleKalmanMFDS::EnsembleKalmanMFDS - must have at least one initial point.");
-  //Parameters candidate_parameters = initial_points_in[0];
-  //this->setup_variables_using_candidate_parameters(candidate_parameters);
   
   this->proposal.reset();
   
@@ -151,20 +144,10 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
   }
   
   this->index.reset(new VectorIndex(indices));
-  
-  /*
-   for (auto i=measurement_covariance_estimators.begin();
-   i!=measurement_covariance_estimators.end();
-   ++i)
-   {
-   (*i)->setup(candidate_parameters);
-   }
-   */
-  
+
   this->ensemble_factors.reset(new VectorEnsembleFactors(measurement_covariance_estimators));
   
   Rcpp::stop("EMFDS - need alternative to set temperature.");
-  //this->ensemble_factors->set_temperature(this->delta_t);
   
   // Need to construct LikelihoodEstimator to read in to this constructor.
   //this->particle_simulator = new ParameterParticleSimulator(proposal,
@@ -172,9 +155,6 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
   
   if (parallel_in==TRUE)
   {
-    //this->the_worker.reset(new RcppParallelSMCWorker(this,
-    //this->model_and_algorithm.particle_simulator,
-    //grain_size_in));
   }
   else
   {
@@ -226,9 +206,6 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
   
   if (initial_points_in.size()==0)
     Rcpp::stop("EnsembleKalmanMFDS::EnsembleKalmanMFDS - must have at least one initial point.");
-  //Parameters candidate_parameters = initial_points_in[0];
-  //this->setup_variables_using_candidate_parameters(candidate_parameters);
-  //Data candidate_measurement = transform_function_in(candidate_parameters);
   
   this->proposal.reset();
   
@@ -253,20 +230,10 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
   indices.push_back(0);
   
   this->index.reset(new VectorIndex(indices));
-  
-  /*
-   for (auto i=measurement_covariance_estimators.begin();
-   i!=measurement_covariance_estimators.end();
-   ++i)
-   {
-   (*i)->setup(candidate_parameters);
-   }
-   */
-  
+
   this->ensemble_factors.reset(new VectorEnsembleFactors(measurement_covariance_estimators));
   
   Rcpp::stop("EMFDS - need alternative to set temperature.");
-  //this->ensemble_factors->set_temperature(this->delta_t);
   
   // Need to construct LikelihoodEstimator to read in to this constructor.
   //this->particle_simulator = new ParameterParticleSimulator(proposal,
@@ -274,9 +241,6 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
   
   if (parallel_in==TRUE)
   {
-    //this->the_worker.reset(new RcppParallelSMCWorker(this,
-    //this->model_and_algorithm.particle_simulator,
-    //grain_size_in));
   }
   else
   {
@@ -327,9 +291,6 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
   
   if (initial_points_in.size()==0)
     Rcpp::stop("EnsembleKalmanMFDS::EnsembleKalmanMFDS - must have at least one initial point.");
-  //Parameters candidate_parameters = initial_points_in[0];
-  //this->setup_variables_using_candidate_parameters(candidate_parameters);
-  //Data candidate_measurement = transform_function_in(candidate_parameters);
   
   this->proposal.reset();
   
@@ -353,26 +314,13 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
   indices.push_back(0);
   
   this->index.reset(new VectorIndex(indices));
-  
-  /*
-   for (auto i=measurement_covariance_estimators.begin();
-   i!=measurement_covariance_estimators.end();
-   ++i)
-   {
-   (*i)->setup(candidate_parameters);
-   }
-   */
-  
+
   this->ensemble_factors.reset(new VectorEnsembleFactors(measurement_covariance_estimators));
   
   Rcpp::stop("EMFDS - need alternative to set temperature.");
-  //this->ensemble_factors->set_temperature(this->delta_t);
   
   if (parallel_in==TRUE)
   {
-    //this->the_worker.reset(new RcppParallelSMCWorker(this,
-    //this->model_and_algorithm.particle_simulator,
-    //grain_size_in));
   }
   else
   {
@@ -391,13 +339,6 @@ EnsembleKalmanMFDS::EnsembleKalmanMFDS(RandomNumberGenerator* rng_in,
   
   this->mcmc.reset();
 }
-
-/*
- void EnsembleKalmanMFDS::setup_variables()
- {
- // intentionally blank
- }
- */
 
 //Copy constructor for the EnsembleKalmanMFDS class.
 EnsembleKalmanMFDS::EnsembleKalmanMFDS(const EnsembleKalmanMFDS &another)
@@ -453,8 +394,6 @@ void EnsembleKalmanMFDS::make_copy(const EnsembleKalmanMFDS &another)
   this->delta_t = another.delta_t;
   this->number_of_iterations = another.number_of_iterations;
   this->state_mean_as_data = another.state_mean_as_data;
-  //this->sequencer = another.sequencer;
-  //this->sequencer_limit_is_fixed = another.sequencer_limit_is_fixed;
 }
 
 EnsembleKalmanOutput* EnsembleKalmanMFDS::specific_run()
@@ -511,8 +450,6 @@ void EnsembleKalmanMFDS::ensemble_kalman_evaluate(EnsembleKalmanOutput* current_
 
 void EnsembleKalmanMFDS::ensemble_kalman_evaluate_smcfixed_part(EnsembleKalmanOutput* current_state)
 {
-  //this->the_worker->smcfixed_weight(current_state->all_particles.back());
-  //current_state->initialise_next_step();
 }
 
 void EnsembleKalmanMFDS::ensemble_kalman_evaluate_smcadaptive_part_given_smcfixed(EnsembleKalmanOutput* current_state)
@@ -528,7 +465,6 @@ void EnsembleKalmanMFDS::ensemble_kalman_evaluate_smcadaptive_part_given_smcfixe
                             1.0/this->delta_t);
     
     Rcpp::stop("EMFDS - need alternative to set temperature.");
-    //this->ensemble_factors->set_temperature(this->ensemble_factors->get_temperature() + this->delta_t);
     this->predict(current_state);
     this->the_worker->unpack_with_predicted(&current_state->back());
     
@@ -539,19 +475,10 @@ void EnsembleKalmanMFDS::ensemble_kalman_evaluate_smcadaptive_part_given_smcfixe
       current_state->write(results_name);
     
     current_state->start_time = std::chrono::high_resolution_clock::now();
-    
-    //this->sequencer.find_desired_criterion(current_state);
-    
-    // (involves evaluating adaptive weights, using Sequencer)
-    //this->sequencer.find_next_target_bisection(current_state);
-    
-    //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
-    //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-    
+
     // check termination, using sequencer
     if (this->number_of_iterations-1==current_state->enk_iteration)
     {
-      //terminate = TRUE;
       current_state->terminate();
       break;
     }
@@ -564,23 +491,11 @@ MoveOutput* EnsembleKalmanMFDS::move(RandomNumberGenerator &rng,
                                      Particle &particle)
 {
   
-  /*
-   // Outputs are created here, with memory managed by Particle hereafter.
-   return EnsembleMember(simulated_parameters, simulated_ensemble_factor_variables);
-   
-   EnsembleMember new_member = this->mcmc->run(rng,
-   particle);
-   
-   // need to delete the old factor variables if not done already
-   new_member.ensemble_factor_variables = factors->simulate_ensemble_factor_variables(rng,
-   new_member.parameters);
-   */
   if (this->mcmc!=NULL)
   {
     MoveOutput* mcmc_moved = this->mcmc->run(rng,
                                              particle);
     
-    //mcmc_moved->back().simulate_ensemble_factor_variables(&particle);
     return mcmc_moved;
   }
   else
@@ -594,15 +509,6 @@ MoveOutput* EnsembleKalmanMFDS::move(RandomNumberGenerator &rng,
   
   // also sim meas
 }
-
-/*
- void EnsembleKalmanMFDS::weight_for_adapting_sequence(Ensemble &current_particles,
- double incremental_temperature)
- {
- this->the_worker->smcadaptive_given_smcfixed_weight(current_particles,
- incremental_temperature);
- }
- */
 
 void EnsembleKalmanMFDS::predict(EnsembleKalmanOutput* simulation)
 {
@@ -624,7 +530,6 @@ void EnsembleKalmanMFDS::predict(EnsembleKalmanOutput* simulation)
     
     for (size_t i=0; i<this->number_of_ensemble_members; ++i)
     {
-      //mean + sqrt(1.0/(1.0-this->delta_t))*(simulation->back().partially_packed_members_col[i]-mean);
       simulation->back().partially_packed_predicted_members_col.push_back(mean + sqrt(1.0/(1.0-this->delta_t))*(simulation->back().partially_packed_members_col[i]-mean));
     }
   }
@@ -665,9 +570,6 @@ void EnsembleKalmanMFDS::ensemble_kalman_simulate(EnsembleKalmanOutput* current_
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Ensemble* current_particles = &current_state->back();
     Ensemble* next_particles = current_state->add_ensemble(this->ensemble_factors.get());
-    //this->the_worker->move(next_particles,
-    //                       current_particles,
-    //                       conditioned_on_parameters);
     this->the_worker->move(next_particles,
                            current_particles);
     
@@ -693,9 +595,6 @@ void EnsembleKalmanMFDS::ensemble_kalman_evaluate(EnsembleKalmanOutput* current_
 void EnsembleKalmanMFDS::ensemble_kalman_evaluate_smcfixed_part(EnsembleKalmanOutput* current_state,
                                                                 const Parameters &conditioned_on_parameters)
 {
-  //this->the_worker->smcfixed_weight(current_state->all_particles.back(),
-  //                                  conditioned_on_parameters);
-  //current_state->initialise_next_step();
 }
 
 void EnsembleKalmanMFDS::ensemble_kalman_evaluate_smcadaptive_part_given_smcfixed(EnsembleKalmanOutput* current_state,
@@ -721,19 +620,10 @@ void EnsembleKalmanMFDS::ensemble_kalman_evaluate_smcadaptive_part_given_smcfixe
       current_state->write(results_name);
     
     current_state->start_time = std::chrono::high_resolution_clock::now();
-    
-    //this->sequencer.find_desired_criterion(current_state);
-    
-    // (involves evaluating adaptive weights, using Sequencer)
-    //this->sequencer.find_next_target_bisection(current_state);
-    
-    //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
-    //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-    
+
     // check termination, using sequencer
     if (this->number_of_iterations-1==current_state->enk_iteration)
     {
-      //terminate = TRUE;
       current_state->terminate();
       break;
     }
@@ -817,9 +707,6 @@ void EnsembleKalmanMFDS::ensemble_kalman_subsample_evaluate(EnsembleKalmanOutput
 void EnsembleKalmanMFDS::ensemble_kalman_subsample_evaluate_smcfixed_part(EnsembleKalmanOutput* current_state,
                                                                           const Parameters &conditioned_on_parameters)
 {
-  //this->the_worker->subsample_smcfixed_weight(current_state->all_particles.back(),
-  //                                            conditioned_on_parameters);
-  //current_state->initialise_next_step();
 }
 
 void EnsembleKalmanMFDS::ensemble_kalman_subsample_evaluate_smcadaptive_part_given_smcfixed(EnsembleKalmanOutput* current_state,
@@ -844,19 +731,10 @@ void EnsembleKalmanMFDS::ensemble_kalman_subsample_evaluate_smcadaptive_part_giv
       current_state->write(results_name);
     
     current_state->start_time = std::chrono::high_resolution_clock::now();
-    
-    //this->sequencer.find_desired_criterion(current_state);
-    
-    // (involves evaluating adaptive weights, using Sequencer)
-    //this->sequencer.find_next_target_bisection(current_state);
-    
-    //this->the_worker->smcadaptive_given_smcfixed_weight(conditioned_on_parameters);
-    //current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
-    
+
     // check termination, using sequencer
     if (this->number_of_iterations-1==current_state->enk_iteration)
     {
-      //terminate = TRUE;
       current_state->terminate();
       break;
     }
@@ -866,42 +744,6 @@ void EnsembleKalmanMFDS::ensemble_kalman_subsample_evaluate_smcadaptive_part_giv
   }
 }
 
-/*
- MoveOutput* EnsembleKalmanMFDS::move(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters)
- {
- 
- if (this->mcmc!=NULL)
- {
- MoveOutput* mcmc_moved = this->mcmc->run(rng,
- particle,
- conditioned_on_parameters);
- 
- //mcmc_moved->back().simulate_ensemble_factor_variables(&particle,conditioned_on_parameters);
- return mcmc_moved;
- }
- else
- {
- Particle next_particle = particle.copy_without_factor_variables();
- EnsembleFactors* ensemble_factors = particle.ensemble_factor_variables->get_ensemble_factors();
- if (ensemble_factors!=NULL)
- next_particle.simulate_ensemble_factor_variables(ensemble_factors,
- conditioned_on_parameters);
- return new SinglePointMoveOutput(std::move(next_particle));
- }
- }
- */
-
-/*
- void EnsembleKalmanMFDS::weight_for_adapting_sequence(Particles &current_particles,
- const Parameters &conditioned_on_parameters)
- {
- this->the_worker->smcadaptive_given_smcfixed_weight(current_particles,
- conditioned_on_parameters);
- }
- */
-
 MoveOutput* EnsembleKalmanMFDS::subsample_move(RandomNumberGenerator &rng,
                                                Particle &particle)
 {
@@ -910,7 +752,6 @@ MoveOutput* EnsembleKalmanMFDS::subsample_move(RandomNumberGenerator &rng,
     MoveOutput* mcmc_moved = this->mcmc->subsample_run(rng,
                                                        particle);
     
-    //mcmc_moved->back().simulate_ensemble_factor_variables(&particle,conditioned_on_parameters);
     return mcmc_moved;
   }
   else
@@ -923,115 +764,4 @@ MoveOutput* EnsembleKalmanMFDS::subsample_move(RandomNumberGenerator &rng,
   }
 }
 
-/*
- MoveOutput* EnsembleKalmanMFDS::subsample_move(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters)
- {
- if (this->mcmc!=NULL)
- {
- MoveOutput* mcmc_moved = this->mcmc->subsample_run(rng,
- particle,
- conditioned_on_parameters);
- 
- //mcmc_moved->back().simulate_ensemble_factor_variables(&particle,conditioned_on_parameters);
- return mcmc_moved;
- }
- else
- {
- Particle next_particle = particle.copy_without_factor_variables();
- EnsembleFactors* ensemble_factors = particle.ensemble_factor_variables->get_ensemble_factors();
- if (ensemble_factors!=NULL)
- next_particle.subsample_simulate_ensemble_factor_variables(ensemble_factors,
- conditioned_on_parameters);
- return new SinglePointMoveOutput(std::move(next_particle));
- }
- }
- */
-
-/*
- void EnsembleKalmanMFDS::subsample_weight_for_adapting_sequence(Particles &current_particles,
- const Parameters &conditioned_on_parameters)
- {
- this->the_worker->subsample_smcadaptive_given_smcfixed_weight(current_particles,
- conditioned_on_parameters);
- }
- */
-
-// void EnsembleKalmanMFDS::smc_step(void)
-// {
-//
-// }
-//
-// void EnsembleKalmanMFDS::weight_update(void)
-// {
-//
-// }
-
-//void EnsembleKalmanMFDS::smc_update(EnsembleKalmanOutput* current_state)
-//{
-/*
- unsigned int number_of_points = algorithm["number_of_points"];
- 
- List observed_data = model["observed_data"];
- 
- // Do the initial importance sampling step.
- 
- // Do the simulation.
- SEXP simulate_proposal_SEXP = algorithm["simulate_proposal"];
- SimulateDistributionPtr simulate_proposal = load_simulate_distribution(simulate_proposal_SEXP);
- 
- std::vector<List> proposed_points;
- proposed_points.reserve(number_of_points);
- for (unsigned int i=0; i<number_of_points; ++i)
- {
- proposed_points.push_back(simulate_proposal());
- }
- 
- LikelihoodEstimator* likelihood_estimator = make_likelihood_estimator(model, algorithm);
- 
- std::vector<List> proposed_auxiliary_variables;
- proposed_auxiliary_variables.reserve(number_of_points);
- 
- for (std::vector<List>::const_iterator i=proposed_points.begin(); i!=proposed_points.end(); ++i)
- {
- proposed_auxiliary_variables.push_back(likelihood_estimator->simulate_auxiliary_variables(*i));
- }
- 
- likelihood_estimator->is_setup_likelihood_estimator(proposed_points,
- proposed_auxiliary_variables);
- 
- arma::colvec log_weights(number_of_points);
- bool prior_is_proposal = algorithm["prior_is_proposal"];
- if (prior_is_proposal==TRUE)
- {
- for (unsigned int i=0; i<number_of_points; ++i)
- {
- log_weights[i] = likelihood_estimator->estimate_log_likelihood(proposed_points[i], proposed_auxiliary_variables[i]);
- }
- }
- else
- {
- SEXP evaluate_log_prior_SEXP = model["evaluate_log_prior"];
- EvaluateLogDistributionPtr evaluate_log_prior = load_evaluate_log_distribution(evaluate_log_prior_SEXP);
- 
- SEXP evaluate_log_proposal_SEXP = algorithm["evaluate_log_proposal"];
- EvaluateLogDistributionPtr evaluate_log_proposal = load_evaluate_log_distribution(evaluate_log_proposal_SEXP);
- 
- for (unsigned int i=0; i<number_of_points; ++i)
- {
- log_weights[i] = likelihood_estimator->estimate_log_likelihood(proposed_points[i], proposed_auxiliary_variables[i]) + evaluate_log_prior(proposed_points[i]) - evaluate_log_proposal(proposed_points[i]);
- }
- }
- 
- if (likelihood_estimator != NULL)
- delete likelihood_estimator;
- 
- return List::create(Named("proposed_points") = proposed_points,
- Named("proposed_auxiliary_variables") = wrap(proposed_auxiliary_variables),
- Named("log_weights") = log_weights,
- Named("log_normalising_constant") = log_sum_exp(log_weights));
- */
-
-//}
 }

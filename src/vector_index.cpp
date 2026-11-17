@@ -104,10 +104,4 @@ arma::uvec VectorIndex::get_uvec() const
   return result;
 }
 
-/*
- void VectorIndex::add_index(const size_t &number)
- {
- this->indices.push_back(number);
- }
- */
 }

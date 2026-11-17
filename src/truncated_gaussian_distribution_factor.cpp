@@ -77,30 +77,11 @@ double TruncatedGaussianDistributionFactor::distribution_evaluate(
     const Parameters &input) const {
       
       Rcpp::stop("TruncatedGaussianDistributionFactor::distribution_evaluate - not written yet.");
-      /*
-  double output = 0.0;
-  for (auto i = this->proposal_info.begin(); i != this->proposal_info.end();
-       ++i) {
-    arma::colvec mean = i->second.get_mean();
-    double scale = i->second.get_double_scale();
-    double dim = double(mean.n_rows);
-    output = output +
-             dtmvnorm_using_precomp(input.get_colvec(i->first), mean,
-                                    (1.0 / scale) * i->second.get_inv(),
-                                    dim * log(scale) + i->second.get_logdet(),
-                                    this->lower_info.at(i->first),
-                                    this->upper_info.at(i->first));
-  }
-  return output;
-       */
 }
 
 arma::mat TruncatedGaussianDistributionFactor::distribution_evaluate_gradient(
     const std::string &variable, const Parameters &input) const {
   Rcpp::stop("TruncatedGaussianDistributionFactor::distribution_evaluate_"
              "gradient - not written yet.");
-  // auto found = this->proposal_info.find(variable);
-  // return -(1.0 / found->second.get_double_scale()) * found->second.get_inv()
-  // * (input[variable] - found->second.get_mean());
 }
 } // namespace ilike

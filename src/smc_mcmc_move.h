@@ -7,17 +7,6 @@
 
 namespace ilike
 {
-  /**
-   * @file smc_mcmc_move.h
-   * @brief Defines the SMCOutput class.
-   *
-   * Stores and manages the output produced by SMC. Holds results such as log-likelihood estimates, samples, or diagnostics returned after running the associated algorithm.
-   *
-   * @namespace ilike
-   * @class SMCOutput
-   * @brief The smc output class.
-   */
-
 
 class SMCOutput;
 class MoveOutput;
@@ -27,9 +16,6 @@ class SMCMCMCMove : public SMC
 {
 public:
   
-  /**
-   * @brief Performs the smcmcmcmove operation.
-   */
   SMCMCMCMove();
   
   // Multiple MCMC chains.
@@ -200,150 +186,40 @@ public:
               size_t grain_size_in,
               const std::string &results_name_in);
   
-  /**
-   * @brief Performs the smcmcmcmove operation.
-   *
-   * @param another The SMCOutput instance to copy from.
-   */
   SMCMCMCMove(const SMCMCMCMove &another);
   
-  /**
-   * @brief Performs the ~smcmcmcmove operation.
-   */
   virtual ~SMCMCMCMove();
   
-  /**
-   * @brief Assignment operator for SMCOutput.
-   *
-   * @param another The SMCOutput instance to copy from.
-   */
   void operator=(const SMCMCMCMove &another);
-  /**
-   * @brief Creates a deep copy and returns it as a smc pointer.
-   *
-   * @return The result.
-   */
   SMC* smc_duplicate() const;
-  /**
-   * @brief Creates a deep copy of this SMCOutput object.
-   *
-   * @return The result.
-   */
   LikelihoodEstimator* duplicate() const;
   
   MoveOutput* move(RandomNumberGenerator &rng,
                    const Particle &particle) const;
-  
-  //void weight_for_adapting_sequence(Particles &current_particles);
-  
-  /*
-   MoveOutput* move(RandomNumberGenerator &rng,
-   Particle &particle,
-   const Parameters &conditioned_on_parameters);
-   */
-  
+
   void weight_for_adapting_sequence(const Index* index,
                                     Particles &current_particles);
-  
-  /*
-   void weight_for_adapting_sequence(const Index* index,
-   Particles &current_particles,
-   const Parameters &conditioned_on_parameters);
-   */
-  
+
   MoveOutput* subsample_move(RandomNumberGenerator &rng,
                              const Particle &particle) const;
-  
-  /*
-   MoveOutput* subsample_move(RandomNumberGenerator &rng,
-   Particle &particle,
-   const Parameters &conditioned_on_parameters);
-   */
-  
+
   void subsample_weight_for_adapting_sequence(const Index* index,
                                               Particles &current_particles);
-  
-  /*
-   void subsample_weight_for_adapting_sequence(const Index* index,
-   Particles &current_particles,
-   const Parameters &conditioned_on_parameters);
-   */
-  
+
 protected:
-  
-  /*
-   void set_multiple_mcmc(RandomNumberGenerator* rng_in,
-   size_t* seed_in,
-   const Data* data_in,
-   MCMC* mcmc_in,
-   SimulateDistributionPtr simulate_proposal_in,
-   EvaluateLogDistributionPtr evaluate_log_prior_in,
-   EvaluateLogLikelihoodPtr evaluate_log_likelihood_in,
-   bool parallel_in,
-   size_t grain_size_in);
-   */
-  
+
   SMCOutput* specific_run();
-  
-  //SMCOutput* specific_run(const std::string &directory_name);
-  
-  /**
-   * @brief Class-specific implementation for initialise smc.
-   *
-   * @return The result.
-   */
+
   SMCOutput* specific_initialise_smc();
-  /**
-   * @brief Simulates smc.
-   *
-   * @param simulation The simulation.
-   */
   void simulate_smc(SMCOutput* simulation);
-  /**
-   * @brief Evaluates the smc.
-   *
-   * @param simulation The simulation.
-   */
   void evaluate_smc(SMCOutput* simulation);
-  /**
-   * @brief Evaluates the smcfixed part smc.
-   *
-   * @param simulation The simulation.
-   */
   void evaluate_smcfixed_part_smc(SMCOutput* simulation);
-  /**
-   * @brief Evaluates the smcadaptive part given smcfixed smc.
-   *
-   * @param simulation The simulation.
-   */
   void evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* simulation);
   
-  /**
-   * @brief Performs the mcmc move operation.
-   *
-   * @param current_state The current state.
-   */
   void mcmc_move(SMCOutput* current_state);
   
-  /**
-   * @brief Class-specific implementation for run.
-   *
-   * @param parameters The parameters.
-   *
-   * @return The result.
-   */
   SMCOutput* specific_run(const Parameters &parameters);
-  
-  //SMCOutput* specific_run(const std::string &directory_name,
-  //                        const Parameters &parameters);
-  
-  /**
-   * @brief Class-specific implementation for initialise smc.
-   *
-   * @param parameters The parameters.
-   *
-   * @return The result.
-   */
+
   SMCOutput* specific_initialise_smc(const Parameters &parameters);
   void simulate_smc(SMCOutput* simulation,
                     const Parameters &conditioned_on_parameters);
@@ -354,31 +230,11 @@ protected:
                                   const Parameters &conditioned_on_parameters);
   void evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* simulation,
                                                     const Parameters &conditioned_on_parameters);
-  
-  /*
-   void mcmc_move(SMCOutput* current_state,
-   const Parameters &conditioned_on_parameters);
-   */
-  
+
   void subsample_simulate_smc(SMCOutput* simulation);
   
-  /**
-   * @brief Performs the subsample evaluate smc operation.
-   *
-   * @param simulation The simulation.
-   */
   void subsample_evaluate_smc(SMCOutput* simulation);
-  /**
-   * @brief Performs the subsample evaluate smcfixed part smc operation.
-   *
-   * @param simulation The simulation.
-   */
   void subsample_evaluate_smcfixed_part_smc(SMCOutput* simulation);
-  /**
-   * @brief Performs the subsample evaluate smcadaptive part given smcfixed smc operation.
-   *
-   * @param simulation The simulation.
-   */
   void subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* simulation);
   
   void subsample_simulate_smc(SMCOutput* simulation,
@@ -390,14 +246,7 @@ protected:
                                             const Parameters &conditioned_on_parameters);
   void subsample_evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* simulation,
                                                               const Parameters &conditioned_on_parameters);
-  
-  //void smc_update(SMCOutput* current_state);
-  
-  /**
-   * @brief Copies the state of another SMCOutput into this object.
-   *
-   * @param another The SMCOutput instance to copy from.
-   */
+
   void make_copy(const SMCMCMCMove &another);
 
   // MCMC moves on flat generations (dev/plan.md 2.6a, G3). When every factor
@@ -434,12 +283,10 @@ protected:
                         const Parameters &restore_parameters) const;
   
   // Stored here.
-  /** @brief The mcmc. */
   // owned (dev/plan.md 3.5, CH3)
   std::unique_ptr<MCMC> mcmc;
   
   // stored here
-  /** @brief The index. */
   // owned (dev/plan.md 3.5, CH3)
   std::unique_ptr<Index> index;
 
@@ -448,12 +295,8 @@ protected:
   // so the moves' cached denominators are valid. Owned; may be NULL.
   std::unique_ptr<Index> cancelled_index;
 
-  /** @brief The mcmc at last step. */
   bool mcmc_at_last_step;
-  
-  //void smc_step();
-  
-  //void weight_update();
+
 };
 }
 

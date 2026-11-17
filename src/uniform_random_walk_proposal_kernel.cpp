@@ -9,7 +9,6 @@ namespace ilike
 UniformRandomWalkProposalKernel::UniformRandomWalkProposalKernel()
 :SymmetricProposalKernel()
 {
-  //this->unused_variables_kept = true;
 }
 
 UniformRandomWalkProposalKernel::~UniformRandomWalkProposalKernel()
@@ -19,7 +18,6 @@ UniformRandomWalkProposalKernel::~UniformRandomWalkProposalKernel()
 UniformRandomWalkProposalKernel::UniformRandomWalkProposalKernel(const std::vector<std::string> &variable_names_in)
 :SymmetricProposalKernel()
 {
-  //this->unused_variables_kept = true;
   
   for (auto i=variable_names_in.begin();
        i!=variable_names_in.end();
@@ -33,7 +31,6 @@ UniformRandomWalkProposalKernel::UniformRandomWalkProposalKernel(const std::stri
                                                                  const double &halfwidth_in)
 :SymmetricProposalKernel()
 {
-  //this->unused_variables_kept = true;
   
   this->proposal_info[variable_name_in] = halfwidth_in;
 }
@@ -42,7 +39,6 @@ UniformRandomWalkProposalKernel::UniformRandomWalkProposalKernel(const std::stri
                                                                  const arma::colvec &halfwidth_in)
 :SymmetricProposalKernel()
 {
-  //this->unused_variables_kept = true;
   
   this->proposal_info[variable_name_in] = halfwidth_in;
 }
@@ -51,7 +47,6 @@ UniformRandomWalkProposalKernel::UniformRandomWalkProposalKernel(const std::stri
                                                                  const arma::mat &halfwidth_in)
 :SymmetricProposalKernel()
 {
-  //this->unused_variables_kept = true;
   
   this->proposal_info[variable_name_in] = halfwidth_in;
 }
@@ -60,7 +55,6 @@ UniformRandomWalkProposalKernel::UniformRandomWalkProposalKernel(const std::vect
                                                                  const std::vector<arma::mat> &halfwidths_in)
 :SymmetricProposalKernel()
 {
-  //this->unused_variables_kept = true;
   
   for (size_t i=0;
        i<variable_names_in.size();
@@ -102,7 +96,6 @@ SymmetricProposalKernel* UniformRandomWalkProposalKernel::symmetric_proposal_ker
 
 void UniformRandomWalkProposalKernel::make_copy(const UniformRandomWalkProposalKernel &another)
 {
-  //this->unused_variables_kept = another.unused_variables_kept;
   this->proposal_info = another.proposal_info;
 }
 
@@ -114,7 +107,6 @@ double UniformRandomWalkProposalKernel::specific_evaluate_kernel(const Particle 
        i!=this->proposal_info.end();
        ++i)
   {
-    //output = output - double(i->second.n_elem)*log(2.0) - arma::accu(arma::log(i->second));
     arma::mat current_position = (old_particle.get_transformed_parameters(this))[i->first];
     output = output + dunif((proposed_particle.get_transformed_parameters(this))[i->first],
                             current_position-i->second,
@@ -123,31 +115,12 @@ double UniformRandomWalkProposalKernel::specific_evaluate_kernel(const Particle 
   return output;
 }
 
-/*
- double UniformRandomWalkProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->specific_evaluate_kernel(proposed_particle, old_particle);
- }
- */
-
 double UniformRandomWalkProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
                                                                            const Particle &old_particle) const
 {
   // no difference since size of data set does not impact on proposal
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
-
-/*
- double UniformRandomWalkProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters) const
- {
- // no difference since size of data set does not impact on proposal
- return this->specific_evaluate_kernel(proposed_particle, old_particle);
- }
- */
 
 // simulate, written into the target (same random numbers and values)
 void UniformRandomWalkProposalKernel::simulate_into(RandomNumberGenerator &rng,
@@ -169,8 +142,6 @@ Parameters UniformRandomWalkProposalKernel::simulate(RandomNumberGenerator &rng,
                                                      const Particle &particle) const
 {
   Parameters output;
-  //if (this->unused_variables_kept)
-  //  output = particle.get_transformed_parameters(this);
   for (auto i=this->proposal_info.begin();
        i!=this->proposal_info.end();
        ++i)
@@ -213,8 +184,6 @@ Parameters UniformRandomWalkProposalKernel::subsample_simulate(RandomNumberGener
   auto found =  this->proposal_info.find(variable);
   
   Parameters output;
-  //if (this->unused_variables_kept)
-  //  output = particle.get_transformed_parameters(this);
   arma::mat current_position = (particle.get_transformed_parameters(this))[found->first];
   output[found->first] = runif(rng,
                                current_position-found->second,
@@ -240,32 +209,12 @@ arma::mat UniformRandomWalkProposalKernel::specific_gradient_of_log(const std::s
   Rcpp::stop("UniformRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
-/*
- arma::mat UniformRandomWalkProposalKernel::specific_gradient_of_log(const std::string &variable,
- Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters)
- {
- Rcpp::stop("UniformRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
- }
- */
-
 arma::mat UniformRandomWalkProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
                                                                               const Particle &proposed_particle,
                                                                               const Particle &old_particle)
 {
   Rcpp::stop("UniformRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
 }
-
-/*
- arma::mat UniformRandomWalkProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
- Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters)
- {
- Rcpp::stop("UniformRandomWalkProposalKernel::specific_gradient_of_log - not written yet.");
- }
- */
 
 void UniformRandomWalkProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
 {

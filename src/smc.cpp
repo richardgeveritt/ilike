@@ -3,10 +3,7 @@
 #include <mutex>
 #include "chunk_parallel.h"
 
-//#include "function_pointers.h"
 #include "utils.h"
-//#include "likelihood_estimator.h"
-//#include "likelihood_maker.h"
 #include "smc_worker.h"
 #include "sequential_smc_worker.h"
 #include "smc_output.h"
@@ -26,16 +23,10 @@ SMC::SMC()
 :LikelihoodEstimator()
 {
   this->particle_simulator.reset();
-  //this->smc_termination = NULL;
-  //this->sequencer_parameters = NULL;
-  //this->transform = NULL;
-  //this->store_raw = true;
-  //this->store_transformed = false;
   this->setup_default_ancestor_variables();
   this->initialised = false;
   this->the_worker.reset();
   this->resampling_criterion.reset();
-  //this->output = NULL;
 }
 
 SMC::SMC(RandomNumberGenerator* rng_in,
@@ -55,23 +46,14 @@ SMC::SMC(RandomNumberGenerator* rng_in,
          const std::string &results_name_in)
 :LikelihoodEstimator(rng_in, seed_in, data_in, algorithm_parameters_in, smcfixed_flag_in)
 {
-  //this->output = new SMCOutput(lag_in,
-  //                             lag_proposed_in);
   this->number_of_particles = number_of_particles_in;
   this->lag = lag_in;
   this->lag_proposed = lag_proposed_in;
-  //this->summary_statistics = summary_statistics_in;
   this->sequencer_limit_is_fixed = sequencer_limit_is_fixed_in;
-  //this->evaluate_log_proposal = evaluate_log_proposal_in;
   this->proposal_is_evaluated = proposal_is_evaluated_in;
   this->resampling_criterion.reset(new ESSSMCCriterion(resampling_desired_ess_in));
   this->proposed_particles_inputted = false;
   this->particle_simulator.reset();
-  //this->smc_termination = NULL;
-  //this->sequencer_parameters = NULL;
-  //this->transform = NULL;
-  //this->store_raw = true;
-  //this->store_transformed = false;
   this->setup_default_ancestor_variables();
   this->results_name = results_name_in;
   
@@ -104,23 +86,14 @@ SMC::SMC(RandomNumberGenerator* rng_in,
          const std::string &results_name_in)
 :LikelihoodEstimator(rng_in, seed_in, data_in, algorithm_parameters_in, smcfixed_flag_in)
 {
-  //this->output = new SMCOutput(lag_in,
-  //                             lag_proposed_in);
   this->number_of_particles = number_of_particles_in;
   this->lag = lag_in;
   this->lag_proposed = lag_proposed_in;
-  //this->summary_statistics = summary_statistics_in;
   this->sequencer_limit_is_fixed = sequencer_limit_is_fixed_in;
-  //this->evaluate_log_proposal = evaluate_log_proposal_in;
   this->proposal_is_evaluated = proposal_is_evaluated_in;
   this->resampling_criterion.reset(adaptive_resampling_method_in);
   this->proposed_particles_inputted = false;
   this->particle_simulator.reset();
-  //this->smc_termination = NULL;
-  //this->sequencer_parameters = NULL;
-  //this->transform = NULL;
-  //this->store_raw = true;
-  //this->store_transformed = false;
   this->setup_default_ancestor_variables();
   this->results_name = results_name_in;
   
@@ -136,36 +109,6 @@ SMC::SMC(RandomNumberGenerator* rng_in,
   this->the_worker.reset();
 }
 
-/*
- SMC::SMC(RandomNumberGenerator* rng_in,
- size_t* seed_in,
- Data* data_in,
- size_t lag_in,
- size_t lag_proposed_in,
- double resampling_desired_ess_in,
- const std::vector<Parameters> &initial_values_in,
- const arma::colvec &log_probabilities_of_initial_values_in,
- bool smcfixed_flag_in,
- bool sequencer_limit_is_fixed_in)
- :LikelihoodEstimator(rng_in, seed_in, data_in)
- {
- this->number_of_particles = initial_values_in.size();
- this->lag = lag_in;
- this->lag_proposed = lag_proposed_in;
- this->smcfixed_flag = smcfixed_flag_in;
- this->sequencer_limit_is_fixed = sequencer_limit_is_fixed_in;
- this->resampling_criterion.reset(new ESSSMCCriterion(resampling_desired_ess_in));
- //this->evaluate_log_proposal = NULL;
- this->proposal_is_evaluated = false;
- this->proposed_particles_inputted = true;
- this->initial_particles = Particles(initial_values_in,
- log_probabilities_of_initial_values_in);
- this->particle_simulator.reset();
- this->smc_termination = NULL;
- //this->results_name = results_name_in;
- }
- */
-
 SMC::SMC(const SMC &another)
 :LikelihoodEstimator(another)
 {
@@ -180,15 +123,7 @@ SMC::~SMC()
   this->resampling_criterion.reset();
   
   this->particle_simulator.reset();
-  
-  //if (this->transform!=NULL)
-  //  delete this->transform;
-  
-  //if (this->smc_termination!=NULL)
-  //  delete this->smc_termination;
-  
-  //if (this->output!=NULL)
-  //  delete this->output;
+
 }
 
 void SMC::operator=(const SMC &another)
@@ -201,13 +136,7 @@ void SMC::operator=(const SMC &another)
   this->resampling_criterion.reset();
   
   this->particle_simulator.reset();
-  
-  //if (this->transform!=NULL)
-  //  delete this->transform;
-  
-  //if (this->smc_termination!=NULL)
-  //  delete this->smc_termination;
-  
+
   this->make_copy(another);
 }
 
@@ -235,20 +164,7 @@ void SMC::make_copy(const SMC &another)
     this->particle_simulator.reset(another.particle_simulator->duplicate());
   else
     this->particle_simulator.reset();
-  
-  //if (another.transform!=NULL)
-  //  this->transform = another.transform->duplicate();
-  //else
-  //  this->transform = NULL;
-  
-  //if (another.smc_termination!=NULL)
-  //  this->smc_termination = another.smc_termination->duplicate();
-  //else
-  //  this->smc_termination = NULL;
-  
-  //if (this->output!=NULL)
-  //  this->output = another.output->smc_duplicate();
-  
+
   this->sequencer = another.sequencer;
   // B29: the copy's worker and sequencer work for the copy, and its schedule
   // variables are its own (Sequencer's copy shares the matrices, and the
@@ -257,23 +173,11 @@ void SMC::make_copy(const SMC &another)
     this->the_worker->set_smc(this);
   this->sequencer.set_worker(this->the_worker.get());
   this->sequencer.schedule_parameters = another.sequencer.schedule_parameters.deep_copy();
-  /*
-   if (another.sequencer_parameters!=NULL)
-   {
-   this->sequencer_parameters = &this->sequencer.schedule_parameters;
-   }
-   else
-   {
-   this->sequencer_parameters = NULL;
-   }
-   */
   
   this->sequencer_limit_is_fixed = another.sequencer_limit_is_fixed;
   this->number_of_particles = another.number_of_particles;
   this->lag = another.lag;
   this->lag_proposed = another.lag_proposed;
-  //this->summary_statistics = another.summary_statistics;
-  //this->evaluate_log_proposal = another.evaluate_log_proposal;
   this->proposal_is_evaluated = another.proposal_is_evaluated;
   this->proposed_particles_inputted = another.proposed_particles_inputted;
   this->initial_particles = another.initial_particles;
@@ -281,9 +185,6 @@ void SMC::make_copy(const SMC &another)
   this->any_variables = another.any_variables;
   this->vector_variable_sizes = another.vector_variable_sizes;
   this->default_ancestor_variables = another.default_ancestor_variables;
-  //this->store_raw = another.store_raw;
-  //this->store_transformed = another.store_transformed;
-  //this->output_filename = another.output_filename;
   this->log_probabilities_of_initial_values = another.log_probabilities_of_initial_values;
   this->initialised = another.initialised;
   this->results_name = another.results_name;
@@ -319,30 +220,13 @@ SMCOutput* SMC::run()
   }
   
   return this->specific_run();
-  //return new SMCOutput;
 }
-
-/*
- SMCOutput* SMC::run(const std::string &directory_name)
- {
- return this->specific_run(directory_name);
- }
- */
 
 SMCOutput* SMC::run(const Parameters &conditioned_on_parameters)
 {
   this->setup(conditioned_on_parameters);
   return this->specific_run(conditioned_on_parameters);
 }
-
-/*
- SMCOutput* SMC::run(const std::string &directory_name,
- const Parameters &conditioned_on_parameters)
- {
- return this->specific_run(directory_name,
- conditioned_on_parameters);
- }
- */
 
 LikelihoodEstimatorOutput* SMC::initialise()
 {
@@ -396,7 +280,6 @@ void SMC::setup_variables()
   if (this->factors!=NULL)
     this->factors->setup(dummy_parameters);
   
-  //this->setup_moves_and_proposals();
 }
 
 void SMC::setup_variables(const Parameters &parameters)
@@ -425,51 +308,6 @@ void SMC::setup_variables(const Parameters &parameters)
   if (this->factors!=NULL)
     this->factors->setup(dummy_parameters);
 }
-
-/*
- Parameters dummy_parameters;
- if (this->transform==NULL)
- {
- this->vector_variables = dummy_parameters.get_vector_variables();
- this->any_variables = dummy_parameters.get_any_variables();
- }
- else
- {
- if (this->store_transformed==false)
- {
- Rcpp::stop("SMC::setup_variables - need to store transformed auxiliary variables if transform is specified.");
- }
- else
- {
- if (this->proposed_particles_inputted)
- {
- dummy_parameters = this->initial_particles[0];
- }
- else
- {
- Particle new_particle;
- this->particle_simulator->simulate(*this->rng,
- &new_particle,
- this->factors.get());
- dummy_parameters = new_particle.parameters;
- }
- 
- if (this->store_raw==false)
- {
- dummy_parameters = this->transform->transform(dummy_parameters);
- this->vector_variables = dummy_parameters.get_vector_variables();
- this->any_variables = dummy_parameters.get_any_variables();
- }
- else
- {
- dummy_parameters.add_parameters(this->transform->transform(dummy_parameters));
- this->vector_variables = dummy_parameters.get_vector_variables();
- this->any_variables = dummy_parameters.get_any_variables();
- }
- 
- }
- }
- */
 
 void SMC::simulate_generation_in_chunks(SMCOutput *current_state,
                                        const Parameters* conditioned_on_parameters,
@@ -739,7 +577,6 @@ void SMC::simulate_generation_in_chunks(SMCOutput *current_state,
     generation->initialise_weights();
   }
 
-
 void SMC::weight_from_summaries_if_possible(const Index* index,
                                             Particles &current_particles)
 {
@@ -866,18 +703,6 @@ LikelihoodEstimatorOutput* SMC::initialise(const Parameters &conditioned_on_para
 
 SMCOutput* SMC::initialise_smc(const Parameters &conditioned_on_parameters)
 {
-  /*
-   Particle new_particle;
-   Parameters dummy_parameters = this->particle_simulator->simulate(*this->rng,
-   this->factors.get(),
-   conditioned_on_parameters).parameters;
-   
-   //Parameters dummy_parameters = this->particle_simulator->simulate(*this->rng,
-   //                                                                 this->factors.get(),
-   //                                                                 conditioned_on_parameters).parameters;
-   this->vector_variables = dummy_parameters.get_vector_variables();
-   this->any_variables = dummy_parameters.get_any_variables();
-   */
   
   if (this->initialised==false)
   {
@@ -923,12 +748,10 @@ void SMC::resample(SMCOutput* current_state)
     // Sample ancestor variables.
     current_particles_iterator->resampled_flag = true;
     current_particles_iterator->resample();
-    //current_state->back().previous_normalised_log_weights.fill(-log(double(this->number_of_particles)));
   }
   else
   {
     current_particles_iterator->ancestor_variables = this->default_ancestor_variables;
-    //current_state->back().previous_normalised_log_weights = current_state->back().normalised_log_weights;
   }
 }
 

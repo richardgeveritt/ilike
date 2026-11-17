@@ -40,8 +40,7 @@ void UnadjustedStandardMCMCOutput::operator=(const UnadjustedStandardMCMCOutput 
   if(this == &another){ //if a==a
     return;
   }
-  
-  
+
   StandardMCMCOutput::operator=(another);
   this->make_copy(another);
 }

@@ -185,7 +185,6 @@ void ABCLikelihoodEstimatorOutput::close_ofstreams()
   this->estimator->h5_file_path.clear();
 }
 
-
 // Adaptive summary (dev/plan.md 2.6a): the distance and scale constant found
 // in the smcfixed part; the kernel at the current tolerance is then
 // evaluate_kernel_given_distance. When smcfixed, the value itself.
@@ -217,7 +216,6 @@ double ABCLikelihoodEstimatorOutput::smcadaptive_from_summary(const double *valu
                                                                      values[1]);
 }
 
-
 bool ABCLikelihoodEstimatorOutput::repoint_estimator(LikelihoodEstimator* estimator_in)
 {
   ABCLikelihoodEstimator* abc = dynamic_cast<ABCLikelihoodEstimator*>(estimator_in);
@@ -226,7 +224,6 @@ bool ABCLikelihoodEstimatorOutput::repoint_estimator(LikelihoodEstimator* estima
   this->estimator = abc;
   return true;
 }
-
 
 void ABCLikelihoodEstimatorOutput::smcadaptive_from_summaries(const double *values,
                                                               size_t stride,

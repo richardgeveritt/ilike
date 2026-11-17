@@ -32,8 +32,6 @@ void IndependentProposalKernel::operator=(const IndependentProposalKernel &anoth
 
 void IndependentProposalKernel::make_copy(const IndependentProposalKernel &another)
 {
-  //this->proposal_evaluate = another.proposal_evaluate;
-  //this->proposal_simulate = another.proposal_simulate;
 }
 
 double IndependentProposalKernel::specific_evaluate_kernel(const Particle &proposed_particle,
@@ -42,29 +40,11 @@ double IndependentProposalKernel::specific_evaluate_kernel(const Particle &propo
   return this->evaluate_independent_kernel(proposed_particle.get_transformed_parameters(this));
 }
 
-/*
- double IndependentProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->evaluate_independent_kernel(proposed_particle.move_parameters->merge(conditioned_on_parameters));
- }
- */
-
 double IndependentProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
                                                                      const Particle &old_particle) const
 {
   return this->subsample_evaluate_independent_kernel(proposed_particle.get_transformed_parameters(this));
 }
-
-/*
- double IndependentProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->subsample_evaluate_independent_kernel(proposed_particle.move_parameters->merge(conditioned_on_parameters));
- }
- */
 
 arma::mat IndependentProposalKernel::specific_gradient_of_log(const std::string &variable,
                                                               const Particle &proposed_particle,
@@ -74,17 +54,6 @@ arma::mat IndependentProposalKernel::specific_gradient_of_log(const std::string 
                                            proposed_particle.get_transformed_parameters(this));
 }
 
-/*
- arma::mat IndependentProposalKernel::specific_gradient_of_log(const std::string &variable,
- Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters)
- {
- return this->independent_gradient_of_log(variable,
- proposed_particle.move_parameters->merge(conditioned_on_parameters));
- }
- */
-
 arma::mat IndependentProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
                                                                         const Particle &proposed_particle,
                                                                         const Particle &old_particle)
@@ -93,48 +62,17 @@ arma::mat IndependentProposalKernel::specific_subsample_gradient_of_log(const st
                                                      proposed_particle.get_transformed_parameters(this));
 }
 
-/*
- arma::mat IndependentProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
- Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters)
- {
- return this->subsample_independent_gradient_of_log(variable,
- proposed_particle.move_parameters->merge(conditioned_on_parameters));
- }
- */
-
 Parameters IndependentProposalKernel::simulate(RandomNumberGenerator &rng,
                                                const Particle &particle) const
 {
   return this->independent_simulate(rng);
 }
 
-/*
- Parameters IndependentProposalKernel::simulate(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->independent_simulate(rng,
- conditioned_on_parameters);
- }
- */
-
 Parameters IndependentProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                          const Particle &particle) const
 {
   return this->subsample_independent_simulate(rng);
 }
-
-/*
- Parameters IndependentProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->subsample_independent_simulate(rng,
- conditioned_on_parameters);
- }
- */
 
 Parameters IndependentProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                          const std::string &variable,
@@ -143,15 +81,4 @@ Parameters IndependentProposalKernel::subsample_simulate(RandomNumberGenerator &
   return this->subsample_independent_simulate(rng, variable);
 }
 
-/*
- Parameters IndependentProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
- const std::string &variable,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->subsample_independent_simulate(rng,
- variable,
- conditioned_on_parameters);
- }
- */
 }

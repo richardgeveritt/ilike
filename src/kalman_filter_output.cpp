@@ -40,7 +40,6 @@ KalmanFilterOutput::KalmanFilterOutput(KalmanFilter* estimator_in,
   this->results_name = results_name_in;
   this->kf_iteration = 0;
   this->iteration_written_to_file = -1;
-  //this->time = 0.0;
   this->start_time = std::chrono::high_resolution_clock::now();
 }
 
@@ -308,7 +307,6 @@ void KalmanFilterOutput::print(std::ostream &os) const
 void KalmanFilterOutput::forget_you_were_already_written_to_file()
 {
   this->iteration_written_to_file = -1;
-  //int iteration_written_to_file = -1;
 }
 
 void KalmanFilterOutput::terminate()

@@ -141,31 +141,12 @@ double MirrorProposalKernel::specific_evaluate_kernel(const Particle &proposed_p
   
 }
 
-/*
- double MirrorProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->specific_evaluate_kernel(proposed_particle, old_particle);
- }
- */
-
 double MirrorProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
                                                                 const Particle &old_particle) const
 {
   // no difference since size of data set does not impact on proposal
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
-
-/*
- double MirrorProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters) const
- {
- // no difference since size of data set does not impact on proposal
- return this->specific_evaluate_kernel(proposed_particle, old_particle);
- }
- */
 
 arma::mat MirrorProposalKernel::get_inverse_covariance(const std::string &variable)
 {
@@ -202,31 +183,12 @@ Parameters MirrorProposalKernel::simulate(RandomNumberGenerator &rng,
   return output;
 }
 
-/*
- Parameters MirrorProposalKernel::simulate(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->simulate(rng,particle);
- }
- */
-
 Parameters MirrorProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                     const Particle &particle) const
 {
   // no difference since size of data set does not impact on proposal
   return this->simulate(rng,particle);
 }
-
-/*
- Parameters MirrorProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- // no difference since size of data set does not impact on proposal
- return this->simulate(rng,particle);
- }
- */
 
 Parameters MirrorProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                     const std::string &variable,
@@ -242,19 +204,6 @@ Parameters MirrorProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
   return output;
 }
 
-/*
- Parameters MirrorProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
- const std::string &variable,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- // no difference since size of data set does not impact on proposal
- return this->subsample_simulate(rng,
- variable,
- particle);
- }
- */
-
 arma::mat MirrorProposalKernel::specific_gradient_of_log(const std::string &variable,
                                                          const Particle &proposed_particle,
                                                          const Particle &old_particle)
@@ -262,32 +211,12 @@ arma::mat MirrorProposalKernel::specific_gradient_of_log(const std::string &vari
   Rcpp::stop("MirrorProposalKernel::specific_gradient_of_log - not written yet.");
 }
 
-/*
- arma::mat MirrorProposalKernel::specific_gradient_of_log(const std::string &variable,
- Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters)
- {
- Rcpp::stop("MirrorProposalKernel::specific_gradient_of_log - not written yet.");
- }
- */
-
 arma::mat MirrorProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
                                                                    const Particle &proposed_particle,
                                                                    const Particle &old_particle)
 {
   Rcpp::stop("MirrorProposalKernel::specific_gradient_of_log - not written yet.");
 }
-
-/*
- arma::mat MirrorProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
- Particle &proposed_particle,
- Particle &old_particle,
- const Parameters &conditioned_on_parameters)
- {
- Rcpp::stop("MirrorProposalKernel::specific_gradient_of_log - not written yet.");
- }
- */
 
 void MirrorProposalKernel::set_proposal_parameters(Parameters* proposal_parameters_in)
 {

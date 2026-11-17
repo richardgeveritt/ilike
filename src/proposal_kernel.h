@@ -9,25 +9,12 @@ using namespace Rcpp;
 
 #include "kernel.h"
 #include "particle.h"
-//#include "ensemble_member.h"
 #include "distributions.h"
 #include "ilike_header.h"
 #include "proposal_target.h"
 
 namespace ilike
 {
-  /**
-   * @file proposal_kernel.h
-   * @brief Defines the MCMCAdaptor class.
-   *
-   * An adaptor for mcmc tuning. Adjusts algorithm parameters based on accumulated statistics.
-   *
-   * @namespace ilike
-   * @class MCMCAdaptor
-   * @brief The mcmc adaptor class.
-   */
-
-
 
 class MCMCAdaptor;
 struct AdaptationStep;
@@ -67,40 +54,14 @@ public:
 
   bool has_mcmc_adaptor() const { return this->mcmc_adaptor!=NULL; }
   
-  /**
-   * @brief Performs the proposalkernel operation.
-   */
   ProposalKernel();
-  /**
-   * @brief Performs the ~proposalkernel operation.
-   */
   virtual ~ProposalKernel();
   
-  /**
-   * @brief Performs the proposalkernel operation.
-   *
-   * @param proposal_parameters_in The proposal parameters.
-   */
   ProposalKernel(const Parameters &proposal_parameters_in);
   
-  /**
-   * @brief Performs the proposalkernel operation.
-   *
-   * @param another The MCMCAdaptor instance to copy from.
-   */
   ProposalKernel(const ProposalKernel &another);
   
-  /**
-   * @brief Assignment operator for MCMCAdaptor.
-   *
-   * @param another The MCMCAdaptor instance to copy from.
-   */
   void operator=(const ProposalKernel &another);
-  /**
-   * @brief Creates a deep copy and returns it as a proposal_kernel pointer.
-   *
-   * @return The result.
-   */
   virtual ProposalKernel* proposal_kernel_duplicate() const=0;
   
   Particle move(RandomNumberGenerator &rng,
@@ -121,62 +82,16 @@ public:
                  const Particle &particle,
                  const Index* new_outputs_index,
                  Particle &scratch) const;
-  /*
-   Particle move(RandomNumberGenerator &rng,
-   Particle &particle,
-   const Parameters &conditioned_on_parameters) const;
-   */
   
   Particle subsample_move(RandomNumberGenerator &rng,
                           const Particle &particle) const;
   
-  /*
-   Particle subsample_move(RandomNumberGenerator &rng,
-   Particle &particle,
-   const Parameters &conditioned_on_parameters) const;
-   */
   Particle subsample_move(RandomNumberGenerator &rng,
                           const std::string &variable,
                           const Particle &particle) const;
-  
-  /*
-   Particle subsample_move(RandomNumberGenerator &rng,
-   const std::string &variable,
-   Particle &particle,
-   const Parameters &conditioned_on_parameters) const;
-   */
-  
-  /*
-   Particle move(RandomNumberGenerator &rng,
-   const Index* index,
-   Particle &particle) const;
-   Particle move(RandomNumberGenerator &rng,
-   const Index* index,
-   Particle &particle,
-   const Parameters &conditioned_on_parameters) const;
-   //Particle subsample_move(RandomNumberGenerator &rng,
-   //                              Particle &particle) const;
-   Particle subsample_move(RandomNumberGenerator &rng,
-   const Index* index,
-   Particle &particle,
-   const Parameters &conditioned_on_parameters) const;
-   //Particle subsample_move(RandomNumberGenerator &rng,
-   //                              const std::string &variable,
-   //                              Particle &particle) const;
-   Particle subsample_move(RandomNumberGenerator &rng,
-   const Index* index,
-   const std::string &variable,
-   Particle &particle,
-   const Parameters &conditioned_on_parameters) const;
-   */
-  
+
   void ensemble_adapt(EnsembleKalmanOutput* current_state);
   
-  /**
-   * @brief Performs the smc adapt operation.
-   *
-   * @param current_state The current state.
-   */
   void smc_adapt(SMCOutput* current_state);
   
   void mcmc_adapt(const Particle &current_particle,
@@ -185,6 +100,8 @@ public:
   // Adaptation (dev/plan.md 3.2): attaches an adaptor (owned) and points it
   // at this kernel; one adaptation step from a Metropolis(-Hastings) move.
   void set_mcmc_adaptor(MCMCAdaptor* adaptor_in);
+  // adaptation from the SMC particles (dev/plan.md 3.2, B2): owned
+  void set_smc_adaptor(SMCAdaptor* adaptor_in);
   void mcmc_adapt(const AdaptationStep &step);
   void prepare_mcmc_adaptation();
   void append_adaptation_state(std::vector<std::string> *names,
@@ -208,9 +125,7 @@ public:
 
   // The principal directions of a principal-components kernel (Algorithm 8); NULL otherwise.
   virtual PrincipalComponentsInfo* get_principal_components(const std::string &variable);
-  
-  //void use_transform(const Particle &particle);
-  
+
   double evaluate_kernel(const Particle &proposed_particle,
                          const Particle &old_particle) const;
   // The same for two sets of parameters (e.g. a data model evaluated at the
@@ -222,38 +137,15 @@ public:
                          const Parameters &old_parameters) const;
   double subsample_evaluate_kernel(const Particle &proposed_particle,
                                    const Particle &old_particle) const;
-  
-  //double evaluate_kernel_for_mh(const Particle &proposed_particle) const;
-  //double subsample_evaluate_kernel_for_mh(const Particle &proposed_particle) const;
-  
-  /*
-   double subsample_evaluate_kernel(Particle &proposed_particle,
-   Particle &old_particle,
-   const Parameters &conditioned_on_parameters) const;
-   */
-  
+
   arma::mat gradient_of_log(const std::string &variable,
                             const Particle &proposed_particle,
                             const Particle &old_particle);
-  
-  /*
-   arma::mat gradient_of_log(const std::string &variable,
-   Particle &proposed_particle,
-   Particle &old_particle,
-   const Parameters &conditioned_on_parameters);
-   */
-  
+
   arma::mat subsample_gradient_of_log(const std::string &variable,
                                       const Particle &proposed_particle,
                                       const Particle &old_particle);
-  
-  /*
-   arma::mat subsample_gradient_of_log(const std::string &variable,
-   Particle &proposed_particle,
-   Particle &old_particle,
-   const Parameters &conditioned_on_parameters);
-   */
-  
+
   virtual Parameters simulate(RandomNumberGenerator &rng,
                               const Particle &particle) const=0;
 
@@ -266,88 +158,29 @@ public:
                              const Particle &particle,
                              ProposalTarget &target) const;
 
-  /*
-   virtual Parameters simulate(RandomNumberGenerator &rng,
-   Particle &particle,
-   const Parameters &conditioned_on_parameters) const=0;
-   */
-  
   virtual Parameters subsample_simulate(RandomNumberGenerator &rng,
                                         const Particle &particle) const=0;
-  
-  /*
-   virtual Parameters subsample_simulate(RandomNumberGenerator &rng,
-   Particle &particle,
-   const Parameters &conditioned_on_parameters) const=0;
-   */
-  
+
   virtual Parameters subsample_simulate(RandomNumberGenerator &rng,
                                         const std::string &variable,
                                         const Particle &particle) const=0;
-  
-  /*
-   virtual Parameters subsample_simulate(RandomNumberGenerator &rng,
-   const std::string &variable,
-   Particle &particle,
-   const Parameters &conditioned_on_parameters) const=0;
-   */
-  
+
   Transform* get_transform() const;
   
-  /**
-   * @brief Sets the proposal parameters.
-   *
-   * @param proposal_parameters_in The proposal parameters.
-   */
   virtual void set_proposal_parameters(Parameters* proposal_parameters_in)=0;
   
-  /**
-   * @brief Simulates gradient estimator output.
-   *
-   * @return The result.
-   */
   virtual GradientEstimatorOutput* simulate_gradient_estimator_output() const=0;
   
-  /**
-   * @brief Returns the proposals.
-   *
-   * @return The result.
-   */
   virtual std::vector<const ProposalKernel*> get_proposals() const=0;
   
-  /**
-   * @brief Sets the index.
-   *
-   * @param index_in The index.
-   */
   virtual void set_index(Index* index_in)=0;
   
-  /**
-   * @brief Sets the index if null.
-   *
-   * @param index_in The index.
-   */
   virtual void set_index_if_null(Index* index_in)=0;
   
-  /**
-   * @brief Returns the instance index.
-   *
-   * @return The result.
-   */
   int get_instance_index() const;
   
-  /**
-   * @brief Performs the can be evaluated operation.
-   *
-   * @return The result.
-   */
   virtual bool can_be_evaluated() const=0;
   
-  /**
-   * @brief Sets the data.
-   *
-   * @param data_in The data.
-   */
   virtual void set_data(Data* data_in)=0;
   
   // Mh has its own parameters.
@@ -372,71 +205,34 @@ protected:
   virtual double specific_evaluate_kernel_from_parameters(const Parameters &proposed_parameters,
                                                           const Parameters &old_parameters) const;
 
-  /*
-   virtual double specific_evaluate_kernel(Particle &proposed_particle,
-   Particle &old_particle,
-   const Parameters &conditioned_on_parameters) const=0;
-   */
-  
   virtual double specific_subsample_evaluate_kernel(const Particle &proposed_particle,
                                                     const Particle &old_particle) const=0;
-  
-  /*
-   virtual double specific_subsample_evaluate_kernel(Particle &proposed_particle,
-   Particle &old_particle,
-   const Parameters &conditioned_on_parameters) const=0;
-   */
-  
+
   virtual arma::mat specific_gradient_of_log(const std::string &variable,
                                              const Particle &proposed_particle,
                                              const Particle &old_particle)=0;
-  
-  /*
-   virtual arma::mat specific_gradient_of_log(const std::string &variable,
-   Particle &proposed_particle,
-   Particle &old_particle,
-   const Parameters &conditioned_on_parameters)=0;
-   */
-  
+
   virtual arma::mat specific_subsample_gradient_of_log(const std::string &variable,
                                                        const Particle &proposed_particle,
                                                        const Particle &old_particle)=0;
-  
-  /*
-   virtual arma::mat specific_subsample_gradient_of_log(const std::string &variable,
-   Particle &proposed_particle,
-   Particle &old_particle,
-   const Parameters &conditioned_on_parameters)=0;
-   */
-  
+
   void make_copy(const ProposalKernel &another);
-  
-  //EvaluateLogMCMCProposalPtr proposal_evaluate;
-  
-  //SimulateMCMCProposalPtr proposal_simulate;
-  
+
   // stored here
-  /** @brief The mcmc adaptor. */
   // owned (dev/plan.md 3.5, CH3)
   std::unique_ptr<MCMCAdaptor> mcmc_adaptor;
   
   // stored here
-  /** @brief The smc adaptor. */
   // owned (dev/plan.md 3.5, CH3)
   std::unique_ptr<SMCAdaptor> smc_adaptor;
   
   // stored here
-  /** @brief The transform. */
   // owned (dev/plan.md 3.5, CH3)
   std::unique_ptr<Transform> transform;
   
-  /** @brief The instance counter. */
   static int instance_counter; // Static member variable to track instances
-  /** @brief The instance index. */
   int instance_index; // Instance-specific index
-  
-  //Parameters proposal_parameters;
-  
+
 };
 }
 

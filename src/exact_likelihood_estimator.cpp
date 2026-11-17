@@ -22,7 +22,6 @@ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in
 {
   this->numerator_likelihood_factors.emplace_back(new CustomLikelihoodFactor(llhd_in,
                                                                           data_in));
-  //this->output = new ExactLikelihoodEstimatorOutput();
 }
 
 ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
@@ -33,7 +32,6 @@ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in
 :LikelihoodEstimator(rng_in, seed_in, data_in, Parameters(), smcfixed_flag_in)
 {
   this->numerator_distribution_factors.emplace_back(new CustomDistributionFactor(dist_in));
-  //this->output = new ExactDistributionEstimatorOutput();
 }
 
 ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
@@ -154,41 +152,9 @@ ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in
   this->numerator_distribution_factors.emplace_back(new CustomDistributionFactor(prior_in));
 }
 
-/*
- ExactLikelihoodEstimator::ExactLikelihoodEstimator(RandomNumberGenerator* rng_in,
- size_t* seed_in,
- const Data* data_in,
- EvaluateLogDistributionPtr prior_in,
- EvaluateLogLikelihoodPtr llhd_in,
- EvaluateLogDistributionPtr proposal_in,
- bool smcfixed_flag_in)
- :LikelihoodEstimator(rng_in, seed_in, data_in)
- {
- this->numerator_llhds.reserve(1);
- this->numerator_llhds.push_back(llhd_in);
- 
- this->numerator_distributions.reserve(1);
- this->numerator_distributions.push_back(prior_in);
- 
- this->denominator_distributions.reserve(1);
- this->denominator_distributions.push_back(proposal_in);
- 
- this->smcfixed_flag = smcfixed_flag_in;
- }
- */
-
 ExactLikelihoodEstimator::~ExactLikelihoodEstimator()
 {
   
-  /*
-   for (auto i=this->numerator_proposals.begin();
-   i!=this->numerator_proposals.end();
-   ++i)
-   {
-   if (*i!=NULL)
-   delete *i;
-   }
-   */
 }
 
 //Copy constructor for the ExactLikelihoodEstimator class.
@@ -248,21 +214,6 @@ void ExactLikelihoodEstimator::make_copy(const ExactLikelihoodEstimator &another
   this->numerator_proposals = another.numerator_proposals;
   this->numerator_likelihood_proposals = another.numerator_likelihood_proposals;
   
-  /*
-   this->numerator_proposals.resize(0);
-   this->numerator_proposals.reserve(another.numerator_proposals.size());
-   for (auto i=another.numerator_proposals.begin();
-   i!=numerator_proposals.end();
-   ++i)
-   {
-   if (*i!=NULL)
-   this->numerator_proposals.push_back((*i)->independent_proposal_kernel_duplicate());
-   else
-   this->numerator_proposals.push_back(NULL);
-   }
-   */
-  //if (this->output!=NULL)
-  //  this->output = another.output->duplicate();
 }
 
 // double ExactLikelihoodEstimator::estimate_log_likelihood(const List &inputs,
@@ -460,14 +411,4 @@ void ExactLikelihoodEstimator::specific_change_data(Data* new_data)
   }
 }
 
-//double ExactLikelihoodEstimator::evaluate(const Parameters &parameters)
-//{
-//  return this->func(parameters,*this->data);
-//}
-
-// void ExactLikelihoodEstimator::is_setup_likelihood_estimator(const std::vector<List> &all_points,
-//                                                              const std::vector<List> &all_auxiliary_variables)
-// {
-//
-// }
 }

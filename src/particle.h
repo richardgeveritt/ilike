@@ -8,24 +8,12 @@ using namespace Rcpp;
 #include <iostream>
 #include <boost/unordered_map.hpp>
 #include "parameters.h"
-//#include "variables.h"
 #include "index.h"
 #include "distributions.h"
 #include "proposal_store.h"
 
 namespace ilike
 {
-  /**
-   * @file particle.h
-   * @brief Defines the ModelAndAlgorithm class.
-   *
-   * Provides model and algorithm functionality.
-   *
-   * @namespace ilike
-   * @class ModelAndAlgorithm
-   * @brief The model and algorithm class.
-   */
-
 
 class ModelAndAlgorithm;
 class LikelihoodEstimatorOutput;
@@ -79,17 +67,8 @@ class Particle
   
 public:
   
-  /**
-   * @brief Performs the particle operation.
-   */
   Particle();
-  //Particle(const Parameters &&parameters_in);
   
-  /**
-   * @brief Performs the particle operation.
-   *
-   * @param parameters_in The parameters.
-   */
   Particle(const Parameters &parameters_in);
   
   Particle(const Parameters &parameters_in,
@@ -131,13 +110,7 @@ public:
   
   Particle(const Parameters &parameters_in,
            EnsembleFactorVariables* ensemble_factor_variables_in);
-  
-  
-  /**
-   * @brief Performs the particle operation.
-   *
-   * @param parameters_in The parameters.
-   */
+
   Particle(Parameters &&parameters_in);
   
   Particle(Parameters &&parameters_in,
@@ -179,18 +152,9 @@ public:
   
   Particle(Parameters &&parameters_in,
            EnsembleFactorVariables* ensemble_factor_variables_in);
-  
-  
-  /**
-   * @brief Performs the ~particle operation.
-   */
+
   virtual ~Particle();
   
-  /**
-   * @brief Performs setup given the supplied parameters.
-   *
-   * @param factors_in The factors.
-   */
   void setup(Factors* factors_in);
   void setup(Factors* factors_in,
              const Parameters &conditioned_on_parameters);
@@ -216,56 +180,17 @@ public:
              const Parameters &conditioned_on_parameters,
              const Parameters &sequencer_parameters);
   
-  /**
-   * @brief Performs the copy without factor variables operation.
-   *
-   * @return The result.
-   */
   Particle copy_without_factor_variables() const;
   
-  /**
-   * @brief Performs the particle operation.
-   *
-   * @param another The ModelAndAlgorithm instance to copy from.
-   */
   Particle(const Particle &another);
-  /**
-   * @brief Assignment operator for ModelAndAlgorithm.
-   *
-   * @param another The ModelAndAlgorithm instance to copy from.
-   */
   Particle& operator=(const Particle &another);
   
-  /**
-   * @brief Performs the particle operation.
-   *
-   * @param another The ModelAndAlgorithm instance to copy from.
-   */
   Particle(Particle &&another);
-  /**
-   * @brief Assignment operator for ModelAndAlgorithm.
-   *
-   * @param another The ModelAndAlgorithm instance to copy from.
-   */
   Particle& operator=(Particle &&another);
   
-  /**
-   * @brief Performs the operator<< operation.
-   *
-   * @param os The os.
-   * @param p The p.
-   *
-   * @return The result.
-   */
   friend std::ostream& operator<<(std::ostream& os, const Particle &p);
   
-  /**
-   * @brief Simulates factor variables.
-   */
   void simulate_factor_variables();
-  /**
-   * @brief Simulates ensemble factor variables.
-   */
   void simulate_ensemble_factor_variables();
   // Make this particle what Particle(std::move(parameters_in), factors_in,
   // proposals_to_transform_for_in, proposals_to_find_gradient_for_in,
@@ -282,147 +207,43 @@ public:
 
   void simulate_proposal_variables(const std::vector<const ProposalKernel*>* proposals_to_transform_for_in,
                                    const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_in);
-  
-  /*
-   void evaluate_smcfixed_part_of_likelihoods();
-   void evaluate_smcfixed_part_of_likelihoods(const Parameters &conditioned_on_parameters);
-   double evaluate_smcadaptive_part_given_smcfixed_likelihoods();
-   double evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Parameters &conditioned_on_parameters);
-   double evaluate_likelihoods();
-   double evaluate_likelihoods(const Parameters &conditioned_on_parameters);
-   void subsample_evaluate_smcfixed_part_of_likelihoods(const Parameters &conditioned_on_parameters);
-   double subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Parameters &conditioned_on_parameters);
-   double subsample_evaluate_likelihoods();
-   double subsample_evaluate_likelihoods(const Parameters &conditioned_on_parameters);
-   */
-  
+
   void evaluate_smcfixed_part_of_likelihoods(const Index* index);
-  /*
-   void evaluate_smcfixed_part_of_likelihoods(const Index* index,
-   const Parameters &conditioned_on_parameters);
-   */
   double evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index);
-  
-  /*
-   double evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index,
-   const Parameters &conditioned_on_parameters);
-   */
-  
+
   double evaluate_likelihoods(const Index* index);
 
   // Sum of the cached factor values over index (no evaluation; see
   // FactorVariables::get_cached_likelihoods).
   double get_cached_likelihoods(const Index* index) const;
-  
-  /*
-   double evaluate_likelihoods(const Index* index,
-   const Parameters &conditioned_on_parameters);
-   */
-  
+
   void subsample_evaluate_smcfixed_part_of_likelihoods(const Index* index);
-  /**
-   * @brief Performs the subsample evaluate smcadaptive part given smcfixed likelihoods operation.
-   *
-   * @param index The index.
-   *
-   * @return The result.
-   */
   double subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index);
-  
-  /*
-   void subsample_evaluate_smcfixed_part_of_likelihoods(const Index* index,
-   const Parameters &conditioned_on_parameters);
-   double subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index,
-   const Parameters &conditioned_on_parameters);
-   */
-  
+
   double subsample_evaluate_likelihoods(const Index* index);
-  
-  /*
-   double subsample_evaluate_likelihoods(const Index* index,
-   const Parameters &conditioned_on_parameters);
-   */
-  
+
   double evaluate_ensemble_likelihood_ratios(const Index* index,
                                              double incremental_temperature,
                                              const std::vector<arma::mat> &inv_sigma_precomps,
                                              const std::vector<double> &log_det_precomps) const;
-  /*
-   double evaluate_ensemble_likelihood_ratios(const Index* index,
-   double incremental_temperature,
-   const Parameters &conditioned_on_parameters);
-   */
   
   double subsample_evaluate_ensemble_likelihood_ratios(const Index* index,
                                                        double incremental_temperature,
                                                        const std::vector<arma::mat> &inv_sigma_precomps,
                                                        const std::vector<double> &log_det_precomps) const;
-  
-  /*
-   double subsample_evaluate_ensemble_likelihood_ratios(const Index* index,
-   double incremental_temperature,
-   const Parameters &conditioned_on_parameters);
-   */
-  
+
   double evaluate_all_likelihoods(const Index* index);
-  
-  /*
-   double evaluate_all_likelihoods(const Index* index,
-   const Parameters &conditioned_on_parameters);
-   */
-  
+
   double subsample_evaluate_all_likelihoods(const Index* index);
-  
-  /*
-   double subsample_evaluate_all_likelihoods(const Index* index,
-   const Parameters &conditioned_on_parameters);
-   */
-  
-  //arma::colvec get_vector() const;
-  
-  /**
-   * @brief Returns the colvec.
-   *
-   * @param state_name The state name.
-   *
-   * @return The result.
-   */
+
   arma::colvec get_colvec(const std::string &state_name) const;
   
-  /**
-   * @brief Returns the rowvec.
-   *
-   * @param state_name The state name.
-   *
-   * @return The result.
-   */
   arma::rowvec get_rowvec(const std::string &state_name) const;
   
-  /**
-   * @brief Returns the colvec.
-   *
-   * @param state_names The state names.
-   *
-   * @return The result.
-   */
   arma::colvec get_colvec(const std::vector<std::string> &state_names) const;
   
-  /**
-   * @brief Returns the rowvec.
-   *
-   * @param state_names The state names.
-   *
-   * @return The result.
-   */
   arma::rowvec get_rowvec(const std::vector<std::string> &state_names) const;
   
-  /**
-   * @brief Returns the transformed parameters.
-   *
-   * @param proposal_in The proposal.
-   *
-   * @return The result.
-   */
   // The particle's parameters on the scale the proposal works on: the
   // parameters themselves for a proposal without a transform (by reference:
   // returning a copy made every density evaluation and simulation copy the
@@ -435,27 +256,8 @@ public:
   // Used to accept a proposal held in a scratch particle in O(1).
   void swap(Particle &another);
   
-  /**
-   * @brief Returns the gradient estimator output.
-   *
-   * @param proposal_in The proposal.
-   *
-   * @return The result.
-   */
   GradientEstimatorOutput* get_gradient_estimator_output(const ProposalKernel* proposal_in) const;
-  /*
-   void set_current_transformed_parameters(const ProposalKernel* proposal_in);
-   void set_previous_transformed_parameters(const ProposalKernel* proposal_in,
-   Transform* transform_in);
-   
-   void set_previous(const Particle &previous_particle);
-   
-   Parameters get_previous_transformed_parameters(const ProposalKernel* proposal_in) const;
-   */
-  
-  //void set_previous_move_transformed_parameters();
-  //void set_previous_move_transformed_parameters(Transform* transform_in);
-  
+
   Parameters parameters;
   
   // parameters after they've been put through the transformation of the move recent move
@@ -470,9 +272,7 @@ public:
   // tests them against NULL before following them (B26)
   const std::vector<const ProposalKernel*>* proposals_to_transform_for_pointer = NULL;
   const std::vector<const ProposalKernel*>* proposals_to_find_gradient_for_pointer = NULL;
-  
-  //boost::unordered_map< const ProposalKernel*, ProposalStore> previous_proposal_store;
-  
+
   // not stored here - this points to one of the above, depending on which one if being used by the current move
   //Parameters* move_parameters;
   
@@ -484,13 +284,6 @@ public:
   
   // pointer returned will be owned by this class
   // function is member of Variables since we will not always create a new GradientEstimatorOutput if one already exists for this proposal
-  /*
-   GradientEstimatorOutput* initialise_gradient_estimator_output(const ProposalKernel* proposal,
-   GradientEstimator* gradient_estimator);
-   
-   GradientEstimatorOutput* initialise_previous_gradient_estimator_output(const ProposalKernel* proposal,
-   GradientEstimator* gradient_estimator);
-   */
   
   // take the transformed parameters, store them in the ProposalInfo, and also go through the inverse transform to set the parameters
   //void set_parameters(const ProposalKernel* proposal,
@@ -498,14 +291,10 @@ public:
   
   // Proposal kernel is pointed to
   AcceptanceRecords accepted_outputs;
-  //boost::unordered_map< const ProposalKernel*, bool> accepted_outputs;
   
   void set_acceptance(const ProposalKernel* proposal_in,
                       bool accepted_in);
   
-  /**
-   * @brief Performs the erase mcmc adaptation info operation.
-   */
   void erase_mcmc_adaptation_info();
   
   // What happened at the last target.
@@ -530,22 +319,10 @@ public:
   
   arma::mat direct_get_gradient_of_log(const std::string &variable,
                                        const Index* index) const;
-  
-  /*
-   arma::mat direct_get_gradient_of_log(const std::string &variable,
-   const Index* index,
-   const Parameters &conditioned_on_parameters);
-   */
-  
+
   arma::mat direct_subsample_get_gradient_of_log(const std::string &variable,
                                                  const Index* index) const;
-  
-  /*
-   arma::mat direct_subsample_get_gradient_of_log(const std::string &variable,
-   const Index* index,
-   const Parameters &conditioned_on_parameters);
-   */
-  
+
   void simulate_factor_variables(const Factors* factors);
 
   // Replace this particle's factor variables with
@@ -553,60 +330,21 @@ public:
   void simulate_factor_variables(const FactorVariables* current,
                                  const Index* new_outputs_index);
   
-  /**
-   * @brief Simulates ensemble factor variables.
-   *
-   * @param ensemble_factors The ensemble factors.
-   */
   void simulate_ensemble_factor_variables(const EnsembleFactors* ensemble_factors);
-  
-  /*
-   void simulate_factor_variables(Factors* factors,
-   const Parameters &conditioned_on_parameters);
-   
-   void simulate_ensemble_factor_variables(EnsembleFactors* ensemble_factors,
-   const Parameters &conditioned_on_parameters);
-   */
-  
+
   void subsample_simulate_factor_variables(const Factors* factors);
   
-  /**
-   * @brief Performs the subsample simulate ensemble factor variables operation.
-   *
-   * @param ensemble_factors The ensemble factors.
-   */
   void subsample_simulate_ensemble_factor_variables(const EnsembleFactors* ensemble_factors);
-  
-  /*
-   void subsample_simulate_factor_variables(Factors* factors,
-   const Parameters &conditioned_on_parameters);
-   
-   void subsample_simulate_ensemble_factor_variables(EnsembleFactors* ensemble_factors,
-   const Parameters &conditioned_on_parameters);
-   */
-  
+
   // not stored here
   const Particle* previous_self = NULL;
   
-  /**
-   * @brief Performs the tell factors to forget they were already written to file operation.
-   */
   void tell_factors_to_forget_they_were_already_written_to_file();
   
 protected:
   
-  /**
-   * @brief Copies the state of another ModelAndAlgorithm into this object.
-   *
-   * @param another The ModelAndAlgorithm instance to copy from.
-   */
   void make_copy(const Particle &another);
   
-  /**
-   * @brief Copies the state of another ModelAndAlgorithm into this object.
-   *
-   * @param another The ModelAndAlgorithm instance to copy from.
-   */
   void make_copy(Particle &&another);
   
 };

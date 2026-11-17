@@ -1514,6 +1514,38 @@ determine_block_type = function(split_block_name,blocks,line_counter,block_type,
   #reinforce_gradient = c("reinforce_gradient")
   method_function_types = c("mcmc_weights","mcmc_termination","adaptive_resampling","adaptive_target","smc_termination","smc_sequence","reinforce_gradient","enk_likelihood_index","enk_shifter","ssm")
 
+  # an smc_adaptor belongs to the proposal just before it, whatever its type
+  # (adaptation of that proposal from the SMC particles, dev/plan.md 3.2, B2)
+  if (block_name=="smc_adaptor")
+  {
+    if (!(block_type %in% c("mh_proposal","m_proposal","unadjusted_proposal","imh_proposal")))
+      stop(paste("Invalid file: line ",line_counter,", an smc_adaptor block must follow the MCMC proposal it adapts.",sep=""))
+    if (is_custom)
+      stop(paste("Invalid file: line ",line_counter,", smc_adaptor takes an ilike function (e.g. /***smc_adaptor,ilike::gaussian(theta)***/).",sep=""))
+    number_to_pass_to_extract_block = switch(block_type,
+                                             mh_proposal = mh_proposal_number,
+                                             m_proposal = m_proposal_number,
+                                             unadjusted_proposal = unadjusted_proposal_number,
+                                             imh_proposal = imh_proposal_number)
+    return(list(block_type,
+                number_to_pass_to_extract_block,
+                block_name,
+                is_custom,
+                block_function,
+                factor_number,
+                transition_model_number,
+                potential_function_number,
+                is_proposal_number,
+                mh_proposal_number,
+                unadjusted_proposal_number,
+                imh_proposal_number,
+                m_proposal_number,
+                enk_transform_number,
+                transition_proposal_number,
+                data_number,
+                method_number))
+  }
+
   # distinguish between factor, data, etc
   if (block_name %in% factor_function_types)
   {
@@ -3589,7 +3621,7 @@ extract_block <- function(blocks,block_type,block_name,factor_number,line_counte
 
       if (is_like_function==TRUE)
       {
-        if ( (block_name=="prior") || (block_name=="is_proposal") || (block_name=="imh_proposal") || (block_name=="mh_proposal") || (block_name=="unadjusted_proposal") || (block_name=="m_proposal") || (block_name=="m_adaptor") || (block_name=="mh_adaptor") || (block_name=="smc_sequence") || (block_name=="linear_gaussian_transition_model") || (block_name=="nonlinear_gaussian_transition_model") || (block_name=="linear_gaussian_data_model") || (block_name=="nonlinear_gaussian_data_model") )
+        if ( (block_name=="prior") || (block_name=="is_proposal") || (block_name=="imh_proposal") || (block_name=="mh_proposal") || (block_name=="unadjusted_proposal") || (block_name=="m_proposal") || (block_name=="m_adaptor") || (block_name=="mh_adaptor") || (block_name=="smc_adaptor") || (block_name=="smc_sequence") || (block_name=="linear_gaussian_transition_model") || (block_name=="nonlinear_gaussian_transition_model") || (block_name=="linear_gaussian_data_model") || (block_name=="nonlinear_gaussian_data_model") )
         {
           split_arg_string = split_string_at_comma_ignoring_parentheses(arg_string)
 

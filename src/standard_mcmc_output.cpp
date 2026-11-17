@@ -29,12 +29,6 @@ StandardMCMCOutput::StandardMCMCOutput(MCMCTermination* termination_in)
   this->number_of_iterations_seen = 0;
 }
 
-//StandardMCMCOutput::StandardMCMCOutput(const Parameters &parameters_in)
-//{
-//  this->output = std::deque<Particle>(1);
-//  this->output[0] = Particle(parameters_in);
-//}
-
 StandardMCMCOutput::~StandardMCMCOutput()
 {
   this->termination.reset();
@@ -203,15 +197,6 @@ void StandardMCMCOutput::write_vector_points(const std::vector<std::string> &var
 void StandardMCMCOutput::write_any_points(const std::vector<std::string> &variables,
                                           std::ofstream &file_stream) const
 {
-  //if(file_stream.is_open())
-  //{
-  //  for (auto i = this->output.begin();
-  //       i!=this->output.end();
-  //       ++i)
-  //  {
-  //    file_stream << i->parameters. << std::endl;
-  //  }
-  //}
 }
 
 size_t StandardMCMCOutput::fill_vector_points_transposed(const std::vector<std::string> &variables,

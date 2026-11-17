@@ -99,34 +99,12 @@ void StochasticScanMCMC::move_in_place(RandomNumberGenerator &rng,
   this->moves[rdis(rng, this->probabilities)]->move_in_place(rng, particle);
 }
 
-/*
- Particle StochasticScanMCMC::move(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->moves[rdis(rng, this->probabilities)]->move(rng,
- particle,
- conditioned_on_parameters);
- }
- */
-
 Particle StochasticScanMCMC::subsample_move(RandomNumberGenerator &rng,
                                             const Particle &particle) const
 {
   return this->moves[rdis(rng, this->probabilities)]->subsample_move(rng,
                                                                      particle);
 }
-
-/*
- Particle StochasticScanMCMC::subsample_move(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->moves[rdis(rng, this->probabilities)]->subsample_move(rng,
- particle,
- conditioned_on_parameters);
- }
- */
 
 void StochasticScanMCMC::smc_adapt(SMCOutput* current_state)
 {
@@ -139,39 +117,6 @@ void StochasticScanMCMC::smc_adapt(SMCOutput* current_state)
     (*i)->smc_adapt(current_state);
   }
 }
-
-/*
- EnsembleMember StochasticScanMCMC::move(RandomNumberGenerator &rng,
- const Index* index,
- EnsembleMember &particle) const
- {
- return this->moves[rdis(rng, this->probabilities)]->move(rng,
- index,
- particle);
- }
- 
- EnsembleMember StochasticScanMCMC::move(RandomNumberGenerator &rng,
- const Index* index,
- EnsembleMember &particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->moves[rdis(rng, this->probabilities)]->move(rng,
- index,
- particle,
- conditioned_on_parameters);
- }
- 
- EnsembleMember StochasticScanMCMC::subsample_move(RandomNumberGenerator &rng,
- const Index* index,
- EnsembleMember &particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->moves[rdis(rng, this->probabilities)]->subsample_move(rng,
- index,
- particle,
- conditioned_on_parameters);
- }
- */
 
 void StochasticScanMCMC::ensemble_adapt(EnsembleKalmanOutput* current_state)
 {

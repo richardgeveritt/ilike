@@ -40,8 +40,7 @@ void StochasticScanStandardMCMCOutput::operator=(const StochasticScanStandardMCM
   if(this == &another){ //if a==a
     return;
   }
-  
-  
+
   StandardMCMCOutput::operator=(another);
   this->make_copy(another);
 }
@@ -60,35 +59,6 @@ void StochasticScanStandardMCMCOutput::make_copy(const StochasticScanStandardMCM
   else
     this->mcmc = std::unique_ptr<StochasticScanMCMC, OptionalDelete>(another.mcmc.get(), OptionalDelete(false));
 }
-
-/*
- void StochasticScanStandardMCMCOutput::specific_mcmc_adapt()
- {
- for (std::vector<MCMC*>::iterator i=this->moves.begin();
- i!=this->moves.end();
- ++i)
- {
- (*i)->mcmc_adapt(this->output.back(),
- this->iteration_counter);
- }
- }
- */
-
-/*
- Particle StochasticScanStandardMCMCOutput::move(RandomNumberGenerator &rng,
- const Particle &particle) const
- {
- return this->moves[rdis(rng, this->probabilities)]->move(rng,
- particle);
- }
- 
- Particle StochasticScanStandardMCMCOutput::subsample_move(RandomNumberGenerator &rng,
- const Particle &particle) const
- {
- return this->moves[rdis(rng, this->probabilities)]->subsample_move(rng,
- particle);
- }
- */
 
 MCMC* StochasticScanStandardMCMCOutput::get_mcmc()
 {

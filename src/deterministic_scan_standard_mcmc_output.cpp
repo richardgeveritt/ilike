@@ -40,8 +40,7 @@ void DeterministicScanStandardMCMCOutput::operator=(const DeterministicScanStand
   if(this == &another){ //if a==a
     return;
   }
-  
-  
+
   StandardMCMCOutput::operator=(another);
   this->make_copy(another);
 }
@@ -60,49 +59,6 @@ void DeterministicScanStandardMCMCOutput::make_copy(const DeterministicScanStand
   else
     this->mcmc = std::unique_ptr<DeterministicScanMCMC, OptionalDelete>(another.mcmc.get(), OptionalDelete(false));
 }
-
-/*
- void DeterministicScanStandardMCMCOutput::specific_mcmc_adapt()
- {
- for (std::vector<MCMC*>::iterator i=this->moves.begin();
- i!=this->moves.end();
- ++i)
- {
- (*i)->mcmc_adapt(this->output.back(),
- this->iteration_counter);
- }
- }
- */
-
-/*
- Particle DeterministicScanStandardMCMCOutput::move(RandomNumberGenerator &rng,
- const Particle &particle) const
- {
- Particle current_particle = particle;
- for (std::vector<size_t>::const_iterator i=this->order.begin();
- i!=this->order.end();
- ++i)
- {
- current_particle = this->moves[*i]->move(rng,
- current_particle);
- }
- return current_particle;
- }
- 
- Particle DeterministicScanStandardMCMCOutput::subsample_move(RandomNumberGenerator &rng,
- const Particle &particle) const
- {
- Particle current_particle = particle;
- for (std::vector<size_t>::const_iterator i=this->order.begin();
- i!=this->order.end();
- ++i)
- {
- current_particle = this->moves[*i]->subsample_move(rng,
- current_particle);
- }
- return current_particle;
- }
- */
 
 MCMC* DeterministicScanStandardMCMCOutput::get_mcmc()
 {

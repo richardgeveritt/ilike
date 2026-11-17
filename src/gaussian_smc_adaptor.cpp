@@ -1,34 +1,30 @@
 #include "gaussian_smc_adaptor.h"
-#include "utils.h"
+#include "proposal_kernel.h"
 #include "smc_output.h"
+#include "particles.h"
+#include "move_output.h"
 #include "ensemble_kalman_output.h"
-#include "matrix_parameter_estimator.h"
-#include "vector_parameter_estimator.h"
+#include "ensemble.h"
 
 namespace ilike
 {
+
 GaussianSMCAdaptor::GaussianSMCAdaptor()
 :SMCAdaptor()
 {
+  this->constant = -1.0;
+}
+
+GaussianSMCAdaptor::GaussianSMCAdaptor(const std::string &variable_in,
+                                       double constant_in)
+:SMCAdaptor()
+{
+  this->variable = variable_in;
+  this->constant = constant_in;
 }
 
 GaussianSMCAdaptor::~GaussianSMCAdaptor()
 {
-  for (auto i=this->mean_estimators.begin();
-       i!=this->mean_estimators.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      (*i).reset();
-  }
-  
-  for (auto i=this->covariance_estimators.begin();
-       i!=this->covariance_estimators.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      (*i).reset();
-  }
 }
 
 GaussianSMCAdaptor::GaussianSMCAdaptor(const GaussianSMCAdaptor &another)
@@ -41,58 +37,14 @@ void GaussianSMCAdaptor::operator=(const GaussianSMCAdaptor &another)
 {
   if(this == &another)
     return;
-  
-  for (auto i=this->mean_estimators.begin();
-       i!=this->mean_estimators.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      (*i).reset();
-  }
-  this->mean_estimators.clear();
-  
-  for (auto i=this->covariance_estimators.begin();
-       i!=this->covariance_estimators.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      (*i).reset();
-  }
-  this->covariance_estimators.clear();
-  
   SMCAdaptor::operator=(another);
   this->make_copy(another);
 }
 
 void GaussianSMCAdaptor::make_copy(const GaussianSMCAdaptor &another)
 {
-  this->variable_names = another.variable_names;
-  this->scales = another.scales;
-  this->gaussian_info_pointers = another.gaussian_info_pointers;
-  
-  this->mean_estimators.resize(0);
-  this->mean_estimators.reserve(another.mean_estimators.size());
-  for (auto i=another.mean_estimators.begin();
-       i!=another.mean_estimators.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      this->mean_estimators.emplace_back((*i)->duplicate());
-    else
-      this->mean_estimators.emplace_back();
-  }
-  
-  this->covariance_estimators.resize(0);
-  this->covariance_estimators.reserve(another.covariance_estimators.size());
-  for (auto i=another.covariance_estimators.begin();
-       i!=another.covariance_estimators.end();
-       ++i)
-  {
-    if (*i!=NULL)
-      this->covariance_estimators.emplace_back((*i)->duplicate());
-    else
-      this->covariance_estimators.emplace_back();
-  }
+  this->variable = another.variable;
+  this->constant = another.constant;
 }
 
 SMCAdaptor* GaussianSMCAdaptor::duplicate() const
@@ -100,82 +52,120 @@ SMCAdaptor* GaussianSMCAdaptor::duplicate() const
   return( new GaussianSMCAdaptor(*this));
 }
 
-void GaussianSMCAdaptor::smc_adapt(SMCOutput* current_state)
+void GaussianSMCAdaptor::adapt_from(const arma::mat &points,
+                                    const arma::colvec &normalised_weights)
 {
-  // reads the generation's particles one by one: not available for a
-  // generation stored flat (dev/plan.md 2.6a; no adaptor is set from R)
-  if (current_state->back().is_flat())
-    Rcpp::stop("GaussianSMCAdaptor::smc_adapt: not available for a generation stored flat.");
-  // the estimators take normalised log weights (they exponentiate them)
-  arma::colvec wt = current_state->back().normalised_log_weights;
-  // the estimators take the particles as plain pointers (not owned)
-  std::vector<MoveOutput*> points;
-  for (auto i = current_state->back().particles.begin(); i != current_state->back().particles.end(); ++i)
-    points.push_back(i->get());
-  for (size_t i=0; i<this->variable_names.size(); ++i)
+  if (this->proposal==NULL)
+    Rcpp::stop("SMC adaptor: not attached to a proposal.");
+  if (this->proposal->get_transform()!=NULL)
+    Rcpp::stop("SMC adaptor: not available for a proposal on a transformed space.");
+  GaussianProposalInfo* info = this->proposal->get_gaussian_proposal_info(this->variable);
+  if (info==NULL)
+    Rcpp::stop("SMC adaptor: the proposal has no Gaussian covariance for variable " + this->variable + " to adapt.");
+  PrincipalComponentsInfo* components = this->proposal->get_principal_components(this->variable);
+  arma::colvec* component_scales = this->proposal->get_component_scales(this->variable);
+
+  size_t d = points.n_cols;
+  if (points.n_rows<2)
+    return;
+  if (info->get_covariance().n_rows!=d)
+    Rcpp::stop("SMC adaptor: the proposal's covariance for " + this->variable + " does not match the variable's dimension.");
+
+  // weighted mean and covariance (the unbiased form for normalised weights)
+  arma::rowvec mean = normalised_weights.t()*points;
+  arma::mat centred = points.each_row() - mean;
+  double denominator = 1.0 - arma::accu(arma::square(normalised_weights));
+  if (denominator<=0.0)
+    return; // a single particle carries all the weight
+  arma::mat covariance = (centred.t()*(centred.each_col() % normalised_weights))/denominator;
+  covariance = (covariance + covariance.t())/2.0;
+
+  if (this->proposal->proposal_uses_gaussian_mean())
+    info->get_mean() = mean.t();
+
+  if (covariance.is_sympd())
   {
-    if (this->mean_estimators[i]!=NULL)
+    info->set_covariance(covariance);
+    if (components!=NULL)
     {
-      this->mean_estimators[i]->fit(variable_names[i],
-                                    points,
-                                    wt);
-      this->gaussian_info_pointers[i]->get_mean() = this->mean_estimators[i]->estimated;
-    }
-    
-    if (this->covariance_estimators[i]!=NULL)
-    {
-      this->covariance_estimators[i]->fit(variable_names[i],
-                                          points,
-                                          wt);
-      this->gaussian_info_pointers[i]->get_covariance() = covariance_estimators[i]->estimated;
+      arma::colvec values;
+      arma::mat vectors;
+      if (arma::eig_sym(values, vectors, covariance))
+      {
+        size_t m = components->directions.n_cols;
+        components->directions = arma::fliplr(vectors.tail_cols(m));
+        components->eigenvalues = arma::flipud(values.tail(m));
+      }
     }
   }
-  
-  // Find sample covariance of current particle set.
-  //arma::mat matrix_particles = current_state->back().get_most_recent_matrix_particles();
-  
-  //arma::mat sample_covariance = cov_wt(matrix_particles,wt);
-  
-  // needs sorting
-  // Set specified variable in parameter_to_adapt to have scaled covariance.
-  //parameter_to_adapt[this->variance_name] = this->scale(dimension)*sample_covariance;
+
+  if (this->constant>0.0)
+  {
+    double c2 = this->constant*this->constant;
+    if (components!=NULL)
+      components->scales.fill(c2);
+    else if (component_scales!=NULL)
+      component_scales->fill(c2);
+    else
+      info->get_double_scale() = c2/double(d);
+  }
+}
+
+void GaussianSMCAdaptor::smc_adapt(SMCOutput* current_state)
+{
+  Particles &generation = current_state->back();
+  arma::mat points;
+  if (generation.is_flat())
+  {
+    std::vector<std::string> variables(1, this->variable);
+    points = generation.flat_points.matrix_of(variables);
+  }
+  else
+  {
+    size_t n = generation.particles.size();
+    for (size_t i=0; i<n; ++i)
+    {
+      arma::colvec point = generation.particles[i]->back().parameters.get_colvec(this->variable);
+      if (i==0)
+        points.set_size(n, point.n_elem);
+      points.row(i) = point.t();
+    }
+  }
+  if (points.n_rows==0)
+    return;
+  // the weights for the current target, before resampling
+  arma::colvec log_weights = generation.unnormalised_log_weights;
+  arma::colvec weights;
+  if (log_weights.n_elem==points.n_rows)
+  {
+    weights = arma::exp(log_weights - log_weights.max());
+    if (!weights.is_finite() || (arma::accu(weights)<=0.0))
+      return;
+    weights = weights/arma::accu(weights);
+  }
+  else
+  {
+    weights = arma::colvec(points.n_rows, arma::fill::value(1.0/double(points.n_rows)));
+  }
+  this->adapt_from(points, weights);
 }
 
 void GaussianSMCAdaptor::ensemble_adapt(EnsembleKalmanOutput* current_state)
 {
-  arma::colvec wt(current_state->back().size());
-  wt.fill(-log(double(current_state->back().size())));
-  // the estimators take the ensemble members as plain pointers (not owned)
-  std::vector<MoveOutput*> points;
-  points.reserve(current_state->back().members.size());
-  for (auto i = current_state->back().members.begin(); i != current_state->back().members.end(); ++i)
-    points.push_back(i->get());
-  for (size_t i=0; i<this->variable_names.size(); ++i)
+  // ensemble members are equally weighted
+  Ensemble &ensemble = current_state->back();
+  size_t n = ensemble.members.size();
+  if (n==0)
+    return;
+  arma::mat points;
+  for (size_t i=0; i<n; ++i)
   {
-    if (this->mean_estimators[i]!=NULL)
-    {
-      this->mean_estimators[i]->fit(variable_names[i],
-                                    points,
-                                    wt);
-      this->gaussian_info_pointers[i]->get_mean() = this->mean_estimators[i]->estimated;
-    }
-    
-    if (this->covariance_estimators[i]!=NULL)
-    {
-      this->covariance_estimators[i]->fit(variable_names[i],
-                                          points,
-                                          wt);
-      this->gaussian_info_pointers[i]->get_covariance() = covariance_estimators[i]->estimated;
-    }
+    arma::colvec point = ensemble.members[i]->back().parameters.get_colvec(this->variable);
+    if (i==0)
+      points.set_size(n, point.n_elem);
+    points.row(i) = point.t();
   }
-  
-  // Find sample covariance of current particle set.
-  //arma::mat matrix_particles = current_state->back().get_most_recent_matrix_particles();
-  
-  //arma::mat sample_covariance = cov_wt(matrix_particles,wt);
-  
-  // needs sorting
-  // Set specified variable in parameter_to_adapt to have scaled covariance.
-  //parameter_to_adapt[this->variance_name] = this->scale(dimension)*sample_covariance;
+  this->adapt_from(points, arma::colvec(n, arma::fill::value(1.0/double(n))));
 }
+
 }

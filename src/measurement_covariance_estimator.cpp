@@ -55,19 +55,15 @@ void MeasurementCovarianceEstimator::make_copy(const MeasurementCovarianceEstima
   this->measurement = another.measurement;
   this->transform = another.transform;
   this->summary_statistics = another.summary_statistics;
-  //this->inv_sigma_precomp = another.inv_sigma_precomp;
-  //this->log_det_precomp = another.log_det_precomp;
 }
 
 MeasurementCovarianceEstimatorOutput* MeasurementCovarianceEstimator::initialise()
 {
-  //this->setup_measurement_variables();
   return this->initialise_measurement_covariance_estimator();
 }
 
 MeasurementCovarianceEstimatorOutput* MeasurementCovarianceEstimator::initialise(const Parameters &conditioned_on_parameters)
 {
-  //this->setup_measurement_variables(conditioned_on_parameters);
   return this->initialise_measurement_covariance_estimator(conditioned_on_parameters);
 }
 

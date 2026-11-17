@@ -5,7 +5,7 @@
 #' @param results_path (optional) The path in which the results folder will be created (current working directory is the default).
 #' @param write_factor_output (optional) If TRUE (default), write each point's factor outputs (the iterationK/factorJ_* files used to load nested output, e.g. the states of a particle filter inside particle marginal MH). FALSE writes only the points, weights and evidence.
 #' @param number_of_chains (optional) The number of chains.
-#' @param initial_values (optional) A list of lists containing the initial values for the chains.
+#' @param initial_values (optional) A list of lists containing the initial values for the chains. If not given, each of the number_of_chains chains starts at an independent draw from the recipe's is_proposal, or from the prior if the recipe has no is_proposal.
 #' @param parallel (optional) If TRUE, chunks of grain_size chains run in parallel threads (the number set by RcppParallel::setThreadOptions); useful only with more chains than grain_size. The results are exactly those of the sequential run with the same seed and grain_size. Needs a model written in C++ or with ilike:: built-in functions, exact factors and a fixed number of iterations; otherwise the chains are run sequentially, with a warning.
 #' @param model_parameter_list (optional) A list containing parameters for the model.
 #' @param algorithm_parameter_list (optional) A list containing named parameters for the algorithm.
@@ -87,7 +87,10 @@ MCMC = function(recipe,
 
   if (length(initial_values)==0)
   {
-    stop("Initial values set using a list. Future versions will allow initial points drawn from the prior.")
+    # the chains start at independent draws from the recipe's is_proposal,
+    # or from the prior if it has none (dev/plan.md 3.3)
+    if (number_of_chains < 1)
+      stop("number_of_chains must be at least 1.")
   }
   else
   {

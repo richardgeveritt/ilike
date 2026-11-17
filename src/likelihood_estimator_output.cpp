@@ -16,11 +16,6 @@ LikelihoodEstimatorOutput::~LikelihoodEstimatorOutput()
   
 }
 
-// void LikelihoodEstimatorOutput::simulate(const Parameters &parameters)
-// {
-//
-// }
-
 LikelihoodEstimatorOutput::LikelihoodEstimatorOutput(const LikelihoodEstimatorOutput &another)
 {
   this->make_copy(another);

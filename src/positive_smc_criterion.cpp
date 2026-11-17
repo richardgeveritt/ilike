@@ -47,13 +47,6 @@ void PositiveSMCCriterion::find_desired_criterion(SMCOutput* current_state)
 {
 }
 
-/*
- void PositiveSMCCriterion::find_desired_criterion(SMCOutput* current_state,
- const Parameters &conditioned_on_parameters)
- {
- }
- */
-
 void PositiveSMCCriterion::subsample_find_desired_criterion(SMCOutput* current_state)
 {
 }
@@ -67,14 +60,6 @@ void PositiveSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_
 {
   
 }
-
-/*
- void PositiveSMCCriterion::find_desired_criterion(EnsembleKalmanOutput* current_state,
- const Parameters &conditioned_on_parameters)
- {
- 
- }
- */
 
 bool PositiveSMCCriterion::always_positive() const
 {

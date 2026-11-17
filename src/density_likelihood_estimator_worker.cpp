@@ -35,28 +35,7 @@ void DensityLikelihoodEstimatorWorker::operator=(const DensityLikelihoodEstimato
 void DensityLikelihoodEstimatorWorker::make_copy(const DensityLikelihoodEstimatorWorker &another)
 {
   this->the_dle = another.the_dle;
-  //this->output = another.output;
-  
-  //this->likelihood_estimator_outputs.resize(0);
-  //this->likelihood_estimator_outputs.reserve(another.likelihood_estimator_outputs.size());
-  //for (std::vector< std::vector<LikelihoodEstimatorOutput*> >::const_iterator i=this->likelihood_estimator_outputs.begin();
-  //     i!=this->likelihood_estimator_outputs.end();
-  //     ++i)
-  //{
-  //  std::vector<LikelihoodEstimatorOutput*> inner_vector;
-  //  inner_vector.reserve(this->get_number_of_particles());
-  
-  //  for (std::vector<LikelihoodEstimatorOutput*>::const_iterator j=i->begin();
-  //       j!=i->end();
-  //       ++j)
-  //  {
-  //    if (*j!=NULL)
-  //      inner_vector.push_back((*j)->duplicate());
-  //    else
-  //      inner_vector.push_back(NULL);
-  //  }
-  //  this->likelihood_estimator_outputs.push_back(inner_vector);
-  //}
+
 }
 
 void DensityLikelihoodEstimatorWorker::simulate(DensityLikelihoodEstimatorOutput* output)

@@ -346,7 +346,6 @@ double AnnealedLikelihoodEstimatorOutput::smcadaptive_from_summary(const double 
   }
 }
 
-
 void AnnealedLikelihoodEstimatorOutput::restore_from_summary(const double *values,
                                                              const Parameters &parameters)
 {
@@ -355,7 +354,6 @@ void AnnealedLikelihoodEstimatorOutput::restore_from_summary(const double *value
   this->estimator_output->restore_from_summary(values, parameters);
   this->log_likelihood = this->smcadaptive_from_summary(values, parameters);
 }
-
 
 bool AnnealedLikelihoodEstimatorOutput::repoint_estimator(LikelihoodEstimator* estimator_in)
 {

@@ -1,5 +1,4 @@
 #include "likelihood_estimator.h"
-//#include "model_and_algorithm.h"
 #include "likelihood_estimator_output.h"
 #include "smc_worker.h"
 #include "factors.h"
@@ -19,7 +18,6 @@ LikelihoodEstimator::LikelihoodEstimator(RandomNumberGenerator* rng_in,
 {
   this->data = data_in;
   this->current_data = this->data;
-  //this->model_and_algorithm = ModelAndAlgorithm() ;
   this->rng = rng_in;
   this->seed = seed_in;
   this->smcfixed_flag = smcfixed_flag_in;
@@ -52,7 +50,6 @@ void LikelihoodEstimator::make_copy(const LikelihoodEstimator &another)
 {
   this->data = another.data;
   this->current_data = another.current_data;
-  //this->model_and_algorithm = another.model_and_algorithm;
   this->rng = another.rng;
   this->seed = another.seed;
   this->subsampler = another.subsampler;
@@ -63,18 +60,6 @@ void LikelihoodEstimator::make_copy(const LikelihoodEstimator &another)
     this->factors.reset();
   this->algorithm_parameters = another.algorithm_parameters;
 }
-
-/*
- double LikelihoodEstimator::estimate()
- {
- LikelihoodEstimatorOutput* output = this->initialise();
- output->simulate();
- output->evaluate();
- double log_llhd = output->log_likelihood;
- delete output;
- return log_llhd;
- }
- */
 
 double LikelihoodEstimator::estimate(const Parameters &parameters)
 {

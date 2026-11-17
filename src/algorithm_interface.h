@@ -16,17 +16,6 @@ using namespace Rcpp;
 
 namespace ilike
 {
-  /**
-   * @file algorithm_interface.h
-   * @brief Defines the KalmanFilter class.
-   *
-   * Implements kalman filter. Performs Gaussian state-space inference using Kalman recursions.
-   *
-   * @namespace ilike
-   * @class KalmanFilter
-   * @brief The kalman filter class.
-   */
-
 
 class KalmanFilter;
 class EnsembleKalmanFilter;

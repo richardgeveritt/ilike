@@ -120,21 +120,13 @@ void GaussianIndependentProposalKernel::make_copy(const GaussianIndependentPropo
 void GaussianIndependentProposalKernel::set_mean(const std::string &variable,
                                                  const arma::colvec &mean_in)
 {
-  //auto found = this->proposal_info.find(variable);
-  //if (found!=this->proposal_info.end())
-  //{
   this->proposal_info[variable].set_mean(mean_in);
-  //}
 }
 
 void GaussianIndependentProposalKernel::set_covariance(const std::string &variable,
                                                        const arma::mat &covariance_in)
 {
-  //auto found = this->proposal_info.find(variable);
-  //if (found!=this->proposal_info.end())
-  //{
   this->proposal_info[variable].set_covariance(covariance_in);
-  //}
 }
 
 arma::mat GaussianIndependentProposalKernel::get_inverse_covariance(const std::string &variable) const
@@ -192,14 +184,6 @@ double GaussianIndependentProposalKernel::evaluate_independent_kernel(const Para
   }
   return output;
 }
-
-/*
- double GaussianIndependentProposalKernel::evaluate_independent_kernel(Variables* proposed_particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->evaluate_independent_kernel(proposed_particle);
- }
- */
 
 double GaussianIndependentProposalKernel::subsample_evaluate_independent_kernel(const Parameters &proposed_particle) const
 {
@@ -326,4 +310,18 @@ void GaussianIndependentProposalKernel::set_data(Data* data_in)
 {
   
 }
+
+GaussianProposalInfo* GaussianIndependentProposalKernel::get_gaussian_proposal_info(const std::string &variable)
+{
+  auto found = this->proposal_info.find(variable);
+  if (found==this->proposal_info.end())
+    return NULL;
+  return &found->second;
+}
+
+bool GaussianIndependentProposalKernel::proposal_uses_gaussian_mean() const
+{
+  return true;
+}
+
 }

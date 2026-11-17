@@ -46,8 +46,6 @@ GaussianMeasurementCovarianceEstimatorOutput* DirectGaussianMeasurementCovarianc
 
 void DirectGaussianMeasurementCovarianceEstimatorOutput::make_copy(const DirectGaussianMeasurementCovarianceEstimatorOutput &another)
 {
-  //this->conditioned_on_parameters = another.conditioned_on_parameters;
-  //this->kernel = another.kernel;
   this->direct_estimator = another.direct_estimator;
 }
 
@@ -88,13 +86,6 @@ void DirectGaussianMeasurementCovarianceEstimatorOutput::subsample_specific_simu
   
   this->random_shift = this->direct_estimator->kernel.subsample_independent_simulate(*this->direct_estimator->rng).get_colvec(this->direct_estimator->measurement_variables);
 }
-
-/*
- arma::rowvec DirectGaussianMeasurementCovarianceEstimatorOutput::get_measurement_random_shift()
- {
- 
- }
- */
 
 MeasurementCovarianceEstimator* DirectGaussianMeasurementCovarianceEstimatorOutput::get_estimator()
 {

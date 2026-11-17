@@ -99,29 +99,6 @@ arma::mat ReinforceGradientEstimatorOutput::get_gradient_of_log(const std::strin
   }
 }
 
-/*
- arma::mat ReinforceGradientEstimatorOutput::get_gradient_of_log(const std::string &variable,
- const Index* index,
- Particle &particle,
- const Parameters &conditioned_on_parameters)
- {
- auto found = this->infos.find(variable);
- 
- if (found != this->infos.end())
- {
- return found->second.gradient;
- }
- else
- {
- // if proposal is not found, regenerate all of the variables needed to estimate the gradient
- ReinforceInfo info = ReinforceInfo();
- info.gradient = this->estimator->get_gradient_of_log(variable,index,particle,conditioned_on_parameters);
- this->infos[variable] = info;
- return info.gradient;
- }
- }
- */
-
 arma::mat ReinforceGradientEstimatorOutput::subsample_get_gradient_of_log(const std::string &variable,
                                                                           const Index* index,
                                                                           const Particle &particle)
@@ -150,26 +127,4 @@ void ReinforceGradientEstimatorOutput::simulate_auxiliary_variables()
   this->auxiliary_variables = this->estimator->simulate_auxiliary_variables();
 }
 
-/*
- arma::mat ReinforceGradientEstimatorOutput::subsample_get_gradient_of_log(const std::string &variable,
- const Index* index,
- Particle &particle,
- const Parameters &conditioned_on_parameters)
- {
- auto found = this->infos.find(variable);
- 
- if (found != this->infos.end())
- {
- return found->second.gradient;
- }
- else
- {
- // if proposal is not found, regenerate all of the variables needed to estimate the gradient
- ReinforceInfo info = ReinforceInfo();
- info.gradient = this->estimator->subsample_get_gradient_of_log(variable,index,particle,conditioned_on_parameters);
- this->infos[variable] = info;
- return info.gradient;
- }
- }
- */
 }

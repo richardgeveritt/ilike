@@ -58,9 +58,7 @@ void GaussianDensityEstimatorOutput::make_copy(const GaussianDensityEstimatorOut
     this->covariance_estimator.reset(another.covariance_estimator->duplicate());
   else
     this->covariance_estimator.reset();
-  
-  //this->unbiased = another.unbiased;
-  
+
 }
 
 void GaussianDensityEstimatorOutput::fit(const std::vector<Parameters> &points,

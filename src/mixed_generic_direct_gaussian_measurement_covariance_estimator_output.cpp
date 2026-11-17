@@ -35,9 +35,7 @@ void MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::operator=(c
 
 void MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::make_copy(const MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput &another)
 {
-  //this->conditioned_on_parameters = another.conditioned_on_parameters;
   this->estimator = another.estimator;
-  //this->simulated_measurement = another.simulated_measurement;
   this->likelihood_measurement_state = another.likelihood_measurement_state;
   this->prior_measurement_state = another.prior_measurement_state;
   this->likelihood_random_shift = another.likelihood_random_shift;
@@ -139,17 +137,6 @@ double MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::evaluate_
                                log_det_precomp);
 }
 
-/*
- double MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
- const Parameters &conditioned_on_parameters)
- {
- // parameters of covariance should already be set at this point, so second argument does nothing
- return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
- arma::join_cols(this->likelihood_measurement_state,this->prior_measurement_state),
- this->estimator->get_measurement_covariance_for_likelihood_ratio(inverse_incremental_temperature));
- }
- */
-
 double MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
                                                                                                                     const arma::mat &inv_sigma_precomp,
                                                                                                                     double log_det_precomp) const
@@ -161,17 +148,6 @@ double MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::subsample
                  this->estimator->get_measurement_covariance_for_likelihood_ratio(inverse_incremental_temperature));
 }
 
-/*
- double MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_ensemble_likelihood_ratio(double inverse_incremental_temperature,
- const Parameters &conditioned_on_parameters)
- {
- // parameters of covariance should already be set at this point, so second argument does nothing
- return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
- arma::join_cols(this->likelihood_measurement_state,this->prior_measurement_state),
- this->estimator->get_measurement_covariance_for_likelihood_ratio(inverse_incremental_temperature));
- }
- */
-
 double MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::evaluate_likelihood()
 {
   return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
@@ -179,30 +155,12 @@ double MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::evaluate_
                  this->estimator->get_measurement_covariance_for_likelihood_ratio(1.0));
 }
 
-/*
- double MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::evaluate_likelihood(const Parameters &conditioned_on_parameters)
- {
- return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
- arma::join_cols(this->likelihood_measurement_state,this->prior_measurement_state),
- this->estimator->get_measurement_covariance_for_likelihood_ratio(1.0));
- }
- */
-
 double MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_likelihood()
 {
   return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
                  arma::join_cols(this->likelihood_measurement_state,this->prior_measurement_state),
                  this->estimator->get_measurement_covariance_for_likelihood_ratio(1.0));
 }
-
-/*
- double MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::subsample_evaluate_likelihood(const Parameters &conditioned_on_parameters)
- {
- return dmvnorm(*this->get_estimator()->get_measurement_pointer(),
- arma::join_cols(this->likelihood_measurement_state,this->prior_measurement_state),
- this->estimator->get_measurement_covariance_for_likelihood_ratio(1.0));
- }
- */
 
 MeasurementCovarianceEstimator* MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::get_estimator()
 {

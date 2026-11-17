@@ -22,8 +22,6 @@ AnnealedLikelihoodEstimator::AnnealedLikelihoodEstimator(RandomNumberGenerator* 
   this->power_variable = power_variable_in;
   this->constant_power = 1.0;
   this->use_constant = FALSE;
-  //this->smcfixed_flag = this->estimator->get_smcfixed_flag();
-  //this->output = new AnnealedLikelihoodEstimatorOutput();
 }
 
 AnnealedLikelihoodEstimator::AnnealedLikelihoodEstimator(RandomNumberGenerator* rng_in,
@@ -39,8 +37,6 @@ AnnealedLikelihoodEstimator::AnnealedLikelihoodEstimator(RandomNumberGenerator* 
   this->power_variable = "";
   this->constant_power = constant_power_in;
   this->use_constant = FALSE;
-  //this->smcfixed_flag = this->estimator->get_smcfixed_flag();
-  //this->output = new AnnealedLikelihoodEstimatorOutput();
 }
 
 AnnealedLikelihoodEstimator::~AnnealedLikelihoodEstimator()
@@ -113,12 +109,6 @@ void AnnealedLikelihoodEstimator::setup(const Parameters &parameters)
   this->estimator->setup(parameters);
 }
 
-// void AnnealedLikelihoodEstimator::is_setup_likelihood_estimator(const std::vector<List> &all_points,
-//                                                              const std::vector<List> &all_auxiliary_variables)
-// {
-//
-// }
-
 void AnnealedLikelihoodEstimator::specific_change_data(Data* new_data)
 {
   this->estimator->change_data_with_raw_pointer(new_data);
@@ -132,12 +122,10 @@ bool AnnealedLikelihoodEstimator::supports_restore_from_summary() const
     this->estimator->supports_restore_from_summary();
 }
 
-
 bool AnnealedLikelihoodEstimator::supports_parallel_chunks() const
 {
   return (this->estimator!=NULL) && this->estimator->supports_parallel_chunks();
 }
-
 
 bool AnnealedLikelihoodEstimator::supports_parallel_copies() const
 {
@@ -151,7 +139,6 @@ void AnnealedLikelihoodEstimator::redirect_random_numbers(RandomNumberGenerator*
   if (this->estimator!=NULL)
     this->estimator->redirect_random_numbers(rng_in, seed_in);
 }
-
 
 bool AnnealedLikelihoodEstimator::supports_flat_generations() const
 {

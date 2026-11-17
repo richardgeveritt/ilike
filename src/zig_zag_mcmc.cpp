@@ -80,54 +80,11 @@ Particle ZigZagMCMC::move(RandomNumberGenerator &rng,
   Rcpp::stop("ZigZagMCMC::move - not yet implemented.");
 }
 
-/*
- Particle ZigZagMCMC::move(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- Rcpp::stop("ZigZagMCMC::move - not yet implemented.");
- }
- */
-
 Particle ZigZagMCMC::subsample_move(RandomNumberGenerator &rng,
                                     const Particle &particle) const
 {
   Rcpp::stop("ZigZagMCMC::move - not yet implemented.");
 }
-
-/*
- Particle ZigZagMCMC::subsample_move(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- Rcpp::stop("ZigZagMCMC::move - not yet implemented.");
- }
- */
-
-/*
- EnsembleMember ZigZagMCMC::move(RandomNumberGenerator &rng,
- const Index* index,
- EnsembleMember &particle) const
- {
- Rcpp::stop("ZigZagMCMC::move - not yet implemented.");
- }
- 
- EnsembleMember ZigZagMCMC::move(RandomNumberGenerator &rng,
- const Index* index,
- EnsembleMember &particle,
- const Parameters &conditioned_on_parameters) const
- {
- Rcpp::stop("ZigZagMCMC::move - not yet implemented.");
- }
- 
- EnsembleMember ZigZagMCMC::subsample_move(RandomNumberGenerator &rng,
- const Index* index,
- EnsembleMember &particle,
- const Parameters &conditioned_on_parameters) const
- {
- Rcpp::stop("ZigZagMCMC::move - not yet implemented.");
- }
- */
 
 MoveOutput* ZigZagMCMC::run(RandomNumberGenerator &rng,
                             const Particle &particle) const
@@ -136,32 +93,12 @@ MoveOutput* ZigZagMCMC::run(RandomNumberGenerator &rng,
   return new PDMPMCMCOutput();
 }
 
-/*
- MoveOutput* ZigZagMCMC::run(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- // run PDMP
- return new PDMPMCMCOutput();
- }
- */
-
 MoveOutput* ZigZagMCMC::subsample_run(RandomNumberGenerator &rng,
                                       const Particle &particle) const
 {
   // run PDMP
   return new PDMPMCMCOutput();
 }
-
-/*
- MoveOutput* ZigZagMCMC::subsample_run(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- // run PDMP
- return new PDMPMCMCOutput();
- }
- */
 
 void ZigZagMCMC::smc_adapt(SMCOutput* current_state)
 {

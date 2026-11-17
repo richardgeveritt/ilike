@@ -64,33 +64,12 @@ double CustomNoParamsSymmetricProposalKernel::specific_evaluate_kernel(const Par
                                  old_particle.get_transformed_parameters(this));
 }
 
-/*
-double CustomNoParamsSymmetricProposalKernel::specific_evaluate_kernel(Particle &proposed_particle,
-                                                      Particle &old_particle,
-                                                      const Parameters &conditioned_on_parameters) const
-{
-  return this->proposal_evaluate(proposed_particle.move_parameters->merge(conditioned_on_parameters),
-                                 old_particle.move_parameters->merge(conditioned_on_parameters),
-                                 this->proposal_parameters);
-}
-*/
-
 double CustomNoParamsSymmetricProposalKernel::specific_subsample_evaluate_kernel(const Particle &proposed_particle,
                                                                                  const Particle &old_particle) const
 {
   // no difference since size of data set does not impact on proposal
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
-
-/*
-double CustomNoParamsSymmetricProposalKernel::specific_subsample_evaluate_kernel(Particle &proposed_particle,
-                                                                Particle &old_particle,
-                                                                const Parameters &conditioned_on_parameters) const
-{
-  // no difference since size of data set does not impact on proposal
-  return this->specific_evaluate_kernel(proposed_particle, old_particle, conditioned_on_parameters);
-}
-*/
 
 Parameters CustomNoParamsSymmetricProposalKernel::simulate(RandomNumberGenerator &rng,
                                                            const Particle &particle) const
@@ -99,33 +78,12 @@ Parameters CustomNoParamsSymmetricProposalKernel::simulate(RandomNumberGenerator
                                  particle.get_transformed_parameters(this));
 }
 
-/*
-Parameters CustomNoParamsSymmetricProposalKernel::simulate(RandomNumberGenerator &rng,
-                                          Particle &particle,
-                                          const Parameters &conditioned_on_parameters) const
-{
-  return this->proposal_simulate(rng,
-                                 particle.move_parameters->merge(conditioned_on_parameters),
-                                 this->proposal_parameters);
-}
-*/
-
 Parameters CustomNoParamsSymmetricProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                                      const Particle &particle) const
 {
   // no difference since size of data set does not impact on proposal
   return this->simulate(rng, particle);
 }
-
-/*
-Parameters CustomNoParamsSymmetricProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                    Particle &particle,
-                                                    const Parameters &conditioned_on_parameters) const
-{
-  // no difference since size of data set does not impact on proposal
-  return this->simulate(rng, particle, conditioned_on_parameters);
-}
-*/
 
 Parameters CustomNoParamsSymmetricProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                                      const std::string &variable,
@@ -135,33 +93,12 @@ Parameters CustomNoParamsSymmetricProposalKernel::subsample_simulate(RandomNumbe
   Rcpp::stop("CustomNoParamsSymmetricProposalKernel::subsample_simulate - not implemented.");
 }
 
-/*
-Parameters CustomNoParamsSymmetricProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
-                                                    const std::string &variable,
-                                                    Particle &particle,
-                                                    const Parameters &conditioned_on_parameters) const
-{
-  // no difference since size of data set does not impact on proposal
-  Rcpp::stop("CustomNoParamsSymmetricProposalKernel::subsample_simulate - not implemented.");
-}
-*/
-
 arma::mat CustomNoParamsSymmetricProposalKernel::specific_gradient_of_log(const std::string &variable,
                                                                           const Particle &proposed_particle,
                                                                           const Particle &old_particle)
 {
   Rcpp::stop("CustomNoParamsSymmetricProposalKernel::specific_gradient_of_log - not written yet.");
 }
-
-/*
-arma::mat CustomNoParamsSymmetricProposalKernel::specific_gradient_of_log(const std::string &variable,
-                                                           Particle &proposed_particle,
-                                                           Particle &old_particle,
-                                                           const Parameters &conditioned_on_parameters)
-{
-  Rcpp::stop("CustomNoParamsSymmetricProposalKernel::specific_gradient_of_log - not written yet.");
-}
-*/
 
 arma::mat CustomNoParamsSymmetricProposalKernel::specific_subsample_gradient_of_log(const std::string &variable,
                                                                                     const Particle &proposed_particle,

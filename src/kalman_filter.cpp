@@ -35,9 +35,7 @@ KalmanFilter::KalmanFilter(Data* data_in,
   this->prior_mean = prior_mean_in;
   this->prior_covariance = prior_covariance_in;
   this->state_dimension = prior_mean_in.n_elem;
-  
-  //this->state_name = state_name_in;
-  
+
   this->state_name = "";
   
   for (auto i=updaters_in.begin();
@@ -56,7 +54,6 @@ KalmanFilter::KalmanFilter(Data* data_in,
   this->index_name = index_name_in;
   this->time_name = time_name_in;
   this->time_diff_name = time_diff_name_in;
-  //this->measurements_names = measurements_names_in;
   this->first_index = first_index_in;
   this->last_index = last_index_in;
   this->predictions_per_update = predictions_per_update_in;
@@ -113,7 +110,6 @@ void KalmanFilter::make_copy(const KalmanFilter &another)
   this->index_name = another.index_name;
   this->time_name = another.time_name;
   this->time_diff_name = another.time_diff_name;
-  //this->measurements_names = another.measurements_names;
   this->first_index = another.first_index;
   this->last_index = another.last_index;
   this->predictions_per_update = another.predictions_per_update;
@@ -178,7 +174,6 @@ LikelihoodEstimatorOutput* KalmanFilter::initialise()
 
 KalmanFilterOutput* KalmanFilter::kalman_filter_initialise()
 {
-  //this->first_index = 0;
   this->current_index = this->first_index;
   return new KalmanFilterOutput(this,
                                 this->lag,
@@ -187,12 +182,7 @@ KalmanFilterOutput* KalmanFilter::kalman_filter_initialise()
 
 void KalmanFilter::evaluate(KalmanFilterOutput* current_state)
 {
-  
-  //if ( (this->updater->set_using_parameters) || (this->updater->set_using_parameters) )
-  //{
-  //  Rcpp::stop("KalmanFilter::evaluate - need to read in a parameter fix updater and/or predictor.");
-  //}
-  
+
   if (!this->last_index_is_fixed)
   {
     Rcpp::stop("KalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
@@ -235,7 +225,6 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state)
       // Data current_measurement = this->data->get_using_time_index(this->measurements_names);
       // Returns the data for a time slice, which will include a bunch of variables.
       arma::colvec current_measurement = arma::vectorise(this->data->row(this->current_index)[(*i)->get_measurement_variable()]);
-      //arma::colvec current_measurement = (*this->data)[this->measurements_names].col(this->current_index);
       
       // Update at initial step.
       (*i)->update(current_state,
@@ -261,14 +250,7 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state)
     for (size_t i=0; i<this->predictions_per_update; ++i)
     {
       this->current_time = this->current_time + predict_time_step;
-      
-      //this->schedule_parameters[this->time_name] = this->current_time;
-      //this->schedule_parameters[this->time_diff_name] = predict_time_step;
-      
-      //this->predictor->predict(current_state,
-      //                         previous_time,
-      //                         this->current_time);
-      
+
       this->predictor->predict(current_state);
     }
     current_state->add_predicted_statistics();
@@ -281,7 +263,6 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state)
          ++i)
     {
       arma::colvec current_measurement = arma::vectorise(this->data->row(this->current_index)[(*i)->get_measurement_variable()]);
-      //arma::colvec current_measurement = (*this->data)[this->measurements_names].col(this->current_index);
       
       // Update at initial step.
       (*i)->update(current_state,
@@ -312,116 +293,12 @@ void KalmanFilter::subsample_evaluate(KalmanFilterOutput* current_state)
 {
   Rcpp::stop("KalmanFilter::subsample_evaluate - not written.");
   
-  /*
-   if ( (this->updater->set_using_parameters) || (this->updater->set_using_parameters) )
-   {
-   Rcpp::stop("KalmanFilter::evaluate - need to read in a parameter fix updater and/or predictor.");
-   }
-   
-   if (!this->last_index_is_fixed)
-   {
-   Rcpp::stop("KalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
-   }
-   
-   if (current_state->predicted_size()==0)
-   {
-   // Initial step.
-   current_state->set_current_predicted_statistics(this->prior_mean,
-   this->prior_covariance);
-   current_state->add_predicted_statistics();
-   
-   // For a particle filter, we instead need to use
-   // Data current_measurement = this->data->get_using_time_index(this->measurements_names);
-   // Returns the data for a time slice, which will include a bunch of variables.
-   arma::colvec current_measurement = (*this->subsampler->small_data)[this->measurements_names].col(this->current_index);
-   
-   // Update at initial step.
-   this->updater->update(current_state,
-   current_measurement);
-   current_state->add_posterior_statistics();
-   }
-   
-   double predict_time_step = this->update_time_step/double(this->predictions_per_update);
-   
-   while (!this->check_termination())
-   {
-   current_state->set_current_predicted_to_be_current_posterior();
-   for (size_t i=0; i<this->predictions_per_update; ++i)
-   {
-   double previous_time = this->current_time;
-   this->current_time = this->current_time + predict_time_step;
-   this->predictor->predict(current_state,
-   previous_time,
-   this->current_time);
-   }
-   current_state->add_predicted_statistics();
-   this->current_index = this->current_index + 1;
-   
-   arma::colvec current_measurement = (*this->subsampler->small_data)[this->measurements_names].col(this->current_index);
-   
-   this->updater->update(current_state,
-   current_measurement);
-   current_state->add_posterior_statistics();
-   }
-   */
 }
 
 void KalmanFilter::subsample_evaluate(KalmanFilterOutput* current_state,
                                       const Parameters &conditioned_on_parameters)
 {
   Rcpp::stop("KalmanFilter::subsample_evaluate - not written.");
-  /*
-   if ( (this->updater->set_using_parameters) || (this->updater->set_using_parameters) )
-   {
-   Rcpp::stop("KalmanFilter::evaluate - need to read in a parameter fix updater and/or predictor.");
-   }
-   
-   if (!this->last_index_is_fixed)
-   {
-   Rcpp::stop("KalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
-   }
-   
-   if (current_state->predicted_size()==0)
-   {
-   // Initial step.
-   current_state->set_current_predicted_statistics(this->prior_mean,
-   this->prior_covariance);
-   current_state->add_predicted_statistics();
-   
-   // For a particle filter, we instead need to use
-   // Data current_measurement = this->data->get_using_time_index(this->measurements_names);
-   // Returns the data for a time slice, which will include a bunch of variables.
-   arma::colvec current_measurement = (*this->subsampler->small_data)[this->measurements_names].col(this->current_index);
-   
-   // Update at initial step.
-   this->updater->update(current_state,
-   current_measurement);
-   current_state->add_posterior_statistics();
-   }
-   
-   double predict_time_step = this->update_time_step/double(this->predictions_per_update);
-   
-   while (!this->check_termination())
-   {
-   current_state->set_current_predicted_to_be_current_posterior();
-   for (size_t i=0; i<this->predictions_per_update; ++i)
-   {
-   double previous_time = this->current_time;
-   this->current_time = this->current_time + predict_time_step;
-   this->predictor->predict(current_state,
-   previous_time,
-   this->current_time);
-   }
-   current_state->add_predicted_statistics();
-   this->current_index = this->current_index + 1;
-   
-   arma::colvec current_measurement = (*this->subsampler->small_data)[this->measurements_names].col(this->current_index);
-   
-   this->updater->update(current_state,
-   current_measurement);
-   current_state->add_posterior_statistics();
-   }
-   */
 }
 
 KalmanFilterOutput* KalmanFilter::run(const Parameters &conditioned_on_parameters)
@@ -495,7 +372,6 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state,
       // Data current_measurement = this->data->get_using_time_index(this->measurements_names);
       // Returns the data for a time slice, which will include a bunch of variables.
       arma::colvec current_measurement = arma::vectorise(this->data->row(this->current_index)[(*i)->get_measurement_variable()]);
-      //arma::colvec current_measurement = (*this->data)[this->measurements_names].col(this->current_index);
       
       // Update at initial step.
       (*i)->update(current_state,
@@ -520,16 +396,10 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state,
     current_state->set_current_predicted_to_be_current_posterior();
     for (size_t i=0; i<this->predictions_per_update; ++i)
     {
-      //double previous_time = this->current_time;
       this->current_time = this->current_time + predict_time_step;
       
-      //this->schedule_parameters[this->time_name] = this->current_time;
       this->schedule_parameters[this->time_diff_name] = predict_time_step;
-      
-      //this->predictor->predict(current_state,
-      //                         previous_time,
-      //                         this->current_time);
-      
+
       this->predictor->predict(current_state);
     }
     current_state->add_predicted_statistics();
@@ -544,7 +414,6 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state,
       // Data current_measurement = this->data->get_using_time_index(this->measurements_names);
       // Returns the data for a time slice, which will include a bunch of variables.
       arma::colvec current_measurement = arma::vectorise(this->data->row(this->current_index)[(*i)->get_measurement_variable()]);
-      //arma::colvec current_measurement = (*this->data)[this->measurements_names].col(this->current_index);
       
       // Update at initial step.
       (*i)->update(current_state,
@@ -575,18 +444,6 @@ bool KalmanFilter::check_termination() const
 {
   return(this->current_index==this->last_index);
 }
-
-
-//double KalmanFilter::evaluate(const Parameters &parameters)
-//{
-//  return this->func(parameters,*this->data);
-//}
-
-// void KalmanFilter::is_setup_likelihood_estimator(const std::vector<List> &all_points,
-//                                                              const std::vector<List> &all_auxiliary_variables)
-// {
-//
-// }
 
 void KalmanFilter::specific_change_data(Data* new_data)
 {

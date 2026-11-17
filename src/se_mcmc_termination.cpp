@@ -14,7 +14,6 @@ SEMCMCTermination::SEMCMCTermination(double threshold_in,
 {
   this->threshold = threshold_in;
   this->max_number_of_iterations = max_number_of_iterations_in;
-  //this->counter = counter_pointer;
 }
 
 SEMCMCTermination::~SEMCMCTermination()

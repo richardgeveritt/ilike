@@ -99,20 +99,6 @@ void EnsembleKalmanOutput::make_copy(const EnsembleKalmanOutput &another)
   this->results_name = another.results_name;
 }
 
-/*
- Ensemble* EnsembleKalmanOutput::add_ensemble()
- {
- size_t num_to_pop_front = std::max<int>(0,this->all_ensembles.size()-this->lag+1);
- for (size_t i=0; i<num_to_pop_front; ++i)
- {
- this->all_ensembles.pop_front();
- }
- this->all_ensembles.push_back(Ensemble());
- this->all_ensembles.back().reserve(this->estimator->number_of_ensemble_members);
- return &this->all_ensembles.back();
- }
- */
-
 Ensemble* EnsembleKalmanOutput::add_ensemble(EnsembleFactors* ensemble_factors)
 {
   size_t num_to_pop_front = std::max<int>(0,this->all_ensembles.size()-this->lag+1);
@@ -148,7 +134,6 @@ double EnsembleKalmanOutput::calculate_mc_inversion_latest_log_normalising_const
                                       inverse_incremental_temperature);
   return this->all_ensembles.back().calculate_mc_inversion_log_normalising_constant(this->estimator->the_worker->get_unnormalised_log_incremental_weights(),inverse_incremental_temperature);
 
-  //return this->all_ensembles.back().calculate_mc_inversion_log_normalising_constant(inverse_incremental_temperature);
 }
 
 double EnsembleKalmanOutput::calculate_inversion_latest_log_normalising_constant_ratio(double inverse_incremental_temperature)
@@ -171,7 +156,6 @@ double EnsembleKalmanOutput::calculate_path1_inversion_latest_log_normalising_co
                                                                                 multiplier);
   
   std::deque<Ensemble>::iterator current_ensemble = this->all_ensembles.end()-1;
-  //std::deque<Ensemble>::iterator previous_ensemble = this->all_ensembles.end()-2;
   
   double log_ratio = 0.0;
   for (size_t i=0; i<current_ensemble->log_measurement_likelihood_means.size(); ++i)
@@ -190,7 +174,6 @@ double EnsembleKalmanOutput::calculate_path2_inversion_latest_log_normalising_co
                                                                                 (this->all_ensembles.end()-1)->log_measurement_likelihood_variances);
   
   std::deque<Ensemble>::iterator current_ensemble = this->all_ensembles.end()-1;
-  //std::deque<Ensemble>::iterator previous_ensemble = this->all_ensembles.end()-2;
   
   double log_ratio = 0.0;
   for (size_t i=0; i<current_ensemble->log_measurement_likelihood_means.size(); ++i)
@@ -234,40 +217,11 @@ void EnsembleKalmanOutput::simulate(const Parameters &parameters)
   this->estimator->ensemble_kalman_simulate(this, parameters);
 }
 
-/*
- void EnsembleKalmanOutput::evaluate_smcfixed_part()
- {
- if (this->estimator->smcfixed_flag)
- {
- this->estimator->ensemble_kalman_evaluate(this);
- //this->log_likelihood_smcfixed_part = std::accumulate(this->log_normalising_constant_ratios.begin(),
- //this->log_normalising_constant_ratios.end(),
- //1.0);
- }
- else
- {
- this->estimator->ensemble_kalman_evaluate_smcfixed_part(this);
- }
- }
- 
- void EnsembleKalmanOutput::evaluate_smcadaptive_part_given_smcfixed()
- {
- if (!this->estimator->smcfixed_flag)
- {
- this->estimator->ensemble_kalman_evaluate_smcadaptive_part_given_smcfixed(this);
- }
- 
- }
- */
-
 void EnsembleKalmanOutput::evaluate_smcfixed_part(const Parameters &conditioned_on_parameters)
 {
   if (this->estimator->smcfixed_flag)
   {
     this->estimator->ensemble_kalman_evaluate(this, conditioned_on_parameters);
-    //this->log_likelihood_smcfixed_part = std::accumulate(this->log_normalising_constant_ratios.begin(),
-    //this->log_normalising_constant_ratios.end(),
-    //1.0);
   }
   else
   {
@@ -294,40 +248,11 @@ void EnsembleKalmanOutput::subsample_simulate(const Parameters &parameters)
   this->estimator->ensemble_kalman_simulate(this, parameters);
 }
 
-/*
- void EnsembleKalmanOutput::subsample_evaluate_smcfixed_part()
- {
- if (this->estimator->smcfixed_flag)
- {
- this->estimator->ensemble_kalman_subsample_evaluate(this);
- //this->log_likelihood_smcfixed_part = std::accumulate(this->log_normalising_constant_ratios.begin(),
- //this->log_normalising_constant_ratios.end(),
- //1.0);
- }
- else
- {
- this->estimator->ensemble_kalman_subsample_evaluate_smcfixed_part(this);
- }
- }
- 
- void EnsembleKalmanOutput::subsample_evaluate_smcadaptive_part_given_smcfixed()
- {
- if (!this->estimator->smcfixed_flag)
- {
- this->estimator->ensemble_kalman_subsample_evaluate_smcadaptive_part_given_smcfixed(this);
- }
- 
- }
- */
-
 void EnsembleKalmanOutput::subsample_evaluate_smcfixed_part(const Parameters &conditioned_on_parameters)
 {
   if (this->estimator->smcfixed_flag)
   {
     this->estimator->ensemble_kalman_subsample_evaluate(this, conditioned_on_parameters);
-    //this->log_likelihood_smcfixed_part = std::accumulate(this->log_normalising_constant_ratios.begin(),
-    //this->log_normalising_constant_ratios.end(),
-    //1.0);
   }
   else
   {

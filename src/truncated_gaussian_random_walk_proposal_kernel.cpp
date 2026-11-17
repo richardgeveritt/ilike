@@ -8,7 +8,6 @@ namespace ilike {
 TruncatedGaussianRandomWalkProposalKernel::
     TruncatedGaussianRandomWalkProposalKernel()
     : SymmetricProposalKernel() {
-  // this->unused_variables_kept = true;
 }
 
 TruncatedGaussianRandomWalkProposalKernel::
@@ -20,7 +19,6 @@ TruncatedGaussianRandomWalkProposalKernel::
         const std::vector<arma::colvec> &lower_in,
         const std::vector<arma::colvec> &upper_in)
     : SymmetricProposalKernel() {
-  // this->unused_variables_kept = true;
   size_t counter = 0;
   for (auto i = variable_names_in.begin(); i != variable_names_in.end(); ++i) {
     this->proposal_info[*i] = GaussianProposalInfo();
@@ -37,7 +35,6 @@ TruncatedGaussianRandomWalkProposalKernel::
         const std::vector<arma::colvec> &lower_in,
         const std::vector<arma::colvec> &upper_in)
     : SymmetricProposalKernel() {
-  // this->unused_variables_kept = true;
   for (size_t i = 0; i < variable_names_in.size(); ++i) {
     this->proposal_info[variable_names_in[i]] =
         GaussianProposalInfo(covariances_in[i]);
@@ -51,7 +48,6 @@ TruncatedGaussianRandomWalkProposalKernel::
         const std::string &variable_name_in, const double &sd_in,
         const double &lower_in, const double &upper_in)
     : SymmetricProposalKernel() {
-  // this->unused_variables_kept = true;
   this->proposal_info[variable_name_in] = GaussianProposalInfo(sd_in);
   this->lower_info[variable_name_in] = lower_in;
   this->upper_info[variable_name_in] = upper_in;
@@ -62,7 +58,6 @@ TruncatedGaussianRandomWalkProposalKernel::
         const std::string &variable_name_in, const arma::mat &covariance_in,
         const arma::colvec &lower_in, const arma::colvec &upper_in)
     : SymmetricProposalKernel() {
-  // this->unused_variables_kept = true;
   this->proposal_info[variable_name_in] = GaussianProposalInfo(covariance_in);
   this->lower_info[variable_name_in] = lower_in;
   this->upper_info[variable_name_in] = upper_in;
@@ -74,7 +69,6 @@ TruncatedGaussianRandomWalkProposalKernel::
         double scale_in, const arma::colvec &lower_in,
         const arma::colvec &upper_in)
     : SymmetricProposalKernel() {
-  // this->unused_variables_kept = true;
   this->proposal_info[variable_name_in] =
       GaussianProposalInfo(covariance_in, scale_in);
   this->lower_info[variable_name_in] = lower_in;
@@ -117,42 +111,13 @@ void TruncatedGaussianRandomWalkProposalKernel::make_copy(
   this->proposal_info = another.proposal_info;
   this->lower_info = another.lower_info;
   this->upper_info = another.upper_info;
-  // this->unused_variables_kept = another.unused_variables_kept;
 }
 
 double TruncatedGaussianRandomWalkProposalKernel::specific_evaluate_kernel(
     const Particle &proposed_particle, const Particle &old_particle) const {
       Rcpp::stop("TruncatedGaussianDistributionFactor::distribution_evaluate - not written yet.");
       
-      /*
-  double output = 0.0;
-  for (auto i = this->proposal_info.begin(); i != this->proposal_info.end();
-       ++i) {
-    arma::colvec mean =
-        old_particle.get_transformed_parameters(this).get_colvec(i->first);
-    double scale = i->second.get_double_scale();
-    double dim = double(mean.n_rows);
-    output = output +
-             dtmvnorm_using_precomp(
-                 proposed_particle.get_transformed_parameters(this).get_colvec(
-                     i->first),
-                 mean, (1.0 / sqrt(scale)) * i->second.get_inv(),
-                 dim * log(scale) + i->second.get_logdet(),
-                 this->lower_info.at(i->first), this->upper_info.at(i->first));
-  }
-  return output;
-       */
 }
-
-/*
- double
- TruncatedGaussianRandomWalkProposalKernel::specific_evaluate_kernel(Particle
- &proposed_particle, Particle &old_particle, const Parameters
- &conditioned_on_parameters) const
- {
- return this->specific_evaluate_kernel(proposed_particle, old_particle);
- }
- */
 
 double
 TruncatedGaussianRandomWalkProposalKernel::specific_subsample_evaluate_kernel(
@@ -160,17 +125,6 @@ TruncatedGaussianRandomWalkProposalKernel::specific_subsample_evaluate_kernel(
   // no difference since size of data set does not impact on proposal
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
-
-/*
- double
- TruncatedGaussianRandomWalkProposalKernel::specific_subsample_evaluate_kernel(Particle
- &proposed_particle, Particle &old_particle, const Parameters
- &conditioned_on_parameters) const
- {
- // no difference since size of data set does not impact on proposal
- return this->specific_evaluate_kernel(proposed_particle, old_particle);
- }
- */
 
 void TruncatedGaussianRandomWalkProposalKernel::set_covariance(
     const std::string &variable, const arma::mat &covariance_in) {
@@ -190,13 +144,9 @@ arma::mat TruncatedGaussianRandomWalkProposalKernel::get_covariance(
 Parameters TruncatedGaussianRandomWalkProposalKernel::simulate(
     RandomNumberGenerator &rng, const Particle &particle) const {
   Parameters output;
-  // if (this->unused_variables_kept)
-  //   output = *particle.move_parameters;
   for (auto i = this->proposal_info.begin(); i != this->proposal_info.end();
        ++i) {
-    // arma::colvec mean = i->second.get_mean();
     double scale = i->second.get_double_scale();
-    // double dim = double(mean.n_rows);
     output[i->first] = rtmvnorm_using_chol(
         rng, particle.get_transformed_parameters(this).get_colvec(i->first),
         sqrt(scale) * i->second.get_chol(), this->lower_info.at(i->first),
@@ -205,31 +155,11 @@ Parameters TruncatedGaussianRandomWalkProposalKernel::simulate(
   return output;
 }
 
-/*
- Parameters
- TruncatedGaussianRandomWalkProposalKernel::simulate(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- return this->simulate(rng, particle);
- }
- */
-
 Parameters TruncatedGaussianRandomWalkProposalKernel::subsample_simulate(
     RandomNumberGenerator &rng, const Particle &particle) const {
   // no difference since size of data set does not impact on proposal
   return this->simulate(rng, particle);
 }
-
-/*
- Parameters
- TruncatedGaussianRandomWalkProposalKernel::subsample_simulate(RandomNumberGenerator
- &rng, Particle &particle, const Parameters &conditioned_on_parameters) const
- {
- // no difference since size of data set does not impact on proposal
- return this->simulate(rng, particle);
- }
- */
 
 Parameters TruncatedGaussianRandomWalkProposalKernel::subsample_simulate(
     RandomNumberGenerator &rng, const std::string &variable,
@@ -238,25 +168,12 @@ Parameters TruncatedGaussianRandomWalkProposalKernel::subsample_simulate(
   auto found = this->proposal_info.find(variable);
 
   Parameters output;
-  // if (this->unused_variables_kept)
-  //   output = *particle.move_parameters;
   output[variable] = rtmvnorm_using_chol(
       rng, particle.get_transformed_parameters(this).get_colvec(variable),
       sqrt(found->second.get_double_scale()) * found->second.get_chol(),
       this->lower_info.at(variable), this->upper_info.at(variable));
   return output;
 }
-
-/*
- Parameters
- TruncatedGaussianRandomWalkProposalKernel::subsample_simulate(RandomNumberGenerator
- &rng, const std::string &variable, Particle &particle, const Parameters
- &conditioned_on_parameters) const
- {
- // no difference since size of data set does not impact on proposal
- return this->subsample_simulate(rng, variable, particle);
- }
- */
 
 arma::mat TruncatedGaussianRandomWalkProposalKernel::specific_gradient_of_log(
     const std::string &variable, const Particle &proposed_particle,
@@ -265,17 +182,6 @@ arma::mat TruncatedGaussianRandomWalkProposalKernel::specific_gradient_of_log(
              "log - not written yet.");
 }
 
-/*
- arma::mat
- TruncatedGaussianRandomWalkProposalKernel::specific_gradient_of_log(const
- std::string &variable, Particle &proposed_particle, Particle &old_particle,
- const Parameters &conditioned_on_parameters)
- {
- Rcpp::stop("TruncatedGaussianRandomWalkProposalKernel::specific_gradient_of_log
- - not written yet.");
- }
- */
-
 arma::mat
 TruncatedGaussianRandomWalkProposalKernel::specific_subsample_gradient_of_log(
     const std::string &variable, const Particle &proposed_particle,
@@ -283,17 +189,6 @@ TruncatedGaussianRandomWalkProposalKernel::specific_subsample_gradient_of_log(
   Rcpp::stop("TruncatedGaussianRandomWalkProposalKernel::specific_gradient_of_"
              "log - not written yet.");
 }
-
-/*
- arma::mat
- TruncatedGaussianRandomWalkProposalKernel::specific_subsample_gradient_of_log(const
- std::string &variable, Particle &proposed_particle, Particle &old_particle,
- const Parameters &conditioned_on_parameters)
- {
- Rcpp::stop("TruncatedGaussianRandomWalkProposalKernel::specific_gradient_of_log
- - not written yet.");
- }
- */
 
 void TruncatedGaussianRandomWalkProposalKernel::set_proposal_parameters(
     Parameters *proposal_parameters_in) {}

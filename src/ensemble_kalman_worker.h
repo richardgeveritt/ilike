@@ -12,17 +12,6 @@ using namespace Rcpp;
 
 namespace ilike
 {
-  /**
-   * @file ensemble_kalman_worker.h
-   * @brief Defines the EnsembleKalman class.
-   *
-   * An Ensemble Kalman method implementation. Performs ensemble-based data assimilation using Kalman-type updates.
-   *
-   * @namespace ilike
-   * @class EnsembleKalman
-   * @brief The ensemble kalman class.
-   */
-
 
 class EnsembleKalman;
 class ParticleSimulator;
@@ -33,74 +22,21 @@ class EnsembleKalmanWorker
 {
 public:
   
-  /**
-   * @brief Performs the ensemblekalmanworker operation.
-   */
   EnsembleKalmanWorker();
   
-  /**
-   * @brief Performs the ensemblekalmanworker operation.
-   *
-   * @param the_smc_in The the smc.
-   */
   EnsembleKalmanWorker(EnsembleKalman* the_smc_in);
   
-  /**
-   * @brief Performs the ~ensemblekalmanworker operation.
-   *
-   * @param void The void.
-   */
   virtual ~EnsembleKalmanWorker(void);
   
-  /**
-   * @brief Performs the ensemblekalmanworker operation.
-   *
-   * @param another The EnsembleKalman instance to copy from.
-   */
   EnsembleKalmanWorker(const EnsembleKalmanWorker &another);
-  /**
-   * @brief Assignment operator for EnsembleKalman.
-   *
-   * @param another The EnsembleKalman instance to copy from.
-   */
   void operator=(const EnsembleKalmanWorker &another);
-  /**
-   * @brief Creates a deep copy of this EnsembleKalman object.
-   *
-   * @return The result.
-   */
   virtual EnsembleKalmanWorker* duplicate() const=0;
   
-  /**
-   * @brief Returns the number of ensemble members.
-   *
-   * @return The result.
-   */
   size_t get_number_of_ensemble_members() const;
-  /**
-   * @brief Returns the rng.
-   *
-   * @return The result.
-   */
   RandomNumberGenerator* get_rng();
-  /**
-   * @brief Returns the seed.
-   *
-   * @return The result.
-   */
   size_t get_seed() const;
-  /**
-   * @brief Sets the seed.
-   *
-   * @param seed_in The seed.
-   */
   void set_seed(size_t seed_in);
   
-  /**
-   * @brief Sets the enk.
-   *
-   * @param the_enk_in The the enk.
-   */
   void set_enk(EnsembleKalman* the_enk_in);
   
   void simulate(Ensemble* next_ensemble,
@@ -111,146 +47,26 @@ public:
   
   void move(Ensemble* next_particles,
             Ensemble* current_particles);
-  
-  /*
-   void move(Ensemble* next_particles,
-   Ensemble* current_particles,
-   const Parameters &conditioned_on_parameters);
-   */
-  
+
   void subsample_move(Ensemble* next_particles,
                       Ensemble* current_particles);
-  
-  /*
-   void subsample_move(Ensemble* next_particles,
-   Ensemble* current_particles,
-   const Parameters &conditioned_on_parameters);
-   */
-  
+
   virtual void shift(Ensemble* ensemble,
                      double inverse_incremental_temperature)=0;
   
-  /**
-   * @brief Performs the pack operation.
-   *
-   * @param ensemble The ensemble.
-   */
   virtual void pack(Ensemble* ensemble)=0;
-  /**
-   * @brief Performs the unpack operation.
-   *
-   * @param ensemble The ensemble.
-   */
   virtual void unpack(Ensemble* ensemble)=0;
-  /**
-   * @brief Performs the unpack with predicted operation.
-   *
-   * @param ensemble The ensemble.
-   */
   virtual void unpack_with_predicted(Ensemble* ensemble)=0;
   
   virtual void weight(Ensemble* ensemble,
                       const Index* index,
                       double incremental_temperature)=0;
-  
-  /*
-   virtual void weight(Ensemble* ensemble,
-   const Index* index,
-   double incremental_temperature,
-   const Parameters &conditioned_on_parameters)=0;
-   */
-  
+
   virtual void subsample_weight(Ensemble* ensemble,
                                 const Index* index,
                                 double incremental_temperature)=0;
-  
-  /*
-   virtual void subsample_weight(Ensemble* ensemble,
-   const Index* index,
-   double incremental_temperature,
-   const Parameters &conditioned_on_parameters)=0;
-   */
-  
+
   virtual arma::colvec get_unnormalised_log_incremental_weights() const=0;
-  /*
-   virtual void weight(Particles &current_particles)=0;
-   virtual void smcfixed_weight(Particles &current_particles)=0;
-   virtual void smcadaptive_given_smcfixed_weight(Particles &current_particles)=0;
-   virtual void smcadaptive_given_smcfixed_evaluate_target(Particles &current_particles)=0;
-   virtual void marginal_weight(Particles &current_particles,
-   Particles &previous_particles,
-   ProposalKernel* proposal_kernel)=0;
-   virtual void generic_weight(Particles &current_particles,
-   Particles &previous_particles,
-   ProposalKernel* proposal_kernel,
-   ProposalKernel* L_kernel)=0;
-   virtual void pf_weight(Particles &current_particles,
-   Particles &previous_particles,
-   ProposalKernel* proposal_kernel)=0;
-   void move(Particles* next_particles,
-   const Particles* current_particles);
-   
-   void simulate(Particles* next_particles,
-   const Parameters &conditioned_on_parameters);
-   virtual void weight(Particles &current_particles,
-   const Parameters &conditioned_on_parameters)=0;
-   virtual void pf_initial_weight(Particles &current_particles,
-   const Parameters &conditioned_on_parameters)=0;
-   virtual void smcfixed_weight(Particles &current_particles,
-   const Parameters &conditioned_on_parameters)=0;
-   virtual void smcadaptive_given_smcfixed_weight(Particles &current_particles,
-   const Parameters &conditioned_on_parameters)=0;
-   virtual void smcadaptive_given_smcfixed_evaluate_target(Particles &current_particles,
-   const Parameters &conditioned_on_parameters)=0;
-   virtual void marginal_weight(Particles &current_particles,
-   Particles &previous_particles,
-   ProposalKernel* proposal_kernel,
-   const Parameters &conditioned_on_parameters)=0;
-   virtual void generic_weight(Particles &current_particles,
-   Particles &previous_particles,
-   ProposalKernel* proposal_kernel,
-   ProposalKernel* L_kernel,
-   const Parameters &conditioned_on_parameters)=0;
-   virtual void pf_weight(Particles &current_particles,
-   Particles &previous_particles,
-   ProposalKernel* proposal_kernel,
-   const Parameters &conditioned_on_parameters)=0;
-   void move(Particles* next_particles,
-   const Particles* current_particles,
-   const Parameters &conditioned_on_parameters);
-   
-   void subsample_simulate(Particles* next_particles,
-   const Parameters &conditioned_on_parameters);
-   virtual void subsample_weight(Particles &current_particles,
-   const Parameters &conditioned_on_parameters)=0;
-   virtual void subsample_smcfixed_weight(Particles &current_particles,
-   const Parameters &conditioned_on_parameters)=0;
-   virtual void subsample_smcadaptive_given_smcfixed_weight(Particles &current_particles,
-   const Parameters &conditioned_on_parameters)=0;
-   virtual void subsample_smcadaptive_given_smcfixed_evaluate_target(Particles &current_particles,
-   const Parameters &conditioned_on_parameters)=0;
-   virtual void subsample_marginal_weight(Particles &current_particles,
-   Particles &previous_particles,
-   ProposalKernel* proposal_kernel,
-   const Parameters &conditioned_on_parameters)=0;
-   virtual void subsample_generic_weight(Particles &current_particles,
-   Particles &previous_particles,
-   ProposalKernel* proposal_kernel,
-   ProposalKernel* L_kernel,
-   const Parameters &conditioned_on_parameters)=0;
-   virtual void subsample_pf_weight(Particles &current_particles,
-   Particles &previous_particles,
-   ProposalKernel* proposal_kernel,
-   const Parameters &conditioned_on_parameters)=0;
-   void subsample_move(Particles* next_particles,
-   const Particles* current_particles,
-   const Parameters &conditioned_on_parameters);
-   //void simulate_and_weight(const Parameters &conditioned_on_parameters);
-   
-   //virtual Particles& simulated_particles()=0;
-   //virtual Particles simulated_particles() const=0;
-   virtual arma::colvec get_unnormalised_log_incremental_weights() const=0;
-   */
   
 protected:
   
@@ -261,51 +77,21 @@ protected:
   virtual void specific_simulate(Ensemble* next_ensemble,
                                  const Index* index,
                                  const Parameters &conditioned_on_parameters)=0;
-  /*
-   //virtual void specific_weight(const Parameters &conditioned_on_parameters)=0;
-   //virtual void specific_simulate_and_weight(const Parameters &conditioned_on_parameters)=0;
-   */
   
   virtual void specific_move(Ensemble* next_particles,
                              Ensemble* current_particles)=0;
-  
-  /*
-   virtual void specific_move(Ensemble* next_particles,
-   Ensemble* current_particles,
-   const Parameters &conditioned_on_parameters)=0;
-   */
-  
+
   virtual void subsample_specific_move(Ensemble* next_particles,
                                        Ensemble* current_particles)=0;
-  
-  /*
-   virtual void subsample_specific_move(Ensemble* next_particles,
-   Ensemble* current_particles,
-   const Parameters &conditioned_on_parameters)=0;
-   */
-  
-  /*
-   virtual void subsample_specific_simulate(Particles* next_particles,
-   const Parameters &conditioned_on_parameters)=0;
-   
-   
-   */
-  
+
   void make_copy(const EnsembleKalmanWorker &another);
   
   friend Sequencer;
-  /** @brief The the enk. */
   EnsembleKalman* the_enk; // not stored here
   
   // stored in model_and_algorithm
   //std::vector<LikelihoodEstimator*> likelihood_estimators;
-  
-  //Particles output;
-  
-  //EvaluateLogDistributionPtr evaluate_log_prior;
-  
-  //EvaluateLogDistributionPtr evaluate_log_proposal;
-  
+
   // stored here
   // outer vector is which likelihood estimator
   // inner vector is which particle

@@ -21,7 +21,6 @@ SMCOutput::SMCOutput()
   this->estimator = NULL;
   this->smc_iteration = 0;
   this->iteration_written_to_file = -1;
-  //this->time = 0.0;
   
   this->start_time = std::chrono::high_resolution_clock::now();
 }
@@ -52,7 +51,6 @@ SMCOutput::SMCOutput(SMC* estimator_in,
   this->results_name = results_name_in;
   this->smc_iteration = 0;
   this->iteration_written_to_file = -1;
-  //this->time = 0.0;
   this->start_time = std::chrono::high_resolution_clock::now();
 }
 
@@ -71,10 +69,6 @@ void SMCOutput::operator=(const SMCOutput &another)
   
   this->all_particles.clear();
   this->all_proposed.clear();
-  //this->unnormalised_log_weights.clear();
-  //this->normalised_log_weights.clear();
-  //this->log_normalising_constant_ratios.clear();
-  //this->incremental_log_weights.clear();
   
   LikelihoodEstimatorOutput::operator=(another);
   this->make_copy(another);
@@ -94,7 +88,6 @@ void SMCOutput::make_copy(const SMCOutput &another)
 {
   this->all_particles = another.all_particles;
   this->all_proposed = another.all_proposed;
-  //this->log_normalising_constant_ratios = another.log_normalising_constant_ratios;
   this->lag = another.lag;
   this->output_lag = another.output_lag;
   this->lag_proposed = another.lag_proposed;
@@ -120,9 +113,6 @@ void SMCOutput::evaluate_smcfixed_part()
   if (this->estimator->smcfixed_flag)
   {
     this->estimator->evaluate_smc(this);
-    //this->log_likelihood_smcfixed_part = std::accumulate(this->log_normalising_constant_ratios.begin(),
-    //this->log_normalising_constant_ratios.end(),
-    //1.0);
   }
   else
   {
@@ -148,9 +138,6 @@ void SMCOutput::evaluate_smcfixed_part(const Parameters &parameters)
   if (this->estimator->smcfixed_flag)
   {
     this->estimator->evaluate_smc(this, parameters);
-    //this->log_likelihood_smcfixed_part = std::accumulate(this->log_normalising_constant_ratios.begin(),
-    //this->log_normalising_constant_ratios.end(),
-    //1.0);
   }
   else
   {
@@ -176,9 +163,6 @@ void SMCOutput::subsample_evaluate_smcfixed_part()
   if (this->estimator->smcfixed_flag)
   {
     this->estimator->subsample_evaluate_smc(this);
-    //this->log_likelihood_smcfixed_part = std::accumulate(this->log_normalising_constant_ratios.begin(),
-    //this->log_normalising_constant_ratios.end(),
-    //1.0);
   }
   else
   {
@@ -204,9 +188,6 @@ void SMCOutput::subsample_evaluate_smcfixed_part(const Parameters &parameters)
   if (this->estimator->smcfixed_flag)
   {
     this->estimator->subsample_evaluate_smc(this, parameters);
-    //this->log_likelihood_smcfixed_part = std::accumulate(this->log_normalising_constant_ratios.begin(),
-    //this->log_normalising_constant_ratios.end(),
-    //1.0);
   }
   else
   {
@@ -307,41 +288,6 @@ void SMCOutput::update_weights(const arma::colvec &latest_unnormalised_log_incre
 {
   this->all_particles.back().update_weights(latest_unnormalised_log_incremental_weights);
 }
-
-//void SMCOutput::initialise_unnormalised_log_incremental_weights(const arma::colvec &latest_unnormalised_log_incremental_weights)
-//{
-//arma::colvec latest_unnormalised_log_weights;
-//if (this->unnormalised_log_incremental_weights.size()>0)
-//  latest_unnormalised_log_weights = this->unnormalised_log_weights.back() + latest_unnormalised_log_incremental_weights;
-//else
-//  latest_unnormalised_log_weights = latest_unnormalised_log_weight_updates;
-//this->unnormalised_log_incremental_weights.push_back(latest_unnormalised_log_incremental_weights);
-//size_t num_to_pop_front = std::max<int>(0,unnormalised_log_incremental_weights.size()-lag);
-//for (size_t i=0; i<num_to_pop_front; ++i)
-//{
-//  this->unnormalised_log_incremental_weights.pop_front();
-//}
-//}
-
-//void SMCOutput::set_unnormalised_log_incremental_weights(const arma::colvec &latest_unnormalised_log_incremental_weights)
-//{
-//  this->unnormalised_log_incremental_weights.push_back(latest_unnormalised_log_incremental_weights);
-//  size_t num_to_pop_front = std::max<int>(0,this->unnormalised_log_incremental_weights.size()-lag);
-//  for (size_t i=0; i<num_to_pop_front; ++i)
-//  {
-//    this->unnormalised_log_incremental_weights.pop_front();
-//  }
-//}
-
-//void SMCOutput::initialise_next_step()
-//{
-//  arma::colvec init(this->estimator->number_of_particles);
-//  init.fill(0.0);
-//  this->unnormalised_log_weights.push_back(init);
-//  this->incremental_log_weights.push_back(init);
-//  //this->unnormalised_log_incremental_weights.push_back(init);
-//  this->log_normalising_constant_ratios.push_back(0.0);
-//}
 
 void SMCOutput::normalise_and_resample_weights()
 {
@@ -829,39 +775,6 @@ void SMCOutput::print(std::ostream &os) const
   }
   os << std::endl << ")" << std::endl;
   
-  /*
-   os << "unnormalised_log_weights" << std::endl << "(" << std::endl;
-   std::deque<arma::colvec>::const_iterator itd;
-   for (itd=this->unnormalised_log_weights.begin();itd!=this->unnormalised_log_weights.end();++itd)
-   {
-   if (itd==this->unnormalised_log_weights.begin())
-   os << *itd;
-   else
-   os << std::endl << "," << std::endl << *itd;
-   }
-   os << std::endl << ")" << std::endl;
-   
-   os << "normalised_log_weights" << std::endl << "(" << std::endl;
-   for (itd=this->normalised_log_weights.begin();itd!=this->normalised_log_weights.end();++itd)
-   {
-   if (itd==this->normalised_log_weights.begin())
-   os << *itd;
-   else
-   os << std::endl << "," << std::endl << *itd;
-   }
-   os << std::endl << ")" << std::endl;
-   
-   os << "log_normalising_constant_ratios" << std::endl << "(" << std::endl;
-   std::vector<double>::const_iterator i;
-   for (i=this->log_normalising_constant_ratios.begin();i!=this->log_normalising_constant_ratios.end();++i)
-   {
-   if (i==this->log_normalising_constant_ratios.begin())
-   os << *i;
-   else
-   os << std::endl << "," << std::endl << *i;
-   }
-   os << std::endl << ")" << std::endl;
-   */
 }
 
 // Adaptive summary (dev/plan.md 2.6a): only when smcfixed, where the adaptive

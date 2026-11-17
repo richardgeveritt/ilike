@@ -9,18 +9,6 @@ using namespace Rcpp;
 
 namespace ilike
 {
-  /**
-   * @file likelihood_maker.h
-   * @brief Defines the ABCLikelihoodEstimator class.
-   *
-   * Estimates the abc likelihood for a given set of parameters. Implements the estimator interface for use inside SMC, MCMC, or importance-sampling algorithms.
-   *
-   * @namespace ilike
-   * @class ABCLikelihoodEstimator
-   * @brief The abc likelihood estimator class.
-   */
-
-
 
     class ABCLikelihoodEstimator;
     class DensityLikelihoodEstimator;
@@ -120,23 +108,6 @@ namespace ilike
                                                const std::vector<MeasurementCovarianceEstimator *> &measurement_covariance_estimators_in,
                                                bool parallel_in,
                                                size_t grain_size_in);
-
-    /*
-     SMCMCMCMove* make_fixed_epsilon_smc_gaussian_abc_likelihood(RandomNumberGenerator* rng_in,
-     size_t* seed_in,
-     Data* data_in,
-     size_t lag_in,
-     double annealing_desired_cess_in,
-     size_t number_of_bisections_in,
-     const std::string &scale_variable_in,
-     const std::string &sequence_variable_in,
-     const std::vector<double> &schedule_in,
-     const std::vector<std::string> &data_variables_in,
-     SimulateModelPtr simulate_model_in,
-     size_t number_of_abc_simulations_in,
-     bool parallel_in,
-     size_t grain_size_in);
-     */
 
     ImportanceSampler *make_fixed_epsilon_lp_uniform_abc_likelihood(RandomNumberGenerator *rng_in,
                                                                     size_t *seed_in,

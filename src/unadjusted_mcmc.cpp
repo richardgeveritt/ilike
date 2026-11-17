@@ -114,63 +114,11 @@ Particle UnadjustedMCMC::move(RandomNumberGenerator &rng,
                               this->get_new_outputs_index(this->index.get()));
 }
 
-/*
- Particle UnadjustedMCMC::move(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- Particle proposed_particle = this->proposal->move(rng,
- particle,
- conditioned_on_parameters);
- 
- double log_u = log(runif(rng));
- 
- if (log_u < proposed_particle.evaluate_likelihoods(this->index.get(),
- conditioned_on_parameters) -
- particle.target_evaluated)
- {
- proposed_particle.set_acceptance(this->proposal.get(),true);
- return proposed_particle;
- }
- else
- {
- proposed_particle.set_acceptance(this->proposal.get(),false);
- return particle;
- }
- 
- }
- */
-
 Particle UnadjustedMCMC::subsample_move(RandomNumberGenerator &rng,
                                         const Particle &particle) const
 {
   return this->proposal->subsample_move(rng,particle);
 }
-
-/*
- Particle UnadjustedMCMC::subsample_move(RandomNumberGenerator &rng,
- Particle &particle,
- const Parameters &conditioned_on_parameters) const
- {
- Particle proposed_particle = this->proposal->subsample_move(rng,
- particle,
- conditioned_on_parameters);
- 
- double log_u = log(runif(rng));
- 
- if (log_u < proposed_particle.subsample_evaluate_likelihoods(this->index.get(),
- conditioned_on_parameters) -
- particle.subsample_target_evaluated)
- {
- return proposed_particle;
- }
- else
- {
- return particle;
- }
- 
- }
- */
 
 void UnadjustedMCMC::smc_adapt(SMCOutput* current_state)
 {
@@ -231,7 +179,6 @@ void UnadjustedMCMC::set_proposal_parameters(Parameters* proposal_parameters_in)
 std::vector<const ProposalKernel*> UnadjustedMCMC::get_proposals() const
 {
   std::vector<const ProposalKernel*> proposals = this->proposal->get_proposals();
-  //proposals.push_back(this->proposal.get());
   return proposals;
 }
 

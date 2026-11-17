@@ -107,14 +107,12 @@ Parameters CustomGuidedProposalKernel::simulate(RandomNumberGenerator &rng,
   }
 }
 
-
 Parameters CustomGuidedProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                           const Particle &particle) const
 {
   // no difference since size of data set does not impact on proposal
   return this->simulate(rng, particle);
 }
-
 
 Parameters CustomGuidedProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                           const std::string &variable,

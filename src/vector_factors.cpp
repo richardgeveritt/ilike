@@ -25,15 +25,6 @@ VectorFactors::VectorFactors(const std::vector<LikelihoodEstimator*> &likelihood
 VectorFactors::~VectorFactors()
 {
   
-  /*
-   for (std::vector<Data*>::iterator i=this->likelihood_estimator_temp_data.begin();
-   i!=this->likelihood_estimator_temp_data.end();
-   ++i)
-   {
-   if (*i!=NULL)
-   delete *i;
-   }
-   */
 }
 
 //Copy constructor for the VectorFactors class.
@@ -49,18 +40,7 @@ void VectorFactors::operator=(const VectorFactors &another)
     return;
   }
   this->likelihood_estimators.clear();
-  
-  /*
-   for (std::vector<Data*>::iterator i=this->likelihood_estimator_temp_data.begin();
-   i!=this->likelihood_estimator_temp_data.end();
-   ++i)
-   {
-   if (*i!=NULL)
-   delete *i;
-   }
-   this->likelihood_estimator_temp_data.clear();
-   */
-  
+
   Factors::operator=(another);
   this->make_copy(another);
 }
@@ -84,18 +64,6 @@ void VectorFactors::make_copy(const VectorFactors &another)
       this->likelihood_estimators.emplace_back(nullptr);
   }
   
-  /*
-   this->likelihood_estimator_temp_data.resize(0);
-   for (std::vector<Data*>::const_iterator i=another.likelihood_estimator_temp_data.begin();
-   i!=another.likelihood_estimator_temp_data.end();
-   ++i)
-   {
-   if (*i!=NULL)
-   this->likelihood_estimator_temp_data.push_back((*i)->duplicate());
-   else
-   this->likelihood_estimator_temp_data.push_back(NULL);
-   }
-   */
   this->likelihood_estimator_temp_data = another.likelihood_estimator_temp_data;
 }
 
@@ -222,29 +190,6 @@ FactorVariables* VectorFactors::simulate_factor_variables(const Parameters &simu
                                    std::move(outputs));
 }
 
-/*
- FactorVariables* VectorFactors::simulate_factor_variables(const Parameters &simulated_parameters,
- const Parameters &conditioned_on_parameters)
- {
- std::vector<LikelihoodEstimatorOutput*> outputs;
- outputs.reserve(this->likelihood_estimators.size());
- 
- Parameters all_parameters = simulated_parameters.merge(conditioned_on_parameters);
- 
- for (auto i = this->likelihood_estimators.begin();
- i != this->likelihood_estimators.end();
- ++i)
- {
- outputs.push_back((*i)->initialise(all_parameters));
- outputs.back()->simulate(all_parameters);
- outputs.back()->write_to_file_flag = false;
- }
- 
- return new VectorFactorVariables(this,
- outputs);
- }
- */
-
 FactorVariables* VectorFactors::subsample_simulate_factor_variables(const Parameters &simulated_parameters) const
 {
   std::vector<LikelihoodEstimatorOutput*> outputs;
@@ -262,29 +207,6 @@ FactorVariables* VectorFactors::subsample_simulate_factor_variables(const Parame
   return new VectorFactorVariables(this,
                                    std::move(outputs));
 }
-
-/*
- FactorVariables* VectorFactors::subsample_simulate_factor_variables(const Parameters &simulated_parameters,
- const Parameters &conditioned_on_parameters)
- {
- std::vector<LikelihoodEstimatorOutput*> outputs;
- outputs.reserve(this->likelihood_estimators.size());
- 
- Parameters all_parameters = simulated_parameters.merge(conditioned_on_parameters);
- 
- for (auto i = this->likelihood_estimators.begin();
- i != this->likelihood_estimators.end();
- ++i)
- {
- outputs.push_back((*i)->initialise(all_parameters));
- outputs.back()->subsample_simulate(all_parameters);
- outputs.back()->write_to_file_flag = false;
- }
- 
- return new VectorFactorVariables(this,
- outputs);
- }
- */
 
 void VectorFactors::setup()
 {

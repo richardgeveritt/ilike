@@ -12,7 +12,6 @@ IterationsMCMCTermination::IterationsMCMCTermination(size_t number_of_iterations
 :MCMCTermination()
 {
   this->number_of_iterations = number_of_iterations_in;
-  //this->counter = counter_pointer;
 }
 
 IterationsMCMCTermination::~IterationsMCMCTermination()
@@ -50,7 +49,6 @@ void IterationsMCMCTermination::make_copy(const IterationsMCMCTermination &anoth
 
 bool IterationsMCMCTermination::terminate()
 {
-  //std::cout << *this->counter << std::endl;
   if (*this->counter==this->number_of_iterations)
   {
     *this->counter = 0;

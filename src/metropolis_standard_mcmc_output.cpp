@@ -40,8 +40,7 @@ void MetropolisStandardMCMCOutput::operator=(const MetropolisStandardMCMCOutput 
   if(this == &another){ //if a==a
     return;
   }
-  
-  
+
   StandardMCMCOutput::operator=(another);
   this->make_copy(another);
 }

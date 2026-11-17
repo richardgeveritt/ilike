@@ -89,13 +89,4 @@ double& Scale::get_constant()
   return this->constant;
 }
 
-/*
- double Scale::operator()(size_t dimension)
- {
- if (this->divide_by_dimension)
- return this->constant/double(dimension);
- else
- return this->constant;
- }
- */
 }

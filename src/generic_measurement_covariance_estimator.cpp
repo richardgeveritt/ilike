@@ -46,11 +46,6 @@ void GenericMeasurementCovarianceEstimator::operator=(const GenericMeasurementCo
 
 void GenericMeasurementCovarianceEstimator::make_copy(const GenericMeasurementCovarianceEstimator &another)
 {
-  //this->conditioned_on_parameters = another.conditioned_on_parameters;
-  //this->measurement_kernel = another.measurement_kernel;
-  //this->measurement_noise = another.measurement_noise;
-  //this->measurement_noise_function = another.measurement_noise_function;
-  //this->measurement_kernel_function = another.measurement_kernel_function;
   this->dimension = another.dimension;
   this->simulator = another.simulator;
   this->Cygivenx = another.Cygivenx;
@@ -87,7 +82,6 @@ void GenericMeasurementCovarianceEstimator::setup(const Parameters &parameters)
 void GenericMeasurementCovarianceEstimator::setup_measurement_variables()
 {
   Data dummy_data = this->simulator(*this->rng,Parameters());
-  //this->measurement_variables = dummy_data.get_vector_variables();
   std::vector<arma::colvec> means;
   means.reserve(this->measurement_variables.size());
   std::vector<arma::mat> covs;
@@ -108,7 +102,6 @@ void GenericMeasurementCovarianceEstimator::setup_measurement_variables()
 void GenericMeasurementCovarianceEstimator::setup_measurement_variables(const Parameters &conditioned_on_parameters)
 {
   Data dummy_data = this->simulator(*this->rng,conditioned_on_parameters);
-  //this->measurement_variables = dummy_data.get_vector_variables();
   std::vector<arma::colvec> means;
   means.reserve(this->measurement_variables.size());
   std::vector<arma::mat> covs;
@@ -123,15 +116,6 @@ void GenericMeasurementCovarianceEstimator::setup_measurement_variables(const Pa
                                                                means,
                                                                covs);
 }
-
-/*
- arma::mat GenericMeasurementCovarianceEstimator::get_measurement_covariance() const
- {
- arma::mat measurement_noise;
- measurement_noise.zeros(this->dimension,this->dimension);
- return measurement_noise;
- }
- */
 
 arma::mat GenericMeasurementCovarianceEstimator::get_Cygivenx() const
 {
@@ -168,62 +152,7 @@ arma::mat GenericMeasurementCovarianceEstimator::get_sqrt_adjustment(const arma:
 {
   Rcpp::stop("GenericMeasurementCovarianceEstimator::get_sqrt_adjustment - not yet implemented.");
   
-  /*
-   arma::mat sqrtV = arma::chol(inverse_incremental_temperature*this->get_measurement_covariance());
-   arma::mat sqrtS = arma::chol(HSigmaHt + inverse_incremental_temperature*this->get_measurement_covariance());
-   
-   arma::mat stacked_H = this->As[0];
-   if (this->As.size()>1)
-   {
-   for (size_t i=1; i<this->As.size(); ++i)
-   {
-   stacked_H = arma::join_cols(stacked_H, As[i]);
-   }
-   }
-   
-   arma::mat K = Sigma*stacked_H.t() * arma::inv_sympd(sqrtS) * arma::inv_sympd(sqrtS + sqrtV);
-   
-   arma::mat I;
-   I.eye(stacked_H.n_cols,stacked_H.n_cols);
-   
-   return I-K*stacked_H;
-   */
 }
-
-/*
- arma::mat GenericMeasurementCovarianceEstimator::get_adjustment(const arma::mat &Zf,
- const arma::mat &Ginv,
- const arma::mat &Ftranspose,
- const arma::mat &V,
- double inverse_incremental_temperature)
- {
- // follows https://arxiv.org/abs/2006.02941
- arma::mat for_eig = V*((inverse_incremental_temperature-1.0)*this->get_Cygivenx())*V.t();
- 
- arma::mat C;
- arma::vec diagGamma;
- arma::mat Ctrans;
- arma::svd(C,diagGamma,Ctrans,for_eig);
- 
- arma::mat Gamma(diagGamma.n_elem,diagGamma.n_elem);
- Gamma.diag() = diagGamma;
- arma::mat I;
- I.eye(diagGamma.n_elem,diagGamma.n_elem);
- 
- return Zf*C*arma::sqrtmat_sympd(arma::inv_sympd(I+Gamma))*Ginv*Ftranspose;
- }
- */
-
-/*
- void GenericMeasurementCovarianceEstimator::set_parameters(const Parameters &conditioned_on_parameters_in)
- {
- if (this->set_using_parameters)
- {
- this->conditioned_on_parameters = &conditioned_on_parameters_in;
- this->measurement_noise = this->measurement_noise_function(conditioned_on_parameters_in);
- }
- }
- */
 
 bool GenericMeasurementCovarianceEstimator::need_Cxx() const
 {

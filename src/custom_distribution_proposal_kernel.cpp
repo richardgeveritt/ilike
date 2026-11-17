@@ -9,7 +9,6 @@ CustomDistributionProposalKernel::CustomDistributionProposalKernel()
 {
   this->proposal_evaluate = NULL;
   this->proposal_simulate = NULL;
-  //this->proposal_parameters = Parameters();
 }
 
 CustomDistributionProposalKernel::~CustomDistributionProposalKernel()
@@ -65,75 +64,23 @@ void CustomDistributionProposalKernel::make_copy(const CustomDistributionProposa
 {
   this->proposal_evaluate = another.proposal_evaluate;
   this->proposal_simulate = another.proposal_simulate;
-  //this->proposal_parameters = another.proposal_parameters;
 }
 
 double CustomDistributionProposalKernel::evaluate_independent_kernel(const Parameters &proposed_particle) const
 {
-  /*
-  if (proposed_particle.is_empty())
-    return this->proposal_evaluate(this->proposal_parameters);
-  
-  if (this->proposal_parameters.is_empty())
-    return this->proposal_evaluate(proposed_particle);
-  
-  return this->proposal_evaluate(proposed_particle.merge(this->proposal_parameters));
-  */
   return this->proposal_evaluate(proposed_particle);
 }
-
-/*
-double CustomDistributionProposalKernel::evaluate_independent_kernel(Variables* proposed_particle,
-                                                                     const Parameters &conditioned_on_parameters) const
-{
-  return this->proposal_evaluate(proposed_particle->move_parameters->merge(conditioned_on_parameters).merge(this->proposal_parameters));
-}
-*/
 
 double CustomDistributionProposalKernel::subsample_evaluate_independent_kernel(const Parameters &proposed_particle) const
 {
-  /*
-  // no difference since size of data set does not impact on proposal
-  if (proposed_particle.is_empty())
-  {
-    this->proposal_evaluate(this->proposal_parameters);
-  }
-  
-  if (this->proposal_parameters.is_empty())
-  {
-    this->proposal_evaluate(proposed_particle);
-  }
-  
-  return this->proposal_evaluate(proposed_particle.merge(this->proposal_parameters));
-  */
   
   return this->proposal_evaluate(proposed_particle);
 }
 
-/*
-double CustomDistributionProposalKernel::subsample_evaluate_independent_kernel(Variables* proposed_particle,
-                                                                               const Parameters &conditioned_on_parameters) const
-{
-  // no difference since size of data set does not impact on proposal
-  return this->proposal_evaluate(proposed_particle->move_parameters->merge(conditioned_on_parameters).merge(this->proposal_parameters));
-}
-*/
-
 Parameters CustomDistributionProposalKernel::independent_simulate(RandomNumberGenerator &rng) const
 {
-  //return this->proposal_simulate(rng,
-  //                               this->proposal_parameters);
   return this->proposal_simulate(rng);
 }
-
-/*
-Parameters CustomDistributionProposalKernel::independent_simulate(RandomNumberGenerator &rng,
-                                                                 const Parameters &conditioned_on_parameters) const
-{
-  return this->proposal_simulate(rng,
-                                 this->proposal_parameters);
-}
-*/
 
 Parameters CustomDistributionProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng) const
 {
@@ -143,72 +90,23 @@ Parameters CustomDistributionProposalKernel::subsample_independent_simulate(Rand
   return this->proposal_simulate(rng);
 }
 
-/*
-Parameters CustomDistributionProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
-                                                                            const Parameters &conditioned_on_parameters) const
-{
-  // no difference since size of data set does not impact on proposal
-  return this->proposal_simulate(rng,
-                                 this->proposal_parameters);
-}
-*/
-
 Parameters CustomDistributionProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
                                                                            const std::string &variable) const
 {
   // no difference since size of data set does not impact on proposal
   Rcpp::stop("CustomDistributionProposalKernel::subsample_independent_simulate - not written yet.");
-  //return this->proposal_simulate(rng,
-  //                               this->proposal_parameters);
   return this->proposal_simulate(rng);
 }
 
 Parameters CustomDistributionProposalKernel::independent_simulate(RandomNumberGenerator &rng,
                                                                   const Parameters &conditioned_on_parameters) const
 {
-  /*
-  if (this->proposal_parameters.is_empty())
-  {
-    return this->proposal_simulate(rng,
-                                   conditioned_on_parameters);
-  }
-  
-  if (conditioned_on_parameters.is_empty())
-  {
-    return this->proposal_simulate(rng,
-                                   this->proposal_parameters);
-  }
-  
-  return this->proposal_simulate(rng,
-                                 this->proposal_parameters.merge(conditioned_on_parameters));
-  */
-  //return this->proposal_simulate(rng,
-  //                               this->proposal_parameters);
   return this->proposal_simulate(rng);
 }
 
 Parameters CustomDistributionProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
                                                                             const Parameters &conditioned_on_parameters) const
 {
-  /*
-  // no difference since size of data set does not impact on proposal
-  if (this->proposal_parameters.is_empty())
-  {
-    return this->proposal_simulate(rng,
-                                   conditioned_on_parameters);
-  }
-  
-  if (conditioned_on_parameters.is_empty())
-  {
-    return this->proposal_simulate(rng,
-                                   this->proposal_parameters);
-  }
-  
-  return this->proposal_simulate(rng,
-                                 this->proposal_parameters.merge(conditioned_on_parameters));
-  */
-  //return this->proposal_simulate(rng,
-  //                               this->proposal_parameters);
   return this->proposal_simulate(rng);
 }
 
@@ -216,55 +114,14 @@ Parameters CustomDistributionProposalKernel::subsample_independent_simulate(Rand
                                                                             const std::string &variable,
                                                                             const Parameters &conditioned_on_parameters) const
 {
-  /*
-  // no difference since size of data set does not impact on proposal
-  Rcpp::stop("CustomDistributionProposalKernel::subsample_independent_simulate - not written yet.");
-  if (this->proposal_parameters.is_empty())
-  {
-    return this->proposal_simulate(rng,
-                                   conditioned_on_parameters);
-  }
-  
-  if (conditioned_on_parameters.is_empty())
-  {
-    return this->proposal_simulate(rng,
-                                   this->proposal_parameters);
-  }
-  
-  return this->proposal_simulate(rng,
-                                 this->proposal_parameters.merge(conditioned_on_parameters));
-  */
-  //return this->proposal_simulate(rng,
-  //                               this->proposal_parameters);
   return this->proposal_simulate(rng);
 }
-
-/*
-Parameters CustomDistributionProposalKernel::subsample_independent_simulate(RandomNumberGenerator &rng,
-                                                                           const std::string &variable,
-                                                                           const Parameters &conditioned_on_parameters) const
-{
-  // no difference since size of data set does not impact on proposal
-  Rcpp::stop("CustomDistributionProposalKernel::subsample_independent_simulate - not written yet.");
-  return this->proposal_simulate(rng,
-                                 this->proposal_parameters);
-}
-*/
 
 arma::mat CustomDistributionProposalKernel::independent_gradient_of_log(const std::string &variable,
                                                                         const Parameters &proposed_particle)
 {
   Rcpp::stop("CustomDistributionProposalKernel::independent_gradient_of_log - not written yet.");
 }
-
-/*
-arma::mat CustomDistributionProposalKernel::independent_gradient_of_log(const std::string &variable,
-                                      Variables* proposed_particle,
-                                      const Parameters &conditioned_on_parameters)
-{
-  Rcpp::stop("CustomDistributionProposalKernel::independent_gradient_of_log - not written yet.");
-}
-*/
 
 arma::mat CustomDistributionProposalKernel::subsample_independent_gradient_of_log(const std::string &variable,
                                                                                   const Parameters &proposed_particle)
@@ -276,15 +133,6 @@ void CustomDistributionProposalKernel::set_proposal_parameters(Parameters* propo
 {
   
 }
-
-/*
-arma::mat CustomDistributionProposalKernel::subsample_independent_gradient_of_log(const std::string &variable,
-                                                Variables* proposed_particle,
-                                                const Parameters &conditioned_on_parameters)
-{
-  Rcpp::stop("CustomDistributionProposalKernel::independent_gradient_of_log - not written yet.");
-}
-*/
 
 GradientEstimatorOutput* CustomDistributionProposalKernel::simulate_gradient_estimator_output() const
 {
