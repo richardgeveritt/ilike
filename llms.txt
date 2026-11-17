@@ -165,6 +165,9 @@ remotes::install_github("richardgeveritt/ilike")
 - [`load_enk_output()`](https://richardgeveritt.github.io/ilike/reference/load_enk_output.md)
   : Loading ensemble Kalman output into R memory.
 
+- [`load_mcmc_adaptation()`](https://richardgeveritt.github.io/ilike/reference/load_mcmc_adaptation.md)
+  : Loading the adaptation of adaptive MCMC moves into R memory.
+
 - [`load_mcmc_output()`](https://richardgeveritt.github.io/ilike/reference/load_mcmc_output.md)
   : Loading MCMC output into R memory.
 
