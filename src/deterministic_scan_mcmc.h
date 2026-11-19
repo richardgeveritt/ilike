@@ -30,7 +30,8 @@ public:
   void operator=(const DeterministicScanMCMC &another);
   Kernel* duplicate() const;
   MCMC* mcmc_duplicate() const;
-  DeterministicScanMCMC* deterministic_scan_mcmc_duplicate() const;
+  // (virtual: a scan of moves on elements is copied as itself for each chain)
+  virtual DeterministicScanMCMC* deterministic_scan_mcmc_duplicate() const;
   
   Particle move(RandomNumberGenerator &rng,
                 const Particle &particle) const;

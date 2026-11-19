@@ -131,13 +131,13 @@ void SampleStore::append(const Parameters &parameters,
   double *column = this->values.colptr(this->number_of_points);
   for (size_t k = 0; k < this->vector_names.size(); ++k)
   {
-    // element order of as_row(): row by row
+    // element order of get_colvec/get_rowvec: column by column
     const arma::mat &m = this->find_vector_variable(parameters, k);
     if ((m.n_rows != this->vector_n_rows[k]) || (m.n_cols != this->vector_n_cols[k]))
       Rcpp::stop("SampleStore::append: variable '" + this->vector_names[k] + "' changed size.");
     size_t offset = this->vector_offsets[k];
-    for (arma::uword r = 0; r < m.n_rows; ++r)
-      for (arma::uword c = 0; c < m.n_cols; ++c)
+    for (arma::uword c = 0; c < m.n_cols; ++c)
+      for (arma::uword r = 0; r < m.n_rows; ++r)
         column[offset++] = m(r, c);
   }
   for (size_t k = 0; k < this->any_names.size(); ++k)
@@ -186,13 +186,13 @@ void SampleStore::set_point(size_t i,
   double *column = this->values.colptr(i);
   for (size_t k = 0; k < this->vector_names.size(); ++k)
   {
-    // element order of as_row(): row by row
+    // element order of get_colvec/get_rowvec: column by column
     const arma::mat &m = this->lookup_vector_variable(parameters, k);
     if ((m.n_rows != this->vector_n_rows[k]) || (m.n_cols != this->vector_n_cols[k]))
       Rcpp::stop("SampleStore::set_point: variable '" + this->vector_names[k] + "' changed size.");
     size_t offset = this->vector_offsets[k];
-    for (arma::uword r = 0; r < m.n_rows; ++r)
-      for (arma::uword c = 0; c < m.n_cols; ++c)
+    for (arma::uword c = 0; c < m.n_cols; ++c)
+      for (arma::uword r = 0; r < m.n_rows; ++r)
         column[offset++] = m(r, c);
   }
   for (size_t k = 0; k < this->any_names.size(); ++k)
@@ -297,8 +297,8 @@ Parameters SampleStore::parameters_at(size_t i) const
   {
     arma::mat m(this->vector_n_rows[k], this->vector_n_cols[k]);
     size_t offset = this->vector_offsets[k];
-    for (arma::uword r = 0; r < m.n_rows; ++r)
-      for (arma::uword c = 0; c < m.n_cols; ++c)
+    for (arma::uword c = 0; c < m.n_cols; ++c)
+      for (arma::uword r = 0; r < m.n_rows; ++r)
         m(r, c) = column[offset++];
     output[this->vector_names[k]] = m;
   }
@@ -341,10 +341,10 @@ void SampleStore::assign_into(size_t i, Parameters &target) const
     }
     if (destination == NULL)
       continue;
-    // element order of as_row(): row by row
+    // element order of get_colvec/get_rowvec: column by column
     size_t offset = this->vector_offsets[k];
-    for (arma::uword r = 0; r < n_rows; ++r)
-      for (arma::uword c = 0; c < n_cols; ++c)
+    for (arma::uword c = 0; c < n_cols; ++c)
+      for (arma::uword r = 0; r < n_rows; ++r)
         (*destination)(r, c) = column[offset++];
   }
   for (size_t k = 0; k < this->any_names.size(); ++k)

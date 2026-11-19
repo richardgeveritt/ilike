@@ -44,7 +44,7 @@ RecipeValue parse_ilike_language(const std::string &text, const std::string &fil
 // settings), constants (defaults by name), user_code (the cpp sections),
 // generated_code (small functions made by the lowering)}. User functions are
 // placeholders {ilike_function: name, role: old block name}.
-RecipeValue lower_ilike_language(const RecipeValue &trees);
+RecipeValue lower_ilike_language(const RecipeValue &trees, const RecipeValue &constant_values = RecipeValue());
 
 // The signature "type name(arguments)" of the definition of the C++ function
 // name in code, or "" if it is not defined there.

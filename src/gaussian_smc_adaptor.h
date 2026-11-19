@@ -49,8 +49,10 @@ protected:
   void make_copy(const GaussianSMCAdaptor &another);
 
   // the weighted moments of the points (one row per point) into the kernel
+  // points: all the parameters, the moved variable's d columns first
   void adapt_from(const arma::mat &points,
-                  const arma::colvec &normalised_weights);
+                  const arma::colvec &normalised_weights,
+                  size_t d);
 
   std::string variable;
   double constant;

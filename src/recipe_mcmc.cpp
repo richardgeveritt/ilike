@@ -682,6 +682,96 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
         if (model.contains("m_proposal")) {
           RecipeValue proposal_infos = model["m_proposal"];
 
+          if ((proposal_infos[simulate_m_proposal_index]).is_list() &&
+              proposal_infos[simulate_m_proposal_index].contains("m_elements")) {
+            // a scan over elements (I4c): one Metropolis move per element, in
+            // order, each with the factor indices of the move's entry
+            RecipeValue current_proposal_info = proposal_infos[simulate_m_proposal_index];
+            const RecipeValue &elements = current_proposal_info["m_elements"];
+            std::string variable = elements["variable"].as_string();
+            std::string element_type = elements["type"].as_string();
+            ElementStep step = (element_type == "norm_rw") ? ElementStep::normal
+                             : (element_type == "unif_rw") ? ElementStep::uniform
+                             : (element_type == "gibbs_normal") ? ElementStep::normal_conditional : ElementStep::flip;
+            // gibbs: over the element's states, or from its normal full
+            // conditional (gibbs_normal, C206); no move through proposed particles
+            bool gibbs = (element_type == "gibbs") || (element_type == "gibbs_normal");
+            std::vector<double> states;
+            if (element_type == "gibbs")
+              states = elements["values"].as_doubles();
+            std::vector<double> rows = elements["rows"].as_doubles();
+            std::vector<double> columns = elements["columns"].as_doubles();
+            std::vector<double> scales = elements["scales"].as_doubles();
+            std::vector<MCMC *> element_moves;
+            element_moves.reserve(rows.size());
+            MoveFactors first_factors;
+            // (gibbs has no move through proposed particles)
+            // adaptation (dev/plan.md, "adaptation of element moves"): a step per
+            // element adapted along the chain (adapt = scale(…)), and/or set from
+            // SMC particles (smc_adapt = gaussian(c))
+            bool element_adapts = elements.contains("adapt");
+            double element_target = 0.44, element_kappa = 0.6, element_gain = 1.0;
+            bool element_averaged = false;
+            if (element_adapts) {
+              BuiltinArguments adaptor = bind_builtin(elements["adapt"], BuiltinRole::MCMCAdaptor, model_parameters);
+              if (adaptor.builtin() != "scale")
+                stop("moves on elements adapt with adapt = scale(…).");
+              if (adaptor.given("target"))
+                element_target = adaptor.real("target");
+              element_kappa = adaptor.real("kappa");
+              element_gain = adaptor.real("C");
+              element_averaged = adaptor.logical("averaged");
+            }
+            double element_smc_constant = 0.0;
+            if (elements.contains("smc_adapt")) {
+              BuiltinArguments adaptor = bind_builtin(elements["smc_adapt"], BuiltinRole::SMCAdaptor, model_parameters);
+              if (adaptor.builtin() != "gaussian")
+                stop("moves on elements are set from SMC particles with smc_adapt = gaussian(c).");
+              element_smc_constant = adaptor.given("c") ? adaptor.real("c") : 2.38;
+            }
+            for (size_t e = 0; (e < rows.size()) && !gibbs; ++e) {
+              ElementRandomWalkProposalKernel *element_kernel =
+                  new ElementRandomWalkProposalKernel(variable, size_t(rows[e]), size_t(columns[e]), scales[e], step);
+              if (element_adapts)
+                element_kernel->set_mcmc_adaptor(new ElementScaleAdaptor(element_target, element_kappa, element_gain,
+                                                                         element_averaged));
+              if (element_smc_constant > 0.0)
+                element_kernel->set_smc_adaptor(new ElementSMCAdaptor(element_smc_constant));
+              MCMC *element_move = new MetropolisMCMC(1, element_kernel);
+              MoveFactors factors = set_move_factor_indices(
+                  element_move, current_proposal_info, "m", full_index,
+                  check_factor_index, simulate_m_proposal_index + 1);
+              if (e == 0)
+                first_factors = factors;
+              element_moves.push_back(element_move);
+            }
+            // in place (I4c-2), with the moves above for where that does not
+            // apply; or (internal option, for tests) the moves above alone
+            bool in_place = gibbs || !(model.contains("in_place_moves") && !model["in_place_moves"].as_bool());
+            MCMCTermination *scan_termination = (order_of_mcmc.size() > 1) ? NULL : termination_method;
+            if (in_place) {
+              std::vector<size_t> element_rows, element_columns;
+              for (size_t e = 0; e < rows.size(); ++e) {
+                element_rows.push_back(size_t(rows[e]));
+                element_columns.push_back(size_t(columns[e]));
+              }
+              InPlaceElementScanMCMC *scan = new InPlaceElementScanMCMC(scan_termination, element_moves, variable,
+                                                                        element_rows, element_columns, scales, step, states);
+              scan->set_smc_constant(element_smc_constant);
+              mcmc = scan;
+              move_factors.push_back(set_move_factor_indices(mcmc, current_proposal_info, "m", full_index,
+                                                             check_factor_index, simulate_m_proposal_index + 1));
+            } else {
+              move_factors.push_back(first_factors);
+              if (scan_termination == NULL)
+                mcmc = new DeterministicScanMCMC(element_moves);
+              else
+                mcmc = new DeterministicScanMCMC(termination_method, element_moves);
+            }
+            simulate_m_proposal_index = simulate_m_proposal_index + 1;
+            moves.push_back(mcmc);
+            continue;
+          }
           if ((proposal_infos[simulate_m_proposal_index]).is_list()) {
             proposal = get_m_proposal(proposal_infos[simulate_m_proposal_index],
                                       model_parameters, data);

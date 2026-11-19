@@ -62,10 +62,19 @@ arma::mat IndependentProposalKernel::specific_subsample_gradient_of_log(const st
                                                      proposed_particle.get_transformed_parameters(this));
 }
 
+// in a move (independent_mh): drawn for the blocks at the current point, and
+// each variable given the shape it has there (a stacked name split into its
+// variables, C205)
 Parameters IndependentProposalKernel::simulate(RandomNumberGenerator &rng,
                                                const Particle &particle) const
 {
-  return this->independent_simulate(rng);
+  Parameters drawn = this->independent_simulate_like(rng, particle.parameters);
+  Parameters output;
+  for (auto i = drawn.vector_begin(); i != drawn.vector_end(); ++i)
+    output.set_stacked(i->first, arma::vectorise(*i->second.first), particle.parameters);
+  for (auto i = drawn.any_begin(); i != drawn.any_end(); ++i)
+    output(i->first) = *i->second.first;
+  return output;
 }
 
 Parameters IndependentProposalKernel::subsample_simulate(RandomNumberGenerator &rng,

@@ -126,7 +126,8 @@ double MirrorProposalKernel::specific_evaluate_kernel(const Particle &proposed_p
        i!=this->proposal_info.end();
        ++i)
   {
-    arma::colvec mean = i->second.get_mean();
+    // (the centre given the rest of the old point, which the proposed point shares)
+    arma::colvec mean = i->second.mean_at(old_particle.parameters);
     double scale = i->second.get_double_scale();
     double dim = double(mean.n_rows);
     output = output + dmvnorm_using_precomp(proposed_particle.get_transformed_parameters(this).get_colvec(i->first),
@@ -162,9 +163,10 @@ void MirrorProposalKernel::simulate_into(RandomNumberGenerator &rng,
        i!=this->proposal_info.end();
        ++i)
   {
-    target.matrix(i->first) = rmvnorm_using_lower_chol(rng,
-                                                       2.0*i->second.get_mean()-particle.get_transformed_parameters(this).get_colvec(i->first),
-                                                       i->second.get_chol_lower(), sqrt(i->second.get_double_scale()));
+    check_proposal_size(i->first, particle.get_transformed_parameters(this).get_colvec(i->first).n_elem, i->second.get_covariance().n_rows, "covariance");
+    target.write(i->first, rmvnorm_using_lower_chol(rng,
+                                                       2.0*i->second.mean_at(particle.parameters)-particle.get_transformed_parameters(this).get_colvec(i->first),
+                                                       i->second.get_chol_lower(), sqrt(i->second.get_double_scale())), particle.get_transformed_parameters(this));
   }
 }
 
@@ -176,9 +178,10 @@ Parameters MirrorProposalKernel::simulate(RandomNumberGenerator &rng,
        i!=this->proposal_info.end();
        ++i)
   {
-    output[i->first] = rmvnorm_using_lower_chol(rng,
-                                          2.0*i->second.get_mean()-particle.get_transformed_parameters(this).get_colvec(i->first),
-                                          i->second.get_chol_lower(), sqrt(i->second.get_double_scale()));
+    check_proposal_size(i->first, particle.get_transformed_parameters(this).get_colvec(i->first).n_elem, i->second.get_covariance().n_rows, "covariance");
+    output.set_stacked(i->first, rmvnorm_using_lower_chol(rng,
+                                          2.0*i->second.mean_at(particle.parameters)-particle.get_transformed_parameters(this).get_colvec(i->first),
+                                          i->second.get_chol_lower(), sqrt(i->second.get_double_scale())), particle.get_transformed_parameters(this));
   }
   return output;
 }
@@ -198,9 +201,10 @@ Parameters MirrorProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
   auto found = this->proposal_info.find(variable);
   
   Parameters output;
-  output[variable] = rmvnorm_using_lower_chol(rng,
-                                        2.0*found->second.get_mean()-particle.get_transformed_parameters(this).get_colvec(variable),
-                                        found->second.get_chol_lower(), sqrt(found->second.get_double_scale()));
+  check_proposal_size(variable, particle.get_transformed_parameters(this).get_colvec(variable).n_elem, found->second.get_covariance().n_rows, "covariance");
+  output.set_stacked(variable, rmvnorm_using_lower_chol(rng,
+                                        2.0*found->second.mean_at(particle.parameters)-particle.get_transformed_parameters(this).get_colvec(variable),
+                                        found->second.get_chol_lower(), sqrt(found->second.get_double_scale())), particle.get_transformed_parameters(this));
   return output;
 }
 

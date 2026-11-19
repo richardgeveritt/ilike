@@ -65,6 +65,16 @@ public:
   virtual arma::mat direct_subsample_get_gradient_of_log(const Index* index,
                                                          const std::string &variable) const=0;
 
+  // the gradients of several variables (C204); by default one at a time
+  virtual std::vector<arma::mat> direct_get_gradients_of_log(const Index* index,
+                                                             const std::vector<std::string> &variables) const
+  {
+    std::vector<arma::mat> gradients;
+    for (const std::string &variable : variables)
+      gradients.push_back(this->direct_get_gradient_of_log(index, variable));
+    return gradients;
+  }
+
   virtual const Factors* get_factors() const=0;
   
   void set_particle(Particle* particle_in);

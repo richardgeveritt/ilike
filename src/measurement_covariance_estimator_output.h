@@ -26,8 +26,10 @@ public:
   void operator=(const MeasurementCovarianceEstimatorOutput &another);
   virtual MeasurementCovarianceEstimatorOutput* duplicate() const=0;
   
-  void simulate(const Parameters &parameters);
-  void subsample_simulate(const Parameters &parameters);
+  // (virtual: the mixed estimator of MFDS uses the untransformed point for
+  // its prior half)
+  virtual void simulate(const Parameters &parameters);
+  virtual void subsample_simulate(const Parameters &parameters);
   virtual void specific_simulate(const Parameters &parameters)=0;
   virtual void subsample_specific_simulate(const Parameters &parameters)=0;
   virtual arma::rowvec get_measurement_state_for_covariance() const=0;

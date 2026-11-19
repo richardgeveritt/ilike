@@ -45,6 +45,15 @@ public:
                                 const Particle &particle) const;
 
   virtual Parameters independent_simulate(RandomNumberGenerator &rng) const=0;
+
+  // A draw for a move from the point `shapes` (C205): the kernels whose
+  // parameters are scalars draw one value per element of their block there
+  // (a vector variable, or a list); by default, independent_simulate.
+  virtual Parameters independent_simulate_like(RandomNumberGenerator &rng,
+                                               const Parameters &shapes) const
+  {
+    return this->independent_simulate(rng);
+  }
   virtual Parameters subsample_independent_simulate(RandomNumberGenerator &rng) const=0;
   virtual Parameters subsample_independent_simulate(RandomNumberGenerator &rng,
                                                     const std::string &variable) const=0;

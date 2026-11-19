@@ -23,8 +23,12 @@ collect_placeholders <- function(x, found = list())
 # Roles of functions the language generates itself (return type, arguments):
 # the plates of model statements (src/plate_likelihood_estimator.h, I4b)
 internal_roles <- list(
+  mfds_simulate = c("Data", "RandomNumberGenerator &rng, const Parameters &parameters"),
+  mfds_prior = c("Data", ""),
+  mfds_transform = c("Parameters", "const Parameters &parameters"),
   plate_structure = c("Data", "const Data &data"),
-  plate_term = c("double", "const Parameters &parameters, const Data &data, const arma::mat &terms, size_t term"))
+  plate_term = c("double", "const Parameters &parameters, const Data &data, const arma::mat &terms, size_t term"),
+  plate_gradients = c("void", "const std::vector<std::string> &variables, std::vector<arma::mat> &gradients, const Parameters &parameters, const Data &data"))
 
 # The getter's name for a function used in a role
 placeholder_getter <- function(function_name, role)
@@ -70,7 +74,10 @@ replace_placeholders <- function(x, types, foreign_getters = list())
 compile_ilike_language <- function(filenames, texts, keep_temporary_recipe_code = FALSE, model_parameter_list = list(),
                                    external_packages = c(), julia_bin_dir = "", julia_required_libraries = c())
 {
-  lowered = ilike_language_lower(texts, filenames)
+  # (named values given for constants: what must be known when compiling,
+  # such as the elements of moves on elements, uses them)
+  given_constants = model_parameter_list[names(model_parameter_list) != ""]
+  lowered = ilike_language_lower(texts, filenames, if (length(given_constants) > 0) given_constants else NULL)
   code_for_signatures = paste(lowered$user_code, lowered$generated_code, sep = "\n")
   # (internal, for tests and as a way out: options(ilike.plate_factors = FALSE)
   # evaluates factors from model statements whole, as in I4a)
@@ -78,6 +85,10 @@ compile_ilike_language <- function(filenames, texts, keep_temporary_recipe_code 
     for (k in seq_along(lowered$recipe$factor))
       if (is.list(lowered$recipe$factor[[k]]))
         lowered$recipe$factor[[k]]$plate = NULL
+  # (internal, for tests: options(ilike.in_place_moves = FALSE) makes scans of
+  # moves on elements through proposed particles, as in I4c-1)
+  if (!isTRUE(getOption("ilike.in_place_moves", TRUE)))
+    lowered$recipe$in_place_moves = FALSE
 
   # functions in other languages (I5): their code loaded into R (Python
   # through reticulate, Julia through JuliaCall), and the C++ wrappers that
@@ -94,6 +105,15 @@ compile_ilike_language <- function(filenames, texts, keep_temporary_recipe_code 
       constants[[name]] = model_parameter_list[[name]]
   foreign = generate_foreign_wrappers(list(lowered$recipe, lowered$algorithms), constants,
                                       lowered$declared_constants, external_packages, julia_bin_dir, julia_required_libraries)
+
+  # the constants whose values are fixed now, when compiling (those used in
+  # model statements, in moves on elements and in calls to other languages),
+  # kept with the recipe so that a run given another value can refuse it
+  # (prepare_recipe) rather than silently use the compiled one
+  fixed_names = unique(c(lowered$model_constants, lowered$element_constants))
+  for (p in collect_foreign_placeholders(list(lowered$recipe, lowered$algorithms)))
+    fixed_names = union(fixed_names, intersect(all.vars(parse(text = p$expression)), lowered$declared_constants))
+  compiled_constants = constants[intersect(fixed_names, names(constants))]
 
   # constants used in model statements: C++ definitions with their values
   # (known when compiling, as for calls to other languages)
@@ -199,6 +219,7 @@ compile_ilike_language <- function(filenames, texts, keep_temporary_recipe_code 
   recipe$algorithms = replace_placeholders(lowered$algorithms, types, foreign$getters)
   recipe$constants = lowered$constants
   recipe$declared_constants = lowered$declared_constants
+  recipe$compiled_constants = compiled_constants
   recipe$language = "ilike"
   recipe$uses_r_functions = isTRUE(lowered$uses_foreign)
   recipe
@@ -273,11 +294,29 @@ prepare_recipe <- function(recipe, algorithm, model_parameter_list)
         stop("For a recipe in the ilike language, the run-time constants are given by name (model_parameter_list = list(name = value, ...)).")
     }
     for (name in given)
+    {
+      # a constant fixed when compiling cannot take another value now
+      fixed = recipe$compiled_constants[[name]]
+      if (!is.null(fixed) && !same_constant_value(fixed, model_parameter_list[[name]]))
+        stop(paste("The constant ", name, " was fixed when the recipe was compiled (it is used in model statements, ",
+                   "moves on elements or calls to other languages), so it cannot be given another value when running: ",
+                   "compile again with compile(..., model_parameter_list = list(", name, " = ...)).", sep = ""),
+             call. = FALSE)
       constants[[name]] = model_parameter_list[[name]]
+    }
   }
   if (is.null(constants))
     constants = list()
   list(recipe = prepared, model_parameter_list = constants, settings = settings)
+}
+
+# Whether a constant's value given when running is the value it was compiled with
+same_constant_value <- function(compiled, given)
+{
+  if (is.numeric(compiled) && is.numeric(given))
+    return(length(compiled) == length(given) && NROW(compiled) == NROW(given) &&
+           all(as.numeric(compiled) == as.numeric(given)))
+  identical(compiled, given)
 }
 
 # The names a run-time setting may have: the R argument's name, or its short

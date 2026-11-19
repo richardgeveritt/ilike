@@ -7,6 +7,7 @@
 // write (the name of a data variable, a list of factor numbers, literal data)
 // are generated here as C++ code.
 
+#include <functional>
 #include <RcppArmadillo.h>
 
 #include <cctype>
@@ -76,6 +77,10 @@ public:
     this->constants = RecipeValue::list();
   }
 
+  // values given for constants when compiling (compile(model_parameter_list)),
+  // for what must be known then (the elements of moves on elements)
+  void set_constant_values(const RecipeValue &values) { this->constant_values = values; }
+
   RecipeValue run()
   {
     // the C++ code first, so that references to it can be checked
@@ -118,6 +123,13 @@ public:
           else
             this->modules[alias] = std::make_pair(path, this->file);
         }
+    }
+
+    // "." in names: only in expressions in R (now that the imports' languages are known)
+    for (size_t t = 0; t < this->trees.size(); ++t)
+    {
+      this->file = this->trees[t]["file"].as_string();
+      this->check_dotted_names(this->trees[t]["sections"]);
     }
 
     // the model (factors and their names) before the algorithms, which
@@ -164,7 +176,10 @@ public:
         }
       }
       if (pass == 1)
+      {
         this->finish_model_statements();
+        this->finish_mfds();
+      }
     }
     this->finish_data();
 
@@ -181,6 +196,8 @@ public:
       this->recipe.push_back(this->transitions, "transition_model");
     if (this->model_methods.size() > 0)
       this->recipe.push_back(this->model_methods, "method");
+    if (this->mfds_entry.size() > 0)
+      this->recipe.push_back(this->mfds_entry, "mfds");
 
     RecipeValue output = RecipeValue::list();
     output.push_back(this->recipe, "recipe");
@@ -191,9 +208,12 @@ public:
     std::string all_generated = this->generated_code;
     if (!this->model_code.empty())
       all_generated += this->model_header + this->model_code + this->deferred_node_code + this->deferred_function_code;
+    all_generated += this->mfds_code;
     output.push_back(RecipeValue(all_generated), "generated_code");
     output.push_back(RecipeValue(std::vector<std::string>(this->model_constants_used.begin(), this->model_constants_used.end())),
                      "model_constants");
+    output.push_back(RecipeValue(std::vector<std::string>(this->element_constants_used.begin(), this->element_constants_used.end())),
+                     "element_constants");
     output.push_back(this->foreign_code, "foreign_code");
     output.push_back(this->foreign_files, "foreign_files");
     output.push_back(RecipeValue(this->uses_foreign), "uses_foreign");
@@ -244,7 +264,19 @@ private:
   bool generate = false;
   bool generation_decided = false;
   std::map<std::string, size_t> model_factor_position; // "model_prior" or a data variable -> factor entry
+  RecipeValue constant_values;
   std::set<std::string> model_constants_used;
+  std::set<std::string> element_constants_used; // (in moves on elements: values taken when compiling)
+  // MFDS (dev/plan.md 3.16): the likelihood factors it can simulate, those
+  // it cannot (with the reason), and the priors that are not Gaussian
+  struct MfdsPart { std::string kind; RecipeValue call; std::string name; }; // kind: linear, nonlinear, sbi
+  std::vector<MfdsPart> mfds_parts;
+  std::vector<std::string> mfds_reasons;
+  std::vector<std::string> mfds_prior_reasons;
+  std::vector<std::string> mfds_log_variables; // simple lnorm/mvlnorm priors
+  bool mfds_sbi_needs_direct = false;           // an sbi factor in another language, or with summaries
+  RecipeValue mfds_entry = RecipeValue::list();
+  std::string mfds_code;                         // emitted after the model's code
   // plates (I4b): the parameters numbered for the plates' lists of reads, and
   // the parameters each generated factor reads (by factor number)
   std::map<std::string, size_t> plate_variable_ids;
@@ -274,6 +306,9 @@ private:
   {
     if (statement.contains("keyword") && statement["keyword"].as_string() == "for")
       this->error(statement, "loops (for) are only allowed in the model section, not in " + section + ".");
+    std::string op = statement.contains("operator") ? statement["operator"].as_string() : "";
+    if (op == "+=" || op == "<-")
+      this->error(statement, "\"" + op + "\" is only allowed in the model section, not in " + section + ".");
   }
 
   static std::string kind_of(const RecipeValue &expression)
@@ -311,14 +346,56 @@ private:
 
   // --- functions in other languages (I5) ------------------------------------------
 
-  // TRUE for r::f, py::f, jl::f, alias::f (of an imported file), or a call to one
+  // the call (or name) an expression is built on, through $ and [ ]: the
+  // r::f(…) of r::f(…)$y[1]
+  static const RecipeValue &foreign_base(const RecipeValue &expression)
+  {
+    const RecipeValue *current = &expression;
+    while (kind_of(*current) == "member" || kind_of(*current) == "index")
+      current = &(*current)["target"];
+    return *current;
+  }
+
+  // TRUE for r::f, py::f, jl::f, alias::f (of an imported file), a call to
+  // one, or $ / [ ] applied to such a call (r::read.csv("y.csv")$y)
   bool is_foreign(const RecipeValue &expression) const
   {
-    std::string kind = kind_of(expression);
+    const RecipeValue &base = foreign_base(expression);
+    std::string kind = kind_of(base);
     if (kind != "name" && kind != "call")
       return false;
-    std::string name_space = expression["namespace"].as_string();
+    if (kind == "name" && &base != &expression)
+      return false; // (r::f$y: $ needs a call)
+    std::string name_space = base["namespace"].as_string();
     return !name_space.empty() && name_space != "cpp" && name_space != "ilike" && this->foreign_languages.count(name_space);
+  }
+
+  // names may contain "." only in expressions in R (r::read.csv, or a call
+  // through an alias of an imported .R file), as R allows; elsewhere (C++,
+  // Python, Julia, ilike's own names) it is an error
+  void check_dotted_names(const RecipeValue &node) const
+  {
+    if (!node.is_list())
+      return;
+    const RecipeValue &base = foreign_base(node);
+    std::string kind = kind_of(base);
+    if ((kind == "call" || kind == "name") && !base["namespace"].as_string().empty())
+    {
+      auto found = this->foreign_languages.find(base["namespace"].as_string());
+      if (found != this->foreign_languages.end() && found->second == "r")
+        return;
+    }
+    static const std::vector<std::string> fields = {"name", "function", "index", "alias", "keyword"};
+    for (const std::string &field : fields)
+      if (node.contains(field) && node[field].is_string() && node[field].as_string().find('.') != std::string::npos)
+        this->error(node, "\"" + node[field].as_string() + "\": names cannot contain \".\" (except in calls to R, e.g. r::read.csv).");
+    std::vector<std::string> keys = node.names();
+    for (size_t k = 0; k < node.size(); ++k)
+    {
+      if (k < keys.size() && keys[k].find('.') != std::string::npos)
+        this->error(node, "\"" + keys[k] + "\": names cannot contain \".\" (except in calls to R, e.g. r::read.csv).");
+      this->check_dotted_names(node[k]);
+    }
   }
 
   // a function: cpp::f, or a function (or call) in another language
@@ -401,7 +478,16 @@ private:
       return "parameters$" + name;
     }
     if (kind == "member")
-      return this->r_text(expression["target"]) + "$" + expression["name"].as_string();
+    {
+      // parameters$theta, data$y: the objects of the role (the binding reads
+      // these as its arguments); otherwise a member of a value in R, written
+      // [["y"]] so that the binding does not take y for a variable
+      const RecipeValue &target = expression["target"];
+      if (kind_of(target) == "name" && target["namespace"].as_string().empty() &&
+          special.count(target["name"].as_string()))
+        return this->r_text(target) + "$" + expression["name"].as_string();
+      return this->r_text(target) + "[[" + quoted(expression["name"].as_string()) + "]]";
+    }
     if (kind == "call")
     {
       const RecipeValue &arguments = expression["arguments"];
@@ -443,7 +529,7 @@ private:
   {
     if (role.compare(0, 6, "adapt_") == 0 || role.find("factor_index") != std::string::npos)
       this->error(expression, "this function must be written in C++ (cpp::f).");
-    std::string language = this->foreign_languages.at(expression["namespace"].as_string());
+    std::string language = this->foreign_languages.at(foreign_base(expression)["namespace"].as_string());
     std::string text;
     if (kind_of(expression) == "name")
       text = expression["name"].as_string() + "(" + default_arguments(role) + ")";
@@ -664,10 +750,33 @@ private:
     this->error(expression, "a value is needed here.");
   }
 
+  // a list of variables [a, b, c] as the first argument of a move's built-in
+  // proposal: the engine's stacked name "a;b;c" (C203, C205), the column
+  // vector of their elements in that order
+  std::string stacked_variable(const RecipeValue &list, const std::string &type)
+  {
+    const RecipeValue &elements = list["elements"];
+    if (elements.size() == 0)
+      this->error(list, type + ": the list of variables is empty.");
+    std::string stacked;
+    std::set<std::string> seen;
+    for (size_t k = 0; k < elements.size(); ++k)
+    {
+      if (kind_of(elements[k]) != "name" || this->is_function_reference(elements[k]))
+        this->error(elements[k], type + ": each element of the list is the name of a variable.");
+      std::string name = elements[k]["name"].as_string();
+      if (!seen.insert(name).second)
+        this->error(elements[k], type + ": " + name + " appears twice in the list of variables.");
+      stacked = stacked + (stacked.empty() ? "" : ";") + name;
+    }
+    return stacked;
+  }
+
   // a built-in call as the old recipe's node {type, variables, parameters}:
   // the variable is the given one, or the first positional argument (or the
   // argument "variable"); with_variable = false for settings without one
-  RecipeValue builtin_node(const RecipeValue &call, bool with_variable, const std::string &variable = "")
+  RecipeValue builtin_node(const RecipeValue &call, bool with_variable, const std::string &variable = "",
+                           bool lists = false)
   {
     if (kind_of(call) != "call")
       this->error(call, "a built-in call is needed here (e.g. norm_rw(theta, 1)).");
@@ -682,6 +791,16 @@ private:
       std::string key = (i < keys.size()) ? keys[i] : "";
       if (with_variable && variable.empty() && (key == "variable" || (key.empty() && !variable_taken)))
       {
+        if (kind_of(arguments[i]) == "vector")
+        {
+          // several variables moved as one block (C203): the stacked name
+          if (!lists)
+            this->error(arguments[i], type + ": a list of variables can be moved together by the proposal of a move "
+                        "(e.g. metropolis(mvnorm_rw([a, b], cov))), not here.");
+          the_variable = this->stacked_variable(arguments[i], type);
+          variable_taken = true;
+          continue;
+        }
         if (kind_of(arguments[i]) != "name" || this->is_function_reference(arguments[i]))
           this->error(arguments[i], type + ": the first argument is the name of a variable.");
         the_variable = arguments[i]["name"].as_string();
@@ -1004,7 +1123,7 @@ private:
       const RecipeValue &statement = statements[i];
       std::string keyword = statement["keyword"].as_string();
       std::string op = statement.contains("operator") ? statement["operator"].as_string() : "";
-      if (keyword == "for" || op == "<-" || (op == "~" && keyword.empty() && this->generate))
+      if (keyword == "for" || op == "<-" || op == "+=" || (op == "~" && keyword.empty() && this->generate))
       {
         // a model statement compiled to generated C++ (I4a)
         this->collect_model_statement(statement, std::vector<ModelLoop>());
@@ -1024,6 +1143,9 @@ private:
         RecipeValue factor = RecipeValue::list();
         factor.push_back(this->builtin_node(value, true, name), "prior");
         this->add_factor(statement, name, factor);
+        std::string family = this->builtin_name(value);
+        if (family == "lnorm" || family == "mvlnorm")
+          this->mfds_log_variables.push_back(name);
         continue;
       }
       if (op != "=")
@@ -1032,6 +1154,7 @@ private:
       if (keyword.empty() && name == "time")
       {
         // the time index of a state-space model: time = ssm(…)
+        this->mfds_reasons.push_back("the model is a state-space model");
         if (kind_of(value) != "call" || this->builtin_name(value) != "ssm")
           this->error(value, "time = ssm(index = …, first_index = …, …): the time index of a state-space model.");
         RecipeValue item = RecipeValue::list();
@@ -1042,10 +1165,12 @@ private:
       if (keyword == "prior")
       {
         this->add_factor(statement, name, this->density_functions(value, true));
+        this->mfds_prior_reasons.push_back("the prior " + name + " is written as a function");
         continue;
       }
       if (keyword == "transition")
       {
+        this->mfds_reasons.push_back("the model is a state-space model");
         this->define(statement, "transition " + name);
         this->transitions.push_back(this->transition_model(name, value));
         continue;
@@ -1056,13 +1181,29 @@ private:
                                                             value["namespace"].as_string() == "ilike"))
                                ? value["function"].as_string() : "";
         if (function == "sbi")
+        {
           this->add_factor(statement, name, this->sbi_factor(value));
+          Arguments sbi_arguments = this->split_arguments(value);
+          if (!this->is_function_reference(sbi_arguments.named["simulate"]) ||
+              sbi_arguments.named["simulate"]["namespace"].as_string() != "cpp" || sbi_arguments.has("summaries"))
+            this->mfds_sbi_needs_direct = true;
+          this->mfds_parts.push_back({"sbi", value, name});
+        }
         else if (function == "linear_gaussian")
+        {
           this->add_factor(statement, name, this->gaussian_data_model(value, true));
+          this->mfds_parts.push_back({"linear", value, name});
+        }
         else if (function == "nonlinear_gaussian")
+        {
           this->add_factor(statement, name, this->gaussian_data_model(value, false));
+          this->mfds_parts.push_back({"nonlinear", value, name});
+        }
         else if (!function.empty() && role_exists(function, BuiltinRole::AlgorithmicLikelihood))
+        {
           this->add_factor(statement, name, this->algorithmic_likelihood(value));
+          this->mfds_reasons.push_back("the factor " + name + " is estimated by a filter");
+        }
         else if (!function.empty() && function != "density")
         {
           if (role_exists(function, BuiltinRole::LinearGaussianDataModel))
@@ -1070,13 +1211,18 @@ private:
             RecipeValue factor = RecipeValue::list();
             factor.push_back(this->builtin_node(value, true), "linear_gaussian_data_model");
             this->add_factor(statement, name, factor);
+            this->mfds_reasons.push_back("the factor " + name + " (linear_gaussian_data_model) can be simulated "
+                                         "when written linear_gaussian(…)");
           }
           else
             this->error(value, "unknown kind of factor " + function + " (factors: cpp::f, density(…), sbi(…), "
                         "linear_gaussian(…), nonlinear_gaussian(…), pf(…), kf(…), enkf(…)).");
         }
         else
+        {
           this->add_factor(statement, name, this->density_functions(value, false));
+          this->mfds_reasons.push_back("the factor " + name + " is a log density written as a function");
+        }
         continue;
       }
       this->error(statement, "unknown model statement \"" + keyword + "\" (model statements: variable ~ distribution(…), "
@@ -1106,7 +1252,7 @@ private:
           const RecipeValue &st = statements[i];
           std::string keyword = st["keyword"].as_string();
           std::string op = st.contains("operator") ? st["operator"].as_string() : "";
-          if (keyword == "for" || op == "<-")
+          if (keyword == "for" || op == "<-" || op == "+=")
             this->generate = true;
           if (op == "~" && keyword.empty())
           {
@@ -1155,8 +1301,37 @@ private:
       return;
     }
     std::string op = statement["operator"].as_string();
+    if (op == "+=")
+    {
+      // a term of a named factor, not tied to a variable: factor name += expression
+      if (keyword != "factor")
+        this->error(statement, "\"+=\" adds a term to a named factor: factor name += expression.");
+      if (kind_of(statement["target"]) != "name")
+        this->error(statement, "a factor's name has no index (factor name += expression; the loop gives the terms).");
+      ModelStatement st;
+      st.op = op;
+      st.node = statement;
+      st.loops = loops;
+      st.variable = statement["target"]["name"].as_string();
+      st.indices = RecipeValue::list();
+      st.value = statement["value"];
+      st.observed = true; // (a likelihood factor: not part of the prior, and no target to read)
+      if (this->data_names.count(st.variable) || this->constant_names.count(st.variable))
+        this->error(statement, st.variable + " is " + (this->data_names.count(st.variable) ? "data" : "a constant") +
+                    ", so it cannot name a factor of terms (choose another name).");
+      if (!this->model_factor_position.count(st.variable))
+      {
+        this->define(statement, st.variable);
+        this->factor_entries.push_back(RecipeValue::list());
+        this->factor_numbers[st.variable] = this->factor_entries.size();
+        this->model_factor_position[st.variable] = this->factor_entries.size() - 1;
+      }
+      this->model_statements.push_back(st);
+      return;
+    }
     if (!keyword.empty() || (op != "~" && op != "<-"))
-      this->error(statement, "inside a loop, a statement is \"y[i] ~ distribution(…)\" or \"mu[i] <- expression\".");
+      this->error(statement, "inside a loop, a statement is \"y[i] ~ distribution(…)\", \"mu[i] <- expression\" "
+                  "or \"factor name += expression\".");
     ModelStatement st;
     st.op = op;
     st.node = statement;
@@ -1225,6 +1400,26 @@ private:
   }
 
   // literal data, as a static matrix in the generated code (for priors)
+  // a scalar constant's value when compiling: the value given to compile(),
+  // or the constants section's default
+  bool constant_number(const std::string &name, double &value) const
+  {
+    if (!this->constant_names.count(name))
+      return false;
+    const RecipeValue *found = NULL;
+    if (this->constant_values.is_list() && this->constant_values.contains(name))
+      found = &this->constant_values[name];
+    else if (this->constants.contains(name))
+      found = &this->constants[name];
+    if (found == NULL || !found->is_numeric())
+      return false;
+    std::vector<double> numbers = found->as_doubles();
+    if (numbers.size() != 1)
+      return false;
+    value = numbers[0];
+    return true;
+  }
+
   bool is_literal_data(const std::string &name) const
   {
     for (const auto &item : this->literal_data)
@@ -1279,6 +1474,15 @@ private:
     return "parameters[" + quoted(name) + "]";
   }
 
+  // "x[...] (file:line:column)", for messages about an element
+  std::string element_description(const std::string &name, const RecipeValue &node) const
+  {
+    std::string where = this->file;
+    if (node.is_list() && node.contains("line"))
+      where = where + ":" + std::to_string(node["line"].as_int()) + ":" + std::to_string(node["column"].as_int());
+    return name + "[...] (" + where + ")";
+  }
+
   std::string index_code(const RecipeValue &expression, const CodeContext &context)
   {
     return "(int)(" + this->scalar_code(expression, context) + ") - 1";
@@ -1311,10 +1515,16 @@ private:
       if (this->is_deterministic(name))
         return this->deterministic_call(name, indices, expression, context);
       std::string base = this->variable_matrix(name, target, context);
+      bool stochastic = false;
+      for (size_t k = 0; k < indices.size(); ++k)
+        if (!this->parameters_read(indices[k], context).empty())
+          stochastic = true;
+      std::string checked = std::string(stochastic ? "true" : "false") + ", " + quoted(this->element_description(name, expression));
       if (indices.size() == 1)
-        return "(" + base + ")(" + this->index_code(indices[0], context) + ")";
+        return "ilike_model_at(" + base + ", " + this->index_code(indices[0], context) + ", " + checked + ")";
       if (indices.size() == 2)
-        return "(" + base + ")(" + this->index_code(indices[0], context) + ", " + this->index_code(indices[1], context) + ")";
+        return "ilike_model_at(" + base + ", " + this->index_code(indices[0], context) + ", " +
+               this->index_code(indices[1], context) + ", " + checked + ")";
       this->error(expression, "at most two indices.");
     }
     if (kind == "binary")
@@ -1504,6 +1714,21 @@ private:
     return code + ")";
   }
 
+  // a statement of a likelihood factor: an observed variable's "~", or a
+  // "factor name += expression" term
+  bool likelihood_term(const ModelStatement &st) const
+  {
+    return (st.op == "~" && st.observed) || st.op == "+=";
+  }
+
+  // one term's log value: the log density of a "~", or the expression of a "+="
+  std::string term_code(const ModelStatement &st, const CodeContext &context)
+  {
+    if (st.op == "+=")
+      return "(double)(" + this->scalar_code(st.value, context) + ")";
+    return this->density_code(st, this->target_code(st, context, false), context);
+  }
+
   std::string random_code(const ModelStatement &st, const CodeContext &context)
   {
     const RecipeValue &call = st.value;
@@ -1511,14 +1736,15 @@ private:
     const RecipeValue &arguments = call["arguments"];
     static const std::map<std::string, std::string> samplers = {
       {"norm", "rnorm"}, {"lnorm", "rlnorm"}, {"gamma", "rgamma"}, {"unif", "runif"}, {"exp", "rexp"},
-      {"pois", "(double)rpois"}, {"tnorm", "rtnorm"}, {"beta", "ilike_model_rbeta"}};
+      {"pois", "(double)rpois"}, {"tnorm", "rtnorm"}, {"beta", "ilike_model_rbeta"},
+      {"bern", "ilike_model_rbern"}, {"binom", "ilike_model_rbinom"}};
     if (f == "mvnorm")
       return "arma::mat(rmvnorm(rng, arma::colvec(arma::vectorise(" + this->matrix_code(arguments[0], context) + ")), " +
              this->matrix_code(arguments[1], context) + "))";
     auto found = samplers.find(f);
     if (found == samplers.end())
       this->error(call, "the parameter " + st.variable + " has the distribution " + f +
-                  ", which cannot be simulated in a prior (a discrete parameter needs element moves, I4c).");
+                  ", which cannot be simulated in a prior.");
     std::string code = found->second + "(rng";
     for (size_t k = 0; k < arguments.size(); ++k)
       code += ", " + this->scalar_code(arguments[k], context);
@@ -1537,11 +1763,24 @@ private:
     }
     if (st.indices.size() == 0)
       return "(" + base + ")(0)";
-    if (st.indices.size() == 1)
-      return "(" + base + ")(" + this->index_code(st.indices[0], context) + ")";
-    if (st.indices.size() == 2)
+    if (st.indices.size() > 2)
+      this->error(st.node, "at most two indices.");
+    if (writable)
+    {
+      if (st.indices.size() == 1)
+        return "(" + base + ")(" + this->index_code(st.indices[0], context) + ")";
       return "(" + base + ")(" + this->index_code(st.indices[0], context) + ", " + this->index_code(st.indices[1], context) + ")";
-    this->error(st.node, "at most two indices.");
+    }
+    // a target read (in a log density): checked, as other elements
+    bool stochastic = false;
+    for (size_t k = 0; k < st.indices.size(); ++k)
+      if (!this->parameters_read(st.indices[k], context).empty())
+        stochastic = true;
+    std::string checked = std::string(stochastic ? "true" : "false") + ", " + quoted(this->element_description(st.variable, st.node));
+    if (st.indices.size() == 1)
+      return "ilike_model_at(" + base + ", " + this->index_code(st.indices[0], context) + ", " + checked + ")";
+    return "ilike_model_at(" + base + ", " + this->index_code(st.indices[0], context) + ", " +
+           this->index_code(st.indices[1], context) + ", " + checked + ")";
   }
 
   // loops around a body: for (int i = from; i <= to; ++i) { … }
@@ -1562,6 +1801,290 @@ private:
     while (std::getline(lines, line))
       inner += pad + line + "\n";
     return open + inner + close;
+  }
+
+  // --- gradients (I4e): code generated from each term ---------------------------
+  //
+  // Each term passes an adjoint (d term / d subexpression, a C++ expression)
+  // down its expression; at a parameter's element the adjoint is added to
+  // that variable's gradient, if it is one of the variables asked for
+  // (ilike_G, a set of variables and their gradients: several variables are
+  // computed in one pass over the terms, C204). Deterministic
+  // nodes have gradient functions taking the adjoint. Subexpressions that read
+  // no parameters are skipped. dev/plan.md, "Gradients of model statements".
+
+  size_t gradient_temporaries = 0;
+
+  static std::string indented_code(const std::string &code)
+  {
+    std::string out, line;
+    std::stringstream lines(code);
+    while (std::getline(lines, line))
+      out += "  " + line + "\n";
+    return out;
+  }
+
+  std::string node_gradient_call(const std::string &name, const RecipeValue &indices, const std::string &adjoint,
+                                 const CodeContext &context)
+  {
+    std::string data = context.prior ? std::string("nullptr") : (context.node ? std::string("data") : std::string("&data"));
+    std::string call = "ilike_model_node_gradient_" + name + "(ilike_G, " + adjoint + ", parameters, " + data;
+    for (size_t k = 0; k < indices.size(); ++k)
+      call += ", (int)(" + this->scalar_code(indices[k], context) + ")";
+    return call + ");\n";
+  }
+
+  std::string gradient_code(const RecipeValue &expression, const std::string &adjoint, const CodeContext &context)
+  {
+    if (this->parameters_read(expression, context).empty())
+      return "";
+    std::string kind = kind_of(expression);
+    if (kind == "name")
+    {
+      const std::string name = expression["name"].as_string();
+      if (this->is_deterministic(name))
+        return this->node_gradient_call(name, RecipeValue::list(), adjoint, context);
+      return "if (arma::mat *ilike_gv = ilike_G.find(" + quoted(name) + ")) (*ilike_gv)(0) += " + adjoint + ";\n";
+    }
+    if (kind == "index")
+    {
+      const std::string name = expression["target"]["name"].as_string();
+      const RecipeValue &indices = expression["indices"];
+      if (this->is_deterministic(name))
+        return this->node_gradient_call(name, indices, adjoint, context);
+      if (this->constant_names.count(name) || this->data_names.count(name))
+        return ""; // (an index that reads parameters is piecewise constant in them: no contribution)
+      bool stochastic = false;
+      for (size_t k = 0; k < indices.size(); ++k)
+        if (!this->parameters_read(indices[k], context).empty())
+          stochastic = true;
+      std::string where = std::string(stochastic ? "true" : "false") + ", " + quoted(this->element_description(name, expression));
+      std::string element = this->index_code(indices[0], context);
+      if (indices.size() == 2)
+        element += ", " + this->index_code(indices[1], context);
+      return "if (arma::mat *ilike_gv = ilike_G.find(" + quoted(name) + ")) ilike_model_add(*ilike_gv, " + element + ", " + adjoint + ", " + where + ");\n";
+    }
+    std::string t = "ilike_a" + std::to_string(++this->gradient_temporaries);
+    std::string open = "{\n  const double " + t + " = " + adjoint + ";\n";
+    if (kind == "unary")
+      return open + indented_code(this->gradient_code(expression["operand"], "-" + t, context)) + "}\n";
+    if (kind == "binary")
+    {
+      std::string op = expression["operator"].as_string();
+      const RecipeValue &left = expression["left"], &right = expression["right"];
+      std::string a = this->scalar_code(left, context), b = this->scalar_code(right, context);
+      std::string inner;
+      if (op == "+")
+        inner = this->gradient_code(left, t, context) + this->gradient_code(right, t, context);
+      else if (op == "-")
+        inner = this->gradient_code(left, t, context) + this->gradient_code(right, "-" + t, context);
+      else if (op == "*")
+        inner = this->gradient_code(left, t + "*" + b, context) + this->gradient_code(right, t + "*" + a, context);
+      else if (op == "/")
+        inner = this->gradient_code(left, t + "/" + b, context) +
+                this->gradient_code(right, "-" + t + "*" + a + "/(" + b + "*" + b + ")", context);
+      else if (op == "^")
+        inner = this->gradient_code(left, t + "*" + b + "*std::pow(" + a + ", " + b + " - 1.0)", context) +
+                this->gradient_code(right, t + "*std::log(" + a + ")*std::pow(" + a + ", " + b + ")", context);
+      else
+        this->error(expression, "the operator " + op + " cannot be differentiated.");
+      return open + indented_code(inner) + "}\n";
+    }
+    if (kind == "call")
+    {
+      std::string f = expression["function"].as_string();
+      const RecipeValue &arguments = expression["arguments"];
+      std::string u = this->scalar_code(arguments[0], context);
+      static const std::map<std::string, std::string> derivative = {
+        {"exp", "std::exp(U)"}, {"log", "(1.0/(U))"}, {"sqrt", "(0.5/std::sqrt(U))"},
+        {"abs", "(double)(((U) > 0.0) - ((U) < 0.0))"}, {"lgamma", "R::digamma(U)"}, {"log1p", "(1.0/(1.0 + (U)))"},
+        {"expm1", "std::exp(U)"}, {"sin", "std::cos(U)"}, {"cos", "(-std::sin(U))"},
+        {"tanh", "(1.0 - std::pow(std::tanh(U), 2))"},
+        {"inv_logit", "(1.0/(1.0 + std::exp(-(U))))*(1.0 - 1.0/(1.0 + std::exp(-(U))))"},
+        {"ilogit", "(1.0/(1.0 + std::exp(-(U))))*(1.0 - 1.0/(1.0 + std::exp(-(U))))"},
+        {"logit", "(1.0/((U)*(1.0 - (U))))"}};
+      auto found = derivative.find(f);
+      if (found != derivative.end())
+      {
+        std::string d = found->second;
+        for (size_t at = d.find('U'); at != std::string::npos; at = d.find('U', at + u.size()))
+          d.replace(at, 1, u);
+        return open + indented_code(this->gradient_code(arguments[0], t + "*" + d, context)) + "}\n";
+      }
+      std::string v = this->scalar_code(arguments[1], context);
+      if (f == "pow")
+        return open + indented_code(this->gradient_code(arguments[0], t + "*" + v + "*std::pow(" + u + ", " + v + " - 1.0)", context) +
+                                    this->gradient_code(arguments[1], t + "*std::log(" + u + ")*std::pow(" + u + ", " + v + ")", context)) + "}\n";
+      if (f == "min" || f == "max")
+      {
+        // (the derivative of the argument chosen)
+        std::string first = (f == "min") ? "((double)" + u + " <= (double)" + v + ")" : "((double)" + u + " >= (double)" + v + ")";
+        return open + "  if " + first + "\n  {\n" + indented_code(indented_code(this->gradient_code(arguments[0], t, context))) +
+               "  }\n  else\n  {\n" + indented_code(indented_code(this->gradient_code(arguments[1], t, context))) + "  }\n}\n";
+      }
+      this->error(expression, "the function " + f + " cannot be differentiated.");
+    }
+    this->error(expression, "this expression cannot be differentiated.");
+  }
+
+  // the gradient of one "~" term: the log density's partial derivatives with
+  // respect to the target and the arguments, then the arguments' chain rule
+  std::string density_gradient_code(const ModelStatement &st, const CodeContext &context)
+  {
+    const RecipeValue &call = st.value;
+    std::string f = call["function"].as_string();
+    const RecipeValue &arguments = call["arguments"];
+    if (f == "mvnorm")
+    {
+      std::string code = "{\n  arma::colvec ilike_x = arma::vectorise(" + this->target_code(st, context, false) + ");\n"
+                         "  arma::colvec ilike_m = arma::vectorise(" + this->matrix_code(arguments[0], context) + ");\n"
+                         "  arma::mat ilike_S = " + this->matrix_code(arguments[1], context) + ";\n"
+                         "  arma::colvec ilike_r = arma::solve(ilike_S, ilike_x - ilike_m, arma::solve_opts::likely_sympd);\n";
+      auto is_parameter = [&](const RecipeValue &e) {
+        return kind_of(e) == "name" && !this->data_names.count(e["name"].as_string()) &&
+               !this->constant_names.count(e["name"].as_string()); };
+      if (!st.observed)
+        code += "  if (arma::mat *ilike_gv = ilike_G.find(" + quoted(st.variable) + ")) *ilike_gv -= arma::reshape(ilike_r, ilike_gv->n_rows, ilike_gv->n_cols);\n";
+      if (is_parameter(arguments[0]))
+        code += "  if (arma::mat *ilike_gv = ilike_G.find(" + quoted(arguments[0]["name"].as_string()) +
+                ")) *ilike_gv += arma::reshape(ilike_r, ilike_gv->n_rows, ilike_gv->n_cols);\n";
+      if (is_parameter(arguments[1]))
+        code += "  if (ilike_G.find(" + quoted(arguments[1]["name"].as_string()) + ")) Rcpp::stop(" +
+                quoted("The gradient with respect to the covariance of mvnorm (" + arguments[1]["name"].as_string() +
+                       ") is not available yet.") + ");\n";
+      return code + "}\n";
+    }
+    std::string x = "ilike_x", v[4] = {"ilike_v0", "ilike_v1", "ilike_v2", "ilike_v3"};
+    std::string dx;
+    std::vector<std::string> d(arguments.size());
+    std::string prelude;
+    if (f == "norm")
+    {
+      dx = "(-(" + x + " - " + v[0] + ")/(" + v[1] + "*" + v[1] + "))";
+      d[0] = "((" + x + " - " + v[0] + ")/(" + v[1] + "*" + v[1] + "))";
+      d[1] = "(-1.0/" + v[1] + " + (" + x + " - " + v[0] + ")*(" + x + " - " + v[0] + ")/(" + v[1] + "*" + v[1] + "*" + v[1] + "))";
+    }
+    else if (f == "lnorm")
+    {
+      std::string l = "(std::log(" + x + ") - " + v[0] + ")";
+      dx = "(-1.0/" + x + " - " + l + "/(" + v[1] + "*" + v[1] + "*" + x + "))";
+      d[0] = "(" + l + "/(" + v[1] + "*" + v[1] + "))";
+      d[1] = "(-1.0/" + v[1] + " + " + l + "*" + l + "/(" + v[1] + "*" + v[1] + "*" + v[1] + "))";
+    }
+    else if (f == "gamma")
+    {
+      dx = "((" + v[0] + " - 1.0)/" + x + " - " + v[1] + ")";
+      d[0] = "(std::log(" + v[1] + ") - R::digamma(" + v[0] + ") + std::log(" + x + "))";
+      d[1] = "(" + v[0] + "/" + v[1] + " - " + x + ")";
+    }
+    else if (f == "exp")
+    {
+      dx = "(-" + v[0] + ")";
+      d[0] = "(1.0/" + v[0] + " - " + x + ")";
+    }
+    else if (f == "unif")
+    {
+      d[0] = "(1.0/(" + v[1] + " - " + v[0] + "))";
+      d[1] = "(-1.0/(" + v[1] + " - " + v[0] + "))";
+    }
+    else if (f == "tnorm")
+    {
+      prelude = "  const arma::colvec ilike_d = ilike_model_dtnorm_partials(" + x + ", " + v[0] + ", " + v[1] + ", " + v[2] + ", " + v[3] + ");\n";
+      dx = "ilike_d[0]";
+      for (size_t k = 0; k < 4; ++k)
+        d[k] = "ilike_d[" + std::to_string(k + 1) + "]";
+    }
+    else if (f == "beta")
+    {
+      dx = "((" + v[0] + " - 1.0)/" + x + " - (" + v[1] + " - 1.0)/(1.0 - " + x + "))";
+      d[0] = "(std::log(" + x + ") - R::digamma(" + v[0] + ") + R::digamma(" + v[0] + " + " + v[1] + "))";
+      d[1] = "(std::log(1.0 - " + x + ") - R::digamma(" + v[1] + ") + R::digamma(" + v[0] + " + " + v[1] + "))";
+    }
+    else if (f == "pois")
+      d[0] = "(" + x + "/" + v[0] + " - 1.0)"; // (the target is discrete)
+    else if (f == "bern")
+      d[0] = "(" + x + "/" + v[0] + " - (1.0 - " + x + ")/(1.0 - " + v[0] + "))";
+    else if (f == "binom")
+      d[1] = "(" + x + "/" + v[1] + " - (" + v[0] + " - " + x + ")/(1.0 - " + v[1] + "))"; // (n is discrete)
+    else
+      this->error(call, "the distribution " + f + " cannot be differentiated.");
+
+    std::string code = "{\n  const double " + x + " = " + this->target_code(st, context, false) + ";\n";
+    for (size_t k = 0; k < arguments.size() && k < 4; ++k)
+      code += "  const double " + v[k] + " = " + this->scalar_code(arguments[k], context) + ";\n";
+    code += prelude;
+    if (!st.observed && !dx.empty())
+    {
+      // the target: an element of a parameter (its indices are loop indices or numbers)
+      std::string element = "0";
+      if (st.indices.size() >= 1)
+        element = this->index_code(st.indices[0], context);
+      if (st.indices.size() == 2)
+        element += ", " + this->index_code(st.indices[1], context);
+      code += "  if (arma::mat *ilike_gv = ilike_G.find(" + quoted(st.variable) + ")) ilike_model_add(*ilike_gv, " + element + ", " + dx + ", false, " +
+              quoted(this->element_description(st.variable, st.node)) + ");\n";
+    }
+    for (size_t k = 0; k < arguments.size(); ++k)
+      if (!d[k].empty())
+        code += indented_code(this->gradient_code(arguments[k], d[k], context));
+    return code + "}\n";
+  }
+
+  std::string term_gradient_code(const ModelStatement &st, const CodeContext &context)
+  {
+    if (st.op == "+=")
+      return this->gradient_code(st.value, "1.0", context);
+    return this->density_gradient_code(st, context);
+  }
+
+  // the gradient functions of a factor made of these statements (one term per
+  // statement and loop index): f_many(variables, gradients, parameters[,
+  // data]), the gradients of several variables in one pass over the terms
+  // (C204), and f(variable, parameters[, data]) for one variable; for the
+  // prior also forms with data (for its plate). "" if they cannot be
+  // generated (the factor then has no gradient, as before).
+  std::string generate_gradient(const std::string &suffix, const std::vector<const ModelStatement*> &statements, bool prior)
+  {
+    std::string name = "ilike_model_gradient_" + suffix;
+    try
+    {
+      std::string body = "ilike_model_gradients ilike_G(variables, gradients, parameters);\ntry\n{\n";
+      for (const ModelStatement* st : statements)
+      {
+        std::set<std::string> reads = this->statements_read(std::vector<const ModelStatement*>(1, st));
+        if (reads.empty())
+          continue;
+        std::string guard;
+        for (const std::string &r : reads)
+          guard += (guard.empty() ? "" : " || ") + std::string("ilike_G.find(") + quoted(r) + ")";
+        CodeContext context;
+        context.prior = prior;
+        for (const ModelLoop &loop : st->loops) context.indices.insert(loop.index);
+        std::string term = this->term_gradient_code(*st, context);
+        CodeContext fresh;
+        fresh.prior = prior;
+        body += "  if (" + guard + ")\n  {\n" + indented_code(indented_code(this->loops_code(*st, fresh, term, ""))) + "  }\n";
+      }
+      body += "}\ncatch (const ilike_model_outside &)\n{\n  for (arma::mat &g : gradients) g.fill(arma::datum::nan); // (density 0 at this point)\n}\n";
+      std::string many = "(const std::vector<std::string> &variables, std::vector<arma::mat> &gradients, const Parameters &parameters" +
+                         std::string(prior ? ")" : ", const Data &data)");
+      std::string code = "void " + name + "_many" + many + "\n{\n" + indented_code(body) + "}\n\n";
+      std::string signature = prior ? "(const std::string &variable, const Parameters &parameters)"
+                                    : "(const std::string &variable, const Parameters &parameters, const Data &data)";
+      code += "arma::mat " + name + signature + "\n{\n  std::vector<std::string> variables(1, variable);\n  std::vector<arma::mat> gradients;\n  " +
+              name + "_many(variables, gradients, parameters" + (prior ? "" : ", data") + ");\n  return gradients[0];\n}\n\n";
+      if (prior)
+        code += "arma::mat " + name + "_plate(const std::string &variable, const Parameters &parameters, const Data &data)\n{\n"
+                "  return " + name + "(variable, parameters);\n}\n\n"
+                "void " + name + "_many_plate(const std::vector<std::string> &variables, std::vector<arma::mat> &gradients, "
+                "const Parameters &parameters, const Data &data)\n{\n  " + name + "_many(variables, gradients, parameters);\n}\n\n";
+      this->deferred_function_code += code;
+      return name;
+    }
+    catch (std::exception &e)
+    {
+      return "";
+    }
   }
 
   // --- plates (I4b): what each term reads, and one term at a time ---------------
@@ -1676,6 +2199,8 @@ private:
   // the reads of a statement: its target (a parameter) and its distribution's arguments
   std::string statement_reads_code(const ModelStatement &st, const CodeContext &context)
   {
+    if (st.op == "+=")
+      return this->reads_code(st.value, context, false);
     std::string code;
     bool mvnorm = st.value["function"].as_string() == "mvnorm";
     if (!st.observed)
@@ -1720,6 +2245,7 @@ private:
                             "  Parameters parameters; // (no index read here depends on the parameters)\n";
     std::string term = "double ilike_model_term_" + suffix +
                        "(const Parameters &parameters, const Data &data, const arma::mat &terms, size_t term)\n{\n"
+                       "  try\n  {\n"
                        "  switch ((int)terms(term, 0))\n  {\n";
     for (size_t s = 0; s < statements.size(); ++s)
     {
@@ -1739,11 +2265,11 @@ private:
       term += "    case " + std::to_string(s) + ":\n    {\n";
       for (size_t k = 0; k < st.loops.size(); ++k)
         term += "      int " + st.loops[k].index + " = (int)terms(term, " + std::to_string(k + 1) + ");\n";
-      term += "      return " + this->density_code(st, this->target_code(st, context, false), context) + ";\n    }\n";
+      term += "      return " + this->term_code(st, context) + ";\n    }\n";
     }
     structure += "  Data result;\n  result[\"terms\"] = ilike_model_table(terms, " + std::to_string(width) + ");\n"
                  "  result[\"reads\"] = ilike_model_table(reads, 4);\n  return result;\n}\n\n";
-    term += "  }\n  return 0.0;\n}\n\n";
+    term += "  }\n  }\n" + std::string("  catch (const ilike_model_outside &)\n  {\n    return -std::numeric_limits<double>::infinity(); // (an index that reads parameters is outside its variable)\n  }\n") + "  return 0.0;\n}\n\n";
     this->deferred_function_code += structure + term;
   }
 
@@ -1773,20 +2299,504 @@ private:
     return plate;
   }
 
+  // --- MFDS (dev/plan.md 3.16): a joint simulator of the likelihood, the
+  // Gaussian prior's moments, and the exp of log-normal variables -------------
+
+  // the data variables an expression reads, through the deterministic nodes it uses
+  void data_read_by(const RecipeValue &node, std::set<std::string> &found, std::set<std::string> &nodes_seen) const
+  {
+    if (!node.is_list())
+      return;
+    if (kind_of(node) == "name" && node["namespace"].as_string().empty())
+    {
+      std::string name = node["name"].as_string();
+      if (this->data_names.count(name))
+        found.insert(name);
+      if (this->is_deterministic(name) && !nodes_seen.count(name))
+      {
+        nodes_seen.insert(name);
+        this->data_read_by(this->deterministic_statement(name).value, found, nodes_seen);
+      }
+    }
+    for (size_t k = 0; k < node.size(); ++k)
+      this->data_read_by(node[k], found, nodes_seen);
+  }
+
+  // a matrix of a Gaussian data model as C++: numbers, or a C++ function
+  // (with or without the parameters); "" if it cannot be (another language)
+  std::string mfds_matrix_code(const RecipeValue &expression)
+  {
+    arma::mat value;
+    if (!this->is_function_value(expression) && this->numeric(expression, value))
+    {
+      std::string list;
+      for (arma::uword k = 0; k < value.n_elem; ++k)
+        list += (k ? ", " : "") + number_text(value(k));
+      return "arma::mat(std::vector<double>{" + list + "}.data(), " + std::to_string(value.n_rows) + ", " +
+             std::to_string(value.n_cols) + ")";
+    }
+    if (!this->is_function_reference(expression) || expression["namespace"].as_string() != "cpp")
+      return "";
+    std::string name = this->cpp_function(expression, "a matrix");
+    return name + (this->functions_take_parameters({expression}) ? "(parameters)" : "()");
+  }
+
+  // the names of a data argument (y, or [y1, y2])
+  static std::vector<std::string> mfds_names(const RecipeValue &expression)
+  {
+    std::vector<std::string> names;
+    if (kind_of(expression) == "name")
+      names.push_back(expression["name"].as_string());
+    else if (kind_of(expression) == "vector")
+      for (size_t k = 0; k < expression["elements"].size(); ++k)
+        if (kind_of(expression["elements"][k]) == "name")
+          names.push_back(expression["elements"][k]["name"].as_string());
+    return names;
+  }
+
+  static std::string joined(const std::vector<std::string> &items, const std::string &separator)
+  {
+    std::string out;
+    for (size_t k = 0; k < items.size(); ++k)
+      out += (k ? separator : "") + items[k];
+    return out;
+  }
+
+  void finish_mfds()
+  {
+    std::vector<std::string> reasons = this->mfds_reasons;
+    std::vector<std::string> observed;
+    std::vector<std::string> potentials;
+    for (const ModelStatement &st : this->model_statements)
+    {
+      if (st.op == "~" && st.observed && std::find(observed.begin(), observed.end(), st.variable) == observed.end())
+        observed.push_back(st.variable);
+      if (st.op == "+=" && std::find(potentials.begin(), potentials.end(), st.variable) == potentials.end())
+      {
+        potentials.push_back(st.variable);
+        reasons.push_back("the factor " + st.variable + " is made of += terms, which cannot be simulated");
+      }
+    }
+
+    // the likelihood's simulator: generated, unless the likelihood is one
+    // sbi factor, which MFDS uses directly (in any language, with summaries)
+    size_t likelihoods = observed.size() + this->mfds_parts.size();
+    bool one_sbi = this->mfds_parts.size() == 1 && this->mfds_parts[0].kind == "sbi" && observed.empty();
+    if (reasons.empty() && likelihoods > 0 && !one_sbi && this->mfds_sbi_needs_direct)
+      reasons.push_back("with several likelihood factors, each simulator must be a C++ function without summaries");
+    std::vector<std::string> data_variables;
+    std::string body;
+    if (reasons.empty() && likelihoods > 0 && !one_sbi)
+    {
+      for (const std::string &y : observed)
+      {
+        std::set<std::string> read, nodes_seen;
+        for (const ModelStatement &st : this->model_statements)
+          if (st.op == "~" && st.variable == y)
+          {
+            this->data_read_by(st.value, read, nodes_seen);
+            for (size_t i = 0; i < st.indices.size(); ++i) this->data_read_by(st.indices[i], read, nodes_seen);
+            for (const ModelLoop &loop : st.loops) { this->data_read_by(loop.from, read, nodes_seen); this->data_read_by(loop.to, read, nodes_seen); }
+          }
+        for (const std::string &name : read)
+          if (!this->is_literal_data(name))
+            reasons.push_back("the statements of " + y + " use the data " + name +
+                              ", which is given by a function (MFDS's simulator receives no data)");
+      }
+      for (const MfdsPart &part : this->mfds_parts)
+      {
+        Arguments arguments = this->split_arguments(part.call);
+        if (part.kind == "sbi")
+          continue;
+        std::vector<std::string> order = (part.kind == "linear") ? std::vector<std::string>{"data", "state", "matrix", "covariance"}
+                                                                 : std::vector<std::string>{"data", "function", "covariance"};
+        for (size_t k = 0; k < arguments.positional.size() && k < order.size(); ++k)
+          arguments.named[order[k]] = arguments.positional[k];
+        if (mfds_names(arguments.named["data"]).size() != 1)
+          reasons.push_back("the factor " + part.name + " has several data variables");
+        if (this->mfds_matrix_code(arguments.named["covariance"]).empty() ||
+            (part.kind == "linear" && this->mfds_matrix_code(arguments.named["matrix"]).empty()) ||
+            (part.kind == "nonlinear" && (!this->is_function_reference(arguments.named["function"]) ||
+                                         arguments.named["function"]["namespace"].as_string() != "cpp")))
+          reasons.push_back("the factor " + part.name + " uses a function in another language");
+      }
+    }
+    bool generated = false;
+    if (reasons.empty() && likelihoods > 0 && !one_sbi)
+    {
+     // (a model MFDS cannot simulate must still compile: an error here is
+     // MFDS's reason, not the file's)
+     try
+     {
+      for (const std::string &y : observed)
+      {
+        std::string rows, cols;
+        this->variable_extent(y, rows, cols);
+        body += "output[" + quoted(y) + "] = arma::mat(" + rows + ", " + cols + ", arma::fill::zeros);\n";
+        for (const ModelStatement &st : this->model_statements)
+        {
+          if (st.op != "~" || st.variable != y)
+            continue;
+          CodeContext context;
+          context.prior = true;
+          context.data = "output";
+          for (const ModelLoop &loop : st.loops) context.indices.insert(loop.index);
+          std::string assign = (st.value["function"].as_string() == "mvnorm")
+                               ? "output[" + quoted(y) + "] = " + this->random_code(st, context) + ";\n"
+                               : this->target_code(st, context, true) + " = " + this->random_code(st, context) + ";\n";
+          CodeContext fresh;
+          fresh.prior = true;
+          body += this->loops_code(st, fresh, assign, "");
+        }
+        data_variables.push_back(y);
+      }
+      for (const MfdsPart &part : this->mfds_parts)
+      {
+        Arguments arguments = this->split_arguments(part.call);
+        if (part.kind == "sbi")
+        {
+          std::string f = this->cpp_function(arguments.named["simulate"], "the simulator");
+          body += "{\n  Data simulated = " + f + "(rng, parameters);\n";
+          for (const std::string &v : mfds_names(arguments.named["data"]))
+          {
+            body += "  output[" + quoted(v) + "] = simulated[" + quoted(v) + "];\n";
+            data_variables.push_back(v);
+          }
+          body += "}\n";
+          continue;
+        }
+        std::vector<std::string> order = (part.kind == "linear") ? std::vector<std::string>{"data", "state", "matrix", "covariance"}
+                                                                 : std::vector<std::string>{"data", "function", "covariance"};
+        for (size_t k = 0; k < arguments.positional.size() && k < order.size(); ++k)
+          arguments.named[order[k]] = arguments.positional[k];
+        const std::string y = mfds_names(arguments.named["data"])[0]; // (const: the file's quoted, not std::quoted)
+        body += "{\n";
+        if (part.kind == "linear")
+        {
+          std::vector<std::string> state;
+          for (const std::string &x : mfds_names(arguments.named["state"]))
+            state.push_back("arma::vectorise(parameters[" + quoted(x) + "])");
+          std::string stacked = state.empty() ? "arma::colvec()" : state[0];
+          for (size_t k = 1; k < state.size(); ++k)
+            stacked = "arma::join_cols(" + stacked + ", " + state[k] + ")";
+          body += "  arma::colvec mean = arma::vectorise(" + this->mfds_matrix_code(arguments.named["matrix"]) + " * " + stacked + ");\n";
+        }
+        else
+          body += "  arma::colvec mean = arma::vectorise(" + this->cpp_function(arguments.named["function"], "the function") +
+                  "(parameters)[" + quoted(y) + "]);\n";
+        body += "  arma::mat covariance = " + this->mfds_matrix_code(arguments.named["covariance"]) + ";\n"
+                "  output[" + quoted(y) + "] = arma::mat(mean + rmvnorm(rng, arma::zeros<arma::colvec>(mean.n_elem), covariance));\n}\n";
+        data_variables.push_back(y);
+      }
+      std::string indented, line;
+      std::stringstream lines(body);
+      while (std::getline(lines, line)) indented += "  " + line + "\n";
+      this->mfds_code += "// MFDS: the likelihood's simulator (dev/plan.md 3.16)\n"
+                         "Data ilike_mfds_simulate(RandomNumberGenerator &rng, const Parameters &parameters)\n{\n"
+                         "  Data output;\n" + indented + "  return output;\n}\n\n";
+      this->mfds_entry.push_back(this->placeholder("ilike_mfds_simulate", "mfds_simulate"), "simulate");
+      this->mfds_entry.push_back(this->placeholder(this->generate_string_function(joined(data_variables, ";")), "data_variable"),
+                                 "data_variable");
+      generated = true;
+     }
+     catch (std::exception &e)
+     {
+       reasons.push_back(std::string("its simulator could not be generated (") + e.what() + ")");
+     }
+    }
+    if (generated)
+      ;
+    else if (!reasons.empty())
+      this->mfds_entry.push_back(RecipeValue(joined(reasons, "; ")), "simulate_reason");
+    else if (likelihoods == 0)
+      this->mfds_entry.push_back(RecipeValue(std::string("the model has no likelihood")), "simulate_reason");
+
+    // the Gaussian prior's moments, from prior statements
+    std::vector<std::string> log_variables = this->mfds_log_variables;
+    std::vector<size_t> prior;
+    for (size_t k = 0; k < this->model_statements.size(); ++k)
+      if (this->model_statements[k].op == "~" && !this->model_statements[k].observed)
+        prior.push_back(k);
+    std::vector<std::string> prior_reasons = this->mfds_prior_reasons;
+    std::vector<std::string> variables;
+    std::map<std::string, std::string> family;
+    for (size_t k : prior)
+    {
+      const ModelStatement &st = this->model_statements[k];
+      std::string f = st.value["function"].as_string();
+      if (f != "norm" && f != "mvnorm" && f != "lnorm")
+      {
+        prior_reasons.push_back("the prior of " + st.variable + " is " + f + ", not norm, mvnorm or lnorm");
+        continue;
+      }
+      std::set<std::string> found;
+      this->read_parameters(st.value, found);
+      for (size_t i = 0; i < st.indices.size(); ++i) this->read_parameters(st.indices[i], found);
+      for (const ModelLoop &loop : st.loops) { this->read_parameters(loop.from, found); this->read_parameters(loop.to, found); }
+      for (const ModelLoop &loop : st.loops) found.erase(loop.index);
+      found.erase(st.variable);
+      if (!found.empty())
+      {
+        prior_reasons.push_back("the prior of " + st.variable + " depends on " + *found.begin() +
+                                " (a prior with parameters in its arguments is not Gaussian)");
+        continue;
+      }
+      std::string kind = (f == "lnorm") ? "lnorm" : "norm";
+      if (family.count(st.variable) && family[st.variable] != kind)
+        prior_reasons.push_back("the elements of " + st.variable + " mix log-normal and normal priors");
+      if (!family.count(st.variable))
+        variables.push_back(st.variable);
+      family[st.variable] = kind;
+    }
+    bool prior_generated = false;
+    if (!prior.empty() && prior_reasons.empty())
+    {
+     try
+     {
+      std::string code = "// MFDS: the Gaussian prior's means and covariances (dev/plan.md 3.16)\n"
+                         "Data ilike_mfds_prior()\n{\n  Data output;\n"
+                         "  Parameters parameters; // (for deterministic nodes: the prior's arguments read no parameters)\n";
+      for (size_t v = 0; v < variables.size(); ++v)
+      {
+        const std::string &name = variables[v];
+        bool whole = false;
+        for (size_t k : prior)
+        {
+          const ModelStatement &st = this->model_statements[k];
+          if (st.variable == name && st.value["function"].as_string() == "mvnorm")
+          {
+            CodeContext context;
+            context.prior = true;
+            const RecipeValue &arguments = st.value["arguments"];
+            code += "  output[" + quoted(name) + "] = arma::mat(arma::vectorise(" + this->matrix_code(arguments[0], context) + "));\n"
+                    "  output[" + quoted(name + ":cov") + "] = " + this->matrix_code(arguments[1], context) + ";\n";
+            whole = true;
+          }
+        }
+        if (!whole)
+        {
+          std::string rows, cols, mean = "mean_" + std::to_string(v), variance = "variance_" + std::to_string(v);
+          this->variable_extent(name, rows, cols);
+          code += "  arma::mat " + mean + "(" + rows + ", " + cols + ", arma::fill::zeros), " + variance + "(" + rows + ", " + cols +
+                  ", arma::fill::zeros);\n";
+          for (size_t k : prior)
+          {
+            const ModelStatement &st = this->model_statements[k];
+            if (st.variable != name)
+              continue;
+            CodeContext context;
+            context.prior = true;
+            for (const ModelLoop &loop : st.loops) context.indices.insert(loop.index);
+            std::string element = "(0)";
+            if (st.indices.size() == 1)
+              element = "(" + this->index_code(st.indices[0], context) + ")";
+            else if (st.indices.size() == 2)
+              element = "(" + this->index_code(st.indices[0], context) + ", " + this->index_code(st.indices[1], context) + ")";
+            const RecipeValue &arguments = st.value["arguments"];
+            std::string assign = mean + element + " = " + this->scalar_code(arguments[0], context) + ";\n" +
+                                 variance + element + " = std::pow(" + this->scalar_code(arguments[1], context) + ", 2);\n";
+            CodeContext fresh;
+            fresh.prior = true;
+            code += this->loops_code(st, fresh, assign, "  ");
+          }
+          code += "  if (arma::any(arma::vectorise(" + variance + ") <= 0.0))\n"
+                  "    Rcpp::stop(" + quoted("MFDS: every element of " + name + " needs a prior with a positive standard deviation.") + ");\n"
+                  "  output[" + quoted(name) + "] = " + mean + ";\n"
+                  "  output[" + quoted(name + ":cov") + "] = arma::mat(arma::diagmat(arma::vectorise(" + variance + ")));\n";
+        }
+        if (family[name] == "lnorm")
+        {
+          code += "  output[" + quoted(name + ":log") + "] = arma::mat(1, 1, arma::fill::ones);\n";
+          log_variables.push_back(name);
+        }
+      }
+      code += "  return output;\n}\n\n";
+      this->mfds_code += code;
+      this->mfds_entry.push_back(this->placeholder("ilike_mfds_prior", "mfds_prior"), "prior");
+      prior_generated = true;
+     }
+     catch (std::exception &e)
+     {
+       prior_reasons.push_back(std::string("its Gaussian moments could not be generated (") + e.what() + ")");
+       log_variables = this->mfds_log_variables;
+     }
+    }
+    if (prior_generated)
+      ;
+    else if (!prior_reasons.empty())
+      this->mfds_entry.push_back(RecipeValue(joined(prior_reasons, "; ")), "prior_reason");
+
+    // the map from the Gaussian scale to the model's, for log-normal variables
+    if (!log_variables.empty())
+    {
+      std::string code = "// MFDS: from the Gaussian scale to the model's (dev/plan.md 3.16)\n"
+                         "Parameters ilike_mfds_log_transform(const Parameters &u)\n{\n"
+                         "  Parameters theta = u.deep_copy(); // (a plain copy shares u's matrices, which must not change)\n";
+      for (const std::string &name : log_variables)
+        code += "  theta[" + quoted(name) + "] = arma::exp(u[" + quoted(name) + "]);\n";
+      code += "  return theta;\n}\n\n";
+      this->mfds_code += code;
+      this->mfds_entry.push_back(this->placeholder("ilike_mfds_log_transform", "mfds_transform"), "log_transform");
+    }
+  }
+
+  // the size of a variable with "~" statements (a parameter, or data when
+  // simulating it): the largest index of its statements, as C++ expressions
+  void variable_extent(const std::string &variable, std::string &rows, std::string &cols)
+  {
+    rows = "1";
+    cols = "1";
+    for (const ModelStatement &other : this->model_statements)
+    {
+      if (other.op != "~" || other.variable != variable)
+        continue;
+      CodeContext size_context;
+      size_context.prior = true;
+      for (size_t i = 0; i < other.indices.size() && i < 2; ++i)
+      {
+        std::string extent;
+        const RecipeValue &index = other.indices[i];
+        if (kind_of(index) == "name")
+        {
+          std::string name = index["name"].as_string();
+          for (const ModelLoop &loop : other.loops)
+            if (loop.index == name)
+              extent = "(int)" + this->scalar_code(loop.to, size_context);
+        }
+        if (extent.empty())
+        {
+          arma::mat number;
+          if (!this->numeric(index, number))
+            this->error(other.node, "an index of " + variable + " in its statements is a loop index or a number (e.g. x[1], x[t]).");
+          extent = std::to_string((int)number(0));
+        }
+        std::string &dimension = (i == 0) ? rows : cols;
+        dimension = "std::max(" + dimension + ", " + extent + ")";
+      }
+    }
+  }
+
   void finish_model_statements()
   {
     if (this->model_statements.empty())
       return;
-    std::string code = R"(// model statements (generated by the ilike language, I4a)
+    std::string code = R"ILIKE(// model statements (generated by the ilike language, I4a)
 inline double ilike_model_dbeta(double x, double a, double b)
 {
   if (x <= 0.0 || x >= 1.0) return -std::numeric_limits<double>::infinity();
   return std::lgamma(a + b) - std::lgamma(a) - std::lgamma(b) + (a - 1.0)*std::log(x) + (b - 1.0)*std::log(1.0 - x);
 }
+// an element read by a model statement, checked: outside the variable, an
+// index that reads parameters (a proposed value outside its range) makes the
+// log density -Inf (ilike_model_outside, caught by the log density's
+// function), and any other index is an error in the model
+struct ilike_model_outside : public std::runtime_error
+{
+  ilike_model_outside(const std::string &what) : std::runtime_error(what) {}
+};
+inline void ilike_model_outside_index(const arma::mat &m, int i, int j, bool stochastic, const char *what)
+{
+  std::string message = std::string(what) + ": the index (" + std::to_string(i + 1) +
+                        (j >= 0 ? ", " + std::to_string(j + 1) : std::string("")) + ") is outside the variable, which has " +
+                        std::to_string(m.n_rows) + " row(s) and " + std::to_string(m.n_cols) + " column(s)";
+  if (stochastic)
+    throw ilike_model_outside(message + " (the index reads parameters, so this point has density 0).");
+  Rcpp::stop(message + ".");
+}
+inline double ilike_model_at(const arma::mat &m, int i, bool stochastic, const char *what)
+{
+  if ((i < 0) || ((arma::uword)i >= m.n_elem))
+    ilike_model_outside_index(m, i, -1, stochastic, what);
+  return m(i);
+}
+inline double ilike_model_at(const arma::mat &m, int i, int j, bool stochastic, const char *what)
+{
+  if ((i < 0) || (j < 0) || ((arma::uword)i >= m.n_rows) || ((arma::uword)j >= m.n_cols))
+    ilike_model_outside_index(m, i, j, stochastic, what);
+  return m(i, j);
+}
+// gradients (I4e): an adjoint added to element i (or (i, j)) of the gradient
+// of the variable asked for, with the same check as ilike_model_at
+inline void ilike_model_add(arma::mat &g, int i, double a, bool stochastic, const char *what)
+{
+  if ((i < 0) || ((arma::uword)i >= g.n_elem))
+    ilike_model_outside_index(g, i, -1, stochastic, what);
+  g(i) += a;
+}
+inline void ilike_model_add(arma::mat &g, int i, int j, double a, bool stochastic, const char *what)
+{
+  if ((i < 0) || (j < 0) || ((arma::uword)i >= g.n_rows) || ((arma::uword)j >= g.n_cols))
+    ilike_model_outside_index(g, i, j, stochastic, what);
+  g(i, j) += a;
+}
+// the variables whose gradients are asked for, and their gradients (C204):
+// find(name) is the gradient of name, or NULL if it is not asked for
+struct ilike_model_gradients
+{
+  const std::vector<std::string> &names;
+  std::vector<arma::mat> &values;
+  std::unordered_map<std::string, size_t> index; // (only for many variables)
+  ilike_model_gradients(const std::vector<std::string> &names_in, std::vector<arma::mat> &values_in,
+                        const Parameters &parameters)
+  : names(names_in), values(values_in)
+  {
+    this->values.resize(this->names.size());
+    for (size_t k = 0; k < this->names.size(); ++k)
+      this->values[k].zeros(arma::size(parameters[this->names[k]]));
+    if (this->names.size() > 8)
+      for (size_t k = 0; k < this->names.size(); ++k)
+        this->index[this->names[k]] = k;
+  }
+  arma::mat* find(const char *name)
+  {
+    if (this->index.empty())
+    {
+      for (size_t k = 0; k < this->names.size(); ++k)
+        if (this->names[k] == name)
+          return &this->values[k];
+      return NULL;
+    }
+    auto found = this->index.find(name);
+    return (found == this->index.end()) ? NULL : &this->values[found->second];
+  }
+};
+// a phi(a) and phi(a) for the truncated normal, 0 at infinite limits
+inline double ilike_model_phi(double a)
+{
+  return std::isfinite(a) ? R::dnorm(a, 0.0, 1.0, 0) : 0.0;
+}
+inline double ilike_model_a_phi(double a)
+{
+  return std::isfinite(a) ? a*R::dnorm(a, 0.0, 1.0, 0) : 0.0;
+}
+// the partial derivatives of log dtnorm(x, m, s, l, u) with respect to x, m, s, l, u
+inline arma::colvec ilike_model_dtnorm_partials(double x, double m, double s, double l, double u)
+{
+  double alpha = (l - m)/s, beta = (u - m)/s;
+  double Z = R::pnorm(beta, 0.0, 1.0, 1, 0) - R::pnorm(alpha, 0.0, 1.0, 1, 0);
+  arma::colvec d(5);
+  d[0] = -(x - m)/(s*s);
+  d[1] = (x - m)/(s*s) + (ilike_model_phi(beta) - ilike_model_phi(alpha))/(s*Z);
+  d[2] = -1.0/s + (x - m)*(x - m)/(s*s*s) + (ilike_model_a_phi(beta) - ilike_model_a_phi(alpha))/(s*Z);
+  d[3] = ilike_model_phi(alpha)/(s*Z);
+  d[4] = -ilike_model_phi(beta)/(s*Z);
+  return d;
+}
 inline double ilike_model_rbeta(RandomNumberGenerator &rng, double a, double b)
 {
   double x = rgamma(rng, a, 1.0), y = rgamma(rng, b, 1.0);
   return x/(x + y);
+}
+inline double ilike_model_rbern(RandomNumberGenerator &rng, double p)
+{
+  return (runif(rng) < p) ? 1.0 : 0.0;
+}
+inline double ilike_model_rbinom(RandomNumberGenerator &rng, double n, double p)
+{
+  double count = 0.0;
+  for (int k = 0; k < (int)n; ++k)
+    if (runif(rng) < p) count = count + 1.0;
+  return count;
 }
 inline double ilike_model_dbern(double x, double p)
 {
@@ -1812,7 +2822,7 @@ inline double ilike_model_dbinom(double x, double n, double p)
   return std::lgamma(n + 1.0) - std::lgamma(x + 1.0) - std::lgamma(n - x + 1.0) + x*std::log(p) + (n - x)*std::log(1.0 - p);
 }
 
-)";
+)ILIKE";
     // deterministic nodes: one function each (data may be absent, in the prior)
     std::set<std::string> deterministic_done;
     std::string node_code;
@@ -1846,16 +2856,42 @@ inline double ilike_model_dbinom(double x, double n, double p)
       node_code += reads_signature + ");\n";
       this->deferred_node_code += reads_signature + ")\n{\n  Parameters parameters; // (no index read here depends on the parameters)\n" +
                                   this->reads_code(st.value, context, false) + "}\n\n";
+      // its gradient (I4e): the adjoint passed on to what the node reads
+      std::string gradient_signature = "inline void ilike_model_node_gradient_" + st.variable +
+                                       "(ilike_model_gradients &ilike_G, double ilike_adjoint, "
+                                       "const Parameters &parameters, const Data *data";
+      for (size_t k = 0; k < st.indices.size(); ++k)
+        gradient_signature += ", int " + st.indices[k]["name"].as_string();
+      gradient_signature += ")";
+      node_code += gradient_signature + ";\n";
+      std::string gradient_body;
+      try
+      {
+        gradient_body = this->gradient_code(st.value, "ilike_adjoint", context);
+      }
+      catch (std::exception &e)
+      {
+        gradient_body = "Rcpp::stop(" + quoted("The gradient through the deterministic node " + st.variable + " is not available.") + ");\n";
+      }
+      this->deferred_node_code += gradient_signature + "\n{\n" + indented_code(gradient_body) + "}\n\n";
     }
     code += node_code + "\n";
 
-    // the likelihood factors: one per observed variable
-    struct PendingPlate { size_t position; std::string suffix; std::string name; };
+    // a factor's name is not a parameter
+    for (const ModelStatement &st : this->model_statements)
+      if (st.op == "+=")
+        for (const ModelStatement &other : this->model_statements)
+          if (other.op != "+=" && other.variable == st.variable)
+            this->error(st.node, st.variable + " is a variable in the model statements, so it cannot name a factor of terms.");
+
+    // the likelihood factors: one per observed variable, and one per name of
+    // "factor name += expression" terms
+    struct PendingPlate { size_t position; std::string suffix; std::string name; std::string gradient; };
     std::vector<PendingPlate> plates;
     std::vector<std::string> observed_done;
     for (const ModelStatement &first : this->model_statements)
     {
-      if (first.op != "~" || !first.observed ||
+      if (!this->likelihood_term(first) ||
           std::find(observed_done.begin(), observed_done.end(), first.variable) != observed_done.end())
         continue;
       observed_done.push_back(first.variable);
@@ -1863,12 +2899,12 @@ inline double ilike_model_dbinom(double x, double n, double p)
       std::string body = "double log_density = 0.0;\n";
       for (const ModelStatement &st : this->model_statements)
       {
-        if (st.op != "~" || st.variable != first.variable)
+        if (!this->likelihood_term(st) || st.variable != first.variable)
           continue;
         // (the loop indices in scope for the target and the arguments)
         CodeContext inner_context;
         for (const ModelLoop &loop : st.loops) inner_context.indices.insert(loop.index);
-        std::string statement_body = "log_density += " + this->density_code(st, this->target_code(st, inner_context, false), inner_context) + ";\n";
+        std::string statement_body = "log_density += " + this->term_code(st, inner_context) + ";\n";
         CodeContext fresh;
         body += this->loops_code(st, fresh, statement_body, "");
       }
@@ -1877,21 +2913,26 @@ inline double ilike_model_dbinom(double x, double n, double p)
       std::stringstream lines(body);
       std::string line;
       while (std::getline(lines, line)) indented += "  " + line + "\n";
-      this->deferred_function_code += "double " + function + "(const Parameters &parameters, const Data &data)\n{\n" + indented + "}\n\n";
+      this->deferred_function_code += "double " + function + "(const Parameters &parameters, const Data &data)\n{\n  try\n  {\n" +
+                                      indented + "  }\n" + std::string("  catch (const ilike_model_outside &)\n  {\n    return -std::numeric_limits<double>::infinity(); // (an index that reads parameters is outside its variable)\n  }\n") + "}\n\n";
       RecipeValue factor = RecipeValue::list();
       factor.push_back(this->placeholder(function, "evaluate_log_likelihood"), "evaluate_log_likelihood");
-      this->factor_entries[this->model_factor_position.at(first.variable)] = factor;
 
       // its plate (I4b): the same terms, in the same order
       std::vector<const ModelStatement*> statements;
       for (const ModelStatement &st : this->model_statements)
-        if (st.op == "~" && st.variable == first.variable)
+        if (this->likelihood_term(st) && st.variable == first.variable)
           statements.push_back(&st);
+      // and its gradient (I4e)
+      std::string gradient = this->generate_gradient("likelihood_" + first.variable, statements, false);
+      if (!gradient.empty())
+        factor.push_back(this->placeholder(gradient, "evaluate_gradient_log_likelihood"), "evaluate_gradient_log_likelihood");
+      this->factor_entries[this->model_factor_position.at(first.variable)] = factor;
       this->generated_factor_reads[this->factor_numbers.at(first.variable)] = this->statements_read(statements);
       if (this->plate_possible(statements))
       {
         this->generate_plate("likelihood_" + first.variable, statements, false);
-        plates.push_back({this->model_factor_position.at(first.variable), "likelihood_" + first.variable, first.variable});
+        plates.push_back({this->model_factor_position.at(first.variable), "likelihood_" + first.variable, first.variable, gradient});
       }
     }
 
@@ -1970,35 +3011,8 @@ inline double ilike_model_dbinom(double x, double n, double p)
           // the variable's size: the largest index of its statements
           if (st.value["function"].as_string() != "mvnorm")
           {
-            std::string rows = "1", cols = "1";
-            for (const ModelStatement &other : this->model_statements)
-            {
-              if (other.op != "~" || other.variable != st.variable)
-                continue;
-              CodeContext size_context;
-              size_context.prior = true;
-              for (size_t i = 0; i < other.indices.size() && i < 2; ++i)
-              {
-                std::string extent;
-                const RecipeValue &index = other.indices[i];
-                if (kind_of(index) == "name")
-                {
-                  std::string name = index["name"].as_string();
-                  for (const ModelLoop &loop : other.loops)
-                    if (loop.index == name)
-                      extent = "(int)" + this->scalar_code(loop.to, size_context);
-                }
-                if (extent.empty())
-                {
-                  arma::mat number;
-                  if (!this->numeric(index, number))
-                    this->error(other.node, "a parameter's index in its prior is a loop index or a number (e.g. x[1], x[t]).");
-                  extent = std::to_string((int)number(0));
-                }
-                std::string &dimension = (i == 0) ? rows : cols;
-                dimension = "std::max(" + dimension + ", " + extent + ")";
-              }
-            }
+            std::string rows, cols;
+            this->variable_extent(st.variable, rows, cols);
             simulate_body += "parameters[" + quoted(st.variable) + "] = arma::mat(" + rows + ", " + cols + ", arma::fill::zeros);\n";
           }
         }
@@ -2006,7 +3020,7 @@ inline double ilike_model_dbinom(double x, double n, double p)
         if (st.value["function"].as_string() == "mvnorm")
           assign = "parameters[" + quoted(st.variable) + "] = " + this->random_code(st, loop_context) + ";\n";
         else
-          assign = x + " = " + this->random_code(st, loop_context) + ";\n";
+          assign = this->target_code(st, loop_context, true) + " = " + this->random_code(st, loop_context) + ";\n";
         CodeContext fresh2;
         fresh2.prior = true;
         simulate_body += this->loops_code(st, fresh2, assign, "");
@@ -2019,21 +3033,27 @@ inline double ilike_model_dbinom(double x, double n, double p)
         while (std::getline(lines, line)) out += "  " + line + "\n";
         return out;
       };
-      this->deferred_function_code += "double ilike_model_log_prior(const Parameters &parameters)\n{\n" + indent(log_body) + "}\n\n";
+      this->deferred_function_code += "double ilike_model_log_prior(const Parameters &parameters)\n{\n  try\n  {\n" + indent(log_body) +
+                                      "  }\n" + std::string("  catch (const ilike_model_outside &)\n  {\n    return -std::numeric_limits<double>::infinity(); // (an index that reads parameters is outside its variable)\n  }\n") + "}\n\n";
       this->deferred_function_code += "Parameters ilike_model_simulate_prior(RandomNumberGenerator &rng)\n{\n" + indent(simulate_body) + "}\n\n";
       RecipeValue factor = RecipeValue::list();
       factor.push_back(this->placeholder("ilike_model_log_prior", "evaluate_log_prior"), "evaluate_log_prior");
       factor.push_back(this->placeholder("ilike_model_simulate_prior", "simulate_prior"), "simulate_prior");
-      this->factor_entries[this->model_factor_position.at("model_prior")] = factor;
 
       std::vector<const ModelStatement*> statements;
       for (size_t k : order)
         statements.push_back(&this->model_statements[k]);
+      // its gradient (I4e)
+      std::string gradient = this->generate_gradient("prior", statements, true);
+      if (!gradient.empty())
+        factor.push_back(this->placeholder(gradient, "evaluate_gradient_log_prior"), "evaluate_gradient_log_prior");
+      this->factor_entries[this->model_factor_position.at("model_prior")] = factor;
       this->generated_factor_reads[this->factor_numbers.at("model_prior")] = this->statements_read(statements);
       if (this->plate_possible(statements))
       {
         this->generate_plate("prior", statements, true);
-        plates.push_back({this->model_factor_position.at("model_prior"), "prior", "model_prior"});
+        plates.push_back({this->model_factor_position.at("model_prior"), "prior", "model_prior",
+                          gradient.empty() ? gradient : gradient + "_plate"});
       }
     }
 
@@ -2041,6 +3061,18 @@ inline double ilike_model_dbinom(double x, double n, double p)
     for (const PendingPlate &plate : plates)
     {
       RecipeValue entry = this->plate_entry(plate.suffix, plate.name);
+      if (!plate.gradient.empty())
+      {
+        entry.push_back(this->placeholder(plate.gradient, "evaluate_gradient_log_likelihood"), "gradient");
+        // the gradients of several variables in one pass (C204): f_many, or
+        // for the prior f_many_plate (f_plate's counterpart)
+        std::string many = plate.gradient;
+        if (many.size() > 6 && many.compare(many.size() - 6, 6, "_plate") == 0)
+          many = many.substr(0, many.size() - 6) + "_many_plate";
+        else
+          many = many + "_many";
+        entry.push_back(this->placeholder(many, "plate_gradients"), "gradients");
+      }
       RecipeValue variables = RecipeValue::list();
       for (const std::string &name : this->plate_variable_names)
         variables.push_back(RecipeValue(name));
@@ -2290,9 +3322,8 @@ inline double ilike_model_dbinom(double x, double n, double p)
     this->allow_only(call, arguments, {"method", "simulate", "data", "summaries"}, 1);
     RecipeValue method = arguments.positional.empty() ? (arguments.has("method") ? arguments.named["method"] : RecipeValue())
                                                       : arguments.positional[0];
-    if (method.is_null())
-      this->error(call, "sbi: the method is missing (e.g. sbi(sl(100), …)).");
-    if (!role_exists(this->builtin_name(method), BuiltinRole::SBILikelihood))
+    // (without a method the factor is a simulator alone, used by MFDS)
+    if (!method.is_null() && !role_exists(this->builtin_name(method), BuiltinRole::SBILikelihood))
       find_builtin(this->builtin_name(method), BuiltinRole::SBILikelihood); // (the registry's message)
     if (!arguments.has("simulate"))
       this->error(call, "sbi: the simulator is missing (simulate = cpp::f).");
@@ -2301,7 +3332,8 @@ inline double ilike_model_dbinom(double x, double n, double p)
     RecipeValue factor = RecipeValue::list();
     factor.push_back(this->function_placeholder(arguments.named["simulate"], "simulate_data_model", "simulate"),
                      "simulate_data_model");
-    factor.push_back(this->builtin_node(method, false), "sbi_likelihood");
+    if (!method.is_null())
+      factor.push_back(this->builtin_node(method, false), "sbi_likelihood");
     const RecipeValue &data_variable = arguments.named["data"];
     std::string variables;
     if (kind_of(data_variable) == "name")
@@ -2330,6 +3362,442 @@ inline double ilike_model_dbinom(double x, double n, double p)
     int code;            // in order_of_mcmc: mh 1, imh 2, m 3, unadjusted 4
     RecipeValue entry;
   };
+
+  // a copy of an expression with the loop indices replaced by their values
+  static RecipeValue substitute(const RecipeValue &expression, const std::map<std::string, double> &values)
+  {
+    if (!expression.is_list())
+      return expression;
+    if (kind_of(expression) == "name" && expression["namespace"].as_string().empty())
+    {
+      auto found = values.find(expression["name"].as_string());
+      if (found != values.end())
+      {
+        RecipeValue number = RecipeValue::list();
+        number.push_back(RecipeValue("number"), "expression");
+        number.push_back(RecipeValue(found->second), "value");
+        if (expression.contains("line")) number.push_back(expression["line"], "line");
+        if (expression.contains("column")) number.push_back(expression["column"], "column");
+        return number;
+      }
+    }
+    RecipeValue copy = RecipeValue::list();
+    std::vector<std::string> names = expression.names();
+    for (size_t k = 0; k < expression.size(); ++k)
+      copy.push_back(substitute(expression[k], values), (k < names.size()) ? names[k] : std::string());
+    return copy;
+  }
+
+  // for (j in a:b) move name = metropolis(norm_rw(theta[j], s)) (I4c): a scan
+  // over the elements, in the loops' order (the last loop fastest), as one
+  // move whose entry lists the elements (rows, columns, scales; 0-based)
+  // the constants named anywhere in an expression or statement
+  void constants_named(const RecipeValue &node, std::set<std::string> &found) const
+  {
+    if (!node.is_list())
+      return;
+    if (kind_of(node) == "name" && node["namespace"].as_string().empty() &&
+        this->constant_names.count(node["name"].as_string()))
+      found.insert(node["name"].as_string());
+    for (size_t k = 0; k < node.size(); ++k)
+      this->constants_named(node[k], found);
+  }
+
+  // --- Gibbs updates from normal full conditionals (C206) ---------------------
+
+  bool reads_name(const RecipeValue &expression, const std::string &x) const
+  {
+    std::set<std::string> found;
+    this->read_parameters(expression, found);
+    return found.count(x) > 0;
+  }
+
+  // whether an expression is affine in x (a + b x, with a and b not depending
+  // on x), looking through deterministic nodes; `why` says why not
+  bool affine_in(const RecipeValue &expression, const std::string &x, std::string &why) const
+  {
+    if (!this->reads_name(expression, x))
+      return true;
+    std::string kind = kind_of(expression);
+    if (kind == "name" || kind == "index")
+    {
+      std::string name = (kind == "name") ? expression["name"].as_string() : expression["target"]["name"].as_string();
+      if (kind == "index")
+        for (size_t k = 0; k < expression["indices"].size(); ++k)
+          if (this->reads_name(expression["indices"][k], x))
+          {
+            why = "an index depends on " + x;
+            return false;
+          }
+      if ((name != x) && this->is_deterministic(name))
+        return this->affine_in(this->deterministic_statement(name).value, x, why);
+      return true;
+    }
+    if (kind == "unary")
+      return this->affine_in(expression["operand"], x, why);
+    if (kind == "binary")
+    {
+      std::string op = expression["operator"].as_string();
+      const RecipeValue &left = expression["left"], &right = expression["right"];
+      if ((op == "+") || (op == "-"))
+        return this->affine_in(left, x, why) && this->affine_in(right, x, why);
+      if (op == "*")
+      {
+        if (!this->reads_name(left, x))
+          return this->affine_in(right, x, why);
+        if (!this->reads_name(right, x))
+          return this->affine_in(left, x, why);
+        why = "two factors of a product depend on " + x;
+        return false;
+      }
+      if (op == "/")
+      {
+        if (this->reads_name(right, x))
+        {
+          why = "it divides by an expression depending on " + x;
+          return false;
+        }
+        return this->affine_in(left, x, why);
+      }
+      why = x + " is in a power (^)";
+      return false;
+    }
+    if (kind == "call")
+    {
+      why = x + " is inside " + expression["function"].as_string() + "(…)";
+      return false;
+    }
+    why = "it is not a sum of multiples of " + x;
+    return false;
+  }
+
+  // Whether x's full conditional is normal by the model statements: x's own
+  // distribution is norm or mvnorm with arguments not depending on x, and
+  // every other term depending on x is a norm whose mean is affine in x and
+  // whose sd, target and loops do not depend on x. Then its log density is
+  // exactly quadratic in each element of x. The answer: "" when it is, or why
+  // not (with the statement at fault, if any).
+  std::pair<const ModelStatement*, std::string> normal_conditional_problem(const std::string &x) const
+  {
+    bool own = false;
+    for (const ModelStatement &st : this->model_statements)
+    {
+      if (st.op == "<-")
+        continue;
+      if (!this->statements_read(std::vector<const ModelStatement*>(1, &st)).count(x))
+        continue;
+      if (st.op == "+=")
+        return {&st, "the term of factor " + st.variable + " depends on " + x};
+      std::string f = st.value["function"].as_string();
+      const RecipeValue &arguments = st.value["arguments"];
+      for (const ModelLoop &loop : st.loops)
+        if (this->reads_name(loop.from, x) || this->reads_name(loop.to, x))
+          return {&st, "a loop's range depends on " + x};
+      for (size_t k = 0; k < st.indices.size(); ++k)
+        if (this->reads_name(st.indices[k], x))
+          return {&st, "an index depends on " + x};
+      if (!st.observed && (st.variable == x))
+      {
+        own = true;
+        if ((f != "norm") && (f != "mvnorm"))
+          return {&st, x + "'s distribution is " + f + " (a normal full conditional needs norm or mvnorm)"};
+        for (size_t k = 0; k < arguments.size(); ++k)
+          if (this->reads_name(arguments[k], x))
+            return {&st, "the arguments of " + x + "'s distribution depend on " + x};
+        continue;
+      }
+      if (f != "norm")
+        return {&st, "this term's distribution is " + f + " (a normal full conditional needs norm terms)"};
+      if (this->reads_name(arguments[1], x))
+        return {&st, x + " is in the standard deviation"};
+      std::string why;
+      if (!this->affine_in(arguments[0], x, why))
+        return {&st, x + " enters the mean nonlinearly: " + why};
+    }
+    if (!own)
+      return {NULL, x + " has no distribution in the model statements"};
+    return {NULL, ""};
+  }
+
+  Move element_move_loop(const RecipeValue &statement)
+  {
+    // (its constants take their values now, when compiling)
+    this->constants_named(statement, this->element_constants_used);
+    // the loops, down to the one move they hold
+    std::vector<ModelLoop> loops;
+    const RecipeValue *current = &statement;
+    while (current->contains("keyword") && (*current)["keyword"].as_string() == "for")
+    {
+      const RecipeValue &range = (*current)["range"];
+      if (kind_of(range) != "binary" || range["operator"].as_string() != ":")
+        this->error(*current, "a loop's range is from:to (e.g. for (j in 1:J)).");
+      ModelLoop loop;
+      loop.index = (*current)["index"].as_string();
+      loop.from = range["left"];
+      loop.to = range["right"];
+      loops.push_back(loop);
+      const RecipeValue &body = (*current)["body"];
+      if (body.size() != 1)
+        this->error(*current, "a loop in an algorithm holds one move (for (j in 1:J) move m = metropolis(norm_rw(theta[j], s))).");
+      current = &body[0];
+    }
+    const RecipeValue &move_statement = *current;
+    if (!(move_statement.contains("keyword") && move_statement["keyword"].as_string() == "move") ||
+        move_statement["operator"].as_string() != "=")
+      this->error(move_statement, "a loop in an algorithm holds one move (move name = metropolis(…)).");
+    std::string name = move_statement["target"]["name"].as_string();
+    const RecipeValue &call = move_statement["value"];
+    if (kind_of(call) != "call" || (call["function"].as_string() != "metropolis" && call["function"].as_string() != "gibbs"))
+      this->error(move_statement, "a move on elements is a metropolis move (norm_rw(theta[j], sd), unif_rw(theta[j], halfwidth) "
+                  "or flip(s[j])) or a gibbs move (gibbs(s[j])).");
+    bool gibbs = (call["function"].as_string() == "gibbs");
+    Arguments arguments = this->split_arguments(call);
+    if (arguments.positional.empty())
+      this->error(call, call["function"].as_string() + ": the element is missing.");
+    std::string type, scale_name;
+    RecipeValue element, scale, support;
+    if (gibbs)
+    {
+      if (arguments.has("adapt") || arguments.has("smc_adapt"))
+        this->error(call, "gibbs moves have no step to adapt.");
+      this->allow_only(call, arguments, {"values", "factors", "cut_factors"}, 1);
+      type = "gibbs";
+      element = arguments.positional[0];
+      if (arguments.has("values"))
+        support = arguments.named["values"];
+    }
+    else
+    {
+      const RecipeValue &proposal = arguments.positional[0];
+      type = (kind_of(proposal) == "call") ? this->builtin_name(proposal) : std::string();
+      if (type != "norm_rw" && type != "unif_rw" && type != "flip")
+        this->error(proposal, "a metropolis move on elements uses norm_rw(theta[j], sd), unif_rw(theta[j], halfwidth) or flip(s[j]).");
+      Arguments proposal_arguments = this->split_arguments(proposal);
+      scale_name = (type == "norm_rw") ? "sd" : "halfwidth";
+      element = !proposal_arguments.positional.empty() ? proposal_arguments.positional[0]
+              : (proposal_arguments.has("variable") ? proposal_arguments.named["variable"] : RecipeValue());
+      if (type == "flip")
+      {
+        if (proposal_arguments.positional.size() > 1 || !proposal_arguments.named.empty())
+          this->error(proposal, "flip(s[j]) takes only the element.");
+      }
+      else
+      {
+        scale = (proposal_arguments.positional.size() > 1) ? proposal_arguments.positional[1]
+              : (proposal_arguments.has(scale_name) ? proposal_arguments.named[scale_name] : RecipeValue());
+        if (scale.is_null())
+          this->error(proposal, type + ": the " + scale_name + " is missing.");
+      }
+    }
+    if (gibbs && (kind_of(element) != "name") && (kind_of(element) != "index"))
+      this->error(call, "gibbs takes a scalar parameter (move m = gibbs(mu)) or an element in a loop "
+                  "(for (j in 1:J) move m = gibbs(theta[j])); a proposal such as norm_rw(…) goes in metropolis(…).");
+    bool whole_scalar = gibbs && loops.empty() && (kind_of(element) == "name");
+    if (whole_scalar)
+    {
+      // gibbs(mu) on a whole variable: a scalar, as its element mu[1] (C206)
+      std::string name = element["name"].as_string();
+      for (const ModelStatement &st : this->model_statements)
+        if ((st.op == "~") && !st.observed && (st.variable == name) &&
+            ((st.indices.size() > 0) || st.value["function"].as_string() == "mvnorm"))
+          this->error(call, "gibbs(" + name + ") moves a scalar; for the elements of " + name +
+                      ", write for (j in 1:J) move m = gibbs(" + name + "[j]).");
+      RecipeValue one = RecipeValue::list();
+      one.push_back(RecipeValue("number"), "expression");
+      one.push_back(RecipeValue(1.0), "value");
+      RecipeValue indices = RecipeValue::list();
+      indices.push_back(one, "");
+      RecipeValue indexed = RecipeValue::list();
+      indexed.push_back(RecipeValue("index"), "expression");
+      indexed.push_back(element, "target");
+      indexed.push_back(indices, "indices");
+      element = indexed;
+    }
+    if (element.is_null() || kind_of(element) != "index" || kind_of(element["target"]) != "name")
+      this->error(call, type + ": the element is written theta[j] (or x[i, j]) with the loop's indices.");
+    std::string variable = element["target"]["name"].as_string();
+    const RecipeValue &indices = element["indices"];
+    if (indices.size() > 2)
+      this->error(element, "at most two indices.");
+    if (this->data_names.count(variable) || this->constant_names.count(variable))
+      this->error(element, variable + " is not a parameter.");
+
+    // every combination of the loops' values (each range evaluated with the
+    // outer loops' values, so a range may depend on an outer index)
+    std::vector<double> rows, columns, scales;
+    // (scalar constants by their values when compiling)
+    std::map<std::string, double> values;
+    for (const std::string &constant : this->constant_names)
+    {
+      double number;
+      if (this->constant_number(constant, number))
+        values[constant] = number;
+    }
+    std::function<void(size_t)> enumerate = [&](size_t depth) {
+      if (depth == loops.size())
+      {
+        arma::mat number;
+        double index[2] = {1.0, 1.0};
+        for (size_t k = 0; k < indices.size(); ++k)
+        {
+          if (!this->numeric(substitute(indices[k], values), number) || number.n_elem != 1)
+            this->error(indices[k], "an element's index must be a number given the loops' indices.");
+          index[k] = number(0);
+        }
+        if (index[0] < 1 || index[1] < 1 || index[0] != std::floor(index[0]) || index[1] != std::floor(index[1]))
+          this->error(element, "an element's indices are whole numbers from 1.");
+        double step = 0.0;
+        if (!scale.is_null())
+        {
+          if (!this->numeric(substitute(scale, values), number) || number.n_elem != 1)
+            this->error(scale, "the " + scale_name + " must be a number (it may use the loops' indices and constants).");
+          step = number(0);
+        }
+        rows.push_back(index[0] - 1);
+        columns.push_back(index[1] - 1);
+        scales.push_back(step);
+        return;
+      }
+      const ModelLoop &loop = loops[depth];
+      arma::mat from, to;
+      if (!this->numeric(substitute(loop.from, values), from) || !this->numeric(substitute(loop.to, values), to) ||
+          from.n_elem != 1 || to.n_elem != 1)
+        this->error(statement, "a loop's range in an algorithm must be numbers (constants allowed).");
+      for (double v = from(0); v <= to(0); v += 1.0)
+      {
+        values[loop.index] = v;
+        enumerate(depth + 1);
+      }
+      values.erase(loop.index);
+    };
+    enumerate(0);
+    if (rows.empty())
+      this->error(statement, "the loop has no elements.");
+
+    // gibbs: the element's states (values = [...], or from the variable's
+    // prior: bern, or binom with its n known when compiling)
+    std::vector<double> states;
+    if (gibbs)
+    {
+      arma::mat number;
+      std::map<std::string, double> constants;
+      for (const std::string &constant : this->constant_names)
+      {
+        double value;
+        if (this->constant_number(constant, value))
+          constants[constant] = value;
+      }
+      if (!support.is_null())
+      {
+        if (!this->numeric(substitute(support, constants), number) || number.n_elem == 0)
+          this->error(support, "gibbs: values = [...] lists the element's possible values (numbers).");
+        states.assign(number.begin(), number.end());
+      }
+      else
+      {
+        for (const ModelStatement &st : this->model_statements)
+          if (st.op == "~" && !st.observed && st.variable == variable)
+          {
+            std::string f = st.value["function"].as_string();
+            if (f == "bern")
+              states = {0.0, 1.0};
+            else if (f == "binom" && this->numeric(substitute(st.value["arguments"][0], constants), number) &&
+                     number.n_elem == 1)
+              for (double v = 0.0; v <= number(0); v += 1.0)
+                states.push_back(v);
+            break;
+          }
+        if (states.empty())
+        {
+          // not discrete: a normal full conditional, if the model statements
+          // make it one (C206)
+          std::pair<const ModelStatement*, std::string> problem = this->normal_conditional_problem(variable);
+          if (!problem.second.empty())
+          {
+            std::string message = "gibbs(" + variable + (whole_scalar ? "" : "[…]") + "): " + variable + " is not discrete (bern, binom, or values = [...]), "
+                                  "and its full conditional is not normal: " + problem.second +
+                                  ". Use a metropolis move instead.";
+            if (problem.first != NULL)
+              this->error(problem.first->node, message);
+            this->error(call, message);
+          }
+          // every factor reading it is known (what other factors read is not)
+          if (!arguments.has("factors"))
+          {
+            std::vector<size_t> numbers = this->automatic_factor_index(variable);
+            size_t total = this->factor_entries.size();
+            for (size_t n = 1; n <= total; ++n)
+              if ((numbers.empty() || std::find(numbers.begin(), numbers.end(), n) != numbers.end()) &&
+                  !this->generated_factor_reads.count(n))
+                this->error(call, "gibbs(" + variable + (whole_scalar ? "" : "[…]") + "): factor " + std::to_string(n) + " is not written as model "
+                            "statements, so whether its density is normal in " + variable + " is not known; if it does not "
+                            "depend on " + variable + ", list the factors the move uses with factors = [...].");
+          }
+          type = "gibbs_normal";
+        }
+      }
+    }
+
+    // the move's entry: as a metropolis move on the whole variable (which
+    // gives its factors, from what the factors read, or from factors = [...]),
+    // with the elements listed for the engine
+    auto number_node = [](double value) {
+      RecipeValue node = RecipeValue::list();
+      node.push_back(RecipeValue("number"), "expression");
+      node.push_back(RecipeValue(value), "value");
+      return node;
+    };
+    auto call_node = [&](const std::string &function, const RecipeValue &call_arguments) {
+      RecipeValue node = RecipeValue::list();
+      node.push_back(RecipeValue("call"), "expression");
+      node.push_back(RecipeValue(function), "function");
+      node.push_back(RecipeValue(""), "namespace");
+      node.push_back(call_arguments, "arguments");
+      if (call.contains("line")) node.push_back(call["line"], "line");
+      if (call.contains("column")) node.push_back(call["column"], "column");
+      return node;
+    };
+    RecipeValue walk_arguments = RecipeValue::list();
+    walk_arguments.push_back(element["target"], "");
+    walk_arguments.push_back(number_node(scale.is_null() ? 1.0 : scales[0]), "");
+    RecipeValue move_arguments = RecipeValue::list();
+    move_arguments.push_back(call_node("norm_rw", walk_arguments), "");
+    for (const auto &named : arguments.named)
+      if (named.first == "factors" || named.first == "cut_factors")
+        move_arguments.push_back(named.second, named.first);
+    RecipeValue whole_call = call_node("metropolis", move_arguments);
+    Move move = this->lower_move(move_statement, name, whole_call);
+    RecipeValue elements = RecipeValue::list();
+    elements.push_back(RecipeValue(variable), "variable");
+    elements.push_back(RecipeValue(type), "type");
+    elements.push_back(RecipeValue(rows), "rows");
+    elements.push_back(RecipeValue(columns), "columns");
+    elements.push_back(RecipeValue(scales), "scales");
+    if (gibbs && (type == "gibbs"))
+      elements.push_back(RecipeValue(states), "values");
+    // adaptation of each element's step (dev/plan.md, "adaptation of element moves")
+    if (arguments.has("adapt") || arguments.has("smc_adapt"))
+    {
+      if (type == "flip")
+        this->error(call, "flip moves have no step to adapt.");
+      if (arguments.has("adapt"))
+      {
+        const RecipeValue &adaptor = arguments.named["adapt"];
+        if (kind_of(adaptor) != "call" || this->builtin_name(adaptor) != "scale")
+          this->error(adaptor, "moves on elements adapt each element's step with adapt = scale(target, kappa, C, averaged).");
+        elements.push_back(this->builtin_node(adaptor, true, variable), "adapt");
+      }
+      if (arguments.has("smc_adapt"))
+      {
+        const RecipeValue &adaptor = arguments.named["smc_adapt"];
+        if (kind_of(adaptor) != "call" || this->builtin_name(adaptor) != "gaussian")
+          this->error(adaptor, "moves on elements are set from SMC particles with smc_adapt = gaussian(c).");
+        elements.push_back(this->builtin_node(adaptor, true, variable), "smc_adapt");
+      }
+    }
+    move.entry.push_back(elements, "m_elements");
+    return move;
+  }
 
   Move lower_move(const RecipeValue &statement, const std::string &name, const RecipeValue &call)
   {
@@ -2362,7 +3830,7 @@ inline double ilike_model_dbinom(double x, double n, double p)
       if (!role_exists(type, role))
         // the registry's message: what it is, and where it may be used
         find_builtin(type, role);
-      RecipeValue node = this->builtin_node(proposal, true);
+      RecipeValue node = this->builtin_node(proposal, true, "", true);
       variable = node["variables"].as_string();
       entry.push_back(node, p + "_proposal");
       if (arguments.has("log"))
@@ -2496,6 +3964,7 @@ inline double ilike_model_dbinom(double x, double n, double p)
     RecipeValue is_proposals = RecipeValue::list();
     RecipeValue transition_proposals = RecipeValue::list();
     RecipeValue settings = RecipeValue::list();
+    RecipeValue mfds_transform;
 
     auto method = [&](const std::string &key, const RecipeValue &node) {
       RecipeValue item = RecipeValue::list();
@@ -2507,7 +3976,16 @@ inline double ilike_model_dbinom(double x, double n, double p)
     for (size_t i = 0; i < statements.size(); ++i)
     {
       const RecipeValue &statement = statements[i];
-      this->refuse_loop(statement, "an algorithm section");
+      if (statement.contains("keyword") && statement["keyword"].as_string() == "for")
+      {
+        // a scan of moves on elements (I4c)
+        Move move = this->element_move_loop(statement);
+        for (const Move &m : moves)
+          if (m.name == move.name)
+            this->error(statement, "move " + move.name + " is defined more than once.");
+        moves.push_back(move);
+        continue;
+      }
       std::string keyword = statement["keyword"].as_string();
       std::string target = statement["target"]["name"].as_string();
       const RecipeValue &value = statement["value"];
@@ -2520,7 +3998,11 @@ inline double ilike_model_dbinom(double x, double n, double p)
         for (const Move &m : moves)
           if (m.name == move_name)
             this->error(statement, "move " + move_name + " is defined more than once.");
-        moves.push_back(this->lower_move(statement, move_name, value));
+        if ((kind_of(value) == "call") && (value["function"].as_string() == "gibbs"))
+          // gibbs(mu) on a scalar, as a move on its one element (C206)
+          moves.push_back(this->element_move_loop(statement));
+        else
+          moves.push_back(this->lower_move(statement, move_name, value));
         continue;
       }
       if (!keyword.empty())
@@ -2602,6 +4084,19 @@ inline double ilike_model_dbinom(double x, double n, double p)
         else
           method("mcmc_weights", this->function_placeholder(value, "mcmc_weights", "weights"));
       }
+      else if (target == "transform")
+      {
+        // MFDS: the map from the Gaussian scale the ensemble moves on to the
+        // model's parameters, under the same names (dev/plan.md 3.16); the
+        // variables it does not give keep their values
+        if (!this->is_function_reference(value) || value["namespace"].as_string() != "cpp")
+          this->error(value, "transform is a C++ function (cpp::f) giving the model's parameters from the Gaussian scale.");
+        std::string f = this->cpp_function(value, "transform");
+        std::string wrapper = "ilike_mfds_transform_" + std::to_string(++this->generated_count);
+        this->generated_code += "Parameters " + wrapper + "(const Parameters &u)\n{\n  Parameters theta = " + f +
+                                "(u);\n  return theta.merge(u);\n}\n\n";
+        mfds_transform = this->placeholder(wrapper, "mfds_transform");
+      }
       else if (target == "proposal")
         is_proposals.push_back(this->is_proposal(value));
       else if (target == "transition_proposal")
@@ -2659,6 +4154,8 @@ inline double ilike_model_dbinom(double x, double n, double p)
       algorithm.push_back(transition_proposals, "transition_proposal");
     if (methods.size() > 0)
       algorithm.push_back(methods, "method");
+    if (!mfds_transform.is_null())
+      algorithm.push_back(mfds_transform, "mfds_transform");
     algorithm.push_back(settings, "settings");
     this->algorithms.push_back(algorithm, name);
   }
@@ -2715,9 +4212,10 @@ inline double ilike_model_dbinom(double x, double n, double p)
 
 }
 
-RecipeValue lower_ilike_language(const RecipeValue &trees)
+RecipeValue lower_ilike_language(const RecipeValue &trees, const RecipeValue &constant_values)
 {
   Lowering lowering(trees);
+  lowering.set_constant_values(constant_values);
   return lowering.run();
 }
 

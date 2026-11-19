@@ -465,7 +465,8 @@ static std::string signature(const Builtin &entry)
 }
 
 static RecipeValue resolve_argument(const RecipeValue &raw, const ArgumentSpec &spec,
-                                    const RecipeValue &constants, const std::string &where)
+                                    const RecipeValue &constants, const std::string &where,
+                                    bool lists_allowed = false)
 {
   std::string context = where + ", argument " + spec.name;
   RecipeValue value = raw;
@@ -481,8 +482,8 @@ static RecipeValue resolve_argument(const RecipeValue &raw, const ArgumentSpec &
         text = text.substr(1, text.size() - 2);
       if (text.empty())
         Rcpp::stop(context + ": a variable name is needed.");
-      if (text.find(';') != std::string::npos)
-        Rcpp::stop(context + ": only one variable is allowed.");
+      if (text.find(';') != std::string::npos && !lists_allowed)
+        Rcpp::stop(context + ": only one variable is allowed here (lists of variables are for the proposals of moves).");
       return RecipeValue(text);
     }
 
@@ -591,6 +592,12 @@ BuiltinArguments bind_builtin(const RecipeValue &node, BuiltinRole role,
   const Builtin &entry = find_builtin(call["builtin"].as_string(), role);
   BuiltinArguments bound(entry.name, role);
   std::string where = bound.where();
+  // several variables stacked into one block ("a;b;c", C203/C205): for the
+  // proposals of moves and their adaptors, which read the blocks' shapes from
+  // the current point
+  bool lists_allowed = (role == BuiltinRole::MProposal) || (role == BuiltinRole::MHProposal) ||
+                       (role == BuiltinRole::UnadjustedProposal) || (role == BuiltinRole::IMHProposal) ||
+                       (role == BuiltinRole::MCMCAdaptor) || (role == BuiltinRole::SMCAdaptor);
 
   const RecipeValue &arguments = call["arguments"];
   std::vector<std::string> keys = arguments.names();
@@ -604,7 +611,7 @@ BuiltinArguments bind_builtin(const RecipeValue &node, BuiltinRole role,
   auto bind = [&](const ArgumentSpec &spec, const RecipeValue &raw) {
     if (bound.given(spec.name))
       Rcpp::stop(where + ": the argument " + spec.name + " is given more than once.");
-    bound.set(spec.name, resolve_argument(raw, spec, constants, where), true);
+    bound.set(spec.name, resolve_argument(raw, spec, constants, where, lists_allowed), true);
   };
 
   // keyword arguments first, then positional ones fill the remaining

@@ -68,11 +68,37 @@ public:
                                         const Parameters &x)=0;
   virtual arma::mat subsample_get_gradient_of_log(const std::string &variable,
                                                   const Parameters &x)=0;
+  // the gradients of several variables (C204): one call per variable unless
+  // the factor can do better (plates of model statements compute them in one
+  // pass over their terms)
+  virtual std::vector<arma::mat> get_gradients_of_log(const std::vector<std::string> &variables,
+                                                      const Parameters &x)
+  {
+    std::vector<arma::mat> gradients;
+    gradients.reserve(variables.size());
+    for (const std::string &variable : variables)
+      gradients.push_back(this->get_gradient_of_log(variable, x));
+    return gradients;
+  }
   
   virtual void forget_you_were_already_written_to_file()=0;
   
   void write(const std::string &directory_name);
   
+  // A move on one element (dev/plan.md I4c-2): change the output in place for
+  // the element's new value, already in parameters, keeping what is needed to
+  // undo it. FALSE: it cannot (the caller then makes a new output instead).
+  // undo_in_place restores the output; commit_in_place keeps the change.
+  // Plates, and the annealing wrapper of a plate, can.
+  virtual bool change_in_place(const Parameters &parameters, const std::string &variable,
+                               size_t row, size_t column) { return false; }
+  virtual void undo_in_place() {}
+  virtual void commit_in_place() {}
+  // before a scan of in-place moves: make what change_in_place needs valid at
+  // the current parameters (a plate's terms, invalid after the output was
+  // restored from a summary in SMC); the value is not changed
+  virtual void prepare_in_place(const Parameters &parameters) {}
+
   friend std::ostream& operator<<(std::ostream& os, const LikelihoodEstimatorOutput &p);
   
   virtual void print(std::ostream &os) const;
@@ -112,10 +138,13 @@ protected:
   // new_parameters, with the current particle's output of the same factor and
   // its parameters: an output may keep what does not change between the two
   // (a plate factor's terms that read no changed element, dev/plan.md I4b).
+  // `changed`, when given, lists the variables whose values may differ
+  // between the two (the others are the same matrices, C205); NULL: unknown.
   // Default: nothing kept.
   virtual void carry_over_from(const LikelihoodEstimatorOutput &previous,
                                const Parameters &previous_parameters,
-                               const Parameters &new_parameters) {}
+                               const Parameters &new_parameters,
+                               const std::vector<std::string>* changed = NULL) {}
   virtual bool assign_from(const LikelihoodEstimatorOutput &another) { return false; }
 
   virtual size_t compact_size() const { return 0; }

@@ -5,6 +5,7 @@
 #include "move_output.h"
 #include "ensemble_kalman_output.h"
 #include "ensemble.h"
+#include "covariance_tools.h"
 
 namespace ilike
 {
@@ -53,7 +54,8 @@ SMCAdaptor* GaussianSMCAdaptor::duplicate() const
 }
 
 void GaussianSMCAdaptor::adapt_from(const arma::mat &points,
-                                    const arma::colvec &normalised_weights)
+                                    const arma::colvec &normalised_weights,
+                                    size_t d)
 {
   if (this->proposal==NULL)
     Rcpp::stop("SMC adaptor: not attached to a proposal.");
@@ -65,25 +67,30 @@ void GaussianSMCAdaptor::adapt_from(const arma::mat &points,
   PrincipalComponentsInfo* components = this->proposal->get_principal_components(this->variable);
   arma::colvec* component_scales = this->proposal->get_component_scales(this->variable);
 
-  size_t d = points.n_cols;
   if (points.n_rows<2)
     return;
-  if (info->get_covariance().n_rows!=d)
-    Rcpp::stop("SMC adaptor: the proposal's covariance for " + this->variable + " does not match the variable's dimension.");
+  // a 1 x 1 covariance c on a block of several elements is c I (C205)
+  if ((info->get_covariance().n_rows==1) && (d>1))
+    info->set_covariance(info->get_covariance()(0,0)*arma::eye(d, d));
+  check_proposal_size(this->variable, d, info->get_covariance().n_rows, "covariance");
 
-  // weighted mean and covariance (the unbiased form for normalised weights)
-  arma::rowvec mean = normalised_weights.t()*points;
-  arma::mat centred = points.each_row() - mean;
-  double denominator = 1.0 - arma::accu(arma::square(normalised_weights));
-  if (denominator<=0.0)
-    return; // a single particle carries all the weight
-  arma::mat covariance = (centred.t()*(centred.each_col() % normalised_weights))/denominator;
-  covariance = (covariance + covariance.t())/2.0;
+  // the moved variable (the first d columns) given all the other parameters:
+  // its weighted mean and conditional covariance (shrunk if singular)
+  arma::rowvec mean;
+  arma::mat covariance;
+  bool estimated = conditional_moments(points, normalised_weights, d, mean, covariance);
+  if (!estimated)
+  {
+    // (the mean alone, when the covariance cannot be estimated)
+    arma::mat full_covariance;
+    if (!weighted_covariance(points.cols(0, d - 1), normalised_weights, mean, full_covariance))
+      return;
+  }
 
   if (this->proposal->proposal_uses_gaussian_mean())
     info->get_mean() = mean.t();
 
-  if (covariance.is_sympd())
+  if (estimated && covariance.is_sympd())
   {
     info->set_covariance(covariance);
     if (components!=NULL)
@@ -114,58 +121,33 @@ void GaussianSMCAdaptor::adapt_from(const arma::mat &points,
 void GaussianSMCAdaptor::smc_adapt(SMCOutput* current_state)
 {
   Particles &generation = current_state->back();
-  arma::mat points;
-  if (generation.is_flat())
-  {
-    std::vector<std::string> variables(1, this->variable);
-    points = generation.flat_points.matrix_of(variables);
-  }
-  else
-  {
-    size_t n = generation.particles.size();
-    for (size_t i=0; i<n; ++i)
-    {
-      arma::colvec point = generation.particles[i]->back().parameters.get_colvec(this->variable);
-      if (i==0)
-        points.set_size(n, point.n_elem);
-      points.row(i) = point.t();
-    }
-  }
+  // the moved block's variables first (several for a stacked variable)
+  std::vector<std::string> names = split_stacked_name(this->variable);
+  std::vector<size_t> offsets;
+  arma::mat points = population_points(generation, names, offsets);
   if (points.n_rows==0)
     return;
-  // the weights for the current target, before resampling
-  arma::colvec log_weights = generation.unnormalised_log_weights;
   arma::colvec weights;
-  if (log_weights.n_elem==points.n_rows)
-  {
-    weights = arma::exp(log_weights - log_weights.max());
-    if (!weights.is_finite() || (arma::accu(weights)<=0.0))
-      return;
-    weights = weights/arma::accu(weights);
-  }
-  else
-  {
-    weights = arma::colvec(points.n_rows, arma::fill::value(1.0/double(points.n_rows)));
-  }
-  this->adapt_from(points, weights);
+  if (!population_weights(generation, points.n_rows, weights))
+    return;
+  size_t K = split_stacked_name(this->variable).size();
+  size_t d = (offsets.size() > K) ? offsets[K] : points.n_cols;
+  this->adapt_from(points, weights, d);
 }
 
 void GaussianSMCAdaptor::ensemble_adapt(EnsembleKalmanOutput* current_state)
 {
   // ensemble members are equally weighted
   Ensemble &ensemble = current_state->back();
-  size_t n = ensemble.members.size();
-  if (n==0)
+  // the moved block's variables first (several for a stacked variable)
+  std::vector<std::string> names = split_stacked_name(this->variable);
+  std::vector<size_t> offsets;
+  arma::mat points = ensemble_points(ensemble, names, offsets);
+  if (points.n_rows==0)
     return;
-  arma::mat points;
-  for (size_t i=0; i<n; ++i)
-  {
-    arma::colvec point = ensemble.members[i]->back().parameters.get_colvec(this->variable);
-    if (i==0)
-      points.set_size(n, point.n_elem);
-    points.row(i) = point.t();
-  }
-  this->adapt_from(points, arma::colvec(n, arma::fill::value(1.0/double(n))));
+  size_t K = split_stacked_name(this->variable).size();
+  size_t d = (offsets.size() > K) ? offsets[K] : points.n_cols;
+  this->adapt_from(points, arma::colvec(points.n_rows, arma::fill::value(1.0/double(points.n_rows))), d);
 }
 
 }

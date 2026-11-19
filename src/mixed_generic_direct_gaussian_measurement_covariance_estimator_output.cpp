@@ -47,57 +47,58 @@ MeasurementCovarianceEstimatorOutput* MixedGenericDirectGaussianMeasurementCovar
   return( new MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput(*this));
 }
 
+void MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::simulate(const Parameters &parameters)
+{
+  std::shared_ptr<Transform> transform = this->estimator->transform;
+  this->simulate_at(transform == NULL ? parameters : transform->inverse_transform(parameters), parameters, false);
+}
+
+void MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::subsample_simulate(const Parameters &parameters)
+{
+  std::shared_ptr<Transform> transform = this->estimator->transform;
+  this->simulate_at(transform == NULL ? parameters : transform->inverse_transform(parameters), parameters, true);
+}
+
 void MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::specific_simulate(const Parameters &parameters)
 {
-  // do transform on params (could actually leave until later since deterministic, but choose to do now and store result
-  std::shared_ptr<Transform> summary_statistics = this->estimator->summary_statistics;
-  if (summary_statistics==NULL)
-  {
-    this->likelihood_measurement_state = this->estimator->simulate(parameters).get_colvec(this->estimator->measurement_variables);
-  }
-  else
-  {
-    this->likelihood_measurement_state = summary_statistics->transform(this->estimator->simulate(parameters)).get_colvec(this->estimator->measurement_variables);
-  }
-  
-  if (this->estimator->transform_function!=NULL)
-  {
-    this->prior_measurement_state = this->estimator->transform_function(parameters).get_colvec(this->estimator->prior_measurement_variables);
-  }
-  else
-  {
-    this->prior_measurement_state = parameters.get_colvec(this->estimator->prior_measurement_variables);
-  }
-  
-  this->likelihood_random_shift = this->estimator->gaussian_simulate();
-  this->estimator->set_parameters(parameters);
-  this->prior_random_shift = this->estimator->kernel.independent_simulate(*this->estimator->rng).get_colvec(this->estimator->prior_measurement_variables);
+  this->simulate_at(parameters, parameters, false);
 }
 
 void MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::subsample_specific_simulate(const Parameters &parameters)
 {
-  // do transform on params (could actually leave until later since deterministic, but choose to do now and store result
+  this->simulate_at(parameters, parameters, true);
+}
+
+// The likelihood half of the augmented observation is simulated at the
+// model's parameters (T(u) when the ensemble moves on a transformed scale),
+// the prior half is the ensemble's point u itself, since the Gaussian prior
+// is on that scale. (Without a transform the two are the same point.)
+void MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::simulate_at(const Parameters &model_parameters,
+                                                                                  const Parameters &ensemble_parameters,
+                                                                                  bool subsample)
+{
+  (void)subsample; // (the subsampled and full versions are the same here)
   std::shared_ptr<Transform> summary_statistics = this->estimator->summary_statistics;
   if (summary_statistics==NULL)
   {
-    this->likelihood_measurement_state = this->estimator->simulate(parameters).get_colvec(this->estimator->measurement_variables);
+    this->likelihood_measurement_state = this->estimator->simulate(model_parameters).get_colvec(this->estimator->measurement_variables);
   }
   else
   {
-    this->likelihood_measurement_state = summary_statistics->transform(this->estimator->simulate(parameters)).get_colvec(this->estimator->measurement_variables);
+    this->likelihood_measurement_state = summary_statistics->transform(this->estimator->simulate(model_parameters)).get_colvec(this->estimator->measurement_variables);
   }
-  
+
   if (this->estimator->transform_function!=NULL)
   {
-    this->prior_measurement_state = this->estimator->transform_function(parameters).get_colvec(this->estimator->prior_measurement_variables);
+    this->prior_measurement_state = this->estimator->transform_function(ensemble_parameters).get_colvec(this->estimator->prior_measurement_variables);
   }
   else
   {
-    this->prior_measurement_state = parameters.get_colvec(this->estimator->prior_measurement_variables);
+    this->prior_measurement_state = ensemble_parameters.get_colvec(this->estimator->prior_measurement_variables);
   }
-  
+
   this->likelihood_random_shift = this->estimator->gaussian_simulate();
-  this->estimator->set_parameters(parameters);
+  this->estimator->set_parameters(ensemble_parameters);
   this->prior_random_shift = this->estimator->kernel.independent_simulate(*this->estimator->rng).get_colvec(this->estimator->prior_measurement_variables);
 }
 

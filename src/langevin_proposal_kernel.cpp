@@ -153,6 +153,7 @@ double LangevinProposalKernel::specific_evaluate_kernel(const Particle &proposed
        ++i)
   {
     arma::colvec mean = old_particle.get_transformed_parameters(this).get_colvec(i->first);
+    check_proposal_size(i->first, mean.n_elem, i->second.get_covariance().n_rows, "covariance");
     double scale = i->second.get_double_scale();
     double dim = double(mean.n_rows);
     output = output + dmvnorm_using_precomp(proposed_particle.get_transformed_parameters(this).get_colvec(i->first),
@@ -174,6 +175,7 @@ double LangevinProposalKernel::specific_subsample_evaluate_kernel(const Particle
        ++i)
   {
     arma::colvec mean = old_particle.get_transformed_parameters(this).get_colvec(i->first);
+    check_proposal_size(i->first, mean.n_elem, i->second.get_covariance().n_rows, "covariance");
     double scale = i->second.get_double_scale();
     double dim = double(mean.n_rows);
     output = output + dmvnorm_using_precomp(proposed_particle.get_transformed_parameters(this).get_colvec(i->first),
@@ -195,10 +197,11 @@ void LangevinProposalKernel::simulate_into(RandomNumberGenerator &rng,
        ++i)
   {
     arma::colvec mean = particle.get_transformed_parameters(this).get_colvec(i->first);
+    check_proposal_size(i->first, mean.n_elem, i->second.get_covariance().n_rows, "covariance");
     double scale = i->second.get_double_scale();
-    target.matrix(i->first) = rmvnorm_using_lower_chol(rng,
+    target.write(i->first, rmvnorm_using_lower_chol(rng,
                                                        mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first,this->index.get(),particle))/2.0,
-                                                       i->second.get_chol_lower(), sqrt(scale));
+                                                       i->second.get_chol_lower(), sqrt(scale)), particle.get_transformed_parameters(this));
   }
 }
 
@@ -214,10 +217,11 @@ Parameters LangevinProposalKernel::simulate(RandomNumberGenerator &rng,
        ++i)
   {
     arma::colvec mean = particle.get_transformed_parameters(this).get_colvec(i->first);
+    check_proposal_size(i->first, mean.n_elem, i->second.get_covariance().n_rows, "covariance");
     double scale = i->second.get_double_scale();
-    output[i->first] = rmvnorm_using_lower_chol(rng,
+    output.set_stacked(i->first, rmvnorm_using_lower_chol(rng,
                                           mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first,this->index.get(),particle))/2.0,
-                                          i->second.get_chol_lower(), sqrt(scale));
+                                          i->second.get_chol_lower(), sqrt(scale)), particle.get_transformed_parameters(this));
   }
   return output;
 }
@@ -236,10 +240,11 @@ Parameters LangevinProposalKernel::subsample_simulate(RandomNumberGenerator &rng
        ++i)
   {
     arma::colvec mean = particle.get_transformed_parameters(this).get_colvec(i->first);
+    check_proposal_size(i->first, mean.n_elem, i->second.get_covariance().n_rows, "covariance");
     double scale = i->second.get_double_scale();
-    output[i->first] = rmvnorm_using_lower_chol(rng,
+    output.set_stacked(i->first, rmvnorm_using_lower_chol(rng,
                                           mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->subsample_get_gradient_of_log(i->first,this->index.get(),particle))/2.0,
-                                          i->second.get_chol_lower(), sqrt(scale));
+                                          i->second.get_chol_lower(), sqrt(scale)), particle.get_transformed_parameters(this));
   }
   return output;
 }
@@ -257,10 +262,11 @@ Parameters LangevinProposalKernel::subsample_simulate(RandomNumberGenerator &rng
   
   Parameters output;
   arma::colvec mean = particle.get_transformed_parameters(this).get_colvec(found->first);
+  check_proposal_size(found->first, mean.n_elem, found->second.get_covariance().n_rows, "covariance");
   double scale = found->second.get_double_scale();
-  output[found->first] = rmvnorm_using_lower_chol(rng,
+  output.set_stacked(found->first, rmvnorm_using_lower_chol(rng,
                                             mean + scale*found->second.get_covariance()*arma::vectorise(gradient_estimator_output->subsample_get_gradient_of_log(found->first,this->index.get(),particle))/2.0,
-                                            found->second.get_chol_lower(), sqrt(scale));
+                                            found->second.get_chol_lower(), sqrt(scale)), particle.get_transformed_parameters(this));
   return output;
 }
 

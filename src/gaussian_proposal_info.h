@@ -5,6 +5,7 @@
 using namespace Rcpp;
 
 #include "scale.h"
+#include "parameters.h"
 
 namespace ilike
 {
@@ -69,7 +70,17 @@ public:
   arma::mat& get_inv();
   arma::mat& get_inv_chol();
   double& get_logdet();
-  
+
+  // A mean that depends on the other parameters (a move on part of the
+  // parameters, with an adaptor that estimates the conditional mean,
+  // dev/plan.md "conditional scaling of partial moves"): mean +
+  // regression (r - rest_mean), r the point's values of rest_names. Without
+  // rest_names, the mean.
+  void set_conditional_mean(const std::vector<std::string> &rest_names_in,
+                            const arma::mat &regression_in,
+                            const arma::colvec &rest_mean_in);
+  arma::colvec mean_at(const Parameters &parameters) const;
+
 protected:
   
   void make_copy(const GaussianProposalInfo &another);
@@ -87,7 +98,10 @@ protected:
   arma::mat inv;
   arma::mat inv_chol;
   double logdet;
-  
+
+  std::vector<std::string> rest_names;
+  arma::mat regression;
+  arma::colvec rest_mean;
 };
 }
 

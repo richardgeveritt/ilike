@@ -6,6 +6,19 @@
 
 namespace ilike
 {
+
+// the half-widths for a block of n elements (a variable or a stack): one per
+// element, or a single one for every element (unif_rw on a vector or a list,
+// C205)
+static arma::colvec halfwidths_for(const std::string &variable, const arma::mat &halfwidth, arma::uword n)
+{
+  arma::colvec h = arma::vectorise(halfwidth);
+  if (h.n_elem == n)
+    return h;
+  if (h.n_elem != 1)
+    check_proposal_size(variable, n, h.n_elem, "half-width(s)", false);
+  return arma::colvec(n, arma::fill::value(h[0]));
+}
 UniformRandomWalkProposalKernel::UniformRandomWalkProposalKernel()
 :SymmetricProposalKernel()
 {
@@ -107,10 +120,11 @@ double UniformRandomWalkProposalKernel::specific_evaluate_kernel(const Particle 
        i!=this->proposal_info.end();
        ++i)
   {
-    arma::mat current_position = (old_particle.get_transformed_parameters(this))[i->first];
-    output = output + dunif((proposed_particle.get_transformed_parameters(this))[i->first],
-                            current_position-i->second,
-                            current_position+i->second);
+    arma::colvec current_position = old_particle.get_transformed_parameters(this).get_colvec(i->first);
+    arma::colvec h = halfwidths_for(i->first, i->second, current_position.n_elem);
+    output = output + dunif(arma::mat(proposed_particle.get_transformed_parameters(this).get_colvec(i->first)),
+                            arma::mat(current_position-h),
+                            arma::mat(current_position+h));
   }
   return output;
 }
@@ -131,10 +145,10 @@ void UniformRandomWalkProposalKernel::simulate_into(RandomNumberGenerator &rng,
        i!=this->proposal_info.end();
        ++i)
   {
-    const arma::mat &current_position = (particle.get_transformed_parameters(this))[i->first];
-    target.matrix(i->first) = runif(rng,
-                                    current_position-i->second,
-                                    current_position+i->second);
+    const Parameters &current = particle.get_transformed_parameters(this);
+    arma::colvec current_position = current.get_colvec(i->first);
+    arma::colvec h = halfwidths_for(i->first, i->second, current_position.n_elem);
+    target.write(i->first, arma::vectorise(runif(rng, arma::mat(current_position-h), arma::mat(current_position+h))), current);
   }
 }
 
@@ -146,10 +160,10 @@ Parameters UniformRandomWalkProposalKernel::simulate(RandomNumberGenerator &rng,
        i!=this->proposal_info.end();
        ++i)
   {
-    arma::mat current_position = (particle.get_transformed_parameters(this))[i->first];
-    output[i->first] = runif(rng,
-                             current_position-i->second,
-                             current_position+i->second);
+    const Parameters &current = particle.get_transformed_parameters(this);
+    arma::colvec current_position = current.get_colvec(i->first);
+    arma::colvec h = halfwidths_for(i->first, i->second, current_position.n_elem);
+    output.set_stacked(i->first, arma::vectorise(runif(rng, arma::mat(current_position-h), arma::mat(current_position+h))), current);
   }
   return output;
 }
@@ -184,10 +198,10 @@ Parameters UniformRandomWalkProposalKernel::subsample_simulate(RandomNumberGener
   auto found =  this->proposal_info.find(variable);
   
   Parameters output;
-  arma::mat current_position = (particle.get_transformed_parameters(this))[found->first];
-  output[found->first] = runif(rng,
-                               current_position-found->second,
-                               current_position+found->second);
+  const Parameters &current = particle.get_transformed_parameters(this);
+  arma::colvec current_position = current.get_colvec(found->first);
+  arma::colvec h = halfwidths_for(found->first, found->second, current_position.n_elem);
+  output.set_stacked(found->first, arma::vectorise(runif(rng, arma::mat(current_position-h), arma::mat(current_position+h))), current);
   return output;
 }
 

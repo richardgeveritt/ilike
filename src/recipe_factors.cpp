@@ -24,11 +24,17 @@ LikelihoodEstimator *make_model_statement_estimator(
     variables.push_back(names[k].as_string());
   bool check = model.contains("check_factor_index") &&
                model["check_factor_index"].as_bool();
-  return new PlateLikelihoodEstimator(
+  PlateLikelihoodEstimator *estimator = new PlateLikelihoodEstimator(
       rng_in, seed_in, data_in,
       plate["structure"].function_pointer<PlateStructurePtr>(),
       plate["term"].function_pointer<PlateTermPtr>(), variables,
       plate["name"].as_string(), check, smcfixed);
+  // its gradient, generated from its terms (I4e)
+  if (plate.contains("gradient"))
+    estimator->set_gradient(plate["gradient"].function_pointer<PlateGradientPtr>());
+  if (plate.contains("gradients"))
+    estimator->set_gradients(plate["gradients"].function_pointer<PlateGradientsPtr>());
+  return estimator;
 }
 
 std::vector<LikelihoodEstimator *> get_likelihood_estimators(
@@ -847,6 +853,12 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
           } else {
             stop("likelihood factor not well specified.");
           }
+        } else if (current_factor.contains("simulate_data_model")) {
+          // sbi(simulate = …, data = …) without a method: only MFDS uses a
+          // simulator directly
+          stop("Factor " + std::to_string(i + 1) + " is a simulator without a method (sbi(simulate = …, data = …)): "
+               "only MFDS can use it. For other algorithms, give the simulation-based method, e.g. "
+               "sbi(sl(100), simulate = …, data = …).");
         } else {
           stop("Invalid factor.");
         }
@@ -1217,11 +1229,12 @@ ProposalKernel *get_transition_model(const RecipeValue &model,
 }
 
 void get_gaussian_prior_moments(const RecipeValue &model, const RecipeValue &model_parameters,
-                                Parameters &means, Parameters &covariances) {
+                                Parameters &means, Parameters &covariances,
+                                std::vector<std::string> &log_variables) {
   const std::string requirement =
-      "MFDS requires a Gaussian prior on every parameter, made of built-in "
-      "priors: prior,ilike::norm(variable,mean,sd) or "
-      "prior,ilike::mvnorm(variable,mean,covariance).";
+      "MFDS requires a Gaussian prior on every parameter, or a log-normal one (the exp of a Gaussian): "
+      "theta ~ norm(mean, sd), mvnorm(mean, covariance), lnorm(meanlog, sdlog) or "
+      "mvlnorm(meanlog, covlog), with arguments that do not depend on parameters.";
   if (!model.contains("factor"))
     stop(requirement + " No prior was found.");
   RecipeValue factors = model["factor"];
@@ -1244,6 +1257,16 @@ void get_gaussian_prior_moments(const RecipeValue &model, const RecipeValue &mod
     } else if (iequals(type, "mvnorm")) {
       means[variable] = arma::mat(arguments.vector("mean"));
       covariances[variable] = arguments.matrix("cov");
+    } else if (iequals(type, "lnorm")) {
+      // (the Gaussian is on log(variable))
+      double sdlog = arguments.real("sdlog");
+      means[variable] = arma::mat(1, 1, arma::fill::value(arguments.real("meanlog")));
+      covariances[variable] = arma::mat(1, 1, arma::fill::value(sdlog * sdlog));
+      log_variables.push_back(variable);
+    } else if (iequals(type, "mvlnorm")) {
+      means[variable] = arma::mat(arguments.vector("meanlog"));
+      covariances[variable] = arguments.matrix("covlog");
+      log_variables.push_back(variable);
     } else {
       stop(requirement + " Factor " + std::to_string(i + 1) +
            " is a built-in prior of type " + type + ".");

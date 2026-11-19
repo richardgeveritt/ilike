@@ -1,6 +1,7 @@
 #include "gaussian_mcmc_adaptor.h"
 #include "proposal_kernel.h"
 #include "particle.h"
+#include "covariance_tools.h"
 
 namespace ilike
 {
@@ -233,9 +234,11 @@ void GaussianMCMCAdaptor::adapt(const AdaptationStep &step)
       s->mean = previous;
       if (this->writes_mean && (s->info->get_mean().n_elem==previous.n_elem))
         s->mean = s->info->get_mean();
+      // a 1 x 1 covariance c on a block of several elements is c I (C205)
+      if ((s->info->get_covariance().n_rows==1) && (previous.n_elem>1))
+        s->info->set_covariance(s->info->get_covariance()(0,0)*arma::eye(previous.n_elem, previous.n_elem));
       s->covariance = s->info->get_covariance();
-      if (s->covariance.n_rows!=previous.n_elem)
-        Rcpp::stop("MCMC adaptor: the proposal's covariance for " + s->variable + " does not match the variable's dimension.");
+      check_proposal_size(s->variable, previous.n_elem, s->covariance.n_rows, "covariance");
       if ( ((this->method==GaussianAdaptationMethod::AM) || (this->method==GaussianAdaptationMethod::RB_AM)) && !this->writes_mean )
       {
         s->info->get_double_scale() = 2.38*2.38/double(previous.n_elem);
@@ -256,6 +259,33 @@ void GaussianMCMCAdaptor::adapt(const AdaptationStep &step)
       s->average_mean = s->mean;
       s->average_covariance = s->covariance;
       s->average_log_component_scales = s->log_component_scales;
+      // the other non-fixed vector parameters (conditional scaling)
+      s->rest.clear();
+      if (this->estimates_moments())
+      {
+        std::vector<std::string> all = step.current->parameters.get_nonfixed_vector_variables();
+        for (const std::string &name : all)
+        {
+          bool moved = false;
+          for (const VariableState &other : this->states)
+            for (const std::string &part : split_stacked_name(other.variable))
+              if (part == name)
+                moved = true;
+          if (!moved)
+            s->rest.push_back(name);
+        }
+      }
+      if (!s->rest.empty())
+      {
+        s->joint_mean = this->joint_point(*s, *step.previous);
+        size_t D = s->joint_mean.n_elem;
+        s->joint_sum.zeros(D, D);
+        s->joint_weighted_products.zeros(D, D);
+        s->joint_squared_products.zeros(D, D);
+        s->weight_sum = 0.0;
+        s->squared_weight_sum = 0.0;
+        s->average_joint_covariance.zeros(D, D);
+      }
       s->started = true;
     }
 
@@ -308,6 +338,40 @@ void GaussianMCMCAdaptor::adapt(const AdaptationStep &step)
       s->covariance = s->covariance + gain*(alpha*to_proposed*to_proposed.t() + (1.0-alpha)*to_previous*to_previous.t() - s->covariance);
     }
 
+    // the joint statistics of z = [x; r] (conditional scaling): the same
+    // recursion and gain as the moved block's, over all the parameters
+    if (!s->rest.empty())
+    {
+      arma::colvec m = s->joint_mean;
+      arma::mat y;
+      if (this->method==GaussianAdaptationMethod::RB_AM)
+      {
+        arma::colvec to_proposed = this->joint_point(*s, *step.proposed) - m;
+        arma::colvec to_previous = this->joint_point(*s, *step.previous) - m;
+        s->joint_mean = m + gain*(alpha*to_proposed + (1.0-alpha)*to_previous);
+        y = alpha*to_proposed*to_proposed.t() + (1.0-alpha)*to_previous*to_previous.t();
+      }
+      else
+      {
+        arma::colvec difference = this->joint_point(*s, *step.current) - m;
+        s->joint_mean = m + gain*difference;
+        y = difference*difference.t();
+      }
+      double keep = 1.0 - gain;
+      s->joint_sum = keep*s->joint_sum + gain*y;
+      s->joint_weighted_products = (keep*keep)*s->joint_weighted_products + (gain*gain)*y;
+      s->joint_squared_products = (keep*keep)*s->joint_squared_products + (gain*gain)*(y % y);
+      s->weight_sum = keep*s->weight_sum + gain;
+      s->squared_weight_sum = keep*keep*s->squared_weight_sum + gain*gain;
+      if (this->averaging)
+      {
+        double unbiased = 1.0 - s->squared_weight_sum/(s->weight_sum*s->weight_sum);
+        if (unbiased > 0.0)
+          s->average_joint_covariance = s->average_joint_covariance +
+            ((s->joint_sum/s->weight_sum)/unbiased - s->average_joint_covariance)/double(this->number_of_updates + 1);
+      }
+    }
+
     // with averaging: theta-bar_n = theta-bar_{n-1} + (theta_n - theta-bar_{n-1})/(n+1)
     if (this->averaging)
     {
@@ -335,10 +399,38 @@ void GaussianMCMCAdaptor::adapt(const AdaptationStep &step)
     if (s->components!=NULL)
       s->components->scales = arma::exp(used_log_component_scales);
 
-    if (this->writes_mean && this->estimates_moments())
+    if (this->writes_mean && this->estimates_moments() && s->rest.empty())
       s->info->get_mean() = used_mean;
 
-    if (this->estimates_moments())
+    if (this->estimates_moments() && !s->rest.empty())
+    {
+      // a move on part of the parameters: the conditional covariance of x
+      // given the rest (and, for a mirror, the conditional mean), formed
+      // every D iterations by default (D the total dimension: its solve with
+      // the rest is O(D^3))
+      size_t every = this->refresh_every;
+      if (every==0)
+        every = s->joint_mean.n_elem;
+      if ((this->number_of_updates % every)==0)
+      {
+        arma::mat conditional, regression;
+        arma::colvec x_mean, rest_mean;
+        if (this->conditional_estimate(*s, conditional, regression, x_mean, rest_mean))
+        {
+          s->conditional_covariance = conditional;
+          if (s->components!=NULL)
+            this->refresh_principal_components(*s, conditional);
+          else
+            s->info->set_covariance(conditional);
+          if (this->writes_mean)
+          {
+            s->info->get_mean() = x_mean;
+            s->info->set_conditional_mean(s->rest, regression, rest_mean);
+          }
+        }
+      }
+    }
+    else if (this->estimates_moments())
     {
       size_t every = this->refresh_every;
       if (every==0)
@@ -363,6 +455,91 @@ void GaussianMCMCAdaptor::adapt(const AdaptationStep &step)
       }
     }
   }
+}
+
+arma::colvec GaussianMCMCAdaptor::joint_point(const VariableState &state, const Particle &particle) const
+{
+  arma::colvec x = particle.get_transformed_parameters(this->proposal).get_colvec(state.variable);
+  arma::colvec r = particle.parameters.get_colvec(state.rest);
+  return arma::join_cols(x, r);
+}
+
+bool GaussianMCMCAdaptor::conditional_estimate(const VariableState &state,
+                                               arma::mat &conditional,
+                                               arma::mat &regression,
+                                               arma::colvec &x_mean,
+                                               arma::colvec &rest_mean) const
+{
+  double W = state.weight_sum, Q = state.squared_weight_sum;
+  if (W <= 0.0)
+    return false;
+  // the weighted covariance (the unbiased form for the normalised weights
+  // w_k/W, as in covariance_tools.h)
+  double unbiased = 1.0 - Q/(W*W);
+  if (unbiased <= 0.0)
+    return false;
+  arma::mat biased = state.joint_sum/W;
+  arma::mat covariance = this->averaging ? state.average_joint_covariance : arma::mat(biased/unbiased);
+  covariance = (covariance + covariance.t())/2.0;
+  size_t d = state.mean.n_elem;
+  size_t D = covariance.n_rows;
+  // the moved block, and the rest's coordinates that vary
+  std::vector<arma::uword> keep;
+  for (arma::uword k = 0; k < D; ++k)
+  {
+    double m = state.joint_mean[k];
+    bool varies = std::isfinite(covariance(k, k)) && (covariance(k, k) > 1e-12*(1.0 + m*m));
+    if (k < d)
+    {
+      if (!varies)
+        return false;
+      keep.push_back(k);
+    }
+    else if (varies)
+      keep.push_back(k);
+  }
+  arma::uvec kept(keep);
+  arma::mat S = covariance(kept, kept);
+  if (!S.is_sympd())
+  {
+    // the weighted Ledoit-Wolf intensity for the recursion's implicit weights:
+    // var(S_ij) = sum w_k^2 (y_kij - Sb_ij)^2 / W^2 / unbiased^2, from B, C, Q
+    arma::mat Sb = biased(kept, kept);
+    arma::mat variances = (state.joint_squared_products(kept, kept) - 2.0*(Sb % state.joint_weighted_products(kept, kept)) +
+                           Q*(Sb % Sb))/(W*W*unbiased*unbiased);
+    double off_variance = arma::accu(variances) - arma::accu(variances.diag());
+    double off_squares = arma::accu(arma::square(S)) - arma::accu(arma::square(S.diag()));
+    double lambda = (off_squares > 0.0) ? std::min(1.0, std::max(0.0, off_variance/off_squares)) : 1.0;
+    arma::mat shrunk = (1.0 - lambda)*S;
+    shrunk.diag() = S.diag();
+    S = (shrunk + shrunk.t())/2.0;
+    if (!S.is_sympd())
+      return false;
+  }
+  x_mean = state.joint_mean.head(d);
+  rest_mean = state.joint_mean.tail(D - d);
+  regression.zeros(d, D - d);
+  if (kept.n_elem == d)
+  {
+    conditional = S;
+    return true;
+  }
+  size_t R = kept.n_elem - d;
+  arma::mat Sxx = S.submat(0, 0, d - 1, d - 1);
+  arma::mat Sxr = S.submat(0, d, d - 1, d + R - 1);
+  arma::mat Srr = S.submat(d, d, d + R - 1, d + R - 1);
+  arma::mat Srr_inverse_Srx;
+  if (!arma::solve(Srr_inverse_Srx, Srr, Sxr.t(), arma::solve_opts::likely_sympd + arma::solve_opts::no_approx))
+    return false;
+  conditional = Sxx - Sxr*Srr_inverse_Srx;
+  conditional = (conditional + conditional.t())/2.0;
+  if (!conditional.is_sympd())
+    return false;
+  // Sigma_xr Sigma_rr^-1, placed at the kept coordinates of r
+  arma::mat kept_regression = Srr_inverse_Srx.t();
+  for (size_t k = 0; k < R; ++k)
+    regression.col(kept[d + k] - d) = kept_regression.col(k);
+  return true;
 }
 
 void GaussianMCMCAdaptor::append_state(std::vector<std::string> *names,
@@ -432,6 +609,18 @@ void GaussianMCMCAdaptor::append_state(std::vector<std::string> *names,
           if (values!=NULL)
             values->push_back(covariance(i,j));
         }
+      }
+      // a move on part of the parameters: the conditional covariance used
+      if (s->conditional_covariance.n_rows==d)
+      {
+        for (size_t i=0; i<d; ++i)
+          for (size_t j=i; j<d; ++j)
+          {
+            if (names!=NULL)
+              names->push_back(base + "conditional_covariance[" + std::to_string(i+1) + "," + std::to_string(j+1) + "]");
+            if (values!=NULL)
+              values->push_back(s->conditional_covariance(i,j));
+          }
       }
     }
     if (s->components!=NULL)

@@ -50,6 +50,8 @@
 #ifndef PARAMETERS_H
 #define PARAMETERS_H
 
+#include <unordered_map>
+#include <memory>
 #include <RcppArmadillo.h>
 #include <iostream>
 #include <limits>
@@ -61,6 +63,57 @@
 
 class Parameters;
 
+// A stacked variable (dev/plan.md, C203) is the column vector of several
+// variables' elements, named by their names joined by ';' ("a;b;c"); a name
+// cannot contain ';'. Proposals over several named variables use it as one
+// block.
+inline bool is_stacked_name(const std::string &name)
+{
+  return name.find(';') != std::string::npos;
+}
+
+inline std::vector<std::string> split_stacked_name(const std::string &name)
+{
+  std::vector<std::string> names;
+  size_t start = 0;
+  while (true)
+  {
+    size_t end = name.find(';', start);
+    names.push_back(name.substr(start, (end == std::string::npos) ? std::string::npos : end - start));
+    if (end == std::string::npos)
+      break;
+    start = end + 1;
+  }
+  return names;
+}
+
+// how a block is named in messages: theta, or [a, b, c] for a stack
+inline std::string stacked_display_name(const std::string &name)
+{
+  if (!is_stacked_name(name))
+    return name;
+  std::string shown;
+  for (const std::string &part : split_stacked_name(name))
+    shown = shown + (shown.empty() ? "" : ", ") + part;
+  return "[" + shown + "]";
+}
+
+// a proposal's dimension against the block it moves (C205): `what` names the
+// proposal's parameter, e.g. "covariance" (k x k) or "half-width(s)" (k)
+inline void check_proposal_size(const std::string &name, size_t elements, size_t proposal_size,
+                                const std::string &what, bool square = true)
+{
+  if (elements == proposal_size)
+    return;
+  std::string shown = stacked_display_name(name);
+  std::string size = std::to_string(proposal_size);
+  if (square)
+    Rcpp::stop("The proposal's " + what + " for " + shown + " is " + size + " x " + size +
+               ", but " + shown + " has " + std::to_string(elements) + " element(s).");
+  Rcpp::stop("The proposal has " + size + " " + what + " for " + shown +
+             ", but " + shown + " has " + std::to_string(elements) + " element(s).");
+}
+
 // A small map from variable names to values, kept as a vector of
 // (name, value) pairs searched linearly (dev/plan.md, Stage 3 (b)). A model
 // has a handful of variables, so this is faster than a hash map: no hashing,
@@ -70,6 +123,12 @@ class Parameters;
 // name; operator[] inserts a default value for a new name. Iteration is in
 // insertion order. Values are shared_ptrs in Parameters, so references to
 // the matrices stay valid when the vector grows.
+// With more than index_threshold names, a hash index from name to position
+// makes lookups O(1) (dev/plan.md, "Many named variables": a term reading D
+// named variables would otherwise cost D^2 comparisons). The index is
+// shared by copies (which keep the same order of names) and is not changed
+// while shared (an insertion of a new name then makes a new one); lookups
+// never change it, so concurrent lookups are safe.
 template <typename V>
 class FlatMap
 {
@@ -84,11 +143,16 @@ public:
   const_iterator end() const { return this->data.end(); }
   size_t size() const { return this->data.size(); }
   bool empty() const { return this->data.empty(); }
-  void clear() { this->data.clear(); }
+  void clear() { this->data.clear(); this->index.reset(); }
   void reserve(size_t n) { this->data.reserve(n); }
 
   iterator find(const std::string &key)
   {
+    if (this->index != NULL)
+    {
+      auto found = this->index->find(key);
+      return (found == this->index->end()) ? this->data.end() : this->data.begin() + found->second;
+    }
     for (iterator i = this->data.begin(); i != this->data.end(); ++i)
       if (i->first == key)
         return i;
@@ -97,6 +161,11 @@ public:
 
   const_iterator find(const std::string &key) const
   {
+    if (this->index != NULL)
+    {
+      auto found = this->index->find(key);
+      return (found == this->index->end()) ? this->data.end() : this->data.begin() + found->second;
+    }
     for (const_iterator i = this->data.begin(); i != this->data.end(); ++i)
       if (i->first == key)
         return i;
@@ -109,6 +178,7 @@ public:
     if (found != this->data.end())
       return std::pair<iterator, bool>(found, false);
     this->data.push_back(value);
+    this->added();
     return std::pair<iterator, bool>(this->data.end() - 1, true);
   }
 
@@ -118,6 +188,7 @@ public:
     if (found != this->data.end())
       return std::pair<iterator, bool>(found, false);
     this->data.push_back(std::move(value));
+    this->added();
     return std::pair<iterator, bool>(this->data.end() - 1, true);
   }
 
@@ -134,11 +205,42 @@ public:
     if (found != this->data.end())
       return found->second;
     this->data.emplace_back(key, V());
+    this->added();
     return this->data.back().second;
   }
 
 private:
+  static const size_t index_threshold = 16;
+
+  // after a name is appended: the index, once there are enough names (a new
+  // table, since copies may share the old one)
+  void added()
+  {
+    if (this->data.size() <= index_threshold)
+      return;
+    if ((this->index != NULL) && (this->index.use_count() == 1))
+    {
+      // (this map alone holds the table: extended in place)
+      this->index->emplace(this->data.back().first, this->data.size() - 1);
+      return;
+    }
+    std::shared_ptr<std::unordered_map<std::string, size_t>> table;
+    if (this->index != NULL)
+      table = std::make_shared<std::unordered_map<std::string, size_t>>(*this->index);
+    else
+    {
+      table = std::make_shared<std::unordered_map<std::string, size_t>>();
+      table->reserve(2*this->data.size());
+      for (size_t k = 0; k + 1 < this->data.size(); ++k)
+        table->emplace(this->data[k].first, k);
+    }
+    table->emplace(this->data.back().first, this->data.size() - 1);
+    this->index = table;
+  }
+
   std::vector<value_type> data;
+  // (shared by copies: changed only when this map is its only owner)
+  std::shared_ptr<std::unordered_map<std::string, size_t>> index;
 };
 
 typedef FlatMap<std::pair<std::shared_ptr<arma::mat>, bool>> VectorParameterMap;
@@ -212,6 +314,14 @@ public:
    */
   const arma::mat& operator[](const std::string &variable) const;
 
+  // The matrix of a variable, or NULL if there is none (no error; uses the
+  // index of a map with many names, dev/plan.md "Many named variables").
+  const arma::mat* find_vector(const std::string &variable) const
+  {
+    auto found = this->vector_parameters.find(variable);
+    return (found != this->vector_parameters.end()) ? found->second.first.get() : NULL;
+  }
+
   /**
    * @brief Accessor operator for a vector of variable names.
    * @param variables The vector of variable names.
@@ -277,6 +387,13 @@ public:
    * @return Armadillo column vector associated with the variable.
    */
   arma::colvec get_colvec(const std::string &variable) const;
+
+  // Writes a proposed value of `variable`, with the shape it has in `shapes`
+  // (a column if it is not there); for a stacked name, each variable's part
+  // of `value`.
+  void set_stacked(const std::string &variable,
+                   const arma::colvec &value,
+                   const Parameters &shapes);
 
   /**
    * @brief Gets an Armadillo column vector for a vector of variables.
@@ -598,7 +715,48 @@ inline bool Parameters::is_empty() const
 
 inline arma::colvec Parameters::get_colvec(const std::string &variable) const
 {
-  return arma::vectorise((*this)[variable]);
+  const arma::mat* found = this->find_vector(variable);
+  if (found != NULL)
+    return arma::vectorise(*found);
+  // a stacked name is looked at only when the name is not a variable
+  if (is_stacked_name(variable))
+    return this->get_colvec(split_stacked_name(variable));
+  return arma::vectorise((*this)[variable]); // the "not found" error
+}
+
+inline void Parameters::set_stacked(const std::string &variable,
+                                    const arma::colvec &value,
+                                    const Parameters &shapes)
+{
+  if (!is_stacked_name(variable))
+  {
+    // the shape the variable has at the current point (C205), else a column
+    const arma::mat* shape = shapes.find_vector(variable);
+    if ((shape != NULL) && (shape->n_elem == value.n_elem) && (shape->n_cols != 1))
+      (*this)[variable] = arma::reshape(value, shape->n_rows, shape->n_cols);
+    else
+      (*this)[variable] = value;
+    return;
+  }
+  std::vector<std::string> names = split_stacked_name(variable);
+  arma::uword offset = 0;
+  for (const std::string &name : names)
+  {
+    const arma::mat &shape = shapes[name];
+    if (shape.n_elem == 0)
+    {
+      (*this)[name] = arma::mat(shape.n_rows, shape.n_cols);
+      continue;
+    }
+    if (offset + shape.n_elem > value.n_elem)
+      Rcpp::stop("Parameters::set_stacked: the proposed value of " + variable + " has " +
+                 std::to_string(value.n_elem) + " elements, fewer than its variables.");
+    (*this)[name] = arma::reshape(value.subvec(offset, offset + shape.n_elem - 1), shape.n_rows, shape.n_cols);
+    offset = offset + shape.n_elem;
+  }
+  if (offset != value.n_elem)
+    Rcpp::stop("Parameters::set_stacked: the proposed value of " + variable + " has " +
+               std::to_string(value.n_elem) + " elements, but its variables have " + std::to_string(offset) + ".");
 }
 
 inline arma::colvec Parameters::get_colvec(const std::vector<std::string> &variables) const
@@ -616,9 +774,13 @@ inline arma::colvec Parameters::get_colvec(const std::vector<std::string> &varia
   return concatenated_vector;
 }
 
+// column by column, as get_colvec (and as R stores a matrix), so outputs,
+// population covariances and proposals agree on the order of a matrix's
+// elements
 inline arma::rowvec Parameters::get_rowvec(const std::string &variable) const
 {
-  return (*this)[variable].as_row();
+  // (vectorise(m, 1) would concatenate the rows: row by row)
+  return arma::vectorise((*this)[variable]).t();
 }
 
 inline arma::rowvec Parameters::get_rowvec(const std::vector<std::string> &variables) const

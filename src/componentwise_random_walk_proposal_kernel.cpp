@@ -70,8 +70,7 @@ arma::colvec ComponentwiseRandomWalkProposalKernel::move_one_component(RandomNum
 {
   arma::colvec point = particle.get_transformed_parameters(this).get_colvec(this->variable);
   size_t d = point.n_elem;
-  if (d!=this->component_scales.n_elem)
-    Rcpp::stop("ilike::componentwise_rw: the covariance does not match the dimension of " + this->variable + ".");
+  check_proposal_size(this->variable, d, this->component_scales.n_elem, "covariance");
   // k uniform on 0, ..., d-1, then one normal increment for component k
   size_t k = size_t(std::floor(runif(rng)*double(d)));
   if (k>=d)
@@ -85,7 +84,7 @@ Parameters ComponentwiseRandomWalkProposalKernel::simulate(RandomNumberGenerator
                                                            const Particle &particle) const
 {
   Parameters output;
-  output[this->variable] = this->move_one_component(rng, particle);
+  output.set_stacked(this->variable, this->move_one_component(rng, particle), particle.get_transformed_parameters(this));
   return output;
 }
 
@@ -93,7 +92,7 @@ void ComponentwiseRandomWalkProposalKernel::simulate_into(RandomNumberGenerator 
                                                           const Particle &particle,
                                                           ProposalTarget &target) const
 {
-  target.matrix(this->variable) = this->move_one_component(rng, particle);
+  target.write(this->variable, this->move_one_component(rng, particle), particle.get_transformed_parameters(this));
 }
 
 Parameters ComponentwiseRandomWalkProposalKernel::subsample_simulate(RandomNumberGenerator &rng,

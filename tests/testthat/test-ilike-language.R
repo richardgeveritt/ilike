@@ -82,6 +82,17 @@ test_that("loops and deterministic statements are parsed (I4)", {
   expect_error(language_tree("ilike 1.0\nmodel {\n  w < -1\n}"), "test.ilike:3:7: expected a constraint")
 })
 
+test_that("terms of a named factor are parsed", {
+  tree = language_tree("ilike 1.0\nmodel {\n  for (e in 1:n) factor ising += b * s[e]\n  factor one += 2\n}")
+  statements = tree$sections[[1]]$statements
+  term = statements[[1]]$body[[1]]
+  expect_equal(term$keyword, "factor")
+  expect_equal(term$target$name, "ising")
+  expect_equal(term$operator, "+=")
+  expect_equal(term$value$operator, "*")
+  expect_equal(statements[[2]]$operator, "+=")
+})
+
 test_that("syntax errors give the file, line and column", {
   expect_error(language_tree("ilike 1.0\nmodel { theta ~ norm(0, 1 }"), "test.ilike:2:27: expected \",\" or \"\\)\"")
   expect_error(language_tree("ilike 1.0\nmodle { }"), "test.ilike:2:1: unknown section \"modle\"")

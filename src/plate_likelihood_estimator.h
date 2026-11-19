@@ -27,6 +27,17 @@ typedef double (*PlateTermPtr)(const Parameters &parameters,
                                const Data &data,
                                const arma::mat &terms,
                                size_t term);
+// the factor's gradient with respect to one variable (generated from its
+// terms, dev/plan.md I4e)
+typedef arma::mat (*PlateGradientPtr)(const std::string &variable,
+                                      const Parameters &parameters,
+                                      const Data &data);
+
+// the gradients of several variables in one pass over the terms (C204)
+typedef void (*PlateGradientsPtr)(const std::vector<std::string> &variables,
+                                  std::vector<arma::mat> &gradients,
+                                  const Parameters &parameters,
+                                  const Data &data);
 
 class PlateLikelihoodEstimatorOutput;
 
@@ -54,6 +65,8 @@ public:
   LikelihoodEstimatorOutput* initialise(const Parameters &parameters);
 
   size_t number_of_terms() const { return this->terms.n_rows; }
+  void set_gradient(PlateGradientPtr gradient_in) { this->gradient_function = gradient_in; }
+  void set_gradients(PlateGradientsPtr gradients_in) { this->gradients_function = gradients_in; }
 
 protected:
 
@@ -68,6 +81,8 @@ protected:
 
   PlateStructurePtr structure;
   PlateTermPtr term_function;
+  PlateGradientPtr gradient_function = NULL;
+  PlateGradientsPtr gradients_function = NULL;
   std::vector<std::string> variables;
   std::string name;
   // check_factor_index: after a partial evaluation, recompute every term and
@@ -83,8 +98,9 @@ protected:
   // (key: row << 32 | column)
   std::vector<std::vector<uint32_t>> whole_readers;
   std::vector<std::unordered_map<uint64_t, std::vector<uint32_t>>> element_readers;
-  // the variables some term reads
+  // the variables some term reads, and their numbers by name (C205)
   std::vector<size_t> variables_read;
+  std::unordered_map<std::string, size_t> read_index;
 
   void make_copy(const PlateLikelihoodEstimator &another);
 };

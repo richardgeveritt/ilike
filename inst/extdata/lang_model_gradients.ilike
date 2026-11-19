@@ -1,0 +1,26 @@
+ilike 1.0
+// every distribution and function of model statements, for checking the
+// gradients generated from the terms against finite differences (dev/plan.md I4e)
+data { y = [0.3, 1.4, 0.9]; z = [2, 0, 5]; b01 = [1, 0, 1]; cnt = [1, 2, 3]; w = [0.7, 2.1]; obs = [0.4, -0.3] }
+model {
+  mu ~ norm(0, 2)
+  sigma ~ lnorm(0, 0.5)
+  a ~ gamma(2, 1.5)
+  r ~ exp(1)
+  q ~ unif(mu - 5, mu + 5)
+  t ~ tnorm(0, 1, -1, 2)
+  p ~ beta(2, 3)
+  v ~ mvnorm([0, 0], [[1, 0.5], [0.5, 2]])
+  for (k in 1:3) th[k] ~ norm(mu, sigma)
+  for (i in 1:3) {
+    m[i] <- th[i] * exp(-a) + log1p(r) + sqrt(a) - abs(t) + pow(sigma, 2) / (1 + sin(mu)) + cos(t) * tanh(mu) +
+            lgamma(a + 1) + expm1(0.1 * r) + max(t, mu) + min(mu, 1)^2 + q / 10
+    y[i] ~ norm(m[i], sigma)
+    z[i] ~ pois(exp(mu + 0.1 * th[i]))
+    b01[i] ~ bern(inv_logit(mu + th[i]))
+    cnt[i] ~ binom(5, ilogit(t + 0.2 * th[i]))
+  }
+  for (j in 1:2) w[j] ~ gamma(a, r)
+  obs ~ mvnorm(v, [[1, 0.2], [0.2, 1]])
+  factor pot += -0.5 * logit(p)^2 + log(p) + t^3 / 3
+}

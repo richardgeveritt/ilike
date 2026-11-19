@@ -42,6 +42,9 @@
 #include "custom_symmetric_proposal_kernel.h"
 #include "density_likelihood_estimator.h"
 #include "deterministic_scan_mcmc.h"
+#include "element_random_walk_proposal_kernel.h"
+#include "in_place_element_scan_mcmc.h"
+#include "element_adaptors.h"
 #include "direct_gradient_estimator.h"
 #include "direct_linear_gaussian_measurement_covariance_estimator.h"
 #include "direct_nonlinear_gaussian_measurement_covariance_estimator.h"
@@ -175,10 +178,12 @@ KalmanPredictor *get_kalman_predictor(const RecipeValue &model, const RecipeValu
 ProposalKernel *get_transition_proposal(const RecipeValue &model, const RecipeValue &model_parameters);
 ProposalKernel *get_transition_model(const RecipeValue &model, const RecipeValue &model_parameters);
 RecipeValue get_prior_mean_and_covariance(const RecipeValue &model, const RecipeValue &model_parameters);
-// The means and covariances of a prior made only of built-in Gaussian priors
-// (ilike::norm, ilike::mvnorm), one entry per variable (MFDS, dev/plan.md 3.16).
+// The means and covariances of a prior made only of built-in Gaussian or
+// log-normal priors (norm, mvnorm, lnorm, mvlnorm), one entry per variable, on
+// the Gaussian scale; log_variables are the log-normal ones (MFDS, dev/plan.md 3.16).
 void get_gaussian_prior_moments(const RecipeValue &model, const RecipeValue &model_parameters,
-                                Parameters &means, Parameters &covariances);
+                                Parameters &means, Parameters &covariances,
+                                std::vector<std::string> &log_variables);
 std::vector<MeasurementCovarianceEstimator *> get_measurement_covariance_estimators( RandomNumberGenerator *rng_in, size_t *seed_in, Data *data_in, const RecipeValue &model, const RecipeValue &model_parameters, const std::vector<size_t> &factor_indices, std::shared_ptr<Transform> transform, std::vector<Data> &data_created_in_get_measurement_covariance_estimators);
 IndependentProposalKernel * get_proposal(const RecipeValue &model, const RecipeValue &model_parameters, Data *data);
 IndependentProposalKernel *get_prior_as_proposal(const RecipeValue &model, const RecipeValue &model_parameters);

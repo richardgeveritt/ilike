@@ -1,0 +1,14 @@
+ilike 1.0
+// a smoothing term between neighbouring means (a Gaussian Markov random field
+// on a line), written as a factor of terms; the posterior is Gaussian
+data { y = [1.2, 0.4, -0.3, 0.8, 2.1, 1.7] }
+constants { int K = 6; real tau = 2 }
+model {
+  for (k in 1:K) theta[k] ~ norm(0, 10)
+  for (k in 1:(K - 1)) factor smooth += -0.5 * tau * (theta[k + 1] - theta[k])^2
+  for (k in 1:K) y[k] ~ norm(theta[k], 1)
+}
+algorithm mcmc {
+  for (k in 1:K) move m = metropolis(norm_rw(theta[k], 0.8))
+  termination = iterations(10000)
+}

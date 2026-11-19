@@ -63,11 +63,37 @@ void VectorFactorVariables::operator=(const VectorFactorVariables &another)
   this->make_copy(another);
 }
 
+// The variables whose matrices differ between the current point and a
+// proposed one (C205). A proposed point is the current one with the proposed
+// variables written over: the others share the current point's matrices, so
+// comparing pointers finds the changed ones without looking any name up.
+// False when the two do not have the same variables in the same order (then
+// each factor compares every variable it reads, as before).
+static bool changed_variables(const Parameters &before,
+                              const Parameters &after,
+                              std::vector<std::string> &changed)
+{
+  changed.clear();
+  if (before.vector_size() != after.vector_size())
+    return false;
+  auto b = before.vector_begin();
+  for (auto a = after.vector_begin(); a != after.vector_end(); ++a, ++b)
+  {
+    if (a->first != b->first)
+      return false;
+    if (a->second.first.get() != b->second.first.get())
+      changed.push_back(a->first);
+  }
+  return true;
+}
+
 FactorVariables* VectorFactorVariables::copy_with_new_outputs(const Parameters &new_parameters,
                                                              const Index* new_outputs_index) const
 {
   std::vector<LikelihoodEstimatorOutput*> outputs;
   outputs.reserve(this->likelihood_estimator_outputs.size());
+  std::vector<std::string> changed;
+  int changed_known = -1; // (found when first needed)
   for (size_t i=0; i<this->likelihood_estimator_outputs.size(); ++i)
   {
     bool new_output = std::find(new_outputs_index->begin(),
@@ -79,9 +105,14 @@ FactorVariables* VectorFactorVariables::copy_with_new_outputs(const Parameters &
       outputs.back()->simulate(new_parameters);
       outputs.back()->write_to_file_flag = false;
       if ((this->likelihood_estimator_outputs[i]!=NULL) && (this->particle!=NULL))
+      {
+        if (changed_known < 0)
+          changed_known = changed_variables(this->particle->parameters, new_parameters, changed) ? 1 : 0;
         outputs.back()->carry_over_from(*this->likelihood_estimator_outputs[i],
                                         this->particle->parameters,
-                                        new_parameters);
+                                        new_parameters,
+                                        (changed_known == 1) ? &changed : NULL);
+      }
     }
     else if (this->likelihood_estimator_outputs[i]!=NULL)
     {
@@ -300,6 +331,32 @@ arma::mat VectorFactorVariables::direct_get_gradient_of_log(const Index* index,
   return result;
 }
 
+// several variables at once (C204): each factor in the index is asked once
+// for all of them, and the gradients are summed over the factors
+std::vector<arma::mat> VectorFactorVariables::direct_get_gradients_of_log(const Index* index,
+                                                                         const std::vector<std::string> &variables) const
+{
+  std::vector<arma::mat> result(variables.size());
+  for (size_t k = 0; k < variables.size(); ++k)
+  {
+    const arma::mat &current_parameter = this->particle->parameters[variables[k]];
+    result[k].zeros(current_parameter.n_rows, current_parameter.n_cols);
+  }
+  for (auto i=index->begin();
+       i!=index->end();
+       ++i)
+  {
+    if (this->likelihood_estimator_outputs[*i]!=NULL)
+    {
+      std::vector<arma::mat> factor_gradients = this->likelihood_estimator_outputs[*i]->get_gradients_of_log(variables,
+                                                                                                             this->particle->parameters);
+      for (size_t k = 0; k < variables.size(); ++k)
+        result[k] = result[k] + factor_gradients[k];
+    }
+  }
+  return result;
+}
+
 arma::mat VectorFactorVariables::direct_subsample_get_gradient_of_log(const Index* index,
                                                                       const std::string &variable) const
 {
@@ -367,6 +424,8 @@ bool VectorFactorVariables::recycle_with_new_outputs(const FactorVariables* sour
       (source->likelihood_estimator_outputs.size() != this->likelihood_estimator_outputs.size()))
     return false;
   // as copy_with_new_outputs, output by output
+  std::vector<std::string> changed;
+  int changed_known = -1; // (found when first needed)
   for (size_t i=0; i<this->likelihood_estimator_outputs.size(); ++i)
   {
     LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[i].get();
@@ -379,9 +438,14 @@ bool VectorFactorVariables::recycle_with_new_outputs(const FactorVariables* sour
         return false;
       output->simulate(new_parameters);
       if ((source->likelihood_estimator_outputs[i]!=NULL) && (source->particle!=NULL))
+      {
+        if (changed_known < 0)
+          changed_known = changed_variables(source->particle->parameters, new_parameters, changed) ? 1 : 0;
         output->carry_over_from(*source->likelihood_estimator_outputs[i],
                                 source->particle->parameters,
-                                new_parameters);
+                                new_parameters,
+                                (changed_known == 1) ? &changed : NULL);
+      }
     }
     else if (source->likelihood_estimator_outputs[i]!=NULL)
     {
@@ -582,4 +646,25 @@ void VectorFactorVariables::close_ofstreams()
     this->likelihood_estimator_outputs[i]->close_ofstreams();
   }
 }
+LikelihoodEstimatorOutput* VectorFactorVariables::get_output(size_t i) const
+{
+  return this->likelihood_estimator_outputs[i].get();
+}
+
+std::unique_ptr<LikelihoodEstimatorOutput> VectorFactorVariables::replace_with_new_output(size_t i,
+                                                                                          const Parameters &parameters)
+{
+  std::unique_ptr<LikelihoodEstimatorOutput> old = std::move(this->likelihood_estimator_outputs[i]);
+  LikelihoodEstimatorOutput* output = this->vector_factors->get_likelihood_estimator(i)->initialise(parameters);
+  output->simulate(parameters);
+  output->write_to_file_flag = false;
+  this->likelihood_estimator_outputs[i].reset(output);
+  return old;
+}
+
+void VectorFactorVariables::put_back_output(size_t i, std::unique_ptr<LikelihoodEstimatorOutput> output)
+{
+  this->likelihood_estimator_outputs[i] = std::move(output);
+}
+
 }

@@ -1,0 +1,13 @@
+ilike 1.0
+// an Ising model on a 3x3 grid: spins s in {0, 1} (sigma = 2 s - 1) with an
+// external field from the prior, and the potential beta * sigma_a * sigma_b on each edge
+data { a = [1, 2, 4, 5, 7, 8, 1, 2, 3, 4, 5, 6]; b = [2, 3, 5, 6, 8, 9, 4, 5, 6, 7, 8, 9] }
+constants { real beta = 0.4 }
+model {
+  for (k in 1:9) s[k] ~ bern(0.3)
+  for (e in 1:12) factor ising += beta * (2 * s[a[e]] - 1) * (2 * s[b[e]] - 1)
+}
+algorithm mcmc {
+  for (k in 1:9) move m = gibbs(s[k])
+  termination = iterations(10000)
+}

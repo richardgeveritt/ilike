@@ -6,6 +6,43 @@
 
 namespace ilike
 {
+
+// A step N(x, s Sigma) on a block of n elements (a variable or a stack). A
+// 1 x 1 Sigma on a block of several elements applies to each element
+// independently (norm_rw on a vector or a list, C205); otherwise Sigma must
+// match the block. For a block whose size matches, the same random numbers
+// and values as before.
+static arma::colvec random_walk_step(RandomNumberGenerator &rng,
+                                     const std::string &variable,
+                                     const arma::colvec &x,
+                                     const GaussianProposalInfo &info)
+{
+  const arma::mat &lower = info.get_chol_lower();
+  double sd = sqrt(info.get_double_scale());
+  if (lower.n_rows == x.n_elem)
+    return rmvnorm_using_lower_chol(rng, x, lower, sd);
+  if (lower.n_rows == 1)
+    return x + (sd*lower(0, 0))*arma::vectorise(rnorm(rng, std::pair<size_t, size_t>(x.n_elem, 1)));
+  check_proposal_size(variable, x.n_elem, lower.n_rows, "covariance");
+  return x;
+}
+
+static double random_walk_log_density(const std::string &variable,
+                                      const arma::colvec &proposed,
+                                      const arma::colvec &x,
+                                      const GaussianProposalInfo &info)
+{
+  if (info.get_inv().n_rows == x.n_elem)
+    return dmvnorm_scaled_precomp(proposed, x, info.get_inv(), info.get_double_scale(), info.get_logdet());
+  if (info.get_inv().n_rows != 1)
+    check_proposal_size(variable, x.n_elem, info.get_inv().n_rows, "covariance");
+  double output = 0.0;
+  for (arma::uword k = 0; k < x.n_elem; ++k)
+    output = output + dmvnorm_scaled_precomp(arma::colvec(1, arma::fill::value(proposed[k])),
+                                             arma::colvec(1, arma::fill::value(x[k])),
+                                             info.get_inv(), info.get_double_scale(), info.get_logdet());
+  return output;
+}
 GaussianRandomWalkProposalKernel::GaussianRandomWalkProposalKernel()
 :SymmetricProposalKernel()
 {
@@ -111,11 +148,10 @@ double GaussianRandomWalkProposalKernel::specific_evaluate_kernel_from_parameter
        i!=this->proposal_info.end();
        ++i)
   {
-    output = output + dmvnorm_scaled_precomp(proposed_parameters.get_colvec(i->first),
-                                             old_parameters.get_colvec(i->first),
-                                             i->second.get_inv(),
-                                             i->second.get_double_scale(),
-                                             i->second.get_logdet());
+    output = output + random_walk_log_density(i->first,
+                                              proposed_parameters.get_colvec(i->first),
+                                              old_parameters.get_colvec(i->first),
+                                              i->second);
   }
   return output;
 }
@@ -152,10 +188,8 @@ void GaussianRandomWalkProposalKernel::simulate_into(RandomNumberGenerator &rng,
        i!=this->proposal_info.end();
        ++i)
   {
-    double scale = i->second.get_double_scale();
-    target.matrix(i->first) = rmvnorm_using_lower_chol(rng,
-                                                       particle.get_transformed_parameters(this).get_colvec(i->first),
-                                                       i->second.get_chol_lower(), sqrt(scale));
+    const Parameters &current = particle.get_transformed_parameters(this);
+    target.write(i->first, random_walk_step(rng, i->first, current.get_colvec(i->first), i->second), current);
   }
 }
 
@@ -167,10 +201,8 @@ Parameters GaussianRandomWalkProposalKernel::simulate(RandomNumberGenerator &rng
        i!=this->proposal_info.end();
        ++i)
   {
-    double scale = i->second.get_double_scale();
-    output[i->first] = rmvnorm_using_lower_chol(rng,
-                                          particle.get_transformed_parameters(this).get_colvec(i->first),
-                                          i->second.get_chol_lower(), sqrt(scale));
+    const Parameters &current = particle.get_transformed_parameters(this);
+    output.set_stacked(i->first, random_walk_step(rng, i->first, current.get_colvec(i->first), i->second), current);
   }
   return output;
 }
@@ -190,9 +222,8 @@ Parameters GaussianRandomWalkProposalKernel::subsample_simulate(RandomNumberGene
   auto found = this->proposal_info.find(variable);
   
   Parameters output;
-  output[variable] = rmvnorm_using_lower_chol(rng,
-                                        particle.get_transformed_parameters(this).get_colvec(variable),
-                                        found->second.get_chol_lower(), sqrt(found->second.get_double_scale()));
+  const Parameters &current = particle.get_transformed_parameters(this);
+  output.set_stacked(variable, random_walk_step(rng, variable, current.get_colvec(variable), found->second), current);
   return output;
 }
 

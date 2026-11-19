@@ -1,3 +1,4 @@
+#include "vector_factor_variables.h"
 #include "recipe_internal.h"
 #include "recipe_from_r.h"
 
@@ -794,6 +795,14 @@ do_enki(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
   return log_likelihood;
 }
 
+// MFDS's transform maps the ensemble's (Gaussian) scale to the model's; the
+// other direction is not needed (the initial ensemble is given on the
+// ensemble's scale)
+static Parameters mfds_no_transform_to_ensemble_scale(const Parameters &parameters)
+{
+  Rcpp::stop("MFDS: internal: no map from the model's scale to the ensemble's.");
+}
+
 // MFDS: the ensemble Kalman method of Huang, Huang, Reich & Stuart
 // (arXiv-2204.04386v2; dev/plan.md 3.16). The posterior is the fixed point of
 // a filtering problem: each iteration inflates the ensemble about its mean
@@ -821,44 +830,101 @@ void do_enkmfds(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
   RandomNumberGenerator rng;
   Data the_data = get_data(model);
 
-  // the Gaussian prior: its means are the artificial observation of theta
+  // what the lowering of a file in the ilike language prepared for MFDS
+  // (dev/plan.md 3.16): a joint simulator of the likelihood, the Gaussian
+  // prior's moments, the map to the model's scale, or why they are missing
+  RecipeValue mfds;
+  bool has_mfds = model.contains("mfds");
+  if (has_mfds)
+    mfds = model["mfds"];
+
+  // the Gaussian prior (on the scale the ensemble moves on): its means are
+  // the artificial observation of the parameters
   Parameters prior_means;
   Parameters prior_covariances;
-  get_gaussian_prior_moments(model, parameters, prior_means, prior_covariances);
+  std::vector<std::string> log_variables;
+  if (has_mfds && mfds.contains("prior")) {
+    Data moments = mfds["prior"].function_pointer<DataPtr>()();
+    std::vector<std::string> names = moments.get_vector_variables();
+    for (const std::string &name : names) {
+      if (name.find(':') != std::string::npos)
+        continue;
+      prior_means[name] = moments[name];
+      prior_covariances[name] = moments[name + ":cov"];
+      if (std::find(names.begin(), names.end(), name + ":log") != names.end())
+        log_variables.push_back(name);
+    }
+  } else {
+    if (has_mfds && mfds.contains("prior_reason"))
+      stop("MFDS needs a Gaussian prior (or a log-normal one, or a transformation of a Gaussian), but " +
+           mfds["prior_reason"].as_string() + ".");
+    get_gaussian_prior_moments(model, parameters, prior_means, prior_covariances, log_variables);
+  }
 
-  // the simulator of the data
+  // the simulator of the data: generated for the whole likelihood, or the
+  // one factor with a simulator
   SimulateModelPtr simulate_data_model = NULL;
   std::vector<std::string> data_variables;
   std::shared_ptr<Transform> summary_statistics = NULL;
-  if (model.contains("factor")) {
-    RecipeValue factors = model["factor"];
-    for (size_t i = 0; i < factors.size(); ++i) {
-      RecipeValue current_factor = factors[i];
-      if (!current_factor.contains("simulate_data_model"))
-        continue;
-      if (simulate_data_model != NULL)
-        stop("MFDS: only one simulate_data_model is allowed.");
-      simulate_data_model =
-          current_factor["simulate_data_model"].function_pointer<SimulateModelPtr>();
-      if (!current_factor.contains("data_variable"))
-        stop("MFDS: the factor with simulate_data_model must also have data_variable.");
-      data_variables = split(current_factor["data_variable"].function_pointer<StringPtr>()(), ';');
-      if (current_factor.contains("summary_statistics"))
-        summary_statistics = std::make_shared<Transform>(
-            current_factor["summary_statistics"].function_pointer<SummaryStatisticsPtr>());
+  if (has_mfds && mfds.contains("simulate")) {
+    simulate_data_model = mfds["simulate"].function_pointer<SimulateModelPtr>();
+    data_variables = split(mfds["data_variable"].function_pointer<StringPtr>()(), ';');
+  } else {
+    if (has_mfds && mfds.contains("simulate_reason"))
+      stop("MFDS needs a likelihood it can simulate, but " + mfds["simulate_reason"].as_string() + ".");
+    if (model.contains("factor")) {
+      RecipeValue factors = model["factor"];
+      for (size_t i = 0; i < factors.size(); ++i) {
+        RecipeValue current_factor = factors[i];
+        if (!current_factor.contains("simulate_data_model"))
+          continue;
+        if (simulate_data_model != NULL)
+          stop("MFDS: only one simulate_data_model is allowed.");
+        simulate_data_model =
+            current_factor["simulate_data_model"].function_pointer<SimulateModelPtr>();
+        if (!current_factor.contains("data_variable"))
+          stop("MFDS: the factor with simulate_data_model must also have data_variable.");
+        data_variables = split(current_factor["data_variable"].function_pointer<StringPtr>()(), ';');
+        if (current_factor.contains("summary_statistics"))
+          summary_statistics = std::make_shared<Transform>(
+              current_factor["summary_statistics"].function_pointer<SummaryStatisticsPtr>());
+      }
     }
   }
   if (simulate_data_model == NULL)
     stop("MFDS: the model needs a simulate_data_model (and data_variable) for the likelihood.");
 
+  // the map from the Gaussian scale to the model's parameters: exp for
+  // log-normal priors, or the user's transform (with which the prior
+  // statements give the Gaussian itself)
+  TransformPtr to_model = NULL;
+  if (model.contains("mfds_transform")) {
+    if (!log_variables.empty())
+      stop("MFDS: with transform = …, the prior gives the Gaussian on the scale the ensemble moves on, so it must be "
+           "norm or mvnorm (" + log_variables[0] + " has a log-normal prior).");
+    to_model = model["mfds_transform"].function_pointer<TransformPtr>();
+  } else if (!log_variables.empty()) {
+    if (!has_mfds || !mfds.contains("log_transform"))
+      stop("MFDS: log-normal priors need a recipe in the ilike language.");
+    to_model = mfds["log_transform"].function_pointer<TransformPtr>();
+  }
+  std::shared_ptr<Transform> transform = NULL;
+  if (to_model != NULL)
+    transform = std::make_shared<Transform>(&mfds_no_transform_to_ensemble_scale, to_model);
+
   // the initial ensemble, drawn from the prior (with the streams' convention
-  // of the ensemble workers: seed, then advance the seed by the ensemble size)
+  // of the ensemble workers: seed, then advance the seed by the ensemble size),
+  // on the Gaussian scale (the log of log-normal variables)
   std::unique_ptr<IndependentProposalKernel> prior(get_prior_as_simulate_only_proposal(model, parameters));
   rng.seed(seed);
   std::vector<Parameters> initial_points;
   initial_points.reserve(number_of_ensemble_members);
-  for (size_t i = 0; i < number_of_ensemble_members; ++i)
-    initial_points.push_back(prior->independent_simulate(rng));
+  for (size_t i = 0; i < number_of_ensemble_members; ++i) {
+    Parameters point = prior->independent_simulate(rng);
+    for (const std::string &name : log_variables)
+      point[name] = arma::log(point[name]);
+    initial_points.push_back(point);
+  }
   seed = seed + number_of_ensemble_members;
 
   EnsembleShifter *shifter = get_enk_shifter_method(model, parameters);
@@ -871,7 +937,7 @@ void do_enkmfds(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
       &rng, &seed, &the_data, iterations_to_store, initial_points, shifter, delta_t,
       number_of_iterations, prior_means, prior_covariances, simulate_data_model,
       2, // the joint update of the augmented observation
-      summary_statistics, NULL, data_variables, false, 100000, results_name_in));
+      summary_statistics, transform, data_variables, false, 100000, results_name_in));
 
   std::unique_ptr<EnsembleKalmanOutput> output(alg->run());
 }
@@ -1375,6 +1441,70 @@ VectorIndex* user_factor_index(const IntegerVector &index_in,
     indices_in.push_back(size_t(index_in[k] - 1));
   }
   return new VectorIndex(indices_in);
+}
+
+// The gradient of the log target (the sum of the factors' gradients) with
+// respect to one variable at a point: for checking gradients, e.g. those
+// generated from model statements (dev/plan.md I4e), against finite differences.
+// [[Rcpp::export]]
+arma::mat do_evaluate_gradient_log(const Rcpp::List &model_R,
+                                   const Rcpp::List &model_parameters_R,
+                                   const Rcpp::List &parameters_in,
+                                   const std::string &variable,
+                                   const IntegerVector &index_in)
+{
+  RecipeValue model = recipe_from_R(model_R);
+  RecipeValue model_parameters = recipe_from_R(model_parameters_R);
+  Parameters algorithm_parameters;
+  Parameters parameters = list_to_parameters(parameters_in);
+  RandomNumberGenerator rng;
+  size_t seed = 1;
+  Data the_data = get_data(model);
+  std::vector<Data> data_created_in_get_likelihood_estimators;
+  std::vector<Data> data_created_in_get_measurement_covariance_estimators;
+  std::vector<std::string> sequencer_types, sequencer_variables;
+  std::vector<std::vector<double>> sequencer_schedules;
+  std::vector<int> factors_affected_by_smc_sequence;
+  VectorIndex *without_cancelled_index = NULL, *without_priors_index = NULL, *full_index = NULL;
+  bool any_annealing = false;
+  std::vector<LikelihoodEstimator *> likelihood_estimators = get_likelihood_estimators(
+      &rng, &seed, &the_data, model, model_parameters, algorithm_parameters, true,
+      sequencer_types, sequencer_variables, sequencer_schedules, NULL,
+      without_cancelled_index, without_priors_index, full_index, any_annealing,
+      factors_affected_by_smc_sequence,
+      data_created_in_get_likelihood_estimators,
+      data_created_in_get_measurement_covariance_estimators);
+  std::unique_ptr<Factors> factors(new VectorFactors(likelihood_estimators));
+  std::unique_ptr<Index> index((index_in.size() == 0) ? full_index->duplicate()
+                                                      : user_factor_index(index_in, likelihood_estimators.size()));
+  factors->setup(parameters);
+  Particle particle(parameters, factors.get(), NULL, NULL);
+  particle.evaluate_smcfixed_part_of_likelihoods(index.get());
+  particle.evaluate_smcadaptive_part_given_smcfixed_likelihoods(index.get());
+  VectorFactorVariables *factor_variables = dynamic_cast<VectorFactorVariables*>(particle.factor_variables.get());
+  if (factor_variables == NULL)
+    Rcpp::stop("evaluate_gradient_log: not available for this model.");
+  arma::mat gradient;
+  if (is_stacked_name(variable))
+  {
+    // several variables ("a;b;c"): the stacked gradient, as proposals ask for
+    // it (each factor asked once for all of them, C204)
+    gradient = particle.direct_get_gradient_of_log(variable, index.get());
+  }
+  else
+  {
+    gradient.zeros(arma::size(static_cast<const Parameters&>(parameters)[variable]));
+    for (auto i = index->begin(); i != index->end(); ++i)
+    {
+      LikelihoodEstimatorOutput *output = factor_variables->get_output(*i);
+      if (output != NULL)
+        gradient = gradient + output->get_gradient_of_log(variable, particle.parameters);
+    }
+  }
+  delete without_cancelled_index;
+  delete without_priors_index;
+  delete full_index;
+  return gradient;
 }
 
 // [[Rcpp::export]]

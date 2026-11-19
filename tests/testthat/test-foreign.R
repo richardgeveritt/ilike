@@ -65,3 +65,33 @@ test_that("old files read through the converter give the same results as the old
                      label = paste(sets[[k]], collapse = " + "))
   }
 })
+
+test_that("calls to R may use names with \".\" and $ after the call; other names may not", {
+  skip_on_cran()
+  csv = tempfile(fileext = ".csv")
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(c(csv, f)), add = TRUE)
+  utils::write.csv(data.frame(y = c(1.2, 0.4, 2.2)), csv, row.names = FALSE)
+  path = normalizePath(csv, winslash = "/")
+  write_model = function(data_line, prior = "mu ~ norm(0, 10)")
+    writeLines(c("ilike 1.0", paste("data {", data_line, "}"), "model {", paste(" ", prior),
+                 "  for (i in 1:3) y[i] ~ norm(mu, 1)", "}",
+                 "algorithm mcmc { move m = metropolis(norm_rw(mu, 1)); termination = iterations(500) }"), f)
+  chain = function(name)
+  {
+    on.exit(unlink(name, recursive = TRUE), add = TRUE)
+    ilike::MCMC(ilike::compile(f), results_name = name, initial_values = list(list(mu = 0)), seed = 1)
+    ilike::load_mcmc_output(name)$Value
+  }
+  write_model("y = [1.2, 0.4, 2.2]")
+  literal = chain("dotted_literal")
+  write_model(paste("y = r::read.csv(\"", path, "\")$y", sep = ""))
+  expect_identical(chain("dotted_csv"), literal)
+  write_model(paste("y = r::as.numeric(read.csv(\"", path, "\")$y)", sep = ""))
+  expect_identical(chain("dotted_numeric"), literal)
+
+  write_model("y = [1.2, 0.4, 2.2]", "my.mu ~ norm(0, 10)")
+  expect_error(ilike::compile(f), "\"my.mu\": names cannot contain \".\"")
+  write_model("y = py::np.ones(3L)")
+  expect_error(ilike::compile(f), "\"np.ones\": names cannot contain \".\"")
+})

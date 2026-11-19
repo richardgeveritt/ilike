@@ -281,6 +281,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// do_evaluate_gradient_log
+arma::mat do_evaluate_gradient_log(const Rcpp::List& model_R, const Rcpp::List& model_parameters_R, const Rcpp::List& parameters_in, const std::string& variable, const IntegerVector& index_in);
+RcppExport SEXP _ilike_do_evaluate_gradient_log(SEXP model_RSEXP, SEXP model_parameters_RSEXP, SEXP parameters_inSEXP, SEXP variableSEXP, SEXP index_inSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_R(model_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_parameters_R(model_parameters_RSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type parameters_in(parameters_inSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type variable(variableSEXP);
+    Rcpp::traits::input_parameter< const IntegerVector& >::type index_in(index_inSEXP);
+    rcpp_result_gen = Rcpp::wrap(do_evaluate_gradient_log(model_R, model_parameters_R, parameters_in, variable, index_in));
+    return rcpp_result_gen;
+END_RCPP
+}
 // do_evaluate_log
 double do_evaluate_log(const Rcpp::List& model_R, const Rcpp::List& model_parameters_R, const Rcpp::List& algorithm_parameter_list_R, const Rcpp::List& parameters_in, const IntegerVector& index_in, const std::string& results_name_in, size_t seed);
 RcppExport SEXP _ilike_do_evaluate_log(SEXP model_RSEXP, SEXP model_parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP parameters_inSEXP, SEXP index_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
@@ -344,6 +359,19 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// covariance_tools_check
+Rcpp::List covariance_tools_check(const arma::mat& points, const arma::colvec& weights, int block_size);
+RcppExport SEXP _ilike_covariance_tools_check(SEXP pointsSEXP, SEXP weightsSEXP, SEXP block_sizeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type points(pointsSEXP);
+    Rcpp::traits::input_parameter< const arma::colvec& >::type weights(weightsSEXP);
+    Rcpp::traits::input_parameter< int >::type block_size(block_sizeSEXP);
+    rcpp_result_gen = Rcpp::wrap(covariance_tools_check(points, weights, block_size));
+    return rcpp_result_gen;
+END_RCPP
+}
 // recipe_json
 std::string recipe_json(SEXP recipe);
 RcppExport SEXP _ilike_recipe_json(SEXP recipeSEXP) {
@@ -390,14 +418,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // ilike_language_lower
-SEXP ilike_language_lower(const std::vector<std::string>& texts, const std::vector<std::string>& file_names);
-RcppExport SEXP _ilike_ilike_language_lower(SEXP textsSEXP, SEXP file_namesSEXP) {
+SEXP ilike_language_lower(const std::vector<std::string>& texts, const std::vector<std::string>& file_names, SEXP constant_values);
+RcppExport SEXP _ilike_ilike_language_lower(SEXP textsSEXP, SEXP file_namesSEXP, SEXP constant_valuesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< const std::vector<std::string>& >::type texts(textsSEXP);
     Rcpp::traits::input_parameter< const std::vector<std::string>& >::type file_names(file_namesSEXP);
-    rcpp_result_gen = Rcpp::wrap(ilike_language_lower(texts, file_names));
+    Rcpp::traits::input_parameter< SEXP >::type constant_values(constant_valuesSEXP);
+    rcpp_result_gen = Rcpp::wrap(ilike_language_lower(texts, file_names, constant_values));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -457,15 +486,17 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ilike_do_ensemble_kalman_filter_with_fixed_params", (DL_FUNC) &_ilike_do_ensemble_kalman_filter_with_fixed_params, 11},
     {"_ilike_do_particle_filter", (DL_FUNC) &_ilike_do_particle_filter, 10},
     {"_ilike_do_particle_filter_with_fixed_params", (DL_FUNC) &_ilike_do_particle_filter_with_fixed_params, 11},
+    {"_ilike_do_evaluate_gradient_log", (DL_FUNC) &_ilike_do_evaluate_gradient_log, 5},
     {"_ilike_do_evaluate_log", (DL_FUNC) &_ilike_do_evaluate_log, 7},
     {"_ilike_do_evaluate_log_with_fixed_params", (DL_FUNC) &_ilike_do_evaluate_log_with_fixed_params, 8},
     {"_ilike_shared_point_weights_check", (DL_FUNC) &_ilike_shared_point_weights_check, 2},
     {"_ilike_copy_audit", (DL_FUNC) &_ilike_copy_audit, 6},
+    {"_ilike_covariance_tools_check", (DL_FUNC) &_ilike_covariance_tools_check, 3},
     {"_ilike_recipe_json", (DL_FUNC) &_ilike_recipe_json, 1},
     {"_ilike_builtin_registry_table", (DL_FUNC) &_ilike_builtin_registry_table, 0},
     {"_ilike_ilike_language_syntax_tree", (DL_FUNC) &_ilike_ilike_language_syntax_tree, 3},
     {"_ilike_is_ilike_language_text", (DL_FUNC) &_ilike_is_ilike_language_text, 1},
-    {"_ilike_ilike_language_lower", (DL_FUNC) &_ilike_ilike_language_lower, 2},
+    {"_ilike_ilike_language_lower", (DL_FUNC) &_ilike_ilike_language_lower, 3},
     {"_ilike_ilike_find_cpp_function_signature", (DL_FUNC) &_ilike_ilike_find_cpp_function_signature, 2},
     {"_ilike_ilike_rdtsc", (DL_FUNC) &_ilike_ilike_rdtsc, 0},
     {"_ilike_reset_informs", (DL_FUNC) &_ilike_reset_informs, 0},

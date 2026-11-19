@@ -53,6 +53,10 @@ do_particle_filter_with_fixed_params <- function(model_R, parameters_R, algorith
     .Call(`_ilike_do_particle_filter_with_fixed_params`, model_R, parameters_R, algorithm_parameter_list_R, fixed_parameter_list, number_of_particles, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed)
 }
 
+do_evaluate_gradient_log <- function(model_R, model_parameters_R, parameters_in, variable, index_in) {
+    .Call(`_ilike_do_evaluate_gradient_log`, model_R, model_parameters_R, parameters_in, variable, index_in)
+}
+
 do_evaluate_log <- function(model_R, model_parameters_R, algorithm_parameter_list_R, parameters_in, index_in, results_name_in, seed) {
     .Call(`_ilike_do_evaluate_log`, model_R, model_parameters_R, algorithm_parameter_list_R, parameters_in, index_in, results_name_in, seed)
 }
@@ -67,6 +71,10 @@ shared_point_weights_check <- function(points_per_particle, normalised_log_weigh
 
 copy_audit <- function(model_R, parameters_R, algorithm_parameter_list_R, mcmc_termination_method_R, mcmc_weights_method_R, seed_value) {
     .Call(`_ilike_copy_audit`, model_R, parameters_R, algorithm_parameter_list_R, mcmc_termination_method_R, mcmc_weights_method_R, seed_value)
+}
+
+covariance_tools_check <- function(points, weights, block_size) {
+    .Call(`_ilike_covariance_tools_check`, points, weights, block_size)
 }
 
 recipe_json <- function(recipe) {
@@ -85,8 +93,8 @@ is_ilike_language_text <- function(text) {
     .Call(`_ilike_is_ilike_language_text`, text)
 }
 
-ilike_language_lower <- function(texts, file_names) {
-    .Call(`_ilike_ilike_language_lower`, texts, file_names)
+ilike_language_lower <- function(texts, file_names, constant_values = NULL) {
+    .Call(`_ilike_ilike_language_lower`, texts, file_names, constant_values)
 }
 
 ilike_find_cpp_function_signature <- function(code, name) {

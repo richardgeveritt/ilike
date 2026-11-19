@@ -71,6 +71,26 @@ public:
     return this->collected[name];
   }
 
+  // Write the proposed value of `name`, with the shape it has in `shapes`
+  // (C205); for a stacked name ("a;b;c", C203), each variable's part,
+  // with the shape it has in `shapes` (Parameters::set_stacked).
+  void write(const std::string &name, const arma::colvec &value, const Parameters &shapes)
+  {
+    if (!is_stacked_name(name))
+    {
+      const arma::mat* shape = shapes.find_vector(name);
+      if ((shape != NULL) && (shape->n_elem == value.n_elem) && (shape->n_cols != 1))
+        this->matrix(name) = arma::reshape(value, shape->n_rows, shape->n_cols);
+      else
+        this->matrix(name) = value;
+      return;
+    }
+    Parameters split;
+    split.set_stacked(name, value, shapes);
+    for (auto i = split.vector_begin(); i != split.vector_end(); ++i)
+      this->matrix(i->first) = *i->second.first;
+  }
+
   // Write every variable of `values` (the default for kernels that return a
   // new Parameters from simulate).
   void write_all(const Parameters &values)

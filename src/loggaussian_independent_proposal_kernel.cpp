@@ -7,6 +7,15 @@
 
 namespace ilike
 {
+
+// the number of elements of a block at a point, or `otherwise` if the point
+// does not have it (C205)
+static arma::uword block_size(const Parameters &shapes, const std::string &variable, arma::uword otherwise)
+{
+  if (is_stacked_name(variable) || (shapes.find_vector(variable) != NULL))
+    return shapes.get_colvec(variable).n_elem;
+  return otherwise;
+}
 LogGaussianIndependentProposalKernel::LogGaussianIndependentProposalKernel()
 :IndependentProposalKernel()
 {
@@ -175,10 +184,25 @@ double LogGaussianIndependentProposalKernel::evaluate_independent_kernel(const P
     arma::colvec mean = i->second.get_mean();
     double scale = i->second.get_double_scale();
     double dim = double(mean.n_rows);
-    output = output + dmvlnorm_using_precomp(proposed_particle.get_colvec(i->first),
-                                             mean,
-                                             (1.0/scale)*i->second.get_inv(),
-                                             dim*log(scale)+i->second.get_logdet());
+    arma::colvec x = proposed_particle.get_colvec(i->first);
+    if (x.n_elem == mean.n_elem)
+    {
+      output = output + dmvlnorm_using_precomp(x,
+                           mean,
+                           (1.0/scale)*i->second.get_inv(),
+                           dim*log(scale)+i->second.get_logdet());
+    }
+    else
+    {
+      // a scalar proposal on a block: each element independently (C205)
+      if (mean.n_elem != 1)
+        check_proposal_size(i->first, x.n_elem, mean.n_elem, "mean value(s)", false);
+      for (arma::uword k = 0; k < x.n_elem; ++k)
+        output = output + dmvlnorm_using_precomp(arma::colvec(1, arma::fill::value(x[k])),
+                             mean,
+                             (1.0/scale)*i->second.get_inv(),
+                             dim*log(scale)+i->second.get_logdet());
+    }
   }
   return output;
 }
@@ -199,6 +223,33 @@ Parameters LogGaussianIndependentProposalKernel::independent_simulate(RandomNumb
     output[i->first] = rmvlnorm_using_lower_chol(rng,
                                            i->second.get_mean(),
                                            i->second.get_chol_lower(), sqrt(i->second.get_double_scale()));
+  }
+  return output;
+}
+
+Parameters LogGaussianIndependentProposalKernel::independent_simulate_like(RandomNumberGenerator &rng,
+                                                    const Parameters &shapes) const
+{
+  Parameters output;
+  for (auto i=this->proposal_info.begin();
+       i!=this->proposal_info.end();
+       ++i)
+  {
+    const arma::colvec &mean = i->second.get_mean();
+    arma::uword n = block_size(shapes, i->first, mean.n_elem);
+    double sd = sqrt(i->second.get_double_scale());
+    if (n == mean.n_elem)
+    {
+      output[i->first] = rmvlnorm_using_lower_chol(rng, mean, i->second.get_chol_lower(), sd);
+    }
+    else
+    {
+      // a scalar proposal on a block: each element independently (C205)
+      if (mean.n_elem != 1)
+        check_proposal_size(i->first, n, mean.n_elem, "mean value(s)", false);
+      arma::colvec z = mean[0] + (sd*i->second.get_chol_lower()(0, 0))*arma::vectorise(rnorm(rng, std::pair<size_t, size_t>(n, 1)));
+      output[i->first] = arma::exp(z);
+    }
   }
   return output;
 }

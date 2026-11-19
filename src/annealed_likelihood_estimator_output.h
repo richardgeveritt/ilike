@@ -40,6 +40,8 @@ public:
   
   arma::mat get_gradient_of_log(const std::string &variable,
                                 const Parameters &x);
+  std::vector<arma::mat> get_gradients_of_log(const std::vector<std::string> &variables,
+                                              const Parameters &x);
   arma::mat subsample_get_gradient_of_log(const std::string &variable,
                                           const Parameters &x);
   
@@ -48,8 +50,17 @@ public:
   // passed on to the annealed output (dev/plan.md I4b)
   void carry_over_from(const LikelihoodEstimatorOutput &previous,
                        const Parameters &previous_parameters,
-                       const Parameters &new_parameters);
+                       const Parameters &new_parameters,
+                       const std::vector<std::string>* changed = NULL);
   
+  // in-place moves on one element, passed on to the annealed output; the
+  // value is the power times its new value (dev/plan.md I4c-2)
+  bool change_in_place(const Parameters &parameters, const std::string &variable,
+                       size_t row, size_t column);
+  void undo_in_place();
+  void commit_in_place();
+  void prepare_in_place(const Parameters &parameters);
+
   void forget_you_were_already_written_to_file();
   
   void print(std::ostream &os) const;
@@ -84,6 +95,12 @@ protected:
                             const double *values);
   
   void make_copy(const AnnealedLikelihoodEstimatorOutput &another);
+
+  // the power at the parameters (as in evaluate_smcadaptive_part_given_smcfixed)
+  double power(const Parameters &parameters) const;
+
+  // the value before an in-place change
+  double undo_log_likelihood = 0.0;
   
 };
 }

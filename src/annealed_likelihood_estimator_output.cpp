@@ -105,6 +105,48 @@ void AnnealedLikelihoodEstimatorOutput::evaluate_smcadaptive_part_given_smcfixed
   }
 }
 
+double AnnealedLikelihoodEstimatorOutput::power(const Parameters &parameters) const
+{
+  if (this->estimator->use_constant)
+    return this->estimator->constant_power;
+  return this->estimator->function_power(parameters, this->estimator->power_variable);
+}
+
+bool AnnealedLikelihoodEstimatorOutput::change_in_place(const Parameters &parameters,
+                                                        const std::string &variable,
+                                                        size_t row,
+                                                        size_t column)
+{
+  if ((this->estimator_output == NULL) ||
+      !this->estimator_output->change_in_place(parameters, variable, row, column))
+    return false;
+  // (as evaluate_smcadaptive_part_given_smcfixed: a zero power gives zero)
+  this->undo_log_likelihood = this->log_likelihood;
+  double current_power = this->power(parameters);
+  if (current_power != 0.0)
+    this->log_likelihood = current_power * this->estimator_output->log_likelihood;
+  else
+    this->log_likelihood = 0.0;
+  return true;
+}
+
+void AnnealedLikelihoodEstimatorOutput::undo_in_place()
+{
+  this->estimator_output->undo_in_place();
+  this->log_likelihood = this->undo_log_likelihood;
+}
+
+void AnnealedLikelihoodEstimatorOutput::prepare_in_place(const Parameters &parameters)
+{
+  if (this->estimator_output != NULL)
+    this->estimator_output->prepare_in_place(parameters);
+}
+
+void AnnealedLikelihoodEstimatorOutput::commit_in_place()
+{
+  this->estimator_output->commit_in_place();
+}
+
 void AnnealedLikelihoodEstimatorOutput::subsample_simulate(const Parameters &parameters)
 {
   this->estimator_output->subsample_simulate(parameters);
@@ -193,6 +235,23 @@ arma::mat AnnealedLikelihoodEstimatorOutput::get_gradient_of_log(const std::stri
     }
   }
   return gradient;
+}
+
+// several variables (C204): the wrapped factor's gradients, times the power
+std::vector<arma::mat> AnnealedLikelihoodEstimatorOutput::get_gradients_of_log(const std::vector<std::string> &variables,
+                                                                               const Parameters &x)
+{
+  double power = this->estimator->use_constant ? this->estimator->constant_power
+                                               : this->estimator->function_power(x, this->estimator->power_variable);
+  std::vector<arma::mat> gradients = this->estimator_output->get_gradients_of_log(variables, x);
+  for (arma::mat &gradient : gradients)
+  {
+    if (power != 0.0)
+      gradient = power * gradient;
+    else
+      gradient = arma::mat(gradient.n_rows, gradient.n_cols, arma::fill::zeros);
+  }
+  return gradients;
 }
 
 arma::mat AnnealedLikelihoodEstimatorOutput::subsample_get_gradient_of_log(const std::string &variable,
@@ -368,11 +427,12 @@ bool AnnealedLikelihoodEstimatorOutput::repoint_estimator(LikelihoodEstimator* e
 
 void AnnealedLikelihoodEstimatorOutput::carry_over_from(const LikelihoodEstimatorOutput &previous,
                                                         const Parameters &previous_parameters,
-                                                        const Parameters &new_parameters)
+                                                        const Parameters &new_parameters,
+                                                        const std::vector<std::string>* changed)
 {
   const AnnealedLikelihoodEstimatorOutput* source = dynamic_cast<const AnnealedLikelihoodEstimatorOutput*>(&previous);
   if ((source != NULL) && (source->estimator_output != NULL) && (this->estimator_output != NULL))
-    this->estimator_output->carry_over_from(*source->estimator_output, previous_parameters, new_parameters);
+    this->estimator_output->carry_over_from(*source->estimator_output, previous_parameters, new_parameters, changed);
 }
 
 }

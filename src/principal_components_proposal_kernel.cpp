@@ -82,8 +82,7 @@ arma::colvec PrincipalComponentsProposalKernel::move_along_one_direction(RandomN
                                                                          const Particle &particle) const
 {
   arma::colvec point = particle.get_transformed_parameters(this).get_colvec(this->variable);
-  if (point.n_elem!=this->components.directions.n_rows)
-    Rcpp::stop("ilike::pc_rw: the covariance does not match the dimension of " + this->variable + ".");
+  check_proposal_size(this->variable, point.n_elem, this->components.directions.n_rows, "covariance");
   size_t m = this->components.directions.n_cols;
   // l uniform on 0, ..., m-1, then one normal increment along w_l
   size_t l = size_t(std::floor(runif(rng)*double(m)));
@@ -98,7 +97,7 @@ Parameters PrincipalComponentsProposalKernel::simulate(RandomNumberGenerator &rn
                                                        const Particle &particle) const
 {
   Parameters output;
-  output[this->variable] = this->move_along_one_direction(rng, particle);
+  output.set_stacked(this->variable, this->move_along_one_direction(rng, particle), particle.get_transformed_parameters(this));
   return output;
 }
 
@@ -106,7 +105,7 @@ void PrincipalComponentsProposalKernel::simulate_into(RandomNumberGenerator &rng
                                                       const Particle &particle,
                                                       ProposalTarget &target) const
 {
-  target.matrix(this->variable) = this->move_along_one_direction(rng, particle);
+  target.write(this->variable, this->move_along_one_direction(rng, particle), particle.get_transformed_parameters(this));
 }
 
 Parameters PrincipalComponentsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,

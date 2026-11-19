@@ -97,6 +97,25 @@ void GaussianProposalInfo::make_copy(const GaussianProposalInfo &another)
   this->inv_chol = another.inv_chol;
   this->mean = another.mean;
   this->scale = another.scale;
+  this->rest_names = another.rest_names;
+  this->regression = another.regression;
+  this->rest_mean = another.rest_mean;
+}
+
+void GaussianProposalInfo::set_conditional_mean(const std::vector<std::string> &rest_names_in,
+                                                const arma::mat &regression_in,
+                                                const arma::colvec &rest_mean_in)
+{
+  this->rest_names = rest_names_in;
+  this->regression = regression_in;
+  this->rest_mean = rest_mean_in;
+}
+
+arma::colvec GaussianProposalInfo::mean_at(const Parameters &parameters) const
+{
+  if (this->rest_names.empty())
+    return this->mean;
+  return this->mean + this->regression*(parameters.get_colvec(this->rest_names) - this->rest_mean);
 }
 
 //Move constructor for the GaussianProposalInfo class.
@@ -127,6 +146,9 @@ void GaussianProposalInfo::make_copy(GaussianProposalInfo &&another)
   this->inv_chol = std::move(another.inv_chol);
   this->mean = std::move(another.mean);
   this->scale = std::move(another.scale);
+  this->rest_names = std::move(another.rest_names);
+  this->regression = std::move(another.regression);
+  this->rest_mean = std::move(another.rest_mean);
   
   another.covariance = arma::mat();
   another.A = arma::mat();

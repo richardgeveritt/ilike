@@ -67,6 +67,8 @@ public:
   double subsample_evaluate_independent_kernel(const Parameters &proposed_particle) const;
   
   Parameters independent_simulate(RandomNumberGenerator &rng) const;
+  Parameters independent_simulate_like(RandomNumberGenerator &rng,
+                                       const Parameters &shapes) const;
   
   Parameters independent_simulate(RandomNumberGenerator &rng,
                                   const Parameters &conditioned_on_parameters) const;

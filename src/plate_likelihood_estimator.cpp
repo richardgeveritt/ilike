@@ -66,6 +66,8 @@ void PlateLikelihoodEstimator::make_copy(const PlateLikelihoodEstimator &another
 {
   this->structure = another.structure;
   this->term_function = another.term_function;
+  this->gradient_function = another.gradient_function;
+  this->gradients_function = another.gradients_function;
   this->variables = another.variables;
   this->name = another.name;
   this->check = another.check;
@@ -76,6 +78,7 @@ void PlateLikelihoodEstimator::make_copy(const PlateLikelihoodEstimator &another
   this->whole_readers = another.whole_readers;
   this->element_readers = another.element_readers;
   this->variables_read = another.variables_read;
+  this->read_index = another.read_index;
 }
 
 LikelihoodEstimatorOutput* PlateLikelihoodEstimator::initialise()
@@ -143,9 +146,13 @@ void PlateLikelihoodEstimator::build_structure()
     }
   }
   this->variables_read.clear();
+  this->read_index.clear();
   for (size_t v = 0; v < n_variables; ++v)
     if (read[v])
+    {
       this->variables_read.push_back(v);
+      this->read_index[this->variables[v]] = v;
+    }
   this->structure_built = true;
   this->structure_version = this->structure_version + 1;
 }

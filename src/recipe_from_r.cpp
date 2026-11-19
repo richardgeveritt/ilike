@@ -177,12 +177,14 @@ bool is_ilike_language_text(const std::string &text)
 // recipe with placeholders for the user's functions, the algorithms, the
 // constants' defaults and the C++ code to compile (R/ilike_language.R).
 // [[Rcpp::export]]
-SEXP ilike_language_lower(const std::vector<std::string> &texts, const std::vector<std::string> &file_names)
+SEXP ilike_language_lower(const std::vector<std::string> &texts, const std::vector<std::string> &file_names,
+                          SEXP constant_values = R_NilValue)
 {
   ilike::RecipeValue trees = ilike::RecipeValue::list();
   for (size_t i = 0; i < texts.size(); ++i)
     trees.push_back(ilike::parse_ilike_language(texts[i], file_names[i]));
-  return ilike::recipe_to_R(ilike::lower_ilike_language(trees));
+  ilike::RecipeValue values = Rf_isNull(constant_values) ? ilike::RecipeValue() : ilike::recipe_from_R(constant_values);
+  return ilike::recipe_to_R(ilike::lower_ilike_language(trees, values));
 }
 
 // [[Rcpp::export]]

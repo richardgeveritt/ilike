@@ -79,6 +79,8 @@ public:
   void set_proposal_parameters(Parameters* proposal_parameters_in);
   
   std::vector<const ProposalKernel*> get_proposals() const;
+  // the kernel, for a scan of moves on elements that reads and adapts its step
+  SymmetricProposalKernel* get_symmetric_proposal() const { return this->proposal.get(); }
   
 protected:
   

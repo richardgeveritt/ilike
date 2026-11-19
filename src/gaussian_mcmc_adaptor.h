@@ -110,6 +110,21 @@ protected:
     arma::mat average_covariance;
     arma::colvec average_log_component_scales;
     bool started;
+    // conditional scaling of a move on part of the parameters (dev/plan.md):
+    // the other non-fixed vector parameters, and the running statistics of
+    // z = [x; r] (x this variable on the kernel's scale, r the rest): with
+    // implicit weights w_k of the recursion, A = sum w_k y_k, C = sum w_k^2
+    // y_k, B = sum w_k^2 y_k o y_k (y_k the outer products of the deviations),
+    // W = sum w_k, Q = sum w_k^2 (for the weighted Ledoit-Wolf intensity)
+    std::vector<std::string> rest;
+    arma::colvec joint_mean;
+    arma::mat joint_sum;
+    arma::mat joint_weighted_products;
+    arma::mat joint_squared_products;
+    double weight_sum = 0.0;
+    double squared_weight_sum = 0.0;
+    arma::mat average_joint_covariance;
+    arma::mat conditional_covariance; // the last one formed (for the output)
   };
 
   // the principal directions of the current Sigma, into the kernel
@@ -117,6 +132,16 @@ protected:
                                     const arma::mat &covariance);
 
   bool uses_global_scale() const;
+  // z = [x; r] at a point
+  arma::colvec joint_point(const VariableState &state, const Particle &particle) const;
+  // the conditional covariance of x given the rest (shrunk if singular), the
+  // regression matrix Sigma_xr Sigma_rr^-1 over all of r (zero for the
+  // coordinates of r that do not vary), and the means; FALSE if not yet estimable
+  bool conditional_estimate(const VariableState &state,
+                            arma::mat &conditional,
+                            arma::mat &regression,
+                            arma::colvec &x_mean,
+                            arma::colvec &rest_mean) const;
   bool estimates_moments() const;
 
   std::vector<VariableState> states;

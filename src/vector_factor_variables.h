@@ -55,6 +55,8 @@ public:
   
   arma::mat direct_subsample_get_gradient_of_log(const std::string &variable) const;
   
+  std::vector<arma::mat> direct_get_gradients_of_log(const Index* index,
+                                                     const std::vector<std::string> &variables) const;
   arma::mat direct_get_gradient_of_log(const Index* index,
                                        const std::string &variable) const;
   
@@ -103,6 +105,13 @@ public:
   
   void close_ofstreams();
   
+  // In-place moves (dev/plan.md I4c-2): factor i's output; a new output of
+  // factor i for parameters (made and simulated as a proposal's would be),
+  // put in place of the current one, which is returned.
+  LikelihoodEstimatorOutput* get_output(size_t i) const;
+  std::unique_ptr<LikelihoodEstimatorOutput> replace_with_new_output(size_t i, const Parameters &parameters);
+  void put_back_output(size_t i, std::unique_ptr<LikelihoodEstimatorOutput> output);
+
 protected:
   
   // not stored here

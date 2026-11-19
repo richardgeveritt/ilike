@@ -28,6 +28,11 @@ public:
   
   void specific_simulate(const Parameters &parameters);
   void subsample_specific_simulate(const Parameters &parameters);
+
+  // the likelihood simulated at the model's parameters T(u), the prior half
+  // at the ensemble's point u (dev/plan.md 3.16, MFDS transformations)
+  void simulate(const Parameters &parameters);
+  void subsample_simulate(const Parameters &parameters);
   
   arma::rowvec get_measurement_state_for_covariance() const;
   arma::colvec get_shift(double inverse_incremental_temperature) const;
@@ -49,7 +54,9 @@ public:
   void close_ofstreams();
   
 protected:
-  
+
+  void simulate_at(const Parameters &model_parameters, const Parameters &ensemble_parameters, bool subsample);
+
   // not stored here
   //const Parameters* conditioned_on_parameters;
   MixedGenericDirectGaussianMeasurementCovarianceEstimator* estimator;

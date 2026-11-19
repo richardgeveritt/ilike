@@ -1029,6 +1029,27 @@ double Particle::subsample_evaluate_likelihoods(const Index* index)
 arma::mat Particle::direct_get_gradient_of_log(const std::string &variable,
                                                const Index* index) const
 {
+  // a stacked variable (C203): the stack of its variables' gradients
+  // (C204: each factor is asked once for all of its variables)
+  if (is_stacked_name(variable))
+  {
+    std::vector<std::string> names = split_stacked_name(variable);
+    if (this->factor_variables==NULL)
+      return arma::zeros<arma::colvec>(this->parameters.get_colvec(variable).n_elem);
+    std::vector<arma::mat> gradients = this->factor_variables->direct_get_gradients_of_log(index, names);
+    arma::uword total = 0;
+    for (const arma::mat &gradient : gradients)
+      total += gradient.n_elem;
+    arma::colvec stacked(total);
+    arma::uword offset = 0;
+    for (const arma::mat &gradient : gradients)
+    {
+      if (gradient.n_elem > 0)
+        stacked.subvec(offset, offset + gradient.n_elem - 1) = arma::vectorise(gradient);
+      offset += gradient.n_elem;
+    }
+    return stacked;
+  }
   arma::mat current_parameter = this->parameters[variable];
   
   if (this->factor_variables!=NULL)
@@ -1042,6 +1063,17 @@ arma::mat Particle::direct_get_gradient_of_log(const std::string &variable,
 arma::mat Particle::direct_subsample_get_gradient_of_log(const std::string &variable,
                                                          const Index* index) const
 {
+  // a stacked variable (C203): the stack of its variables' gradients
+  if (is_stacked_name(variable))
+  {
+    arma::colvec stacked;
+    for (const std::string &name : split_stacked_name(variable))
+    {
+      arma::colvec gradient = arma::vectorise(this->direct_subsample_get_gradient_of_log(name, index));
+      stacked = (stacked.n_elem == 0) ? gradient : arma::colvec(arma::join_cols(stacked, gradient));
+    }
+    return stacked;
+  }
   arma::mat current_parameter = this->parameters[variable];
   
   if (this->factor_variables!=NULL)

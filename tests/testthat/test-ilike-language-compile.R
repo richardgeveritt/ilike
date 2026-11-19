@@ -77,7 +77,7 @@ test_that("mistakes in recipes in the language are reported with their place", {
   expect_error(ilike::compile(write(c("model { theta ~ norm(0, 1) }", "algorithm { move m = metropolis(gamma(theta, 1, 1)) }"))),
                "ilike::gamma cannot be used as a Metropolis proposal")
   expect_error(ilike::compile(write(c("model { theta ~ norm(0, 1) }", "algorithm { move m = gibbs(norm_rw(theta, 1)) }"))),
-               "a move is metropolis\\(…\\)")
+               "gibbs takes a scalar parameter \\(move m = gibbs\\(mu\\)\\) or an element in a loop")
   expect_error(ilike::compile(write("model { theta ~ norm(0, 1)\ntheta ~ norm(0, 2) }")), "\"theta\" is defined more than once")
 })
 

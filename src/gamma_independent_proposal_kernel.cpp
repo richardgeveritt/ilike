@@ -7,6 +7,15 @@
 
 namespace ilike
 {
+
+// the number of elements of a block at a point, or `otherwise` if the point
+// does not have it (C205)
+static arma::uword block_size(const Parameters &shapes, const std::string &variable, arma::uword otherwise)
+{
+  if (is_stacked_name(variable) || (shapes.find_vector(variable) != NULL))
+    return shapes.get_colvec(variable).n_elem;
+  return otherwise;
+}
 GammaIndependentProposalKernel::GammaIndependentProposalKernel()
   :IndependentProposalKernel()
 {
@@ -65,9 +74,12 @@ void GammaIndependentProposalKernel::make_copy(const GammaIndependentProposalKer
 
 double GammaIndependentProposalKernel::evaluate_independent_kernel(const Parameters &proposed_particle) const
 {
-  return dgamma(proposed_particle[this->variable][0],
-                this->shape,
-                this->rate);
+  // one value, or each element of a block independently (C205)
+  arma::colvec x = proposed_particle.get_colvec(this->variable);
+  double output = 0.0;
+  for (arma::uword k = 0; k < x.n_elem; ++k)
+    output = output + dgamma(x[k], this->shape, this->rate);
+  return output;
 }
 
 double GammaIndependentProposalKernel::subsample_evaluate_independent_kernel(const Parameters &proposed_particle) const
@@ -80,6 +92,17 @@ Parameters GammaIndependentProposalKernel::independent_simulate(RandomNumberGene
 {
   Parameters output;
   output[this->variable] = rgamma(rng, this->shape, this->rate);
+  return output;
+}
+
+Parameters GammaIndependentProposalKernel::independent_simulate_like(RandomNumberGenerator &rng,
+                                                                     const Parameters &shapes) const
+{
+  arma::uword n = block_size(shapes, this->variable, 1);
+  if (n == 1)
+    return this->independent_simulate(rng);
+  Parameters output;
+  output[this->variable] = rgamma(rng, n, this->shape, this->rate);
   return output;
 }
 

@@ -274,11 +274,13 @@ private:
     }
     if (std::isalpha((unsigned char)c) || c == '_' || (unsigned char)c >= 0x80)
     {
-      // (non-ASCII bytes: UTF-8 letters such as θ, as R allows in names)
+      // (non-ASCII bytes: UTF-8 letters such as θ, as R allows in names; "."
+      // after the first character, as in R: the lowering allows it only in
+      // calls to R, r::read.csv)
       size_t start = this->position;
       while (this->position < this->text.size() &&
              (std::isalnum((unsigned char)this->current()) || this->current() == '_' ||
-              (unsigned char)this->current() >= 0x80))
+              this->current() == '.' || (unsigned char)this->current() >= 0x80))
         this->advance();
       token.type = TokenType::Identifier;
       token.text = this->text.substr(start, this->position - start);
@@ -547,7 +549,7 @@ private:
     return node;
   }
 
-  // [keyword [ "[" arguments "]" ] [ "<" constraints ">" ]] target [(= | ~) value]
+  // [keyword [ "[" arguments "]" ] [ "<" constraints ">" ]] target [(= | ~ | <- | +=) value]
   RecipeValue statement()
   {
     Token first = this->lexer.peek();
@@ -656,6 +658,16 @@ private:
       this->lexer.next();
       this->lexer.next();
       op = "<-";
+      this->skip_newlines_inside();
+      value = this->expression();
+    }
+    else if (this->is_symbol(next, "+") && this->is_symbol(this->lexer.peek(1), "=") &&
+             this->lexer.peek(1).line == next.line && this->lexer.peek(1).column == next.column + 1)
+    {
+      // a term added to a named factor: factor name += expression
+      this->lexer.next();
+      this->lexer.next();
+      op = "+=";
       this->skip_newlines_inside();
       value = this->expression();
     }

@@ -1,0 +1,12 @@
+ilike 1.0
+// spins on a 3x3 grid with a pairwise interaction, written as observations
+data { a = [1, 2, 4, 5, 7, 8, 1, 2, 3, 4, 5, 6]; b = [2, 3, 5, 6, 8, 9, 4, 5, 6, 7, 8, 9]; one = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] }
+constants { real beta = 0.8 }
+model {
+  for (k in 1:9) s[k] ~ bern(0.3)
+  for (e in 1:12) one[e] ~ bern(inv_logit(beta * (2 * s[a[e]] - 1) * (2 * s[b[e]] - 1)))
+}
+algorithm mcmc {
+  for (k in 1:9) move m = gibbs(s[k])
+  termination = iterations(10000)
+}
