@@ -44,6 +44,11 @@ public:
                     bool final,
                     const std::string &prefix) const;
 
+  bool watched(const std::string &name, std::vector<double> &values) const;
+  std::vector<std::string> watchable() const;
+  bool acceptance_target(double &target) const;
+  std::string state_label() const;
+
 protected:
 
   void make_copy(const ElementScaleAdaptor &another);

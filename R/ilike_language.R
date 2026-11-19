@@ -187,6 +187,7 @@ compile_ilike_language <- function(filenames, texts, keep_temporary_recipe_code 
 
   if (length(getters) > 0 || length(foreign$code) > 0)
   {
+    sets_file = grepl("ilike_model_file()", lowered$generated_code, fixed = TRUE)
     model_for_compilation_name = tempfile(pattern = "ilike_language_", fileext = ".cpp")
     if (!keep_temporary_recipe_code)
       on.exit(unlink(model_for_compilation_name), add = TRUE)
@@ -207,12 +208,17 @@ compile_ilike_language <- function(filenames, texts, keep_temporary_recipe_code 
                  '',
                  constant_code,
                  lowered$generated_code,
+                 if (sets_file) c('', '// [[Rcpp::export]]', 'void ilike_model_set_file(std::string file) { ilike_model_file() = file; }') else character(0),
                  '',
                  getters,
                  '',
                  foreign$code),
                model_for_compilation_name)
     source_generated_cpp(model_for_compilation_name, filenames)
+    # the file named in the generated code's messages (C208: kept out of the
+    # code, so that the compile cache does not depend on the path)
+    if (sets_file)
+      get("ilike_model_set_file", envir = globalenv())(lowered$element_file)
   }
 
   recipe = resolve_modules(replace_placeholders(lowered$recipe, types, foreign$getters))

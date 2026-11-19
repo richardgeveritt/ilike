@@ -55,6 +55,9 @@ public:
   
   arma::mat direct_subsample_get_gradient_of_log(const std::string &variable) const;
   
+  std::vector<arma::mat> direct_get_gradients_of_log_at(const Index* index,
+                                                        const std::vector<std::string> &variables,
+                                                        const Parameters &at) const;
   std::vector<arma::mat> direct_get_gradients_of_log(const Index* index,
                                                      const std::vector<std::string> &variables) const;
   arma::mat direct_get_gradient_of_log(const Index* index,

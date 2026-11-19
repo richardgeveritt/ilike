@@ -542,6 +542,96 @@ bool GaussianMCMCAdaptor::conditional_estimate(const VariableState &state,
   return true;
 }
 
+// What a stopping criterion reads (C207): the values the kernel uses (the
+// averages, with averaging), every variable's in turn.
+bool GaussianMCMCAdaptor::watched(const std::string &name, std::vector<double> &values) const
+{
+  std::vector<std::string> available = this->watchable();
+  if (std::find(available.begin(), available.end(), name) == available.end())
+    return false;
+  values.clear();
+  for (auto s=this->states.begin(); s!=this->states.end(); ++s)
+  {
+    if (!s->started)
+      continue;
+    double log_scale = this->averaging ? s->average_log_scale : s->log_scale;
+    const arma::colvec &log_component_scales = this->averaging ? s->average_log_component_scales : s->log_component_scales;
+    const arma::colvec &mean = this->averaging ? s->average_mean : s->mean;
+    const arma::mat &covariance = this->averaging ? s->average_covariance : s->covariance;
+    if (name == "scale")
+      values.push_back(exp(log_scale));
+    else if (name == "component_scales")
+      for (arma::uword k = 0; k < log_component_scales.n_elem; ++k)
+        values.push_back(exp(log_component_scales[k]));
+    else if (name == "mean")
+      values.insert(values.end(), mean.begin(), mean.end());
+    else if (name == "covariance_elements")
+      values.insert(values.end(), covariance.begin(), covariance.end());
+    else if (name == "covariance")
+    {
+      // det^(1/d) (NaN if not positive definite) and trace/d
+      double d = double(covariance.n_rows);
+      double log_det = 0.0, sign = 0.0;
+      bool ok = arma::log_det(log_det, sign, arma::symmatu(covariance));
+      values.push_back((ok && (sign > 0.0)) ? exp(log_det/d) : arma::datum::nan);
+      values.push_back(arma::trace(covariance)/d);
+    }
+  }
+  return true;
+}
+
+std::vector<std::string> GaussianMCMCAdaptor::watchable() const
+{
+  std::vector<std::string> output;
+  if (this->uses_global_scale() && (this->method != GaussianAdaptationMethod::AM) &&
+      (this->method != GaussianAdaptationMethod::RB_AM))
+    output.push_back("scale");
+  bool componentwise = (this->method == GaussianAdaptationMethod::COMPONENTWISE_AM) ||
+                       (this->method == GaussianAdaptationMethod::PC_EIGEN) ||
+                       (this->method == GaussianAdaptationMethod::PC_ONLINE);
+  if (componentwise)
+    output.push_back("component_scales");
+  if (this->estimates_moments())
+  {
+    output.push_back("covariance");
+    output.push_back("covariance_elements");
+    output.push_back("mean");
+  }
+  return output;
+}
+
+// the quantities it adapts (am and rb_am keep the scale 2.38^2/d fixed)
+std::vector<std::string> GaussianMCMCAdaptor::default_watch() const
+{
+  std::vector<std::string> output;
+  std::vector<std::string> available = this->watchable();
+  for (const std::string &name : {"scale", "component_scales", "covariance"})
+    if (std::find(available.begin(), available.end(), name) != available.end())
+      output.push_back(name);
+  return output;
+}
+
+bool GaussianMCMCAdaptor::acceptance_target(double &target) const
+{
+  if ((this->method == GaussianAdaptationMethod::AM) || (this->method == GaussianAdaptationMethod::RB_AM))
+    return false;
+  for (auto s=this->states.begin(); s!=this->states.end(); ++s)
+    if (s->started && (s->target > 0.0))
+    {
+      target = s->target;
+      return true;
+    }
+  return false;
+}
+
+std::string GaussianMCMCAdaptor::state_label() const
+{
+  std::string label;
+  for (auto s=this->states.begin(); s!=this->states.end(); ++s)
+    label = label + (label.empty() ? "" : ",") + s->variable;
+  return label.empty() ? std::string("the proposal") : label;
+}
+
 void GaussianMCMCAdaptor::append_state(std::vector<std::string> *names,
                                        std::vector<double> *values,
                                        bool final,

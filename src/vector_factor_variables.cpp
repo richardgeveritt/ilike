@@ -336,10 +336,19 @@ arma::mat VectorFactorVariables::direct_get_gradient_of_log(const Index* index,
 std::vector<arma::mat> VectorFactorVariables::direct_get_gradients_of_log(const Index* index,
                                                                          const std::vector<std::string> &variables) const
 {
+  return this->direct_get_gradients_of_log_at(index, variables, this->particle->parameters);
+}
+
+// at a given point (the factors' gradients are functions of the parameters
+// they are given; C208)
+std::vector<arma::mat> VectorFactorVariables::direct_get_gradients_of_log_at(const Index* index,
+                                                                            const std::vector<std::string> &variables,
+                                                                            const Parameters &at) const
+{
   std::vector<arma::mat> result(variables.size());
   for (size_t k = 0; k < variables.size(); ++k)
   {
-    const arma::mat &current_parameter = this->particle->parameters[variables[k]];
+    const arma::mat &current_parameter = at[variables[k]];
     result[k].zeros(current_parameter.n_rows, current_parameter.n_cols);
   }
   for (auto i=index->begin();
@@ -348,8 +357,7 @@ std::vector<arma::mat> VectorFactorVariables::direct_get_gradients_of_log(const 
   {
     if (this->likelihood_estimator_outputs[*i]!=NULL)
     {
-      std::vector<arma::mat> factor_gradients = this->likelihood_estimator_outputs[*i]->get_gradients_of_log(variables,
-                                                                                                             this->particle->parameters);
+      std::vector<arma::mat> factor_gradients = this->likelihood_estimator_outputs[*i]->get_gradients_of_log(variables, at);
       for (size_t k = 0; k < variables.size(); ++k)
         result[k] = result[k] + factor_gradients[k];
     }

@@ -217,6 +217,7 @@ public:
     output.push_back(this->foreign_code, "foreign_code");
     output.push_back(this->foreign_files, "foreign_files");
     output.push_back(RecipeValue(this->uses_foreign), "uses_foreign");
+    output.push_back(RecipeValue(this->element_file), "element_file");
     return output;
   }
 
@@ -224,6 +225,7 @@ private:
 
   RecipeValue trees;
   std::string file;
+  std::string element_file; // the file named in the generated code's messages
   RecipeValue recipe;
   std::vector<RecipeValue> factor_entries;
   RecipeValue data;
@@ -1474,10 +1476,14 @@ private:
     return "parameters[" + quoted(name) + "]";
   }
 
-  // "x[...] (file:line:column)", for messages about an element
-  std::string element_description(const std::string &name, const RecipeValue &node) const
+  // "x[...] (file:line:column)", for messages about an element. The file is
+  // a marker, replaced when the message is made by the file name R sets after
+  // loading the model (ilike_model_set_file): the generated code, and so the
+  // compile cache's key, then do not depend on where the file is (C208).
+  std::string element_description(const std::string &name, const RecipeValue &node)
   {
-    std::string where = this->file;
+    this->element_file = this->file;
+    std::string where = "@ILIKE_FILE@";
     if (node.is_list() && node.contains("line"))
       where = where + ":" + std::to_string(node["line"].as_int()) + ":" + std::to_string(node["column"].as_int());
     return name + "[...] (" + where + ")";
@@ -1591,7 +1597,9 @@ private:
     arma::mat value;
     if (this->numeric(expression, value))
     {
-      std::string code = "arma::mat({";
+      // (the nested list's type named: arma::mat({{0}, {0}}) is ambiguous for
+      // g++, which can read the inner braces as braced scalars of a flat list)
+      std::string code = "arma::mat(std::initializer_list<std::initializer_list<double>>{";
       for (arma::uword r = 0; r < value.n_rows; ++r)
       {
         code += (r ? ", {" : "{");
@@ -2694,9 +2702,24 @@ struct ilike_model_outside : public std::runtime_error
 {
   ilike_model_outside(const std::string &what) : std::runtime_error(what) {}
 };
+// the model's file, for messages (set by R after loading: the generated code
+// holds the marker @ILIKE_FILE@ instead, so that it does not depend on the path)
+inline std::string &ilike_model_file()
+{
+  static std::string file;
+  return file;
+}
+inline std::string ilike_model_where(const char *what)
+{
+  std::string text(what);
+  size_t at = text.find("@ILIKE_FILE@");
+  if (at != std::string::npos)
+    text.replace(at, 12, ilike_model_file());
+  return text;
+}
 inline void ilike_model_outside_index(const arma::mat &m, int i, int j, bool stochastic, const char *what)
 {
-  std::string message = std::string(what) + ": the index (" + std::to_string(i + 1) +
+  std::string message = ilike_model_where(what) + ": the index (" + std::to_string(i + 1) +
                         (j >= 0 ? ", " + std::to_string(j + 1) : std::string("")) + ") is outside the variable, which has " +
                         std::to_string(m.n_rows) + " row(s) and " + std::to_string(m.n_cols) + " column(s)";
   if (stochastic)
@@ -3785,7 +3808,11 @@ inline double ilike_model_dbinom(double x, double n, double p)
         const RecipeValue &adaptor = arguments.named["adapt"];
         if (kind_of(adaptor) != "call" || this->builtin_name(adaptor) != "scale")
           this->error(adaptor, "moves on elements adapt each element's step with adapt = scale(target, kappa, C, averaged).");
-        elements.push_back(this->builtin_node(adaptor, true, variable), "adapt");
+        RecipeValue until;
+        RecipeValue scale_adaptor = this->without_until(adaptor, until);
+        elements.push_back(this->builtin_node(scale_adaptor, true, variable), "adapt");
+        if (!until.is_null())
+          elements.push_back(until, "adapt_until");
       }
       if (arguments.has("smc_adapt"))
       {
@@ -3900,8 +3927,147 @@ inline double ilike_model_dbinom(double x, double n, double p)
 
   // adapt = scaled_am(…) (its variable defaults to the proposal's),
   // acceptance_rate(parameter, …), cpp::f, or averaged(cpp::f)
-  void lower_adaptor(const RecipeValue &adaptor, const std::string &p, const std::string &variable, RecipeValue &entry)
+  // --- when to stop adapting (until = …, dev/plan.md 3.18 item 10) ------------
+
+  // a number in a criterion (constants by their values when compiling)
+  double criterion_number(const RecipeValue &expression, const std::string &what)
   {
+    std::map<std::string, double> constants;
+    for (const std::string &constant : this->constant_names)
+    {
+      double value;
+      if (this->constant_number(constant, value))
+        constants[constant] = value;
+    }
+    arma::mat number;
+    if (!this->numeric(substitute(expression, constants), number) || (number.n_elem != 1))
+      this->error(expression, what + " is a number.");
+    return number(0);
+  }
+
+  // until = criterion, as the recipe's node
+  RecipeValue adaptation_criterion(const RecipeValue &expression)
+  {
+    static const std::string forms = "iterations(n), stable(tolerance, window, watch, change), acceptance(tolerance, window), "
+                                     "all(…) or any(…)";
+    if (kind_of(expression) != "call")
+      this->error(expression, "until is a criterion: " + forms + ".");
+    std::string f = expression["function"].as_string();
+    Arguments arguments = this->split_arguments(expression);
+    RecipeValue node = RecipeValue::list();
+    node.push_back(RecipeValue(f), "criterion");
+    auto argument = [&](size_t position, const std::string &name) -> RecipeValue {
+      if (arguments.has(name))
+        return arguments.named[name];
+      return (position < arguments.positional.size()) ? arguments.positional[position] : RecipeValue();
+    };
+    if (f == "iterations")
+    {
+      this->allow_only(expression, arguments, {"n"}, 1);
+      RecipeValue n = argument(0, "n");
+      if (n.is_null())
+        this->error(expression, "iterations(n): the number of adaptation steps is missing.");
+      double value = this->criterion_number(n, "iterations(n): n");
+      if ((value < 1) || (value != std::floor(value)))
+        this->error(n, "iterations(n): n is a whole number from 1.");
+      node.push_back(RecipeValue(value), "n");
+      return node;
+    }
+    if ((f == "stable") || (f == "acceptance"))
+    {
+      bool stable = (f == "stable");
+      if (stable)
+        this->allow_only(expression, arguments, {"tolerance", "window", "watch", "change"}, 2);
+      else
+        this->allow_only(expression, arguments, {"tolerance", "window"}, 2);
+      // defaults: placeholders to be set from tests (dev/plan.md 3.18)
+      RecipeValue tolerance = argument(0, "tolerance"), window = argument(1, "window");
+      double tolerance_value = tolerance.is_null() ? (stable ? 0.01 : 0.05) : this->criterion_number(tolerance, f + ": tolerance");
+      double window_value = window.is_null() ? 100.0 : this->criterion_number(window, f + ": window");
+      if (!(tolerance_value >= 0.0))
+        this->error(tolerance, f + ": the tolerance is at least 0.");
+      if ((window_value < 1) || (window_value != std::floor(window_value)))
+        this->error(window.is_null() ? expression : window, f + ": the window is a whole number from 1.");
+      node.push_back(RecipeValue(tolerance_value), "tolerance");
+      node.push_back(RecipeValue(window_value), "window");
+      if (stable && arguments.has("watch"))
+      {
+        static const std::set<std::string> watchable = {"default", "scale", "covariance", "covariance_elements", "mean",
+                                                        "component_scales"};
+        const RecipeValue &watch = arguments.named["watch"];
+        std::vector<std::string> names;
+        auto one = [&](const RecipeValue &e) {
+          if ((kind_of(e) != "name") || !watchable.count(e["name"].as_string()))
+            this->error(e, "stable: watch is default, scale, covariance, covariance_elements, mean or component_scales, "
+                        "or a list of these.");
+          names.push_back(e["name"].as_string());
+        };
+        if (kind_of(watch) == "vector")
+          for (size_t k = 0; k < watch["elements"].size(); ++k)
+            one(watch["elements"][k]);
+        else
+          one(watch);
+        node.push_back(RecipeValue(names), "watch");
+      }
+      if (stable && arguments.has("change"))
+      {
+        const RecipeValue &change = arguments.named["change"];
+        if ((kind_of(change) != "name") || ((change["name"].as_string() != "relative") && (change["name"].as_string() != "absolute")))
+          this->error(change, "stable: change is relative or absolute.");
+        node.push_back(RecipeValue(change["name"].as_string()), "change");
+      }
+      return node;
+    }
+    if ((f == "all") || (f == "any"))
+    {
+      this->allow_only(expression, arguments, {}, 1000);
+      if (arguments.positional.empty())
+        this->error(expression, f + "(…) holds one or more criteria.");
+      RecipeValue items = RecipeValue::list();
+      for (const RecipeValue &item : arguments.positional)
+        items.push_back(this->adaptation_criterion(item));
+      node.push_back(items, "items");
+      return node;
+    }
+    this->error(expression, "until is a criterion: " + forms + ".");
+  }
+
+  // the adaptor's call without until = (lowered separately into `until`)
+  RecipeValue without_until(const RecipeValue &adaptor, RecipeValue &until)
+  {
+    if ((kind_of(adaptor) != "call") || !adaptor.contains("arguments"))
+      return adaptor;
+    const RecipeValue &arguments = adaptor["arguments"];
+    std::vector<std::string> keys = arguments.names();
+    RecipeValue kept = RecipeValue::list();
+    for (size_t i = 0; i < arguments.size(); ++i)
+    {
+      std::string key = (i < keys.size()) ? keys[i] : "";
+      if (key == "until")
+        until = this->adaptation_criterion(arguments[i]);
+      else
+        kept.push_back(arguments[i], key);
+    }
+    if (until.is_null())
+      return adaptor;
+    // a new node (values share their nodes: the original is not changed)
+    RecipeValue call = RecipeValue::list();
+    std::vector<std::string> fields = adaptor.names();
+    for (size_t i = 0; i < adaptor.size(); ++i)
+      call.push_back((fields[i] == "arguments") ? kept : adaptor[i], fields[i]);
+    return call;
+  }
+
+  void lower_adaptor(const RecipeValue &adaptor_with_until, const std::string &p, const std::string &variable, RecipeValue &entry)
+  {
+    RecipeValue until;
+    RecipeValue adaptor = this->without_until(adaptor_with_until, until);
+    if (!until.is_null())
+    {
+      if (this->builtin_name(adaptor) == "averaged")
+        this->error(adaptor_with_until, "until goes with a built-in adaptor (e.g. scaled_am(until = iterations(1000))).");
+      entry.push_back(until, p + "_adaptor_until");
+    }
     if (this->is_function_reference(adaptor))
     {
       entry.push_back(this->function_placeholder(adaptor, "adapt_" + p + "_proposal", "the adaptation"),

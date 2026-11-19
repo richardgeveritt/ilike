@@ -538,8 +538,11 @@ void attach_mcmc_adaptor(ProposalKernel *proposal, const RecipeValue &proposal_i
       function_averaging = true;
     }
     RecipeValue adapt_value = proposal_info[function_name];
-    proposal->set_mcmc_adaptor(new ProposalParameterAdaptor(
-        (adapt_value).function_pointer<AdaptProposalPtr>(), 0.6, 1.0, function_averaging));
+    MCMCAdaptor* adaptor = new ProposalParameterAdaptor(
+        (adapt_value).function_pointer<AdaptProposalPtr>(), 0.6, 1.0, function_averaging);
+    if (proposal_info.contains((adaptor_name + "_until").c_str()))
+      adaptor->set_until(AdaptationCriterion::from_recipe(proposal_info[adaptor_name + "_until"]));
+    proposal->set_mcmc_adaptor(adaptor);
     return;
   }
   if (!has_block)
@@ -557,7 +560,11 @@ void attach_mcmc_adaptor(ProposalKernel *proposal, const RecipeValue &proposal_i
   MCMCAdaptorContext context;
   context.block = adaptor_name;
   context.proposal_type = proposal_type;
-  proposal->set_mcmc_adaptor(make_builtin_mcmc_adaptor(adaptor_info, context, model_parameters));
+  MCMCAdaptor* adaptor = make_builtin_mcmc_adaptor(adaptor_info, context, model_parameters);
+  // when to stop adapting (until = …, dev/plan.md 3.18 item 10)
+  if (proposal_info.contains((adaptor_name + "_until").c_str()))
+    adaptor->set_until(AdaptationCriterion::from_recipe(proposal_info[adaptor_name + "_until"]));
+  proposal->set_mcmc_adaptor(adaptor);
 }
 
 // Adaptation of a proposal from the SMC particles (dev/plan.md 3.2, B2): the
@@ -733,8 +740,13 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
               ElementRandomWalkProposalKernel *element_kernel =
                   new ElementRandomWalkProposalKernel(variable, size_t(rows[e]), size_t(columns[e]), scales[e], step);
               if (element_adapts)
-                element_kernel->set_mcmc_adaptor(new ElementScaleAdaptor(element_target, element_kappa, element_gain,
-                                                                         element_averaged));
+              {
+                MCMCAdaptor* element_adaptor = new ElementScaleAdaptor(element_target, element_kappa, element_gain,
+                                                                       element_averaged);
+                if (elements.contains("adapt_until"))
+                  element_adaptor->set_until(AdaptationCriterion::from_recipe(elements["adapt_until"]));
+                element_kernel->set_mcmc_adaptor(element_adaptor);
+              }
               if (element_smc_constant > 0.0)
                 element_kernel->set_smc_adaptor(new ElementSMCAdaptor(element_smc_constant));
               MCMC *element_move = new MetropolisMCMC(1, element_kernel);

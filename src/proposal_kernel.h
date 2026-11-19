@@ -71,17 +71,19 @@ public:
   // proposed particle; the others are copied from particle with their cached
   // values (see FactorVariables::copy_with_new_outputs). NULL means all
   // factors get new outputs (the behaviour of the overload above).
-  Particle move(RandomNumberGenerator &rng,
-                const Particle &particle,
-                const Index* new_outputs_index) const;
+  // (virtual: the HMC proposal builds its particle with its momenta's
+  // energies, C208)
+  virtual Particle move(RandomNumberGenerator &rng,
+                        const Particle &particle,
+                        const Index* new_outputs_index) const;
 
   // As move(rng, particle, new_outputs_index), but the proposal is built in
   // scratch, reusing its objects where possible (dev/plan.md, Stage 3 (a)).
   // Same random numbers and the same result as move.
-  void move_into(RandomNumberGenerator &rng,
-                 const Particle &particle,
-                 const Index* new_outputs_index,
-                 Particle &scratch) const;
+  virtual void move_into(RandomNumberGenerator &rng,
+                         const Particle &particle,
+                         const Index* new_outputs_index,
+                         Particle &scratch) const;
   
   Particle subsample_move(RandomNumberGenerator &rng,
                           const Particle &particle) const;
@@ -195,6 +197,19 @@ protected:
   friend ReinforceGradientEstimator;
   friend DirectGradientEstimatorOutput;
   
+  // the steps of move and move_into after the simulation, for parameters
+  // simulated by the kernel on its own space
+  Particle proposed_from(const Particle &particle,
+                         const Parameters &simulated,
+                         const Index* new_outputs_index) const;
+  void into_from(const Particle &particle,
+                 const Parameters &simulated,
+                 const Index* new_outputs_index,
+                 Particle &scratch) const;
+  void finish_into(const Particle &particle,
+                   const Index* new_outputs_index,
+                   Particle &scratch) const;
+
   virtual double specific_evaluate_kernel(const Particle &proposed_particle,
                                           const Particle &old_particle) const=0;
 

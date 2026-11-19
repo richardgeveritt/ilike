@@ -102,6 +102,35 @@ void ElementScaleAdaptor::adapt(const AdaptationStep &step)
   element->set_scale(std::exp(this->averaging ? this->average_log_scale : this->log_scale));
 }
 
+// for a stopping criterion (C207): the element's step, and its target
+bool ElementScaleAdaptor::watched(const std::string &name, std::vector<double> &values) const
+{
+  if (name != "scale")
+    return false;
+  values.assign(1, this->kernel()->get_scale());
+  return true;
+}
+
+std::vector<std::string> ElementScaleAdaptor::watchable() const
+{
+  return std::vector<std::string>(1, "scale");
+}
+
+bool ElementScaleAdaptor::acceptance_target(double &target) const
+{
+  target = this->target;
+  return true;
+}
+
+std::string ElementScaleAdaptor::state_label() const
+{
+  ElementRandomWalkProposalKernel* element = this->kernel();
+  std::string index = std::to_string(element->get_row() + 1);
+  if (element->get_column() > 0)
+    index = index + "," + std::to_string(element->get_column() + 1);
+  return element->get_variable() + "[" + index + "]";
+}
+
 void ElementScaleAdaptor::append_state(std::vector<std::string> *names,
                                        std::vector<double> *values,
                                        bool final,

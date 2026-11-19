@@ -65,6 +65,16 @@ public:
   virtual arma::mat direct_subsample_get_gradient_of_log(const Index* index,
                                                          const std::string &variable) const=0;
 
+  // the gradients of several variables at a point other than the particle's
+  // (the points of an HMC trajectory, C208): only factors held as a list of
+  // outputs (VectorFactorVariables)
+  virtual std::vector<arma::mat> direct_get_gradients_of_log_at(const Index* index,
+                                                                const std::vector<std::string> &variables,
+                                                                const Parameters &at) const
+  {
+    Rcpp::stop("Gradients at other points are not available for this model's factors (needed by hmc).");
+  }
+
   // the gradients of several variables (C204); by default one at a time
   virtual std::vector<arma::mat> direct_get_gradients_of_log(const Index* index,
                                                              const std::vector<std::string> &variables) const

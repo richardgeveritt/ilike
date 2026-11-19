@@ -303,6 +303,11 @@ public:
   
   // What happened at the current step (whether the true target or the one we are trying in adaptive SMC).
   double target_evaluated;
+  // set by a proposal whose density is only known at simulation (HMC,
+  // C208): the proposed particle's serial is the one it was proposed from
+  // plus one, and proposal_log_ratio is log q(old | new) - log q(new | old)
+  unsigned long long proposal_serial = 0;
+  double proposal_log_ratio = 0.0;
   double subsample_target_evaluated;
   
   double previous_ensemble_target_evaluated;

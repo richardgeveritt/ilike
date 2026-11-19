@@ -14,3 +14,4 @@
 ^arXiv-
 ^[^/]*\.pdf$
 ^\.claude$
+^logs_

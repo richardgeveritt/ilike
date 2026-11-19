@@ -1,10 +1,16 @@
 # Workflow derived from https://github.com/r-lib/actions/tree/v2/examples
 # Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
+# Pushes and pull requests run the fast tests on every platform; the slow
+# tests (marked skip_on_cran()) run on every platform nightly, and on demand
+# from the Actions tab (dev/plan.md, CI, 2026-11-19).
 on:
   push:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
 
 name: R-CMD-check
 
@@ -28,9 +34,9 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       R_KEEP_PKG_SOURCE: yes
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-      _R_CHECK_ELAPSED_TIMEOUT_: 1800
-      # Run the slow tests marked skip_on_cran() here as well
-      NOT_CRAN: true
+      _R_CHECK_ELAPSED_TIMEOUT_: 3600
+      # the slow tests marked skip_on_cran(): in the nightly and on-demand runs
+      NOT_CRAN: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'true' || 'false' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -88,7 +94,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ steps.cache-path.outputs.path }}
-          key: ilike-compile-cache-${{ matrix.config.os }}-${{ matrix.config.r }}-${{ hashFiles('R/parse_ilike_model.R', 'inst/extdata/*.ilike') }}
+          # keyed on the files that change the generated model code or the
+          # models compiled; on a change, restore-keys brings back the latest
+          # cache (models whose code did not change are reused) and the run
+          # saves the new one under the new key
+          key: ilike-compile-cache-${{ matrix.config.os }}-${{ matrix.config.r }}-${{ hashFiles('R/**', 'src/ilike_language*.cpp', 'inst/include/**', 'tests/testthat/**', 'inst/extdata/**') }}
+          restore-keys: |
+            ilike-compile-cache-${{ matrix.config.os }}-${{ matrix.config.r }}-
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
@@ -96,7 +108,9 @@ jobs:
           needs: check
 
       - uses: r-lib/actions/check-r-package@v2
-        timeout-minutes: 60
+        # (installing the package takes about 10 minutes before the tests'
+        # own limit of 60, _R_CHECK_ELAPSED_TIMEOUT_)
+        timeout-minutes: 90
         with:
           upload-snapshots: true
           error-on: ' "error" '

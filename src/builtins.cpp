@@ -21,6 +21,7 @@
 #include "componentwise_random_walk_proposal_kernel.h"
 #include "principal_components_proposal_kernel.h"
 #include "langevin_proposal_kernel.h"
+#include "hmc_proposal_kernel.h"
 #include "barker_dynamics_proposal_kernel.h"
 #include "mirror_proposal_kernel.h"
 #include "direct_gradient_estimator.h"
@@ -69,6 +70,8 @@ static double default_target(const std::string &proposal_type)
     return 0.574;
   if (p == "barker")
     return 0.4;
+  if (p == "hmc")
+    return 0.8; // (owner's decision, dev/plan.md 3.18)
   return 0.234;
 }
 
@@ -167,11 +170,11 @@ static ArgumentSpec adaptor_averaged()
   return flag("averaged", "use the averages of the iterates (Polyak & Juditsky 1992)");
 }
 
-static const AdaptorFit am_fit = {{"norm_rw", "mvnorm_rw", "mirror"}, false,
-                                  "the proposals ilike::norm_rw, ilike::mvnorm_rw and ilike::mirror"};
-static const AdaptorFit scale_fit = {{"norm_rw", "mvnorm_rw", "mirror", "langevin", "barker"}, false,
+static const AdaptorFit am_fit = {{"norm_rw", "mvnorm_rw", "mirror", "hmc"}, false,
+                                  "the proposals ilike::norm_rw, ilike::mvnorm_rw, ilike::mirror and ilike::hmc"};
+static const AdaptorFit scale_fit = {{"norm_rw", "mvnorm_rw", "mirror", "langevin", "barker", "hmc"}, false,
                                      "the proposals ilike::norm_rw, ilike::mvnorm_rw, ilike::mirror, "
-                                     "ilike::langevin and ilike::barker"};
+                                     "ilike::langevin, ilike::barker and ilike::hmc"};
 static const AdaptorFit componentwise_fit = {{"componentwise_rw"}, false, "the proposal ilike::componentwise_rw"};
 static const AdaptorFit pc_fit = {{"pc_rw"}, false, "the proposal ilike::pc_rw"};
 
@@ -330,6 +333,25 @@ static std::vector<Builtin> make_registry()
     b.proposal = [](const BuiltinArguments &a) -> ProposalKernel* {
       return new LangevinProposalKernel(a.variable("variable"), a.matrix("cov"), a.real("scale"),
                                         new DirectGradientEstimator()); };
+    table.push_back(b);
+  }
+  {
+    Builtin b;
+    b.name = "hmc";
+    b.description = "Hamiltonian Monte Carlo proposal: steps leapfrog steps of size step, momentum N(0, mass^-1)";
+    b.arguments = {the_variable(), required("step", T::Real, "the leapfrog step size epsilon").above(0.0),
+                   optional("steps", T::Integer, "the number of leapfrog steps L").at_least(1.0),
+                   optional("length", T::Real, "the trajectory length (L = max(1, round(length/step)))").above(0.0),
+                   optional("mass", T::Matrix, "the inverse mass matrix (a covariance; default: the identity)")};
+    b.roles = {R::MHProposal, R::UnadjustedProposal};
+    b.proposal = [](const BuiltinArguments &a) -> ProposalKernel* {
+      if (a.given("steps") == a.given("length"))
+        Rcpp::stop("ilike::hmc: give the number of leapfrog steps (steps = L) or the trajectory length (length = …), one of them.");
+      double step = a.real("step");
+      size_t steps = a.given("steps") ? size_t(a.integer("steps"))
+                                      : size_t(std::max(1.0, std::round(a.real("length")/step)));
+      arma::mat mass = a.given("mass") ? a.matrix("mass") : arma::mat(1, 1, arma::fill::ones);
+      return new HMCProposalKernel(a.variable("variable"), mass, step, steps); };
     table.push_back(b);
   }
   {

@@ -100,17 +100,25 @@ Particle ProposalKernel::move(RandomNumberGenerator &rng,
                               const Particle &particle,
                               const Index* new_outputs_index) const
 {
+  return this->proposed_from(particle, this->simulate(rng,particle), new_outputs_index);
+}
+
+// the proposed particle for parameters simulated by the kernel (on its own,
+// possibly transformed, space): the steps of move() after the simulation
+Particle ProposalKernel::proposed_from(const Particle &particle,
+                                       const Parameters &simulated,
+                                       const Index* new_outputs_index) const
+{
   Particle proposed_particle;
   proposed_particle.parameters = particle.parameters;
   
   if (this->transform==NULL)
   {
-    proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->simulate(rng,particle));
+    proposed_particle.parameters.deep_overwrite_with_variables_in_argument(simulated);
   }
   else
   {
-    Parameters proposed_parameters_in_transformed_space = this->simulate(rng,particle);
-    proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->transform->inverse_transform(proposed_parameters_in_transformed_space));
+    proposed_particle.parameters.deep_overwrite_with_variables_in_argument(this->transform->inverse_transform(simulated));
   }
   
   // Outputs are created here, with memory managed by Particle hereafter.
@@ -165,7 +173,29 @@ void ProposalKernel::move_into(RandomNumberGenerator &rng,
     target.write_all(this->transform->inverse_transform(proposed_parameters_in_transformed_space));
   }
   target.finish();
+  this->finish_into(particle, new_outputs_index, scratch);
+}
 
+// move_into for parameters simulated by the kernel (on its own space)
+void ProposalKernel::into_from(const Particle &particle,
+                               const Parameters &simulated,
+                               const Index* new_outputs_index,
+                               Particle &scratch) const
+{
+  ProposalTarget target(scratch.parameters, particle.parameters);
+  if (this->transform==NULL)
+    target.write_all(simulated);
+  else
+    target.write_all(this->transform->inverse_transform(simulated));
+  target.finish();
+  this->finish_into(particle, new_outputs_index, scratch);
+}
+
+// the steps of move_into after the parameters are written
+void ProposalKernel::finish_into(const Particle &particle,
+                                 const Index* new_outputs_index,
+                                 Particle &scratch) const
+{
   bool recycled = false;
   if ((particle.factor_variables!=NULL) && (scratch.factor_variables!=NULL))
   {
@@ -337,7 +367,7 @@ void ProposalKernel::set_mcmc_adaptor(MCMCAdaptor* adaptor_in)
 void ProposalKernel::mcmc_adapt(const AdaptationStep &step)
 {
   if (this->mcmc_adaptor!=NULL)
-    this->mcmc_adaptor->adapt(step);
+    this->mcmc_adaptor->adapt_unless_stopped(step);
 }
 
 void ProposalKernel::prepare_mcmc_adaptation()
@@ -352,7 +382,17 @@ void ProposalKernel::append_adaptation_state(std::vector<std::string> *names,
                                              const std::string &prefix) const
 {
   if (this->mcmc_adaptor!=NULL)
+  {
     this->mcmc_adaptor->append_state(names, values, final, prefix);
+    // with until =: the adaptation step at which it stopped (0: it did not)
+    if (final && this->mcmc_adaptor->has_until())
+    {
+      if (names!=NULL)
+        names->push_back(prefix + this->mcmc_adaptor->state_label() + ".adaptation_stopped_at");
+      if (values!=NULL)
+        values->push_back(double(this->mcmc_adaptor->stopped_at()));
+    }
+  }
 }
 
 Parameters* ProposalKernel::get_proposal_parameters() const

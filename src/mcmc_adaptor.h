@@ -8,6 +8,7 @@ using namespace Rcpp;
 
 #include "particle.h"
 #include "distributions.h"
+#include "adaptation_criterion.h"
 
 namespace ilike
 {
@@ -66,12 +67,39 @@ public:
   void mcmc_adapt(const Particle &latest_particle,
                   size_t iteration_counter);
 
+  // Stopping (dev/plan.md 3.18, item 10): adapt (one step) unless the
+  // criterion given with until = has held; then check it.
+  void adapt_unless_stopped(const AdaptationStep &step);
+  void set_until(AdaptationCriterion* until_in); // (takes ownership)
+  bool has_until() const { return this->until != NULL; }
+  bool has_stopped() const { return this->stopped; }
+  size_t stopped_at() const { return this->stopped_at_step; }
+
+  // What a stopping criterion can read. watched(name, values): the current
+  // values of a quantity the adaptor adapts ("scale", "covariance" (the
+  // geometric mean of the eigenvalues, det^(1/d), and the mean variance,
+  // trace/d), "covariance_elements", "mean", "component_scales"); FALSE if
+  // it has no such quantity. default_watch(): the quantities it adapts.
+  // acceptance_target(target): FALSE if it has no target rate.
+  virtual bool watched(const std::string &name, std::vector<double> &values) const;
+  virtual std::vector<std::string> watchable() const;
+  virtual std::vector<std::string> default_watch() const;
+  virtual bool acceptance_target(double &target) const;
+  // how its output columns name what it adapts (for messages and the
+  // column giving when it stopped)
+  virtual std::string state_label() const;
+
 protected:
 
   void make_copy(const MCMCAdaptor &another);
 
   // Not owned: the kernel that owns this adaptor.
   ProposalKernel* proposal;
+
+  std::unique_ptr<AdaptationCriterion> until;
+  bool stopped = false;
+  size_t steps = 0;
+  size_t stopped_at_step = 0;
 
 };
 
