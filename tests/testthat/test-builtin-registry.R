@@ -149,7 +149,7 @@ test_that("every built-in is in the table", {
   expect_true(all(c("euclidean_uniform_abc", "gaussian_abc", "lp_uniform_abc", "ienki_abc", "sl", "kf", "enkf", "pf",
                     "ssm", "linear_gaussian_data_model", "linear_gaussian_transition_model") %in% tab$builtin))
   expect_equal(tab$argument[tab$builtin == "pf"], c("model", "particles", "iterations_to_store", "parallel", "grain_size"))
-  expect_equal(length(unique(tab$builtin)), 50) # (hmc added, C208)
+  expect_equal(length(unique(tab$builtin)), 51) # (hmc and nuts added, C208, C210)
 })
 
 test_that("EnKI reads enk_sequence blocks, which allow only ilike::annealing", {

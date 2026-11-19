@@ -316,7 +316,7 @@ test_that("adaptors that do not fit the proposal are refused with a clear messag
             "/***mcmc_termination,ilike::iterations(10)***/")
   expect_error(adaptive_run("test_gaussian_posterior_vector.ilike", lines, list(diag(2), 1),
                             list(list(theta = c(1, 1)))),
-               "applies to the proposals ilike::norm_rw, ilike::mvnorm_rw, ilike::mirror and ilike::hmc")
+               "applies to the proposals ilike::norm_rw, ilike::mvnorm_rw, ilike::mirror, ilike::hmc and ilike::nuts")
   lines[3] = "/***mh_adaptor,ilike::nonsense(theta)***/"
   expect_error(adaptive_run("test_gaussian_posterior_vector.ilike", lines, list(diag(2), 1),
                             list(list(theta = c(1, 1)))),

@@ -42,7 +42,9 @@ public:
   void operator=(const MetropolisHastingsMCMC &another);
   Kernel* duplicate() const;
   MCMC* mcmc_duplicate() const;
-  MetropolisHastingsMCMC* metropolis_hastings_mcmc_duplicate() const;
+  // (virtual: an adapting move is copied for each chain through it, and a
+  // NoUTurnMCMC must stay one, C210)
+  virtual MetropolisHastingsMCMC* metropolis_hastings_mcmc_duplicate() const;
   
   Particle move(RandomNumberGenerator &rng,
                 const Particle &particle) const;

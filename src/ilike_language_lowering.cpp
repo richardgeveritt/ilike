@@ -4020,13 +4020,63 @@ inline double ilike_model_dbinom(double x, double n, double p)
     return (list.size() > 0) ? list : RecipeValue();
   }
 
+  // a call node like `call`, with another function and arguments (a new node:
+  // values share their nodes, so the original is not changed)
+  static RecipeValue call_with(const RecipeValue &call, const std::string &function, const RecipeValue &arguments)
+  {
+    RecipeValue output = RecipeValue::list();
+    std::vector<std::string> fields = call.names();
+    for (size_t i = 0; i < call.size(); ++i)
+    {
+      if (fields[i] == "arguments")
+        output.push_back(arguments, fields[i]);
+      else if (fields[i] == "function")
+        output.push_back(RecipeValue(function), fields[i]);
+      else
+        output.push_back(call[i], fields[i]);
+    }
+    return output;
+  }
+
+  bool lowering_nuts = false;
+
   Move lower_move(const RecipeValue &statement, const std::string &name, const RecipeValue &call)
   {
+    if ((kind_of(call) == "call") && (call["function"].as_string() == "nuts") && call["namespace"].as_string().empty())
+    {
+      // move m = nuts(x, step = …) (C210): a move of its own, lowered as a
+      // Metropolis-Hastings move whose proposal is nuts(…) (its Hamiltonian
+      // system); the recipe makes it a NoUTurnMCMC. The move's own arguments
+      // stay with the move.
+      static const std::set<std::string> move_level = {"factors", "cut_factors", "adapt", "smc_adapt", "transform"};
+      const RecipeValue &arguments = call["arguments"];
+      std::vector<std::string> keys = arguments.names();
+      RecipeValue inner = RecipeValue::list(), outer = RecipeValue::list();
+      for (size_t i = 0; i < arguments.size(); ++i)
+      {
+        std::string key = (i < keys.size()) ? keys[i] : "";
+        if (move_level.count(key))
+          continue;
+        inner.push_back(arguments[i], key);
+      }
+      outer.push_back(call_with(call, "nuts", inner), "");
+      for (size_t i = 0; i < arguments.size(); ++i)
+      {
+        std::string key = (i < keys.size()) ? keys[i] : "";
+        if (move_level.count(key))
+          outer.push_back(arguments[i], key);
+      }
+      this->lowering_nuts = true;
+      Move move = this->lower_move(statement, name, call_with(call, "metropolis_hastings", outer));
+      this->lowering_nuts = false;
+      return move;
+    }
     static const std::map<std::string, std::pair<std::string, int>> kinds = {
       {"metropolis", {"m", 3}}, {"metropolis_hastings", {"mh", 1}},
       {"independent_mh", {"imh", 2}}, {"unadjusted", {"unadjusted", 4}}};
     if (kind_of(call) != "call" || !kinds.count(call["function"].as_string()))
-      this->error(statement["value"], "a move is metropolis(…), metropolis_hastings(…), independent_mh(…) or unadjusted(…).");
+      this->error(statement["value"], "a move is metropolis(…), metropolis_hastings(…), independent_mh(…), unadjusted(…), "
+                  "nuts(…) or gibbs(…).");
     std::string kind = call["function"].as_string();
     Move move;
     move.name = name;
@@ -4048,6 +4098,8 @@ inline double ilike_model_dbinom(double x, double n, double p)
     if (kind_of(proposal) == "call" && proposal["function"].as_string() != "density" && !this->is_function_value(proposal))
     {
       std::string type = this->builtin_name(proposal);
+      if ((type == "nuts") && !this->lowering_nuts)
+        this->error(proposal, "nuts is a move of its own, not a proposal: move m = nuts(x, step = …).");
       if (!role_exists(type, role))
         // the registry's message: what it is, and where it may be used
         find_builtin(type, role);
@@ -4058,7 +4110,7 @@ inline double ilike_model_dbinom(double x, double n, double p)
       if (p != "imh")
       {
         RecipeValue transform = this->move_transform(arguments.has("transform") ? &arguments.named["transform"] : NULL,
-                                                     variable, type == "hmc");
+                                                     variable, (type == "hmc") || (type == "nuts"));
         if (!transform.is_null())
           entry.push_back(transform, "transform");
       }

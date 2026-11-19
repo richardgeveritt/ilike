@@ -56,6 +56,7 @@ void HMCProposalKernel::make_copy(const HMCProposalKernel &another)
   this->variable = another.variable;
   this->info = another.info;
   this->steps = another.steps;
+  this->max_depth = another.max_depth;
   if (another.index != NULL)
     this->index.reset(another.index->duplicate());
   else
@@ -107,23 +108,11 @@ Parameters HMCProposalKernel::trajectory(RandomNumberGenerator &rng,
   const Parameters &current = particle.get_transformed_parameters(this);
   arma::colvec x0 = current.get_colvec(this->variable);
   arma::uword n = x0.n_elem;
-  const arma::mat &covariance = this->info.get_covariance();
-  bool scalar = (covariance.n_rows == 1);
-  if (!scalar)
-    check_proposal_size(this->variable, n, covariance.n_rows, "mass (covariance)");
-  double eps = std::sqrt(this->info.get_double_scale());
-
-  // r ~ N(0, C^-1): r = L^-T z with C = L L' (c^-1/2 z for C = c I)
-  arma::colvec z = arma::vectorise(rnorm(rng, std::pair<size_t, size_t>(n, 1)));
-  arma::colvec r;
-  if (scalar)
-    r = z/std::sqrt(covariance(0, 0));
-  else
-    r = arma::solve(arma::trimatu(this->info.get_chol_lower().t()), z);
-  auto apply_c = [&](const arma::colvec &v) -> arma::colvec {
-    return scalar ? arma::colvec(covariance(0, 0)*v) : arma::colvec(covariance*v);
-  };
-  auto kinetic = [&](const arma::colvec &v) -> double { return 0.5*arma::dot(v, apply_c(v)); };
+  this->check_size(n);
+  double eps = this->step_size();
+  arma::colvec r = this->draw_momentum(rng, n);
+  auto apply_c = [&](const arma::colvec &v) -> arma::colvec { return this->velocity(v); };
+  auto kinetic = [&](const arma::colvec &v) -> double { return this->kinetic(v); };
   double start = kinetic(r);
 
   arma::colvec x = x0;
@@ -149,6 +138,62 @@ Parameters HMCProposalKernel::trajectory(RandomNumberGenerator &rng,
   log_ratio = start - kinetic(r);
   output.set_stacked(this->variable, x, current);
   return output;
+}
+
+void HMCProposalKernel::check_size(arma::uword n) const
+{
+  const arma::mat &covariance = this->info.get_covariance();
+  if (covariance.n_rows != 1)
+    check_proposal_size(this->variable, n, covariance.n_rows, "mass (covariance)");
+}
+
+// r ~ N(0, C^-1): r = L^-T z with C = L L' (c^-1/2 z for C = c I)
+arma::colvec HMCProposalKernel::draw_momentum(RandomNumberGenerator &rng, arma::uword n) const
+{
+  const arma::mat &covariance = this->info.get_covariance();
+  arma::colvec z = arma::vectorise(rnorm(rng, std::pair<size_t, size_t>(n, 1)));
+  if (covariance.n_rows == 1)
+    return z/std::sqrt(covariance(0, 0));
+  return arma::solve(arma::trimatu(this->info.get_chol_lower().t()), z);
+}
+
+arma::colvec HMCProposalKernel::velocity(const arma::colvec &r) const
+{
+  const arma::mat &covariance = this->info.get_covariance();
+  return (covariance.n_rows == 1) ? arma::colvec(covariance(0, 0)*r) : arma::colvec(covariance*r);
+}
+
+double HMCProposalKernel::kinetic(const arma::colvec &r) const
+{
+  return 0.5*arma::dot(r, this->velocity(r));
+}
+
+double HMCProposalKernel::log_density_at(const Particle &particle,
+                                         const Parameters &base,
+                                         const arma::colvec &x,
+                                         const Index* index,
+                                         const Index* new_outputs_index,
+                                         std::shared_ptr<Particle> &point) const
+{
+  point.reset();
+  if (!x.is_finite())
+    return -arma::datum::inf;
+  Parameters block;
+  block.set_stacked(this->variable, x, base);
+  point = std::make_shared<Particle>(this->proposed_from(particle, block, new_outputs_index));
+  double log_density = point->evaluate_likelihoods(index);
+  if (this->transform != NULL)
+  {
+    Parameters at = base;
+    at.deep_overwrite_with_variables_in_argument(block);
+    log_density = log_density + this->transform->log_abs_inverse_jacobian_determinant(at);
+  }
+  return log_density;
+}
+
+double HMCProposalKernel::log_jacobian(const Parameters &base) const
+{
+  return (this->transform != NULL) ? this->transform->log_abs_inverse_jacobian_determinant(base) : 0.0;
 }
 
 Particle HMCProposalKernel::move(RandomNumberGenerator &rng,

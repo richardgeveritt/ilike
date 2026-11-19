@@ -75,6 +75,33 @@ public:
                         const Particle &particle,
                         double &log_ratio) const;
 
+  // The Hamiltonian system, for the No-U-Turn sampler (C210). On the
+  // kernel's scale (transformed, with a transform): the block's name, the
+  // step size, momenta r ~ N(0, C^-1), the velocity C r, K(r) = r' C r / 2.
+  const std::string &block() const { return this->variable; }
+  double step_size() const { return std::sqrt(this->info.get_double_scale()); }
+  size_t get_max_depth() const { return this->max_depth; }
+  void set_max_depth(size_t max_depth_in) { this->max_depth = max_depth_in; }
+  void check_size(arma::uword n) const;
+  arma::colvec draw_momentum(RandomNumberGenerator &rng, arma::uword n) const;
+  arma::colvec velocity(const arma::colvec &r) const;
+  double kinetic(const arma::colvec &r) const;
+  // the gradient of the move's log density at the block's value x (on the
+  // kernel's scale: with a transform, x is z, and the gradient is that of
+  // log pi(x(z)) + log|dx/dz|); `base` is the particle's parameters on that scale
+  arma::colvec gradient_at(const Particle &particle, const Parameters &base, const arma::colvec &x) const;
+  // the move's log density at x (its factors in `index`, plus log|dx/dz|
+  // with a transform), with the particle at that point (its factors in
+  // new_outputs_index given new outputs); minus infinity if x is not finite
+  double log_density_at(const Particle &particle,
+                        const Parameters &base,
+                        const arma::colvec &x,
+                        const Index* index,
+                        const Index* new_outputs_index,
+                        std::shared_ptr<Particle> &point) const;
+  // log|dx/dz| at the particle's point (0 without a transform)
+  double log_jacobian(const Parameters &base) const;
+
 protected:
 
   double specific_evaluate_kernel(const Particle &proposed_particle,
@@ -97,14 +124,10 @@ protected:
 
   void make_copy(const HMCProposalKernel &another);
 
-  // the gradient of the move's log density at the block's value x (on the
-  // kernel's scale: with a transform, x is z, and the gradient is that of
-  // log pi(x(z)) + log|dx/dz|); `base` is the particle's parameters on that scale
-  arma::colvec gradient_at(const Particle &particle, const Parameters &base, const arma::colvec &x) const;
-
   std::string variable;
   GaussianProposalInfo info;
   size_t steps;
+  size_t max_depth = 10; // (NUTS)
   std::unique_ptr<Index> index;
 };
 

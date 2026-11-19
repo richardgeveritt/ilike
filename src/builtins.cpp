@@ -70,7 +70,7 @@ static double default_target(const std::string &proposal_type)
     return 0.574;
   if (p == "barker")
     return 0.4;
-  if (p == "hmc")
+  if ((p == "hmc") || (p == "nuts"))
     return 0.8; // (owner's decision, dev/plan.md 3.18)
   return 0.234;
 }
@@ -170,11 +170,11 @@ static ArgumentSpec adaptor_averaged()
   return flag("averaged", "use the averages of the iterates (Polyak & Juditsky 1992)");
 }
 
-static const AdaptorFit am_fit = {{"norm_rw", "mvnorm_rw", "mirror", "hmc"}, false,
-                                  "the proposals ilike::norm_rw, ilike::mvnorm_rw, ilike::mirror and ilike::hmc"};
-static const AdaptorFit scale_fit = {{"norm_rw", "mvnorm_rw", "mirror", "langevin", "barker", "hmc"}, false,
+static const AdaptorFit am_fit = {{"norm_rw", "mvnorm_rw", "mirror", "hmc", "nuts"}, false,
+                                  "the proposals ilike::norm_rw, ilike::mvnorm_rw, ilike::mirror, ilike::hmc and ilike::nuts"};
+static const AdaptorFit scale_fit = {{"norm_rw", "mvnorm_rw", "mirror", "langevin", "barker", "hmc", "nuts"}, false,
                                      "the proposals ilike::norm_rw, ilike::mvnorm_rw, ilike::mirror, "
-                                     "ilike::langevin, ilike::barker and ilike::hmc"};
+                                     "ilike::langevin, ilike::barker, ilike::hmc and ilike::nuts"};
 static const AdaptorFit componentwise_fit = {{"componentwise_rw"}, false, "the proposal ilike::componentwise_rw"};
 static const AdaptorFit pc_fit = {{"pc_rw"}, false, "the proposal ilike::pc_rw"};
 
@@ -352,6 +352,22 @@ static std::vector<Builtin> make_registry()
                                       : size_t(std::max(1.0, std::round(a.real("length")/step)));
       arma::mat mass = a.given("mass") ? a.matrix("mass") : arma::mat(1, 1, arma::fill::ones);
       return new HMCProposalKernel(a.variable("variable"), mass, step, steps); };
+    table.push_back(b);
+  }
+  {
+    Builtin b;
+    b.name = "nuts";
+    b.description = "the No-U-Turn sampler (a move: move m = nuts(...)), leapfrog step size step, momentum N(0, mass^-1)";
+    b.arguments = {the_variable(), required("step", T::Real, "the leapfrog step size epsilon").above(0.0),
+                   optional("mass", T::Matrix, "the inverse mass matrix (a covariance; default: the identity)"),
+                   optional("max_depth", T::Integer, RecipeValue(10.0), "the maximum depth of the tree (at most 2^max_depth - 1 leapfrog steps)").at_least(1.0)};
+    // (the role of its Hamiltonian system, in a NoUTurnMCMC made by the recipe)
+    b.roles = {R::MHProposal};
+    b.proposal = [](const BuiltinArguments &a) -> ProposalKernel* {
+      arma::mat mass = a.given("mass") ? a.matrix("mass") : arma::mat(1, 1, arma::fill::ones);
+      HMCProposalKernel* kernel = new HMCProposalKernel(a.variable("variable"), mass, a.real("step"), 1);
+      kernel->set_max_depth(size_t(a.integer("max_depth")));
+      return kernel; };
     table.push_back(b);
   }
   {

@@ -664,7 +664,18 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
             stop("Error in mcmc proposals part of model file.");
           }
 
-          if (order_of_mcmc.size() > 1) {
+          // the No-U-Turn sampler: its own move, with the Hamiltonian system
+          // of its proposal (C210)
+          RecipeValue mh_info = proposal_infos[simulate_mh_proposal_index];
+          bool nuts = mh_info.contains("mh_proposal") && mh_info["mh_proposal"].is_list() &&
+                      mh_info["mh_proposal"].contains("type") && (mh_info["mh_proposal"]["type"].as_string() == "nuts");
+          if (nuts) {
+            HMCProposalKernel *system = dynamic_cast<HMCProposalKernel*>(proposal);
+            if (order_of_mcmc.size() > 1)
+              mcmc = new NoUTurnMCMC(1, system);
+            else
+              mcmc = new NoUTurnMCMC(termination_method, system);
+          } else if (order_of_mcmc.size() > 1) {
             mcmc = new MetropolisHastingsMCMC(1, proposal);
           } else {
             mcmc = new MetropolisHastingsMCMC(termination_method, proposal);

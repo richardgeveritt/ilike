@@ -46,6 +46,7 @@
 #include "in_place_element_scan_mcmc.h"
 #include "element_adaptors.h"
 #include "elementwise_transform_component.h"
+#include "no_u_turn_mcmc.h"
 #include "transform.h"
 #include "direct_gradient_estimator.h"
 #include "direct_linear_gaussian_measurement_covariance_estimator.h"
