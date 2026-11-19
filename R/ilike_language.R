@@ -235,7 +235,7 @@ compile_ilike_language <- function(filenames, texts, keep_temporary_recipe_code 
 # settings put into the recipe as the engine reads them), and the run-time
 # constants with the file's defaults filled in. Old-format recipes pass
 # through (they hold their algorithm settings directly).
-prepare_recipe <- function(recipe, algorithm, model_parameter_list)
+prepare_recipe <- function(recipe, algorithm, model_parameter_list, transform_allowed = FALSE)
 {
   if (!identical(recipe$language, "ilike"))
   {
@@ -313,6 +313,11 @@ prepare_recipe <- function(recipe, algorithm, model_parameter_list)
   }
   if (is.null(constants))
     constants = list()
+  # transform = auto (or a list) in an algorithm section: for IENKI (and MFDS,
+  # which says why it cannot use one); MCMC and SMC moves take their own (C209)
+  if (!transform_allowed && !is.null(prepared$algorithm_transform))
+    stop("transform = ... in an algorithm section is for IENKI; for MCMC and SMC, give it to each move ",
+         "(e.g. move m = metropolis(norm_rw(sigma, 0.5), transform = auto)).", call. = FALSE)
   list(recipe = prepared, model_parameter_list = constants, settings = settings)
 }
 

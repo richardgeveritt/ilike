@@ -482,6 +482,11 @@ double ProposalKernel::subsample_evaluate_kernel(const Particle &proposed_partic
   }
 }
 
+void ProposalKernel::set_transform(Transform* transform_in)
+{
+  this->transform.reset(transform_in);
+}
+
 Transform* ProposalKernel::get_transform() const
 {
   return this->transform.get();

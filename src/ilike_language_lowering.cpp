@@ -3826,6 +3826,200 @@ inline double ilike_model_dbinom(double x, double n, double p)
     return move;
   }
 
+  // --- transforms of moved variables (dev/plan.md 3.18 H2, C209) ---------------
+
+  // a number known when compiling (constants by their values), or FALSE
+  bool compile_time_number(const RecipeValue &expression, double &value)
+  {
+    std::map<std::string, double> constants;
+    for (const std::string &constant : this->constant_names)
+    {
+      double c;
+      if (this->constant_number(constant, c))
+        constants[constant] = c;
+    }
+    arma::mat number;
+    if (!this->numeric(substitute(expression, constants), number) || (number.n_elem != 1))
+      return false;
+    value = number(0);
+    return true;
+  }
+
+  static RecipeValue transform_item(const std::string &variable, const std::string &kind, double lower, double upper)
+  {
+    RecipeValue item = RecipeValue::list();
+    item.push_back(RecipeValue(variable), "variable");
+    item.push_back(RecipeValue(kind), "kind");
+    item.push_back(RecipeValue(lower), "lower");
+    item.push_back(RecipeValue(upper), "upper");
+    return item;
+  }
+
+  // the distribution of a parameter in the model section: its call
+  // (f(arguments)), from the model statements, or from a simple prior
+  // (theta ~ gamma(2, 1) with constant arguments, which stays the registry's
+  // prior when no statement needs generated code); NULL if none
+  RecipeValue distribution_of(const std::string &variable) const
+  {
+    for (const ModelStatement &st : this->model_statements)
+      if ((st.op == "~") && !st.observed && (st.variable == variable))
+        return st.value;
+    for (const std::string &name : this->model_parameter_names())
+      if (name == variable)
+        for (size_t t = 0; t < this->trees.size(); ++t)
+        {
+          const RecipeValue &sections = this->trees[t]["sections"];
+          for (size_t s = 0; s < sections.size(); ++s)
+          {
+            if (sections[s]["section"].as_string() != "model")
+              continue;
+            const RecipeValue &statements = sections[s]["statements"];
+            for (size_t i = 0; i < statements.size(); ++i)
+            {
+              const RecipeValue &st = statements[i];
+              if (st["keyword"].as_string().empty() && st.contains("operator") && (st["operator"].as_string() == "~") &&
+                  (kind_of(st["target"]) == "name") && (st["target"]["name"].as_string() == variable) &&
+                  (kind_of(st["value"]) == "call"))
+                return st["value"];
+            }
+          }
+        }
+    return RecipeValue();
+  }
+
+  // the parameters given a distribution in the model section (statements,
+  // and simple priors written "theta ~ f(…)")
+  std::vector<std::string> model_parameter_names() const
+  {
+    std::vector<std::string> names;
+    auto add = [&](const std::string &name) {
+      if (!this->data_names.count(name) && (std::find(names.begin(), names.end(), name) == names.end()))
+        names.push_back(name);
+    };
+    for (const ModelStatement &st : this->model_statements)
+      if ((st.op == "~") && !st.observed)
+        add(st.variable);
+    for (size_t t = 0; t < this->trees.size(); ++t)
+    {
+      const RecipeValue &sections = this->trees[t]["sections"];
+      for (size_t s = 0; s < sections.size(); ++s)
+      {
+        if (sections[s]["section"].as_string() != "model")
+          continue;
+        const RecipeValue &statements = sections[s]["statements"];
+        for (size_t i = 0; i < statements.size(); ++i)
+        {
+          const RecipeValue &st = statements[i];
+          if (st["keyword"].as_string().empty() && st.contains("operator") && (st["operator"].as_string() == "~") &&
+              (kind_of(st["target"]) == "name"))
+            add(st["target"]["name"].as_string());
+        }
+      }
+    }
+    return names;
+  }
+
+  // the transform of a variable from its support in the model section
+  // (transform = auto): NULL when it needs none (or the support is not known)
+  RecipeValue automatic_transform(const std::string &variable)
+  {
+    RecipeValue call = this->distribution_of(variable);
+    if (!call.is_null())
+    {
+      std::string f = call["function"].as_string();
+      const RecipeValue &arguments = call["arguments"];
+      if ((f == "gamma") || (f == "lnorm") || (f == "exp"))
+        return transform_item(variable, "log", 0.0, 0.0);
+      if (f == "beta")
+        return transform_item(variable, "logit", 0.0, 1.0);
+      double a, b;
+      if ((f == "unif") && this->compile_time_number(arguments[0], a) && this->compile_time_number(arguments[1], b))
+        return transform_item(variable, "logit", a, b);
+      if ((f == "tnorm") && (arguments.size() == 4) && this->compile_time_number(arguments[2], a) &&
+          this->compile_time_number(arguments[3], b))
+      {
+        if (std::isfinite(a) && std::isfinite(b))
+          return transform_item(variable, "logit", a, b);
+        if (std::isfinite(a))
+          return transform_item(variable, "lower", a, 0.0);
+        if (std::isfinite(b))
+          return transform_item(variable, "upper", 0.0, b);
+      }
+    }
+    return RecipeValue();
+  }
+
+  // transform = auto | none | [log(x), logit(p), logit(p, a, b), lower(x, a), upper(x, b)]
+  // for the moved variables (a stacked name's parts); NULL for none
+  RecipeValue move_transform(const RecipeValue *argument, const std::string &variables, bool automatic_by_default)
+  {
+    // (the stacked name's parts, "a;b;c")
+    std::vector<std::string> moved;
+    std::stringstream parts(variables);
+    for (std::string part; std::getline(parts, part, ';');)
+      moved.push_back(part);
+    bool automatic = automatic_by_default;
+    RecipeValue list = RecipeValue::list();
+    if (argument != NULL)
+    {
+      const RecipeValue &given = *argument;
+      if ((kind_of(given) == "name") && (given["name"].as_string() == "none"))
+        return RecipeValue();
+      else if ((kind_of(given) == "name") && (given["name"].as_string() == "auto"))
+        automatic = true;
+      else
+      {
+        std::vector<RecipeValue> items;
+        if (kind_of(given) == "vector")
+          for (size_t k = 0; k < given["elements"].size(); ++k)
+            items.push_back(given["elements"][k]);
+        else
+          items.push_back(given);
+        for (const RecipeValue &item : items)
+        {
+          static const std::string forms = "transform is auto, none, or a list of log(x), logit(x), logit(x, a, b), lower(x, a), upper(x, b)";
+          if (kind_of(item) != "call")
+            this->error(item, forms + ".");
+          std::string f = item["function"].as_string();
+          const RecipeValue &arguments = item["arguments"];
+          if (((f != "log") && (f != "logit") && (f != "lower") && (f != "upper")) || (arguments.size() < 1) ||
+              (kind_of(arguments[0]) != "name"))
+            this->error(item, forms + ".");
+          std::string x = arguments[0]["name"].as_string();
+          if (std::find(moved.begin(), moved.end(), x) == moved.end())
+            this->error(arguments[0], "transform: " + x + " is not moved by this move.");
+          size_t expected = (f == "log") ? 1 : (f == "logit") ? ((arguments.size() == 1) ? 1 : 3) : 2;
+          if (arguments.size() != expected)
+            this->error(item, f + ": " + ((f == "log") ? "log(x)" : (f == "logit") ? "logit(x) or logit(x, a, b)" :
+                                          (f == "lower") ? "lower(x, a)" : "upper(x, b)") + ".");
+          double a = 0.0, b = (f == "logit") ? 1.0 : 0.0;
+          if ((f == "logit") && (arguments.size() == 3))
+          {
+            if (!this->compile_time_number(arguments[1], a) || !this->compile_time_number(arguments[2], b))
+              this->error(item, "logit(x, a, b): the bounds are numbers (or constants).");
+            if (!(a < b))
+              this->error(item, "logit(x, a, b): a must be below b.");
+          }
+          if ((f == "lower") && !this->compile_time_number(arguments[1], a))
+            this->error(item, "lower(x, a): the bound is a number (or a constant).");
+          if ((f == "upper") && !this->compile_time_number(arguments[1], b))
+            this->error(item, "upper(x, b): the bound is a number (or a constant).");
+          list.push_back(transform_item(x, f, a, b));
+        }
+        return list;
+      }
+    }
+    if (!automatic)
+      return RecipeValue();
+    for (const std::string &x : moved)
+    {
+      RecipeValue item = this->automatic_transform(x);
+      if (!item.is_null())
+        list.push_back(item);
+    }
+    return (list.size() > 0) ? list : RecipeValue();
+  }
+
   Move lower_move(const RecipeValue &statement, const std::string &name, const RecipeValue &call)
   {
     static const std::map<std::string, std::pair<std::string, int>> kinds = {
@@ -3841,7 +4035,7 @@ inline double ilike_model_dbinom(double x, double n, double p)
     const std::string &p = move.prefix;
 
     Arguments arguments = this->split_arguments(call);
-    this->allow_only(call, arguments, {"proposal", "log", "factors", "cut_factors", "adapt", "smc_adapt"}, 1);
+    this->allow_only(call, arguments, {"proposal", "log", "factors", "cut_factors", "adapt", "smc_adapt", "transform"}, 1);
     RecipeValue proposal = !arguments.positional.empty() ? arguments.positional[0]
                          : (arguments.has("proposal") ? arguments.named["proposal"] : RecipeValue());
     if (proposal.is_null())
@@ -3860,11 +4054,24 @@ inline double ilike_model_dbinom(double x, double n, double p)
       RecipeValue node = this->builtin_node(proposal, true, "", true);
       variable = node["variables"].as_string();
       entry.push_back(node, p + "_proposal");
+      // the scale it moves on (C209): auto by default for hmc
+      if (p != "imh")
+      {
+        RecipeValue transform = this->move_transform(arguments.has("transform") ? &arguments.named["transform"] : NULL,
+                                                     variable, type == "hmc");
+        if (!transform.is_null())
+          entry.push_back(transform, "transform");
+      }
+      else if (arguments.has("transform"))
+        this->error(arguments.named["transform"], kind + ": an independent proposal does not move on a transformed scale.");
       if (arguments.has("log"))
         this->error(arguments.named["log"], kind + ": log goes with a proposal written by the user.");
     }
     else
     {
+      if (arguments.has("transform"))
+        this->error(arguments.named["transform"], kind + ": transform goes with a built-in proposal "
+                    "(a proposal written by the user moves on the scale it chooses).");
       RecipeValue simulate, log;
       if (this->is_function_value(proposal))
       {
@@ -4131,6 +4338,7 @@ inline double ilike_model_dbinom(double x, double n, double p)
     RecipeValue transition_proposals = RecipeValue::list();
     RecipeValue settings = RecipeValue::list();
     RecipeValue mfds_transform;
+    RecipeValue algorithm_transform;
 
     auto method = [&](const std::string &key, const RecipeValue &node) {
       RecipeValue item = RecipeValue::list();
@@ -4250,12 +4458,26 @@ inline double ilike_model_dbinom(double x, double n, double p)
         else
           method("mcmc_weights", this->function_placeholder(value, "mcmc_weights", "weights"));
       }
+      else if ((target == "transform") && !this->is_function_reference(value))
+      {
+        // the built-in transforms for the whole algorithm (IENKI, C209):
+        // auto (every parameter with a support in the model statements), none,
+        // or a list [log(x), logit(p, a, b), …] of any parameters
+        if (!algorithm_transform.is_null() || !mfds_transform.is_null())
+          this->error(statement, "\"transform\" is set more than once.");
+        std::string parameters;
+        for (const std::string &name : this->model_parameter_names())
+          parameters = parameters + (parameters.empty() ? "" : ";") + name;
+        algorithm_transform = this->move_transform(&value, parameters, false);
+        if (algorithm_transform.is_null())
+          algorithm_transform = RecipeValue::list(); // (none, or nothing to transform)
+      }
       else if (target == "transform")
       {
         // MFDS: the map from the Gaussian scale the ensemble moves on to the
         // model's parameters, under the same names (dev/plan.md 3.16); the
         // variables it does not give keep their values
-        if (!this->is_function_reference(value) || value["namespace"].as_string() != "cpp")
+        if (value["namespace"].as_string() != "cpp")
           this->error(value, "transform is a C++ function (cpp::f) giving the model's parameters from the Gaussian scale.");
         std::string f = this->cpp_function(value, "transform");
         std::string wrapper = "ilike_mfds_transform_" + std::to_string(++this->generated_count);
@@ -4322,6 +4544,8 @@ inline double ilike_model_dbinom(double x, double n, double p)
       algorithm.push_back(methods, "method");
     if (!mfds_transform.is_null())
       algorithm.push_back(mfds_transform, "mfds_transform");
+    if (!algorithm_transform.is_null() && (algorithm_transform.size() > 0))
+      algorithm.push_back(algorithm_transform, "algorithm_transform");
     algorithm.push_back(settings, "settings");
     this->algorithms.push_back(algorithm, name);
   }

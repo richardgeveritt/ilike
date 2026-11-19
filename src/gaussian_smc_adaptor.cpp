@@ -59,8 +59,6 @@ void GaussianSMCAdaptor::adapt_from(const arma::mat &points,
 {
   if (this->proposal==NULL)
     Rcpp::stop("SMC adaptor: not attached to a proposal.");
-  if (this->proposal->get_transform()!=NULL)
-    Rcpp::stop("SMC adaptor: not available for a proposal on a transformed space.");
   GaussianProposalInfo* info = this->proposal->get_gaussian_proposal_info(this->variable);
   if (info==NULL)
     Rcpp::stop("SMC adaptor: the proposal has no Gaussian covariance for variable " + this->variable + " to adapt.");
@@ -124,7 +122,8 @@ void GaussianSMCAdaptor::smc_adapt(SMCOutput* current_state)
   // the moved block's variables first (several for a stacked variable)
   std::vector<std::string> names = split_stacked_name(this->variable);
   std::vector<size_t> offsets;
-  arma::mat points = population_points(generation, names, offsets);
+  // (on the proposal's scale, C209)
+  arma::mat points = population_points(generation, names, offsets, (this->proposal != NULL) ? this->proposal->get_transform() : NULL);
   if (points.n_rows==0)
     return;
   arma::colvec weights;
@@ -142,7 +141,7 @@ void GaussianSMCAdaptor::ensemble_adapt(EnsembleKalmanOutput* current_state)
   // the moved block's variables first (several for a stacked variable)
   std::vector<std::string> names = split_stacked_name(this->variable);
   std::vector<size_t> offsets;
-  arma::mat points = ensemble_points(ensemble, names, offsets);
+  arma::mat points = ensemble_points(ensemble, names, offsets, (this->proposal != NULL) ? this->proposal->get_transform() : NULL);
   if (points.n_rows==0)
     return;
   size_t K = split_stacked_name(this->variable).size();

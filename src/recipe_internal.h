@@ -45,6 +45,8 @@
 #include "element_random_walk_proposal_kernel.h"
 #include "in_place_element_scan_mcmc.h"
 #include "element_adaptors.h"
+#include "elementwise_transform_component.h"
+#include "transform.h"
 #include "direct_gradient_estimator.h"
 #include "direct_linear_gaussian_measurement_covariance_estimator.h"
 #include "direct_nonlinear_gaussian_measurement_covariance_estimator.h"
@@ -194,6 +196,8 @@ IndependentProposalKernel *get_imh_proposal(const RecipeValue &current_proposal,
 SymmetricProposalKernel *get_m_proposal(const RecipeValue &current_proposal, const RecipeValue &model_parameters, Data *data);
 MCMCTermination *make_mcmc_termination(const RecipeValue &model_parameters, const RecipeValue &mcmc_termination_method);
 void attach_mcmc_adaptor(ProposalKernel *proposal, const RecipeValue &proposal_info, const std::string &prefix, const RecipeValue &model_parameters);
+// the built-in transforms from the recipe (C209); NULL if none
+Transform *transform_from_recipe(const RecipeValue &list);
 void attach_smc_adaptor(ProposalKernel *proposal, const RecipeValue &proposal_info, const RecipeValue &model_parameters);
 MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, Data *data, const RecipeValue &mcmc_termination_method, const RecipeValue &mcmc_weights_method, Index *full_index);
 SMCCriterion *get_resampling_method(const RecipeValue &model, const RecipeValue &model_parameters, size_t number_of_particles);

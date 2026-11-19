@@ -1,5 +1,6 @@
 // Include the class definition.
 #include "transform.h"
+#include "elementwise_transform_component.h"
 #include "transform_component.h"
 #include "custom_transform_component.h"
 #include "custom_leafroot_transform_component.h"
@@ -32,6 +33,51 @@ Transform::Transform(TransformPtr transform_in,
                                                                   inverse_transform_in));
   this->root = this->components.begin()->get();
   this->leaf = this->components.begin()->get();
+}
+
+Transform::Transform(TransformComponent* component_in)
+{
+  this->components.emplace_back(component_in);
+  this->root = this->components.begin()->get();
+  this->leaf = this->components.begin()->get();
+}
+
+bool Transform::is_elementwise() const
+{
+  return (this->components.size() == 1) &&
+         (dynamic_cast<const ElementwiseTransformComponent*>(this->root) != NULL);
+}
+
+bool Transform::gradient_to_transformed(const std::string &variable,
+                                        const Parameters &transformed,
+                                        arma::mat &gradient) const
+{
+  if (!this->is_elementwise())
+    return false;
+  const ElementwiseTransformComponent* elementwise = dynamic_cast<const ElementwiseTransformComponent*>(this->root);
+  if (!is_stacked_name(variable))
+  {
+    elementwise->gradient_to_transformed(variable, transformed, gradient);
+    return true;
+  }
+  // a stacked name: each variable's part of the stacked gradient
+  arma::colvec stacked = arma::vectorise(gradient);
+  arma::uword offset = 0;
+  for (const std::string &name : split_stacked_name(variable))
+  {
+    const arma::mat* z = transformed.find_vector(name);
+    if ((z == NULL) || (offset + z->n_elem > stacked.n_elem))
+      Rcpp::stop("The transform of " + stacked_display_name(variable) + " does not match its gradient.");
+    if (z->n_elem > 0)
+    {
+      arma::mat part = stacked.subvec(offset, offset + z->n_elem - 1);
+      elementwise->gradient_to_transformed(name, transformed, part);
+      stacked.subvec(offset, offset + z->n_elem - 1) = arma::vectorise(part);
+    }
+    offset += z->n_elem;
+  }
+  gradient = arma::reshape(stacked, gradient.n_rows, gradient.n_cols);
+  return true;
 }
 
 // Comment about function.

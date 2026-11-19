@@ -519,6 +519,36 @@ static void check_unadjusted_compatibility(const std::vector<MoveFactors> &moves
 // or the user's adaptation function (under "adapt_<prefix>_proposal"), with
 // which the only block allowed is ilike::averaged() (Polyak & Juditsky 1992
 // averaging of the iterates).
+// The scale a proposal moves on (dev/plan.md 3.18 H2, C209): the move's
+// transform = …, lowered to a list of {variable, kind, lower, upper}.
+Transform *transform_from_recipe(const RecipeValue &list) {
+  std::vector<ElementwiseTransformComponent::Spec> specs;
+  for (size_t k = 0; k < list.size(); ++k) {
+    const RecipeValue &item = list[k];
+    ElementwiseTransformComponent::Spec spec;
+    spec.variable = item["variable"].as_string();
+    std::string kind = item["kind"].as_string();
+    spec.kind = (kind == "log") ? ElementwiseTransformComponent::Kind::log
+              : (kind == "lower") ? ElementwiseTransformComponent::Kind::lower
+              : (kind == "upper") ? ElementwiseTransformComponent::Kind::upper
+              : ElementwiseTransformComponent::Kind::logit;
+    spec.lower = item["lower"].as_double();
+    spec.upper = item["upper"].as_double();
+    specs.push_back(spec);
+  }
+  if (specs.empty())
+    return NULL;
+  return new Transform(new ElementwiseTransformComponent(specs));
+}
+
+static void attach_transform(ProposalKernel *proposal, const RecipeValue &proposal_info) {
+  if (!proposal_info.contains("transform"))
+    return;
+  Transform *transform = transform_from_recipe(proposal_info["transform"]);
+  if (transform != NULL)
+    proposal->set_transform(transform);
+}
+
 void attach_mcmc_adaptor(ProposalKernel *proposal, const RecipeValue &proposal_info,
                          const std::string &prefix,
                          const RecipeValue &model_parameters) {
@@ -624,6 +654,7 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
             proposal =
                 get_mh_proposal(proposal_infos[simulate_mh_proposal_index],
                                 model_parameters, data);
+            attach_transform(proposal, proposal_infos[simulate_mh_proposal_index]);
             attach_mcmc_adaptor(proposal,
                                 proposal_infos[simulate_mh_proposal_index],
                                 "mh", model_parameters);
@@ -787,6 +818,7 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
           if ((proposal_infos[simulate_m_proposal_index]).is_list()) {
             proposal = get_m_proposal(proposal_infos[simulate_m_proposal_index],
                                       model_parameters, data);
+            attach_transform(proposal, proposal_infos[simulate_m_proposal_index]);
             attach_mcmc_adaptor(proposal,
                                 proposal_infos[simulate_m_proposal_index],
                                 "m", model_parameters);
@@ -822,6 +854,7 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
             proposal = get_unadjusted_proposal(
                 proposal_infos[simulate_unadjusted_proposal_index],
                 model_parameters, data);
+            attach_transform(proposal, proposal_infos[simulate_unadjusted_proposal_index]);
             attach_smc_adaptor(proposal,
                                proposal_infos[simulate_unadjusted_proposal_index],
                                model_parameters);

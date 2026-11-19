@@ -8,6 +8,8 @@
 namespace ilike
 {
 
+class Transform;
+
 class Particles;
 class Ensemble;
 
@@ -59,12 +61,15 @@ bool conditional_variances(const arma::mat &points,
 // All the vector variables of the points of an SMC generation (one row per
 // particle), in the order of `names` (filled from the first particle when
 // empty, the given ones first), and where each variable starts.
+// (with a transform: each point on the transformed scale, C209)
 arma::mat population_points(const Particles &generation,
                             std::vector<std::string> &names,
-                            std::vector<size_t> &offsets);
+                            std::vector<size_t> &offsets,
+                            const Transform* transform = NULL);
 arma::mat ensemble_points(const Ensemble &ensemble,
                           std::vector<std::string> &names,
-                          std::vector<size_t> &offsets);
+                          std::vector<size_t> &offsets,
+                          const Transform* transform = NULL);
 
 // The normalised weights of an SMC generation for its current target (before
 // resampling), or equal weights; FALSE if they are not usable.

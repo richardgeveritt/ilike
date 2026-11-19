@@ -67,7 +67,13 @@ arma::mat DirectGradientEstimatorOutput::get_gradient_of_log(const std::string &
                                                                      index);
     if (this->estimator->proposal->transform!=NULL)
     {
-      current_gradient = arma::reshape(arma::vectorise(current_gradient)*this->estimator->proposal->transform->inverse_jacobian(particle.get_transformed_parameters(this->estimator->proposal)),current_gradient.n_rows,current_gradient.n_cols);
+      // the built-in elementwise transforms: the exact chain rule, with the
+      // gradient of log|dx/dz| (C209); other transforms: through the inverse
+      // Jacobian, as before
+      if (!this->estimator->proposal->transform->gradient_to_transformed(variable,
+                                                                         particle.get_transformed_parameters(this->estimator->proposal),
+                                                                         current_gradient))
+        current_gradient = arma::reshape(arma::vectorise(current_gradient)*this->estimator->proposal->transform->inverse_jacobian(particle.get_transformed_parameters(this->estimator->proposal)),current_gradient.n_rows,current_gradient.n_cols);
     }
     this->gradients[variable] = current_gradient;
     return current_gradient;
@@ -91,7 +97,13 @@ arma::mat DirectGradientEstimatorOutput::subsample_get_gradient_of_log(const std
                                                                                index);
     if (this->estimator->proposal->transform!=NULL)
     {
-      current_gradient = arma::reshape(arma::vectorise(current_gradient)*this->estimator->proposal->transform->inverse_jacobian(particle.get_transformed_parameters(this->estimator->proposal)),current_gradient.n_rows,current_gradient.n_cols);
+      // the built-in elementwise transforms: the exact chain rule, with the
+      // gradient of log|dx/dz| (C209); other transforms: through the inverse
+      // Jacobian, as before
+      if (!this->estimator->proposal->transform->gradient_to_transformed(variable,
+                                                                         particle.get_transformed_parameters(this->estimator->proposal),
+                                                                         current_gradient))
+        current_gradient = arma::reshape(arma::vectorise(current_gradient)*this->estimator->proposal->transform->inverse_jacobian(particle.get_transformed_parameters(this->estimator->proposal)),current_gradient.n_rows,current_gradient.n_cols);
     }
     this->gradients[variable] = current_gradient;
     return current_gradient;

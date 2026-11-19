@@ -97,8 +97,10 @@ protected:
 
   void make_copy(const HMCProposalKernel &another);
 
-  // the gradient of the move's log density at the block's value x
-  arma::colvec gradient_at(const Particle &particle, const arma::colvec &x) const;
+  // the gradient of the move's log density at the block's value x (on the
+  // kernel's scale: with a transform, x is z, and the gradient is that of
+  // log pi(x(z)) + log|dx/dz|); `base` is the particle's parameters on that scale
+  arma::colvec gradient_at(const Particle &particle, const Parameters &base, const arma::colvec &x) const;
 
   std::string variable;
   GaussianProposalInfo info;

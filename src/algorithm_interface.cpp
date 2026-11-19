@@ -691,7 +691,12 @@ EnsembleKalmanInversion *get_enki(
 
   proposal_in = get_prior_as_simulate_only_proposal(model, parameters);
 
+  // the scale the ensemble moves on: transform = … in the algorithm section
+  // (C209; the ensemble starts from the transformed prior sample, the
+  // simulators get the model's scale, outputs are on the model's scale)
   std::shared_ptr<Transform> transform = NULL;
+  if (model.contains("algorithm_transform"))
+    transform.reset(transform_from_recipe(model["algorithm_transform"]));
 
   std::vector<size_t> enk_indices =
       get_enk_likelihood_indices(model, parameters);
@@ -898,6 +903,10 @@ void do_enkmfds(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
   // log-normal priors, or the user's transform (with which the prior
   // statements give the Gaussian itself)
   TransformPtr to_model = NULL;
+  if (model.contains("algorithm_transform"))
+    stop("MFDS: transform = auto (or a list) is not available: the prior must be Gaussian on the scale the ensemble "
+         "moves on, which log-normal priors already are on the log scale; for other cases give your own transformation "
+         "(transform = cpp::f, from the Gaussian scale to the model's).");
   if (model.contains("mfds_transform")) {
     if (!log_variables.empty())
       stop("MFDS: with transform = …, the prior gives the Gaussian on the scale the ensemble moves on, so it must be "

@@ -1,4 +1,5 @@
 #include "covariance_tools.h"
+#include "transform.h"
 #include "particles.h"
 #include "ensemble.h"
 #include "move_output.h"
@@ -167,14 +168,26 @@ static void layout(const Parameters &first,
 
 arma::mat population_points(const Particles &generation,
                             std::vector<std::string> &names,
-                            std::vector<size_t> &offsets)
+                            std::vector<size_t> &offsets,
+                            const Transform* transform)
 {
   if (generation.is_flat())
   {
-    if (generation.flat_points.size() == 0)
+    size_t n = generation.flat_points.size();
+    if (n == 0)
       return arma::mat();
     layout(generation.flat_points.parameters_at(0), names, offsets);
-    return generation.flat_points.matrix_of(names);
+    if (transform == NULL)
+      return generation.flat_points.matrix_of(names);
+    arma::mat points;
+    for (size_t i = 0; i < n; ++i)
+    {
+      arma::rowvec point = transform->transform(generation.flat_points.parameters_at(i)).get_rowvec(names);
+      if (i == 0)
+        points.set_size(n, point.n_elem);
+      points.row(i) = point;
+    }
+    return points;
   }
   size_t n = generation.particles.size();
   if (n == 0)
@@ -183,7 +196,8 @@ arma::mat population_points(const Particles &generation,
   arma::mat points;
   for (size_t i = 0; i < n; ++i)
   {
-    arma::rowvec point = generation.particles[i]->back().parameters.get_rowvec(names);
+    const Parameters &parameters = generation.particles[i]->back().parameters;
+    arma::rowvec point = (transform == NULL) ? parameters.get_rowvec(names) : transform->transform(parameters).get_rowvec(names);
     if (i == 0)
       points.set_size(n, point.n_elem);
     points.row(i) = point;
@@ -193,7 +207,8 @@ arma::mat population_points(const Particles &generation,
 
 arma::mat ensemble_points(const Ensemble &ensemble,
                           std::vector<std::string> &names,
-                          std::vector<size_t> &offsets)
+                          std::vector<size_t> &offsets,
+                          const Transform* transform)
 {
   size_t n = ensemble.members.size();
   if (n == 0)
@@ -202,7 +217,8 @@ arma::mat ensemble_points(const Ensemble &ensemble,
   arma::mat points;
   for (size_t i = 0; i < n; ++i)
   {
-    arma::rowvec point = ensemble.members[i]->back().parameters.get_rowvec(names);
+    const Parameters &parameters = ensemble.members[i]->back().parameters;
+    arma::rowvec point = (transform == NULL) ? parameters.get_rowvec(names) : transform->transform(parameters).get_rowvec(names);
     if (i == 0)
       points.set_size(n, point.n_elem);
     points.row(i) = point;

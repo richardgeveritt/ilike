@@ -1,6 +1,7 @@
 #include "hmc_proposal_kernel.h"
 #include "factor_variables.h"
 #include "index.h"
+#include "transform.h"
 
 namespace ilike
 {
@@ -61,18 +62,19 @@ void HMCProposalKernel::make_copy(const HMCProposalKernel &another)
     this->index.reset();
 }
 
-arma::colvec HMCProposalKernel::gradient_at(const Particle &particle, const arma::colvec &x) const
+arma::colvec HMCProposalKernel::gradient_at(const Particle &particle, const Parameters &base, const arma::colvec &x) const
 {
   if (particle.factor_variables == NULL)
     return arma::zeros<arma::colvec>(x.n_elem);
   if (this->index == NULL)
     Rcpp::stop("ilike::hmc: the move's factors are not known.");
   // the particle's parameters with the block at x (new matrices: the
-  // particle's are shared and must not change)
+  // particle's are shared and must not change), on the model's scale
   Parameters block;
-  block.set_stacked(this->variable, x, particle.parameters);
-  Parameters at = particle.parameters;
-  at.deep_overwrite_with_variables_in_argument(block);
+  block.set_stacked(this->variable, x, base);
+  Parameters point = base;
+  point.deep_overwrite_with_variables_in_argument(block);
+  Parameters at = (this->transform != NULL) ? this->transform->inverse_transform(point) : point;
   std::vector<std::string> names = split_stacked_name(this->variable);
   std::vector<arma::mat> gradients = particle.factor_variables->direct_get_gradients_of_log_at(this->index.get(), names, at);
   arma::colvec stacked(x.n_elem);
@@ -85,6 +87,15 @@ arma::colvec HMCProposalKernel::gradient_at(const Particle &particle, const arma
       stacked.subvec(offset, offset + gradient.n_elem - 1) = arma::vectorise(gradient);
     offset += gradient.n_elem;
   }
+  // on the transformed scale (C209): the chain rule, with log|dx/dz|
+  if (this->transform != NULL)
+  {
+    arma::mat transformed = stacked;
+    if (!this->transform->gradient_to_transformed(this->variable, point, transformed))
+      Rcpp::stop("ilike::hmc on a scale given by a transform written by the user is not available "
+                 "(the built-in transforms are: transform = auto, or a list of log, logit, lower, upper).");
+    return arma::vectorise(transformed);
+  }
   return stacked;
 }
 
@@ -92,9 +103,8 @@ Parameters HMCProposalKernel::trajectory(RandomNumberGenerator &rng,
                                          const Particle &particle,
                                          double &log_ratio) const
 {
-  if (this->transform != NULL)
-    Rcpp::stop("ilike::hmc on a transformed space is not available yet.");
-  const Parameters &current = particle.parameters;
+  // (on the kernel's scale: transformed, with a transform, C209)
+  const Parameters &current = particle.get_transformed_parameters(this);
   arma::colvec x0 = current.get_colvec(this->variable);
   arma::uword n = x0.n_elem;
   const arma::mat &covariance = this->info.get_covariance();
@@ -117,13 +127,13 @@ Parameters HMCProposalKernel::trajectory(RandomNumberGenerator &rng,
   double start = kinetic(r);
 
   arma::colvec x = x0;
-  arma::colvec g = this->gradient_at(particle, x);
+  arma::colvec g = this->gradient_at(particle, current, x);
   bool finite = g.is_finite();
   for (size_t l = 0; (l < this->steps) && finite; ++l)
   {
     r = r + (0.5*eps)*g;
     x = x + eps*apply_c(r);
-    g = this->gradient_at(particle, x);
+    g = this->gradient_at(particle, current, x);
     r = r + (0.5*eps)*g;
     finite = x.is_finite() && g.is_finite() && r.is_finite();
   }

@@ -168,6 +168,8 @@ public:
                                         const Particle &particle) const=0;
 
   Transform* get_transform() const;
+  // the scale the kernel proposes on (takes ownership; C209)
+  void set_transform(Transform* transform_in);
   
   virtual void set_proposal_parameters(Parameters* proposal_parameters_in)=0;
   

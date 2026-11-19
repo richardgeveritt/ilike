@@ -54,7 +54,7 @@ IENKI = function(recipe,
 
   # a recipe in the ilike language: the algorithm to run, and the constants
   # with the file's defaults (dev/ilike-language.md)
-  prepared = prepare_recipe(recipe, algorithm, model_parameter_list)
+  prepared = prepare_recipe(recipe, algorithm, model_parameter_list, transform_allowed = TRUE)
   recipe = prepared$recipe
   model_parameter_list = prepared$model_parameter_list
   apply_algorithm_settings(prepared$settings, names(match.call())[-1], environment(), names(formals(sys.function())))

@@ -83,6 +83,12 @@ public:
   SymmetricProposalKernel* get_symmetric_proposal() const { return this->proposal.get(); }
   
 protected:
+
+  double log_ratio(double numerator,
+                   double denominator,
+                   const Particle &old_particle,
+                   const Particle &proposed_particle) const;
+
   
   void specific_mcmc_adapt(const Particle &current_particle,
                            size_t iteration_counter);
