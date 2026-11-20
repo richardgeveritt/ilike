@@ -302,3 +302,12 @@ test_that("chisq, weibull, laplace and logis: log densities, gradients and simul
     expect_lt(max(abs(quantile(x, p) - target))/(target[3] - target[1]), 0.03, label = name)
   }
 })
+
+test_that("a division of whole numbers in a statement is not integer division", {
+  # (C231) 1/2 in a statement was C++'s integer division (0)
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(f), add = TRUE)
+  writeLines(c("ilike 1.0", "data { y = 0.3 }", "model {", "  mu ~ norm(0, 1)", "  y ~ norm(mu, 1/2 + 3/4)", "}"), f)
+  expect_equal(ilike::evaluate_log(ilike::compile(f), parameters = list(mu = 0.1)),
+               dnorm(0.1, log = TRUE) + dnorm(0.3, 0.1, 1.25, log = TRUE), tolerance = 1e-12)
+})

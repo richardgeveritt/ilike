@@ -119,3 +119,80 @@ test_that("transforms are refused where they cannot be used", {
   expect_error(ilike::MCMC(ilike::compile(f), results_name = "transform_refused", seed = 1, initial_values = list(list(sigma = 1))),
                "transform = ... in an algorithm section is for IENKI", fixed = TRUE)
 })
+
+# (C232) the simplex, cov and corr transforms, and the gradients of the
+# matrix distributions
+test_that("the gradients of wishart, invwishart and lkj targets and of mvnorm and mvt matrices", {
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(f), add = TRUE)
+  writeLines(c("ilike 1.0", "data { y = [0.4, -0.7]; t = [1.1, 0.2] }", "model {", "  W ~ wishart(5, [[2, 0.5], [0.5, 1]])",
+               "  V ~ invwishart(6, [[2, 0.5], [0.5, 1]])", "  R ~ lkj(2.5, 2)", "  y ~ mvnorm([0, 0], V)", "  t ~ mvt(4, [0, 0], W)", "}"), f)
+  recipe = ilike::compile(f)
+  P = list(W = matrix(c(1.5, 0.3, 0.3, 0.8), 2), V = matrix(c(1.2, -0.2, -0.2, 0.9), 2), R = matrix(c(1, 0.4, 0.4, 1), 2))
+  # diagonal elements by finite differences (an off-diagonal change alone leaves the matrices non-symmetric)
+  for (name in c("W", "V"))
+  {
+    g = ilike:::evaluate_gradient_log(recipe, P, name)
+    for (k in c(1, 4))
+    {
+      h = 1e-6; Pp = P; Pm = P
+      Pp[[name]][k] = Pp[[name]][k] + h; Pm[[name]][k] = Pm[[name]][k] - h
+      fd = (ilike::evaluate_log(recipe, parameters = Pp) - ilike::evaluate_log(recipe, parameters = Pm))/(2*h)
+      expect_equal(g[k], fd, tolerance = 1e-5, label = paste(name, k))
+    }
+  }
+  # and the formula: lkj's (eta - 1) R^-1
+  expect_equal(ilike:::evaluate_gradient_log(recipe, P, "R"), 1.5*solve(P$R), tolerance = 1e-10)
+})
+
+test_that("nuts moves a probability vector on the simplex, and a correlation matrix", {
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(c(f, "transforms_whole"), recursive = TRUE), add = TRUE)
+  run = function(lines, move, initial, iterations)
+  {
+    writeLines(c("ilike 1.0", lines, "algorithm mcmc {", paste0("  move m = ", move), paste0("  termination = iterations(", iterations, ")"), "}"), f)
+    unlink("transforms_whole", recursive = TRUE)
+    ilike::MCMC(ilike::compile(f), results_name = "transforms_whole", seed = 1, initial_values = list(initial))
+    ilike::load_mcmc_output("transforms_whole")
+  }
+  # the Dirichlet posterior: dirichlet([2, 3, 1.5]) with counts (2, 3, 1)
+  o = run(c("data { c = [1, 2, 2, 3, 2, 1] }", "model {", "  p ~ dirichlet([2, 3, 1.5])", "  for (i in 1:6) c[i] ~ categorical(p)", "}"),
+          "nuts(p, step = 0.3, adapt = dual_averaging(until = iterations(500)))", list(p = c(1, 1, 1)/3), 3000)
+  a = c(4, 6, 2.5)
+  x = sapply(1:3, function(k) o$Value[o$ParameterName == "p" & o$Dimension == k & o$Iteration > 500])
+  expect_true(all(abs(rowSums(x) - 1) < 1e-12) && all(x > 0))
+  sds = sqrt(a*(sum(a) - a)/(sum(a)^2*(sum(a) + 1)))
+  expect_lt(max(abs(colMeans(x) - a/sum(a))/sds), 0.15)
+  expect_equal(apply(x, 2, sd), sds, tolerance = 0.1)
+  # an explicit transform list
+  expect_silent(ilike::compile(f))
+  skip_on_cran()
+  # the LKJ prior: each correlation 2 Beta(b, b) - 1, b = eta + (d - 2)/2, variance 1/6 for eta = 2, d = 3
+  o = run(c("model {", "  R ~ lkj(2, 3)", "}"), "nuts(R, step = 0.3, transform = [corr(R)], adapt = dual_averaging(until = iterations(1000)))",
+          list(R = diag(3)), 8000)
+  r = sapply(c(2, 3, 6), function(k) o$Value[o$ParameterName == "R" & o$Dimension == k & o$Iteration > 1000])
+  expect_true(all(abs(o$Value[o$ParameterName == "R" & o$Dimension == 1] - 1) < 1e-10))
+  expect_equal(apply(r, 2, var), rep(1/6, 3), tolerance = 0.08)
+})
+
+test_that("nuts moves a covariance matrix: the inverse Wishart posterior of normal data", {
+  skip_on_cran()
+  set.seed(2); Y = matrix(round(rnorm(16), 2), 8); S0 = matrix(c(2, 0.5, 0.5, 1), 2)
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(c(f, "transforms_cov"), recursive = TRUE), add = TRUE)
+  writeLines(c("ilike 1.0", paste0("data { ", paste0("y", 1:8, " = [", Y[, 1], ", ", Y[, 2], "]", collapse = "; "), " }"), "model {",
+               "  Sigma ~ invwishart(6, [[2, 0.5], [0.5, 1]])", paste0("  y", 1:8, " ~ mvnorm([0, 0], Sigma)"), "}",
+               "algorithm mcmc {", "  move m = nuts(Sigma, step = 0.3, adapt = dual_averaging(until = iterations(1000)))",
+               "  termination = iterations(11000)", "}"), f)
+  unlink("transforms_cov", recursive = TRUE)
+  ilike::MCMC(ilike::compile(f), results_name = "transforms_cov", seed = 1, initial_values = list(list(Sigma = diag(2))))
+  o = ilike::load_mcmc_output("transforms_cov")
+  # IW(14, S0 + Y'Y): mean Psi/(nu - p - 1), var of a diagonal element 2 Psi_kk^2/((nu - p - 1)^2 (nu - p - 3))
+  Psi = S0 + crossprod(Y); nu = 14
+  for (k in c(1, 4))
+  {
+    x = o$Value[o$ParameterName == "Sigma" & o$Dimension == k & o$Iteration > 1000]
+    sd_k = sqrt(2*Psi[k]^2/((nu - 3)^2*(nu - 5)))
+    expect_lt(abs(mean(x) - Psi[k]/(nu - 3))/sd_k, 0.1, label = k)
+  }
+})

@@ -84,12 +84,17 @@ arma::colvec HMCProposalKernel::gradient_at(const Particle &particle, const Para
 
 arma::colvec HMCProposalKernel::stacked_gradient(const std::vector<arma::mat> &gradients, const Parameters &point, arma::uword n) const
 {
-  arma::colvec stacked(n);
+  // the model-scale gradients, stacked (their total size may differ from n
+  // on the transformed scale: simplex, cov, corr, C232)
+  arma::uword total = 0;
+  for (const arma::mat &gradient : gradients)
+    total += gradient.n_elem;
+  if ((this->transform == NULL) && (total != n))
+    Rcpp::stop("ilike::hmc: the gradient does not match the size of " + stacked_display_name(this->variable) + ".");
+  arma::colvec stacked(total);
   arma::uword offset = 0;
   for (const arma::mat &gradient : gradients)
   {
-    if (offset + gradient.n_elem > n)
-      Rcpp::stop("ilike::hmc: the gradient does not match the size of " + stacked_display_name(this->variable) + ".");
     if (gradient.n_elem > 0)
       stacked.subvec(offset, offset + gradient.n_elem - 1) = arma::vectorise(gradient);
     offset += gradient.n_elem;
@@ -100,7 +105,9 @@ arma::colvec HMCProposalKernel::stacked_gradient(const std::vector<arma::mat> &g
     arma::mat transformed = stacked;
     if (!this->transform->gradient_to_transformed(this->variable, point, transformed))
       Rcpp::stop("ilike::hmc on a scale given by a transform written by the user is not available "
-                 "(the built-in transforms are: transform = auto, or a list of log, logit, lower, upper).");
+                 "(the built-in transforms are: transform = auto, or a list of log, logit, lower, upper, simplex, cov, corr).");
+    if (transformed.n_elem != n)
+      Rcpp::stop("ilike::hmc: the gradient does not match the size of " + stacked_display_name(this->variable) + ".");
     return arma::vectorise(transformed);
   }
   return stacked;

@@ -572,6 +572,9 @@ Transform *transform_from_recipe(const RecipeValue &list) {
     spec.kind = (kind == "log") ? ElementwiseTransformComponent::Kind::log
               : (kind == "lower") ? ElementwiseTransformComponent::Kind::lower
               : (kind == "upper") ? ElementwiseTransformComponent::Kind::upper
+              : (kind == "simplex") ? ElementwiseTransformComponent::Kind::simplex
+              : (kind == "cov") ? ElementwiseTransformComponent::Kind::cov
+              : (kind == "corr") ? ElementwiseTransformComponent::Kind::corr
               : ElementwiseTransformComponent::Kind::logit;
     spec.lower = item["lower"].as_double();
     spec.upper = item["upper"].as_double();

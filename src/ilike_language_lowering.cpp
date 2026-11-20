@@ -1499,7 +1499,14 @@ private:
   {
     std::string kind = kind_of(expression);
     if (kind == "number")
-      return "(" + number_text(expression["value"].as_double()) + ")";
+    {
+      // a double literal (C231): 1/2 in a statement is 0.5, not C++'s
+      // integer division (whole numbers were written as integer literals)
+      std::string text = number_text(expression["value"].as_double());
+      if (text.find_first_of(".eEin") == std::string::npos)
+        text += ".0";
+      return "(" + text + ")";
+    }
     if (kind == "name")
     {
       if (!expression["namespace"].as_string().empty())
@@ -2047,9 +2054,39 @@ private:
         code += "  if (arma::mat *ilike_gv = ilike_G.find(" + quoted(arguments[0]["name"].as_string()) +
                 ")) *ilike_gv += arma::reshape(ilike_r, ilike_gv->n_rows, ilike_gv->n_cols);\n";
       if (is_parameter(arguments[1]))
-        code += "  if (ilike_G.find(" + quoted(arguments[1]["name"].as_string()) + ")) Rcpp::stop(" +
-                quoted("The gradient with respect to the covariance of mvnorm (" + arguments[1]["name"].as_string() +
-                       ") is not available yet.") + ");\n";
+      {
+        // (C232) d/dS = -S^-1/2 + S^-1 r r' S^-1/2 (= -S^-1/2 + r r'/2 in terms of r = S^-1 (x - m))
+        code += std::string("  if (arma::mat *ilike_gv = ilike_G.find(") + quoted(arguments[1]["name"].as_string()) + ")) "
+                "*ilike_gv += -0.5*arma::inv_sympd(ilike_S) + 0.5*ilike_r*ilike_r.t();\n";
+      }
+      return code + "}\n";
+    }
+    if ((f == "wishart") || (f == "invwishart") || (f == "lkj"))
+    {
+      // (C232) the gradient with respect to the matrix (each element treated
+      // as free: the transforms' chain rule takes the symmetry into account)
+      for (size_t k = 0; k < arguments.size(); ++k)
+      {
+        std::set<std::string> found;
+        this->read_parameters(arguments[k], found);
+        if (!found.empty())
+          this->error(call, "the gradient with respect to the arguments of " + f + " is not available.");
+      }
+      if (st.observed)
+        return "";
+      std::string target = this->target_code(st, context, false);
+      std::string code = "{\n  arma::mat ilike_X = " + target + ";\n  arma::mat ilike_Xi;\n"
+                         "  if (!arma::inv(ilike_Xi, ilike_X)) ilike_Xi = arma::mat(arma::size(ilike_X), arma::fill::value(arma::datum::nan));\n"
+                         "  const double ilike_p = (double)ilike_X.n_rows;\n";
+      if (f == "wishart")
+        code += "  arma::mat ilike_d = 0.5*(" + this->scalar_code(arguments[0], context) + " - ilike_p - 1.0)*ilike_Xi - 0.5*arma::inv(" +
+                this->matrix_code(arguments[1], context) + ");\n";
+      else if (f == "invwishart")
+        code += "  arma::mat ilike_d = -0.5*(" + this->scalar_code(arguments[0], context) + " + ilike_p + 1.0)*ilike_Xi + 0.5*ilike_Xi*" +
+                this->matrix_code(arguments[1], context) + "*ilike_Xi;\n";
+      else
+        code += "  arma::mat ilike_d = (" + this->scalar_code(arguments[0], context) + " - 1.0)*ilike_Xi;\n";
+      code += std::string("  if (arma::mat *ilike_gv = ilike_G.find(") + quoted(st.variable) + ")) *ilike_gv += ilike_d;\n";
       return code + "}\n";
     }
     // (C227) the vector distributions: the gradient with respect to the
@@ -2093,7 +2130,13 @@ private:
         else
           refuse_reading(arguments[1], "the location");
         refuse_reading(arguments[0], "the degrees of freedom");
-        refuse_reading(arguments[2], "the scale matrix");
+        const std::string scale = parameter_name(arguments[2]);
+        if (!scale.empty())
+          // (C232) d/dS = -S^-1/2 + (nu + p)/2 S^-1 r r' S^-1/(nu + q), r = x - m
+          code += std::string("  if (arma::mat *ilike_gv = ilike_G.find(") + quoted(scale) + ")) *ilike_gv += -0.5*arma::inv_sympd(ilike_S) + "
+                  "0.5*((ilike_nu + ilike_x.n_elem)/(ilike_nu + ilike_q))*ilike_r*ilike_r.t();\n";
+        else
+          refuse_reading(arguments[2], "the scale matrix");
       }
       else if (f == "dirichlet")
       {
@@ -4992,6 +5035,13 @@ inline double ilike_model_dbinom(double x, double n, double p)
         return transform_item(variable, "log", 0.0, 0.0);
       if (f == "beta")
         return transform_item(variable, "logit", 0.0, 1.0);
+      // (C232) whole variables
+      if (f == "dirichlet")
+        return transform_item(variable, "simplex", 0.0, 0.0);
+      if ((f == "wishart") || (f == "invwishart"))
+        return transform_item(variable, "cov", 0.0, 0.0);
+      if (f == "lkj")
+        return transform_item(variable, "corr", 0.0, 0.0);
       double a, b;
       if ((f == "unif") && this->compile_time_number(arguments[0], a) && this->compile_time_number(arguments[1], b))
         return transform_item(variable, "logit", a, b);
@@ -5037,17 +5087,24 @@ inline double ilike_model_dbinom(double x, double n, double p)
           items.push_back(given);
         for (const RecipeValue &item : items)
         {
-          static const std::string forms = "transform is auto, none, or a list of log(x), logit(x), logit(x, a, b), lower(x, a), upper(x, b)";
+          static const std::string forms = "transform is auto, none, or a list of log(x), logit(x), logit(x, a, b), lower(x, a), upper(x, b), simplex(p), cov(S), corr(R)";
           if (kind_of(item) != "call")
             this->error(item, forms + ".");
           std::string f = item["function"].as_string();
           const RecipeValue &arguments = item["arguments"];
-          if (((f != "log") && (f != "logit") && (f != "lower") && (f != "upper")) || (arguments.size() < 1) ||
-              (kind_of(arguments[0]) != "name"))
+          if (((f != "log") && (f != "logit") && (f != "lower") && (f != "upper") && (f != "simplex") && (f != "cov") && (f != "corr")) ||
+              (arguments.size() < 1) || (kind_of(arguments[0]) != "name"))
             this->error(item, forms + ".");
           std::string x = arguments[0]["name"].as_string();
           if (std::find(moved.begin(), moved.end(), x) == moved.end())
             this->error(arguments[0], "transform: " + x + " is not moved by this move.");
+          if ((f == "simplex") || (f == "cov") || (f == "corr"))
+          {
+            if (arguments.size() != 1)
+              this->error(item, f + "(" + x + ") takes only the variable.");
+            list.push_back(transform_item(x, f, 0.0, 0.0));
+            continue;
+          }
           size_t expected = (f == "log") ? 1 : (f == "logit") ? ((arguments.size() == 1) ? 1 : 3) : 2;
           if (arguments.size() != expected)
             this->error(item, f + ": " + ((f == "log") ? "log(x)" : (f == "logit") ? "logit(x) or logit(x, a, b)" :

@@ -60,23 +60,28 @@ bool Transform::gradient_to_transformed(const std::string &variable,
     elementwise->gradient_to_transformed(variable, transformed, gradient);
     return true;
   }
-  // a stacked name: each variable's part of the stacked gradient
+  // a stacked name: each variable's part of the stacked gradient (on the
+  // model's scale; a part's size on the transformed scale may differ, C232)
   arma::colvec stacked = arma::vectorise(gradient);
+  std::vector<double> output;
   arma::uword offset = 0;
   for (const std::string &name : split_stacked_name(variable))
   {
     const arma::mat* z = transformed.find_vector(name);
-    if ((z == NULL) || (offset + z->n_elem > stacked.n_elem))
+    if (z == NULL)
       Rcpp::stop("The transform of " + stacked_display_name(variable) + " does not match its gradient.");
-    if (z->n_elem > 0)
+    arma::uword size = elementwise->model_size(name, z->n_elem);
+    if (offset + size > stacked.n_elem)
+      Rcpp::stop("The transform of " + stacked_display_name(variable) + " does not match its gradient.");
+    if (size > 0)
     {
-      arma::mat part = stacked.subvec(offset, offset + z->n_elem - 1);
+      arma::mat part = stacked.subvec(offset, offset + size - 1);
       elementwise->gradient_to_transformed(name, transformed, part);
-      stacked.subvec(offset, offset + z->n_elem - 1) = arma::vectorise(part);
+      output.insert(output.end(), part.begin(), part.end());
     }
-    offset += z->n_elem;
+    offset += size;
   }
-  gradient = arma::reshape(stacked, gradient.n_rows, gradient.n_cols);
+  gradient = arma::colvec(output);
   return true;
 }
 

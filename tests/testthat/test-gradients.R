@@ -113,7 +113,16 @@ test_that("gradients that are not available say so when asked for", {
   recipe = ilike::compile(f)
   P = list(v = c(0.1, 0.2), C = matrix(c(1, 0.2, 0.2, 1), 2))
   expect_true(all(is.finite(ilike:::evaluate_gradient_log(recipe, P, "v"))))
-  expect_error(ilike:::evaluate_gradient_log(recipe, P, "C"), "covariance of mvnorm \\(C\\) is not available")
+  # (C232: the gradient with respect to a covariance that is a parameter is
+  # now available) its diagonal elements against finite differences
+  g = ilike:::evaluate_gradient_log(recipe, P, "C")
+  for (k in c(1, 4))
+  {
+    h = 1e-6; Pp = P; Pm = P
+    Pp$C[k] = Pp$C[k] + h; Pm$C[k] = Pm$C[k] - h
+    expect_equal(g[k], (ilike::evaluate_log(recipe, parameters = Pp) - ilike::evaluate_log(recipe, parameters = Pm))/(2*h),
+                 tolerance = 1e-5)
+  }
   # an index that reads a parameter has no derivative through the index
   writeLines(c("ilike 1.0", "data { y = 2.5 }", "model {", "  for (j in 1:3) mu[j] ~ norm(j, 0.1)",
                "  k ~ unif(1, 4)", "  y ~ norm(mu[k], 1)", "}"), f)

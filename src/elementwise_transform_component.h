@@ -20,13 +20,26 @@ namespace ilike
 // - logit(a, b):  z = logit((x - a)/(b - a))    a < x < b
 // The Jacobian is diagonal, so a gradient on the model's scale gives the
 // gradient on the transformed scale exactly (gradient_to_transformed).
+// And three applied to a whole variable (C232), as Stan's:
+// - simplex:  K probabilities summing to 1 <- K - 1 values by stick-breaking,
+//             y_k = logit^-1(z_k - log(K - k)), x_k = y_k (1 - sum_{j<k} x_j)
+// - cov:      a p x p positive definite matrix <- p(p + 1)/2 values: its
+//             Cholesky factor L, log on the diagonal (column by column)
+// - corr:     a p x p correlation matrix <- p(p - 1)/2 values: canonical
+//             partial correlations tanh(z) (column by column), turned into a
+//             Cholesky factor (Stan's read_corr_L)
+// Their log |dx/dz| are Stan's (with respect to the free elements: the first
+// K - 1 probabilities; the lower triangle; the strict lower triangle). Their
+// gradient's chain rule uses dx/dz and the gradient of log |dx/dz| by
+// central differences (which affects only the efficiency of gradient-based
+// moves: their exactness rests on the density, not on the gradient).
 // jacobian()/inverse_jacobian() are the diagonal matrices over the transformed
 // variables' elements, in the order of the specification.
 class ElementwiseTransformComponent : public TransformComponent
 {
 public:
 
-  enum class Kind { log, lower, upper, logit };
+  enum class Kind { log, lower, upper, logit, simplex, cov, corr };
 
   struct Spec
   {
@@ -65,6 +78,9 @@ public:
                                arma::mat &gradient) const;
 
   const std::vector<Spec> &get_specs() const { return this->specs; }
+  // the number of elements of `variable` on the model's scale, from its
+  // number on the transformed scale (they differ for simplex, cov, corr)
+  arma::uword model_size(const std::string &variable, arma::uword transformed_size) const;
 
 private:
 
@@ -74,6 +90,10 @@ private:
   static double log_dx_dz(const Spec &spec, double z);       // log |dx/dz|
   static double dx_dz(const Spec &spec, double z);
   static double d_log_dx_dz(const Spec &spec, double z);     // d/dz log |dx/dz|
+  static bool whole(Kind kind) { return (kind == Kind::simplex) || (kind == Kind::cov) || (kind == Kind::corr); }
+  static arma::colvec whole_forward(const Spec &spec, const arma::mat &x);
+  static arma::mat whole_backward(const Spec &spec, const arma::colvec &z);
+  static double whole_log_dx_dz(const Spec &spec, const arma::colvec &z);
 
   std::vector<Spec> specs;
 };
