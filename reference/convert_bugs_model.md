@@ -7,16 +7,16 @@ tells which variables are data: the others are parameters). Translated:
 stochastic relations (~), deterministic relations (\<-, with logit(p)
 \<- … and log(x) \<- … on the left), for loops, arithmetic and the
 functions exp, log, sqrt, pow, abs, logit, ilogit (and NIMBLE's expit),
-sin, cos, tanh, min, max, and inprod and sum over vectors whose lengths
-are known from the data; truncation T(a, b) (and BUGS's I(a, b)) for
-dnorm. Distributions (with BUGS's parameterisations, or NIMBLE's when
-dialect = "nimble"): dnorm, dlnorm, dt, dgamma, dbeta, dunif, dexp,
-dchisqr (dchisq), dweib, ddexp, dlogis, dpois, dbern, dbin, dnegbin,
-dcat, dmulti, ddirch (ddirich), dmnorm, dmt and dwish (whose precision
-matrices must be data: they are inverted into new data, name_inverse).
-Missing values in the data, censoring (dinterval), other truncations,
-precision matrices that are parameters, and other functions stop with a
-message.
+sin, cos, tanh, min, max, equals, step, and inprod and sum over vectors
+whose lengths are known from the data; truncation T(a, b) (and BUGS's
+I(a, b)) for dnorm. Distributions (with BUGS's parameterisations, or
+NIMBLE's when dialect = "nimble"): dnorm, dlnorm, dt, dgamma, dbeta,
+dunif, dexp, dchisqr (dchisq), dweib, ddexp, dlogis, dpois, dbern, dbin,
+dnegbin, dcat, dmulti, ddirch (ddirich), dmnorm, dmt and dwish (whose
+precision matrices must be data: they are inverted into new data,
+name_inverse). Missing values in the data, censoring (dinterval), other
+truncations, precision matrices that are parameters, and other functions
+stop with a message.
 
 An algorithm section is added with a NUTS move on all the parameters
 when they are all continuous and unconstrained vectors or scalars.

@@ -26,6 +26,9 @@
 - [`SMC_with_MCMC()`](https://richardgeveritt.github.io/ilike/reference/SMC_with_MCMC.md)
   : SMC with an MCMC move
 
+- [`check_gradient()`](https://richardgeveritt.github.io/ilike/reference/check_gradient.md)
+  : Check gradients against finite differences.
+
 - [`compile()`](https://richardgeveritt.github.io/ilike/reference/compile.md)
   : Parse .ilike file to give a compiled ilike "recipe".
 
