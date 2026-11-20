@@ -159,3 +159,146 @@ test_that("a tnorm statement's density and gradient stay right with the mean far
     expect_lt(abs(ilike:::evaluate_gradient_log(recipe, list(mu = mu), "mu")[1] - fd), 1e-5, label = mu)
   }
 })
+
+# (C227) negbinom, geom, categorical, vonmises; multinom, dirichlet, mvt,
+# wishart, invwishart, lkj
+test_that("the second group of distributions have the right log densities", {
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(f), add = TRUE)
+  S = matrix(c(2, 0.5, 0.5, 1), 2)
+  writeLines(c("ilike 1.0",
+               "data { n1 = 3; g1 = 2; c1 = 2; a1 = 0.4; m1 = [1, 3, 2]; d1 = [0.2, 0.5, 0.3]; t1 = [0.5, -1]; W = [[1.5, 0.3], [0.3, 0.8]]; R = [[1, 0.3], [0.3, 1]] }",
+               "model {", "  q ~ unif(0, 1)", "  k ~ gamma(2, 1)", "  mu ~ norm(0, 1)",
+               "  n1 ~ negbinom(k, q)", "  g1 ~ geom(q)", "  c1 ~ categorical([0.2, 0.5, 0.3])", "  a1 ~ vonmises(mu, k)",
+               "  m1 ~ multinom(6, [0.2, 0.5, 0.3])", "  d1 ~ dirichlet([2, 3, 1.5])", "  t1 ~ mvt(4, [0.2, 0], [[2, 0.5], [0.5, 1]])",
+               "  W ~ wishart(5, [[2, 0.5], [0.5, 1]])", "  W ~ invwishart(6, [[2, 0.5], [0.5, 1]])", "  R ~ lkj(2.5)", "}"), f)
+  recipe = ilike::compile(f)
+  P = list(q = 0.35, k = 1.7, mu = 0.2)
+  ldirichlet = function(x, a) lgamma(sum(a)) - sum(lgamma(a)) + sum((a - 1)*log(x))
+  lmvt = function(x, nu, m, S) { p = length(x); q = sum((x - m)*solve(S, x - m))
+    lgamma((nu + p)/2) - lgamma(nu/2) - p/2*log(nu*pi) - 0.5*determinant(S)$modulus[1] - (nu + p)/2*log1p(q/nu) }
+  lmvgamma = function(a, p) p*(p - 1)/4*log(pi) + sum(lgamma(a + (1 - seq_len(p))/2))
+  lwishart = function(X, nu, S) { p = nrow(X); (nu - p - 1)/2*determinant(X)$modulus[1] - 0.5*sum(diag(solve(S, X))) -
+    nu*p/2*log(2) - nu/2*determinant(S)$modulus[1] - lmvgamma(nu/2, p) }
+  linvwishart = function(X, nu, Psi) { p = nrow(X); nu/2*determinant(Psi)$modulus[1] - nu*p/2*log(2) - lmvgamma(nu/2, p) -
+    (nu + p + 1)/2*determinant(X)$modulus[1] - 0.5*sum(diag(Psi %*% solve(X))) }
+  W = matrix(c(1.5, 0.3, 0.3, 0.8), 2)
+  # lkj in two dimensions: (1 - r^2)^(eta - 1)/(2^(2 eta - 1) B(eta, eta))
+  truth = 0 + dgamma(P$k, 2, 1, log = TRUE) + dnorm(P$mu, log = TRUE) +
+    dnbinom(3, P$k, P$q, log = TRUE) + dgeom(2, P$q, log = TRUE) + log(0.5) +
+    (P$k*cos(0.4 - P$mu) - log(2*pi*besselI(P$k, 0))) + dmultinom(c(1, 3, 2), 6, c(0.2, 0.5, 0.3), log = TRUE) +
+    ldirichlet(c(0.2, 0.5, 0.3), c(2, 3, 1.5)) + lmvt(c(0.5, -1), 4, c(0.2, 0), S) +
+    lwishart(W, 5, S) + linvwishart(W, 6, S) + (1.5*log(1 - 0.09) - ((2*2.5 - 1)*log(2) + lbeta(2.5, 2.5)))
+  expect_equal(ilike::evaluate_log(recipe, parameters = P), truth, tolerance = 1e-10)
+  # gradients with respect to the parameters in the arguments, against finite differences
+  for (name in names(P))
+  {
+    h = 1e-6
+    fd = (ilike::evaluate_log(recipe, parameters = replace(P, name, P[[name]] + h)) -
+          ilike::evaluate_log(recipe, parameters = replace(P, name, P[[name]] - h)))/(2*h)
+    if (name == "k" || name == "q" || name == "mu")
+      expect_equal(ilike:::evaluate_gradient_log(recipe, P, name)[1], fd, tolerance = 1e-5, label = name)
+  }
+})
+
+test_that("the gradients of the vector distributions", {
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(f), add = TRUE)
+  writeLines(c("ilike 1.0", "data { m1 = [1, 3, 2]; c1 = 2; t1 = [0.5, -1] }", "model {",
+               "  p ~ dirichlet([2, 3, 1.5])", "  a ~ mvnorm([1, 1, 1], [[1, 0, 0], [0, 1, 0], [0, 0, 1]])",
+               "  x ~ dirichlet(a)", "  m ~ mvnorm([0, 0], [[1, 0], [0, 1]])",
+               "  m1 ~ multinom(6, p)", "  c1 ~ categorical(p)", "  t1 ~ mvt(4, m, [[2, 0.5], [0.5, 1]])", "}"), f)
+  recipe = ilike::compile(f)
+  P = list(p = c(0.2, 0.5, 0.3), a = c(1.5, 2, 2.5), x = c(0.3, 0.3, 0.4), m = c(0.2, -0.4))
+  # p and x: on the simplex, so the formula rather than finite differences
+  expect_equal(as.vector(ilike:::evaluate_gradient_log(recipe, P, "p")),
+               (c(2, 3, 1.5) - 1)/P$p + c(1, 3, 2)/P$p + c(0, 1/0.5, 0))
+  expect_equal(as.vector(ilike:::evaluate_gradient_log(recipe, P, "x")), (P$a - 1)/P$x)
+  for (name in c("a", "m"))
+  {
+    g = as.vector(ilike:::evaluate_gradient_log(recipe, P, name))
+    for (j in seq_along(P[[name]]))
+    {
+      h = 1e-6; Pp = P; Pm = P
+      Pp[[name]][j] = Pp[[name]][j] + h; Pm[[name]][j] = Pm[[name]][j] - h
+      fd = (ilike::evaluate_log(recipe, parameters = Pp) - ilike::evaluate_log(recipe, parameters = Pm))/(2*h)
+      expect_equal(g[j], fd, tolerance = 1e-5, label = paste(name, j))
+    }
+  }
+})
+
+test_that("the second group of distributions are simulated from their priors", {
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(c(f, "distributions_prior2"), recursive = TRUE), add = TRUE)
+  writeLines(c("ilike 1.0", "model {", "  nb ~ negbinom(3, 0.4)", "  ge ~ geom(0.3)", "  ca ~ categorical([0.2, 0.5, 0.3])",
+               "  vm ~ vonmises(1, 2)", "  mn ~ multinom(10, [0.2, 0.5, 0.3])", "  di ~ dirichlet([2, 3, 1.5])",
+               "  mt ~ mvt(6, [1, -1], [[2, 0.5], [0.5, 1]])", "  wi ~ wishart(5, [[2, 0.5], [0.5, 1]])",
+               "  iw ~ invwishart(7, [[2, 0.5], [0.5, 1]])", "  lk ~ lkj(2, 3)", "}"), f)
+  unlink("distributions_prior2", recursive = TRUE)
+  ilike::IS(ilike::compile(f), results_name = "distributions_prior2", number_of_importance_points = 20000, seed = 1)
+  o = ilike::load_smc_output("distributions_prior2")
+  v = function(name, k = 1) o$Value[o$ParameterName == name & o$Dimension == k]
+  near = function(x, target, sd, label) expect_lt(abs(x - target)/sd, 5, label = label) # (5 Monte Carlo sds)
+  n = 20000
+  near(mean(v("nb")), 3*0.6/0.4, sqrt(3*0.6/0.4^2/n), "negbinom mean")
+  near(mean(v("ge")), 0.7/0.3, sqrt(0.7/0.3^2/n), "geom mean")
+  expect_equal(as.vector(table(v("ca")))/n, c(0.2, 0.5, 0.3), tolerance = 0.03)
+  # the mean resultant: E cos(x - mu) = I1(kappa)/I0(kappa)
+  near(mean(cos(v("vm") - 1)), besselI(2, 1)/besselI(2, 0), 0.5/sqrt(n), "vonmises")
+  expect_equal(c(mean(v("mn", 1)), mean(v("mn", 2)), mean(v("mn", 3))), 10*c(0.2, 0.5, 0.3), tolerance = 0.02)
+  expect_true(all(abs(v("mn", 1) + v("mn", 2) + v("mn", 3) - 10) < 1e-12))
+  expect_equal(c(mean(v("di", 1)), mean(v("di", 2)), mean(v("di", 3))), c(2, 3, 1.5)/6.5, tolerance = 0.02)
+  expect_equal(c(mean(v("mt", 1)), mean(v("mt", 2))), c(1, -1), tolerance = 0.05)
+  expect_equal(var(v("mt", 1)), 2*6/4, tolerance = 0.1)
+  # wishart: mean nu S; inverse wishart: Psi/(nu - p - 1) (elements column by column)
+  expect_equal(c(mean(v("wi", 1)), mean(v("wi", 2)), mean(v("wi", 4))), 5*c(2, 0.5, 1), tolerance = 0.03)
+  expect_equal(c(mean(v("iw", 1)), mean(v("iw", 2)), mean(v("iw", 4))), c(2, 0.5, 1)/4, tolerance = 0.05)
+  # lkj(2) in 3 dimensions: unit diagonal; each correlation 2 Beta(b, b) - 1, b = 2.5: variance 1/6
+  expect_true(all(abs(v("lk", 1) - 1) < 1e-12) && all(abs(v("lk", 5) - 1) < 1e-12))
+  expect_equal(c(var(v("lk", 2)), var(v("lk", 6))), c(1/6, 1/6), tolerance = 0.05)
+})
+
+# (C229) chisq, weibull, laplace, logis
+test_that("chisq, weibull, laplace and logis: log densities, gradients and simulation", {
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(c(f, "distributions_prior3"), recursive = TRUE), add = TRUE)
+  writeLines(c("ilike 1.0", "data { a = 2.3; b = 1.1; c = -0.4; e = 0.9 }", "model {", "  k ~ gamma(3, 1)", "  m ~ norm(0, 1)", "  s ~ gamma(2, 2)",
+               "  a ~ chisq(k)", "  b ~ weibull(k, s)", "  c ~ laplace(m, s)", "  e ~ logis(m, s)", "}"), f)
+  recipe = ilike::compile(f)
+  P = list(k = 2.6, m = 0.3, s = 0.8)
+  truth = dgamma(P$k, 3, 1, log = TRUE) + dnorm(P$m, log = TRUE) + dgamma(P$s, 2, 2, log = TRUE) +
+    dchisq(2.3, P$k, log = TRUE) + dweibull(1.1, P$k, P$s, log = TRUE) + (-log(2*P$s) - abs(-0.4 - P$m)/P$s) +
+    dlogis(0.9, P$m, P$s, log = TRUE)
+  expect_equal(ilike::evaluate_log(recipe, parameters = P), truth, tolerance = 1e-10)
+  for (name in names(P))
+  {
+    h = 1e-6
+    fd = (ilike::evaluate_log(recipe, parameters = replace(P, name, P[[name]] + h)) -
+          ilike::evaluate_log(recipe, parameters = replace(P, name, P[[name]] - h)))/(2*h)
+    expect_equal(ilike:::evaluate_gradient_log(recipe, P, name)[1], fd, tolerance = 1e-5, label = name)
+  }
+  # their gradients with respect to the target, with the target as a parameter
+  writeLines(c("ilike 1.0", "model {", "  a ~ chisq(3)", "  b ~ weibull(1.5, 2)", "  c ~ laplace(0.5, 1.2)", "  e ~ logis(-1, 0.7)", "}"), f)
+  recipe = ilike::compile(f)
+  Q = list(a = 1.7, b = 0.9, c = -0.2, e = 0.4)
+  for (name in names(Q))
+  {
+    h = 1e-6
+    fd = (ilike::evaluate_log(recipe, parameters = replace(Q, name, Q[[name]] + h)) -
+          ilike::evaluate_log(recipe, parameters = replace(Q, name, Q[[name]] - h)))/(2*h)
+    expect_equal(ilike:::evaluate_gradient_log(recipe, Q, name)[1], fd, tolerance = 1e-5, label = name)
+  }
+  # simulation: quartiles against R's quantile functions (laplace's by its inverse cdf)
+  unlink("distributions_prior3", recursive = TRUE)
+  ilike::IS(recipe, results_name = "distributions_prior3", number_of_importance_points = 20000, seed = 1)
+  o = ilike::load_smc_output("distributions_prior3")
+  p = c(0.25, 0.5, 0.75)
+  qlaplace = function(p, m, b) ifelse(p < 0.5, m + b*log(2*p), m - b*log(2*(1 - p)))
+  quantiles = list(a = qchisq(p, 3), b = qweibull(p, 1.5, 2), c = qlaplace(p, 0.5, 1.2), e = qlogis(p, -1, 0.7))
+  for (name in names(quantiles))
+  {
+    x = o$Value[o$ParameterName == name]
+    target = quantiles[[name]]
+    expect_lt(max(abs(quantile(x, p) - target))/(target[3] - target[1]), 0.03, label = name)
+  }
+})

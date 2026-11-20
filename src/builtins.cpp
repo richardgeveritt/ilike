@@ -23,6 +23,7 @@
 #include "langevin_proposal_kernel.h"
 #include "hmc_proposal_kernel.h"
 #include "normal_block_proposal_kernel.h"
+#include "conjugate_block_proposal_kernel.h"
 #include "dual_averaging_adaptor.h"
 #include "pretune_adaptor.h"
 #include "truncated_normal_distribution_factor.h"
@@ -423,6 +424,26 @@ static std::vector<Builtin> make_registry()
     b.roles = {R::MHProposal};
     b.proposal = [](const BuiltinArguments &a) -> ProposalKernel* {
       return new NormalBlockProposalKernel(a.variable("variable")); };
+    table.push_back(b);
+  }
+  {
+    Builtin b;
+    b.name = "dirichlet_block";
+    b.description = "gibbs on a Dirichlet-distributed probability vector (a move: move m = gibbs(p))";
+    b.arguments = {the_variable()};
+    b.roles = {R::MHProposal};
+    b.proposal = [](const BuiltinArguments &a) -> ProposalKernel* {
+      return new DirichletBlockProposalKernel(a.variable("variable")); };
+    table.push_back(b);
+  }
+  {
+    Builtin b;
+    b.name = "normal_invgamma_block";
+    b.description = "gibbs on a mean and a variance (a move: move m = gibbs([mu, v]))";
+    b.arguments = {the_variable(), optional("mean_first", T::Logical, RecipeValue(true), "whether the mean comes first")};
+    b.roles = {R::MHProposal};
+    b.proposal = [](const BuiltinArguments &a) -> ProposalKernel* {
+      return new NormalInverseGammaBlockProposalKernel(a.variable("variable"), a.logical("mean_first")); };
     table.push_back(b);
   }
   {

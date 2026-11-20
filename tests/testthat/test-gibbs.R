@@ -241,7 +241,7 @@ test_that("gibbs on a vector is refused where the block's conditional is not nor
   writeLines(c("ilike 1.0", "data { y = [1, 2] }", "model {", "  for (k in 1:2) beta[k] ~ norm(0, 1)",
                "  for (i in 1:2) y[i] ~ norm(beta[i], 1)", "}", "algorithm mcmc {",
                "  move m = metropolis_hastings(normal_block(beta))", "  termination = iterations(10)", "}"), f)
-  expect_error(ilike::compile(f), "gibbs on a vector is move m = gibbs(beta)", fixed = TRUE)
+  expect_error(ilike::compile(f), "normal_block is not a proposal to write: write move m = gibbs(", fixed = TRUE)
 })
 
 test_that("SMC with gibbs on a vector gives the evidence of a linear regression", {
@@ -257,4 +257,71 @@ test_that("SMC with gibbs on a vector gives the evidence of a linear regression"
   S = r$sigma^2*diag(8) + 9*tcrossprod(r$X)
   exact = -0.5*8*log(2*pi) - 0.5*determinant(S)$modulus[1] - 0.5*sum(r$y*solve(S, r$y))
   expect_lt(abs(z - exact), 0.1)
+})
+
+# (C228) Dirichlet-categorical/multinomial and normal-inverse-gamma updates
+test_that("gibbs draws a Dirichlet full conditional, and categorical elements with Dirichlet probabilities", {
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(c(f, "gibbs_dirichlet"), recursive = TRUE), add = TRUE)
+  run = function(lines, moves, iterations = 4000, initial = list(list(p = c(1, 1, 1)/3)))
+  {
+    writeLines(c("ilike 1.0", "data { c = [1, 2, 2, 3, 2, 1]; m = [2, 5, 3] }", "model {", lines, "}", "algorithm mcmc {",
+                 paste0("  ", moves), paste0("  termination = iterations(", iterations, ")"), "}"), f)
+    unlink("gibbs_dirichlet", recursive = TRUE)
+    ilike::MCMC(ilike::compile(f), results_name = "gibbs_dirichlet", seed = 1, initial_values = initial)
+    ilike::load_mcmc_output("gibbs_dirichlet")
+  }
+  o = run(c("  p ~ dirichlet([1, 2, 1.5])", "  for (i in 1:6) c[i] ~ categorical(p)", "  m ~ multinom(10, p)"), "move g = gibbs(p)")
+  a = c(1, 2, 1.5) + c(2, 3, 1) + c(2, 5, 3) # the posterior Dirichlet(a)
+  for (k in 1:3)
+  {
+    x = o$Value[o$ParameterName == "p" & o$Dimension == k]
+    expect_lt(abs(mean(x) - a[k]/sum(a))/sqrt(a[k]*(sum(a) - a[k])/(sum(a)^2*(sum(a) + 1))), 0.1, label = k)
+    expect_equal(sd(x), sqrt(a[k]*(sum(a) - a[k])/(sum(a)^2*(sum(a) + 1))), tolerance = 0.06, label = k)
+    expect_true(all(diff(x) != 0))
+  }
+  # a categorical parameter with Dirichlet probabilities, both by gibbs: z's
+  # marginal is E[p] = alpha/sum(alpha)
+  o = run(c("  p ~ dirichlet([1, 2, 1.5])", "  z ~ categorical(p)"), c("move g = gibbs(p)", "  move h = gibbs(z)"),
+          iterations = 8000, initial = list(list(p = c(1, 1, 1)/3, z = 1)))
+  z = o$Value[o$ParameterName == "z"]
+  expect_equal(as.vector(table(factor(z, levels = 1:3)))/length(z), c(1, 2, 1.5)/4.5, tolerance = 0.06)
+})
+
+test_that("gibbs draws a mean and a variance from their normal-inverse-gamma full conditional", {
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(c(f, "gibbs_nig"), recursive = TRUE), add = TRUE)
+  y = c(1.3, 0.2, 2.1, 1.7, 0.9, 1.4); n = length(y)
+  writeLines(c("ilike 1.0", paste0("data { y = [", paste(y, collapse = ", "), "] }"), "model {", "  v ~ invgamma(3, 2)",
+               "  mu ~ norm(1, 2 * sqrt(v))", "  for (i in 1:6) y[i] ~ norm(mu, sqrt(v))", "}", "algorithm mcmc {",
+               "  move g = gibbs([mu, v])", "  termination = iterations(4000)", "}"), f)
+  unlink("gibbs_nig", recursive = TRUE)
+  ilike::MCMC(ilike::compile(f), results_name = "gibbs_nig", seed = 1, initial_values = list(list(mu = 0, v = 1)))
+  o = ilike::load_mcmc_output("gibbs_nig")
+  mu = o$Value[o$ParameterName == "mu"]; v = o$Value[o$ParameterName == "v"]
+  # the exact posterior: kappa0 = 1/4 (the prior variance of mu is 4 v)
+  k0 = 0.25; kn = k0 + n; mn = (k0*1 + n*mean(y))/kn; an = 3 + n/2
+  bn = 2 + 0.5*sum((y - mean(y))^2) + k0*n*(mean(y) - 1)^2/(2*kn)
+  expect_lt(abs(mean(v) - bn/(an - 1))/(bn/((an - 1)*sqrt(an - 2))), 0.1)
+  expect_equal(sd(v), bn/((an - 1)*sqrt(an - 2)), tolerance = 0.08)
+  expect_lt(abs(mean(mu) - mn)/sqrt(bn/((an - 1)*kn)), 0.1)
+  expect_equal(sd(mu), sqrt(bn/((an - 1)*kn)), tolerance = 0.06)
+  expect_true(all(diff(v) != 0))
+})
+
+test_that("gibbs is refused where the Dirichlet or normal-inverse-gamma conditional does not hold", {
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(f), add = TRUE)
+  check = function(lines, move, message)
+  {
+    writeLines(c("ilike 1.0", "data { y = [1, 2] }", "model {", lines, "}", "algorithm mcmc {", paste0("  ", move),
+                 "  termination = iterations(10)", "}"), f)
+    expect_error(ilike::compile(f), message, fixed = TRUE)
+  }
+  check(c("  p ~ dirichlet([1, 1])", "  for (i in 1:2) y[i] ~ pois(p[1])"), "move m = gibbs(p)",
+        "the full conditional of p is not Dirichlet: this term's distribution is pois")
+  check(c("  v ~ invgamma(2, 1)", "  mu ~ norm(0, 1)", "  for (i in 1:2) y[i] ~ norm(mu, sqrt(v))"), "move m = gibbs([mu, v])",
+        "the standard deviation must be c*sqrt(v) (v a variance)")
+  check(c("  v ~ gamma(2, 1)", "  mu ~ norm(0, sqrt(v))", "  for (i in 1:2) y[i] ~ norm(mu, sqrt(v))"), "move m = gibbs([mu, v])",
+        "one of the two needs an invgamma distribution")
 })

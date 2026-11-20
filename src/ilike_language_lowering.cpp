@@ -1705,7 +1705,50 @@ private:
       {"exp", {1, "dexp"}}, {"pois", {1, "dpois"}}, {"tnorm", {4, "dtnorm"}}, {"beta", {2, "ilike_model_dbeta"}},
       {"bern", {1, "ilike_model_dbern"}}, {"binom", {2, "ilike_model_dbinom"}},
       {"invgamma", {2, "ilike_model_dinvgamma"}}, {"t", {3, "ilike_model_dt"}}, {"cauchy", {2, "ilike_model_dcauchy"}},
-      {"halfnorm", {1, "ilike_model_dhalfnorm"}}, {"halfcauchy", {1, "ilike_model_dhalfcauchy"}}, {"halft", {2, "ilike_model_dhalft"}}};
+      {"halfnorm", {1, "ilike_model_dhalfnorm"}}, {"halfcauchy", {1, "ilike_model_dhalfcauchy"}}, {"halft", {2, "ilike_model_dhalft"}},
+      {"negbinom", {2, "ilike_model_dnbinom"}}, {"geom", {1, "ilike_model_dgeom"}}, {"vonmises", {2, "ilike_model_dvonmises"}},
+      {"chisq", {1, "ilike_model_dchisq"}}, {"weibull", {2, "ilike_model_dweibull"}}, {"laplace", {2, "ilike_model_dlaplace"}},
+      {"logis", {2, "ilike_model_dlogis"}}};
+    // (C227) a vector argument or a whole target
+    auto check = [&](size_t n, const std::string &form) {
+      if (arguments.size() != n)
+        this->error(call, f + " takes " + form + ".");
+    };
+    std::string vx = "arma::colvec(arma::vectorise(" + x + "))";
+    if (f == "categorical")
+    {
+      check(1, "a vector of probabilities");
+      return "ilike_model_dcategorical(" + x + ", arma::colvec(arma::vectorise(" + this->matrix_code(arguments[0], context) + ")))";
+    }
+    if (f == "multinom")
+    {
+      check(2, "the number of trials and a vector of probabilities");
+      return "ilike_model_dmultinom(" + vx + ", " + this->scalar_code(arguments[0], context) + ", arma::colvec(arma::vectorise(" +
+             this->matrix_code(arguments[1], context) + ")))";
+    }
+    if (f == "dirichlet")
+    {
+      check(1, "a vector of concentrations");
+      return "ilike_model_ddirichlet(" + vx + ", arma::colvec(arma::vectorise(" + this->matrix_code(arguments[0], context) + ")))";
+    }
+    if (f == "mvt")
+    {
+      check(3, "the degrees of freedom, a location vector and a scale matrix");
+      return "ilike_model_dmvt(" + vx + ", " + this->scalar_code(arguments[0], context) + ", arma::colvec(arma::vectorise(" +
+             this->matrix_code(arguments[1], context) + ")), " + this->matrix_code(arguments[2], context) + ")";
+    }
+    if ((f == "wishart") || (f == "invwishart"))
+    {
+      check(2, "the degrees of freedom and a scale matrix");
+      return "ilike_model_d" + f + "(arma::mat(" + x + "), " + this->scalar_code(arguments[0], context) + ", " +
+             this->matrix_code(arguments[1], context) + ")";
+    }
+    if (f == "lkj")
+    {
+      if ((arguments.size() != 1) && (arguments.size() != 2))
+        this->error(call, "lkj takes the shape eta, and optionally the dimension d.");
+      return "ilike_model_dlkj(arma::mat(" + x + "), " + this->scalar_code(arguments[0], context) + ")";
+    }
     if (f == "mvnorm")
     {
       if (arguments.size() != 2)
@@ -1715,13 +1758,38 @@ private:
     }
     auto found = densities.find(f);
     if (found == densities.end())
-      this->error(call, "unknown distribution " + f + " in a model statement (norm, lnorm, gamma, invgamma, unif, exp, pois, tnorm, beta, t, cauchy, halfnorm, halfcauchy, halft, bern, binom, mvnorm).");
+      this->error(call, "unknown distribution " + f + " in a model statement (norm, lnorm, gamma, invgamma, unif, exp, pois, tnorm, beta, t, cauchy, halfnorm, halfcauchy, halft, vonmises, chisq, weibull, laplace, logis, bern, binom, negbinom, geom, categorical, mvnorm, mvt, multinom, dirichlet, wishart, invwishart, lkj).");
     if (arguments.size() != found->second.first)
       this->error(call, f + " takes " + std::to_string(found->second.first) + " argument(s).");
     std::string code = found->second.second + "(" + x;
     for (size_t k = 0; k < arguments.size(); ++k)
       code += ", " + this->scalar_code(arguments[k], context);
     return code + ")";
+  }
+
+  // distributions whose target is a whole vector (mvnorm, multinom,
+  // dirichlet, mvt) or matrix (wishart, invwishart, lkj), written without an
+  // index (C227)
+  static bool whole_target(const std::string &f)
+  {
+    return (f == "mvnorm") || (f == "multinom") || (f == "dirichlet") || (f == "mvt") ||
+           (f == "wishart") || (f == "invwishart") || (f == "lkj");
+  }
+
+  // the dimension of an lkj matrix, for its simulation: lkj(eta, d), or the
+  // largest index of the variable in the statements (C227)
+  std::string lkj_dimension(const ModelStatement &st)
+  {
+    const RecipeValue &arguments = st.value["arguments"];
+    CodeContext context;
+    context.prior = true;
+    if (arguments.size() == 2)
+      return "(size_t)(" + this->scalar_code(arguments[1], context) + ")";
+    std::string rows, cols;
+    this->variable_extent(st.variable, rows, cols);
+    if ((rows == "1") || rows.empty())
+      this->error(st.node, "lkj: the dimension of " + st.variable + " is not known from the statements; give it: lkj(eta, d).");
+    return "(size_t)(" + rows + ")";
   }
 
   // a statement of a likelihood factor: an observed variable's "~", or a
@@ -1749,7 +1817,25 @@ private:
       {"pois", "(double)rpois"}, {"tnorm", "rtnorm"}, {"beta", "ilike_model_rbeta"},
       {"bern", "ilike_model_rbern"}, {"binom", "ilike_model_rbinom"},
       {"invgamma", "ilike_model_rinvgamma"}, {"t", "ilike_model_rt"}, {"cauchy", "ilike_model_rcauchy"},
-      {"halfnorm", "ilike_model_rhalfnorm"}, {"halfcauchy", "ilike_model_rhalfcauchy"}, {"halft", "ilike_model_rhalft"}};
+      {"halfnorm", "ilike_model_rhalfnorm"}, {"halfcauchy", "ilike_model_rhalfcauchy"}, {"halft", "ilike_model_rhalft"},
+      {"negbinom", "ilike_model_rnbinom"}, {"geom", "ilike_model_rgeom"}, {"vonmises", "ilike_model_rvonmises"},
+      {"chisq", "ilike_model_rchisq"}, {"weibull", "ilike_model_rweibull"}, {"laplace", "ilike_model_rlaplace"},
+      {"logis", "ilike_model_rlogis"}};
+    auto vector_argument = [&](size_t k) {
+      return "arma::colvec(arma::vectorise(" + this->matrix_code(arguments[k], context) + "))"; };
+    if (f == "categorical")
+      return "ilike_model_rcategorical(rng, " + vector_argument(0) + ")";
+    if (f == "multinom")
+      return "ilike_model_rmultinom(rng, " + this->scalar_code(arguments[0], context) + ", " + vector_argument(1) + ")";
+    if (f == "dirichlet")
+      return "ilike_model_rdirichlet(rng, " + vector_argument(0) + ")";
+    if (f == "mvt")
+      return "ilike_model_rmvt(rng, " + this->scalar_code(arguments[0], context) + ", " + vector_argument(1) + ", " +
+             this->matrix_code(arguments[2], context) + ")";
+    if ((f == "wishart") || (f == "invwishart"))
+      return "ilike_model_r" + f + "(rng, " + this->scalar_code(arguments[0], context) + ", " + this->matrix_code(arguments[1], context) + ")";
+    if (f == "lkj")
+      return "ilike_model_rlkj(rng, " + this->scalar_code(arguments[0], context) + ", " + this->lkj_dimension(st) + ")";
     if (f == "mvnorm")
       return "arma::mat(rmvnorm(rng, arma::colvec(arma::vectorise(" + this->matrix_code(arguments[0], context) + ")), " +
              this->matrix_code(arguments[1], context) + "))";
@@ -1767,10 +1853,10 @@ private:
   std::string target_code(const ModelStatement &st, const CodeContext &context, bool writable)
   {
     std::string base = st.observed ? (context.data + "[" + quoted(st.variable) + "]") : ("parameters[" + quoted(st.variable) + "]");
-    if (st.value["function"].as_string() == "mvnorm")
+    if (whole_target(st.value["function"].as_string()))
     {
       if (st.indices.size() != 0)
-        this->error(st.node, "mvnorm's target is a whole vector (no index).");
+        this->error(st.node, st.value["function"].as_string() + "'s target is a whole vector or matrix (no index).");
       return base;
     }
     if (st.indices.size() == 0)
@@ -1966,6 +2052,89 @@ private:
                        ") is not available yet.") + ");\n";
       return code + "}\n";
     }
+    // (C227) the vector distributions: the gradient with respect to the
+    // target (if continuous and a parameter) and to a vector argument that
+    // is a parameter written by its name; other arguments that read
+    // parameters have no gradient (the factor then has none)
+    if ((f == "mvt") || (f == "dirichlet") || (f == "multinom") || (f == "categorical"))
+    {
+      auto parameter_name = [&](const RecipeValue &e) -> std::string {
+        if ((kind_of(e) == "name") && !this->data_names.count(e["name"].as_string()) &&
+            !this->constant_names.count(e["name"].as_string()) && !this->is_deterministic(e["name"].as_string()))
+          return e["name"].as_string();
+        return std::string();
+      };
+      auto refuse_reading = [&](const RecipeValue &e, const std::string &what) {
+        std::set<std::string> found;
+        this->read_parameters(e, found);
+        if (!found.empty())
+          this->error(call, "the gradient with respect to " + what + " of " + f + " is available only for a parameter written by its name.");
+      };
+      std::string target = this->target_code(st, context, false);
+      auto add_to = [&](const std::string &name, const std::string &value) {
+        return "  if (arma::mat *ilike_gv = ilike_G.find(" + quoted(name) + ")) *ilike_gv += arma::reshape(" + value +
+               ", ilike_gv->n_rows, ilike_gv->n_cols);\n";
+      };
+      std::string code = "{\n";
+      if (f == "mvt")
+      {
+        code += "  arma::colvec ilike_x = arma::vectorise(" + target + ");\n"
+                "  const double ilike_nu = " + this->scalar_code(arguments[0], context) + ";\n"
+                "  arma::colvec ilike_m = arma::vectorise(" + this->matrix_code(arguments[1], context) + ");\n"
+                "  arma::mat ilike_S = " + this->matrix_code(arguments[2], context) + ";\n"
+                "  arma::colvec ilike_r = arma::solve(ilike_S, ilike_x - ilike_m, arma::solve_opts::likely_sympd);\n"
+                "  const double ilike_q = arma::dot(ilike_x - ilike_m, ilike_r);\n"
+                "  arma::colvec ilike_w = ((ilike_nu + ilike_x.n_elem)/(ilike_nu + ilike_q))*ilike_r;\n";
+        if (!st.observed)
+          code += "  if (arma::mat *ilike_gv = ilike_G.find(" + quoted(st.variable) + ")) *ilike_gv -= arma::reshape(ilike_w, ilike_gv->n_rows, ilike_gv->n_cols);\n";
+        std::string mean = parameter_name(arguments[1]);
+        if (!mean.empty())
+          code += add_to(mean, "ilike_w");
+        else
+          refuse_reading(arguments[1], "the location");
+        refuse_reading(arguments[0], "the degrees of freedom");
+        refuse_reading(arguments[2], "the scale matrix");
+      }
+      else if (f == "dirichlet")
+      {
+        code += "  arma::colvec ilike_x = arma::vectorise(" + target + ");\n"
+                "  arma::colvec ilike_a = arma::vectorise(" + this->matrix_code(arguments[0], context) + ");\n";
+        if (!st.observed)
+          code += add_to(st.variable, "arma::colvec((ilike_a - 1.0)/ilike_x)");
+        std::string alpha = parameter_name(arguments[0]);
+        if (!alpha.empty())
+          code += "  {\n    arma::colvec ilike_d(ilike_a.n_elem);\n    const double ilike_s = R::digamma(arma::accu(ilike_a));\n"
+                  "    for (arma::uword k = 0; k < ilike_a.n_elem; ++k) ilike_d[k] = ilike_s - R::digamma(ilike_a[k]) + std::log(ilike_x[k]);\n  " +
+                  add_to(alpha, "ilike_d") + "  }\n";
+        else
+          refuse_reading(arguments[0], "the concentrations");
+      }
+      else if (f == "multinom")
+      {
+        // (the target is discrete)
+        code += "  arma::colvec ilike_x = arma::vectorise(" + target + ");\n"
+                "  arma::colvec ilike_p = arma::vectorise(" + this->matrix_code(arguments[1], context) + ");\n";
+        std::string probabilities = parameter_name(arguments[1]);
+        if (!probabilities.empty())
+          code += add_to(probabilities, "arma::colvec(ilike_x/ilike_p)");
+        else
+          refuse_reading(arguments[1], "the probabilities");
+      }
+      else
+      {
+        // categorical (the target is discrete): d log p[x] / d p[x] = 1/p[x]
+        code += "  const double ilike_x = " + target + ";\n"
+                "  arma::colvec ilike_p = arma::vectorise(" + this->matrix_code(arguments[0], context) + ");\n";
+        std::string probabilities = parameter_name(arguments[0]);
+        if (!probabilities.empty())
+          code += "  {\n    arma::colvec ilike_d(ilike_p.n_elem, arma::fill::zeros);\n"
+                  "    arma::uword ilike_k = (arma::uword)(ilike_x - 1.0);\n"
+                  "    if (ilike_k < ilike_p.n_elem) ilike_d[ilike_k] = 1.0/ilike_p[ilike_k];\n  " + add_to(probabilities, "ilike_d") + "  }\n";
+        else
+          refuse_reading(arguments[0], "the probabilities");
+      }
+      return code + "}\n";
+    }
     std::string x = "ilike_x", v[4] = {"ilike_v0", "ilike_v1", "ilike_v2", "ilike_v3"};
     std::string dx;
     std::vector<std::string> d(arguments.size());
@@ -2057,6 +2226,51 @@ private:
     {
       dx = "(-" + x + "/(" + v[0] + "*" + v[0] + "))";
       d[0] = "(-1.0/" + v[0] + " + " + x + "*" + x + "/(" + v[0] + "*" + v[0] + "*" + v[0] + "))";
+    }
+    else if (f == "negbinom")
+    {
+      // (the target is discrete) log f = lgamma(x + n) - lgamma(n) - lgamma(x + 1) + n log p + x log(1 - p)
+      d[0] = "(R::digamma(" + x + " + " + v[0] + ") - R::digamma(" + v[0] + ") + std::log(" + v[1] + "))";
+      d[1] = "(" + v[0] + "/" + v[1] + " - " + x + "/(1.0 - " + v[1] + "))";
+    }
+    else if (f == "geom")
+      d[0] = "(1.0/" + v[0] + " - " + x + "/(1.0 - " + v[0] + "))"; // (the target is discrete)
+    else if (f == "vonmises")
+    {
+      // log f = kappa cos(x - mu) - log(2 pi I0(kappa))
+      dx = "(-" + v[1] + "*std::sin(" + x + " - " + v[0] + "))";
+      d[0] = "(" + v[1] + "*std::sin(" + x + " - " + v[0] + "))";
+      d[1] = "(std::cos(" + x + " - " + v[0] + ") - R::bessel_i(" + v[1] + ", 1.0, 2.0)/R::bessel_i(" + v[1] + ", 0.0, 2.0))";
+    }
+    else if (f == "chisq")
+    {
+      // (C229) log f = (k/2 - 1) log x - x/2 - (k/2) log 2 - lgamma(k/2)
+      dx = "((" + v[0] + "/2.0 - 1.0)/" + x + " - 0.5)";
+      d[0] = "(0.5*(std::log(" + x + ") - std::log(2.0) - R::digamma(" + v[0] + "/2.0)))";
+    }
+    else if (f == "weibull")
+    {
+      // log f = log k - log l + (k - 1) log(x/l) - (x/l)^k
+      prelude = "  const double ilike_z = " + x + "/" + v[1] + ";\n  const double ilike_zk = std::pow(ilike_z, " + v[0] + ");\n";
+      dx = "((" + v[0] + " - 1.0)/" + x + " - " + v[0] + "*ilike_zk/" + x + ")";
+      d[0] = "(1.0/" + v[0] + " + std::log(ilike_z) - ilike_zk*std::log(ilike_z))";
+      d[1] = "((-" + v[0] + " + " + v[0] + "*ilike_zk)/" + v[1] + ")";
+    }
+    else if (f == "laplace")
+    {
+      // log f = -log(2 b) - |x - m|/b
+      std::string sign = "((" + x + " > " + v[0] + ") ? 1.0 : ((" + x + " < " + v[0] + ") ? -1.0 : 0.0))";
+      dx = "(-" + sign + "/" + v[1] + ")";
+      d[0] = "(" + sign + "/" + v[1] + ")";
+      d[1] = "(-1.0/" + v[1] + " + std::abs(" + x + " - " + v[0] + ")/(" + v[1] + "*" + v[1] + "))";
+    }
+    else if (f == "logis")
+    {
+      // d log f / d z = -tanh(z/2), z = (x - m)/s
+      prelude = "  const double ilike_z = (" + x + " - " + v[0] + ")/" + v[1] + ";\n  const double ilike_t = std::tanh(0.5*ilike_z);\n";
+      dx = "(-ilike_t/" + v[1] + ")";
+      d[0] = "(ilike_t/" + v[1] + ")";
+      d[1] = "(-1.0/" + v[1] + " + ilike_z*ilike_t/" + v[1] + ")";
     }
     else if (f == "pois")
       d[0] = "(" + x + "/" + v[0] + " - 1.0)"; // (the target is discrete)
@@ -2278,7 +2492,7 @@ private:
     if (st.op == "+=")
       return this->reads_code(st.value, context, false);
     std::string code;
-    bool mvnorm = st.value["function"].as_string() == "mvnorm";
+    bool mvnorm = whole_target(st.value["function"].as_string());
     if (!st.observed)
     {
       if (mvnorm || st.indices.size() == 0)
@@ -2517,7 +2731,7 @@ private:
           context.prior = true;
           context.data = "output";
           for (const ModelLoop &loop : st.loops) context.indices.insert(loop.index);
-          std::string assign = (st.value["function"].as_string() == "mvnorm")
+          std::string assign = whole_target(st.value["function"].as_string())
                                ? "output[" + quoted(y) + "] = " + this->random_code(st, context) + ";\n"
                                : this->target_code(st, context, true) + " = " + this->random_code(st, context) + ";\n";
           CodeContext fresh;
@@ -2955,6 +3169,254 @@ inline double ilike_model_rhalft(RandomNumberGenerator &rng, double nu, double s
 {
   return std::abs(ilike_model_rt(rng, nu, 0.0, s));
 }
+// (C227) negbinom(size, prob) (R's), geom(prob) (failures before the first
+// success, R's), categorical(p) (x in 1, ..., K, p the probabilities),
+// vonmises(mu, kappa); the vector and matrix distributions multinom(n, p),
+// dirichlet(alpha), mvt(df, location, scale), wishart(df, S),
+// invwishart(df, S) (R's parameterisations, as MCMCpack's riwish) and
+// lkj(eta) (correlation matrices, Lewandowski, Kurowicka & Joe 2009)
+// (C229) chisq(df), weibull(shape, scale), logis(location, scale) (R's);
+// laplace(location, scale)
+inline double ilike_model_dchisq(double x, double k)
+{
+  if (!(x > 0.0) || !(k > 0.0)) return -std::numeric_limits<double>::infinity();
+  return (0.5*k - 1.0)*std::log(x) - 0.5*x - 0.5*k*std::log(2.0) - std::lgamma(0.5*k);
+}
+inline double ilike_model_rchisq(RandomNumberGenerator &rng, double k)
+{
+  return rgamma(rng, 0.5*k, 0.5);
+}
+inline double ilike_model_dweibull(double x, double k, double l)
+{
+  if (!(x > 0.0) || !(k > 0.0) || !(l > 0.0)) return -std::numeric_limits<double>::infinity();
+  double z = x/l;
+  return std::log(k/l) + (k - 1.0)*std::log(z) - std::pow(z, k);
+}
+inline double ilike_model_rweibull(RandomNumberGenerator &rng, double k, double l)
+{
+  return l*std::pow(-std::log(runif(rng)), 1.0/k);
+}
+inline double ilike_model_dlaplace(double x, double m, double b)
+{
+  if (!(b > 0.0)) return -std::numeric_limits<double>::infinity();
+  return -std::log(2.0*b) - std::abs(x - m)/b;
+}
+inline double ilike_model_rlaplace(RandomNumberGenerator &rng, double m, double b)
+{
+  // the difference of two exponentials
+  return m + b*(std::log(runif(rng)) - std::log(runif(rng)));
+}
+inline double ilike_model_dlogis(double x, double m, double s)
+{
+  if (!(s > 0.0)) return -std::numeric_limits<double>::infinity();
+  double z = std::abs((x - m)/s);
+  return -std::log(s) - z - 2.0*std::log1p(std::exp(-z));
+}
+inline double ilike_model_rlogis(RandomNumberGenerator &rng, double m, double s)
+{
+  double u = runif(rng);
+  return m + s*(std::log(u) - std::log1p(-u));
+}
+inline double ilike_model_dnbinom(double x, double n, double p)
+{
+  if (x < 0.0 || x != std::floor(x) || !(n > 0.0) || !(p > 0.0) || p > 1.0) return -std::numeric_limits<double>::infinity();
+  return std::lgamma(x + n) - std::lgamma(n) - std::lgamma(x + 1.0) + n*std::log(p) + ((x > 0.0) ? x*std::log1p(-p) : 0.0);
+}
+inline double ilike_model_rnbinom(RandomNumberGenerator &rng, double n, double p)
+{
+  // a Poisson with a gamma-distributed mean
+  if (p >= 1.0) return 0.0;
+  return (double)rpois(rng, rgamma(rng, n, p/(1.0 - p)));
+}
+inline double ilike_model_dgeom(double x, double p)
+{
+  if (x < 0.0 || x != std::floor(x) || !(p > 0.0) || p > 1.0) return -std::numeric_limits<double>::infinity();
+  return std::log(p) + ((x > 0.0) ? x*std::log1p(-p) : 0.0);
+}
+inline double ilike_model_rgeom(RandomNumberGenerator &rng, double p)
+{
+  if (p >= 1.0) return 0.0;
+  return std::floor(std::log(runif(rng))/std::log1p(-p));
+}
+inline double ilike_model_dcategorical(double x, const arma::colvec &p)
+{
+  if (x < 1.0 || x > double(p.n_elem) || x != std::floor(x)) return -std::numeric_limits<double>::infinity();
+  return std::log(p[(arma::uword)(x - 1.0)]);
+}
+inline double ilike_model_rcategorical(RandomNumberGenerator &rng, const arma::colvec &p)
+{
+  double u = runif(rng)*arma::accu(p), cumulative = 0.0;
+  for (arma::uword k = 0; k < p.n_elem; ++k)
+  {
+    cumulative = cumulative + p[k];
+    if (u < cumulative) return double(k + 1);
+  }
+  return double(p.n_elem);
+}
+inline double ilike_model_dvonmises(double x, double mu, double kappa)
+{
+  if (!(kappa >= 0.0)) return -std::numeric_limits<double>::infinity();
+  // log I0(kappa) from the exponentially scaled Bessel function
+  return kappa*(std::cos(x - mu) - 1.0) - std::log(2.0*3.14159265358979323846*R::bessel_i(kappa, 0.0, 2.0));
+}
+inline double ilike_model_rvonmises(RandomNumberGenerator &rng, double mu, double kappa)
+{
+  // Best & Fisher (1979)
+  const double pi = 3.14159265358979323846;
+  if (kappa < 1e-8) return mu + pi*(2.0*runif(rng) - 1.0);
+  double tau = 1.0 + std::sqrt(1.0 + 4.0*kappa*kappa);
+  double rho = (tau - std::sqrt(2.0*tau))/(2.0*kappa);
+  double r = (1.0 + rho*rho)/(2.0*rho);
+  double f;
+  while (true)
+  {
+    double u1 = runif(rng), u2 = runif(rng);
+    double z = std::cos(pi*u1);
+    f = (1.0 + r*z)/(r + z);
+    double c = kappa*(r - f);
+    if ((c*(2.0 - c) - u2 > 0.0) || (std::log(c/u2) + 1.0 - c >= 0.0)) break;
+  }
+  double u3 = runif(rng);
+  return mu + ((u3 > 0.5) ? 1.0 : -1.0)*std::acos(std::max(-1.0, std::min(1.0, f)));
+}
+inline double ilike_model_dmultinom(const arma::colvec &x, double n, const arma::colvec &p)
+{
+  if (x.n_elem != p.n_elem) Rcpp::stop("multinom: the counts and the probabilities differ in length.");
+  double total = 0.0, value = std::lgamma(n + 1.0);
+  for (arma::uword k = 0; k < x.n_elem; ++k)
+  {
+    if (x[k] < 0.0 || x[k] != std::floor(x[k])) return -std::numeric_limits<double>::infinity();
+    total = total + x[k];
+    value = value - std::lgamma(x[k] + 1.0) + ((x[k] > 0.0) ? x[k]*std::log(p[k]) : 0.0);
+  }
+  return (total == n) ? value : -std::numeric_limits<double>::infinity();
+}
+inline arma::mat ilike_model_rmultinom(RandomNumberGenerator &rng, double n, const arma::colvec &p)
+{
+  arma::colvec x(p.n_elem, arma::fill::zeros);
+  double total = arma::accu(p);
+  for (int i = 0; i < (int)n; ++i)
+    x[(arma::uword)(ilike_model_rcategorical(rng, p/total) - 1.0)] += 1.0;
+  return x;
+}
+inline double ilike_model_ddirichlet(const arma::colvec &x, const arma::colvec &alpha)
+{
+  if (x.n_elem != alpha.n_elem) Rcpp::stop("dirichlet: the vector and the concentrations differ in length.");
+  if (arma::any(x <= 0.0) || std::abs(arma::accu(x) - 1.0) > 1e-8) return -std::numeric_limits<double>::infinity();
+  double value = std::lgamma(arma::accu(alpha));
+  for (arma::uword k = 0; k < x.n_elem; ++k)
+    value = value - std::lgamma(alpha[k]) + (alpha[k] - 1.0)*std::log(x[k]);
+  return value;
+}
+inline arma::mat ilike_model_rdirichlet(RandomNumberGenerator &rng, const arma::colvec &alpha)
+{
+  arma::colvec x(alpha.n_elem);
+  for (arma::uword k = 0; k < alpha.n_elem; ++k) x[k] = rgamma(rng, alpha[k], 1.0);
+  return x/arma::accu(x);
+}
+inline double ilike_model_dmvt(const arma::colvec &x, double nu, const arma::colvec &m, const arma::mat &S)
+{
+  double p = double(x.n_elem), log_det, sign;
+  arma::log_det(log_det, sign, S);
+  if (!(nu > 0.0) || !(sign > 0.0)) return -std::numeric_limits<double>::infinity();
+  arma::colvec r = arma::solve(S, x - m, arma::solve_opts::likely_sympd);
+  double q = arma::dot(x - m, r);
+  return std::lgamma(0.5*(nu + p)) - std::lgamma(0.5*nu) - 0.5*p*std::log(nu*3.14159265358979323846) - 0.5*log_det -
+         0.5*(nu + p)*std::log1p(q/nu);
+}
+inline arma::mat ilike_model_rmvt(RandomNumberGenerator &rng, double nu, const arma::colvec &m, const arma::mat &S)
+{
+  arma::colvec z(m.n_elem);
+  for (arma::uword k = 0; k < m.n_elem; ++k) z[k] = rnorm(rng, 0.0, 1.0);
+  double w = rgamma(rng, 0.5*nu, 0.5);
+  return m + arma::chol(S, "lower")*z/std::sqrt(w/nu);
+}
+// log of the multivariate gamma function Gamma_p(a)
+inline double ilike_model_lmvgamma(double a, double p)
+{
+  double value = 0.25*p*(p - 1.0)*std::log(3.14159265358979323846);
+  for (int j = 1; j <= (int)p; ++j) value = value + std::lgamma(a + 0.5*(1.0 - j));
+  return value;
+}
+inline bool ilike_model_sympd(const arma::mat &X)
+{
+  return (X.n_rows == X.n_cols) && X.is_symmetric(1e-10*(1.0 + arma::abs(X).max())) && arma::mat(X).is_sympd();
+}
+inline double ilike_model_dwishart(const arma::mat &X, double nu, const arma::mat &S)
+{
+  double p = double(X.n_rows), log_det_X, log_det_S, sign;
+  if (!ilike_model_sympd(X) || !(nu > p - 1.0)) return -std::numeric_limits<double>::infinity();
+  arma::log_det(log_det_X, sign, X);
+  arma::log_det(log_det_S, sign, S);
+  return 0.5*(nu - p - 1.0)*log_det_X - 0.5*arma::trace(arma::solve(S, X)) - 0.5*nu*p*std::log(2.0) - 0.5*nu*log_det_S -
+         ilike_model_lmvgamma(0.5*nu, p);
+}
+inline arma::mat ilike_model_rwishart(RandomNumberGenerator &rng, double nu, const arma::mat &S)
+{
+  // Bartlett: A lower triangular, A_ii^2 ~ chisq(nu - i + 1), A_ij ~ N(0, 1)
+  arma::uword p = S.n_rows;
+  arma::mat A(p, p, arma::fill::zeros);
+  for (arma::uword i = 0; i < p; ++i)
+  {
+    A(i, i) = std::sqrt(rgamma(rng, 0.5*(nu - double(i)), 0.5));
+    for (arma::uword j = 0; j < i; ++j) A(i, j) = rnorm(rng, 0.0, 1.0);
+  }
+  arma::mat LA = arma::chol(S, "lower")*A;
+  return LA*LA.t();
+}
+inline double ilike_model_dinvwishart(const arma::mat &X, double nu, const arma::mat &Psi)
+{
+  double p = double(X.n_rows), log_det_X, log_det_Psi, sign;
+  if (!ilike_model_sympd(X) || !(nu > p - 1.0)) return -std::numeric_limits<double>::infinity();
+  arma::log_det(log_det_X, sign, X);
+  arma::log_det(log_det_Psi, sign, Psi);
+  return 0.5*nu*log_det_Psi - 0.5*nu*p*std::log(2.0) - ilike_model_lmvgamma(0.5*nu, p) - 0.5*(nu + p + 1.0)*log_det_X -
+         0.5*arma::trace(arma::solve(X, Psi));
+}
+inline arma::mat ilike_model_rinvwishart(RandomNumberGenerator &rng, double nu, const arma::mat &Psi)
+{
+  arma::mat W = ilike_model_rwishart(rng, nu, arma::inv_sympd(Psi));
+  return arma::inv_sympd(W);
+}
+inline double ilike_model_dlkj(const arma::mat &R, double eta)
+{
+  // density det(R)^(eta - 1)/c_d(eta), Lewandowski, Kurowicka & Joe (2009):
+  // c_d = 2^(sum_k (2 eta - 2 + d - k)(d - k)) prod_k B(b_k, b_k)^(d - k),
+  // b_k = eta + (d - k - 1)/2, k = 1, ..., d - 1
+  double d = double(R.n_rows), log_det, sign;
+  if (!(eta > 0.0) || !ilike_model_sympd(R) || arma::any(arma::abs(R.diag() - 1.0) > 1e-10))
+    return -std::numeric_limits<double>::infinity();
+  arma::log_det(log_det, sign, R);
+  double log_c = 0.0;
+  for (int k = 1; k < (int)d; ++k)
+  {
+    double b = eta + 0.5*(d - k - 1.0);
+    log_c = log_c + (2.0*eta - 2.0 + d - k)*(d - k)*std::log(2.0) + (d - k)*(2.0*std::lgamma(b) - std::lgamma(2.0*b));
+  }
+  return (eta - 1.0)*log_det - log_c;
+}
+inline arma::mat ilike_model_rlkj(RandomNumberGenerator &rng, double eta, size_t d)
+{
+  // the C-vine method of Lewandowski, Kurowicka & Joe (2009): partial
+  // correlations P[k][i] ~ 2 Beta(b_k, b_k) - 1, b_k = eta + (d - 1 - k)/2
+  // (k = 1, ..., d - 1), turned into correlations
+  arma::mat P(d, d, arma::fill::zeros), S(d, d, arma::fill::eye);
+  for (size_t k = 0; k + 1 < d; ++k)
+  {
+    double b = eta + 0.5*(double(d) - 2.0 - double(k));
+    for (size_t i = k + 1; i < d; ++i)
+    {
+      double g1 = rgamma(rng, b, 1.0), g2 = rgamma(rng, b, 1.0);
+      P(k, i) = 2.0*g1/(g1 + g2) - 1.0;
+      double p = P(k, i);
+      for (int l = int(k) - 1; l >= 0; --l)
+        p = p*std::sqrt((1.0 - P(l, i)*P(l, i))*(1.0 - P(l, k)*P(l, k))) + P(l, i)*P(l, k);
+      S(k, i) = p;
+      S(i, k) = p;
+    }
+  }
+  return S;
+}
 inline void ilike_model_read(std::vector<double> &reads, double term, double variable, double row, double col)
 {
   reads.push_back(term); reads.push_back(variable); reads.push_back(row); reads.push_back(col);
@@ -3160,7 +3622,7 @@ inline double ilike_model_dbinom(double x, double n, double p)
         {
           allocated.insert(st.variable);
           // the variable's size: the largest index of its statements
-          if (st.value["function"].as_string() != "mvnorm")
+          if (!whole_target(st.value["function"].as_string()))
           {
             std::string rows, cols;
             this->variable_extent(st.variable, rows, cols);
@@ -3168,7 +3630,7 @@ inline double ilike_model_dbinom(double x, double n, double p)
           }
         }
         std::string assign;
-        if (st.value["function"].as_string() == "mvnorm")
+        if (whole_target(st.value["function"].as_string()))
           assign = "parameters[" + quoted(st.variable) + "] = " + this->random_code(st, loop_context) + ";\n";
         else
           assign = this->target_code(st, loop_context, true) + " = " + this->random_code(st, loop_context) + ";\n";
@@ -3872,6 +4334,148 @@ inline double ilike_model_dbinom(double x, double n, double p)
     return {NULL, ""};
   }
 
+  // (C228) the Dirichlet full conditional of a probability vector x: x's own
+  // distribution dirichlet (arguments free of x), and every other term
+  // reading x categorical(x) or multinom(n, x), with x itself as the
+  // probabilities and the target, loops and indices free of x
+  std::pair<const ModelStatement*, std::string> dirichlet_problem(const std::string &x)
+  {
+    for (const ModelStatement &st : this->model_statements)
+    {
+      if (st.op == "<-")
+        continue;
+      if (!this->statements_read(std::vector<const ModelStatement*>(1, &st)).count(x))
+        continue;
+      if (st.op == "+=")
+        return {&st, "the term of factor " + st.variable + " depends on " + x};
+      std::string f = st.value["function"].as_string();
+      const RecipeValue &arguments = st.value["arguments"];
+      for (const ModelLoop &loop : st.loops)
+        if (this->reads_name(loop.from, x) || this->reads_name(loop.to, x))
+          return {&st, "a loop's range depends on " + x};
+      for (size_t k = 0; k < st.indices.size(); ++k)
+        if (this->reads_name(st.indices[k], x))
+          return {&st, "an index depends on " + x};
+      if (!st.observed && (st.variable == x))
+      {
+        for (size_t k = 0; k < arguments.size(); ++k)
+          if (this->reads_name(arguments[k], x))
+            return {&st, "the arguments of " + x + "'s distribution depend on " + x};
+        continue;
+      }
+      int which = (f == "categorical") ? 0 : ((f == "multinom") ? 1 : -1);
+      if (which < 0)
+        return {&st, "this term's distribution is " + f + " (with a dirichlet distribution, " + x +
+                     " is conjugate for categorical(" + x + ") and multinom(n, " + x + ") terms)"};
+      const RecipeValue &probabilities = arguments[which];
+      if ((kind_of(probabilities) != "name") || (probabilities["name"].as_string() != x))
+        return {&st, "the probabilities must be " + x + " itself for a Dirichlet full conditional"};
+      if ((f == "multinom") && this->reads_name(arguments[0], x))
+        return {&st, "the number of trials depends on " + x};
+    }
+    return {NULL, ""};
+  }
+
+  // (C228) the normal-inverse-gamma full conditional of a mean mu and a
+  // variance v: v ~ invgamma (arguments free of both), mu ~ norm(m0, c
+  // sqrt(v)), and every other term reading either norm(a + b mu, c' sqrt(v))
+  // (means affine in mu and free of v; standard deviations c x^(1/2) in v
+  // and free of mu), targets, loops and indices free of both
+  std::pair<const ModelStatement*, std::string> normal_invgamma_problem(const std::string &mu, const std::string &v)
+  {
+    bool own_mu = false, own_v = false;
+    for (const ModelStatement &st : this->model_statements)
+    {
+      if (st.op == "<-")
+        continue;
+      std::set<std::string> reads = this->statements_read(std::vector<const ModelStatement*>(1, &st));
+      if (!reads.count(mu) && !reads.count(v))
+        continue;
+      if (st.op == "+=")
+        return {&st, "the term of factor " + st.variable + " depends on " + mu + " or " + v};
+      std::string f = st.value["function"].as_string();
+      const RecipeValue &arguments = st.value["arguments"];
+      for (const ModelLoop &loop : st.loops)
+        for (const std::string &x : {mu, v})
+          if (this->reads_name(loop.from, x) || this->reads_name(loop.to, x))
+            return {&st, "a loop's range depends on " + x};
+      for (size_t k = 0; k < st.indices.size(); ++k)
+        for (const std::string &x : {mu, v})
+          if (this->reads_name(st.indices[k], x))
+            return {&st, "an index depends on " + x};
+      if (!st.observed && (st.variable == v))
+      {
+        own_v = true;
+        if (f != "invgamma")
+          return {&st, v + "'s distribution is " + f + " (the variance needs invgamma)"};
+        for (size_t k = 0; k < arguments.size(); ++k)
+          if (this->reads_name(arguments[k], mu) || this->reads_name(arguments[k], v))
+            return {&st, "the arguments of " + v + "'s distribution depend on " + mu + " or " + v};
+        continue;
+      }
+      if (f != "norm")
+        return {&st, "this term's distribution is " + f + " (a normal-inverse-gamma full conditional needs norm terms)"};
+      if (!st.observed && (st.variable == mu))
+      {
+        own_mu = true;
+        if (this->reads_name(arguments[0], mu) || this->reads_name(arguments[0], v))
+          return {&st, "the mean of " + mu + "'s distribution depends on " + mu + " or " + v};
+      }
+      else
+      {
+        std::string why;
+        if (this->reads_name(arguments[0], v))
+          return {&st, v + " is in the mean"};
+        if (!this->affine_in(arguments[0], mu, why))
+          return {&st, mu + " enters the mean nonlinearly: " + why};
+      }
+      double power;
+      std::string why;
+      if (this->reads_name(arguments[1], mu))
+        return {&st, mu + " is in the standard deviation"};
+      if (!this->power_of(arguments[1], v, power, why) || (power != 0.5))
+        return {&st, "the standard deviation must be c*sqrt(" + v + ") (" + v + " a variance)" + (why.empty() ? "" : ": " + why)};
+    }
+    if (!own_mu || !own_v)
+      return {NULL, (own_mu ? v : mu) + " has no distribution in the model statements"};
+    return {NULL, ""};
+  }
+
+  // every factor reading x is written as model statements (what the others read is unknown)
+  void check_factors_known(const RecipeValue &call, const Arguments &arguments, const std::string &x, const std::string &label)
+  {
+    if (arguments.has("factors"))
+      return;
+    std::vector<size_t> numbers = this->automatic_factor_index(x);
+    size_t total = this->factor_entries.size();
+    for (size_t n = 1; n <= total; ++n)
+      if ((numbers.empty() || std::find(numbers.begin(), numbers.end(), n) != numbers.end()) &&
+          !this->generated_factor_reads.count(n))
+        this->error(call, label + ": factor " + std::to_string(n) + " is not written as model statements, so whether the "
+                    "full conditional is conjugate is not known; if it does not depend on " + x +
+                    ", list the factors the move uses with factors = [...].");
+  }
+
+  // a gibbs move lowered as metropolis_hastings(proposal(…), factors, cut_factors)
+  Move gibbs_block_move(const RecipeValue &move_statement, const RecipeValue &call, Arguments &arguments,
+                        const std::string &proposal, const RecipeValue &target, const RecipeValue *extra, const std::string &extra_name)
+  {
+    RecipeValue inner = RecipeValue::list();
+    inner.push_back(target, "");
+    if (extra != NULL)
+      inner.push_back(*extra, extra_name);
+    RecipeValue outer = RecipeValue::list();
+    outer.push_back(call_with(call, proposal, inner), "");
+    for (const std::string &key : {"factors", "cut_factors"})
+      if (arguments.has(key))
+        outer.push_back(arguments.named[key], key);
+    this->lowering_gibbs_block = true;
+    Move move = this->lower_move(move_statement, move_statement["target"]["name"].as_string(),
+                                 call_with(call, "metropolis_hastings", outer));
+    this->lowering_gibbs_block = false;
+    return move;
+  }
+
   Move element_move_loop(const RecipeValue &statement)
   {
     // (its constants take their values now, when compiling)
@@ -3942,6 +4546,41 @@ inline double ilike_model_dbinom(double x, double n, double p)
           this->error(proposal, type + ": the " + scale_name + " is missing.");
       }
     }
+    if (gibbs && loops.empty() && (kind_of(element) == "vector"))
+    {
+      // gibbs([mu, v]): a mean and a variance with a normal-inverse-gamma
+      // full conditional (C228)
+      const RecipeValue &items = element["elements"];
+      if ((items.size() != 2) || (kind_of(items[0]) != "name") || (kind_of(items[1]) != "name"))
+        this->error(call, "gibbs on a list takes a mean and a variance: gibbs([mu, v]).");
+      std::string a = items[0]["name"].as_string(), b = items[1]["name"].as_string();
+      std::string fa, fb;
+      for (const ModelStatement &st : this->model_statements)
+        if ((st.op == "~") && !st.observed)
+        {
+          if (st.variable == a) fa = st.value["function"].as_string();
+          if (st.variable == b) fb = st.value["function"].as_string();
+        }
+      bool mean_first = (fb == "invgamma");
+      std::string mu = mean_first ? a : b, v = mean_first ? b : a;
+      if (!mean_first && (fa != "invgamma"))
+        this->error(call, "gibbs([mu, v]): one of the two needs an invgamma distribution (the variance).");
+      std::pair<const ModelStatement*, std::string> problem = this->normal_invgamma_problem(mu, v);
+      if (!problem.second.empty())
+      {
+        std::string message = "gibbs([" + a + ", " + b + "]): the full conditional is not normal-inverse-gamma: " + problem.second +
+                              ". Use separate gibbs or metropolis moves.";
+        if (problem.first != NULL)
+          this->error(problem.first->node, message);
+        this->error(call, message);
+      }
+      this->check_factors_known(call, arguments, mu, "gibbs([" + a + ", " + b + "])");
+      this->check_factors_known(call, arguments, v, "gibbs([" + a + ", " + b + "])");
+      RecipeValue flag = RecipeValue::list();
+      flag.push_back(RecipeValue("logical"), "expression");
+      flag.push_back(RecipeValue(mean_first), "value");
+      return this->gibbs_block_move(move_statement, call, arguments, "normal_invgamma_block", element, &flag, "mean_first");
+    }
     if (gibbs && (kind_of(element) != "name") && (kind_of(element) != "index"))
       this->error(call, "gibbs takes a scalar parameter (move m = gibbs(mu)) or an element in a loop "
                   "(for (j in 1:J) move m = gibbs(theta[j])); a proposal such as norm_rw(…) goes in metropolis(…).");
@@ -3955,11 +4594,31 @@ inline double ilike_model_dbinom(double x, double n, double p)
         if ((st.op == "~") && !st.observed && (st.variable == name))
         {
           std::string f = st.value["function"].as_string();
-          if ((st.indices.size() > 0) || (f == "mvnorm"))
+          if ((st.indices.size() > 0) || whole_target(f))
             vector = true;
-          if ((f == "bern") || (f == "binom") || (f == "pois"))
+          if ((f == "bern") || (f == "binom") || (f == "pois") || (f == "negbinom") || (f == "geom") || (f == "categorical") ||
+              (f == "multinom"))
             discrete = true;
         }
+      bool dirichlet = false;
+      for (const ModelStatement &st : this->model_statements)
+        if ((st.op == "~") && !st.observed && (st.variable == name) && (st.value["function"].as_string() == "dirichlet"))
+          dirichlet = true;
+      if (dirichlet && support.is_null())
+      {
+        // gibbs(p) on a Dirichlet-distributed probability vector (C228)
+        std::pair<const ModelStatement*, std::string> problem = this->dirichlet_problem(name);
+        if (!problem.second.empty())
+        {
+          std::string message = "gibbs(" + name + "): the full conditional of " + name + " is not Dirichlet: " + problem.second +
+                                ". Use independent_mh, or a move that keeps it on the simplex.";
+          if (problem.first != NULL)
+            this->error(problem.first->node, message);
+          this->error(call, message);
+        }
+        this->check_factors_known(call, arguments, name, "gibbs(" + name + ")");
+        return this->gibbs_block_move(move_statement, call, arguments, "dirichlet_block", element, NULL, "");
+      }
       if (vector)
       {
         // gibbs(beta) on a whole vector (C216): a draw from the block's
@@ -4106,6 +4765,23 @@ inline double ilike_model_dbinom(double x, double n, double p)
                      number.n_elem == 1)
               for (double v = 0.0; v <= number(0); v += 1.0)
                 states.push_back(v);
+            else if (f == "categorical")
+            {
+              // (C227) 1, ..., K: K from the probabilities, or from the
+              // concentrations of a dirichlet-distributed probability vector
+              const RecipeValue &probabilities = st.value["arguments"][0];
+              size_t K = 0;
+              if (this->numeric(substitute(probabilities, constants), number))
+                K = number.n_elem;
+              else if (kind_of(probabilities) == "name")
+                for (const ModelStatement &other : this->model_statements)
+                  if ((other.op == "~") && !other.observed && (other.variable == probabilities["name"].as_string()) &&
+                      (other.value["function"].as_string() == "dirichlet") &&
+                      this->numeric(substitute(other.value["arguments"][0], constants), number))
+                    K = number.n_elem;
+              for (size_t v = 1; v <= K; ++v)
+                states.push_back(double(v));
+            }
             break;
           }
         if (states.empty())
@@ -4312,7 +4988,7 @@ inline double ilike_model_dbinom(double x, double n, double p)
       std::string f = call["function"].as_string();
       const RecipeValue &arguments = call["arguments"];
       if ((f == "gamma") || (f == "lnorm") || (f == "exp") || (f == "invgamma") || (f == "halfnorm") ||
-          (f == "halfcauchy") || (f == "halft"))
+          (f == "halfcauchy") || (f == "halft") || (f == "chisq") || (f == "weibull"))
         return transform_item(variable, "log", 0.0, 0.0);
       if (f == "beta")
         return transform_item(variable, "logit", 0.0, 1.0);
@@ -4563,8 +5239,8 @@ inline double ilike_model_dbinom(double x, double n, double p)
       std::string type = this->builtin_name(proposal);
       if ((type == "nuts") && !this->lowering_nuts)
         this->error(proposal, "nuts is a move of its own, not a proposal: move m = nuts(x, step = …).");
-      if ((type == "normal_block") && !this->lowering_gibbs_block)
-        this->error(proposal, "normal_block is not a proposal to write: gibbs on a vector is move m = gibbs(beta).");
+      if (((type == "normal_block") || (type == "dirichlet_block") || (type == "normal_invgamma_block")) && !this->lowering_gibbs_block)
+        this->error(proposal, type + " is not a proposal to write: write move m = gibbs(…).");
       if (!role_exists(type, role))
         // the registry's message: what it is, and where it may be used
         find_builtin(type, role);
