@@ -146,8 +146,14 @@ remotes::install_github("richardgeveritt/ilike")
   10000 points simulated from a constant velocity linear-Gaussian
   dynamic model (process noise standard deviation = 1).
 
+- [`convert_bugs_model()`](https://richardgeveritt.github.io/ilike/reference/convert_bugs_model.md)
+  : Convert a BUGS, JAGS or NIMBLE model to the ilike language
+
 - [`convert_ilike_file()`](https://richardgeveritt.github.io/ilike/reference/convert_ilike_file.md)
   : Convert a recipe from the old .ilike format to the ilike language
+
+- [`convert_stan_model()`](https://richardgeveritt.github.io/ilike/reference/convert_stan_model.md)
+  : Convert a Stan program to the ilike language
 
 - [`evaluate_log()`](https://richardgeveritt.github.io/ilike/reference/evaluate_log.md)
   : Evaluate a model specified in a recipe.
