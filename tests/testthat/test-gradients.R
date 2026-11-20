@@ -131,3 +131,17 @@ test_that("gradients that are not available say so when asked for", {
   expect_equal(as.numeric(ilike:::evaluate_gradient_log(recipe, list(mu = c(1, 2, 3), k = 2.5), "mu")),
                c(0, -(2 - 2)/0.01 + (2.5 - 2), -(3 - 3)/0.01), tolerance = 1e-12)
 })
+
+test_that("derivatives written from a distribution argument's value agree with finite differences", {
+  # (C238) exp, expm1, inv_logit, ilogit, tanh and sqrt as a distribution's
+  # argument: their derivatives are written from the argument's value
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(f), add = TRUE)
+  writeLines(c("ilike 1.0", "data { y = [0.3, 1.4]; b = [1, 0]; X = [[1, 0.5], [1, -0.3]] }", "model {",
+               "  a ~ norm(0, 1)", "  c ~ norm(0, 1)", "  for (j in 1:2) beta[j] ~ norm(0, 1)",
+               "  y[1] ~ norm(tanh(a), exp(c))", "  y[2] ~ norm(expm1(a * c), sqrt(1 + c * c))",
+               "  for (i in 1:2) b[i] ~ bern(inv_logit(sum(j in 1:2, X[i, j] * beta[j])))",
+               "  factor extra += -0.5 * pow(ilogit(a - c), 2)", "}"), f)
+  checked = ilike::check_gradient(ilike::compile(f), list(a = 0.4, c = -0.7, beta = c(0.2, -0.6)))
+  expect_true(all(checked$error < 1e-6))
+})

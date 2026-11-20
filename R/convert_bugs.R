@@ -14,7 +14,7 @@
 #' relations (~), deterministic relations (<-, with logit(p) <- … and
 #' log(x) <- … on the left), for loops, arithmetic and the functions exp,
 #' log, sqrt, pow, abs, logit, ilogit (and NIMBLE's expit), sin, cos, tanh,
-#' min, max, and inprod and sum over vectors whose lengths are known from
+#' min, max, equals, step, and inprod and sum over vectors whose lengths are known from
 #' the data; truncation T(a, b) (and BUGS's I(a, b)) for dnorm. Distributions
 #' (with BUGS's parameterisations, or NIMBLE's when dialect = "nimble"):
 #' dnorm, dlnorm, dt, dgamma, dbeta, dunif, dexp, dchisqr (dchisq), dweib,
@@ -195,7 +195,7 @@ bugs_deterministic <- function(tr, lhs, rhs)
 
 bugs_functions <- c(exp = "exp", log = "log", sqrt = "sqrt", pow = "pow", abs = "abs", logit = "logit", ilogit = "inv_logit",
                     expit = "inv_logit", sin = "sin", cos = "cos", tanh = "tanh", min = "min", max = "max",
-                    log1p = "log1p", expm1 = "expm1", lgamma = "lgamma", loggam = "lgamma")
+                    log1p = "log1p", expm1 = "expm1", lgamma = "lgamma", loggam = "lgamma", equals = "equals", step = "step")
 
 # the number of elements of a data variable's dimension k
 bugs_extent <- function(tr, name, k)

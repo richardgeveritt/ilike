@@ -863,6 +863,26 @@ private:
         if (node["expression"].as_string() != "name")
           this->lexer.error(token.line, token.column, "only a named function can be called.");
         this->lexer.next();
+        // an aggregate (C233): sum(k in a:b, expression), k a local index
+        if ((node["name"].as_string() == "sum") && node["namespace"].as_string().empty() &&
+            (this->lexer.peek().type == TokenType::Identifier) && (this->lexer.peek(1).type == TokenType::Identifier) &&
+            (this->lexer.peek(1).text == "in"))
+        {
+          Token index = this->lexer.next();
+          this->lexer.next(); // in
+          RecipeValue range = this->expression();
+          this->expect_symbol(",", "after the range of sum(k in a:b, …)");
+          RecipeValue body = this->expression();
+          this->expect_symbol(")", "to close sum(k in a:b, …)");
+          RecipeValue aggregate = RecipeValue::list();
+          aggregate.push_back(RecipeValue("sum"), "expression");
+          aggregate.push_back(RecipeValue(index.text), "index");
+          aggregate.push_back(range, "range");
+          aggregate.push_back(body, "body");
+          add_position(aggregate, start);
+          node = aggregate;
+          continue;
+        }
         RecipeValue call = RecipeValue::list();
         call.push_back(RecipeValue("call"), "expression");
         call.push_back(node["name"], "function");

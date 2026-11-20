@@ -57,9 +57,9 @@ replace_placeholders <- function(x, types, foreign_getters = list())
         if (!is.null(type) && type != 0)
           x[["type"]] = type
       }
-      else if (is_foreign_placeholder(item))
+      else if (is_foreign_placeholder(item) || is_finite_difference_placeholder(item))
       {
-        wrapper = foreign_getters[[foreign_key(item)]]
+        wrapper = foreign_getters[[if (is_foreign_placeholder(item)) foreign_key(item) else finite_difference_key(item)]]
         x[[k]] = get(wrapper$getter)()
         if (!is.null(wrapper$type) && wrapper$type != 0)
           x[["type"]] = wrapper$type
@@ -79,6 +79,9 @@ compile_ilike_language <- function(filenames, texts, keep_temporary_recipe_code 
   # such as the elements of moves on elements, uses them)
   given_constants = model_parameter_list[names(model_parameter_list) != ""]
   lowered = ilike_language_lower(texts, filenames, if (length(given_constants) > 0) given_constants else NULL)
+  # (notes from the lowering: gradients by finite differences, dev/plan.md 3.10)
+  for (note in unlist(lowered$notes))
+    message(note)
   code_for_signatures = paste(lowered$user_code, lowered$generated_code, sep = "\n")
   # (internal, for tests and as a way out: options(ilike.plate_factors = FALSE)
   # evaluates factors from model statements whole, as in I4a)
@@ -203,6 +206,9 @@ compile_ilike_language <- function(filenames, texts, keep_temporary_recipe_code 
                  '',
                  'using namespace Rcpp;',
                  '#include <ilike.h>',
+                 # (log densities written as templates on the number type,
+                 # for gradient = autodiff: dev/plan.md 3.10 stage 2)
+                 if (grepl("ParametersT", lowered$user_code, fixed = TRUE)) '#include <ilike_autodiff.h>' else character(0),
                  'using namespace ilike;',
                  '',
                  lowered$user_code,
@@ -558,7 +564,56 @@ generate_foreign_wrappers <- function(x, constants, declared, external_packages,
     unlink(file_name)
     entry = blocks[[block_type]][[number]]
     getter = names(entry)[grepl("getXPtr", names(entry))][1]
-    getters[[key]] = list(getter = getter, type = entry$type)
+    getters[[key]] = list(getter = getter, type = entry$type, cpp_name = paste(p$role, number, sep = ""))
+  }
+
+  # gradients by finite differences of a log density in another language
+  # (gradient = autodiff, dev/plan.md 3.10): central differences, in C++
+  # (ilike_finite_difference_gradient, in the generated code), of the C++
+  # wrapper made above for the log density
+  for (p in collect_finite_difference_placeholders(x))
+  {
+    key = finite_difference_key(p)
+    if (!is.null(getters[[key]]))
+      next
+    log_name = getters[[foreign_key(p$log)]]$cpp_name
+    log_signature = ilike_find_cpp_function_signature(paste(code, collapse = "\n"), log_name)
+    log_arguments = c(if (grepl("Parameters", log_signature, fixed = TRUE)) "p",
+                      if (grepl("Data", log_signature, fixed = TRUE)) "data")
+    prior = identical(p$ilike_finite_difference, "prior")
+    name = paste("ilike_finite_difference_", log_name, sep = "")
+    arguments = paste("const std::string &variable, const Parameters &parameters", if (!prior) ", const Data &data", sep = "")
+    code = c(code, "",
+             paste("arma::mat ", name, "(", arguments, ")", sep = ""), "{",
+             paste("  return ilike_finite_difference_gradient([&](const Parameters &p) { return (double)", log_name, "(",
+                   paste(log_arguments, collapse = ", "), "); }, variable, parameters);", sep = ""), "}", "")
+    pt = parameter_types_for_cpp(paste("arma::mat ", name, "(", arguments, ")", sep = ""))
+    rt = return_types_for_cpp(p$role, 0, pt[[1]], pt[[2]], pt[[3]], pt[[4]])
+    getter = paste(name, "getXPtr", sep = "_")
+    code = c(code, "// [[Rcpp::export]]", paste("SEXP ", getter, "() {", sep = ""),
+             paste("  typedef", rt[[1]], "(*funcPtr)(", rt[[2]], ");"),
+             paste("  return XPtr<funcPtr>(new funcPtr(&", name, "));", sep = ""), "}", "")
+    getters[[key]] = list(getter = getter, type = rt[[4]])
   }
   list(code = code, getters = getters)
+}
+
+is_finite_difference_placeholder <- function(x)
+{
+  is.list(x) && !is.null(names(x)) && ("ilike_finite_difference" %in% names(x))
+}
+
+finite_difference_key <- function(p)
+{
+  paste("finite_difference", p$role, foreign_key(p$log), sep = "\r")
+}
+
+collect_finite_difference_placeholders <- function(x, found = list())
+{
+  if (is_finite_difference_placeholder(x))
+    return(c(found, list(x)))
+  if (is.list(x))
+    for (item in x)
+      found = collect_finite_difference_placeholders(item, found)
+  found
 }

@@ -218,6 +218,7 @@ public:
     output.push_back(this->foreign_files, "foreign_files");
     output.push_back(RecipeValue(this->uses_foreign), "uses_foreign");
     output.push_back(RecipeValue(this->element_file), "element_file");
+    output.push_back(RecipeValue(this->notes), "notes");
     return output;
   }
 
@@ -290,6 +291,13 @@ private:
   std::string deferred_function_code;  // the factors' functions
   bool data_function = false;
   size_t generated_count = 0;
+  // gradient = autodiff (dev/plan.md 3.10): the factors whose gradients are
+  // finite differences, and the notes compile() prints
+  std::vector<std::string> finite_difference_gradients;
+  bool finite_difference_helper_emitted = false;
+  std::map<std::string, std::string> template_log_wrappers; // "f prior"/"f likelihood" -> double instance
+
+  std::vector<std::string> notes;
 
   // --- messages ------------------------------------------------------------------
 
@@ -1084,14 +1092,181 @@ private:
 
   // the functions of a user-written factor: a bare function (the log
   // density), or density(log = …, simulate = …, gradient = …, second_gradient = …)
-  RecipeValue density_functions(const RecipeValue &value, bool prior)
+  // gradient = autodiff, autodiff(finite_difference) or autodiff(forward)
+  // (dev/plan.md 3.10, S-5): the backend asked for ("auto" for the first), or
+  // "" if the value is not autodiff
+  std::string autodiff_backend(const RecipeValue &value) const
+  {
+    std::string kind = kind_of(value);
+    if ((kind == "name") && value["namespace"].as_string().empty() && (value["name"].as_string() == "autodiff"))
+      return "auto";
+    if ((kind != "call") || !value["namespace"].as_string().empty() || (value["function"].as_string() != "autodiff"))
+      return "";
+    const RecipeValue &arguments = value["arguments"];
+    std::vector<std::string> keys = arguments.names();
+    if ((arguments.size() == 1) && (keys.empty() || keys[0].empty()) && (kind_of(arguments[0]) == "name") &&
+        arguments[0]["namespace"].as_string().empty())
+    {
+      std::string backend = arguments[0]["name"].as_string();
+      if ((backend == "finite_difference") || (backend == "forward") || (backend == "reverse"))
+        return backend;
+    }
+    this->error(value, "autodiff takes no argument (compile() chooses how), or one of finite_difference, forward, reverse.");
+    return ""; // (not reached)
+  }
+
+  // central differences of a log density, emitted once into the generated
+  // code: each element of the variable moved by h = ε^(1/3) max(1, |x|)
+  // (the h balancing the truncation error, O(h²), against the rounding
+  // error, O(ε/h)); the parameters are copied deeply, since a copy of
+  // Parameters shares the variables' memory
+  void emit_finite_difference_helper()
+  {
+    if (this->finite_difference_helper_emitted)
+      return;
+    this->finite_difference_helper_emitted = true;
+    this->generated_code +=
+      "template <class F>\n"
+      "static arma::mat ilike_finite_difference_gradient(F f, const std::string &variable, const Parameters &parameters)\n"
+      "{\n"
+      "  Parameters moved = parameters.deep_copy();\n"
+      "  arma::mat &x = moved[variable];\n"
+      "  arma::mat gradient(x.n_rows, x.n_cols);\n"
+      "  const double scale = std::cbrt(std::numeric_limits<double>::epsilon());\n"
+      "  for (arma::uword k = 0; k < x.n_elem; ++k)\n"
+      "  {\n"
+      "    double value = x(k);\n"
+      "    double h = scale * std::max(1.0, std::abs(value));\n"
+      "    double up = value + h, down = value - h;\n"
+      "    x(k) = up;\n"
+      "    double f_up = f(moved);\n"
+      "    x(k) = down;\n"
+      "    double f_down = f(moved);\n"
+      "    x(k) = value;\n"
+      "    gradient(k) = (f_up - f_down) / (up - down); // (up - down: the step actually taken)\n"
+      "  }\n"
+      "  return gradient;\n"
+      "}\n\n";
+  }
+
+  // the gradient function generated for gradient = autodiff (dev/plan.md
+  // 3.10 stage 1): for now, central differences of the log density, always
+  // in C++: of the user's function, or, for a log density in another
+  // language, of the C++ wrapper the R binding generates for it (placeholder
+  // {ilike_finite_difference, log: the log's placeholder, role}); either way
+  // an ordinary gradient function, so the engine sees no difference
+  // a log density written in C++ as a template on the number type,
+  // template <class T> T f(const ParametersT<T> &parameters[, const Data &data])
+  // (dev/plan.md 3.10 stage 2; ilike_autodiff.h)
+  bool is_template_log(const RecipeValue &log)
+  {
+    if (this->is_foreign(log) || !this->is_function_reference(log))
+      return false;
+    std::string f = this->cpp_function(log, "log");
+    return find_cpp_function_signature(this->user_code, f).find("ParametersT") != std::string::npos;
+  }
+
+  // the double instance of a templated log density, as the ordinary function
+  // the log density's role takes; ParametersT<double> is a view on the
+  // Parameters, so it costs what the function written with Parameters costs
+  std::string template_log_wrapper(const RecipeValue &log, bool prior)
+  {
+    std::string f = this->cpp_function(log, "log");
+    std::string key = f + (prior ? " prior" : " likelihood");
+    auto found = this->template_log_wrappers.find(key);
+    if (found != this->template_log_wrappers.end())
+      return found->second;
+    bool takes_data = find_cpp_function_signature(this->user_code, f).find("Data") != std::string::npos;
+    std::string w = "ilike_generated_log_" + std::to_string(++this->generated_count);
+    this->generated_code += "double " + w + "(const Parameters &parameters" + (prior ? "" : ", const Data &data") +
+                            ")\n{\n  return ::" + f + "<double>(ParametersT<double>(parameters)" +
+                            (takes_data ? ", data" : "") + ");\n}\n\n";
+    this->template_log_wrappers[key] = w;
+    return w;
+  }
+
+  // the placeholder of a log density: the function, or a templated
+  // function's double instance
+  RecipeValue log_placeholder(const RecipeValue &log, bool prior, const std::string &what)
+  {
+    std::string role = std::string("evaluate_log_") + (prior ? "prior" : "likelihood");
+    if (this->is_template_log(log))
+      return this->placeholder(this->template_log_wrapper(log, prior), role);
+    return this->function_placeholder(log, role, what);
+  }
+
+  RecipeValue generated_gradient(const RecipeValue &where, const std::string &backend, Arguments &arguments, bool prior,
+                                 const std::string &name)
+  {
+    std::string suffix = prior ? "prior" : "likelihood";
+    if (!arguments.has("log"))
+      this->error(where, "gradient = autodiff differentiates the log density, so the log density is needed too: "
+                         "density(log = …, gradient = autodiff).");
+    const RecipeValue &log = arguments.named["log"];
+    bool template_log = this->is_template_log(log);
+    if (((backend == "forward") || (backend == "reverse")) && !template_log)
+      this->error(where, "autodiff(" + backend + ") needs the log density written in C++ as a template on the number type: "
+                         "template <class T> T f(const ParametersT<T> &parameters, const Data &data) (see ilike_autodiff.h).");
+    if (template_log && (backend != "finite_difference"))
+    {
+      // exact: forward mode (one Dual evaluation per element) or reverse mode
+      // (one Var evaluation recorded on a tape, then one sweep back, whatever
+      // the number of elements, but each operation costs more); by default
+      // forward for fewer than 10 elements, reverse otherwise (C239: the two
+      // took the same time at 10 elements on a logistic regression, forward
+      // 3 times faster at 2, reverse 3.5 times faster at 50)
+      std::string f = this->cpp_function(log, "log");
+      bool takes_data = find_cpp_function_signature(this->user_code, f).find("Data") != std::string::npos;
+      auto call = [&](const std::string &number) {
+        return std::string(number == "Dual" ? "forward_gradient" : "reverse_gradient") + "([&](const ParametersT<" + number +
+               "> &p) { return ::" + f + "<" + number + ">(p" + (takes_data ? ", data" : "") + "); }, variable, parameters)";
+      };
+      std::string body;
+      if (backend == "forward")
+        body = "  return " + call("Dual") + ";\n";
+      else if (backend == "reverse")
+        body = "  return " + call("Var") + ";\n";
+      else
+        body = "  if (parameters[variable].n_elem < 10)\n    return " + call("Dual") + ";\n  return " + call("Var") + ";\n";
+      std::string g = "ilike_generated_gradient_" + std::to_string(++this->generated_count);
+      this->generated_code += "arma::mat " + g + "(const std::string &variable, const Parameters &parameters" +
+                              (prior ? "" : ", const Data &data") + ")\n{\n" + body + "}\n\n";
+      return this->placeholder(g, "evaluate_gradient_log_" + suffix);
+    }
+    this->finite_difference_gradients.push_back(name);
+    this->notes.push_back(std::string("The gradient of the ") + (prior ? "prior " : "factor ") + name +
+                          " is computed by finite differences of its log density, so it is approximate: "
+                          "metropolis_hastings moves using it stay exact, unadjusted moves refuse it" +
+                          std::string(template_log || this->is_foreign(log) ? "." :
+                                      " (a log density written in C++ as a template on the number type gets an exact gradient)."));
+    this->emit_finite_difference_helper();
+    if (this->is_foreign(log))
+    {
+      RecipeValue output = RecipeValue::list();
+      output.push_back(RecipeValue(prior ? "prior" : "likelihood"), "ilike_finite_difference");
+      output.push_back(this->foreign_placeholder(log, "evaluate_log_" + suffix, ""), "log");
+      output.push_back(RecipeValue("evaluate_gradient_log_" + suffix), "role");
+      return output;
+    }
+    // (a templated log density is differenced through its double instance)
+    std::string f = template_log ? this->template_log_wrapper(log, prior) : this->cpp_function(log, "log");
+    bool takes_data = template_log ? !prior : (find_cpp_function_signature(this->user_code, f).find("Data") != std::string::npos);
+    std::string g = "ilike_generated_gradient_" + std::to_string(++this->generated_count);
+    // (::f: the generated function's arguments must not hide the user's function)
+    this->generated_code += "arma::mat " + g + "(const std::string &variable, const Parameters &parameters" +
+                            (prior ? "" : ", const Data &data") + ")\n{\n" +
+                            "  return ilike_finite_difference_gradient([&](const Parameters &p) { return (double)::" + f +
+                            "(p" + (takes_data ? ", data" : "") + "); }, variable, parameters);\n}\n\n";
+    return this->placeholder(g, "evaluate_gradient_log_" + suffix);
+  }
+
+  RecipeValue density_functions(const RecipeValue &value, bool prior, const std::string &name)
   {
     RecipeValue factor = RecipeValue::list();
     std::string suffix = prior ? "prior" : "likelihood";
     if (this->is_function_value(value))
     {
-      factor.push_back(this->function_placeholder(value, "evaluate_log_" + suffix, "the log density"),
-                       "evaluate_log_" + suffix);
+      factor.push_back(this->log_placeholder(value, prior, "the log density"), "evaluate_log_" + suffix);
       return factor;
     }
     if (kind_of(value) != "call" || value["function"].as_string() != "density")
@@ -1103,13 +1278,21 @@ private:
       allowed.insert("simulate");
     this->allow_only(value, arguments, allowed, 0);
     if (arguments.has("log"))
-      factor.push_back(this->function_placeholder(arguments.named["log"], "evaluate_log_" + suffix, "log"),
-                       "evaluate_log_" + suffix);
+      factor.push_back(this->log_placeholder(arguments.named["log"], prior, "log"), "evaluate_log_" + suffix);
     if (arguments.has("simulate"))
       factor.push_back(this->function_placeholder(arguments.named["simulate"], "simulate_prior", "simulate"),
                        "simulate_prior");
     if (arguments.has("gradient"))
-      factor.push_back(this->function_placeholder(arguments.named["gradient"], "evaluate_gradient_log_" + suffix, "gradient"), "evaluate_gradient_log_" + suffix);
+    {
+      std::string backend = this->autodiff_backend(arguments.named["gradient"]);
+      if (backend.empty())
+        factor.push_back(this->function_placeholder(arguments.named["gradient"], "evaluate_gradient_log_" + suffix, "gradient"), "evaluate_gradient_log_" + suffix);
+      else
+        factor.push_back(this->generated_gradient(arguments.named["gradient"], backend, arguments, prior, name),
+                         "evaluate_gradient_log_" + suffix);
+    }
+    if (arguments.has("second_gradient") && !this->autodiff_backend(arguments.named["second_gradient"]).empty())
+      this->error(arguments.named["second_gradient"], "second_gradient = autodiff is not written yet.");
     if (arguments.has("second_gradient"))
       factor.push_back(this->function_placeholder(arguments.named["second_gradient"], "evaluate_second_gradient_log_" + suffix, "second_gradient"), "evaluate_second_gradient_log_" + suffix);
     if (factor.size() == 0)
@@ -1166,7 +1349,7 @@ private:
       }
       if (keyword == "prior")
       {
-        this->add_factor(statement, name, this->density_functions(value, true));
+        this->add_factor(statement, name, this->density_functions(value, true, name));
         this->mfds_prior_reasons.push_back("the prior " + name + " is written as a function");
         continue;
       }
@@ -1222,7 +1405,7 @@ private:
         }
         else
         {
-          this->add_factor(statement, name, this->density_functions(value, false));
+          this->add_factor(statement, name, this->density_functions(value, false, name));
           this->mfds_reasons.push_back("the factor " + name + " is a log density written as a function");
         }
         continue;
@@ -1377,13 +1560,23 @@ private:
 
   // --- generating C++ for the statements
 
+  // the lookups by name of one statement's code, made before its loops
+  struct Hoist
+  {
+    std::map<std::string, std::string> names; // expression -> local name
+    std::string declarations;
+  };
+  size_t hoist_count = 0;
+
   struct CodeContext
   {
     bool prior = false;                 // in the prior's functions (no runtime data)
     std::set<std::string> indices;      // loop indices in scope
     std::string data = "data";          // how the runtime data are reached ("data" or "(*data)")
     bool node = false;                  // in a deterministic node's function (data is a pointer, nullptr in the prior)
+    Hoist *hoist = nullptr;             // when set, lookups by name are made once, before the statement's loops (hoisted)
   };
+
 
   bool is_deterministic(const std::string &name) const
   {
@@ -1469,11 +1662,30 @@ private:
       // cannot reach the prior, deterministic_call)
       if (context.node && this->is_literal_data(name))
         return "(data != nullptr ? (*data)[" + quoted(name) + "] : " + this->literal_data_matrix(name, node) + ")";
-      return context.data + "[" + quoted(name) + "]";
+      return this->hoisted(context.data + "[" + quoted(name) + "]", "const arma::mat &", context);
     }
     if (this->is_deterministic(name))
       this->error(node, name + " is a deterministic node: use it with its indices.");
-    return "parameters[" + quoted(name) + "]";
+    return this->hoisted("parameters[" + quoted(name) + "]", "const arma::mat &", context);
+  }
+
+  // a lookup by name (data["X"], parameters["beta"], ilike_G.find("beta")),
+  // done once before a statement's loops when the context collects them: a
+  // lookup builds a string and searches a map, which in the innermost loop
+  // (a sum over a row of a matrix, say) cost more than the arithmetic. The
+  // declaration (type name = expression) goes to the context's Hoist, which
+  // the function's code puts before the statement's loops.
+  std::string hoisted(const std::string &expression, const std::string &type, const CodeContext &context)
+  {
+    if (context.hoist == nullptr)
+      return expression;
+    auto found = context.hoist->names.find(expression);
+    if (found != context.hoist->names.end())
+      return found->second;
+    std::string name = "ilike_ref" + std::to_string(++this->hoist_count);
+    context.hoist->declarations += type + " " + name + " = " + expression + ";\n";
+    context.hoist->names[expression] = name;
+    return name;
   }
 
   // "x[...] (file:line:column)", for messages about an element. The file is
@@ -1498,6 +1710,14 @@ private:
   std::string scalar_code(const RecipeValue &expression, const CodeContext &context)
   {
     std::string kind = kind_of(expression);
+    if (kind == "sum")
+    {
+      CodeContext inner;
+      std::string loop = this->sum_loop(expression, context, inner);
+      std::string total = "ilike_sum" + std::to_string(++this->sum_temporaries);
+      return "([&]() { double " + total + " = 0.0; " + loop + " " + total + " += " +
+             this->scalar_code(expression["body"], inner) + "; return " + total + "; }())";
+    }
     if (kind == "number")
     {
       // a double literal (C231): 1/2 in a statement is 0.5, not C++'s
@@ -1589,8 +1809,20 @@ private:
         // (both double: a number such as 2 is written as an int literal)
         return "std::" + f + "((double)" + argument(0) + ", (double)" + argument(1) + ")";
       }
+      // (C234) indicators, as BUGS's: equals(a, b) is 1 if a = b, else 0;
+      // step(x) is 1 if x >= 0, else 0
+      if (f == "equals")
+      {
+        if (arguments.size() != 2) this->error(expression, "equals takes two arguments.");
+        return "(((double)" + argument(0) + " == (double)" + argument(1) + ") ? 1.0 : 0.0)";
+      }
+      if (f == "step")
+      {
+        if (arguments.size() != 1) this->error(expression, "step takes one argument.");
+        return "(((double)" + argument(0) + " >= 0.0) ? 1.0 : 0.0)";
+      }
       this->error(expression, "unknown function " + f + " in a model statement (functions: exp, log, sqrt, abs, pow, "
-                  "inv_logit, logit, lgamma, log1p, expm1, sin, cos, tanh, min, max).");
+                  "inv_logit, logit, lgamma, log1p, expm1, sin, cos, tanh, min, max, equals, step).");
     }
     this->error(expression, "this expression cannot be used in a model statement.");
   }
@@ -1674,11 +1906,41 @@ private:
         found.insert(name);
       return;
     }
+    if (kind == "sum")
+    {
+      // (C233) its index is local to it
+      this->read_parameters(expression["range"], found, visited);
+      std::set<std::string> inner;
+      this->read_parameters(expression["body"], inner, visited);
+      inner.erase(expression["index"].as_string());
+      found.insert(inner.begin(), inner.end());
+      return;
+    }
     if (!expression.is_list())
       return;
     for (size_t k = 0; k < expression.size(); ++k)
       if (expression[k].is_list())
         this->read_parameters(expression[k], found, visited);
+  }
+
+  // (C233) the C++ loop header of sum(k in a:b, ...), and the context of its body
+  std::string sum_loop(const RecipeValue &expression, const CodeContext &context, CodeContext &inner)
+  {
+    const RecipeValue &range = expression["range"];
+    if ((kind_of(range) != "binary") || (range["operator"].as_string() != ":"))
+      this->error(expression, "sum's range is a:b, as in sum(k in 1:n, x[k]).");
+    std::string k = expression["index"].as_string();
+    if (context.indices.count(k) || this->data_names.count(k) || this->constant_names.count(k) || this->is_deterministic(k))
+      this->error(expression, "sum's index " + k + " is already the name of a loop index, data, a constant or a node.");
+    std::set<std::string> found;
+    this->read_parameters(range, found);
+    for (const std::string &index : context.indices) found.erase(index);
+    if (!found.empty())
+      this->error(expression, "sum's range depends on the parameter " + *found.begin() + " (it must be known from the data and loops).");
+    inner = context;
+    inner.indices.insert(k);
+    return "for (int " + k + " = (int)std::lround(" + this->scalar_code(range["left"], context) + "); " + k +
+           " <= (int)std::lround(" + this->scalar_code(range["right"], context) + "); ++" + k + ")";
   }
 
   std::string deterministic_call(const std::string &name, const RecipeValue &indices, const RecipeValue &node, const CodeContext &context)
@@ -1807,8 +2069,53 @@ private:
   }
 
   // one term's log value: the log density of a "~", or the expression of a "+="
+  // (C235) a term written in C++: factor name += cpp::f(i, …, reads = [...]),
+  // calling double f(const Parameters &parameters, const Data &data, int i, …)
+  // with the loop indices (or index expressions) given; the reads declared
+  // are the term's dependencies (as a statement's indices are)
+  static bool cpp_term(const RecipeValue &value)
+  {
+    return (kind_of(value) == "call") && (value["namespace"].as_string() == "cpp");
+  }
+  const RecipeValue &cpp_term_reads(const RecipeValue &call)
+  {
+    const RecipeValue &arguments = call["arguments"];
+    std::vector<std::string> keys = arguments.names();
+    for (size_t k = 0; k < arguments.size(); ++k)
+      if ((k < keys.size()) && (keys[k] == "reads"))
+      {
+        if (kind_of(arguments[k]) != "vector")
+          this->error(arguments[k], "reads is a list of what the term reads: reads = [mu[group[i]], sigma].");
+        return arguments[k]["elements"];
+      }
+    this->error(call, "a term written in C++ declares what it reads: cpp::" + call["function"].as_string() +
+                "(i, reads = [mu[group[i]], sigma]) (each a variable, all of it, or an element).");
+    return arguments; // (not reached)
+  }
+  std::string cpp_term_code(const RecipeValue &call, const CodeContext &context)
+  {
+    const RecipeValue &arguments = call["arguments"];
+    std::vector<std::string> keys = arguments.names();
+    // (::f: the user's function is at global scope, and the generated function
+    // around this call has arguments, such as term, that would hide it)
+    std::string code = "::" + call["function"].as_string() + "(parameters, " + context.data;
+    for (size_t k = 0; k < arguments.size(); ++k)
+    {
+      std::string key = (k < keys.size()) ? keys[k] : "";
+      if (key == "reads")
+        continue;
+      if (!key.empty())
+        this->error(arguments[k], "a term written in C++ takes index arguments and reads = [...] only.");
+      code += ", (int)std::lround(" + this->scalar_code(arguments[k], context) + ")";
+    }
+    this->cpp_term_reads(call); // (checked)
+    return "(double)" + code + ")";
+  }
+
   std::string term_code(const ModelStatement &st, const CodeContext &context)
   {
+    if ((st.op == "+=") && cpp_term(st.value))
+      return this->cpp_term_code(st.value, context);
     if (st.op == "+=")
       return "(double)(" + this->scalar_code(st.value, context) + ")";
     return this->density_code(st, this->target_code(st, context, false), context);
@@ -1860,6 +2167,8 @@ private:
   std::string target_code(const ModelStatement &st, const CodeContext &context, bool writable)
   {
     std::string base = st.observed ? (context.data + "[" + quoted(st.variable) + "]") : ("parameters[" + quoted(st.variable) + "]");
+    if (!writable)
+      base = this->hoisted(base, "const arma::mat &", context);
     if (whole_target(st.value["function"].as_string()))
     {
       if (st.indices.size() != 0)
@@ -1939,7 +2248,11 @@ private:
     return call + ");\n";
   }
 
-  std::string gradient_code(const RecipeValue &expression, const std::string &adjoint, const CodeContext &context)
+  // (known: the name of a C++ variable already holding the expression's
+  // value, or ""; some functions' derivatives are written from their value,
+  // which then saves computing their argument)
+  std::string gradient_code(const RecipeValue &expression, const std::string &adjoint, const CodeContext &context,
+                            const std::string &known = "")
   {
     if (this->parameters_read(expression, context).empty())
       return "";
@@ -1949,7 +2262,8 @@ private:
       const std::string name = expression["name"].as_string();
       if (this->is_deterministic(name))
         return this->node_gradient_call(name, RecipeValue::list(), adjoint, context);
-      return "if (arma::mat *ilike_gv = ilike_G.find(" + quoted(name) + ")) (*ilike_gv)(0) += " + adjoint + ";\n";
+      return "if (arma::mat *ilike_gv = " + this->hoisted("ilike_G.find(" + quoted(name) + ")", "arma::mat *const", context) +
+             ") (*ilike_gv)(0) += " + adjoint + ";\n";
     }
     if (kind == "index")
     {
@@ -1967,7 +2281,17 @@ private:
       std::string element = this->index_code(indices[0], context);
       if (indices.size() == 2)
         element += ", " + this->index_code(indices[1], context);
-      return "if (arma::mat *ilike_gv = ilike_G.find(" + quoted(name) + ")) ilike_model_add(*ilike_gv, " + element + ", " + adjoint + ", " + where + ");\n";
+      return "if (arma::mat *ilike_gv = " + this->hoisted("ilike_G.find(" + quoted(name) + ")", "arma::mat *const", context) +
+             ") ilike_model_add(*ilike_gv, " + element + ", " + adjoint + ", " + where + ");\n";
+    }
+    if (kind == "sum")
+    {
+      // (C233) each term gets the sum's adjoint
+      CodeContext inner;
+      std::string loop = this->sum_loop(expression, context, inner);
+      std::string t = "ilike_a" + std::to_string(++this->gradient_temporaries);
+      return "{\n  const double " + t + " = " + adjoint + ";\n  " + loop + "\n  {\n" +
+             indented_code(indented_code(this->gradient_code(expression["body"], t, inner))) + "  }\n}\n";
     }
     std::string t = "ilike_a" + std::to_string(++this->gradient_temporaries);
     std::string open = "{\n  const double " + t + " = " + adjoint + ";\n";
@@ -1977,7 +2301,9 @@ private:
     {
       std::string op = expression["operator"].as_string();
       const RecipeValue &left = expression["left"], &right = expression["right"];
-      std::string a = this->scalar_code(left, context), b = this->scalar_code(right, context);
+      // (each operand computed once, into a temporary, if the derivatives use it)
+      std::string a = "ilike_l" + std::to_string(++this->gradient_temporaries);
+      std::string b = "ilike_r" + std::to_string(this->gradient_temporaries);
       std::string inner;
       if (op == "+")
         inner = this->gradient_code(left, t, context) + this->gradient_code(right, t, context);
@@ -1993,13 +2319,35 @@ private:
                 this->gradient_code(right, t + "*std::log(" + a + ")*std::pow(" + a + ", " + b + ")", context);
       else
         this->error(expression, "the operator " + op + " cannot be differentiated.");
-      return open + indented_code(inner) + "}\n";
+      std::string operands;
+      if (inner.find(a) != std::string::npos)
+        operands += "  const double " + a + " = " + this->scalar_code(left, context) + ";\n";
+      if (inner.find(b) != std::string::npos)
+        operands += "  const double " + b + " = " + this->scalar_code(right, context) + ";\n";
+      return open + operands + indented_code(inner) + "}\n";
     }
     if (kind == "call")
     {
       std::string f = expression["function"].as_string();
       const RecipeValue &arguments = expression["arguments"];
-      std::string u = this->scalar_code(arguments[0], context);
+      // (C234) piecewise constant: no contribution (as an index reading a parameter)
+      if ((f == "equals") || (f == "step"))
+        return "";
+      // derivatives written from the function's value K, when it is known
+      static const std::map<std::string, std::string> from_value = {
+        {"exp", "(K)"}, {"expm1", "((K) + 1.0)"}, {"inv_logit", "(K)*(1.0 - (K))"}, {"ilogit", "(K)*(1.0 - (K))"},
+        {"tanh", "(1.0 - (K)*(K))"}, {"sqrt", "(0.5/(K))"}};
+      auto by_value = from_value.find(f);
+      if (!known.empty() && (by_value != from_value.end()))
+      {
+        std::string d = by_value->second;
+        for (size_t at = d.find('K'); at != std::string::npos; at = d.find('K', at + known.size()))
+          d.replace(at, 1, known);
+        return open + indented_code(this->gradient_code(arguments[0], t + "*" + d, context)) + "}\n";
+      }
+      // (the argument computed once, into a temporary)
+      std::string u = "ilike_u" + std::to_string(++this->gradient_temporaries);
+      std::string argument = "  const double " + u + " = " + this->scalar_code(arguments[0], context) + ";\n";
       static const std::map<std::string, std::string> derivative = {
         {"exp", "std::exp(U)"}, {"log", "(1.0/(U))"}, {"sqrt", "(0.5/std::sqrt(U))"},
         {"abs", "(double)(((U) > 0.0) - ((U) < 0.0))"}, {"lgamma", "R::digamma(U)"}, {"log1p", "(1.0/(1.0 + (U)))"},
@@ -2014,17 +2362,17 @@ private:
         std::string d = found->second;
         for (size_t at = d.find('U'); at != std::string::npos; at = d.find('U', at + u.size()))
           d.replace(at, 1, u);
-        return open + indented_code(this->gradient_code(arguments[0], t + "*" + d, context)) + "}\n";
+        return open + argument + indented_code(this->gradient_code(arguments[0], t + "*" + d, context)) + "}\n";
       }
       std::string v = this->scalar_code(arguments[1], context);
       if (f == "pow")
-        return open + indented_code(this->gradient_code(arguments[0], t + "*" + v + "*std::pow(" + u + ", " + v + " - 1.0)", context) +
+        return open + argument + indented_code(this->gradient_code(arguments[0], t + "*" + v + "*std::pow(" + u + ", " + v + " - 1.0)", context) +
                                     this->gradient_code(arguments[1], t + "*std::log(" + u + ")*std::pow(" + u + ", " + v + ")", context)) + "}\n";
       if (f == "min" || f == "max")
       {
         // (the derivative of the argument chosen)
         std::string first = (f == "min") ? "((double)" + u + " <= (double)" + v + ")" : "((double)" + u + " >= (double)" + v + ")";
-        return open + "  if " + first + "\n  {\n" + indented_code(indented_code(this->gradient_code(arguments[0], t, context))) +
+        return open + argument + "  if " + first + "\n  {\n" + indented_code(indented_code(this->gradient_code(arguments[0], t, context))) +
                "  }\n  else\n  {\n" + indented_code(indented_code(this->gradient_code(arguments[1], t, context))) + "  }\n}\n";
       }
       this->error(expression, "the function " + f + " cannot be differentiated.");
@@ -2341,7 +2689,7 @@ private:
     }
     for (size_t k = 0; k < arguments.size(); ++k)
       if (!d[k].empty())
-        code += indented_code(this->gradient_code(arguments[k], d[k], context));
+        code += indented_code(this->gradient_code(arguments[k], d[k], context, (k < 4) ? v[k] : std::string()));
     return code + "}\n";
   }
 
@@ -2373,25 +2721,35 @@ private:
         CodeContext context;
         context.prior = prior;
         for (const ModelLoop &loop : st->loops) context.indices.insert(loop.index);
-        std::string value = "ilike_value += " + this->term_code(*st, context) + ";\n";
+        // (the lookups by name of the value and of the gradient, made once
+        // before the statement's loops; separately for the two functions, whose
+        // code is in different places)
+        Hoist value_hoist, gradient_hoist;
+        CodeContext value_context = context, gradient_context = context;
+        value_context.hoist = &value_hoist;
+        gradient_context.hoist = &gradient_hoist;
+        std::string value = "ilike_value += " + this->term_code(*st, value_context) + ";\n";
         CodeContext fresh;
         fresh.prior = prior;
         if (reads.empty())
         {
-          value_body += indented_code(this->loops_code(*st, fresh, value, ""));
+          value_body += indented_code("{\n" + value_hoist.declarations + this->loops_code(*st, fresh, value, "") + "}\n");
           continue;
         }
         std::string guard;
         for (const std::string &r : reads)
           guard += (guard.empty() ? "" : " || ") + std::string("ilike_G.find(") + quoted(r) + ")";
-        std::string term = this->term_gradient_code(*st, context);
-        body += "  if (" + guard + ")\n  {\n" + indented_code(indented_code(this->loops_code(*st, fresh, term, ""))) + "  }\n";
+        std::string term = this->term_gradient_code(*st, gradient_context);
+        body += "  if (" + guard + ")\n  {\n" +
+                indented_code(indented_code(gradient_hoist.declarations + this->loops_code(*st, fresh, term, ""))) + "  }\n";
+        std::string value_term = this->term_gradient_code(*st, value_context);
         CodeContext fresh2;
         fresh2.prior = prior;
         CodeContext fresh3;
         fresh3.prior = prior;
-        value_body += "  if (" + guard + ")\n  {\n" + indented_code(indented_code(this->loops_code(*st, fresh2, value + term, ""))) +
-                      "  }\n  else\n  {\n" + indented_code(indented_code(this->loops_code(*st, fresh3, value, ""))) + "  }\n";
+        value_body += "  {\n" + indented_code(indented_code(value_hoist.declarations)) +
+                      "  if (" + guard + ")\n  {\n" + indented_code(indented_code(this->loops_code(*st, fresh2, value + value_term, ""))) +
+                      "  }\n  else\n  {\n" + indented_code(indented_code(this->loops_code(*st, fresh3, value, ""))) + "  }\n  }\n";
       }
       body += "}\ncatch (const ilike_model_outside &)\n{\n  for (arma::mat &g : gradients) g.fill(arma::datum::nan); // (density 0 at this point)\n}\n";
       value_body += "}\ncatch (const ilike_model_outside &)\n{\n  for (arma::mat &g : gradients) g.fill(arma::datum::nan);\n"
@@ -2456,6 +2814,14 @@ private:
   std::string reads_code(const RecipeValue &expression, const CodeContext &context, bool whole)
   {
     std::string kind = kind_of(expression);
+    if (kind == "sum")
+    {
+      // (C233) the reads of every term
+      CodeContext inner;
+      std::string loop = this->sum_loop(expression, context, inner);
+      std::string body = this->reads_code(expression["body"], inner, whole);
+      return body.empty() ? std::string() : loop + "\n{\n" + indented_code(body) + "}\n";
+    }
     if (kind == "name")
     {
       if (!expression["namespace"].as_string().empty())
@@ -2532,6 +2898,20 @@ private:
   // the reads of a statement: its target (a parameter) and its distribution's arguments
   std::string statement_reads_code(const ModelStatement &st, const CodeContext &context)
   {
+    if ((st.op == "+=") && cpp_term(st.value))
+    {
+      // (C235) the declared reads: a variable (all of it) or an element
+      std::string code;
+      const RecipeValue &reads = this->cpp_term_reads(st.value);
+      for (size_t k = 0; k < reads.size(); ++k)
+      {
+        std::string kind = kind_of(reads[k]);
+        if ((kind != "name") && (kind != "index"))
+          this->error(reads[k], "each of reads = [...] is a variable or an element (x or x[i]).");
+        code += this->reads_code(reads[k], context, true);
+      }
+      return code;
+    }
     if (st.op == "+=")
       return this->reads_code(st.value, context, false);
     std::string code;
@@ -2595,10 +2975,14 @@ private:
       fresh.prior = prior;
       structure += this->loops_code(st, fresh, body, "  ");
 
-      term += "    case " + std::to_string(s) + ":\n    {\n";
+      Hoist hoist;
+      CodeContext term_context = context;
+      term_context.hoist = &hoist;
+      std::string term_value = this->term_code(st, term_context);
+      term += "    case " + std::to_string(s) + ":\n    {\n" + indented_code(indented_code(indented_code(hoist.declarations)));
       for (size_t k = 0; k < st.loops.size(); ++k)
         term += "      int " + st.loops[k].index + " = (int)terms(term, " + std::to_string(k + 1) + ");\n";
-      term += "      return " + this->term_code(st, context) + ";\n    }\n";
+      term += "      return " + term_value + ";\n    }\n";
     }
     structure += "  Data result;\n  result[\"terms\"] = ilike_model_table(terms, " + std::to_string(width) + ");\n"
                  "  result[\"reads\"] = ilike_model_table(reads, 4);\n  return result;\n}\n\n";
@@ -3560,9 +3944,11 @@ inline double ilike_model_dbinom(double x, double n, double p)
         // (the loop indices in scope for the target and the arguments)
         CodeContext inner_context;
         for (const ModelLoop &loop : st.loops) inner_context.indices.insert(loop.index);
+        Hoist hoist;
+        inner_context.hoist = &hoist;
         std::string statement_body = "log_density += " + this->term_code(st, inner_context) + ";\n";
         CodeContext fresh;
-        body += this->loops_code(st, fresh, statement_body, "");
+        body += "{\n" + hoist.declarations + this->loops_code(st, fresh, statement_body, "") + "}\n";
       }
       body += "return log_density;\n";
       std::string indented;
@@ -3656,10 +4042,14 @@ inline double ilike_model_dbinom(double x, double n, double p)
         CodeContext loop_context;
         loop_context.prior = true;
         for (const ModelLoop &loop : st.loops) loop_context.indices.insert(loop.index);
-        std::string x = this->target_code(st, loop_context, false);
+        Hoist hoist;
+        CodeContext log_context = loop_context;
+        log_context.hoist = &hoist;
+        std::string x = this->target_code(st, log_context, false);
         CodeContext fresh;
         fresh.prior = true;
-        log_body += this->loops_code(st, fresh, "log_density += " + this->density_code(st, x, loop_context) + ";\n", "");
+        std::string log_term = "log_density += " + this->density_code(st, x, log_context) + ";\n";
+        log_body += "{\n" + hoist.declarations + this->loops_code(st, fresh, log_term, "") + "}\n";
 
         if (!allocated.count(st.variable))
         {
@@ -4099,6 +4489,8 @@ inline double ilike_model_dbinom(double x, double n, double p)
     }
     if (kind == "unary")
       return this->affine_in(expression["operand"], x, why);
+    if (kind == "sum")
+      return this->affine_in(expression["body"], x, why); // (C233: a sum of affine terms; its range reads no parameters)
     if (kind == "binary")
     {
       std::string op = expression["operator"].as_string();
@@ -5156,6 +5548,7 @@ inline double ilike_model_dbinom(double x, double n, double p)
   }
 
   bool lowering_nuts = false;
+  size_t sum_temporaries = 0;
   bool lowering_gibbs_block = false;
 
   Move lower_move(const RecipeValue &statement, const std::string &name, const RecipeValue &call)
@@ -5201,6 +5594,12 @@ inline double ilike_model_dbinom(double x, double n, double p)
     move.prefix = kinds.at(kind).first;
     move.code = kinds.at(kind).second;
     const std::string &p = move.prefix;
+    // an unadjusted move is biased by any error in the gradient, so it refuses
+    // gradients by finite differences (dev/plan.md 3.10; the model section is
+    // lowered before the algorithm sections)
+    if ((p == "unadjusted") && !this->finite_difference_gradients.empty())
+      this->error(call, "unadjusted moves need exact gradients, but the gradient of " + this->finite_difference_gradients[0] +
+                        " is computed by finite differences (gradient = autodiff); write the gradient, or use metropolis_hastings.");
 
     Arguments arguments = this->split_arguments(call);
     this->allow_only(call, arguments, {"proposal", "log", "factors", "cut_factors", "adapt", "smc_adapt", "transform"}, 1);

@@ -67,5 +67,5 @@ test_that("what cannot be translated is refused with a message", {
          "must be data")
   refuse("model { probit(p) <- a; a ~ dnorm(0, 1); y ~ dbern(p) }", list(y = 1), "the link function probit")
   refuse("model { y ~ dnorm(mu, 1); mu ~ dgamma(1, 1) T(0, 2) }", list(y = 1), "truncation T(,) is translated for dnorm only")
-  refuse("model { y ~ dnorm(step(mu), 1); mu ~ dnorm(0, 1) }", list(y = 1), "the function step cannot be translated")
+  refuse("model { y ~ dnorm(phi(mu), 1); mu ~ dnorm(0, 1) }", list(y = 1), "the function phi cannot be translated")
 })
