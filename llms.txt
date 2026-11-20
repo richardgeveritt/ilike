@@ -174,11 +174,17 @@ remotes::install_github("richardgeveritt/ilike")
 - [`load_mcmc_adaptation()`](https://richardgeveritt.github.io/ilike/reference/load_mcmc_adaptation.md)
   : Loading the adaptation of adaptive MCMC moves into R memory.
 
+- [`load_mcmc_diagnostics()`](https://richardgeveritt.github.io/ilike/reference/load_mcmc_diagnostics.md)
+  : Load the per-iteration diagnostics of an MCMC run with nuts.
+
 - [`load_mcmc_output()`](https://richardgeveritt.github.io/ilike/reference/load_mcmc_output.md)
   : Loading MCMC output into R memory.
 
 - [`load_smc_output()`](https://richardgeveritt.github.io/ilike/reference/load_smc_output.md)
   : Loading SMC output into R memory.
+
+- [`load_smc_tuning()`](https://richardgeveritt.github.io/ilike/reference/load_smc_tuning.md)
+  : Load the tuning values of an SMC run with esjd adaptation.
 
 - [`rdtsc_seed()`](https://richardgeveritt.github.io/ilike/reference/rdtsc_seed.md)
   : Gets a seed for random number generation by using the processor time
