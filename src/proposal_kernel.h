@@ -53,6 +53,8 @@ class ProposalKernel : public Kernel
 public:
 
   bool has_mcmc_adaptor() const { return this->mcmc_adaptor!=NULL; }
+  // adapting with until = and not yet stopped (C212)
+  bool mcmc_warming_up() const;
   
   ProposalKernel();
   virtual ~ProposalKernel();
@@ -104,6 +106,7 @@ public:
   void set_mcmc_adaptor(MCMCAdaptor* adaptor_in);
   // adaptation from the SMC particles (dev/plan.md 3.2, B2): owned
   void set_smc_adaptor(SMCAdaptor* adaptor_in);
+  SMCAdaptor* get_smc_adaptor() const { return this->smc_adaptor.get(); }
   void mcmc_adapt(const AdaptationStep &step);
   void prepare_mcmc_adaptation();
   void append_adaptation_state(std::vector<std::string> *names,
@@ -176,12 +179,21 @@ public:
   virtual GradientEstimatorOutput* simulate_gradient_estimator_output() const=0;
   
   virtual std::vector<const ProposalKernel*> get_proposals() const=0;
+  // the kernels this proposal uses for a move from the particle (choose uses
+  // one of its components, C224); by default all of them
+  virtual std::vector<const ProposalKernel*> proposals_used(const Particle &particle) const { return this->get_proposals(); }
   
   virtual void set_index(Index* index_in)=0;
   
   virtual void set_index_if_null(Index* index_in)=0;
   
   int get_instance_index() const;
+  // a particle's own tuning values for this kernel (esjd in SMC, C211), or
+  // NULL: what they mean is the kernel's
+  const double* tuning_values(const Particle &particle) const
+  {
+    return (particle.tuning != NULL) ? particle.tuning->for_kernel(this->get_instance_index()) : NULL;
+  }
   
   virtual bool can_be_evaluated() const=0;
   

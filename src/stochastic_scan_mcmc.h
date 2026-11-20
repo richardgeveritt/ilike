@@ -57,6 +57,15 @@ public:
                                const std::string &prefix) const;
 
   bool adapts() const;
+
+  // the moves' diagnostics (C226), each move's columns prefixed moveK.
+  void diagnostic_names(std::vector<std::string> &names) const;
+  void diagnostic_move_in_place(RandomNumberGenerator &rng,
+                                Particle &particle,
+                                Particle &scratch,
+                                bool adapting,
+                                double* row);
+  bool warming_up() const;
   
   Particle subsample_move(RandomNumberGenerator &rng,
                           const Particle &particle) const;

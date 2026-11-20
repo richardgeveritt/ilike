@@ -365,6 +365,17 @@ void SMCOutput::forget_you_were_already_written_to_file()
   this->iteration_written_to_file = -1;
 }
 
+void SMCOutput::count_divergences(size_t &divergent, size_t &iterations) const
+{
+  divergent = 0;
+  iterations = 0;
+  if (this->all_particles.empty())
+    return;
+  for (auto &p : this->all_particles.back().particles)
+    if (p)
+      p->count_divergences(divergent, iterations);
+}
+
 void SMCOutput::terminate()
 {
   // Keep the output_lag most recent generations. (These used to be removed
@@ -646,6 +657,44 @@ void SMCOutput::write_to_file(const std::string &dir_name,
           auto root = hf.getGroup("/");
           h5_set_str_attr(root, "adaptation_trace_names", trace_names);
           h5_set_str_attr(root, "adaptation_final_names", final_names);
+        }
+      }
+
+      // per-iteration diagnostics (nuts; C212): a row for each stored point,
+      // aligned with vector_points
+      {
+        const auto &particles = this->all_particles[deque_index].particles;
+        const MoveOutput* first = NULL;
+        for (auto &p : particles)
+        {
+          if (p->diagnostics_columns() > 0)
+          {
+            first = p.get();
+            break;
+          }
+        }
+        if ( (first!=NULL) && !this->all_particles[deque_index].is_flat() )
+        {
+          size_t columns = first->diagnostics_columns();
+          size_t total_rows = 0;
+          for (auto &p : particles)
+            total_rows += p->length();
+          arma::mat transposed(columns, total_rows, arma::fill::zeros);
+          size_t column_offset = 0;
+          for (size_t i=0; i<particles.size(); ++i)
+          {
+            if (particles[i]->diagnostics_columns()!=columns)
+              Rcpp::stop("SMCOutput::write_to_file: not every chain has the same diagnostics.");
+            size_t rows = particles[i]->fill_diagnostics_transposed(transposed, column_offset);
+            if (rows!=particles[i]->length())
+              Rcpp::stop("SMCOutput::write_to_file: a chain's diagnostics do not match its stored points.");
+            column_offset += rows;
+          }
+          h5_write_mat_transposed(iter_grp, "diagnostics", transposed);
+          std::vector<std::string> names;
+          first->diagnostics_names(names);
+          auto root = hf.getGroup("/");
+          h5_set_str_attr(root, "diagnostics_names", names);
         }
       }
 

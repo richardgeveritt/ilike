@@ -168,13 +168,26 @@ MoveOutput* MCMC::run(RandomNumberGenerator &rng,
   bool adapting = this->adapts();
   if (adapting)
     mcmc_output->start_recording_adaptation();
+  // per-iteration diagnostics (nuts; C212): one virtual call per chain for
+  // other moves
+  std::vector<std::string> diagnostics;
+  this->diagnostic_names(diagnostics);
+  std::vector<double> row(diagnostics.size(), 0.0);
+  if (!diagnostics.empty())
+    mcmc_output->start_recording_diagnostics(diagnostics);
   Particle current_particle = particle;
   // proposals are built here, reusing its objects (Stage 3 (a))
   Particle scratch;
   while (!mcmc_output->terminate())
   {
     // In place: a rejected proposal no longer copies the current state.
-    if (adapting)
+    if (!diagnostics.empty())
+    {
+      MCMC* chain_mcmc = mcmc_output->get_mcmc();
+      chain_mcmc->diagnostic_move_in_place(rng, current_particle, scratch, adapting, row.data());
+      mcmc_output->note_diagnostics(row.data(), !chain_mcmc->warming_up());
+    }
+    else if (adapting)
       mcmc_output->get_mcmc()->adaptive_move_in_place(rng, current_particle, scratch);
     else
       mcmc_output->get_mcmc()->move_in_place(rng, current_particle, scratch);
@@ -219,6 +232,15 @@ void MCMC::append_adaptation_state(std::vector<std::string> *names,
                                    bool final,
                                    const std::string &prefix) const
 {
+}
+
+void MCMC::diagnostic_move_in_place(RandomNumberGenerator &rng,
+                                    Particle &particle,
+                                    Particle &scratch,
+                                    bool adapting,
+                                    double* row)
+{
+  Rcpp::stop("MCMC::diagnostic_move_in_place: this move records no diagnostics.");
 }
 
 void MCMC::adaptive_move_in_place(RandomNumberGenerator &rng,

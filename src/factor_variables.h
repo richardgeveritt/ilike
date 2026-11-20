@@ -75,6 +75,19 @@ public:
     Rcpp::stop("Gradients at other points are not available for this model's factors (needed by hmc).");
   }
 
+  // the factors in the index evaluated at the particle's parameters (as
+  // evaluate_likelihoods) and the gradients of `variables` there, in one pass
+  // over each factor's terms where the factor allows it (C222); by default
+  // the two separately
+  virtual double evaluate_likelihoods_with_gradients(const Index* index,
+                                                     const std::vector<std::string> &variables,
+                                                     std::vector<arma::mat> &gradients)
+  {
+    double value = this->evaluate_likelihoods(index);
+    gradients = this->direct_get_gradients_of_log(index, variables);
+    return value;
+  }
+
   // the gradients of several variables (C204); by default one at a time
   virtual std::vector<arma::mat> direct_get_gradients_of_log(const Index* index,
                                                              const std::vector<std::string> &variables) const

@@ -107,8 +107,32 @@ public:
                              size_t column) const;
   void adaptation_names(std::vector<std::string> &trace_names,
                         std::vector<std::string> &final_names) const;
-  
+
+  // Per-iteration diagnostics (nuts; C212): note_diagnostics gives each
+  // iteration's row, stored with the iteration if it is stored (thin), and
+  // counted towards the divergences after warm-up (column "divergent").
+  void start_recording_diagnostics(const std::vector<std::string> &names);
+  void note_diagnostics(const double* row, bool after_warm_up);
+  size_t diagnostics_columns() const { return this->diagnostics ? this->diagnostics->names.size() : 0; }
+  size_t fill_diagnostics_transposed(arma::mat &destination,
+                                     size_t first_column) const;
+  void diagnostics_names(std::vector<std::string> &names) const;
+  void count_divergences(size_t &divergent, size_t &iterations) const;
+
 protected:
+
+  // (behind one pointer, NULL for moves without diagnostics: a chain's output
+  // costs other moves 8 bytes)
+  struct Diagnostics
+  {
+    std::vector<std::string> names;
+    std::vector<double> rows;     // stored iterations, row after row
+    std::vector<double> pending;  // the latest iteration's row
+    std::vector<size_t> divergent_columns; // ("divergent", or "moveK.divergent" in a scan)
+    size_t divergent_after_warm_up = 0;
+    size_t iterations_after_warm_up = 0;
+  };
+  std::unique_ptr<Diagnostics> diagnostics;
 
   bool records_adaptation = false;
   size_t adaptation_columns = 0;

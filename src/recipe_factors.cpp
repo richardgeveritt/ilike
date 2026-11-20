@@ -34,6 +34,8 @@ LikelihoodEstimator *make_model_statement_estimator(
     estimator->set_gradient(plate["gradient"].function_pointer<PlateGradientPtr>());
   if (plate.contains("gradients"))
     estimator->set_gradients(plate["gradients"].function_pointer<PlateGradientsPtr>());
+  if (plate.contains("value_gradients"))
+    estimator->set_value_gradients(plate["value_gradients"].function_pointer<PlateValueGradientsPtr>());
   return estimator;
 }
 

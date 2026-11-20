@@ -70,6 +70,17 @@ public:
 
   bool adapts() const;
 
+  // diagnostics of an hmc proposal (C226): leapfrog_steps, accept_stat,
+  // energy_error (H* - H, minus the log acceptance ratio) and divergent
+  // (energy error above 1000, or not finite); none for other proposals
+  void diagnostic_names(std::vector<std::string> &names) const;
+  void diagnostic_move_in_place(RandomNumberGenerator &rng,
+                                Particle &particle,
+                                Particle &scratch,
+                                bool adapting,
+                                double* row);
+  bool warming_up() const;
+
   Particle subsample_move(RandomNumberGenerator &rng,
                           const Particle &particle) const;
 

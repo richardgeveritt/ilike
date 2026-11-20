@@ -71,9 +71,10 @@ public:
 
   // one trajectory from the particle: the proposed block's parameters, and
   // K(r) - K(r*) (minus infinity when the trajectory left the support)
-  Parameters trajectory(RandomNumberGenerator &rng,
-                        const Particle &particle,
-                        double &log_ratio) const;
+  // (virtual: gibbs on a vector draws its normal conditional instead, C216)
+  virtual Parameters trajectory(RandomNumberGenerator &rng,
+                                const Particle &particle,
+                                double &log_ratio) const;
 
   // The Hamiltonian system, for the No-U-Turn sampler (C210). On the
   // kernel's scale (transformed, with a transform): the block's name, the
@@ -81,7 +82,14 @@ public:
   const std::string &block() const { return this->variable; }
   double step_size() const { return std::sqrt(this->info.get_double_scale()); }
   size_t get_max_depth() const { return this->max_depth; }
+  size_t get_steps() const { return this->steps; }
+  const Index* get_index() const { return this->index.get(); }
   void set_max_depth(size_t max_depth_in) { this->max_depth = max_depth_in; }
+  // nuts's variant (C221): false, the paper's (slice sampling, the U-turn
+  // criterion on the end points); true, Stan's (multinomial sampling, the
+  // generalised criterion)
+  bool get_stan_variant() const { return this->stan_variant; }
+  void set_stan_variant(bool stan_variant_in) { this->stan_variant = stan_variant_in; }
   void check_size(arma::uword n) const;
   arma::colvec draw_momentum(RandomNumberGenerator &rng, arma::uword n) const;
   arma::colvec velocity(const arma::colvec &r) const;
@@ -99,6 +107,19 @@ public:
                         const Index* index,
                         const Index* new_outputs_index,
                         std::shared_ptr<Particle> &point) const;
+  // the move's log density at x in the kernel's own index (log_density_at
+  // without keeping the particle; for FindReasonableEpsilon, C219)
+  double target_at(const Particle &particle, const Parameters &base, const arma::colvec &x) const;
+  // log_density_at and gradient_at together, with each factor's value and
+  // gradients in one pass where it can (C222): the particle at x in `point`,
+  // the gradient on the kernel's scale in `gradient`
+  double log_density_and_gradient_at(const Particle &particle,
+                                     const Parameters &base,
+                                     const arma::colvec &x,
+                                     const Index* index,
+                                     const Index* new_outputs_index,
+                                     std::shared_ptr<Particle> &point,
+                                     arma::colvec &gradient) const;
   // log|dx/dz| at the particle's point (0 without a transform)
   double log_jacobian(const Parameters &base) const;
 
@@ -123,11 +144,15 @@ protected:
                                                const Particle &old_particle);
 
   void make_copy(const HMCProposalKernel &another);
+  // the model-scale gradients of the block's variables, stacked and taken to
+  // the kernel's scale at `point` (the parameters on that scale)
+  arma::colvec stacked_gradient(const std::vector<arma::mat> &gradients, const Parameters &point, arma::uword n) const;
 
   std::string variable;
   GaussianProposalInfo info;
   size_t steps;
   size_t max_depth = 10; // (NUTS)
+  bool stan_variant = false; // (NUTS, C221)
   std::unique_ptr<Index> index;
 };
 

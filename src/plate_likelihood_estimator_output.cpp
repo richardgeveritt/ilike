@@ -123,6 +123,25 @@ std::vector<arma::mat> PlateLikelihoodEstimatorOutput::get_gradients_of_log(cons
   return gradients;
 }
 
+bool PlateLikelihoodEstimatorOutput::evaluate_with_gradients(const Parameters &parameters,
+                                                             const std::vector<std::string> &variables,
+                                                             double &value,
+                                                             std::vector<arma::mat> &gradients)
+{
+  // (check_factor_index checks the terms, which this does not keep)
+  if ((this->plate->value_gradients_function == NULL) || this->plate->check)
+    return false;
+  gradients.clear();
+  value = this->plate->value_gradients_function(variables, gradients, parameters, this->plate->plate_data());
+  this->undo.clear();
+  this->undo_pending = false;
+  this->terms_valid = false;
+  this->partial = false;
+  this->pending.clear();
+  this->set_value(value);
+  return true;
+}
+
 arma::mat PlateLikelihoodEstimatorOutput::subsample_get_gradient_of_log(const std::string &variable,
                                                                         const Parameters &x)
 {

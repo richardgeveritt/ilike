@@ -39,6 +39,11 @@ class Index;
 // conditional's mean and variance, and a draw from it is accepted with the
 // Metropolis-Hastings ratio of that independent proposal (1 up to rounding;
 // computed, so the chain stays exact whatever the rounding).
+// With step gamma_, invgamma_ or beta_conditional (C215) the log full
+// conditional is exactly a phi1(v) + b phi2(v) + c, with (phi1, phi2) =
+// (log v, v), (log v, 1/v) or (log v, log(1 - v)): evaluated at three values
+// inside the support, it gives a and b, hence the gamma, inverse gamma or
+// beta conditional, drawn and accepted in the same way.
 class InPlaceElementScanMCMC : public DeterministicScanMCMC
 {
 public:
@@ -122,7 +127,12 @@ protected:
   std::vector<double> states;
   std::unique_ptr<Index> index;
   // a Gibbs draw (over states, or from a normal full conditional)
-  bool is_gibbs() const { return !this->states.empty() || (this->step_kind == ElementStep::normal_conditional); }
+  bool is_gibbs() const
+  {
+    return !this->states.empty() || (this->step_kind == ElementStep::normal_conditional) ||
+           (this->step_kind == ElementStep::gamma_conditional) || (this->step_kind == ElementStep::invgamma_conditional) ||
+           (this->step_kind == ElementStep::beta_conditional);
+  }
 
   void make_copy(const InPlaceElementScanMCMC &another);
 };

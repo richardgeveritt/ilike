@@ -22,6 +22,13 @@
 #include "principal_components_proposal_kernel.h"
 #include "langevin_proposal_kernel.h"
 #include "hmc_proposal_kernel.h"
+#include "normal_block_proposal_kernel.h"
+#include "dual_averaging_adaptor.h"
+#include "pretune_adaptor.h"
+#include "truncated_normal_distribution_factor.h"
+#include "truncated_normal_independent_proposal_kernel.h"
+#include "truncated_normal_random_walk_proposal_kernel.h"
+#include "esjd_adaptor.h"
 #include "barker_dynamics_proposal_kernel.h"
 #include "mirror_proposal_kernel.h"
 #include "direct_gradient_estimator.h"
@@ -250,8 +257,38 @@ static std::vector<Builtin> make_registry()
       return new GammaIndependentProposalKernel(a.variable("variable"), a.real("shape"), a.real("rate")); };
     table.push_back(b);
   }
+  {
+    Builtin b;
+    b.name = "tnorm";
+    b.description = "truncated normal distribution (C217)";
+    b.arguments = {the_variable(), required("mean", T::Real, "the mean of the normal"),
+                   required("sd", T::Real, "the standard deviation of the normal").above(0.0),
+                   optional("lower", T::Real, RecipeValue(-arma::datum::inf), "the lower limit (default -Inf)"),
+                   optional("upper", T::Real, RecipeValue(arma::datum::inf), "the upper limit (default Inf)")};
+    b.roles = distribution_roles;
+    b.prior = [](const BuiltinArguments &a) -> DistributionFactor* {
+      return new TruncatedNormalDistributionFactor(a.variable("variable"), a.real("mean"), a.real("sd"),
+                                                   a.real("lower"), a.real("upper")); };
+    b.independent_proposal = [](const BuiltinArguments &a) -> IndependentProposalKernel* {
+      return new TruncatedNormalIndependentProposalKernel(a.variable("variable"), a.real("mean"), a.real("sd"),
+                                                          a.real("lower"), a.real("upper")); };
+    table.push_back(b);
+  }
 
   // random walks
+  {
+    Builtin b;
+    b.name = "tnorm_rw";
+    b.description = "truncated normal random walk: each element to a normal(x, sd) draw truncated to [lower, upper] (C217)";
+    b.arguments = {the_variable(), required("sd", T::Real, "the standard deviation of the step").above(0.0),
+                   optional("lower", T::Real, RecipeValue(-arma::datum::inf), "the lower limit (default -Inf)"),
+                   optional("upper", T::Real, RecipeValue(arma::datum::inf), "the upper limit (default Inf)")};
+    // (not symmetric: the truncated mass depends on the current point)
+    b.roles = {R::MHProposal};
+    b.proposal = [](const BuiltinArguments &a) -> ProposalKernel* {
+      return new TruncatedNormalRandomWalkProposalKernel(a.variable("variable"), a.real("sd"), a.real("lower"), a.real("upper")); };
+    table.push_back(b);
+  }
   {
     Builtin b;
     b.name = "norm_rw";
@@ -360,14 +397,32 @@ static std::vector<Builtin> make_registry()
     b.description = "the No-U-Turn sampler (a move: move m = nuts(...)), leapfrog step size step, momentum N(0, mass^-1)";
     b.arguments = {the_variable(), required("step", T::Real, "the leapfrog step size epsilon").above(0.0),
                    optional("mass", T::Matrix, "the inverse mass matrix (a covariance; default: the identity)"),
-                   optional("max_depth", T::Integer, RecipeValue(10.0), "the maximum depth of the tree (at most 2^max_depth - 1 leapfrog steps)").at_least(1.0)};
+                   optional("max_depth", T::Integer, RecipeValue(10.0), "the maximum depth of the tree (at most 2^max_depth - 1 leapfrog steps)").at_least(1.0),
+                   optional("variant", T::String, RecipeValue(std::string("stan")),
+                            "stan (the default: multinomial sampling, the generalised U-turn criterion) or paper (Hoffman & Gelman's Algorithm 3: slice sampling)")};
     // (the role of its Hamiltonian system, in a NoUTurnMCMC made by the recipe)
     b.roles = {R::MHProposal};
     b.proposal = [](const BuiltinArguments &a) -> ProposalKernel* {
       arma::mat mass = a.given("mass") ? a.matrix("mass") : arma::mat(1, 1, arma::fill::ones);
       HMCProposalKernel* kernel = new HMCProposalKernel(a.variable("variable"), mass, a.real("step"), 1);
       kernel->set_max_depth(size_t(a.integer("max_depth")));
+      std::string variant = a.string("variant");
+      if ((variant != "paper") && (variant != "stan"))
+        Rcpp::stop("ilike::nuts: variant is paper or stan.");
+      kernel->set_stan_variant(variant == "stan");
       return kernel; };
+    table.push_back(b);
+  }
+  {
+    Builtin b;
+    b.name = "normal_block";
+    b.description = "gibbs on a vector (a move: move m = gibbs(beta)): a draw from the block's normal full conditional";
+    b.arguments = {the_variable()};
+    // (the proposal of the Metropolis-Hastings move that gibbs on a vector is
+    // lowered to, C216; refused when written directly)
+    b.roles = {R::MHProposal};
+    b.proposal = [](const BuiltinArguments &a) -> ProposalKernel* {
+      return new NormalBlockProposalKernel(a.variable("variable")); };
     table.push_back(b);
   }
   {
@@ -449,6 +504,32 @@ static std::vector<Builtin> make_registry()
   }
   {
     Builtin b;
+    b.name = "dual_averaging";
+    b.description = "the step size of hmc or nuts by dual averaging (Hoffman & Gelman 2014, Algorithms 4-6); needs until = …";
+    b.arguments = {the_variable(),
+                   optional("target", T::Real, "the target acceptance statistic delta (default 0.8)").between(0.0, 1.0),
+                   optional("gamma", T::Real, RecipeValue(0.05), "the shrinkage towards mu = log(10 eps0)").above(0.0),
+                   optional("t0", T::Real, RecipeValue(10.0), "stabilises the first iterations").at_least(0.0),
+                   optional("kappa", T::Real, RecipeValue(0.75), "the weights of the average of log eps, m^-kappa").between(0.0, 1.0),
+                   optional("find_step", T::Logical, RecipeValue(true),
+                            "start from FindReasonableEpsilon (Algorithm 4) rather than the step given"),
+                   optional("mass", T::String, RecipeValue(std::string("none")),
+                            "none, diagonal or dense: also estimate the inverse mass matrix in Stan's windows "
+                            "(needs until = iterations(n))")};
+    b.roles = {R::MCMCAdaptor};
+    b.mcmc_adaptor = [](const BuiltinArguments &arguments, const MCMCAdaptorContext &context) -> MCMCAdaptor* {
+      static const AdaptorFit fit = {{"hmc", "nuts"}, false, "the proposals ilike::hmc and ilike::nuts"};
+      check_fit(arguments, context, fit);
+      double target = arguments.given("target") ? arguments.real("target") : 0.8;
+      std::string mass = arguments.string("mass");
+      if ((mass != "none") && (mass != "diagonal") && (mass != "dense"))
+        Rcpp::stop(context.block + ": dual_averaging's mass is none, diagonal or dense.");
+      return new DualAveragingAdaptor(target, arguments.real("gamma"), arguments.real("t0"), arguments.real("kappa"),
+                                      arguments.logical("find_step"), mass); };
+    table.push_back(b);
+  }
+  {
+    Builtin b;
     b.name = "componentwise_am";
     b.description = "componentwise adaptive scaling (Andrieu & Thoms 2008, Algorithm 5)";
     b.arguments = {the_variable(), adaptor_target(), adaptor_kappa(), adaptor_constant(), adaptor_refresh(),
@@ -512,6 +593,103 @@ static std::vector<Builtin> make_registry()
   }
 
   // SMC adaptor
+  {
+    Builtin b;
+    b.name = "esjd";
+    b.description = "tunes the proposal for each particle from its squared jump distance (Fearnhead & Taylor 2013; "
+                    "Buchholz, Chopin & Jacob 2021): scale (norm_rw, mvnorm_rw, langevin), step and steps (hmc), step (nuts)";
+    b.arguments = {the_variable(),
+                   optional("scale", T::Vector, "the range of the first multipliers of the step (random walks, langevin)"),
+                   optional("step", T::Vector, "the range of the first step sizes (hmc, nuts)"),
+                   optional("steps", T::Vector, "the range of the first numbers of leapfrog steps (hmc)"),
+                   optional("a", T::Real, RecipeValue(0.0), "the constant a of the weights a + jump").at_least(0.0),
+                   optional("perturb", T::Real, RecipeValue(0.05), "the sd of the multiplicative perturbation (log scale)").above(0.0),
+                   optional("metric", T::String, RecipeValue(std::string("diagonal")), "diagonal or full: the particles' variances or covariance")};
+    b.roles = {R::SMCAdaptor};
+    b.smc_adaptor = [](const BuiltinArguments &a, ProposalKernel *proposal) -> SMCAdaptor* {
+      std::string variable = a.variable("variable");
+      auto range = [&](const std::string &name) {
+        arma::colvec r = a.vector(name);
+        if ((r.n_elem != 2) || !(r[0] > 0.0) || !(r[0] <= r[1]))
+          Rcpp::stop("esjd: " + name + " = [lower, upper], with 0 < lower <= upper.");
+        return r;
+      };
+      std::vector<std::string> names;
+      std::vector<double> lower, upper;
+      std::vector<bool> integer;
+      int cost = -1;
+      HMCProposalKernel* hamiltonian = dynamic_cast<HMCProposalKernel*>(proposal);
+      if (hamiltonian != NULL)
+      {
+        if (a.given("scale"))
+          Rcpp::stop("esjd: hmc and nuts are tuned by step (and steps for hmc), not scale.");
+        if (!a.given("step"))
+          Rcpp::stop("esjd: give the range of the step sizes, step = [lower, upper].");
+        arma::colvec r = range("step");
+        names = {"step", "steps"};
+        lower = {r[0], 0.0};
+        upper = {r[1], 0.0};
+        integer = {false, true};
+        if (a.given("steps"))
+        {
+          arma::colvec s = range("steps");
+          lower[1] = std::max(1.0, std::round(s[0]));
+          upper[1] = std::max(lower[1], std::round(s[1]));
+        }
+        else
+          lower[1] = upper[1] = double(hamiltonian->get_steps());
+        cost = 1; // (a leapfrog step's cost: Buchholz et al.)
+      }
+      else if ((dynamic_cast<GaussianRandomWalkProposalKernel*>(proposal) != NULL) ||
+               (dynamic_cast<LangevinProposalKernel*>(proposal) != NULL))
+      {
+        if (a.given("step") || a.given("steps"))
+          Rcpp::stop("esjd: random walks and langevin are tuned by scale (a multiplier of the step).");
+        if (!a.given("scale"))
+          Rcpp::stop("esjd: give the range of the first multipliers of the step, scale = [lower, upper].");
+        arma::colvec r = range("scale");
+        names = {"scale"};
+        lower = {r[0]};
+        upper = {r[1]};
+        integer = {false};
+      }
+      else
+        Rcpp::stop("esjd is available for ilike::norm_rw, ilike::mvnorm_rw, ilike::langevin, ilike::hmc and ilike::nuts.");
+      std::string metric = a.string("metric");
+      if ((metric != "diagonal") && (metric != "full"))
+        Rcpp::stop("esjd: metric is \"diagonal\" or \"full\".");
+      return new ESJDAdaptor(variable, names, lower, upper, integer, a.real("a"), a.real("perturb"), metric == "full", cost); };
+    table.push_back(b);
+  }
+  {
+    Builtin b;
+    b.name = "pretune";
+    b.description = "tunes hmc's step and steps for each particle from trial moves before each SMC move "
+                    "(Buchholz, Chopin & Jacob 2021, pre-tuning)";
+    b.arguments = {the_variable(),
+                   optional("max_step", T::Real, "the first upper limit eps* of the trial steps (default: twice hmc's step)").above(0.0),
+                   optional("max_steps", T::Integer, RecipeValue(100.0), "the first upper limit L_max of the trial numbers of steps").at_least(1.0),
+                   optional("target", T::Real, RecipeValue(0.9), "the acceptance rate that sets eps*").between(0.0, 1.0),
+                   optional("metric", T::String, RecipeValue(std::string("diagonal")), "diagonal or full: the particles' variances or covariance"),
+                   optional("raise_share", T::Real, RecipeValue(0.5), "L_max is raised when more than this share of the chosen L ...").between(0.0, 1.0),
+                   optional("raise_above", T::Real, RecipeValue(0.8), "... are above this fraction of L_max").between(0.0, 1.0),
+                   optional("lower_share", T::Real, RecipeValue(0.9), "L_max is lowered when more than this share of the chosen L ...").between(0.0, 1.0),
+                   optional("lower_below", T::Real, RecipeValue(0.5), "... are below this fraction of L_max").between(0.0, 1.0),
+                   optional("steps_change", T::Integer, RecipeValue(5.0), "how much L_max is raised or lowered (0: fixed)").at_least(0.0)};
+    b.roles = {R::SMCAdaptor};
+    b.smc_adaptor = [](const BuiltinArguments &a, ProposalKernel *proposal) -> SMCAdaptor* {
+      HMCProposalKernel* hamiltonian = dynamic_cast<HMCProposalKernel*>(proposal);
+      if (hamiltonian == NULL)
+        Rcpp::stop("pretune is available for ilike::hmc (in metropolis_hastings).");
+      std::string metric = a.string("metric");
+      if ((metric != "diagonal") && (metric != "full"))
+        Rcpp::stop("pretune: metric is \"diagonal\" or \"full\".");
+      double max_step = a.given("max_step") ? a.real("max_step") : 2.0*hamiltonian->step_size();
+      return new PretuneAdaptor(a.variable("variable"), max_step, size_t(a.integer("max_steps")), a.real("target"),
+                                metric == "full", a.real("raise_share"), a.real("raise_above"), a.real("lower_share"),
+                                a.real("lower_below"), size_t(a.integer("steps_change"))); };
+    table.push_back(b);
+  }
   {
     Builtin b;
     b.name = "gaussian";

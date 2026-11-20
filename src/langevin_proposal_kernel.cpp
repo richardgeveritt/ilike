@@ -155,6 +155,9 @@ double LangevinProposalKernel::specific_evaluate_kernel(const Particle &proposed
     arma::colvec mean = old_particle.get_transformed_parameters(this).get_colvec(i->first);
     check_proposal_size(i->first, mean.n_elem, i->second.get_covariance().n_rows, "covariance");
     double scale = i->second.get_double_scale();
+    // (a particle's own multiplier of the step, esjd in SMC, C211)
+    if (const double* tuning = this->tuning_values(old_particle))
+      scale = scale*tuning[0]*tuning[0];
     double dim = double(mean.n_rows);
     output = output + dmvnorm_using_precomp(proposed_particle.get_transformed_parameters(this).get_colvec(i->first),
                                             mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first,this->index.get(),old_particle))/2.0,
@@ -177,6 +180,9 @@ double LangevinProposalKernel::specific_subsample_evaluate_kernel(const Particle
     arma::colvec mean = old_particle.get_transformed_parameters(this).get_colvec(i->first);
     check_proposal_size(i->first, mean.n_elem, i->second.get_covariance().n_rows, "covariance");
     double scale = i->second.get_double_scale();
+    // (a particle's own multiplier of the step, esjd in SMC, C211)
+    if (const double* tuning = this->tuning_values(old_particle))
+      scale = scale*tuning[0]*tuning[0];
     double dim = double(mean.n_rows);
     output = output + dmvnorm_using_precomp(proposed_particle.get_transformed_parameters(this).get_colvec(i->first),
                                             mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first,this->index.get(),old_particle))/2.0,
@@ -199,6 +205,9 @@ void LangevinProposalKernel::simulate_into(RandomNumberGenerator &rng,
     arma::colvec mean = particle.get_transformed_parameters(this).get_colvec(i->first);
     check_proposal_size(i->first, mean.n_elem, i->second.get_covariance().n_rows, "covariance");
     double scale = i->second.get_double_scale();
+    // (a particle's own multiplier of the step, esjd in SMC, C211)
+    if (const double* tuning = this->tuning_values(particle))
+      scale = scale*tuning[0]*tuning[0];
     target.write(i->first, rmvnorm_using_lower_chol(rng,
                                                        mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first,this->index.get(),particle))/2.0,
                                                        i->second.get_chol_lower(), sqrt(scale)), particle.get_transformed_parameters(this));
@@ -219,6 +228,9 @@ Parameters LangevinProposalKernel::simulate(RandomNumberGenerator &rng,
     arma::colvec mean = particle.get_transformed_parameters(this).get_colvec(i->first);
     check_proposal_size(i->first, mean.n_elem, i->second.get_covariance().n_rows, "covariance");
     double scale = i->second.get_double_scale();
+    // (a particle's own multiplier of the step, esjd in SMC, C211)
+    if (const double* tuning = this->tuning_values(particle))
+      scale = scale*tuning[0]*tuning[0];
     output.set_stacked(i->first, rmvnorm_using_lower_chol(rng,
                                           mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->get_gradient_of_log(i->first,this->index.get(),particle))/2.0,
                                           i->second.get_chol_lower(), sqrt(scale)), particle.get_transformed_parameters(this));
@@ -242,6 +254,9 @@ Parameters LangevinProposalKernel::subsample_simulate(RandomNumberGenerator &rng
     arma::colvec mean = particle.get_transformed_parameters(this).get_colvec(i->first);
     check_proposal_size(i->first, mean.n_elem, i->second.get_covariance().n_rows, "covariance");
     double scale = i->second.get_double_scale();
+    // (a particle's own multiplier of the step, esjd in SMC, C211)
+    if (const double* tuning = this->tuning_values(particle))
+      scale = scale*tuning[0]*tuning[0];
     output.set_stacked(i->first, rmvnorm_using_lower_chol(rng,
                                           mean + scale*i->second.get_covariance()*arma::vectorise(gradient_estimator_output->subsample_get_gradient_of_log(i->first,this->index.get(),particle))/2.0,
                                           i->second.get_chol_lower(), sqrt(scale)), particle.get_transformed_parameters(this));
@@ -264,6 +279,9 @@ Parameters LangevinProposalKernel::subsample_simulate(RandomNumberGenerator &rng
   arma::colvec mean = particle.get_transformed_parameters(this).get_colvec(found->first);
   check_proposal_size(found->first, mean.n_elem, found->second.get_covariance().n_rows, "covariance");
   double scale = found->second.get_double_scale();
+  // (a particle's own multiplier of the step, esjd in SMC, C211)
+  if (const double* tuning = this->tuning_values(particle))
+    scale = scale*tuning[0]*tuning[0];
   output.set_stacked(found->first, rmvnorm_using_lower_chol(rng,
                                             mean + scale*found->second.get_covariance()*arma::vectorise(gradient_estimator_output->subsample_get_gradient_of_log(found->first,this->index.get(),particle))/2.0,
                                             found->second.get_chol_lower(), sqrt(scale)), particle.get_transformed_parameters(this));

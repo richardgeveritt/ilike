@@ -149,6 +149,8 @@ Particle ProposalKernel::proposed_from(const Particle &particle,
   proposed_particle.accepted_outputs = particle.accepted_outputs;
   
   proposed_particle.previous_self = &particle;
+  // (a particle's own tuning, C211: the proposed particle keeps it)
+  proposed_particle.tuning = particle.tuning;
   
   return proposed_particle; // what we need is for previous target eval to be set to eval for this target (when evaluated there)!!!!! we don't want it to know its grad, until evaluated there
 }
@@ -257,6 +259,7 @@ void ProposalKernel::finish_into(const Particle &particle,
   scratch.simulate_proposal_variables(particle.proposals_to_transform_for_pointer, particle.proposals_to_find_gradient_for_pointer);
   scratch.accepted_outputs = particle.accepted_outputs;
   scratch.previous_self = &particle;
+  scratch.tuning = particle.tuning;
 }
 
 Particle ProposalKernel::subsample_move(RandomNumberGenerator &rng,
@@ -368,6 +371,11 @@ void ProposalKernel::mcmc_adapt(const AdaptationStep &step)
 {
   if (this->mcmc_adaptor!=NULL)
     this->mcmc_adaptor->adapt_unless_stopped(step);
+}
+
+bool ProposalKernel::mcmc_warming_up() const
+{
+  return (this->mcmc_adaptor!=NULL) && this->mcmc_adaptor->has_until() && !this->mcmc_adaptor->has_stopped();
 }
 
 void ProposalKernel::prepare_mcmc_adaptation()

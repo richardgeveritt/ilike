@@ -156,6 +156,21 @@ static void warn_if_parallel_refused(const SMC *alg) {
                   "with an inner algorithm. The results are the same as a sequential run.");
 }
 
+// After an MCMC run: divergent nuts transitions after warm-up (3.18 item 9,
+// C212), as Stan warns. A divergence means the leapfrog integrator broke down
+// (the Hamiltonian error passed 1000), typically where the target curves
+// sharply: the chain may not explore that region, so the estimates may be
+// biased even though each transition is valid.
+static void warn_if_divergent(const SMCOutput *output) {
+  size_t divergent = 0, iterations = 0;
+  output->count_divergences(divergent, iterations);
+  if (divergent > 0)
+    Rcpp::warning("hmc or nuts: " + std::to_string(divergent) + " of " + std::to_string(iterations) +
+                  " transitions after warm-up were divergent. The chain may miss regions of high "
+                  "curvature: try a smaller step, a transform, or reparameterising the model. "
+                  "See load_mcmc_diagnostics().");
+}
+
 // [[Rcpp::export]]
 double do_importance_sampler(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
                              const Rcpp::List &algorithm_parameter_list_R,
@@ -327,6 +342,7 @@ void do_mcmc(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
   }
 
   apply_output_options(model, alg);
+  alg->set_chains_only(true); // (MCMC: chains, not particles to tune from; C224)
 
   // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
   std::unique_ptr<SMC> alg_owner(alg);
@@ -334,6 +350,7 @@ void do_mcmc(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
   std::unique_ptr<SMCOutput> output_owner(output);
 
   warn_if_parallel_refused(alg);
+  warn_if_divergent(output);
 
   if (strcmp(results_name_in.c_str(), "") != 0)
     output->write(results_name_in.c_str());
@@ -433,6 +450,7 @@ void do_mcmc_with_fixed_params(
   }
 
   apply_output_options(model, alg);
+  alg->set_chains_only(true); // (MCMC: chains, not particles to tune from; C224)
 
   // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
   std::unique_ptr<SMC> alg_owner(alg);
@@ -440,6 +458,7 @@ void do_mcmc_with_fixed_params(
   std::unique_ptr<SMCOutput> output_owner(output);
 
   warn_if_parallel_refused(alg);
+  warn_if_divergent(output);
 
   if (strcmp(results_name_in.c_str(), "") != 0)
     output->write(results_name_in.c_str());

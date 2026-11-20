@@ -3,6 +3,27 @@
 
 namespace ilike
 {
+// (C226) the moves' diagnostic columns, prefixed with their position, and
+// where each move's columns start in a row
+static void scan_diagnostic_layout(const std::vector<std::unique_ptr<MCMC>> &moves,
+                                   std::vector<std::string> &names,
+                                   std::vector<size_t> &offsets,
+                                   std::vector<size_t> &sizes)
+{
+  names.clear();
+  offsets.assign(moves.size(), 0);
+  sizes.assign(moves.size(), 0);
+  for (size_t k = 0; k < moves.size(); ++k)
+  {
+    std::vector<std::string> own;
+    moves[k]->diagnostic_names(own);
+    offsets[k] = names.size();
+    sizes[k] = own.size();
+    for (const std::string &name : own)
+      names.push_back("move" + std::to_string(k + 1) + "." + name);
+  }
+}
+
 DeterministicScanMCMC::DeterministicScanMCMC()
 :MCMC()
 {
@@ -292,6 +313,44 @@ void DeterministicScanMCMC::append_adaptation_state(std::vector<std::string> *na
   for (size_t k=0; k<this->moves.size(); ++k)
     this->moves[k]->append_adaptation_state(names, values, final,
                                             prefix + "move" + std::to_string(k+1) + ".");
+}
+
+
+void DeterministicScanMCMC::diagnostic_names(std::vector<std::string> &names) const
+{
+  std::vector<size_t> offsets, sizes;
+  scan_diagnostic_layout(this->moves, names, offsets, sizes);
+}
+
+bool DeterministicScanMCMC::warming_up() const
+{
+  for (auto i=this->moves.begin(); i!=this->moves.end(); ++i)
+    if ((*i)->warming_up())
+      return true;
+  return false;
+}
+
+void DeterministicScanMCMC::diagnostic_move_in_place(RandomNumberGenerator &rng,
+                                     Particle &particle,
+                                     Particle &scratch,
+                                     bool adapting,
+                                     double* row)
+{
+  // the moves in order, as move_in_place / adaptive_move_in_place
+  std::vector<std::string> names;
+  std::vector<size_t> offsets, sizes;
+  scan_diagnostic_layout(this->moves, names, offsets, sizes);
+  for (std::vector<size_t>::const_iterator i=this->order.begin(); i!=this->order.end(); ++i)
+  {
+    MCMC* move = this->moves[*i].get();
+    bool adapts = adapting && move->adapts();
+    if (sizes[*i] > 0)
+      move->diagnostic_move_in_place(rng, particle, scratch, adapts, row + offsets[*i]);
+    else if (adapts)
+      move->adaptive_move_in_place(rng, particle, scratch);
+    else
+      move->move_in_place(rng, particle, scratch);
+  }
 }
 
 }

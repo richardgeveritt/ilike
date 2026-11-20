@@ -75,6 +75,22 @@ public:
                                        bool final,
                                        const std::string &prefix) const;
 
+  // Per-iteration diagnostics (3.18 item 9, C212): the names of the columns
+  // (none by default; nuts: tree_depth, leapfrog_steps, divergent,
+  // accept_stat). When there are some, run() moves with
+  // diagnostic_move_in_place, which is move_in_place (or, if adapting,
+  // adaptive_move_in_place) also filling one row; the row goes to the chain's
+  // output, not to the move, which several chains may share.
+  virtual void diagnostic_names(std::vector<std::string> &names) const {}
+  virtual void diagnostic_move_in_place(RandomNumberGenerator &rng,
+                                        Particle &particle,
+                                        Particle &scratch,
+                                        bool adapting,
+                                        double* row);
+  // Whether the move is in a warm-up: adapting with `until`, not yet stopped
+  // (diagnostics after it count towards the divergence warning).
+  virtual bool warming_up() const { return false; }
+
   // Store every thin-th iteration of a run (MCMC(..., thin); default 1).
   void set_thin(size_t thin_in);
   size_t get_thin() const { return this->thin; }

@@ -15,8 +15,10 @@ namespace ilike
 
 // how an element moves: a normal step, a uniform step, or 1 - x (a 0/1 element)
 // normal_conditional: no step, a draw from the element's normal full
-// conditional (gibbs on a normal mean, C206; only in InPlaceElementScanMCMC)
-enum class ElementStep { normal, uniform, flip, normal_conditional };
+// conditional (gibbs on a normal mean, C206; only in InPlaceElementScanMCMC);
+// gamma_conditional, invgamma_conditional, beta_conditional: likewise from a
+// conjugate gamma, inverse gamma or beta full conditional (C215)
+enum class ElementStep { normal, uniform, flip, normal_conditional, gamma_conditional, invgamma_conditional, beta_conditional };
 
 // A random walk on one element of a variable (dev/plan.md I4c): the element
 // (row, column, 0-based) moves by a normal draw with standard deviation

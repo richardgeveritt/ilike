@@ -46,8 +46,11 @@ public:
 
   // The matrix to write the proposed value of `name` into (assign the whole
   // value: its previous contents are stale).
-  arma::mat& matrix(const std::string &name)
+  // (base_value, if given: base's value of `name` when found on the way, else NULL)
+  arma::mat& matrix(const std::string &name, const arma::mat** base_value = NULL)
   {
+    if (base_value != NULL)
+      *base_value = NULL;
     if (this->direct && !this->collect)
     {
       size_t k = 0;
@@ -62,6 +65,8 @@ public:
             j->second.first = std::make_shared<arma::mat>();
           j->second.second = false;
           this->written |= (uint64_t(1) << k);
+          if (base_value != NULL)
+            *base_value = b->second.first.get();
           return *j->second.first;
         }
       }
@@ -78,11 +83,15 @@ public:
   {
     if (!is_stacked_name(name))
     {
-      const arma::mat* shape = shapes.find_vector(name);
+      // the shape from base when the shapes are base's (found by matrix() on
+      // its way, so no second lookup: C211, the hot path of every move)
+      const arma::mat* base_value = NULL;
+      arma::mat &output = this->matrix(name, &base_value);
+      const arma::mat* shape = ((base_value != NULL) && (&shapes == &this->base)) ? base_value : shapes.find_vector(name);
       if ((shape != NULL) && (shape->n_elem == value.n_elem) && (shape->n_cols != 1))
-        this->matrix(name) = arma::reshape(value, shape->n_rows, shape->n_cols);
+        output = arma::reshape(value, shape->n_rows, shape->n_cols);
       else
-        this->matrix(name) = value;
+        output = value;
       return;
     }
     Parameters split;

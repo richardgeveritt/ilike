@@ -40,6 +40,10 @@ public:
   
   arma::mat get_gradient_of_log(const std::string &variable,
                                 const Parameters &x);
+  bool evaluate_with_gradients(const Parameters &parameters,
+                               const std::vector<std::string> &variables,
+                               double &value,
+                               std::vector<arma::mat> &gradients);
   std::vector<arma::mat> get_gradients_of_log(const std::vector<std::string> &variables,
                                               const Parameters &x);
   arma::mat subsample_get_gradient_of_log(const std::string &variable,
@@ -48,6 +52,7 @@ public:
   void close_ofstreams();
 
   // passed on to the annealed output (dev/plan.md I4b)
+  bool carries_over() const { return (this->estimator_output != NULL) && this->estimator_output->carries_over(); }
   void carry_over_from(const LikelihoodEstimatorOutput &previous,
                        const Parameters &previous_parameters,
                        const Parameters &new_parameters,

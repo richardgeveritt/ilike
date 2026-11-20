@@ -1,6 +1,9 @@
 #include <numeric>
 #include <algorithm>
 #include "smc_mcmc_move.h"
+#include "esjd_adaptor.h"
+#include "filesystem.h"
+#include <fstream>
 #include "ensemble_factor_variables.h"
 #include "chunk_parallel.h"
 #include "progress_reporter.h"
@@ -724,6 +727,124 @@ void SMCMCMCMove::make_copy(const SMCMCMCMove &another)
     this->cancelled_index.reset();
   
   this->mcmc_at_last_step = another.mcmc_at_last_step;
+  // (the tuned kernels are this copy's own: found again)
+  this->tuners.clear();
+  this->tuners_found = false;
+  this->particle_tunings.clear();
+}
+
+// esjd (C211): the tuned kernels' values for this move step, and each
+// particle's rows; with a summary of the values in results/esjd.csv
+void SMCMCMCMove::prepare_tuning(SMCOutput* current_state)
+{
+  if (!this->tuners_found)
+  {
+    this->tuners_found = true;
+    this->tuners.clear();
+    for (const ProposalKernel* kernel : this->mcmc->get_proposals())
+    {
+      SMCAdaptor* adaptor = kernel->get_smc_adaptor();
+      std::vector<SMCAdaptor*> adaptors;
+      if (CompositeSMCAdaptor* composite = dynamic_cast<CompositeSMCAdaptor*>(adaptor))
+        adaptors = composite->get_parts();
+      else if (adaptor != NULL)
+        adaptors.push_back(adaptor);
+      for (SMCAdaptor* a : adaptors)
+        if (ESJDAdaptor* tuner = dynamic_cast<ESJDAdaptor*>(a))
+          this->tuners.push_back(std::make_pair(kernel->get_instance_index(), tuner));
+    }
+  }
+  if (this->tuners.empty())
+    return;
+  if (this->chains_only)
+    for (auto &t : this->tuners)
+      if (t.second->is_choice())
+        Rcpp::stop("choose([...]) is used in SMC_with_MCMC, where the particles show which proposal moves them best "
+                   "(in MCMC each chain would keep the proposal drawn at its start).");
+  if (this->waste_free_chains > 0)
+    Rcpp::stop("smc_adapt = esjd(…) is not available with waste-free SMC.");
+  if (!this->can_move_flat() && (this->rich_chunk_mode() == 0))
+    Rcpp::stop("smc_adapt = esjd(…) is not available for this model's SMC moves (the factors must be exact, "
+               "annealed, or support parallel chunks or copies).");
+
+  size_t N = this->number_of_particles;
+  // its own stream from the run's seed (the moves' streams are unchanged)
+  RandomNumberGenerator tuning_rng(*this->the_worker->get_rng());
+  tuning_rng.seed(this->the_worker->get_seed() ^ 0x5DEECE66DULL);
+  for (auto &t : this->tuners)
+    t.second->update(tuning_rng, current_state, N);
+  // pretune (C223): trial moves from each particle's starting state (as the
+  // move starts it: its ancestor, restored on a flat generation, with the
+  // cancelled factors evaluated)
+  bool trials = false;
+  for (auto &t : this->tuners)
+    trials = trials || t.second->needs_trial_moves();
+  if (trials)
+  {
+    Particles &generation = current_state->back();
+    bool from_flat = generation.is_flat();
+    const Parameters &restore_parameters =
+      (from_flat && generation.adaptive_summaries_used) ? generation.last_trial_schedule
+                                                         : this->sequencer.schedule_parameters;
+    auto start = [&](size_t i) -> Particle {
+      size_t ancestor = generation.ancestor_variables[i];
+      Particle particle;
+      if (from_flat)
+        this->restore_particle(particle, generation, ancestor, restore_parameters);
+      else
+        particle = generation[ancestor]->back();
+      if (this->cancelled_index != NULL)
+        particle.evaluate_likelihoods(this->cancelled_index.get());
+      return particle;
+    };
+    for (auto &t : this->tuners)
+      if (t.second->needs_trial_moves())
+        t.second->trial_moves(tuning_rng, N, start);
+  }
+  if (this->particle_tunings.size() != N)
+    this->particle_tunings.resize(N);
+  for (size_t i = 0; i < N; ++i)
+  {
+    ParticleTuning &tuning = this->particle_tunings[i];
+    tuning.rows.clear();
+    for (auto &t : this->tuners)
+    {
+      ParticleTuning::Row row;
+      row.instance = t.first;
+      row.values = t.second->column(i);
+      row.adaptor = t.second;
+      row.choice = t.second->is_choice();
+      tuning.rows.push_back(row);
+    }
+  }
+
+  // the values' summary, one row per move step and tuned kernel
+  if (!this->results_name.empty())
+  {
+    // (beside the SMC's output.h5, in <results>/ilike_smc)
+    std::string directory = this->results_name + "_smc";
+    if (!directory_exists(directory))
+      make_directory(directory);
+    std::string path = directory + "/esjd.csv";
+    bool exists = std::ifstream(path).good();
+    std::ofstream file(path, std::ios::app);
+    if (file.good())
+    {
+      // (long format: one row per statistic, as tuners differ in their
+      // statistics; load_smc_tuning widens it, C224)
+      if (!exists)
+        file << "step,tuner,variable,statistic,value\n";
+      for (size_t k = 0; k < this->tuners.size(); ++k)
+      {
+        std::vector<std::string> names;
+        std::vector<double> numbers;
+        this->tuners[k].second->summary(names, numbers);
+        for (size_t j = 0; j < names.size(); ++j)
+          file << this->tuners[k].second->get_updates() << "," << (k + 1) << ","
+               << stacked_display_name(this->tuners[k].second->get_variable()) << "," << names[j] << "," << numbers[j] << "\n";
+      }
+    }
+  }
 }
 
 SMCOutput* SMCMCMCMove::specific_run()
@@ -811,10 +932,13 @@ void SMCMCMCMove::move_rich_in_chunks(Particles* next_particles,
                        {
                          const Particle &ancestor = (*current_particles)[current_particles->ancestor_variables[i]]->back();
                          MoveOutput* moved;
+                         bool tuned = !this->tuners.empty();
                          if (copies)
                          {
                            group_seed = size_t(local_rng());
                            Particle start = ancestor;
+                           if (tuned)
+                             start.tuning = &this->particle_tunings[i];
                            if ((start.factor_variables != NULL) && !start.factor_variables->repoint_to(factors_for_group))
                              Rcpp::stop("SMCMCMCMove::move_rich_in_chunks: the factors could not be repointed.");
                            moved = this->move(local_rng, start);
@@ -822,9 +946,21 @@ void SMCMCMCMove::move_rich_in_chunks(Particles* next_particles,
                            if (!moved->repoint_to(this->factors.get()))
                              Rcpp::stop("SMCMCMCMove::move_rich_in_chunks: the factors could not be repointed.");
                          }
+                         else if (tuned)
+                         {
+                           Particle start = ancestor;
+                           start.tuning = &this->particle_tunings[i];
+                           moved = this->move(local_rng, start);
+                         }
                          else
                          {
                            moved = this->move(local_rng, ancestor);
+                         }
+                         if (tuned)
+                         {
+                           for (auto &t : this->tuners)
+                             t.second->score(i, ancestor.parameters, moved->back().parameters, this->particle_tunings[i]);
+                           moved->back().tuning = NULL;
                          }
                          moved->back().previous_self = &ancestor;
                          next_particles->particles[i].reset(moved);
@@ -872,6 +1008,13 @@ bool SMCMCMCMove::can_move_flat() const
   if ((this->mcmc == NULL) || !this->mcmc->reads_cached_factors() || this->mcmc->adapts())
     return false;
   if (this->mcmc->known_number_of_iterations() == 0)
+    return false;
+  // moves with per-iteration diagnostics (nuts, C212) record them in each
+  // chain's output, so they run on the rich path (a nuts iteration costs many
+  // gradients: the flat path's saving is negligible there)
+  std::vector<std::string> diagnostics;
+  this->mcmc->diagnostic_names(diagnostics);
+  if (!diagnostics.empty())
     return false;
   if ((this->factors == NULL) || !this->factors->supports_flat_moves(this->index.get(), this->cancelled_index.get()))
     return false;
@@ -1124,6 +1267,14 @@ void SMCMCMCMove::move_flat(Particles* next_particles,
       // as move(): the cancelled factors, then the run
       if (this->cancelled_index != NULL)
         current.evaluate_likelihoods(this->cancelled_index.get());
+      // (esjd, C211: the particle's own tuning, and where it starts)
+      bool tuned = !this->tuners.empty();
+      Parameters before;
+      if (tuned)
+      {
+        current.tuning = &this->particle_tunings[i];
+        before = current.parameters;
+      }
 
       size_t stored = 0;
       for (size_t iteration = 1; iteration <= iterations; ++iteration)
@@ -1166,6 +1317,12 @@ void SMCMCMCMove::move_flat(Particles* next_particles,
         ++stored;
       }
 
+      if (tuned)
+      {
+        for (auto &t : this->tuners)
+          t.second->score(i, before, current.parameters, this->particle_tunings[i]);
+        current.tuning = NULL;
+      }
       // as move(): the target over the SMC's index, which becomes the
       // particle's previous target (set_previous_target_evaluated_to_target_evaluated)
       double target = current.get_cached_likelihoods(this->index.get());
@@ -1246,6 +1403,8 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state)
     this->mcmc->smc_adapt(current_state);
     
     current_state->normalise_and_resample_weights();
+    // each particle's own tuning values (esjd, C211)
+    this->prepare_tuning(current_state);
     
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Particles* current_particles = &current_state->back();

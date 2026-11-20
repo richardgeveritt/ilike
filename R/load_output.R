@@ -738,3 +738,92 @@ load_mcmc_adaptation = function(results_directory,
                           Value = as.vector(final),
                           stringsAsFactors = FALSE))
 }
+
+
+#' Load the tuning values of an SMC run with esjd adaptation.
+#'
+#' With `smc_adapt = esjd(...)` on a move, each particle of `SMC_with_MCMC` moves
+#' with its own tuning values, chosen from how far the particles moved at the
+#' previous step. This function reads the summary of those values written at
+#' each step: per tuned move and parameter, the mean, standard deviation and
+#' 10%, 50% and 90% quantiles over the particles.
+#'
+#' @param results_directory The results directory of the run (`results_name`).
+#' @return A data frame with one row per move step and tuner: columns step (the move step: 1 for the first move),
+#'   tuner (its number, when several moves or proposals are tuned), variable, and for each tuned parameter
+#'   (scale, or step and steps) its mean, sd, q10, q50 and q90; for pretune also step_max and steps_max (the
+#'   ranges of the next trial moves); for choose, kernelK.share (the share of the particles using each proposal).
+#' @export
+load_smc_tuning = function(results_directory)
+{
+  path = file.path(results_directory, "ilike_smc", "esjd.csv")
+  if (!file.exists(path))
+    stop("load_smc_tuning: no tuning values in ", results_directory, " (the run used no esjd adaptation).")
+  long = utils::read.csv(path, stringsAsFactors = FALSE)
+  # one row per step and tuner, one column per statistic (NA where a tuner has none)
+  keys = unique(long[, c("step", "tuner", "variable")])
+  statistics = unique(long$statistic)
+  output = keys
+  for (s in statistics)
+  {
+    rows = long[long$statistic == s, ]
+    output[[s]] = rows$value[match(paste(keys$step, keys$tuner), paste(rows$step, rows$tuner))]
+  }
+  output = output[order(output$tuner, output$step), ]
+  rownames(output) = NULL
+  output
+}
+
+#' Load the per-iteration diagnostics of an MCMC run with nuts.
+#'
+#' A `nuts` move records, at every stored iteration of each chain, the depth
+#' of the tree it built (the trajectory doubled that many times), the number
+#' of leapfrog steps (gradient evaluations), whether the trajectory diverged
+#' (the error in the Hamiltonian passed 1000, a sign that the step is too
+#' large for the curvature of the target there), and the acceptance statistic
+#' (the average acceptance probability over the last doubling, which the
+#' adaptors drive towards their target). Many divergences after warm-up mean
+#' the chain may miss part of the target; a tree depth often at max_depth
+#' means the step is too small or the target poorly scaled.
+#'
+#' @param results_directory The folder in which the results are stored.
+#' @param target (optional) The stored SMC iteration to read (default: the last one, which for MCMC holds the chains).
+#' @return A data frame with one row per stored iteration: Chain, Iteration (counting stored iterations, as in load_mcmc_output), tree_depth, leapfrog_steps, divergent (logical) and accept_stat.
+#' @export
+load_mcmc_diagnostics = function(results_directory,
+                                 target = NULL)
+{
+  h5_path <- file.path(results_directory, "ilike_smc", "output.h5")
+  if (!file.exists(h5_path))
+    stop(paste("HDF5 output file not found:", h5_path))
+  h5f <- hdf5r::H5File$new(h5_path, mode = "r")
+  on.exit(try(h5f$close_all(), silent = TRUE), add = TRUE)
+  if (!("diagnostics_names" %in% hdf5r::h5attr_names(h5f)))
+    stop("load_mcmc_diagnostics: the output holds no diagnostics (no nuts move was used).")
+  names <- h5f$attr_open("diagnostics_names")$read()
+
+  targets <- sort(as.integer(names(h5f[["iteration"]])))
+  if (is.null(target))
+    target <- max(targets)
+  group <- h5f[[paste0("iteration/", target)]]
+  if (!("diagnostics" %in% names(group)))
+    stop("load_mcmc_diagnostics: iteration ", target, " holds no diagnostics.")
+  raw <- group[["diagnostics"]]$read()
+  values <- if (is.matrix(raw)) t(raw) else matrix(raw, ncol = length(names), byrow = TRUE)
+
+  ol <- h5f[["output_lengths"]]
+  ol_dims <- ol$dims
+  ol_mat <- matrix(as.numeric(ol$read()), nrow = ol_dims[2], ncol = ol_dims[1], byrow = TRUE)
+  lengths <- ol_mat[which(targets == target), ]
+  if (sum(lengths) != nrow(values))
+    stop("load_mcmc_diagnostics: the diagnostics do not match the stored points.")
+
+  output <- data.frame(Chain = rep(seq_along(lengths), lengths),
+                       Iteration = sequence(lengths))
+  for (k in seq_along(names))
+    output[[names[k]]] <- values[, k]
+  # (in a scan, one set of columns per move: moveK.divergent, …)
+  for (name in grep("(^|\\.)divergent$", names(output), value = TRUE))
+    output[[name]] <- output[[name]] != 0
+  output
+}

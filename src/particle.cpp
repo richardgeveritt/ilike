@@ -706,6 +706,7 @@ void Particle::make_copy(const Particle &another)
   this->subsample_ensemble_target_evaluated = another.subsample_ensemble_target_evaluated;
   this->proposal_serial = another.proposal_serial;
   this->proposal_log_ratio = another.proposal_log_ratio;
+  this->tuning = another.tuning;
   
   this->parameters = another.parameters;
 
@@ -761,6 +762,7 @@ void Particle::make_copy(Particle &&another)
   this->target_evaluated = std::move(another.target_evaluated);
   this->proposal_serial = another.proposal_serial;
   this->proposal_log_ratio = another.proposal_log_ratio;
+  this->tuning = another.tuning;
   this->subsample_previous_target_evaluated = std::move(another.subsample_previous_target_evaluated);
   this->subsample_target_evaluated = std::move(another.subsample_target_evaluated);
   
@@ -1190,6 +1192,7 @@ void Particle::swap(Particle &another)
   std::swap(this->subsample_ensemble_target_evaluated, another.subsample_ensemble_target_evaluated);
   std::swap(this->proposal_serial, another.proposal_serial);
   std::swap(this->proposal_log_ratio, another.proposal_log_ratio);
+  std::swap(this->tuning, another.tuning);
   std::swap(this->factor_variables, another.factor_variables);
   std::swap(this->ensemble_factor_variables, another.ensemble_factor_variables);
   std::swap(this->previous_self, another.previous_self);

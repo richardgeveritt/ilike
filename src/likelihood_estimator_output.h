@@ -71,6 +71,17 @@ public:
   // the gradients of several variables (C204): one call per variable unless
   // the factor can do better (plates of model statements compute them in one
   // pass over their terms)
+  // The value (as evaluate) and the gradients (as get_gradients_of_log) in
+  // one pass, where the output can (factors written as model statements,
+  // C222): sets this output's value at `parameters` as evaluate does, gives it
+  // in `value`, and the gradients of `variables` in `gradients`. False (the
+  // default; nothing done) if it cannot: the caller then evaluates and asks
+  // for the gradients separately.
+  virtual bool evaluate_with_gradients(const Parameters &parameters,
+                                       const std::vector<std::string> &variables,
+                                       double &value,
+                                       std::vector<arma::mat> &gradients) { return false; }
+
   virtual std::vector<arma::mat> get_gradients_of_log(const std::vector<std::string> &variables,
                                                       const Parameters &x)
   {
@@ -145,6 +156,10 @@ protected:
                                const Parameters &previous_parameters,
                                const Parameters &new_parameters,
                                const std::vector<std::string>* changed = NULL) {}
+  // whether carry_over_from keeps anything (plates, and the annealing wrapper
+  // of one): the caller finds the changed variables only then (C211: finding
+  // them on every move cost the other factors ~25% of an MCMC iteration)
+  virtual bool carries_over() const { return false; }
   virtual bool assign_from(const LikelihoodEstimatorOutput &another) { return false; }
 
   virtual size_t compact_size() const { return 0; }

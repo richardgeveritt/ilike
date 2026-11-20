@@ -1,6 +1,7 @@
 #ifndef PARTICLE_H
 #define PARTICLE_H
 
+#include "particle_tuning.h"
 #include <RcppArmadillo.h>
 #include <memory>
 using namespace Rcpp;
@@ -308,6 +309,9 @@ public:
   // plus one, and proposal_log_ratio is log q(old | new) - log q(new | old)
   unsigned long long proposal_serial = 0;
   double proposal_log_ratio = 0.0;
+  // this particle's tuning values for kernels tuned by esjd in SMC (C211;
+  // owned by the SMC move, NULL otherwise: one pointer, no allocation)
+  const ParticleTuning* tuning = NULL;
   double subsample_target_evaluated;
   
   double previous_ensemble_target_evaluated;

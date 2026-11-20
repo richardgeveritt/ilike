@@ -87,11 +87,174 @@ test_that("gibbs is refused where the full conditional is not normal", {
         "s's distribution is lnorm")
   check(c("  mu ~ norm(0, 1)", "  for (i in 1:2) y[i] ~ norm(mu, abs(mu) + 1)"), "move m = gibbs(mu)", "mu is in the standard deviation")
   check(c("  mu ~ norm(0, 1)", "  for (i in 1:2) y[i] ~ pois(mu * mu)"), "move m = gibbs(mu)", "this term's distribution is pois")
-  check(c("  for (k in 1:2) mu[k] ~ norm(0, 1)", "  for (i in 1:2) y[i] ~ norm(mu[i], 1)"), "move m = gibbs(mu)",
-        "gibbs(mu) moves a scalar")
+  # (gibbs(mu) on a vector is the block update, C216: accepted)
+  writeLines(c("ilike 1.0", "data { y = [1, 2] }", "model {", "  for (k in 1:2) mu[k] ~ norm(0, 1)",
+               "  for (i in 1:2) y[i] ~ norm(mu[i], 1)", "}", "algorithm mcmc {", "  move m = gibbs(mu)",
+               "  termination = iterations(10)", "}"), f)
+  expect_silent(ilike::compile(f))
   # affine through a node and with a coefficient that is another parameter: accepted
   writeLines(c("ilike 1.0", "data { y = [1, 2] }", "model {", "  mu ~ norm(0, 1)", "  b ~ norm(0, 1)", "  m2 <- 2 * mu + 1",
                "  for (i in 1:2) y[i] ~ norm(b * m2 / 3 - mu, 1)", "}", "algorithm mcmc {", "  move m = gibbs(mu)",
                "  termination = iterations(10)", "}"), f)
   expect_silent(ilike::compile(f))
+})
+
+# Conjugate gamma, inverse gamma and beta full conditionals (C215)
+gibbs_conjugate_model = c("ilike 1.0",
+  "data { y = [0.3, 1.9, -0.4, 1.2, 0.8]; z = [3, 5, 4]; cnt = [2, 7, 1, 4]; g = [1, 2, 1, 2]; e = [0.5, 2, 1.5, 1] }",
+  "model {",
+  "  tau ~ gamma(2, 1)",
+  "  v ~ invgamma(3, 2)",
+  "  p ~ beta(2, 3)",
+  "  for (j in 1:2) lambda[j] ~ gamma(2, 1)",
+  "  sd_y <- 1 / sqrt(tau)",
+  "  for (i in 1:5) y[i] ~ norm(0.5, sd_y)",
+  "  for (i in 1:5) y[i] ~ norm(0.5, 2 * sqrt(v))",
+  "  for (i in 1:3) z[i] ~ binom(10, p)",
+  "  for (i in 1:4) cnt[i] ~ pois(e[i] * lambda[g[i]])",
+  "}")
+
+test_that("gibbs draws gamma, inverse gamma and beta full conditionals exactly", {
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(c(f, "gibbs_conjugate"), recursive = TRUE), add = TRUE)
+  writeLines(c(gibbs_conjugate_model, "algorithm mcmc {", "  move a = gibbs(tau)", "  move b = gibbs(v)", "  move c = gibbs(p)",
+               "  for (j in 1:2) move d = gibbs(lambda[j])", "  termination = iterations(4000)", "}"), f)
+  unlink("gibbs_conjugate", recursive = TRUE)
+  ilike::MCMC(ilike::compile(f), results_name = "gibbs_conjugate", seed = 1,
+              initial_values = list(list(tau = 1, v = 1, p = 0.5, lambda = c(1, 1))))
+  o = ilike::load_mcmc_output("gibbs_conjugate")
+  draws = function(name, k = 1) o$Value[o$ParameterName == name & o$Dimension == k]
+  y = c(0.3, 1.9, -0.4, 1.2, 0.8); ss = sum((y - 0.5)^2)
+  cnt = c(2, 7, 1, 4); g = c(1, 2, 1, 2); e = c(0.5, 2, 1.5, 1)
+  # exact conditionals (each variable's terms involve no other parameter)
+  exact = list(tau = c(2 + 5/2, 1 + ss/2),                  # gamma(shape, rate)
+               v = c(3 + 5/2, 2 + ss/8),                    # invgamma(shape, scale): sd 2 sqrt(v)
+               p = c(2 + 12, 3 + 30 - 12),                  # beta
+               lambda1 = c(2 + sum(cnt[g == 1]), 1 + sum(e[g == 1])),
+               lambda2 = c(2 + sum(cnt[g == 2]), 1 + sum(e[g == 2])))
+  check = function(x, mean, sd, label)
+  {
+    expect_lt(abs(mean(x) - mean)/sd, 0.1, label = label)
+    expect_equal(sd(x), sd, tolerance = 0.06, label = label)
+    # an exact draw: every proposal accepted
+    expect_true(all(diff(x) != 0), label = label)
+  }
+  a = exact$tau; check(draws("tau"), a[1]/a[2], sqrt(a[1])/a[2], "tau")
+  a = exact$v; check(draws("v"), a[2]/(a[1] - 1), a[2]/((a[1] - 1)*sqrt(a[1] - 2)), "v")
+  a = exact$p; check(draws("p"), a[1]/sum(a), sqrt(a[1]*a[2]/(sum(a)^2*(sum(a) + 1))), "p")
+  a = exact$lambda1; check(draws("lambda", 1), a[1]/a[2], sqrt(a[1])/a[2], "lambda[1]")
+  a = exact$lambda2; check(draws("lambda", 2), a[1]/a[2], sqrt(a[1])/a[2], "lambda[2]")
+})
+
+test_that("gibbs is refused where the full conditional is not conjugate", {
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(f), add = TRUE)
+  check = function(lines, move, message)
+  {
+    writeLines(c("ilike 1.0", "data { y = [1, 2] }", "model {", lines, "}", "algorithm mcmc {", paste0("  ", move),
+                 "  termination = iterations(10)", "}"), f)
+    expect_error(ilike::compile(f), message, fixed = TRUE)
+  }
+  check(c("  tau ~ gamma(2, 1)", "  for (i in 1:2) y[i] ~ norm(0, tau)"), "move m = gibbs(tau)",
+        "its full conditional is not gamma: the standard deviation must be c/sqrt(tau) (tau a precision)")
+  check(c("  p ~ beta(1, 1)", "  for (i in 1:2) y[i] ~ binom(3, inv_logit(p))"), "move m = gibbs(p)",
+        "the probability must be p itself")
+  check(c("  l ~ gamma(1, 1)", "  for (i in 1:2) y[i] ~ pois(l + 1)"), "move m = gibbs(l)",
+        "the rate must be c*l: l is in a sum or difference")
+  check(c("  v ~ invgamma(1, 1)", "  for (i in 1:2) y[i] ~ t(3, 0, sqrt(v))"), "move m = gibbs(v)",
+        "this term's distribution is t")
+  check(c("  v ~ invgamma(1, 1)", "  for (i in 1:2) y[i] ~ norm(v, 1)"), "move m = gibbs(v)", "v is in the mean")
+})
+
+test_that("SMC with a conjugate gibbs move gives the evidence", {
+  skip_on_cran()
+  # gamma-Poisson: the marginal of the counts is negative binomial
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(c(f, "gibbs_conjugate_smc"), recursive = TRUE), add = TRUE)
+  cnt = c(2, 7, 1, 4); e = c(0.5, 2, 1.5, 1)
+  writeLines(c("ilike 1.0", "data { cnt = [2, 7, 1, 4]; e = [0.5, 2, 1.5, 1] }", "model {", "  l ~ gamma(2, 1)",
+               "  for (i in 1:4) cnt[i] ~ pois(e[i] * l)", "}", "algorithm smc {", "  move m = gibbs(l)",
+               "  termination = iterations(5)", "  sequence = annealing(power, [0, 0.05, 0.2, 0.5, 0.8, 1])", "}"), f)
+  unlink("gibbs_conjugate_smc", recursive = TRUE)
+  z = ilike::SMC_with_MCMC(ilike::compile(f), results_name = "gibbs_conjugate_smc", number_of_particles = 2000, seed = 1)
+  exact = log(integrate(function(l) sapply(l, function(v) dgamma(v, 2, 1)*prod(dpois(cnt, e*v))), 0, 60)$value)
+  expect_lt(abs(z - exact), 0.05)
+})
+
+# gibbs on a whole vector: the block's normal full conditional (C216)
+gibbs_regression = function()
+{
+  set.seed(2)
+  n = 8
+  X = cbind(1, round(rnorm(n), 2), round(runif(n), 2))
+  y = round(drop(X %*% c(0.5, -1, 2) + rnorm(n, 0, 0.7)), 2)
+  rows = paste0("[", apply(X, 1, function(r) paste(r, collapse = ", ")), "]", collapse = ", ")
+  list(X = X, y = y, sigma = 0.7,
+       data = paste0("data { y = [", paste(y, collapse = ", "), "]; X = [", rows, "] }"),
+       likelihood = "  for (i in 1:8) y[i] ~ norm(X[i, 1] * beta[1] + X[i, 2] * beta[2] + X[i, 3] * beta[3], 0.7)")
+}
+
+test_that("gibbs on a vector draws regression coefficients from their normal full conditional", {
+  r = gibbs_regression()
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(c(f, "gibbs_block"), recursive = TRUE), add = TRUE)
+  run = function(prior, iterations = 3000)
+  {
+    writeLines(c("ilike 1.0", r$data, "model {", prior, r$likelihood, "}", "algorithm mcmc {", "  move m = gibbs(beta)",
+                 paste0("  termination = iterations(", iterations, ")"), "}"), f)
+    unlink("gibbs_block", recursive = TRUE)
+    ilike::MCMC(ilike::compile(f), results_name = "gibbs_block", seed = 1, initial_values = list(list(beta = c(0, 0, 0))))
+    o = ilike::load_mcmc_output("gibbs_block")
+    sapply(1:3, function(k) o$Value[o$Dimension == k])
+  }
+  # independent normal elements (sd 3), and a multivariate normal prior
+  for (case in list(list(prior = "  for (k in 1:3) beta[k] ~ norm(0, 3)", S0 = diag(9, 3)),
+                    list(prior = "  beta ~ mvnorm([0, 0, 0], [[4, 1, 0], [1, 4, 0], [0, 0, 4]])",
+                         S0 = matrix(c(4, 1, 0, 1, 4, 0, 0, 0, 4), 3))))
+  {
+    beta = run(case$prior)
+    Q = solve(case$S0) + crossprod(r$X)/r$sigma^2
+    V = solve(Q); m = drop(V %*% crossprod(r$X, r$y))/r$sigma^2
+    expect_lt(max(abs(colMeans(beta) - m)/sqrt(diag(V))), 0.1, label = case$prior)
+    expect_equal(apply(beta, 2, sd), sqrt(diag(V)), tolerance = 0.06, label = case$prior)
+    expect_lt(max(abs(cor(beta) - cov2cor(V))), 0.05, label = case$prior)
+    # exact draws: every proposal accepted, consecutive draws independent
+    expect_true(all(diff(beta[, 1]) != 0), label = case$prior)
+    expect_lt(abs(cor(beta[-1, 1], beta[-nrow(beta), 1])), 0.06, label = case$prior)
+  }
+})
+
+test_that("gibbs on a vector is refused where the block's conditional is not normal", {
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(f), add = TRUE)
+  check = function(lines, message)
+  {
+    writeLines(c("ilike 1.0", "data { y = [1, 2] }", "model {", lines, "}", "algorithm mcmc {", "  move m = gibbs(beta)",
+                 "  termination = iterations(10)", "}"), f)
+    expect_error(ilike::compile(f), message, fixed = TRUE)
+  }
+  check(c("  for (k in 1:2) beta[k] ~ norm(0, 1)", "  for (i in 1:2) y[i] ~ norm(beta[1] * beta[2], 1)"),
+        "the full conditional of the vector beta is not normal: beta enters the mean nonlinearly: two factors of a product depend on beta")
+  check(c("  for (k in 1:2) beta[k] ~ bern(0.5)", "  for (i in 1:2) y[i] ~ norm(beta[i], 1)"),
+        "for the elements of a discrete beta, write for (j in 1:J) move m = gibbs(beta[j])")
+  # its proposal is not one to write
+  writeLines(c("ilike 1.0", "data { y = [1, 2] }", "model {", "  for (k in 1:2) beta[k] ~ norm(0, 1)",
+               "  for (i in 1:2) y[i] ~ norm(beta[i], 1)", "}", "algorithm mcmc {",
+               "  move m = metropolis_hastings(normal_block(beta))", "  termination = iterations(10)", "}"), f)
+  expect_error(ilike::compile(f), "gibbs on a vector is move m = gibbs(beta)", fixed = TRUE)
+})
+
+test_that("SMC with gibbs on a vector gives the evidence of a linear regression", {
+  skip_on_cran()
+  r = gibbs_regression()
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(c(f, "gibbs_block_smc"), recursive = TRUE), add = TRUE)
+  writeLines(c("ilike 1.0", r$data, "model {", "  for (k in 1:3) beta[k] ~ norm(0, 3)", r$likelihood, "}", "algorithm smc {",
+               "  move m = gibbs(beta)", "  termination = iterations(5)",
+               "  sequence = annealing(power, [0, 0.02, 0.1, 0.3, 0.6, 1])", "}"), f)
+  unlink("gibbs_block_smc", recursive = TRUE)
+  z = ilike::SMC_with_MCMC(ilike::compile(f), results_name = "gibbs_block_smc", number_of_particles = 1000, seed = 1)
+  S = r$sigma^2*diag(8) + 9*tcrossprod(r$X)
+  exact = -0.5*8*log(2*pi) - 0.5*determinant(S)$modulus[1] - 0.5*sum(r$y*solve(S, r$y))
+  expect_lt(abs(z - exact), 0.1)
 })

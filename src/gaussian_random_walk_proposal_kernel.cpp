@@ -15,10 +15,14 @@ namespace ilike
 static arma::colvec random_walk_step(RandomNumberGenerator &rng,
                                      const std::string &variable,
                                      const arma::colvec &x,
-                                     const GaussianProposalInfo &info)
+                                     const GaussianProposalInfo &info,
+                                     const double* tuning = NULL)
 {
   const arma::mat &lower = info.get_chol_lower();
   double sd = sqrt(info.get_double_scale());
+  // a particle's own multiplier of the step (esjd in SMC, C211)
+  if (tuning != NULL)
+    sd = sd*tuning[0];
   if (lower.n_rows == x.n_elem)
     return rmvnorm_using_lower_chol(rng, x, lower, sd);
   if (lower.n_rows == 1)
@@ -189,7 +193,7 @@ void GaussianRandomWalkProposalKernel::simulate_into(RandomNumberGenerator &rng,
        ++i)
   {
     const Parameters &current = particle.get_transformed_parameters(this);
-    target.write(i->first, random_walk_step(rng, i->first, current.get_colvec(i->first), i->second), current);
+    target.write(i->first, random_walk_step(rng, i->first, current.get_colvec(i->first), i->second, this->tuning_values(particle)), current);
   }
 }
 
@@ -202,7 +206,7 @@ Parameters GaussianRandomWalkProposalKernel::simulate(RandomNumberGenerator &rng
        ++i)
   {
     const Parameters &current = particle.get_transformed_parameters(this);
-    output.set_stacked(i->first, random_walk_step(rng, i->first, current.get_colvec(i->first), i->second), current);
+    output.set_stacked(i->first, random_walk_step(rng, i->first, current.get_colvec(i->first), i->second, this->tuning_values(particle)), current);
   }
   return output;
 }
@@ -223,7 +227,7 @@ Parameters GaussianRandomWalkProposalKernel::subsample_simulate(RandomNumberGene
   
   Parameters output;
   const Parameters &current = particle.get_transformed_parameters(this);
-  output.set_stacked(variable, random_walk_step(rng, variable, current.get_colvec(variable), found->second), current);
+  output.set_stacked(variable, random_walk_step(rng, variable, current.get_colvec(variable), found->second, this->tuning_values(particle)), current);
   return output;
 }
 

@@ -28,7 +28,8 @@ internal_roles <- list(
   mfds_transform = c("Parameters", "const Parameters &parameters"),
   plate_structure = c("Data", "const Data &data"),
   plate_term = c("double", "const Parameters &parameters, const Data &data, const arma::mat &terms, size_t term"),
-  plate_gradients = c("void", "const std::vector<std::string> &variables, std::vector<arma::mat> &gradients, const Parameters &parameters, const Data &data"))
+  plate_gradients = c("void", "const std::vector<std::string> &variables, std::vector<arma::mat> &gradients, const Parameters &parameters, const Data &data"),
+  plate_value_gradients = c("double", "const std::vector<std::string> &variables, std::vector<arma::mat> &gradients, const Parameters &parameters, const Data &data"))
 
 # The getter's name for a function used in a role
 placeholder_getter <- function(function_name, role)

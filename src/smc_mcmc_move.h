@@ -1,12 +1,15 @@
 #ifndef SMCMCMCMOVE_H
 #define SMCMCMCMOVE_H
 
+#include "particle_tuning.h"
 #include "smc.h"
 #include "ilike_header.h"
 #include "independent_proposal_kernel.h"
 
 namespace ilike
 {
+
+class ESJDAdaptor;
 
 class SMCOutput;
 class MoveOutput;
@@ -248,6 +251,21 @@ protected:
                                                               const Parameters &conditioned_on_parameters);
 
   void make_copy(const SMCMCMCMove &another);
+
+  // esjd tuning (dev/plan.md 3.19, C211): the kernels tuned (by instance
+  // index) and their adaptors (inside this move's kernels), and each
+  // particle's rows for the current move step (Particle::tuning points here;
+  // N entries, kept in place, so the pointers stay valid)
+  void prepare_tuning(SMCOutput* current_state);
+public:
+  // MCMC(…) runs its chains as one SMC move step: choose has no particles to
+  // learn from there (C224)
+  void set_chains_only(bool chains_only_in) { this->chains_only = chains_only_in; }
+protected:
+  bool chains_only = false;
+  std::vector<std::pair<int, ESJDAdaptor*>> tuners;
+  bool tuners_found = false;
+  std::vector<ParticleTuning> particle_tunings;
 
   // MCMC moves on flat generations (dev/plan.md 2.6a, G3). When every factor
   // can be restored from its adaptive summary, the moved generation is kept

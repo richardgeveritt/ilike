@@ -104,7 +104,7 @@ FactorVariables* VectorFactorVariables::copy_with_new_outputs(const Parameters &
       outputs.push_back(this->vector_factors->get_likelihood_estimator(i)->initialise(new_parameters));
       outputs.back()->simulate(new_parameters);
       outputs.back()->write_to_file_flag = false;
-      if ((this->likelihood_estimator_outputs[i]!=NULL) && (this->particle!=NULL))
+      if ((this->likelihood_estimator_outputs[i]!=NULL) && (this->particle!=NULL) && outputs.back()->carries_over())
       {
         if (changed_known < 0)
           changed_known = changed_variables(this->particle->parameters, new_parameters, changed) ? 1 : 0;
@@ -365,6 +365,40 @@ std::vector<arma::mat> VectorFactorVariables::direct_get_gradients_of_log_at(con
   return result;
 }
 
+// (C222) each factor in one pass where it can, else evaluated and asked for
+// its gradients separately; the values summed in the index's order, as
+// evaluate_likelihoods
+double VectorFactorVariables::evaluate_likelihoods_with_gradients(const Index* index,
+                                                                  const std::vector<std::string> &variables,
+                                                                  std::vector<arma::mat> &gradients)
+{
+  const Parameters &at = this->particle->parameters;
+  gradients.resize(variables.size());
+  for (size_t k = 0; k < variables.size(); ++k)
+  {
+    const arma::mat &current_parameter = at[variables[k]];
+    gradients[k].zeros(current_parameter.n_rows, current_parameter.n_cols);
+  }
+  double result = 0.0;
+  std::vector<arma::mat> factor_gradients;
+  for (auto i = index->begin(); i != index->end(); ++i)
+  {
+    LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i].get();
+    if (output == NULL)
+      continue;
+    double value;
+    if (!output->evaluate_with_gradients(at, variables, value, factor_gradients))
+    {
+      value = output->evaluate(at);
+      factor_gradients = output->get_gradients_of_log(variables, at);
+    }
+    result = result + value;
+    for (size_t k = 0; k < variables.size(); ++k)
+      gradients[k] = gradients[k] + factor_gradients[k];
+  }
+  return result;
+}
+
 arma::mat VectorFactorVariables::direct_subsample_get_gradient_of_log(const Index* index,
                                                                       const std::string &variable) const
 {
@@ -445,7 +479,7 @@ bool VectorFactorVariables::recycle_with_new_outputs(const FactorVariables* sour
       if ((output == NULL) || !output->reinitialise(new_parameters))
         return false;
       output->simulate(new_parameters);
-      if ((source->likelihood_estimator_outputs[i]!=NULL) && (source->particle!=NULL))
+      if ((source->likelihood_estimator_outputs[i]!=NULL) && (source->particle!=NULL) && output->carries_over())
       {
         if (changed_known < 0)
           changed_known = changed_variables(source->particle->parameters, new_parameters, changed) ? 1 : 0;

@@ -1,5 +1,6 @@
 #include <cmath>
 #include "in_place_element_scan_mcmc.h"
+#include "esjd_adaptor.h"
 #include "index.h"
 #include "particle.h"
 #include "vector_factor_variables.h"
@@ -314,6 +315,18 @@ bool InPlaceElementScanMCMC::scan_in_place(RandomNumberGenerator &rng,
         output->prepare_in_place(particle.parameters);
     }
 
+  // esjd (C226): the particle's row for the first element's kernel, which
+  // holds the adaptor (one multiplier of every element's step)
+  const ParticleTuning::Row* tuned_row = NULL;
+  if ((particle.tuning != NULL) && !this->rows.empty())
+  {
+    ElementRandomWalkProposalKernel* first = this->element_kernel(0);
+    if (first != NULL)
+      for (const auto &r : particle.tuning->rows)
+        if (r.instance == first->get_instance_index())
+          tuned_row = &r;
+  }
+
   for (size_t e = 0; e < this->rows.size(); ++e)
   {
     row = this->rows[e];
@@ -437,10 +450,130 @@ bool InPlaceElementScanMCMC::scan_in_place(RandomNumberGenerator &rng,
       continue;
     }
 
+    if ((this->step_kind == ElementStep::gamma_conditional) || (this->step_kind == ElementStep::invgamma_conditional) ||
+        (this->step_kind == ElementStep::beta_conditional))
+    {
+      // the log target as a function of the element, f(v) = a phi1(v) +
+      // b phi2(v) + c exactly when the conditional is in the family (C215):
+      // from f at three values inside the support (around the current value
+      // on the log or logit scale), a and b by a 2 x 2 solve
+      bool beta = (this->step_kind == ElementStep::beta_conditional);
+      bool inverse = (this->step_kind == ElementStep::invgamma_conditional);
+      auto phi = [&](double v, double &p1, double &p2) {
+        p1 = std::log(v);
+        p2 = beta ? std::log1p(-v) : (inverse ? 1.0/v : v);
+      };
+      auto target_at = [&](double v) {
+        x(row, column) = v;
+        set_new_outputs(move_index, true);
+        double value = particle.get_cached_likelihoods(move_index);
+        restore();
+        return value;
+      };
+      bool inside = beta ? ((old_value > 0.0) && (old_value < 1.0)) : (old_value > 0.0);
+      double v[3], f[3];
+      const double h = 0.5;
+      if (beta)
+      {
+        double centre = inside ? std::log(old_value) - std::log1p(-old_value) : 0.0;
+        for (int k = 0; k < 3; ++k)
+          v[k] = 1.0/(1.0 + std::exp(-(centre + double(k - 1)*h)));
+      }
+      else
+      {
+        double centre = inside ? old_value : 1.0;
+        for (int k = 0; k < 3; ++k)
+          v[k] = centre*std::exp(double(k - 1)*h);
+      }
+      for (int k = 0; k < 3; ++k)
+        f[k] = ((k == 1) && inside) ? denominator : target_at(v[k]);
+      double p[3][2];
+      for (int k = 0; k < 3; ++k)
+        phi(v[k], p[k][0], p[k][1]);
+      double m00 = p[0][0] - p[1][0], m01 = p[0][1] - p[1][1], m10 = p[2][0] - p[1][0], m11 = p[2][1] - p[1][1];
+      double r0 = f[0] - f[1], r1 = f[2] - f[1];
+      double determinant = m00*m11 - m01*m10;
+      double a = (r0*m11 - m01*r1)/determinant, b = (m00*r1 - r0*m10)/determinant;
+      // the conditional's parameters
+      double first, second;
+      const char* family = beta ? "beta" : (inverse ? "inverse gamma" : "gamma");
+      if (beta)
+      {
+        first = a + 1.0;
+        second = b + 1.0;
+      }
+      else if (inverse)
+      {
+        first = -a - 1.0; // shape
+        second = -b;      // scale
+      }
+      else
+      {
+        first = a + 1.0;  // shape
+        second = -b;      // rate
+      }
+      if (!(first > 0.0) || !(second > 0.0) || !std::isfinite(first) || !std::isfinite(second))
+        Rcpp::stop("gibbs(" + this->variable + "[…]): the log density of " + this->variable + "[" +
+                   std::to_string(row + 1) + (x.n_cols > 1 ? ", " + std::to_string(column + 1) : std::string("")) +
+                   "] given the rest is not that of a " + family + " distribution (fitted parameters " +
+                   std::to_string(first) + ", " + std::to_string(second) + ").");
+      x(row, column) = old_value;
+      double proposed;
+      if (beta)
+      {
+        double g1 = rgamma(rng, first, 1.0), g2 = rgamma(rng, second, 1.0);
+        proposed = g1/(g1 + g2);
+      }
+      else if (inverse)
+        proposed = 1.0/rgamma(rng, first, second);
+      else
+        proposed = rgamma(rng, first, second);
+      x(row, column) = proposed;
+      set_new_outputs(new_outputs_index, false);
+      double log_u = log(runif(rng));
+      for (auto &r : replaced)
+        if (std::find(move_index->begin(), move_index->end(), r.first) != move_index->end())
+          factor_variables->get_output(r.first)->evaluate(particle.parameters);
+      double numerator = particle.get_cached_likelihoods(move_index);
+      // independent proposal q(v) proportional to exp(a phi1(v) + b phi2(v))
+      // (the density's own log-Jacobian is inside a phi1)
+      double q_old = -arma::datum::inf, q_new, p1, p2;
+      if (inside)
+      {
+        phi(old_value, p1, p2);
+        q_old = a*p1 + b*p2;
+      }
+      phi(proposed, p1, p2);
+      q_new = a*p1 + b*p2;
+      // (from a current value outside the support, e.g. a starting value, the
+      // draw is accepted: the target there is 0)
+      bool accept = (numerator != -arma::datum::inf) && std::isfinite(q_new) &&
+                    ((denominator == -arma::datum::inf) || (log_u < numerator - denominator + q_old - q_new));
+      if (accept)
+      {
+        for (LikelihoodEstimatorOutput* plate : changed_plates)
+          plate->commit_in_place();
+        replaced.clear();
+        particle.target_evaluated = numerator;
+        this->refresh_cut_factors(particle);
+        this->check_carried_over_factors(particle, move_index);
+        any_accepted = true;
+      }
+      else
+      {
+        x(row, column) = old_value;
+        restore();
+      }
+      continue;
+    }
+
     ElementRandomWalkProposalKernel* kernel = adapt ? this->element_kernel(e) : NULL;
     if (kernel != NULL)
       kernel->prepare_mcmc_adaptation();
     double scale = this->step_scale(e);
+    // a particle's own multiplier of the steps (esjd in SMC, C226)
+    if (tuned_row != NULL)
+      scale = scale*tuned_row->values[0];
     double proposed = (this->step_kind == ElementStep::normal) ? rnorm(rng, old_value, scale)
                     : (this->step_kind == ElementStep::uniform) ? runif(rng, old_value - scale, old_value + scale)
                     : 1.0 - old_value;
@@ -457,6 +590,20 @@ bool InPlaceElementScanMCMC::scan_in_place(RandomNumberGenerator &rng,
 
     bool accept = (numerator != -arma::datum::inf) && (denominator != -arma::datum::inf) &&
                   (log_u < numerator - denominator);
+    if (tuned_row != NULL)
+    {
+      // the expected squared jump of this step, alpha (y - x)^2 M_kk
+      double alpha = 0.0;
+      if ((numerator != -arma::datum::inf) && (denominator != -arma::datum::inf))
+      {
+        double log_ratio = numerator - denominator;
+        alpha = (log_ratio >= 0.0) ? 1.0 : (std::isnan(log_ratio) ? 0.0 : std::exp(log_ratio));
+      }
+      double delta = proposed - old_value;
+      double jump = alpha*delta*delta*tuned_row->adaptor->metric_at(row + column*x.n_rows);
+      tuned_row->jumps = tuned_row->jumps + (std::isfinite(jump) ? jump : 0.0);
+      tuned_row->iterations = tuned_row->iterations + 1;
+    }
     if (kernel != NULL)
     {
       // the adaptation step (as MetropolisMCMC::adaptive_move_in_place):

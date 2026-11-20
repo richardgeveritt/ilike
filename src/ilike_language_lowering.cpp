@@ -1703,7 +1703,9 @@ private:
     static const std::map<std::string, std::pair<size_t, std::string>> densities = {
       {"norm", {2, "dnorm"}}, {"lnorm", {2, "dlnorm"}}, {"gamma", {2, "dgamma"}}, {"unif", {2, "dunif"}},
       {"exp", {1, "dexp"}}, {"pois", {1, "dpois"}}, {"tnorm", {4, "dtnorm"}}, {"beta", {2, "ilike_model_dbeta"}},
-      {"bern", {1, "ilike_model_dbern"}}, {"binom", {2, "ilike_model_dbinom"}}};
+      {"bern", {1, "ilike_model_dbern"}}, {"binom", {2, "ilike_model_dbinom"}},
+      {"invgamma", {2, "ilike_model_dinvgamma"}}, {"t", {3, "ilike_model_dt"}}, {"cauchy", {2, "ilike_model_dcauchy"}},
+      {"halfnorm", {1, "ilike_model_dhalfnorm"}}, {"halfcauchy", {1, "ilike_model_dhalfcauchy"}}, {"halft", {2, "ilike_model_dhalft"}}};
     if (f == "mvnorm")
     {
       if (arguments.size() != 2)
@@ -1713,7 +1715,7 @@ private:
     }
     auto found = densities.find(f);
     if (found == densities.end())
-      this->error(call, "unknown distribution " + f + " in a model statement (norm, lnorm, gamma, unif, exp, pois, tnorm, beta, bern, binom, mvnorm).");
+      this->error(call, "unknown distribution " + f + " in a model statement (norm, lnorm, gamma, invgamma, unif, exp, pois, tnorm, beta, t, cauchy, halfnorm, halfcauchy, halft, bern, binom, mvnorm).");
     if (arguments.size() != found->second.first)
       this->error(call, f + " takes " + std::to_string(found->second.first) + " argument(s).");
     std::string code = found->second.second + "(" + x;
@@ -1745,7 +1747,9 @@ private:
     static const std::map<std::string, std::string> samplers = {
       {"norm", "rnorm"}, {"lnorm", "rlnorm"}, {"gamma", "rgamma"}, {"unif", "runif"}, {"exp", "rexp"},
       {"pois", "(double)rpois"}, {"tnorm", "rtnorm"}, {"beta", "ilike_model_rbeta"},
-      {"bern", "ilike_model_rbern"}, {"binom", "ilike_model_rbinom"}};
+      {"bern", "ilike_model_rbern"}, {"binom", "ilike_model_rbinom"},
+      {"invgamma", "ilike_model_rinvgamma"}, {"t", "ilike_model_rt"}, {"cauchy", "ilike_model_rcauchy"},
+      {"halfnorm", "ilike_model_rhalfnorm"}, {"halfcauchy", "ilike_model_rhalfcauchy"}, {"halft", "ilike_model_rhalft"}};
     if (f == "mvnorm")
       return "arma::mat(rmvnorm(rng, arma::colvec(arma::vectorise(" + this->matrix_code(arguments[0], context) + ")), " +
              this->matrix_code(arguments[1], context) + "))";
@@ -2008,6 +2012,52 @@ private:
       d[0] = "(std::log(" + x + ") - R::digamma(" + v[0] + ") + R::digamma(" + v[0] + " + " + v[1] + "))";
       d[1] = "(std::log(1.0 - " + x + ") - R::digamma(" + v[1] + ") + R::digamma(" + v[0] + " + " + v[1] + "))";
     }
+    else if (f == "invgamma")
+    {
+      // log f = a log b - lgamma(a) - (a + 1) log x - b/x
+      dx = "(-(" + v[0] + " + 1.0)/" + x + " + " + v[1] + "/(" + x + "*" + x + "))";
+      d[0] = "(std::log(" + v[1] + ") - R::digamma(" + v[0] + ") - std::log(" + x + "))";
+      d[1] = "(" + v[0] + "/" + v[1] + " - 1.0/" + x + ")";
+    }
+    else if ((f == "t") || (f == "halft"))
+    {
+      // t(nu, m, s) (halft(nu, s): m = 0, x >= 0): z = (x - m)/s,
+      // log f = lgamma((nu+1)/2) - lgamma(nu/2) - log(nu pi)/2 - log s - (nu+1)/2 log(1 + z^2/nu)
+      std::string m = (f == "t") ? v[1] : "0.0", sd = (f == "t") ? v[2] : v[1];
+      prelude = "  const double ilike_z = (" + x + " - " + m + ")/" + sd + ";\n";
+      std::string q = "(" + v[0] + " + ilike_z*ilike_z)";
+      dx = "(-(" + v[0] + " + 1.0)*ilike_z/(" + sd + "*" + q + "))";
+      d[0] = "(0.5*(R::digamma((" + v[0] + " + 1.0)/2.0) - R::digamma(" + v[0] + "/2.0) - 1.0/" + v[0] +
+             " - std::log1p(ilike_z*ilike_z/" + v[0] + ") + (" + v[0] + " + 1.0)*ilike_z*ilike_z/(" + v[0] + "*" + q + ")))";
+      std::string dsd = "(-1.0/" + sd + " + (" + v[0] + " + 1.0)*ilike_z*ilike_z/(" + sd + "*" + q + "))";
+      if (f == "t")
+      {
+        d[1] = "(-" + dx + ")";
+        d[2] = dsd;
+      }
+      else
+        d[1] = dsd;
+    }
+    else if ((f == "cauchy") || (f == "halfcauchy"))
+    {
+      // cauchy(m, s) (halfcauchy(s): m = 0, x >= 0): log f = -log(pi s) - log(1 + z^2)
+      std::string m = (f == "cauchy") ? v[0] : "0.0", sd = (f == "cauchy") ? v[1] : v[0];
+      prelude = "  const double ilike_z = (" + x + " - " + m + ")/" + sd + ";\n";
+      dx = "(-2.0*ilike_z/(" + sd + "*(1.0 + ilike_z*ilike_z)))";
+      std::string dsd = "(-1.0/" + sd + " + 2.0*ilike_z*ilike_z/(" + sd + "*(1.0 + ilike_z*ilike_z)))";
+      if (f == "cauchy")
+      {
+        d[0] = "(-" + dx + ")";
+        d[1] = dsd;
+      }
+      else
+        d[0] = dsd;
+    }
+    else if (f == "halfnorm")
+    {
+      dx = "(-" + x + "/(" + v[0] + "*" + v[0] + "))";
+      d[0] = "(-1.0/" + v[0] + " + " + x + "*" + x + "/(" + v[0] + "*" + v[0] + "*" + v[0] + "))";
+    }
     else if (f == "pois")
       d[0] = "(" + x + "/" + v[0] + " - 1.0)"; // (the target is discrete)
     else if (f == "bern")
@@ -2057,26 +2107,42 @@ private:
     try
     {
       std::string body = "ilike_model_gradients ilike_G(variables, gradients, parameters);\ntry\n{\n";
+      // the log density and the gradients in one pass over the terms (C222):
+      // every term's value, and the gradients of those reading a variable asked for
+      std::string value_body = "ilike_model_gradients ilike_G(variables, gradients, parameters);\ndouble ilike_value = 0.0;\ntry\n{\n";
       for (const ModelStatement* st : statements)
       {
         std::set<std::string> reads = this->statements_read(std::vector<const ModelStatement*>(1, st));
-        if (reads.empty())
-          continue;
-        std::string guard;
-        for (const std::string &r : reads)
-          guard += (guard.empty() ? "" : " || ") + std::string("ilike_G.find(") + quoted(r) + ")";
         CodeContext context;
         context.prior = prior;
         for (const ModelLoop &loop : st->loops) context.indices.insert(loop.index);
-        std::string term = this->term_gradient_code(*st, context);
+        std::string value = "ilike_value += " + this->term_code(*st, context) + ";\n";
         CodeContext fresh;
         fresh.prior = prior;
+        if (reads.empty())
+        {
+          value_body += indented_code(this->loops_code(*st, fresh, value, ""));
+          continue;
+        }
+        std::string guard;
+        for (const std::string &r : reads)
+          guard += (guard.empty() ? "" : " || ") + std::string("ilike_G.find(") + quoted(r) + ")";
+        std::string term = this->term_gradient_code(*st, context);
         body += "  if (" + guard + ")\n  {\n" + indented_code(indented_code(this->loops_code(*st, fresh, term, ""))) + "  }\n";
+        CodeContext fresh2;
+        fresh2.prior = prior;
+        CodeContext fresh3;
+        fresh3.prior = prior;
+        value_body += "  if (" + guard + ")\n  {\n" + indented_code(indented_code(this->loops_code(*st, fresh2, value + term, ""))) +
+                      "  }\n  else\n  {\n" + indented_code(indented_code(this->loops_code(*st, fresh3, value, ""))) + "  }\n";
       }
       body += "}\ncatch (const ilike_model_outside &)\n{\n  for (arma::mat &g : gradients) g.fill(arma::datum::nan); // (density 0 at this point)\n}\n";
+      value_body += "}\ncatch (const ilike_model_outside &)\n{\n  for (arma::mat &g : gradients) g.fill(arma::datum::nan);\n"
+                    "  return -std::numeric_limits<double>::infinity(); // (density 0 at this point)\n}\nreturn ilike_value;\n";
       std::string many = "(const std::vector<std::string> &variables, std::vector<arma::mat> &gradients, const Parameters &parameters" +
                          std::string(prior ? ")" : ", const Data &data)");
       std::string code = "void " + name + "_many" + many + "\n{\n" + indented_code(body) + "}\n\n";
+      code += "double " + name + "_many_value" + many + "\n{\n" + indented_code(value_body) + "}\n\n";
       std::string signature = prior ? "(const std::string &variable, const Parameters &parameters)"
                                     : "(const std::string &variable, const Parameters &parameters, const Data &data)";
       code += "arma::mat " + name + signature + "\n{\n  std::vector<std::string> variables(1, variable);\n  std::vector<arma::mat> gradients;\n  " +
@@ -2085,7 +2151,9 @@ private:
         code += "arma::mat " + name + "_plate(const std::string &variable, const Parameters &parameters, const Data &data)\n{\n"
                 "  return " + name + "(variable, parameters);\n}\n\n"
                 "void " + name + "_many_plate(const std::vector<std::string> &variables, std::vector<arma::mat> &gradients, "
-                "const Parameters &parameters, const Data &data)\n{\n  " + name + "_many(variables, gradients, parameters);\n}\n\n";
+                "const Parameters &parameters, const Data &data)\n{\n  " + name + "_many(variables, gradients, parameters);\n}\n\n"
+                "double " + name + "_many_value_plate(const std::vector<std::string> &variables, std::vector<arma::mat> &gradients, "
+                "const Parameters &parameters, const Data &data)\n{\n  return " + name + "_many_value(variables, gradients, parameters);\n}\n\n";
       this->deferred_function_code += code;
       return name;
     }
@@ -2783,26 +2851,23 @@ struct ilike_model_gradients
     return (found == this->index.end()) ? NULL : &this->values[found->second];
   }
 };
-// a phi(a) and phi(a) for the truncated normal, 0 at infinite limits
-inline double ilike_model_phi(double a)
-{
-  return std::isfinite(a) ? R::dnorm(a, 0.0, 1.0, 0) : 0.0;
-}
-inline double ilike_model_a_phi(double a)
-{
-  return std::isfinite(a) ? a*R::dnorm(a, 0.0, 1.0, 0) : 0.0;
-}
 // the partial derivatives of log dtnorm(x, m, s, l, u) with respect to x, m, s, l, u
 inline arma::colvec ilike_model_dtnorm_partials(double x, double m, double s, double l, double u)
 {
+  // phi(alpha)/Z and phi(beta)/Z as exp(log phi - log Z), with log Z from
+  // log_normal_mass: accurate when both limits are far out on one side (C218;
+  // Z itself would underflow or cancel there)
   double alpha = (l - m)/s, beta = (u - m)/s;
-  double Z = R::pnorm(beta, 0.0, 1.0, 1, 0) - R::pnorm(alpha, 0.0, 1.0, 1, 0);
+  double log_Z = log_normal_mass(alpha, beta);
+  double ra = std::isfinite(alpha) ? std::exp(R::dnorm(alpha, 0.0, 1.0, 1) - log_Z) : 0.0;
+  double rb = std::isfinite(beta) ? std::exp(R::dnorm(beta, 0.0, 1.0, 1) - log_Z) : 0.0;
+  double a_ra = std::isfinite(alpha) ? alpha*ra : 0.0, b_rb = std::isfinite(beta) ? beta*rb : 0.0;
   arma::colvec d(5);
   d[0] = -(x - m)/(s*s);
-  d[1] = (x - m)/(s*s) + (ilike_model_phi(beta) - ilike_model_phi(alpha))/(s*Z);
-  d[2] = -1.0/s + (x - m)*(x - m)/(s*s*s) + (ilike_model_a_phi(beta) - ilike_model_a_phi(alpha))/(s*Z);
-  d[3] = ilike_model_phi(alpha)/(s*Z);
-  d[4] = -ilike_model_phi(beta)/(s*Z);
+  d[1] = (x - m)/(s*s) + (rb - ra)/s;
+  d[2] = -1.0/s + (x - m)*(x - m)/(s*s*s) + (b_rb - a_ra)/s;
+  d[3] = ra/s;
+  d[4] = -rb/s;
   return d;
 }
 inline double ilike_model_rbeta(RandomNumberGenerator &rng, double a, double b)
@@ -2826,6 +2891,69 @@ inline double ilike_model_dbern(double x, double p)
   if (x == 1.0) return std::log(p);
   if (x == 0.0) return std::log(1.0 - p);
   return -std::numeric_limits<double>::infinity();
+}
+// (C214) invgamma(a, b): density b^a / Gamma(a) x^(-a-1) exp(-b/x), x > 0
+// (1/x ~ gamma(a, rate b)); t(nu, m, s): Student t, location m, scale s;
+// cauchy(m, s); halfnorm(s), halfcauchy(s), halft(nu, s): twice the
+// density of the zero-centred distribution on x >= 0
+inline double ilike_model_dinvgamma(double x, double a, double b)
+{
+  if (x <= 0.0 || a <= 0.0 || b <= 0.0) return -std::numeric_limits<double>::infinity();
+  return a*std::log(b) - std::lgamma(a) - (a + 1.0)*std::log(x) - b/x;
+}
+inline double ilike_model_dt(double x, double nu, double m, double s)
+{
+  if (nu <= 0.0 || s <= 0.0) return -std::numeric_limits<double>::infinity();
+  double z = (x - m)/s;
+  return std::lgamma((nu + 1.0)/2.0) - std::lgamma(nu/2.0) - 0.5*std::log(nu*3.14159265358979323846) - std::log(s) -
+         0.5*(nu + 1.0)*std::log1p(z*z/nu);
+}
+inline double ilike_model_dcauchy(double x, double m, double s)
+{
+  if (s <= 0.0) return -std::numeric_limits<double>::infinity();
+  double z = (x - m)/s;
+  return -std::log(3.14159265358979323846*s) - std::log1p(z*z);
+}
+inline double ilike_model_dhalfnorm(double x, double s)
+{
+  if (x < 0.0 || s <= 0.0) return -std::numeric_limits<double>::infinity();
+  return std::log(2.0) + dnorm(x, 0.0, s);
+}
+inline double ilike_model_dhalfcauchy(double x, double s)
+{
+  if (x < 0.0) return -std::numeric_limits<double>::infinity();
+  return std::log(2.0) + ilike_model_dcauchy(x, 0.0, s);
+}
+inline double ilike_model_dhalft(double x, double nu, double s)
+{
+  if (x < 0.0) return -std::numeric_limits<double>::infinity();
+  return std::log(2.0) + ilike_model_dt(x, nu, 0.0, s);
+}
+inline double ilike_model_rinvgamma(RandomNumberGenerator &rng, double a, double b)
+{
+  return 1.0/rgamma(rng, a, b);
+}
+inline double ilike_model_rt(RandomNumberGenerator &rng, double nu, double m, double s)
+{
+  // a normal over the square root of a chi-squared on nu degrees of freedom, divided by nu
+  double z = rnorm(rng, 0.0, 1.0), w = rgamma(rng, nu/2.0, 0.5);
+  return m + s*z/std::sqrt(w/nu);
+}
+inline double ilike_model_rcauchy(RandomNumberGenerator &rng, double m, double s)
+{
+  return m + s*std::tan(3.14159265358979323846*(runif(rng) - 0.5));
+}
+inline double ilike_model_rhalfnorm(RandomNumberGenerator &rng, double s)
+{
+  return std::abs(rnorm(rng, 0.0, s));
+}
+inline double ilike_model_rhalfcauchy(RandomNumberGenerator &rng, double s)
+{
+  return std::abs(ilike_model_rcauchy(rng, 0.0, s));
+}
+inline double ilike_model_rhalft(RandomNumberGenerator &rng, double nu, double s)
+{
+  return std::abs(ilike_model_rt(rng, nu, 0.0, s));
 }
 inline void ilike_model_read(std::vector<double> &reads, double term, double variable, double row, double col)
 {
@@ -3089,12 +3217,20 @@ inline double ilike_model_dbinom(double x, double n, double p)
         entry.push_back(this->placeholder(plate.gradient, "evaluate_gradient_log_likelihood"), "gradient");
         // the gradients of several variables in one pass (C204): f_many, or
         // for the prior f_many_plate (f_plate's counterpart)
-        std::string many = plate.gradient;
+        std::string many = plate.gradient, many_value;
         if (many.size() > 6 && many.compare(many.size() - 6, 6, "_plate") == 0)
+        {
+          many_value = many.substr(0, many.size() - 6) + "_many_value_plate";
           many = many.substr(0, many.size() - 6) + "_many_plate";
+        }
         else
+        {
+          many_value = many + "_many_value";
           many = many + "_many";
+        }
         entry.push_back(this->placeholder(many, "plate_gradients"), "gradients");
+        // and the value with them, in one pass (C222)
+        entry.push_back(this->placeholder(many_value, "plate_value_gradients"), "value_gradients");
       }
       RecipeValue variables = RecipeValue::list();
       for (const std::string &name : this->plate_variable_names)
@@ -3523,7 +3659,7 @@ inline double ilike_model_dbinom(double x, double n, double p)
       {
         own = true;
         if ((f != "norm") && (f != "mvnorm"))
-          return {&st, x + "'s distribution is " + f + " (a normal full conditional needs norm or mvnorm)"};
+          return {&st, x + "'s distribution is " + f + " (gibbs on a continuous variable needs norm or mvnorm, for a normal full conditional, or gamma, invgamma or beta, for a conjugate one)"};
         for (size_t k = 0; k < arguments.size(); ++k)
           if (this->reads_name(arguments[k], x))
             return {&st, "the arguments of " + x + "'s distribution depend on " + x};
@@ -3539,6 +3675,200 @@ inline double ilike_model_dbinom(double x, double n, double p)
     }
     if (!own)
       return {NULL, x + " has no distribution in the model statements"};
+    return {NULL, ""};
+  }
+
+  // Whether an expression is c x^power with c not depending on x (C215):
+  // x itself (or an element of it, indices not depending on x) has power 1;
+  // products and quotients with x-free expressions keep the power, negation
+  // too; 1/e negates it, sqrt(e) halves it, pow(e, k) and e^k with k a number
+  // known when compiling multiply it; through deterministic nodes. `why` says
+  // why not.
+  bool power_of(const RecipeValue &expression, const std::string &x, double &power, std::string &why)
+  {
+    if (!this->reads_name(expression, x))
+    {
+      power = 0.0;
+      return true;
+    }
+    std::string kind = kind_of(expression);
+    if (kind == "name" || kind == "index")
+    {
+      std::string name = (kind == "name") ? expression["name"].as_string() : expression["target"]["name"].as_string();
+      if (kind == "index")
+        for (size_t k = 0; k < expression["indices"].size(); ++k)
+          if (this->reads_name(expression["indices"][k], x))
+          {
+            why = "an index depends on " + x;
+            return false;
+          }
+      if ((name != x) && this->is_deterministic(name))
+        return this->power_of(this->deterministic_statement(name).value, x, power, why);
+      power = 1.0;
+      return true;
+    }
+    if (kind == "unary")
+      return this->power_of(expression["operand"], x, power, why);
+    double k;
+    if (kind == "binary")
+    {
+      std::string op = expression["operator"].as_string();
+      const RecipeValue &left = expression["left"], &right = expression["right"];
+      bool l = this->reads_name(left, x), r = this->reads_name(right, x);
+      if ((op == "*") || (op == "/"))
+      {
+        if (l && r)
+        {
+          why = "both sides of a " + std::string(op == "*" ? "product" : "quotient") + " depend on " + x;
+          return false;
+        }
+        if (!this->power_of(l ? left : right, x, power, why))
+          return false;
+        if ((op == "/") && r)
+          power = -power;
+        return true;
+      }
+      if ((op == "^") && !r && this->compile_time_number(right, k))
+      {
+        if (!this->power_of(left, x, power, why))
+          return false;
+        power = power*k;
+        return true;
+      }
+      why = (op == "^") ? "the power of " + x + " is not a number known when compiling"
+                        : x + " is in a sum or difference";
+      return false;
+    }
+    if (kind == "call")
+    {
+      std::string f = expression["function"].as_string();
+      const RecipeValue &arguments = expression["arguments"];
+      if ((f == "sqrt") && (arguments.size() == 1) && this->power_of(arguments[0], x, power, why))
+      {
+        power = power/2.0;
+        return true;
+      }
+      if ((f == "pow") && (arguments.size() == 2) && !this->reads_name(arguments[1], x) &&
+          this->compile_time_number(arguments[1], k) && this->power_of(arguments[0], x, power, why))
+      {
+        power = power*k;
+        return true;
+      }
+      why = x + " is inside " + f + "(…)";
+      return false;
+    }
+    why = "it is not a multiple of a power of " + x;
+    return false;
+  }
+
+  // The conjugate families of gibbs on a positive or (0, 1) variable (C215):
+  // x's own distribution gamma, invgamma or beta (arguments not depending on
+  // x), and every other term depending on x one whose log density in x is in
+  // the family's span, so that log p(x | rest) = a phi1(x) + b phi2(x) + c
+  // exactly:
+  //   gamma (log x, x): norm/lnorm(m, s) with s = c x^(-1/2) (a precision);
+  //     pois(c x); exp(c x); gamma(k, c x) (a rate);
+  //   invgamma (log x, 1/x): norm/lnorm(m, s) with s = c x^(1/2) (a
+  //     variance); pois(c/x); exp(c/x); gamma(k, c/x);
+  //   beta (log x, log(1 - x)): bern(x), binom(n, x).
+  // Targets, loops, indices and the other arguments must not depend on x.
+  // `family` is gamma, invgamma or beta (or empty: x's distribution is none of
+  // these); the answer "" or why not.
+  std::pair<const ModelStatement*, std::string> conjugate_problem(const std::string &x, std::string &family)
+  {
+    family.clear();
+    for (const ModelStatement &st : this->model_statements)
+      if ((st.op == "~") && !st.observed && (st.variable == x))
+      {
+        std::string f = st.value["function"].as_string();
+        if ((f == "gamma") || (f == "invgamma") || (f == "beta"))
+          family = f;
+        break;
+      }
+    if (family.empty())
+      return {NULL, ""};
+    for (const ModelStatement &st : this->model_statements)
+    {
+      if (st.op == "<-")
+        continue;
+      if (!this->statements_read(std::vector<const ModelStatement*>(1, &st)).count(x))
+        continue;
+      if (st.op == "+=")
+        return {&st, "the term of factor " + st.variable + " depends on " + x};
+      std::string f = st.value["function"].as_string();
+      const RecipeValue &arguments = st.value["arguments"];
+      for (const ModelLoop &loop : st.loops)
+        if (this->reads_name(loop.from, x) || this->reads_name(loop.to, x))
+          return {&st, "a loop's range depends on " + x};
+      for (size_t k = 0; k < st.indices.size(); ++k)
+        if (this->reads_name(st.indices[k], x))
+          return {&st, "an index depends on " + x};
+      if (!st.observed && (st.variable == x))
+      {
+        for (size_t k = 0; k < arguments.size(); ++k)
+          if (this->reads_name(arguments[k], x))
+            return {&st, "the arguments of " + x + "'s distribution depend on " + x};
+        continue;
+      }
+      // the argument through which x enters, and the power it must have
+      int which = -1;
+      double wanted = 0.0;
+      std::string role;
+      if (family == "beta")
+      {
+        if (f == "bern")
+          which = 0;
+        else if (f == "binom")
+          which = 1;
+        else
+          return {&st, "this term's distribution is " + f + " (with a beta distribution, " + x +
+                       " is conjugate for bern(" + x + ") and binom(n, " + x + ") terms)"};
+        if (kind_of(arguments[which]) != "name" || arguments[which]["name"].as_string() != x)
+        {
+          const RecipeValue &a = arguments[which];
+          bool element = (kind_of(a) == "index") && (kind_of(a["target"]) == "name") && (a["target"]["name"].as_string() == x);
+          if (!element)
+            return {&st, "the probability must be " + x + " itself for a beta full conditional"};
+        }
+      }
+      else
+      {
+        bool gamma = (family == "gamma");
+        if ((f == "norm") || (f == "lnorm"))
+        {
+          which = 1;
+          wanted = gamma ? -0.5 : 0.5;
+          role = gamma ? "the standard deviation must be c/sqrt(" + x + ") (" + x + " a precision)"
+                       : "the standard deviation must be c*sqrt(" + x + ") (" + x + " a variance)";
+          if (this->reads_name(arguments[0], x))
+            return {&st, x + " is in the mean"};
+        }
+        else if ((f == "pois") || (f == "exp"))
+        {
+          which = 0;
+          wanted = gamma ? 1.0 : -1.0;
+          role = gamma ? "the rate must be c*" + x : "the rate must be c/" + x;
+        }
+        else if (f == "gamma")
+        {
+          which = 1;
+          wanted = gamma ? 1.0 : -1.0;
+          role = gamma ? "the rate must be c*" + x : "the rate must be c/" + x;
+          if (this->reads_name(arguments[0], x))
+            return {&st, x + " is in the shape"};
+        }
+        else
+          return {&st, "this term's distribution is " + f + " (with a" + std::string(gamma ? " gamma" : "n invgamma") +
+                       " distribution, " + x + " is conjugate for norm and lnorm terms through the standard deviation, "
+                       "and pois, exp and gamma terms through the rate)"};
+        double power;
+        std::string why;
+        if (!this->power_of(arguments[which], x, power, why))
+          return {&st, role + ": " + why};
+        if (power != wanted)
+          return {&st, role};
+      }
+    }
     return {NULL, ""};
   }
 
@@ -3620,11 +3950,59 @@ inline double ilike_model_dbinom(double x, double n, double p)
     {
       // gibbs(mu) on a whole variable: a scalar, as its element mu[1] (C206)
       std::string name = element["name"].as_string();
+      bool vector = false, discrete = false;
       for (const ModelStatement &st : this->model_statements)
-        if ((st.op == "~") && !st.observed && (st.variable == name) &&
-            ((st.indices.size() > 0) || st.value["function"].as_string() == "mvnorm"))
-          this->error(call, "gibbs(" + name + ") moves a scalar; for the elements of " + name +
-                      ", write for (j in 1:J) move m = gibbs(" + name + "[j]).");
+        if ((st.op == "~") && !st.observed && (st.variable == name))
+        {
+          std::string f = st.value["function"].as_string();
+          if ((st.indices.size() > 0) || (f == "mvnorm"))
+            vector = true;
+          if ((f == "bern") || (f == "binom") || (f == "pois"))
+            discrete = true;
+        }
+      if (vector)
+      {
+        // gibbs(beta) on a whole vector (C216): a draw from the block's
+        // normal full conditional, if the model statements make it one,
+        // lowered as metropolis_hastings(normal_block(beta), …)
+        if (discrete || !support.is_null())
+          this->error(call, "gibbs(" + name + ") on a whole vector is for a normal full conditional; for the elements of a "
+                      "discrete " + name + ", write for (j in 1:J) move m = gibbs(" + name + "[j]).");
+        std::pair<const ModelStatement*, std::string> problem = this->normal_conditional_problem(name);
+        if (!problem.second.empty())
+        {
+          std::string message = "gibbs(" + name + "): the full conditional of the vector " + name + " is not normal: " +
+                                problem.second + ". Use gibbs on its elements in a loop, if each element's conditional "
+                                "is conjugate, or a metropolis move.";
+          if (problem.first != NULL)
+            this->error(problem.first->node, message);
+          this->error(call, message);
+        }
+        if (!arguments.has("factors"))
+        {
+          std::vector<size_t> numbers = this->automatic_factor_index(name);
+          size_t total = this->factor_entries.size();
+          for (size_t n = 1; n <= total; ++n)
+            if ((numbers.empty() || std::find(numbers.begin(), numbers.end(), n) != numbers.end()) &&
+                !this->generated_factor_reads.count(n))
+              this->error(call, "gibbs(" + name + "): factor " + std::to_string(n) + " is not written as model "
+                          "statements, so whether its full conditional is normal is not known; if it does not "
+                          "depend on " + name + ", list the factors the move uses with factors = [...].");
+        }
+        RecipeValue inner = RecipeValue::list();
+        inner.push_back(element, "");
+        RecipeValue proposal_call = call_with(call, "normal_block", inner);
+        RecipeValue outer = RecipeValue::list();
+        outer.push_back(proposal_call, "");
+        for (const std::string &key : {"factors", "cut_factors"})
+          if (arguments.has(key))
+            outer.push_back(arguments.named[key], key);
+        this->lowering_gibbs_block = true;
+        Move move = this->lower_move(move_statement, move_statement["target"]["name"].as_string(),
+                                     call_with(call, "metropolis_hastings", outer));
+        this->lowering_gibbs_block = false;
+        return move;
+      }
       RecipeValue one = RecipeValue::list();
       one.push_back(RecipeValue("number"), "expression");
       one.push_back(RecipeValue(1.0), "value");
@@ -3732,13 +4110,16 @@ inline double ilike_model_dbinom(double x, double n, double p)
           }
         if (states.empty())
         {
-          // not discrete: a normal full conditional, if the model statements
-          // make it one (C206)
-          std::pair<const ModelStatement*, std::string> problem = this->normal_conditional_problem(variable);
+          // not discrete: a normal full conditional (C206), or a gamma,
+          // inverse gamma or beta one (C215), if the model statements make it one
+          std::string family;
+          std::pair<const ModelStatement*, std::string> problem = this->conjugate_problem(variable, family);
+          if (family.empty())
+            problem = this->normal_conditional_problem(variable);
           if (!problem.second.empty())
           {
             std::string message = "gibbs(" + variable + (whole_scalar ? "" : "[…]") + "): " + variable + " is not discrete (bern, binom, or values = [...]), "
-                                  "and its full conditional is not normal: " + problem.second +
+                                  "and its full conditional is not " + (family.empty() ? std::string("normal") : family) + ": " + problem.second +
                                   ". Use a metropolis move instead.";
             if (problem.first != NULL)
               this->error(problem.first->node, message);
@@ -3753,10 +4134,10 @@ inline double ilike_model_dbinom(double x, double n, double p)
               if ((numbers.empty() || std::find(numbers.begin(), numbers.end(), n) != numbers.end()) &&
                   !this->generated_factor_reads.count(n))
                 this->error(call, "gibbs(" + variable + (whole_scalar ? "" : "[…]") + "): factor " + std::to_string(n) + " is not written as model "
-                            "statements, so whether its density is normal in " + variable + " is not known; if it does not "
+                            "statements, so whether its full conditional is conjugate is not known; if it does not "
                             "depend on " + variable + ", list the factors the move uses with factors = [...].");
           }
-          type = "gibbs_normal";
+          type = family.empty() ? "gibbs_normal" : "gibbs_" + family;
         }
       }
     }
@@ -3817,8 +4198,10 @@ inline double ilike_model_dbinom(double x, double n, double p)
       if (arguments.has("smc_adapt"))
       {
         const RecipeValue &adaptor = arguments.named["smc_adapt"];
-        if (kind_of(adaptor) != "call" || this->builtin_name(adaptor) != "gaussian")
-          this->error(adaptor, "moves on elements are set from SMC particles with smc_adapt = gaussian(c).");
+        if (kind_of(adaptor) != "call" || ((this->builtin_name(adaptor) != "gaussian") && (this->builtin_name(adaptor) != "esjd")))
+          this->error(adaptor, "moves on elements are set from SMC particles with smc_adapt = gaussian(c) or esjd(scale = [lower, upper]).");
+        if ((this->builtin_name(adaptor) == "esjd") && (type == "flip"))
+          this->error(adaptor, "esjd tunes the step of norm_rw and unif_rw on elements; flip has none.");
         elements.push_back(this->builtin_node(adaptor, true, variable), "smc_adapt");
       }
     }
@@ -3928,7 +4311,8 @@ inline double ilike_model_dbinom(double x, double n, double p)
     {
       std::string f = call["function"].as_string();
       const RecipeValue &arguments = call["arguments"];
-      if ((f == "gamma") || (f == "lnorm") || (f == "exp"))
+      if ((f == "gamma") || (f == "lnorm") || (f == "exp") || (f == "invgamma") || (f == "halfnorm") ||
+          (f == "halfcauchy") || (f == "halft"))
         return transform_item(variable, "log", 0.0, 0.0);
       if (f == "beta")
         return transform_item(variable, "logit", 0.0, 1.0);
@@ -4039,6 +4423,7 @@ inline double ilike_model_dbinom(double x, double n, double p)
   }
 
   bool lowering_nuts = false;
+  bool lowering_gibbs_block = false;
 
   Move lower_move(const RecipeValue &statement, const std::string &name, const RecipeValue &call)
   {
@@ -4095,11 +4480,91 @@ inline double ilike_model_dbinom(double x, double n, double p)
     std::string variable;
     BuiltinRole role = (p == "m") ? BuiltinRole::MProposal : (p == "mh") ? BuiltinRole::MHProposal
                      : (p == "imh") ? BuiltinRole::IMHProposal : BuiltinRole::UnadjustedProposal;
-    if (kind_of(proposal) == "call" && proposal["function"].as_string() != "density" && !this->is_function_value(proposal))
+    if ((kind_of(proposal) == "call") && (proposal["function"].as_string() == "choose") && proposal["namespace"].as_string().empty())
+    {
+      // choose([q_1, ..., q_K], cost = [...], change = 0.1, smc_adapt = [...])
+      // (dev/plan.md 3.19 stage S4, C224): each particle in SMC moves with one
+      // of the proposals, the choice tuned from the particles' jumps
+      if (p != "mh")
+        this->error(proposal, "choose([...]) goes in metropolis_hastings(…).");
+      if (arguments.has("smc_adapt"))
+        this->error(arguments.named["smc_adapt"], "with choose, give each proposal's smc_adapt inside it: "
+                    "choose([...], smc_adapt = [esjd(…), none, …]).");
+      if (arguments.has("adapt"))
+        this->error(arguments.named["adapt"], "choose's proposals are tuned from the SMC particles (smc_adapt inside choose), not along the chain.");
+      Arguments choice = this->split_arguments(proposal);
+      this->allow_only(proposal, choice, {"cost", "change", "smc_adapt"}, 1);
+      if (choice.positional.empty() || (kind_of(choice.positional[0]) != "vector"))
+        this->error(proposal, "choose takes a list of proposals: choose([norm_rw(theta, 1), hmc(theta, step = 0.1, steps = 10)]).");
+      const RecipeValue &items = choice.positional[0]["elements"];
+      if (items.size() < 2)
+        this->error(proposal, "choose needs at least two proposals.");
+      RecipeValue components = RecipeValue::list();
+      for (size_t k = 0; k < items.size(); ++k)
+      {
+        const RecipeValue &item = items[k];
+        if ((kind_of(item) != "call") || this->is_function_value(item))
+          this->error(item, "choose's proposals are built-in proposals (norm_rw, langevin, hmc, …).");
+        std::string type = this->builtin_name(item);
+        if ((type == "choose") || (type == "nuts") || (type == "normal_block"))
+          this->error(item, "choose's proposals are built-in proposals of metropolis_hastings (norm_rw, langevin, hmc, …).");
+        if (!role_exists(type, BuiltinRole::MHProposal))
+          find_builtin(type, BuiltinRole::MHProposal);
+        RecipeValue node = this->builtin_node(item, true, "", true);
+        std::string moved = node["variables"].as_string();
+        if (variable.empty())
+          variable = moved;
+        else if (moved != variable)
+          this->error(item, "choose's proposals move the same variables.");
+        components.push_back(node, "");
+      }
+      RecipeValue node = RecipeValue::list();
+      node.push_back(RecipeValue("choose"), "type");
+      node.push_back(RecipeValue(variable), "variables");
+      node.push_back(components, "components");
+      if (choice.has("smc_adapt"))
+      {
+        const RecipeValue &list = choice.named["smc_adapt"];
+        if ((kind_of(list) != "vector") || (list["elements"].size() != items.size()))
+          this->error(list, "choose's smc_adapt lists one adaptor per proposal (none for a proposal without one).");
+        RecipeValue adaptors = RecipeValue::list();
+        for (size_t k = 0; k < list["elements"].size(); ++k)
+        {
+          const RecipeValue &item = list["elements"][k];
+          if ((kind_of(item) == "name") && (item["name"].as_string() == "none"))
+            adaptors.push_back(RecipeValue::list(), "");
+          else
+            adaptors.push_back(this->builtin_node(item, true, variable), "");
+        }
+        node.push_back(adaptors, "component_smc_adaptors");
+      }
+      if (choice.has("cost"))
+      {
+        arma::mat cost;
+        if (!this->numeric(choice.named["cost"], cost) || (cost.n_elem != items.size()) || !(cost.min() > 0.0))
+          this->error(choice.named["cost"], "choose's cost lists a positive number per proposal.");
+        node.push_back(RecipeValue(std::vector<double>(cost.begin(), cost.end())), "cost");
+      }
+      if (choice.has("change"))
+      {
+        double change;
+        if (!this->compile_time_number(choice.named["change"], change) || !(change >= 0.0) || !(change <= 1.0))
+          this->error(choice.named["change"], "choose's change is a probability.");
+        node.push_back(RecipeValue(change), "change");
+      }
+      entry.push_back(node, p + "_proposal");
+      RecipeValue transform = this->move_transform(arguments.has("transform") ? &arguments.named["transform"] : NULL,
+                                                   variable, false);
+      if (!transform.is_null())
+        entry.push_back(transform, "transform");
+    }
+    else if (kind_of(proposal) == "call" && proposal["function"].as_string() != "density" && !this->is_function_value(proposal))
     {
       std::string type = this->builtin_name(proposal);
       if ((type == "nuts") && !this->lowering_nuts)
         this->error(proposal, "nuts is a move of its own, not a proposal: move m = nuts(x, step = …).");
+      if ((type == "normal_block") && !this->lowering_gibbs_block)
+        this->error(proposal, "normal_block is not a proposal to write: gibbs on a vector is move m = gibbs(beta).");
       if (!role_exists(type, role))
         // the registry's message: what it is, and where it may be used
         find_builtin(type, role);
@@ -4178,7 +4643,29 @@ inline double ilike_model_dbinom(double x, double n, double p)
       const RecipeValue &adaptor = arguments.named["smc_adapt"];
       if (variable.empty())
         this->error(adaptor, kind + ": smc_adapt needs a built-in proposal (it sets its covariance).");
-      entry.push_back(this->builtin_node(adaptor, true, variable), "smc_adaptor");
+      if (this->lowering_nuts)
+      {
+        // (pretune chooses a number of leapfrog steps, which nuts does not have, C223)
+        std::vector<RecipeValue> items;
+        if (kind_of(adaptor) == "vector")
+          for (size_t k = 0; k < adaptor["elements"].size(); ++k)
+            items.push_back(adaptor["elements"][k]);
+        else
+          items.push_back(adaptor);
+        for (const RecipeValue &item : items)
+          if ((kind_of(item) == "call") && (this->builtin_name(item) == "pretune"))
+            this->error(item, "pretune tunes hmc's step and number of steps; for nuts, use smc_adapt = esjd(step = [lower, upper]).");
+      }
+      if (kind_of(adaptor) == "vector")
+      {
+        // several, applied in order: smc_adapt = [gaussian(2.38), esjd(…)] (C211)
+        RecipeValue list = RecipeValue::list();
+        for (size_t k = 0; k < adaptor["elements"].size(); ++k)
+          list.push_back(this->builtin_node(adaptor["elements"][k], true, variable));
+        entry.push_back(list, "smc_adaptor");
+      }
+      else
+        entry.push_back(this->builtin_node(adaptor, true, variable), "smc_adaptor");
     }
     move.entry = entry;
     return move;
@@ -4321,6 +4808,10 @@ inline double ilike_model_dbinom(double x, double n, double p)
   {
     RecipeValue until;
     RecipeValue adaptor = this->without_until(adaptor_with_until, until);
+    if (until.is_null() && (kind_of(adaptor) == "call") && (this->builtin_name(adaptor) == "dual_averaging"))
+      this->error(adaptor_with_until, "dual_averaging needs until = criterion (e.g. dual_averaging(until = iterations(1000))): "
+                  "its iterates do not settle, so the step is fixed at their average when adaptation stops; "
+                  "to adapt throughout the run, use scale().");
     if (!until.is_null())
     {
       if (this->builtin_name(adaptor) == "averaged")

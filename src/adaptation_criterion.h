@@ -45,6 +45,9 @@ public:
 
   // after adaptation step number `steps`, with that step's acceptance probability
   bool met(const MCMCAdaptor &adaptor, double acceptance_probability, size_t steps);
+  // iterations(n): n; otherwise 0 (the length of the warm-up is not known in
+  // advance; C220)
+  size_t known_iterations() const { return (this->kind == Kind::iterations) ? this->n : 0; }
 
 private:
 

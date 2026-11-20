@@ -39,6 +39,12 @@ typedef void (*PlateGradientsPtr)(const std::vector<std::string> &variables,
                                   const Parameters &parameters,
                                   const Data &data);
 
+// the factor's value and the gradients of several variables in one pass (C222)
+typedef double (*PlateValueGradientsPtr)(const std::vector<std::string> &variables,
+                                         std::vector<arma::mat> &gradients,
+                                         const Parameters &parameters,
+                                         const Data &data);
+
 class PlateLikelihoodEstimatorOutput;
 
 class PlateLikelihoodEstimator : public ExactLikelihoodEstimator
@@ -67,6 +73,7 @@ public:
   size_t number_of_terms() const { return this->terms.n_rows; }
   void set_gradient(PlateGradientPtr gradient_in) { this->gradient_function = gradient_in; }
   void set_gradients(PlateGradientsPtr gradients_in) { this->gradients_function = gradients_in; }
+  void set_value_gradients(PlateValueGradientsPtr value_gradients_in) { this->value_gradients_function = value_gradients_in; }
 
 protected:
 
@@ -83,6 +90,7 @@ protected:
   PlateTermPtr term_function;
   PlateGradientPtr gradient_function = NULL;
   PlateGradientsPtr gradients_function = NULL;
+  PlateValueGradientsPtr value_gradients_function = NULL;
   std::vector<std::string> variables;
   std::string name;
   // check_factor_index: after a partial evaluation, recompute every term and

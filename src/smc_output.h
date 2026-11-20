@@ -103,6 +103,10 @@ public:
   void forget_you_were_already_written_to_file();
   
   void terminate();
+
+  // The divergent iterations after warm-up, and all iterations after warm-up,
+  // over the chains of the last generation (nuts; C212).
+  void count_divergences(size_t &divergent, size_t &iterations) const;
   
   std::deque<double> times;
   

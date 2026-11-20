@@ -60,7 +60,12 @@ void MCMCAdaptor::adapt_unless_stopped(const AdaptationStep &step)
   {
     this->stopped = true;
     this->stopped_at_step = this->steps;
+    this->on_stop();
   }
+}
+
+void MCMCAdaptor::on_stop()
+{
 }
 
 bool MCMCAdaptor::watched(const std::string &name, std::vector<double> &values) const

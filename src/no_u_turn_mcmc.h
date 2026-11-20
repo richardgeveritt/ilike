@@ -62,13 +62,24 @@ public:
   Particle subsample_move(RandomNumberGenerator &rng,
                           const Particle &particle) const;
 
-  // one NUTS transition, with the adaptation statistic, the depth reached and
-  // whether a divergence stopped it
+  // per-iteration diagnostics (C212): tree_depth, leapfrog_steps, divergent,
+  // accept_stat
+  void diagnostic_names(std::vector<std::string> &names) const;
+  void diagnostic_move_in_place(RandomNumberGenerator &rng,
+                                Particle &particle,
+                                Particle &scratch,
+                                bool adapting,
+                                double* row);
+  bool warming_up() const;
+
+  // one NUTS transition, with the adaptation statistic, the depth reached,
+  // whether a divergence stopped it and the number of leapfrog steps taken
   Particle transition(RandomNumberGenerator &rng,
                       const Particle &particle,
                       double &statistic,
                       size_t &depth,
-                      bool &divergent) const;
+                      bool &divergent,
+                      size_t &leapfrog_steps) const;
 
 protected:
 
@@ -91,7 +102,47 @@ protected:
     double alpha;
     double n_alpha;
     bool divergent;
+    size_t steps; // leapfrog steps taken in building it
   };
+
+  // Stan's variant (C221; Betancourt 2017, arXiv:1701.02434): states
+  // weighted by exp(H0 - H) (log_w: the log of the subtree's total weight),
+  // the candidate drawn in proportion to the weights inside subtrees; rho the
+  // sum of the subtree's momenta, for the generalised criterion
+  struct WeightedTree
+  {
+    State minus;
+    State plus;
+    State candidate;
+    double log_w;
+    arma::colvec rho;
+    bool s;
+    double sum_alpha;
+    size_t steps;
+    bool divergent;
+  };
+
+  WeightedTree build_weighted_tree(RandomNumberGenerator &rng,
+                                   const Particle &particle,
+                                   const Parameters &base,
+                                   const State &from,
+                                   int direction,
+                                   size_t depth,
+                                   double eps,
+                                   double joint0) const;
+  // the generalised criterion on a trajectory with ends minus, plus and
+  // summed momenta rho: p#- . rho > 0 and p#+ . rho > 0 (p# = C p)
+  bool criterion(const arma::colvec &r_minus, const arma::colvec &r_plus, const arma::colvec &rho) const;
+  // whether two adjacent trajectories (left earlier in time) may be merged:
+  // the criterion on the whole, and Stan's two checks across the join
+  bool merge_criterion(const State &left_minus, const State &left_plus, const arma::colvec &left_rho,
+                       const State &right_minus, const State &right_plus, const arma::colvec &right_rho) const;
+  Particle stan_transition(RandomNumberGenerator &rng,
+                           const Particle &particle,
+                           double &statistic,
+                           size_t &depth,
+                           bool &divergent,
+                           size_t &leapfrog_steps) const;
 
   Tree build_tree(RandomNumberGenerator &rng,
                   const Particle &particle,

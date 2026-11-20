@@ -70,6 +70,14 @@ public:
   virtual void adaptation_names(std::vector<std::string> &trace_names,
                                 std::vector<std::string> &final_names) const {}
 
+  // Per-iteration diagnostics of moves that record them (nuts; C212): one
+  // row per stored point; and the divergences after warm-up; none by default.
+  virtual size_t diagnostics_columns() const { return 0; }
+  virtual size_t fill_diagnostics_transposed(arma::mat &destination,
+                                             size_t first_column) const { return 0; }
+  virtual void diagnostics_names(std::vector<std::string> &names) const {}
+  virtual void count_divergences(size_t &divergent, size_t &iterations) const {}
+
   virtual void write_factors(const std::string &directory_name,
                              const std::string &index) const=0;
   virtual void write_ensemble_factors(const std::string &directory_name,

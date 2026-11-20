@@ -47,6 +47,7 @@
 #include "element_adaptors.h"
 #include "elementwise_transform_component.h"
 #include "no_u_turn_mcmc.h"
+#include "esjd_adaptor.h"
 #include "transform.h"
 #include "direct_gradient_estimator.h"
 #include "direct_linear_gaussian_measurement_covariance_estimator.h"

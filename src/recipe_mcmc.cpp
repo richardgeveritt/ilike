@@ -1,4 +1,8 @@
 #include "recipe_internal.h"
+#include "choice_proposal_kernel.h"
+#include "esjd_adaptor.h"
+#include "hmc_proposal_kernel.h"
+#include "langevin_proposal_kernel.h"
 
 IndependentProposalKernel *
 get_proposal(const RecipeValue &model, const RecipeValue &model_parameters, Data *data) {
@@ -186,6 +190,41 @@ get_prior_as_simulate_only_proposal(const RecipeValue &model,
   }
 }
 
+// choose([...]) (dev/plan.md 3.19 stage S4, C224): the components with their
+// own SMC adaptors, and the ChoiceAdaptor tuning each particle's index, with
+// the kernels' costs (given, or a random walk 1, langevin and barker 2 (a
+// density and a gradient), hmc its steps + 1)
+static ProposalKernel *make_choice_proposal(const RecipeValue &node, const RecipeValue &model_parameters) {
+  const RecipeValue &items = node["components"];
+  std::vector<ProposalKernel*> components;
+  std::vector<double> costs;
+  for (size_t k = 0; k < items.size(); ++k) {
+    ProposalKernel *component = make_builtin_proposal(items[k], BuiltinRole::MHProposal, model_parameters);
+    if (node.contains("component_smc_adaptors")) {
+      const RecipeValue &adaptor = node["component_smc_adaptors"][k];
+      if (adaptor.is_list() && (adaptor.size() > 0)) {
+        RecipeValue wrapper = RecipeValue::list();
+        wrapper.push_back(adaptor, "smc_adaptor");
+        attach_smc_adaptor(component, wrapper, model_parameters);
+      }
+    }
+    double cost = 1.0;
+    if (HMCProposalKernel *hamiltonian = dynamic_cast<HMCProposalKernel*>(component))
+      cost = double(hamiltonian->get_steps()) + 1.0;
+    else if ((dynamic_cast<LangevinProposalKernel*>(component) != NULL) ||
+             (dynamic_cast<BarkerDynamicsProposalKernel*>(component) != NULL))
+      cost = 2.0;
+    costs.push_back(cost);
+    components.push_back(component);
+  }
+  if (node.contains("cost"))
+    costs = node["cost"].as_doubles();
+  double change = node.contains("change") ? node["change"].as_double() : 0.1;
+  ChoiceProposalKernel *choice = new ChoiceProposalKernel(components);
+  choice->set_smc_adaptor(new ChoiceAdaptor(node["variables"].as_string(), costs, change, false));
+  return choice;
+}
+
 ProposalKernel *get_mh_proposal(const RecipeValue &current_proposal,
                                 const RecipeValue &model_parameters, Data *data) {
   ProposalKernel *proposal;
@@ -193,7 +232,9 @@ ProposalKernel *get_mh_proposal(const RecipeValue &current_proposal,
     RecipeValue proposal_info = current_proposal["mh_proposal"];
 
     if ((proposal_info).is_list()) {
-      if (proposal_info.contains("type") &&
+      if (proposal_info.contains("type") && (proposal_info["type"].as_string() == "choose")) {
+        proposal = make_choice_proposal(proposal_info, model_parameters);
+      } else if (proposal_info.contains("type") &&
           proposal_info.contains("variables")) {
         proposal = make_builtin_proposal(proposal_info, BuiltinRole::MHProposal, model_parameters);
       } else {
@@ -609,8 +650,17 @@ void attach_smc_adaptor(ProposalKernel *proposal, const RecipeValue &proposal_in
                         const RecipeValue &model_parameters) {
   if (!proposal_info.contains("smc_adaptor"))
     return;
-  proposal->set_smc_adaptor(make_builtin_smc_adaptor(proposal_info["smc_adaptor"], proposal,
-                                                     model_parameters));
+  const RecipeValue &node = proposal_info["smc_adaptor"];
+  if (node.is_list() && !node.contains("type") && !node.contains("builtin") && (node.size() > 0) && node[0].is_list())
+  {
+    // several, applied in order (C211)
+    std::vector<SMCAdaptor*> parts;
+    for (size_t k = 0; k < node.size(); ++k)
+      parts.push_back(make_builtin_smc_adaptor(node[k], proposal, model_parameters));
+    proposal->set_smc_adaptor(new CompositeSMCAdaptor(parts));
+    return;
+  }
+  proposal->set_smc_adaptor(make_builtin_smc_adaptor(node, proposal, model_parameters));
 }
 
 MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, Data *data,
@@ -741,10 +791,14 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
             std::string element_type = elements["type"].as_string();
             ElementStep step = (element_type == "norm_rw") ? ElementStep::normal
                              : (element_type == "unif_rw") ? ElementStep::uniform
-                             : (element_type == "gibbs_normal") ? ElementStep::normal_conditional : ElementStep::flip;
+                             : (element_type == "gibbs_normal") ? ElementStep::normal_conditional
+                             : (element_type == "gibbs_gamma") ? ElementStep::gamma_conditional
+                             : (element_type == "gibbs_invgamma") ? ElementStep::invgamma_conditional
+                             : (element_type == "gibbs_beta") ? ElementStep::beta_conditional : ElementStep::flip;
             // gibbs: over the element's states, or from its normal full
             // conditional (gibbs_normal, C206); no move through proposed particles
-            bool gibbs = (element_type == "gibbs") || (element_type == "gibbs_normal");
+            bool gibbs = (element_type == "gibbs") || (element_type == "gibbs_normal") || (element_type == "gibbs_gamma") ||
+                         (element_type == "gibbs_invgamma") || (element_type == "gibbs_beta");
             std::vector<double> states;
             if (element_type == "gibbs")
               states = elements["values"].as_doubles();
@@ -772,11 +826,26 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
               element_averaged = adaptor.logical("averaged");
             }
             double element_smc_constant = 0.0;
+            // esjd (C226): one multiplier of every element's step per particle,
+            // its adaptor on the first element's kernel (the scan reads it there)
+            ESJDAdaptor* element_esjd = NULL;
             if (elements.contains("smc_adapt")) {
               BuiltinArguments adaptor = bind_builtin(elements["smc_adapt"], BuiltinRole::SMCAdaptor, model_parameters);
-              if (adaptor.builtin() != "gaussian")
-                stop("moves on elements are set from SMC particles with smc_adapt = gaussian(c).");
-              element_smc_constant = adaptor.given("c") ? adaptor.real("c") : 2.38;
+              if (adaptor.builtin() == "esjd") {
+                if (!adaptor.given("scale") || adaptor.given("step") || adaptor.given("steps"))
+                  stop("esjd on elements tunes a multiplier of the elements' steps: esjd(scale = [lower, upper]).");
+                arma::colvec r = adaptor.vector("scale");
+                if ((r.n_elem != 2) || !(r[0] > 0.0) || !(r[0] <= r[1]))
+                  stop("esjd: scale = [lower, upper], with 0 < lower <= upper.");
+                std::string metric = adaptor.string("metric");
+                if ((metric != "diagonal") && (metric != "full"))
+                  stop("esjd: metric is \"diagonal\" or \"full\".");
+                element_esjd = new ESJDAdaptor(variable, {"scale"}, {r[0]}, {r[1]}, {false}, adaptor.real("a"),
+                                               adaptor.real("perturb"), metric == "full", -1);
+              } else if (adaptor.builtin() != "gaussian") {
+                stop("moves on elements are set from SMC particles with smc_adapt = gaussian(c) or esjd(scale = [lower, upper]).");
+              } else
+                element_smc_constant = adaptor.given("c") ? adaptor.real("c") : 2.38;
             }
             for (size_t e = 0; (e < rows.size()) && !gibbs; ++e) {
               ElementRandomWalkProposalKernel *element_kernel =
@@ -791,6 +860,8 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
               }
               if (element_smc_constant > 0.0)
                 element_kernel->set_smc_adaptor(new ElementSMCAdaptor(element_smc_constant));
+              if ((e == 0) && (element_esjd != NULL))
+                element_kernel->set_smc_adaptor(element_esjd);
               MCMC *element_move = new MetropolisMCMC(1, element_kernel);
               MoveFactors factors = set_move_factor_indices(
                   element_move, current_proposal_info, "m", full_index,

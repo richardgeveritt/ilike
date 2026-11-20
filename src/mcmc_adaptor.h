@@ -25,6 +25,9 @@ struct AdaptationStep
   const Particle *proposed;
   const Particle *current;
   double acceptance_probability;
+  // the chain's generator (set by the hmc and nuts moves, for
+  // dual_averaging's FindReasonableEpsilon, C219; NULL otherwise)
+  RandomNumberGenerator* rng = NULL;
 };
 
 // Adapts the parameters of the proposal kernel that owns it, from the chain
@@ -74,6 +77,9 @@ public:
   bool has_until() const { return this->until != NULL; }
   bool has_stopped() const { return this->stopped; }
   size_t stopped_at() const { return this->stopped_at_step; }
+  // the number of adaptation steps before it stops, if until = iterations(n)
+  // gives it (0 otherwise; C220)
+  size_t warm_up_length() const { return (this->until != NULL) ? this->until->known_iterations() : 0; }
 
   // What a stopping criterion can read. watched(name, values): the current
   // values of a quantity the adaptor adapts ("scale", "covariance" (the
@@ -88,6 +94,9 @@ public:
   // how its output columns name what it adapts (for messages and the
   // column giving when it stopped)
   virtual std::string state_label() const;
+  // called once, when the criterion given with until = holds (dual
+  // averaging then fixes the step at its average, C219)
+  virtual void on_stop();
 
 protected:
 

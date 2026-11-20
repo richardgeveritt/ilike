@@ -4,6 +4,27 @@
 
 namespace ilike
 {
+// (C226) the moves' diagnostic columns, prefixed with their position, and
+// where each move's columns start in a row
+static void scan_diagnostic_layout(const std::vector<std::unique_ptr<MCMC>> &moves,
+                                   std::vector<std::string> &names,
+                                   std::vector<size_t> &offsets,
+                                   std::vector<size_t> &sizes)
+{
+  names.clear();
+  offsets.assign(moves.size(), 0);
+  sizes.assign(moves.size(), 0);
+  for (size_t k = 0; k < moves.size(); ++k)
+  {
+    std::vector<std::string> own;
+    moves[k]->diagnostic_names(own);
+    offsets[k] = names.size();
+    sizes[k] = own.size();
+    for (const std::string &name : own)
+      names.push_back("move" + std::to_string(k + 1) + "." + name);
+  }
+}
+
 StochasticScanMCMC::StochasticScanMCMC()
 :MCMC()
 {
@@ -260,6 +281,45 @@ void StochasticScanMCMC::append_adaptation_state(std::vector<std::string> *names
   for (size_t k=0; k<this->moves.size(); ++k)
     this->moves[k]->append_adaptation_state(names, values, final,
                                             prefix + "move" + std::to_string(k+1) + ".");
+}
+
+
+void StochasticScanMCMC::diagnostic_names(std::vector<std::string> &names) const
+{
+  std::vector<size_t> offsets, sizes;
+  scan_diagnostic_layout(this->moves, names, offsets, sizes);
+}
+
+bool StochasticScanMCMC::warming_up() const
+{
+  for (auto i=this->moves.begin(); i!=this->moves.end(); ++i)
+    if ((*i)->warming_up())
+      return true;
+  return false;
+}
+
+void StochasticScanMCMC::diagnostic_move_in_place(RandomNumberGenerator &rng,
+                                     Particle &particle,
+                                     Particle &scratch,
+                                     bool adapting,
+                                     double* row)
+{
+  // the move chosen, as move_in_place / adaptive_move_in_place; the other
+  // moves' columns NaN for this iteration
+  std::vector<std::string> names;
+  std::vector<size_t> offsets, sizes;
+  scan_diagnostic_layout(this->moves, names, offsets, sizes);
+  for (size_t c = 0; c < names.size(); ++c)
+    row[c] = arma::datum::nan;
+  size_t chosen = rdis(rng, this->probabilities);
+  MCMC* move = this->moves[chosen].get();
+  bool adapts = adapting && move->adapts();
+  if (sizes[chosen] > 0)
+    move->diagnostic_move_in_place(rng, particle, scratch, adapts, row + offsets[chosen]);
+  else if (adapts)
+    move->adaptive_move_in_place(rng, particle, scratch);
+  else
+    move->move_in_place(rng, particle, scratch);
 }
 
 }

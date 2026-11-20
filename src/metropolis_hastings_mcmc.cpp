@@ -2,6 +2,8 @@
 #include "distributions.h"
 #include "utils.h"
 #include "metropolis_hastings_mcmc.h"
+#include "normal_block_proposal_kernel.h"
+#include "particle_tuning.h"
 #include "mcmc_adaptor.h"
 #include "gaussian_random_walk_proposal_kernel.h"
 #include "metropolis_hastings_standard_mcmc_output.h"
@@ -137,12 +139,17 @@ Particle MetropolisHastingsMCMC::move(RandomNumberGenerator &rng,
   
   if ( (numerator==-arma::datum::inf) || (denominator==-arma::datum::inf) )
   {
+    if (particle.tuning != NULL)
+      observe_tuned_proposal(particle, proposed_particle, this->proposal.get(), 0.0);
     return particle;
   }
   
-  if (log_u < numerator - denominator +
-      this->proposal->evaluate_kernel(particle, proposed_particle) -
-      this->proposal->evaluate_kernel(proposed_particle, particle))
+  double log_ratio = numerator - denominator +
+    this->proposal->evaluate_kernel(particle, proposed_particle) -
+    this->proposal->evaluate_kernel(proposed_particle, particle);
+  if (particle.tuning != NULL)
+    observe_tuned_proposal(particle, proposed_particle, this->proposal.get(), acceptance_from_log_ratio(log_ratio));
+  if (log_u < log_ratio)
   {
     proposed_particle.set_acceptance(this->proposal.get(),true);
     this->refresh_cut_factors(proposed_particle);
@@ -168,10 +175,17 @@ void MetropolisHastingsMCMC::move_in_place(RandomNumberGenerator &rng,
   double numerator = proposed_particle.evaluate_likelihoods(this->index.get());
   double denominator = particle.get_cached_likelihoods(this->index.get());
   if ( (numerator==-arma::datum::inf) || (denominator==-arma::datum::inf) )
+  {
+    if (particle.tuning != NULL)
+      observe_tuned_proposal(particle, proposed_particle, this->proposal.get(), 0.0);
     return;
-  if (log_u < numerator - denominator +
-      this->proposal->evaluate_kernel(particle, proposed_particle) -
-      this->proposal->evaluate_kernel(proposed_particle, particle))
+  }
+  double log_ratio = numerator - denominator +
+    this->proposal->evaluate_kernel(particle, proposed_particle) -
+    this->proposal->evaluate_kernel(proposed_particle, particle);
+  if (particle.tuning != NULL)
+    observe_tuned_proposal(particle, proposed_particle, this->proposal.get(), acceptance_from_log_ratio(log_ratio));
+  if (log_u < log_ratio)
   {
     proposed_particle.set_acceptance(this->proposal.get(),true);
     this->refresh_cut_factors(proposed_particle);
@@ -287,10 +301,17 @@ void MetropolisHastingsMCMC::move_in_place(RandomNumberGenerator &rng,
   double numerator = scratch.evaluate_likelihoods(this->index.get());
   double denominator = particle.get_cached_likelihoods(this->index.get());
   if ( (numerator==-arma::datum::inf) || (denominator==-arma::datum::inf) )
+  {
+    if (particle.tuning != NULL)
+      observe_tuned_proposal(particle, scratch, this->proposal.get(), 0.0);
     return;
-  if (log_u < numerator - denominator +
-      this->proposal->evaluate_kernel(particle, scratch) -
-      this->proposal->evaluate_kernel(scratch, particle))
+  }
+  double log_ratio = numerator - denominator +
+    this->proposal->evaluate_kernel(particle, scratch) -
+    this->proposal->evaluate_kernel(scratch, particle);
+  if (particle.tuning != NULL)
+    observe_tuned_proposal(particle, scratch, this->proposal.get(), acceptance_from_log_ratio(log_ratio));
+  if (log_u < log_ratio)
   {
     scratch.set_acceptance(this->proposal.get(),true);
     this->refresh_cut_factors(scratch);
@@ -339,6 +360,8 @@ void MetropolisHastingsMCMC::adaptive_move_in_place(RandomNumberGenerator &rng,
       acceptance_probability = 1.0;
     else if (!std::isnan(log_ratio))
       acceptance_probability = exp(log_ratio);
+    if (particle.tuning != NULL)
+      observe_tuned_proposal(particle, scratch, this->proposal.get(), acceptance_probability);
     if (log_u < log_ratio)
     {
       scratch.set_acceptance(this->proposal.get(),true);
@@ -354,6 +377,90 @@ void MetropolisHastingsMCMC::adaptive_move_in_place(RandomNumberGenerator &rng,
   step.proposed = accepted ? &particle : &scratch;
   step.current = &particle;
   step.acceptance_probability = acceptance_probability;
+  step.rng = &rng;
+  this->proposal->mcmc_adapt(step);
+}
+
+// (C226) hmc's diagnostics; not for gibbs on a vector, whose kernel is
+// built on hmc's but makes no trajectory
+static const HMCProposalKernel* diagnosed_hmc(const ProposalKernel* proposal)
+{
+  const HMCProposalKernel* kernel = dynamic_cast<const HMCProposalKernel*>(proposal);
+  if ((kernel == NULL) || (dynamic_cast<const NormalBlockProposalKernel*>(proposal) != NULL))
+    return NULL;
+  return kernel;
+}
+
+void MetropolisHastingsMCMC::diagnostic_names(std::vector<std::string> &names) const
+{
+  if (diagnosed_hmc(this->proposal.get()) != NULL)
+    names = {"leapfrog_steps", "accept_stat", "energy_error", "divergent"};
+}
+
+bool MetropolisHastingsMCMC::warming_up() const
+{
+  return this->proposal->mcmc_warming_up();
+}
+
+void MetropolisHastingsMCMC::diagnostic_move_in_place(RandomNumberGenerator &rng,
+                                                      Particle &particle,
+                                                      Particle &scratch,
+                                                      bool adapting,
+                                                      double* row)
+{
+  // as move_in_place(rng, particle, scratch), or adaptive_move_in_place when
+  // adapting (the same random numbers), recording one row
+  const HMCProposalKernel* kernel = diagnosed_hmc(this->proposal.get());
+  if (adapting)
+    this->proposal->prepare_mcmc_adaptation();
+  double steps = double(kernel->get_steps());
+  if (const double* tuning = kernel->tuning_values(particle))
+    steps = std::max(1.0, std::round(tuning[1]));
+  this->proposal->move_into(rng,
+                            particle,
+                            this->get_new_outputs_index(this->index.get()),
+                            scratch);
+  double log_u = log(runif(rng));
+  double numerator = scratch.evaluate_likelihoods(this->index.get());
+  double denominator = particle.get_cached_likelihoods(this->index.get());
+  bool accepted = false;
+  double acceptance_probability = 0.0;
+  double log_ratio = -arma::datum::inf;
+  if ( (numerator!=-arma::datum::inf) && (denominator!=-arma::datum::inf) )
+  {
+    log_ratio = numerator - denominator +
+      this->proposal->evaluate_kernel(particle, scratch) -
+      this->proposal->evaluate_kernel(scratch, particle);
+    if (log_ratio >= 0.0)
+      acceptance_probability = 1.0;
+    else if (!std::isnan(log_ratio))
+      acceptance_probability = exp(log_ratio);
+    if (particle.tuning != NULL)
+      observe_tuned_proposal(particle, scratch, this->proposal.get(), acceptance_probability);
+    if (log_u < log_ratio)
+    {
+      scratch.set_acceptance(this->proposal.get(),true);
+      this->refresh_cut_factors(scratch);
+      this->check_carried_over_factors(scratch, this->index.get());
+      particle.swap(scratch);
+      accepted = true;
+    }
+  }
+  else if (particle.tuning != NULL)
+    observe_tuned_proposal(particle, scratch, this->proposal.get(), 0.0);
+  double energy_error = -log_ratio;
+  row[0] = steps;
+  row[1] = acceptance_probability;
+  row[2] = energy_error;
+  row[3] = (energy_error <= 1000.0) ? 0.0 : 1.0; // (above 1000, or not finite)
+  if (!adapting)
+    return;
+  AdaptationStep step;
+  step.previous = accepted ? &scratch : &particle;
+  step.proposed = accepted ? &particle : &scratch;
+  step.current = &particle;
+  step.acceptance_probability = acceptance_probability;
+  step.rng = &rng;
   this->proposal->mcmc_adapt(step);
 }
 

@@ -57,6 +57,7 @@ void HMCProposalKernel::make_copy(const HMCProposalKernel &another)
   this->info = another.info;
   this->steps = another.steps;
   this->max_depth = another.max_depth;
+  this->stan_variant = another.stan_variant;
   if (another.index != NULL)
     this->index.reset(another.index->duplicate());
   else
@@ -78,11 +79,16 @@ arma::colvec HMCProposalKernel::gradient_at(const Particle &particle, const Para
   Parameters at = (this->transform != NULL) ? this->transform->inverse_transform(point) : point;
   std::vector<std::string> names = split_stacked_name(this->variable);
   std::vector<arma::mat> gradients = particle.factor_variables->direct_get_gradients_of_log_at(this->index.get(), names, at);
-  arma::colvec stacked(x.n_elem);
+  return this->stacked_gradient(gradients, point, x.n_elem);
+}
+
+arma::colvec HMCProposalKernel::stacked_gradient(const std::vector<arma::mat> &gradients, const Parameters &point, arma::uword n) const
+{
+  arma::colvec stacked(n);
   arma::uword offset = 0;
   for (const arma::mat &gradient : gradients)
   {
-    if (offset + gradient.n_elem > x.n_elem)
+    if (offset + gradient.n_elem > n)
       Rcpp::stop("ilike::hmc: the gradient does not match the size of " + stacked_display_name(this->variable) + ".");
     if (gradient.n_elem > 0)
       stacked.subvec(offset, offset + gradient.n_elem - 1) = arma::vectorise(gradient);
@@ -110,6 +116,13 @@ Parameters HMCProposalKernel::trajectory(RandomNumberGenerator &rng,
   arma::uword n = x0.n_elem;
   this->check_size(n);
   double eps = this->step_size();
+  size_t number_of_steps = this->steps;
+  // a particle's own (step, steps) (esjd in SMC, C211)
+  if (const double* tuning = this->tuning_values(particle))
+  {
+    eps = tuning[0];
+    number_of_steps = size_t(std::max(1.0, std::round(tuning[1])));
+  }
   arma::colvec r = this->draw_momentum(rng, n);
   auto apply_c = [&](const arma::colvec &v) -> arma::colvec { return this->velocity(v); };
   auto kinetic = [&](const arma::colvec &v) -> double { return this->kinetic(v); };
@@ -118,7 +131,7 @@ Parameters HMCProposalKernel::trajectory(RandomNumberGenerator &rng,
   arma::colvec x = x0;
   arma::colvec g = this->gradient_at(particle, current, x);
   bool finite = g.is_finite();
-  for (size_t l = 0; (l < this->steps) && finite; ++l)
+  for (size_t l = 0; (l < number_of_steps) && finite; ++l)
   {
     r = r + (0.5*eps)*g;
     x = x + eps*apply_c(r);
@@ -189,6 +202,46 @@ double HMCProposalKernel::log_density_at(const Particle &particle,
     log_density = log_density + this->transform->log_abs_inverse_jacobian_determinant(at);
   }
   return log_density;
+}
+
+double HMCProposalKernel::log_density_and_gradient_at(const Particle &particle,
+                                                       const Parameters &base,
+                                                       const arma::colvec &x,
+                                                       const Index* index,
+                                                       const Index* new_outputs_index,
+                                                       std::shared_ptr<Particle> &point,
+                                                       arma::colvec &gradient) const
+{
+  point.reset();
+  if (!x.is_finite() || (particle.factor_variables == NULL))
+  {
+    gradient = arma::zeros<arma::colvec>(x.n_elem);
+    return x.is_finite() ? this->log_density_at(particle, base, x, index, new_outputs_index, point) : -arma::datum::inf;
+  }
+  Parameters block;
+  block.set_stacked(this->variable, x, base);
+  point = std::make_shared<Particle>(this->proposed_from(particle, block, new_outputs_index));
+  std::vector<std::string> names = split_stacked_name(this->variable);
+  std::vector<arma::mat> gradients;
+  double log_density = point->factor_variables->evaluate_likelihoods_with_gradients(index, names, gradients);
+  point->target_evaluated = log_density;
+  Parameters at = base;
+  at.deep_overwrite_with_variables_in_argument(block);
+  if (this->transform != NULL)
+    log_density = log_density + this->transform->log_abs_inverse_jacobian_determinant(at);
+  if (std::isfinite(log_density))
+    gradient = this->stacked_gradient(gradients, at, x.n_elem);
+  else
+    gradient = arma::zeros<arma::colvec>(x.n_elem);
+  return log_density;
+}
+
+double HMCProposalKernel::target_at(const Particle &particle, const Parameters &base, const arma::colvec &x) const
+{
+  if (this->index == NULL)
+    Rcpp::stop("ilike::hmc: the move's factors are not known.");
+  std::shared_ptr<Particle> point;
+  return this->log_density_at(particle, base, x, this->index.get(), this->index.get(), point);
 }
 
 double HMCProposalKernel::log_jacobian(const Parameters &base) const

@@ -73,6 +73,7 @@ void StandardMCMCOutput::make_copy(const StandardMCMCOutput &another)
   this->adaptation_columns = another.adaptation_columns;
   this->adaptation_trace = another.adaptation_trace;
   this->adaptation_final = another.adaptation_final;
+  this->diagnostics.reset(another.diagnostics ? new Diagnostics(*another.diagnostics) : NULL);
 }
 
 void StandardMCMCOutput::push_back(const Particle &particle_in)
@@ -96,6 +97,8 @@ void StandardMCMCOutput::record(const Particle &particle_in)
     this->get_mcmc()->append_adaptation_state(NULL, &this->adaptation_trace, false, "");
     this->adaptation_columns = this->adaptation_trace.size() - before;
   }
+  if (this->diagnostics)
+    this->diagnostics->rows.insert(this->diagnostics->rows.end(), this->diagnostics->pending.begin(), this->diagnostics->pending.end());
 
   if (!this->storage_decided)
   {
@@ -393,6 +396,65 @@ void StandardMCMCOutput::start_recording_adaptation()
   this->adaptation_trace.clear();
   this->adaptation_final.clear();
   this->adaptation_columns = 0;
+}
+
+void StandardMCMCOutput::start_recording_diagnostics(const std::vector<std::string> &names)
+{
+  this->diagnostics.reset(new Diagnostics());
+  this->diagnostics->names = names;
+  this->diagnostics->pending.assign(names.size(), 0.0);
+  for (size_t c=0; c<names.size(); ++c)
+  {
+    const std::string &name = names[c];
+    if ((name == "divergent") || ((name.size() > 10) && (name.compare(name.size() - 10, 10, ".divergent") == 0)))
+      this->diagnostics->divergent_columns.push_back(c);
+  }
+}
+
+void StandardMCMCOutput::note_diagnostics(const double* row, bool after_warm_up)
+{
+  Diagnostics &d = *this->diagnostics;
+  std::copy(row, row + d.pending.size(), d.pending.begin());
+  if (after_warm_up)
+  {
+    d.iterations_after_warm_up = d.iterations_after_warm_up + 1;
+    // (an iteration of a scan is divergent if one of its moves was)
+    bool divergent = false;
+    for (size_t c : d.divergent_columns)
+      divergent = divergent || ((row[c] != 0.0) && !std::isnan(row[c]));
+    if (divergent)
+      d.divergent_after_warm_up = d.divergent_after_warm_up + 1;
+  }
+}
+
+size_t StandardMCMCOutput::fill_diagnostics_transposed(arma::mat &destination,
+                                                       size_t first_column) const
+{
+  size_t columns = this->diagnostics_columns();
+  if (columns == 0)
+    return 0;
+  if (destination.n_rows != columns)
+    Rcpp::stop("StandardMCMCOutput: chains with different diagnostics cannot be written together.");
+  size_t rows = this->diagnostics->rows.size()/columns;
+  for (size_t r=0; r<rows; ++r)
+    for (size_t c=0; c<columns; ++c)
+      destination(c, first_column + r) = this->diagnostics->rows[r*columns + c];
+  return rows;
+}
+
+void StandardMCMCOutput::diagnostics_names(std::vector<std::string> &names) const
+{
+  names.clear();
+  if (this->diagnostics)
+    names = this->diagnostics->names;
+}
+
+void StandardMCMCOutput::count_divergences(size_t &divergent, size_t &iterations) const
+{
+  if (!this->diagnostics)
+    return;
+  divergent = divergent + this->diagnostics->divergent_after_warm_up;
+  iterations = iterations + this->diagnostics->iterations_after_warm_up;
 }
 
 void StandardMCMCOutput::finish_adaptation()

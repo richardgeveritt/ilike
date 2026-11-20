@@ -656,6 +656,19 @@ inline arma::mat rtnorm(RandomNumberGenerator &rng, size_t n, double mean,
 }
 
 /*!
+Evaluates log(Phi(b) - Phi(a)) for a < b, the log of the probability that a
+standard normal lies in [a, b], accurately far in either tail (from R's
+log-scale pnorm; limits above the mean are reflected, so that two small
+upper-tail probabilities are subtracted rather than two numbers close to 1).
+*/
+inline double log_normal_mass(double a, double b) {
+  if (a > 0.0)
+    return log_normal_mass(-b, -a);
+  double lb = R::pnorm(b, 0.0, 1.0, 1, 1), la = R::pnorm(a, 0.0, 1.0, 1, 1);
+  return lb + std::log1p(-std::exp(la - lb));
+}
+
+/*!
 Evaluates the log of the standard truncated normal density, with bounds given by
 `min` and `max`, at the point `x`.
 */
@@ -666,8 +679,8 @@ inline double dtnorm(double x, double min, double max) {
   else if (x > max)
     return -arma::datum::inf;
   else {
-    return -0.5 * log(2.0 * M_PI) - 0.5 * std::pow(x, 2.0) + log(2.0) -
-           log(erf(max / sqrt(2.0)) - erf(min / sqrt(2.0)));
+    return -0.5 * log(2.0 * M_PI) - 0.5 * std::pow(x, 2.0) -
+           log_normal_mass(min, max);
   }
 }
 
@@ -692,9 +705,8 @@ inline double dtnorm(double x, double mean, double sd, double min, double max) {
         return -arma::datum::inf;
     }
     return -log(sd) - 0.5 * log(2.0 * M_PI) -
-           0.5 * std::pow((x - mean) / sd, 2.0) + log(2.0) -
-           log(erf((max - mean) / (sd * sqrt(2.0))) -
-               erf((min - mean) / (sd * sqrt(2.0))));
+           0.5 * std::pow((x - mean) / sd, 2.0) -
+           log_normal_mass((min - mean) / sd, (max - mean) / sd);
   }
 }
 
@@ -730,8 +742,7 @@ inline arma::colvec dtnorm(const arma::colvec &x, double mean, double sd,
     return result;
   }
 
-  double erf_part = log(2.0) - log(erf((max - mean) / (sd * sqrt(2.0))) -
-                                   erf((min - mean) / (sd * sqrt(2.0))));
+  double erf_part = -log_normal_mass((min - mean) / sd, (max - mean) / sd);
 
   for (size_t i = 0; i < n; ++i) {
     if (x[i] < min)

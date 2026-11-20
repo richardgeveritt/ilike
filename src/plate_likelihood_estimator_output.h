@@ -45,7 +45,15 @@ public:
                                           const Parameters &x);
   std::vector<arma::mat> get_gradients_of_log(const std::vector<std::string> &variables,
                                               const Parameters &x);
+  // (C222) the value by one pass over the terms with the gradients: the
+  // terms themselves are not kept, so the output is left with no valid terms
+  // (the next evaluation, or a scan's prepare_in_place, recomputes them)
+  bool evaluate_with_gradients(const Parameters &parameters,
+                               const std::vector<std::string> &variables,
+                               double &value,
+                               std::vector<arma::mat> &gradients);
 
+  bool carries_over() const { return true; }
   void carry_over_from(const LikelihoodEstimatorOutput &previous,
                        const Parameters &previous_parameters,
                        const Parameters &new_parameters,

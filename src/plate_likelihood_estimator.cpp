@@ -68,6 +68,7 @@ void PlateLikelihoodEstimator::make_copy(const PlateLikelihoodEstimator &another
   this->term_function = another.term_function;
   this->gradient_function = another.gradient_function;
   this->gradients_function = another.gradients_function;
+  this->value_gradients_function = another.value_gradients_function;
   this->variables = another.variables;
   this->name = another.name;
   this->check = another.check;

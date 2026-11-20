@@ -2,6 +2,7 @@
 #include "distributions.h"
 #include "utils.h"
 #include "metropolis_mcmc.h"
+#include "particle_tuning.h"
 #include "transform.h"
 #include "mcmc_adaptor.h"
 #include "symmetric_proposal_kernel.h"
@@ -139,10 +140,15 @@ Particle MetropolisMCMC::move(RandomNumberGenerator &rng,
   
   if ( (numerator==-arma::datum::inf) || (denominator==-arma::datum::inf) )
   {
+    if (particle.tuning != NULL)
+      observe_tuned_proposal(particle, proposed_particle, this->proposal.get(), 0.0);
     return particle;
   }
   
-  if (log_u < this->log_ratio(numerator, denominator, particle, proposed_particle))
+  double log_ratio = this->log_ratio(numerator, denominator, particle, proposed_particle);
+  if (particle.tuning != NULL)
+    observe_tuned_proposal(particle, proposed_particle, this->proposal.get(), acceptance_from_log_ratio(log_ratio));
+  if (log_u < log_ratio)
   {
     proposed_particle.set_acceptance(this->proposal.get(),true);
     this->refresh_cut_factors(proposed_particle);
@@ -168,8 +174,15 @@ void MetropolisMCMC::move_in_place(RandomNumberGenerator &rng,
   double numerator = proposed_particle.evaluate_likelihoods(this->index.get());
   double denominator = particle.get_cached_likelihoods(this->index.get());
   if ( (numerator==-arma::datum::inf) || (denominator==-arma::datum::inf) )
+  {
+    if (particle.tuning != NULL)
+      observe_tuned_proposal(particle, proposed_particle, this->proposal.get(), 0.0);
     return;
-  if (log_u < this->log_ratio(numerator, denominator, particle, proposed_particle))
+  }
+  double log_ratio = this->log_ratio(numerator, denominator, particle, proposed_particle);
+  if (particle.tuning != NULL)
+    observe_tuned_proposal(particle, proposed_particle, this->proposal.get(), acceptance_from_log_ratio(log_ratio));
+  if (log_u < log_ratio)
   {
     proposed_particle.set_acceptance(this->proposal.get(),true);
     this->refresh_cut_factors(proposed_particle);
@@ -283,8 +296,15 @@ void MetropolisMCMC::move_in_place(RandomNumberGenerator &rng,
   double numerator = scratch.evaluate_likelihoods(this->index.get());
   double denominator = particle.get_cached_likelihoods(this->index.get());
   if ( (numerator==-arma::datum::inf) || (denominator==-arma::datum::inf) )
+  {
+    if (particle.tuning != NULL)
+      observe_tuned_proposal(particle, scratch, this->proposal.get(), 0.0);
     return;
-  if (log_u < this->log_ratio(numerator, denominator, particle, scratch))
+  }
+  double log_ratio = this->log_ratio(numerator, denominator, particle, scratch);
+  if (particle.tuning != NULL)
+    observe_tuned_proposal(particle, scratch, this->proposal.get(), acceptance_from_log_ratio(log_ratio));
+  if (log_u < log_ratio)
   {
     scratch.set_acceptance(this->proposal.get(),true);
     this->refresh_cut_factors(scratch);
@@ -331,6 +351,8 @@ void MetropolisMCMC::adaptive_move_in_place(RandomNumberGenerator &rng,
       acceptance_probability = 1.0;
     else if (!std::isnan(log_ratio))
       acceptance_probability = exp(log_ratio);
+    if (particle.tuning != NULL)
+      observe_tuned_proposal(particle, scratch, this->proposal.get(), acceptance_probability);
     if (log_u < log_ratio)
     {
       scratch.set_acceptance(this->proposal.get(),true);

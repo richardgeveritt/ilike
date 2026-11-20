@@ -60,6 +60,9 @@ public:
                                                         const Parameters &at) const;
   std::vector<arma::mat> direct_get_gradients_of_log(const Index* index,
                                                      const std::vector<std::string> &variables) const;
+  double evaluate_likelihoods_with_gradients(const Index* index,
+                                             const std::vector<std::string> &variables,
+                                             std::vector<arma::mat> &gradients);
   arma::mat direct_get_gradient_of_log(const Index* index,
                                        const std::string &variable) const;
   

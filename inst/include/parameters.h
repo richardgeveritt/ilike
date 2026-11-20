@@ -129,8 +129,65 @@ inline void check_proposal_size(const std::string &name, size_t elements, size_t
 // shared by copies (which keep the same order of names) and is not changed
 // while shared (an insertion of a new name then makes a new one); lookups
 // never change it, so concurrent lookups are safe.
-template <typename V>
-class FlatMap
+// The index lives in a base class, empty for maps that never have many names
+// (Indexed = false: the non-numeric variables), so those carry no pointer
+// (C211: the index's pointer, copied and destroyed with every Parameters,
+// cost small models a few percent of an MCMC iteration).
+template <bool Indexed>
+struct FlatMapIndex
+{
+  // (shared by copies: changed only when this map is its only owner)
+  std::shared_ptr<std::unordered_map<std::string, size_t>> index;
+
+  bool index_find(const std::string &key, size_t &position) const
+  {
+    if (this->index == NULL)
+      return false;
+    auto found = this->index->find(key);
+    position = (found == this->index->end()) ? size_t(-1) : found->second;
+    return true;
+  }
+  void index_clear() { this->index.reset(); }
+
+  // after a name is appended: the index, once there are enough names (a new
+  // table, since copies may share the old one)
+  template <typename Data>
+  void index_added(const Data &data, size_t threshold)
+  {
+    if (data.size() <= threshold)
+      return;
+    if ((this->index != NULL) && (this->index.use_count() == 1))
+    {
+      // (this map alone holds the table: extended in place)
+      this->index->emplace(data.back().first, data.size() - 1);
+      return;
+    }
+    std::shared_ptr<std::unordered_map<std::string, size_t>> table;
+    if (this->index != NULL)
+      table = std::make_shared<std::unordered_map<std::string, size_t>>(*this->index);
+    else
+    {
+      table = std::make_shared<std::unordered_map<std::string, size_t>>();
+      table->reserve(2*data.size());
+      for (size_t k = 0; k + 1 < data.size(); ++k)
+        table->emplace(data[k].first, k);
+    }
+    table->emplace(data.back().first, data.size() - 1);
+    this->index = table;
+  }
+};
+
+template <>
+struct FlatMapIndex<false>
+{
+  bool index_find(const std::string &key, size_t &position) const { return false; }
+  void index_clear() {}
+  template <typename Data>
+  void index_added(const Data &data, size_t threshold) {}
+};
+
+template <typename V, bool Indexed = true>
+class FlatMap : private FlatMapIndex<Indexed>
 {
 public:
   typedef std::pair<std::string, V> value_type;
@@ -143,16 +200,14 @@ public:
   const_iterator end() const { return this->data.end(); }
   size_t size() const { return this->data.size(); }
   bool empty() const { return this->data.empty(); }
-  void clear() { this->data.clear(); this->index.reset(); }
+  void clear() { this->data.clear(); this->index_clear(); }
   void reserve(size_t n) { this->data.reserve(n); }
 
   iterator find(const std::string &key)
   {
-    if (this->index != NULL)
-    {
-      auto found = this->index->find(key);
-      return (found == this->index->end()) ? this->data.end() : this->data.begin() + found->second;
-    }
+    size_t position;
+    if (this->index_find(key, position))
+      return (position == size_t(-1)) ? this->data.end() : this->data.begin() + position;
     for (iterator i = this->data.begin(); i != this->data.end(); ++i)
       if (i->first == key)
         return i;
@@ -161,11 +216,9 @@ public:
 
   const_iterator find(const std::string &key) const
   {
-    if (this->index != NULL)
-    {
-      auto found = this->index->find(key);
-      return (found == this->index->end()) ? this->data.end() : this->data.begin() + found->second;
-    }
+    size_t position;
+    if (this->index_find(key, position))
+      return (position == size_t(-1)) ? this->data.end() : this->data.begin() + position;
     for (const_iterator i = this->data.begin(); i != this->data.end(); ++i)
       if (i->first == key)
         return i;
@@ -178,7 +231,7 @@ public:
     if (found != this->data.end())
       return std::pair<iterator, bool>(found, false);
     this->data.push_back(value);
-    this->added();
+    this->index_added(this->data, index_threshold);
     return std::pair<iterator, bool>(this->data.end() - 1, true);
   }
 
@@ -188,7 +241,7 @@ public:
     if (found != this->data.end())
       return std::pair<iterator, bool>(found, false);
     this->data.push_back(std::move(value));
-    this->added();
+    this->index_added(this->data, index_threshold);
     return std::pair<iterator, bool>(this->data.end() - 1, true);
   }
 
@@ -205,46 +258,18 @@ public:
     if (found != this->data.end())
       return found->second;
     this->data.emplace_back(key, V());
-    this->added();
+    this->index_added(this->data, index_threshold);
     return this->data.back().second;
   }
 
 private:
   static const size_t index_threshold = 16;
 
-  // after a name is appended: the index, once there are enough names (a new
-  // table, since copies may share the old one)
-  void added()
-  {
-    if (this->data.size() <= index_threshold)
-      return;
-    if ((this->index != NULL) && (this->index.use_count() == 1))
-    {
-      // (this map alone holds the table: extended in place)
-      this->index->emplace(this->data.back().first, this->data.size() - 1);
-      return;
-    }
-    std::shared_ptr<std::unordered_map<std::string, size_t>> table;
-    if (this->index != NULL)
-      table = std::make_shared<std::unordered_map<std::string, size_t>>(*this->index);
-    else
-    {
-      table = std::make_shared<std::unordered_map<std::string, size_t>>();
-      table->reserve(2*this->data.size());
-      for (size_t k = 0; k + 1 < this->data.size(); ++k)
-        table->emplace(this->data[k].first, k);
-    }
-    table->emplace(this->data.back().first, this->data.size() - 1);
-    this->index = table;
-  }
-
   std::vector<value_type> data;
-  // (shared by copies: changed only when this map is its only owner)
-  std::shared_ptr<std::unordered_map<std::string, size_t>> index;
 };
 
 typedef FlatMap<std::pair<std::shared_ptr<arma::mat>, bool>> VectorParameterMap;
-typedef FlatMap<std::pair<std::shared_ptr<boost::any>, bool>> AnyParameterMap;
+typedef FlatMap<std::pair<std::shared_ptr<boost::any>, bool>, false> AnyParameterMap;
 
 typedef VectorParameterMap::iterator vector_parameter_iterator;
 typedef VectorParameterMap::const_iterator vector_parameter_const_iterator;

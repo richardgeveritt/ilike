@@ -238,6 +238,29 @@ arma::mat AnnealedLikelihoodEstimatorOutput::get_gradient_of_log(const std::stri
 }
 
 // several variables (C204): the wrapped factor's gradients, times the power
+// (C222) the inner output's value and gradients in one pass, times the power
+// (as evaluate and get_gradients_of_log: a zero power gives zero)
+bool AnnealedLikelihoodEstimatorOutput::evaluate_with_gradients(const Parameters &parameters,
+                                                                const std::vector<std::string> &variables,
+                                                                double &value,
+                                                                std::vector<arma::mat> &gradients)
+{
+  double inner;
+  if (!this->estimator_output->evaluate_with_gradients(parameters, variables, inner, gradients))
+    return false;
+  double current_power = this->power(parameters);
+  this->log_likelihood = (current_power != 0.0) ? current_power * this->estimator_output->log_likelihood : 0.0;
+  for (arma::mat &gradient : gradients)
+  {
+    if (current_power != 0.0)
+      gradient = current_power * gradient;
+    else
+      gradient = arma::mat(gradient.n_rows, gradient.n_cols, arma::fill::zeros);
+  }
+  value = this->log_likelihood;
+  return true;
+}
+
 std::vector<arma::mat> AnnealedLikelihoodEstimatorOutput::get_gradients_of_log(const std::vector<std::string> &variables,
                                                                                const Parameters &x)
 {
