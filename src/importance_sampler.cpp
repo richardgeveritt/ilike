@@ -598,6 +598,75 @@ namespace ilike
     return true;
   }
 
+  bool ImportanceSampler::defers_simulation() const
+  {
+    return this->sequencer_limit_is_fixed && !this->proposal_is_evaluated && this->can_run_flat_conditioned();
+  }
+
+  // (dev/plan.md 3.21) the estimate is the mean of N weights, each at most
+  // M = the sum of the factors' maxima (an ABC kernel's largest value): after
+  // n points with weights summing to S it is at most (S + (N - n) e^M)/N, so
+  // the run stops when the log of that is below threshold. The points are
+  // made in chunks with their own random-number streams, so a run that does
+  // not stop is the run without the check, except for the chunk size, which
+  // is made small enough (16 chunks) for the check to be useful.
+  bool ImportanceSampler::simulate_smc_with_threshold(SMCOutput* simulation,
+                                                      const Parameters &conditioned_on_parameters,
+                                                      double threshold)
+  {
+    const Parameters &schedule_parameters = this->sequencer.schedule_parameters;
+    double M = arma::datum::inf;
+    const VectorFactors* vector_factors = dynamic_cast<const VectorFactors*>(this->factors.get());
+    if (vector_factors != NULL)
+    {
+      M = 0.0;
+      for (auto i = this->index->begin(); i != this->index->end(); ++i)
+        M = M + vector_factors->get_likelihood_estimator(*i)->log_maximum(schedule_parameters);
+    }
+    size_t N = this->number_of_particles;
+    if (!std::isfinite(M) || (N == 0) || !this->can_run_flat_conditioned())
+    {
+      this->simulate_smc(simulation, conditioned_on_parameters);
+      return false;
+    }
+    double log_N = std::log(double(N));
+    double S = -arma::datum::inf;
+    size_t done_before = 0;
+    std::vector<double> values;
+    const Index* index = this->index.get();
+    auto log_add = [](double a, double b) {
+      if (a == -arma::datum::inf) return b;
+      if (b == -arma::datum::inf) return a;
+      double top = std::max(a, b);
+      return top + std::log(std::exp(a - top) + std::exp(b - top));
+    };
+    this->chunk_stop = [&](Particles &generation, size_t done) -> bool
+    {
+      size_t count = done - done_before;
+      if ((count > 0) && (generation.adaptive_summary_evaluator != NULL))
+      {
+        values.resize(count);
+        size_t stride = generation.adaptive_summaries.n_rows;
+        generation.adaptive_summary_evaluator->smcadaptive_from_summaries(index,
+                                                                         generation.adaptive_summaries.memptr() + done_before*stride,
+                                                                         stride, count, schedule_parameters, values.data());
+        for (size_t j = 0; j < count; ++j)
+          S = log_add(S, values[j]);
+      }
+      done_before = done;
+      double rest = (done < N) ? std::log(double(N - done)) + M : -arma::datum::inf;
+      return log_add(S, rest) - log_N < threshold;
+    };
+    size_t chunk_size = this->chunk_size;
+    size_t small = (N + 15)/16;
+    if ((this->chunk_size == 0) || (this->chunk_size > small))
+      this->chunk_size = small;
+    this->simulate_smc(simulation, conditioned_on_parameters);
+    this->chunk_size = chunk_size;
+    this->chunk_stop = nullptr;
+    return this->chunk_stopped;
+  }
+
   void ImportanceSampler::simulate_in_chunks(SMCOutput *current_state,
                                              const Parameters* conditioned_on_parameters,
                                              bool summarise)

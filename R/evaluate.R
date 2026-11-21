@@ -169,3 +169,18 @@ check_gradient = function(recipe, parameters, variables = names(parameters), ind
   }
   do.call(rbind, rows)
 }
+
+# Draws from the simulator of an unnormalised distribution in a recipe
+# (x ~ ising(...), x ~ potts(...); dev/plan.md 3.20, S3): method "exact"
+# (coupling from the past, ising) or "sweeps" (that many heat-bath sweeps,
+# from x in parameters if given, otherwise from the base measure). One row
+# per draw. Internal: for tests and for the doubly intractable methods to come.
+simulate_unnormalised = function(recipe, variable, parameters = list(), draws = 1, method = "exact", sweeps = 100,
+                                 seed = 1, model_parameter_list = list())
+{
+  if (is.character(recipe))
+    recipe = compile(filenames = recipe, model_parameter_list = model_parameter_list)
+  algorithms = names(recipe$algorithms)
+  prepared = prepare_recipe(recipe, if (length(algorithms) > 0) algorithms[1] else NULL, model_parameter_list)
+  do_simulate_unnormalised(prepared$recipe, variable, parameters, as.integer(draws), method, as.integer(sweeps), seed)
+}

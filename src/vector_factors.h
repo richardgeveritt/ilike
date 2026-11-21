@@ -51,7 +51,14 @@ public:
   
   Data* get_current_data();
   
+  // (dev/plan.md 3.21) whether any of its estimators may defer its draws,
+  // found when the list is made, so that a move checks one flag
+  bool can_defer() const { return this->any_defers; }
+
 protected:
+
+  bool any_defers = false;
+  void find_deferring();
   
   void specific_change_data(Data* new_data);
   

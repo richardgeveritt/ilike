@@ -876,6 +876,23 @@ static std::vector<Builtin> make_registry()
     table.push_back(b);
   }
 
+  {
+    Builtin b;
+    b.name = "data";
+    b.description = "data tempering: the data points of factors written as model statements enter along a schedule of "
+                    "fractions from 0 to 1, each annealed in";
+    b.arguments = {required("variable", T::Variable, "the name of the fraction of the data"),
+                   required("schedule", T::Vector, "the fractions"),
+                   optional("factors", T::Vector, "the factors (numbered from 1) whose data points enter (default: all "
+                                                  "the likelihood factors)"),
+                   optional("order", T::String, RecipeValue(std::string("random")),
+                            "the order in which the data points enter: random (fixed by the seed) or given"),
+                   optional("anneal", T::Logical, RecipeValue(true),
+                            "anneal each data point in (else add whole data points)")};
+    b.roles = {R::SMCSequence};
+    table.push_back(b);
+  }
+
   // simulation-based likelihoods (bound only: built in recipe_factors.cpp)
   {
     auto points = [] { return required("number_of_points", T::Integer, "the number of simulations per evaluation").at_least(0.0); };

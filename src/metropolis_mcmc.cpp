@@ -1,3 +1,4 @@
+#include "early_rejection.h"
 #include <cmath>
 #include "distributions.h"
 #include "utils.h"
@@ -131,6 +132,22 @@ Particle MetropolisMCMC::move(RandomNumberGenerator &rng,
   
   double log_u = log(runif(rng));
   
+  // (dev/plan.md 3.21) factors with deferred draws: early rejection
+  if (proposed_particle.simulation_pending(this->index.get()))
+  {
+    double extra = this->log_ratio(0.0, 0.0, particle, proposed_particle);
+    bool accepted = early_rejection_accepts(log_u, particle.get_cached_likelihoods(this->index.get()), extra, proposed_particle, this->index.get());
+    if (particle.tuning != NULL)
+      observe_tuned_proposal(particle, proposed_particle, this->proposal.get(), accepted ? 1.0 : 0.0); // (the indicator: the ratio is not always known)
+    if (accepted)
+    {
+      proposed_particle.set_acceptance(this->proposal.get(),true);
+      this->refresh_cut_factors(proposed_particle);
+      this->check_carried_over_factors(proposed_particle, this->index.get());
+      return proposed_particle;
+    }
+    return particle;
+  }
   double numerator = proposed_particle.evaluate_likelihoods(this->index.get());
   // The denominator is read from the current particle's per-factor cache over
   // this move's own index. (It used to be particle.target_evaluated, a single
@@ -171,6 +188,22 @@ void MetropolisMCMC::move_in_place(RandomNumberGenerator &rng,
                                                     particle,
                                                     this->get_new_outputs_index(this->index.get()));
   double log_u = log(runif(rng));
+  // (dev/plan.md 3.21) factors with deferred draws: early rejection
+  if (proposed_particle.simulation_pending(this->index.get()))
+  {
+    double extra = this->log_ratio(0.0, 0.0, particle, proposed_particle);
+    bool accepted = early_rejection_accepts(log_u, particle.get_cached_likelihoods(this->index.get()), extra, proposed_particle, this->index.get());
+    if (particle.tuning != NULL)
+      observe_tuned_proposal(particle, proposed_particle, this->proposal.get(), accepted ? 1.0 : 0.0); // (the indicator: the ratio is not always known)
+    if (accepted)
+    {
+      proposed_particle.set_acceptance(this->proposal.get(),true);
+      this->refresh_cut_factors(proposed_particle);
+      this->check_carried_over_factors(proposed_particle, this->index.get());
+      particle = std::move(proposed_particle);
+    }
+    return;
+  }
   double numerator = proposed_particle.evaluate_likelihoods(this->index.get());
   double denominator = particle.get_cached_likelihoods(this->index.get());
   if ( (numerator==-arma::datum::inf) || (denominator==-arma::datum::inf) )
@@ -293,6 +326,22 @@ void MetropolisMCMC::move_in_place(RandomNumberGenerator &rng,
                             this->get_new_outputs_index(this->index.get()),
                             scratch);
   double log_u = log(runif(rng));
+  // (dev/plan.md 3.21) factors with deferred draws: early rejection
+  if (scratch.simulation_pending(this->index.get()))
+  {
+    double extra = this->log_ratio(0.0, 0.0, particle, scratch);
+    bool accepted = early_rejection_accepts(log_u, particle.get_cached_likelihoods(this->index.get()), extra, scratch, this->index.get());
+    if (particle.tuning != NULL)
+      observe_tuned_proposal(particle, scratch, this->proposal.get(), accepted ? 1.0 : 0.0); // (the indicator: the ratio is not always known)
+    if (accepted)
+    {
+      scratch.set_acceptance(this->proposal.get(),true);
+      this->refresh_cut_factors(scratch);
+      this->check_carried_over_factors(scratch, this->index.get());
+      particle.swap(scratch);
+    }
+    return;
+  }
   double numerator = scratch.evaluate_likelihoods(this->index.get());
   double denominator = particle.get_cached_likelihoods(this->index.get());
   if ( (numerator==-arma::datum::inf) || (denominator==-arma::datum::inf) )

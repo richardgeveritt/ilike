@@ -319,6 +319,14 @@ void SMC::setup_variables(const Parameters &parameters)
     this->factors->setup(dummy_parameters);
 }
 
+bool SMC::simulate_smc_with_threshold(SMCOutput* simulation,
+                                     const Parameters &conditioned_on_parameters,
+                                     double threshold)
+{
+  this->simulate_smc(simulation, conditioned_on_parameters);
+  return false;
+}
+
 void SMC::simulate_generation_in_chunks(SMCOutput *current_state,
                                        const Parameters* conditioned_on_parameters,
                                        bool summarise,
@@ -552,6 +560,18 @@ void SMC::simulate_generation_in_chunks(SMCOutput *current_state,
       }
     };
 
+    // (dev/plan.md 3.21) a stop check after each chunk, when they run one
+    // after another
+    this->chunk_stopped = false;
+    auto stop_after = [&](size_t k) -> bool
+    {
+      if (!this->chunk_stop || in_parallel || this->chunk_stopped)
+        return this->chunk_stopped;
+      if (this->chunk_stop(*generation, std::min(N, (k + 1)*B)))
+        this->chunk_stopped = true;
+      return this->chunk_stopped;
+    };
+
     if (mode == shared)
     {
       Workspace w;
@@ -559,6 +579,8 @@ void SMC::simulate_generation_in_chunks(SMCOutput *current_state,
       for (size_t k = 0; k < K; ++k)
       {
         run_chunk(k, w);
+        if (stop_after(k))
+          break;
         if (this->progress_counts_points)
           ProgressReporter::instance().update(double(std::min(N, (k + 1)*B)));
         check_interrupt();
@@ -576,7 +598,12 @@ void SMC::simulate_generation_in_chunks(SMCOutput *current_state,
                          Workspace w;
                          make_workspace(w);
                          for (size_t k = first_chunk; k < end_chunk; ++k)
+                         {
+                           if (this->chunk_stopped)
+                             break;
                            run_chunk(k, w);
+                           stop_after(k);
+                         }
                          // the slots' factor variables belong to the group's
                          // copy of the factors: delete them first
                          w.slots.clear();
@@ -584,6 +611,8 @@ void SMC::simulate_generation_in_chunks(SMCOutput *current_state,
                        after_wave);
     }
 
+    if (this->chunk_stopped)
+      return; // (stopped early: the generation is incomplete and is not used)
     generation->initialise_weights();
   }
 

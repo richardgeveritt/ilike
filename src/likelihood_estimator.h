@@ -71,6 +71,12 @@ public:
   // a new one's state (LikelihoodEstimatorOutput::reinitialise). Default:
   // neither.
   virtual bool supports_restore_from_summary() const { return false; }
+  // (dev/plan.md 3.21) its outputs may defer their draws to their first
+  // evaluation (LikelihoodEstimatorOutput::simulation_pending)
+  virtual bool defers_simulation() const { return false; }
+  // (dev/plan.md 3.21) an upper bound on the log value of one term of this
+  // estimator (an ABC kernel's maximum), +inf if none is known
+  virtual double log_maximum(const Parameters &parameters) const { return arma::datum::inf; }
   virtual bool supports_reinitialise() const { return false; }
 
   // True if this estimator's outputs may be simulated and evaluated for

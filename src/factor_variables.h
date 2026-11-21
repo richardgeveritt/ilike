@@ -42,6 +42,17 @@ public:
   virtual double evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index)=0;
   virtual double evaluate_likelihoods(const Index* index) const=0;
 
+  // (dev/plan.md 3.21) whether an output in index has deferred its draws, and
+  // the sum over index evaluated with early rejection: the outputs without
+  // deferred draws first, then the others while the sum can still reach
+  // threshold (below: it cannot; the value is then -inf)
+  virtual bool simulation_pending(const Index* index) const { return false; }
+  virtual double evaluate_likelihoods_with_threshold(const Index* index, double threshold, bool &below) const
+  {
+    below = false;
+    return this->evaluate_likelihoods(index);
+  }
+
   // Sum of the values most recently computed for the factors in index, read
   // from each factor's cache without evaluating anything. Valid only if those
   // factors were last evaluated at the particle's current parameters.

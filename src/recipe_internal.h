@@ -25,6 +25,8 @@
 #include "adjustment_ensemble_shifter.h"
 #include "always_smc_termination.h"
 #include "annealed_likelihood_estimator.h"
+#include "cancellation_plan.h"
+#include "unnormalised_normaliser_estimator.h"
 #include "barker_dynamics_proposal_kernel.h"
 #include "cess_smc_criterion.h"
 #include "composite_independent_proposal_kernel.h"
@@ -175,8 +177,8 @@ bool is_linear_gaussian_transition_model(const RecipeValue &current_factor);
 RecipeValue get_one_line_linear_gaussian(const RecipeValue &current_factor, const std::string &block_name, size_t number_of_variables, const RecipeValue &model_parameters);
 LinearGaussianSpec get_linear_gaussian_data_model(const RecipeValue &current_factor, const RecipeValue &model_parameters);
 LinearGaussianSpec get_linear_gaussian_transition_model(const RecipeValue &current_factor, const RecipeValue &model_parameters, bool variable_required);
-std::string prior_cannot_be_annealed(size_t factor_index);
-std::vector<LikelihoodEstimator *> get_likelihood_estimators( RandomNumberGenerator *rng_in, size_t *seed_in, Data *data_in, const RecipeValue &model, const RecipeValue &model_parameters, const Parameters &algorithm_parameters, bool include_priors, const std::vector<std::string> &sequencer_types, const std::vector<std::string> &sequencer_variables, const std::vector<std::vector<double>> &sequencer_schedules, IndependentProposalKernel *proposal_in, VectorIndex *&without_cancelled_index, VectorIndex *&without_priors_index, VectorIndex *&full_index, bool &any_annealing, const std::vector<int> &factors_affected_by_smc_sequence, std::vector<Data> &data_created_in_get_likelihood_estimators, std::vector<Data> &data_created_in_get_measurement_covariance_estimators);
+TargetSpecification target_specification( const RecipeValue &model, const std::vector<std::string> &sequencer_types, const std::vector<std::string> &sequencer_variables, const std::vector<int> &factors_affected_by_smc_sequence);
+std::vector<LikelihoodEstimator *> get_likelihood_estimators( RandomNumberGenerator *rng_in, size_t *seed_in, Data *data_in, const RecipeValue &model, const RecipeValue &model_parameters, const Parameters &algorithm_parameters, const KernelDeclaration &importance_proposal, const std::vector<std::string> &sequencer_types, const std::vector<std::string> &sequencer_variables, const std::vector<std::vector<double>> &sequencer_schedules, IndependentProposalKernel *proposal_in, VectorIndex *&without_cancelled_index, VectorIndex *&without_priors_index, VectorIndex *&full_index, CancellationPlan &plan, const std::vector<int> &factors_affected_by_smc_sequence, std::vector<Data> &data_created_in_get_likelihood_estimators, std::vector<Data> &data_created_in_get_measurement_covariance_estimators, const DataTemperingOptions &data_tempering = DataTemperingOptions());
 std::vector<KalmanUpdater *> get_kalman_updaters(const RecipeValue &model, const RecipeValue &model_parameters);
 KalmanPredictor *get_kalman_predictor(const RecipeValue &model, const RecipeValue &model_parameters);
 ProposalKernel *get_transition_proposal(const RecipeValue &model, const RecipeValue &model_parameters);

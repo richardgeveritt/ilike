@@ -80,6 +80,15 @@ protected:
 
   double plate_evaluate(const Parameters &parameters);
 
+  // data tempering (dev/plan.md 3.20, S2): only the terms the target
+  // includes are evaluated; the first `active` terms are valid (the others are
+  // not, and are never read). The value is the sum of the first k terms plus
+  // r times term k + 1.
+  size_t active = 0;
+  double tempered_evaluate(const Parameters &parameters);
+  double tempered_value(const Parameters &parameters) const;
+  double prefix_sum(size_t k) const;
+
   // Stored in ModelAndAlgorithm.
   PlateLikelihoodEstimator* plate;
 

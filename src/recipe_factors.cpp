@@ -1,14 +1,61 @@
 #include "recipe_internal.h"
 #include "plate_likelihood_estimator.h"
 
-// Error for annealing a prior that is also the importance proposal: it
-// cancels in the weights, so it is not part of the target and its power would
-// be ignored.
-std::string prior_cannot_be_annealed(size_t factor_index) {
-  return "smc_sequence annealing: factor " + std::to_string(factor_index + 1) +
-         " is a prior that is also used as the importance proposal, so it "
-         "cancels and cannot be annealed. Remove it from the factors to "
-         "anneal, or give an is_proposal.";
+// The target of an algorithm, from the recipe's factors and its SMC sequence
+// (dev/plan.md 3.20, S1): each factor's kind, whether the sequence names it,
+// and whether the sequence is annealing. plan_cancellations
+// (cancellation_plan.cpp) then decides what cancels.
+TargetSpecification target_specification(
+    const RecipeValue &model, const std::vector<std::string> &sequencer_types,
+    const std::vector<std::string> &sequencer_variables,
+    const std::vector<int> &factors_affected_by_smc_sequence) {
+  TargetSpecification target;
+  for (size_t i = 0; i < sequencer_types.size(); ++i) {
+    if ((iequals(sequencer_types[i], "annealing")) ||
+        (iequals(sequencer_types[i], "tempering"))) {
+      // (the first annealing sequence)
+      target.annealing = true;
+      target.annealing_variable = sequencer_variables[i];
+      break;
+    }
+  }
+  target.sequence = !sequencer_types.empty();
+  target.number_of_sequences = sequencer_types.size();
+  for (size_t i = 0; i < sequencer_types.size(); ++i)
+    if (iequals(sequencer_types[i], "data")) {
+      target.data_tempering = true;
+      target.data_variable = sequencer_variables[i];
+    }
+  target.factors_listed = !factors_affected_by_smc_sequence.empty();
+  if (model.contains("factor")) {
+    RecipeValue factors = model["factor"];
+    for (size_t j = 0; j < factors_affected_by_smc_sequence.size(); ++j) {
+      if ((factors_affected_by_smc_sequence[j] < 0) ||
+          (size_t(factors_affected_by_smc_sequence[j]) >= factors.size()))
+        stop("smc_sequence: the factors affected must be between 1 and " +
+             std::to_string(factors.size()) + ".");
+    }
+    for (size_t i = 0; i < factors.size(); ++i) {
+      bool listed = false;
+      for (size_t j = 0; j < factors_affected_by_smc_sequence.size(); ++j)
+        if (int(i) == factors_affected_by_smc_sequence[j])
+          listed = true;
+      target.listed.push_back(listed);
+      // (in the order get_likelihood_estimators reads the entry; a malformed
+      // entry is reported there)
+      FactorKind kind = FactorKind::likelihood;
+      if ((factors[i]).is_list()) {
+        RecipeValue current_factor = factors[i];
+        if (current_factor.contains("prior") ||
+            current_factor.contains("evaluate_log_prior"))
+          kind = FactorKind::prior;
+        else if (current_factor.contains("simulate_prior"))
+          kind = FactorKind::none;
+      }
+      target.kinds.push_back(kind);
+    }
+  }
+  return target;
 }
 
 // A factor written as model statements (I4b): a plate of terms, when its
@@ -42,40 +89,29 @@ LikelihoodEstimator *make_model_statement_estimator(
 std::vector<LikelihoodEstimator *> get_likelihood_estimators(
     RandomNumberGenerator *rng_in, size_t *seed_in, Data *data_in,
     const RecipeValue &model, const RecipeValue &model_parameters,
-    const Parameters &algorithm_parameters, bool include_priors,
+    const Parameters &algorithm_parameters,
+    const KernelDeclaration &importance_proposal,
     const std::vector<std::string> &sequencer_types,
     const std::vector<std::string> &sequencer_variables,
     const std::vector<std::vector<double>> &sequencer_schedules,
     IndependentProposalKernel *proposal_in,
     VectorIndex *&without_cancelled_index, VectorIndex *&without_priors_index,
-    VectorIndex *&full_index, bool &any_annealing,
+    VectorIndex *&full_index, CancellationPlan &plan,
     const std::vector<int> &factors_affected_by_smc_sequence,
     std::vector<Data> &data_created_in_get_likelihood_estimators,
-    std::vector<Data> &data_created_in_get_measurement_covariance_estimators) {
+    std::vector<Data> &data_created_in_get_measurement_covariance_estimators,
+    const DataTemperingOptions &data_tempering) {
 
   std::vector<size_t> without_cancelled_index_vector;
   std::vector<size_t> without_priors_index_vector;
   std::vector<size_t> full_index_vector;
 
-  any_annealing = false;
-  std::string annealing_variable;
-  for (size_t i = 0; i < sequencer_types.size(); ++i) {
-
-    // if ( ( (sequencer_types[i]=="annealing") ||
-    // (sequencer_types[i]=="tempering") ) && (!(
-    // (sequencer_schedules[i].size()==2) && (sequencer_schedules[i][0]==0.0) &&
-    // (sequencer_schedules[i][1]==1.0)) ) )
-    if ((iequals(sequencer_types[i], "annealing")) ||
-        (iequals(sequencer_types[i], "tempering"))) {
-      if (any_annealing == false) {
-        any_annealing = true;
-        annealing_variable = sequencer_variables[i];
-        break;
-      } else {
-        stop("Two annealing variables specified: not currently supported.");
-      }
-    }
-  }
+  // what cancels (dev/plan.md 3.20, S1)
+  plan = plan_cancellations(
+      target_specification(model, sequencer_types, sequencer_variables,
+                           factors_affected_by_smc_sequence),
+      importance_proposal);
+  const std::string &annealing_variable = plan.annealing_variable;
 
   PowerFunctionPtr power = annealing_power;
   PowerFunctionPtr second_power = annealing_one_minus_power;
@@ -86,36 +122,22 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
 
     RecipeValue factors = model["factor"];
 
-    for (size_t j = 0; j < factors_affected_by_smc_sequence.size(); ++j) {
-      if ((factors_affected_by_smc_sequence[j] < 0) ||
-          (size_t(factors_affected_by_smc_sequence[j]) >= factors.size()))
-        stop("smc_sequence: the factors affected must be between 1 and " +
-             std::to_string(factors.size()) + ".");
-    }
-
     for (size_t i = 0; i < factors.size(); ++i) {
 
-      bool factor_is_listed = false;
-      for (size_t j = 0; j < factors_affected_by_smc_sequence.size(); ++j) {
-        if (int(i) == factors_affected_by_smc_sequence[j])
-          factor_is_listed = true;
-      }
-      // Annealing: the listed factors are raised to the power (all factors if
-      // none are listed); the others enter the target unannealed. The value of
-      // an annealed factor does not depend on the power, so it is evaluated
-      // once (smcfixed) and only the power changes.
-      // Other sequences (ilike::parameter): the listed factors are the ones
-      // that depend on the sequence variable, so they are re-evaluated when
-      // the target changes; with no list, every factor is. Without an SMC
-      // sequence, factors are fixed.
-      bool factor_is_annealed =
-          any_annealing &&
-          (factors_affected_by_smc_sequence.empty() || factor_is_listed);
-      bool factor_changes_with_sequence =
-          (!sequencer_types.empty()) &&
-          (factors_affected_by_smc_sequence.empty() || factor_is_listed);
-      bool factor_is_fixed_in_smc =
-          any_annealing || !factor_changes_with_sequence;
+      // (the plan: annealed, fixed along the sequence, in the weights)
+      const FactorPlan &factor_plan = plan.factors[i];
+      const bool factor_is_annealed = factor_plan.annealed;
+      const bool factor_is_fixed_in_smc = factor_plan.fixed_in_smc;
+
+      // (S2) data tempering takes the terms of a factor written as model
+      // statements one at a time; another factor cannot be tempered this way
+      if (factor_plan.data_tempered &&
+          !((factors[i]).is_list() && factors[i].contains("evaluate_log_likelihood") &&
+            factors[i].contains("plate")))
+        stop("smc_sequence data tempering: factor " + std::to_string(i + 1) +
+             " is not written as model statements, so its data points cannot be taken in one at a time. "
+             "List the factors to temper (data(..., factors = [...])), or read the sequence variable in the "
+             "factor's own function with parameter(...).");
 
       if ((factors[i]).is_list()) {
 
@@ -135,21 +157,15 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                                                new_factor, true);
 
               full_index_vector.push_back(likelihood_estimators.size());
-              if (include_priors) {
+              if (factor_plan.in_weight)
                 without_cancelled_index_vector.push_back(
                     likelihood_estimators.size());
-
-                if (factor_is_annealed) {
-                  likelihood_estimators.push_back(
-                      new AnnealedLikelihoodEstimator(
-                          rng_in, seed_in, data_in, new_likelihood_estimator,
-                          power, annealing_variable, false));
-                } else {
-                  likelihood_estimators.push_back(new_likelihood_estimator);
-                }
+              if (factor_is_annealed) {
+                likelihood_estimators.push_back(
+                    new AnnealedLikelihoodEstimator(
+                        rng_in, seed_in, data_in, new_likelihood_estimator,
+                        power, annealing_variable, false));
               } else {
-                if (any_annealing && factor_is_listed)
-                  stop(prior_cannot_be_annealed(i));
                 likelihood_estimators.push_back(new_likelihood_estimator);
               }
             } else {
@@ -186,24 +202,14 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                                              factor_is_fixed_in_smc);
           }
           full_index_vector.push_back(likelihood_estimators.size());
-
-          if (include_priors) {
-
+          if (factor_plan.in_weight)
             without_cancelled_index_vector.push_back(
                 likelihood_estimators.size());
-
-            if (factor_is_annealed) {
-
-              likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(
-                  rng_in, seed_in, data_in, new_likelihood_estimator, power,
-                  annealing_variable, false));
-            } else {
-
-              likelihood_estimators.push_back(new_likelihood_estimator);
-            }
+          if (factor_is_annealed) {
+            likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(
+                rng_in, seed_in, data_in, new_likelihood_estimator, power,
+                annealing_variable, false));
           } else {
-            if (any_annealing && factor_is_listed)
-              stop(prior_cannot_be_annealed(i));
             likelihood_estimators.push_back(new_likelihood_estimator);
           }
         } else if (current_factor.contains("simulate_prior")) {
@@ -234,6 +240,12 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
             new_likelihood_estimator = make_model_statement_estimator(
                 current_factor, model, rng_in, seed_in, data_in,
                 factor_is_fixed_in_smc);
+            // (S2) its data points taken in along the sequence
+            if (factor_plan.data_tempered)
+              static_cast<PlateLikelihoodEstimator *>(new_likelihood_estimator)
+                  ->set_data_tempering(plan.data_variable, data_tempering.anneal,
+                                       data_tempering.random_order,
+                                       (seed_in != NULL) ? *seed_in : 0);
           } else {
             new_likelihood_estimator =
                 new ExactLikelihoodEstimator(rng_in, seed_in, data_in, new_factor,
@@ -241,9 +253,11 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
           }
 
           full_index_vector.push_back(likelihood_estimators.size());
-          without_cancelled_index_vector.push_back(
-              likelihood_estimators.size());
-          without_priors_index_vector.push_back(likelihood_estimators.size());
+          if (factor_plan.in_weight)
+            without_cancelled_index_vector.push_back(
+                likelihood_estimators.size());
+          if (factor_plan.in_without_priors)
+            without_priors_index_vector.push_back(likelihood_estimators.size());
 
           if (factor_is_annealed) {
             likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(
@@ -645,9 +659,11 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
           }
 
           full_index_vector.push_back(likelihood_estimators.size());
-          without_cancelled_index_vector.push_back(
-              likelihood_estimators.size());
-          without_priors_index_vector.push_back(likelihood_estimators.size());
+          if (factor_plan.in_weight)
+            without_cancelled_index_vector.push_back(
+                likelihood_estimators.size());
+          if (factor_plan.in_without_priors)
+            without_priors_index_vector.push_back(likelihood_estimators.size());
 
           if (factor_is_annealed) {
             likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(
@@ -682,9 +698,11 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                                            factor_is_fixed_in_smc);
 
           full_index_vector.push_back(likelihood_estimators.size());
-          without_cancelled_index_vector.push_back(
-              likelihood_estimators.size());
-          without_priors_index_vector.push_back(likelihood_estimators.size());
+          if (factor_plan.in_weight)
+            without_cancelled_index_vector.push_back(
+                likelihood_estimators.size());
+          if (factor_plan.in_without_priors)
+            without_priors_index_vector.push_back(likelihood_estimators.size());
 
           if (factor_is_annealed) {
             likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(
@@ -747,9 +765,11 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                                            factor_is_fixed_in_smc);
 
           full_index_vector.push_back(likelihood_estimators.size());
-          without_cancelled_index_vector.push_back(
-              likelihood_estimators.size());
-          without_priors_index_vector.push_back(likelihood_estimators.size());
+          if (factor_plan.in_weight)
+            without_cancelled_index_vector.push_back(
+                likelihood_estimators.size());
+          if (factor_plan.in_without_priors)
+            without_priors_index_vector.push_back(likelihood_estimators.size());
 
           if (factor_is_annealed) {
             likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(
@@ -841,9 +861,11 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
             }
 
             full_index_vector.push_back(likelihood_estimators.size());
-            without_cancelled_index_vector.push_back(
-                likelihood_estimators.size());
-            without_priors_index_vector.push_back(likelihood_estimators.size());
+            if (factor_plan.in_weight)
+              without_cancelled_index_vector.push_back(
+                  likelihood_estimators.size());
+            if (factor_plan.in_without_priors)
+              without_priors_index_vector.push_back(likelihood_estimators.size());
 
             if (factor_is_annealed) {
               likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(
@@ -854,6 +876,33 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
             }
           } else {
             stop("likelihood factor not well specified.");
+          }
+        } else if (current_factor.contains("unnormalised_normaliser")) {
+          // (dev/plan.md 3.20, S4) an estimate of 1/Z(theta) of an
+          // unnormalised distribution (normaliser = sav(...))
+          RecipeValue entry = current_factor["unnormalised_normaliser"];
+          std::vector<std::string> normaliser = entry["normaliser"];
+          std::vector<double> at = entry["at"];
+          UnnormalisedExactFunctionPtr exact = NULL;
+          if (entry.contains("exact"))
+            exact = entry["exact"].function_pointer<UnnormalisedExactFunctionPtr>();
+          LikelihoodEstimator *new_likelihood_estimator = new UnnormalisedNormaliserEstimator(
+              rng_in, seed_in, data_in, entry["variable"].as_string(),
+              entry["potential"].function_pointer<UnnormalisedPotentialPtr>(), exact,
+              entry["sweep"].function_pointer<UnnormalisedSweepFunctionPtr>(),
+              size_t(entry["sweeps"].as_double()), size_t(entry["points"].as_double()),
+              normaliser, at, factor_is_fixed_in_smc);
+          full_index_vector.push_back(likelihood_estimators.size());
+          if (factor_plan.in_weight)
+            without_cancelled_index_vector.push_back(likelihood_estimators.size());
+          if (factor_plan.in_without_priors)
+            without_priors_index_vector.push_back(likelihood_estimators.size());
+          if (factor_is_annealed) {
+            likelihood_estimators.push_back(new AnnealedLikelihoodEstimator(
+                rng_in, seed_in, data_in, new_likelihood_estimator, power,
+                annealing_variable, false));
+          } else {
+            likelihood_estimators.push_back(new_likelihood_estimator);
           }
         } else if (current_factor.contains("simulate_data_model")) {
           // sbi(simulate = …, data = …) without a method: only MFDS uses a
@@ -874,8 +923,7 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
   // path is (all factors)^p q^(1-p), starting at q. When only chosen factors
   // are annealed, the path is (other factors) (chosen factors)^p, with no q
   // term; the first weights are then (target / q) as usual.
-  if ((include_priors) && (any_annealing) &&
-      (factors_affected_by_smc_sequence.empty())) {
+  if (plan.add_proposal_path_factor) {
     full_index_vector.push_back(likelihood_estimators.size());
     without_cancelled_index_vector.push_back(likelihood_estimators.size());
 

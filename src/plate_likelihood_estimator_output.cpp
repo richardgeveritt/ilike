@@ -75,6 +75,7 @@ void PlateLikelihoodEstimatorOutput::make_copy(const PlateLikelihoodEstimatorOut
   this->terms_version = another.terms_version;
   this->partial = another.partial;
   this->pending = another.pending;
+  this->active = another.active;
   // (marks are all clear between evaluations)
   this->marked.assign(another.marked.size(), 0);
 }
@@ -103,9 +104,17 @@ void PlateLikelihoodEstimatorOutput::subsample_evaluate_smcadaptive_part_given_s
   Rcpp::stop("Subsampling is not available for factors written as model statements.");
 }
 
+static void refuse_tempered_gradient(const PlateLikelihoodEstimator* p, const std::string &name)
+{
+  Rcpp::stop("Gradients are not available for the factor " + name +
+             " under data tempering (its generated gradient includes every data point), so gradient-based proposals cannot be used with it in this SMC sampler.");
+}
+
 arma::mat PlateLikelihoodEstimatorOutput::get_gradient_of_log(const std::string &variable,
                                                               const Parameters &x)
 {
+  if (this->plate->tempered)
+    refuse_tempered_gradient(this->plate, this->plate->name);
   if (this->plate->gradient_function == NULL)
     Rcpp::stop("Gradients are not available for the factor " + this->plate->name +
                " (written as model statements), so gradient-based proposals cannot be used with it.");
@@ -116,6 +125,8 @@ arma::mat PlateLikelihoodEstimatorOutput::get_gradient_of_log(const std::string 
 std::vector<arma::mat> PlateLikelihoodEstimatorOutput::get_gradients_of_log(const std::vector<std::string> &variables,
                                                                             const Parameters &x)
 {
+  if (this->plate->tempered)
+    refuse_tempered_gradient(this->plate, this->plate->name);
   if (this->plate->gradients_function == NULL)
     return LikelihoodEstimatorOutput::get_gradients_of_log(variables, x);
   std::vector<arma::mat> gradients;
@@ -129,7 +140,7 @@ bool PlateLikelihoodEstimatorOutput::evaluate_with_gradients(const Parameters &p
                                                              std::vector<arma::mat> &gradients)
 {
   // (check_factor_index checks the terms, which this does not keep)
-  if ((this->plate->value_gradients_function == NULL) || this->plate->check)
+  if ((this->plate->value_gradients_function == NULL) || this->plate->check || this->plate->tempered)
     return false;
   gradients.clear();
   value = this->plate->value_gradients_function(variables, gradients, parameters, this->plate->plate_data());
@@ -191,9 +202,106 @@ void PlateLikelihoodEstimatorOutput::set_value(double value)
   this->log_likelihood = value;
 }
 
+double PlateLikelihoodEstimatorOutput::prefix_sum(size_t k) const
+{
+  // the sum of leaves 0, ..., k - 1, from the nodes covering them
+  double sum = 0.0;
+  size_t lo = this->leaves, hi = this->leaves + k;
+  while (lo < hi)
+  {
+    if (lo & 1)
+      sum += this->tree[lo++];
+    if (hi & 1)
+      sum += this->tree[--hi];
+    lo >>= 1;
+    hi >>= 1;
+  }
+  return sum;
+}
+
+double PlateLikelihoodEstimatorOutput::tempered_value(const Parameters &parameters) const
+{
+  size_t k;
+  double r;
+  this->plate->tempering_point(parameters, k, r);
+  if (k >= this->plate->number_of_terms())
+    return this->tree_sum(); // (all the data: as without tempering)
+  double value = this->prefix_sum(k);
+  if (r > 0.0)
+    value += r * this->tree[this->leaves + k];
+  return value;
+}
+
+double PlateLikelihoodEstimatorOutput::tempered_evaluate(const Parameters &parameters)
+{
+  PlateLikelihoodEstimator* p = this->plate;
+  size_t n = p->number_of_terms();
+  size_t k;
+  double r;
+  p->tempering_point(parameters, k, r);
+  size_t needed = std::min(n, k + ((r > 0.0) ? size_t(1) : size_t(0)));
+  this->undo.clear();
+  this->undo_pending = false;
+  bool keep = this->terms_valid && (this->terms_version == p->structure_version) &&
+              tree_fits(this->tree, this->leaves, n);
+  if (keep)
+  {
+    // the terms that changed with the parameters (among those evaluated),
+    // then the terms the target now includes for the first time (a new step
+    // of the sequence: its cost is that of the data added)
+    std::vector<uint32_t> changed;
+    if (this->partial)
+      for (uint32_t t : this->pending)
+        if (t < this->active)
+        {
+          this->tree[this->leaves + t] = p->term(parameters, t);
+          changed.push_back(t);
+        }
+    for (size_t t = this->active; t < needed; ++t)
+    {
+      this->tree[this->leaves + t] = p->term(parameters, t);
+      changed.push_back(uint32_t(t));
+    }
+    if (needed > this->active)
+      this->active = needed;
+    if (4*changed.size() > n)
+      this->build_tree();
+    else
+      for (uint32_t t : changed)
+        this->update_tree(t);
+    if (p->check)
+    {
+      for (size_t t = 0; t < this->active; ++t)
+      {
+        double fresh = p->term(parameters, t);
+        double kept = this->tree[this->leaves + t];
+        if ((fresh != kept) && !(std::isnan(fresh) && std::isnan(kept)) &&
+            !(std::abs(fresh - kept) <= 1e-12*(1.0 + std::abs(fresh))))
+          Rcpp::stop("check_factor_index: term " + std::to_string(t + 1) + " of the factor " + p->name +
+                     " changed although none of the parameters it was listed as reading changed (its list of dependencies is wrong).");
+      }
+    }
+  }
+  else
+  {
+    this->size_tree(n);
+    for (size_t t = 0; t < needed; ++t)
+      this->tree[this->leaves + t] = p->term(parameters, t);
+    this->active = needed;
+    this->build_tree();
+  }
+  this->terms_valid = true;
+  this->terms_version = p->structure_version;
+  this->partial = false;
+  this->pending.clear();
+  return this->tempered_value(parameters);
+}
+
 double PlateLikelihoodEstimatorOutput::plate_evaluate(const Parameters &parameters)
 {
   PlateLikelihoodEstimator* p = this->plate;
+  if (p->tempered)
+    return this->tempered_evaluate(parameters);
   size_t n = p->number_of_terms();
   this->undo.clear();
   this->undo_pending = false;
@@ -260,9 +368,11 @@ bool PlateLikelihoodEstimatorOutput::change_in_place(const Parameters &parameter
 
   if (this->marked.size() != n)
     this->marked.assign(n, 0);
+  // (under data tempering, only the terms evaluated so far)
+  const size_t limit = p->tempered ? this->active : n;
   auto recompute = [&](const std::vector<uint32_t> &readers) {
     for (uint32_t t : readers)
-      if (!this->marked[t])
+      if ((t < limit) && !this->marked[t])
       {
         this->marked[t] = 1;
         this->undo.push_back(std::make_pair(t, this->tree[this->leaves + t]));
@@ -281,7 +391,7 @@ bool PlateLikelihoodEstimatorOutput::change_in_place(const Parameters &parameter
   }
   if (p->check)
   {
-    for (size_t t = 0; t < n; ++t)
+    for (size_t t = 0; t < limit; ++t)
     {
       double fresh = p->term(parameters, t);
       double kept = this->tree[this->leaves + t];
@@ -291,7 +401,7 @@ bool PlateLikelihoodEstimatorOutput::change_in_place(const Parameters &parameter
                    " changed although none of the parameters it was listed as reading changed (its list of dependencies is wrong).");
     }
   }
-  this->set_value(this->tree_sum());
+  this->set_value(p->tempered ? this->tempered_value(parameters) : this->tree_sum());
   return true;
 }
 
@@ -312,7 +422,7 @@ void PlateLikelihoodEstimatorOutput::undo_in_place()
 void PlateLikelihoodEstimatorOutput::prepare_in_place(const Parameters &parameters)
 {
   PlateLikelihoodEstimator* p = this->plate;
-  if (this->terms_valid && !this->partial && (this->terms_version == p->structure_version) &&
+  if (!p->tempered && this->terms_valid && !this->partial && (this->terms_version == p->structure_version) &&
       tree_fits(this->tree, this->leaves, p->number_of_terms()))
     return;
   // (the terms at the current parameters, whose value is already known: the
@@ -420,6 +530,7 @@ void PlateLikelihoodEstimatorOutput::carry_over_from(const LikelihoodEstimatorOu
   }
   this->tree = source->tree;
   this->leaves = source->leaves;
+  this->active = source->active;
   this->terms_version = source->terms_version;
   this->terms_valid = true;
   this->partial = true;

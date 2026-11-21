@@ -73,6 +73,10 @@ copy_audit <- function(model_R, parameters_R, algorithm_parameter_list_R, mcmc_t
     .Call(`_ilike_copy_audit`, model_R, parameters_R, algorithm_parameter_list_R, mcmc_termination_method_R, mcmc_weights_method_R, seed_value)
 }
 
+do_simulate_unnormalised <- function(model_R, variable, parameters_in, draws, method, sweeps, seed) {
+    .Call(`_ilike_do_simulate_unnormalised`, model_R, variable, parameters_in, draws, method, sweeps, seed)
+}
+
 covariance_tools_check <- function(points, weights, block_size) {
     .Call(`_ilike_covariance_tools_check`, points, weights, block_size)
 }

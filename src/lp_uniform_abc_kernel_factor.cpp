@@ -173,4 +173,11 @@ arma::mat LpUniformABCKernelFactor::likelihood_evaluate_gradient(const std::stri
   return arma::mat(input[variable].n_elem,1);
 }
 
+
+// (dev/plan.md 3.21) the kernel at distance 0: its largest value
+double LpUniformABCKernelFactor::log_maximum(const Parameters &input) const
+{
+  double scale_constant = (this->scale_variable != "") ? arma::sum(log(arma::colvec(input[this->scale_variable]))) : 0.0;
+  return this->evaluate_kernel_given_distance_at(input[this->epsilon_variable][0], 0.0, scale_constant);
+}
 }

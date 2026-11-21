@@ -1021,6 +1021,22 @@ double Particle::evaluate_likelihoods(const Index* index)
     return 0.0;
 }
 
+bool Particle::simulation_pending(const Index* index) const
+{
+  return (this->factor_variables!=NULL) && this->factor_variables->simulation_pending(index);
+}
+
+double Particle::evaluate_likelihoods_with_threshold(const Index* index, double threshold, bool &below)
+{
+  below = false;
+  if (this->factor_variables!=NULL)
+  {
+    this->target_evaluated = this->factor_variables->evaluate_likelihoods_with_threshold(index, threshold, below);
+    return this->target_evaluated;
+  }
+  return 0.0;
+}
+
 double Particle::subsample_evaluate_likelihoods(const Index* index)
 {
   if (this->factor_variables!=NULL)

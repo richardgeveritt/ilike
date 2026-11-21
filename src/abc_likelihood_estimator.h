@@ -36,6 +36,7 @@ public:
   ABCLikelihoodEstimator(const ABCLikelihoodEstimator &another);
   
   void operator=(const ABCLikelihoodEstimator &another);
+  double log_maximum(const Parameters &parameters) const;
   LikelihoodEstimator* duplicate() const;
   
   LikelihoodEstimatorOutput* initialise();

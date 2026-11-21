@@ -160,6 +160,22 @@ protected:
   // of one): the caller finds the changed variables only then (C211: finding
   // them on every move cost the other factors ~25% of an MCMC iteration)
   virtual bool carries_over() const { return false; }
+
+  // Early rejection in Metropolis-Hastings (dev/plan.md 3.21): an output
+  // whose estimator draws random numbers may defer its draws from simulate()
+  // to its first evaluation (simulation_pending() is then true until then),
+  // so that a proposal rejected without it never makes them. log_upper_bound
+  // is an upper bound on its log value at these parameters (+inf if none is
+  // known). evaluate_with_threshold evaluates it, or stops as soon as its log
+  // value is known to be below threshold (below is then true and the value
+  // is not meaningful); by default it evaluates fully.
+  virtual bool simulation_pending() const { return false; }
+  virtual double log_upper_bound(const Parameters &parameters) const { return arma::datum::inf; }
+  virtual double evaluate_with_threshold(const Parameters &parameters, double threshold, bool &below)
+  {
+    below = false;
+    return this->evaluate(parameters);
+  }
   virtual bool assign_from(const LikelihoodEstimatorOutput &another) { return false; }
 
   virtual size_t compact_size() const { return 0; }

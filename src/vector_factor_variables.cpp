@@ -264,6 +264,69 @@ double VectorFactorVariables::evaluate_likelihoods(const Index* index) const
   return result;
 }
 
+bool VectorFactorVariables::simulation_pending(const Index* index) const
+{
+  if ((this->vector_factors == NULL) || !this->vector_factors->can_defer())
+    return false; // (no estimator defers its draws: one flag, not a loop)
+  for (auto i=index->begin(); i!=index->end(); ++i)
+    if ((this->likelihood_estimator_outputs[*i]!=NULL) && this->likelihood_estimator_outputs[*i]->simulation_pending())
+      return true;
+  return false;
+}
+
+// (dev/plan.md 3.21) early rejection: the outputs that have made their draws
+// (priors, exact factors, plates) first, in index order; then, while the sum
+// plus the upper bounds of the outputs not yet evaluated can still reach the
+// threshold, the outputs with deferred draws, each told how low it may go
+double VectorFactorVariables::evaluate_likelihoods_with_threshold(const Index* index, double threshold, bool &below) const
+{
+  below = false;
+  double result = 0.0;
+  std::vector<LikelihoodEstimatorOutput*> pending;
+  for (auto i=index->begin(); i!=index->end(); ++i)
+  {
+    LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i].get();
+    if (output == NULL)
+      continue;
+    if (output->simulation_pending())
+      pending.push_back(output);
+    else
+      result = result + output->evaluate(this->particle->parameters);
+  }
+  if (pending.empty())
+    return result; // (the same sum, in the same order, as evaluate_likelihoods)
+  if (result == -arma::datum::inf)
+  {
+    below = true; // (e.g. a prior that is zero: nothing more is needed)
+    return -arma::datum::inf;
+  }
+  // later[k]: the sum of the upper bounds of the pending outputs after k
+  // (summed, not found by subtraction: inf - inf would be meaningless)
+  std::vector<double> later(pending.size() + 1, 0.0);
+  for (size_t k = pending.size(); k > 0; --k)
+    later[k - 1] = later[k] + pending[k - 1]->log_upper_bound(this->particle->parameters);
+  for (size_t k = 0; k < pending.size(); ++k)
+  {
+    if (result + later[k] < threshold)
+    {
+      below = true;
+      return -arma::datum::inf;
+    }
+    double remaining = later[k + 1];
+    bool output_below = false;
+    double value = pending[k]->evaluate_with_threshold(this->particle->parameters, threshold - result - remaining, output_below);
+    if (output_below)
+    {
+      below = true;
+      return -arma::datum::inf;
+    }
+    result = result + value;
+  }
+  if (result < threshold)
+    below = true;
+  return result;
+}
+
 double VectorFactorVariables::subsample_evaluate_likelihoods(const Index* index) const
 {
   double result = 0.0;

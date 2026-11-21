@@ -51,6 +51,11 @@ namespace ilike
                                                      double scale_constant) const = 0;
     double get_epsilon(const Parameters &input) const { return input[this->epsilon_variable][0]; }
 
+    // (dev/plan.md 3.21) the kernel's largest log value at the tolerance and
+    // scale in input (+inf if not known): a bound used to stop an ABC
+    // estimate early
+    virtual double log_maximum(const Parameters &input) const { return arma::datum::inf; }
+
   protected:
     void make_copy(const ABCKernelFactor &another);
 

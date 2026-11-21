@@ -198,6 +198,15 @@ public:
       this->recipe.push_back(this->model_methods, "method");
     if (this->mfds_entry.size() > 0)
       this->recipe.push_back(this->mfds_entry, "mfds");
+    if (this->unnormalised_entries.size() > 0)
+    {
+      this->recipe.push_back(this->unnormalised_entries, "unnormalised");
+      std::vector<std::string> names;
+      for (const auto &kv : this->normaliser_parameters)
+        names.push_back(kv.first);
+      if (!names.empty())
+        this->recipe.push_back(RecipeValue(names), "unnormalised_parameters");
+    }
 
     RecipeValue output = RecipeValue::list();
     output.push_back(this->recipe, "recipe");
@@ -293,6 +302,17 @@ private:
   size_t generated_count = 0;
   // gradient = autodiff (dev/plan.md 3.10): the factors whose gradients are
   // finite differences, and the notes compile() prints
+  // unnormalised distributions (dev/plan.md 3.20, S3): the statements, and
+  // the parameters their normalisers depend on (parameter -> the variable
+  // whose distribution it is a parameter of)
+  struct UnnormalisedStatement
+  {
+    std::string variable, kind, factor;
+    std::vector<std::string> normaliser;
+  };
+  std::vector<UnnormalisedStatement> unnormalised;
+  std::map<std::string, std::string> normaliser_parameters;
+  RecipeValue unnormalised_entries = RecipeValue::list();
   std::vector<std::string> finite_difference_gradients;
   bool finite_difference_helper_emitted = false;
   std::map<std::string, std::string> template_log_wrappers; // "f prior"/"f likelihood" -> double instance
@@ -1464,9 +1484,359 @@ private:
     }
   }
 
+  // an expression as ilike text (for statements the lowering writes itself)
+  std::string ilike_text(const RecipeValue &expression) const
+  {
+    std::string kind = kind_of(expression);
+    if (kind == "number")
+      return number_text(expression["value"].as_double());
+    if (kind == "name")
+      return (expression["namespace"].as_string().empty() ? std::string("") : expression["namespace"].as_string() + "::") +
+             expression["name"].as_string();
+    if (kind == "index")
+    {
+      const RecipeValue &indices = expression["indices"];
+      std::string text = this->ilike_text(expression["target"]) + "[";
+      for (size_t k = 0; k < indices.size(); ++k)
+        text += (k ? ", " : "") + this->ilike_text(indices[k]);
+      return text + "]";
+    }
+    if (kind == "unary")
+      return "(" + expression["operator"].as_string() + this->ilike_text(expression["operand"]) + ")";
+    if (kind == "binary")
+      return "(" + this->ilike_text(expression["left"]) + " " + expression["operator"].as_string() + " " +
+             this->ilike_text(expression["right"]) + ")";
+    if (kind == "call")
+    {
+      const RecipeValue &arguments = expression["arguments"];
+      std::vector<std::string> keys = arguments.names();
+      std::string text = this->ilike_text_name(expression) + "(";
+      for (size_t k = 0; k < arguments.size(); ++k)
+        text += (k ? ", " : "") + ((k < keys.size() && !keys[k].empty()) ? keys[k] + " = " : std::string("")) +
+                this->ilike_text(arguments[k]);
+      return text + ")";
+    }
+    this->error(expression, "this argument cannot be used here (a number, a name, an element or an arithmetic expression).");
+    return ""; // (not reached)
+  }
+  std::string ilike_text_name(const RecipeValue &call) const
+  {
+    return (call["namespace"].as_string().empty() ? std::string("") : call["namespace"].as_string() + "::") +
+           call["function"].as_string();
+  }
+
+  static bool is_unnormalised_builtin(const RecipeValue &value)
+  {
+    if (kind_of(value) != "call")
+      return false;
+    std::string name_space = value["namespace"].as_string();
+    std::string f = value["function"].as_string();
+    return (name_space.empty() || (name_space == "ilike")) && ((f == "ising") || (f == "potts"));
+  }
+
+  // x ~ ising(beta, nb, nn) and x ~ potts(beta, q, nb, nn) (dev/plan.md
+  // 3.20, S3): written as their base measure (x[i] ~ bern(0.5), or
+  // categorical with equal probabilities) and their potential, a factor of
+  // terms named x_potential, so that moves on the states recompute only the
+  // neighbouring terms, the prior's simulation draws the base measure, and
+  // annealing the potential starts from it. The normaliser Z(beta) is not
+  // part of either: the parameters it depends on are recorded, and the moves
+  // and algorithms that would need Z are refused. Also generated: the
+  // simulators of x given beta (heat-bath sweeps; coupling from the past for
+  // ising).
+  void expand_unnormalised(const RecipeValue &statement, const std::vector<ModelLoop> &loops)
+  {
+    const RecipeValue &value = statement["value"];
+    std::string kind = value["function"].as_string();
+    if (!loops.empty())
+      this->error(statement, kind + "(…) is the distribution of a whole field: write it outside loops (x ~ " + kind + "(…)).");
+    if (kind_of(statement["target"]) != "name")
+      this->error(statement, kind + "(…)'s target is a whole variable (x ~ " + kind + "(…), without an index).");
+    const std::string x = statement["target"]["name"].as_string();
+    Arguments arguments = this->split_arguments(value);
+    std::vector<std::string> order = (kind == "ising") ? std::vector<std::string>{"beta", "nb", "nn"}
+                                                       : std::vector<std::string>{"beta", "q", "nb", "nn"};
+    std::set<std::string> allowed(order.begin(), order.end());
+    allowed.insert("n");
+    allowed.insert("normaliser");
+    this->allow_only(value, arguments, allowed, order.size());
+    std::map<std::string, RecipeValue> given;
+    for (size_t k = 0; k < arguments.positional.size(); ++k)
+      given[order[k]] = arguments.positional[k];
+    for (const auto &kv : arguments.named)
+      given[kv.first] = kv.second;
+    RecipeValue normaliser_method;
+    if (given.count("normaliser"))
+    {
+      normaliser_method = given["normaliser"];
+      given.erase("normaliser");
+    }
+    for (const std::string &name : order)
+      if (!given.count(name))
+        this->error(value, kind + "(…): the argument " + name + " is missing (" + kind + "(" + joined(order, ", ") + ")).");
+    for (const std::string &name : {std::string("nb"), std::string("nn")})
+      if ((kind_of(given[name]) != "name") || !this->data_names.count(given[name]["name"].as_string()))
+        this->error(given[name], kind + "(…): " + name + " is a data variable (the neighbours' lists, as in sum(k in 1:nn[i], …)).");
+    const std::string nb = given["nb"]["name"].as_string(), nn = given["nn"]["name"].as_string();
+    // the number of sites: n, or the length of nn given as values
+    std::string sites;
+    double sites_value = -1.0;
+    if (given.count("n"))
+      sites = this->ilike_text(given["n"]);
+    else
+    {
+      for (const auto &item : this->literal_data)
+        if (item.first == nn)
+          sites_value = double(item.second.as_matrix().n_elem);
+      if (sites_value < 0.0)
+        this->error(value, kind + "(…): the number of sites is the length of " + nn + " when it is given as values in the data section; "
+                    "otherwise give it, " + kind + "(…, n = …).");
+      sites = number_text(sites_value);
+    }
+    double q = 2.0;
+    if (kind == "potts")
+    {
+      arma::mat number;
+      if (!this->numeric(given["q"], number) || (number.n_elem != 1) || (number(0) < 2.0) || (number(0) != std::floor(number(0))))
+        this->error(given["q"], "potts(…): q, the number of colours, is a whole number of at least 2, known when compiling.");
+      q = number(0);
+    }
+    std::string beta = this->ilike_text(given["beta"]);
+    std::string factor = x + "_potential";
+
+    // the statements, written in ilike and parsed
+    std::string base, potential;
+    if (kind == "ising")
+    {
+      base = "bern(0.5)";
+      potential = "(" + beta + ") / 2 * (2 * " + x + "[ilike_site] - 1) * sum(ilike_k in 1:" + nn + "[ilike_site], 2 * " + x + "[" + nb +
+                  "[ilike_site, ilike_k]] - 1)";
+    }
+    else
+    {
+      base = "categorical([";
+      for (int c = 0; c < int(q); ++c)
+        base += (c ? ", " : "") + number_text(1.0 / q);
+      base += "])";
+      potential = "(" + beta + ") / 2 * sum(ilike_k in 1:" + nn + "[ilike_site], equals(" + x + "[ilike_site], " + x + "[" + nb +
+                  "[ilike_site, ilike_k]]))";
+    }
+    std::string text = "ilike 1.0\nmodel {\n  for (ilike_site in 1:" + sites + ") " + x + "[ilike_site] ~ " + base + "\n" +
+                       "  for (ilike_site in 1:" + sites + ") factor " + factor + " += " + potential + "\n}\n";
+    RecipeValue tree = parse_ilike_language(text, this->file + " (" + kind + " of " + x + ")");
+    const RecipeValue &statements = tree["sections"][0]["statements"];
+    for (size_t k = 0; k < statements.size(); ++k)
+      this->collect_model_statement(statements[k], std::vector<ModelLoop>());
+
+    // the parameters the normaliser depends on
+    UnnormalisedStatement record;
+    record.variable = x;
+    record.kind = kind;
+    record.factor = factor;
+    std::set<std::string> found;
+    this->read_parameters(given["beta"], found);
+    if (given.count("n"))
+      this->read_parameters(given["n"], found);
+    for (const std::string &parameter : found)
+    {
+      record.normaliser.push_back(parameter);
+      if (normaliser_method.is_null())
+        this->normaliser_parameters[parameter] = x;
+    }
+    this->unnormalised.push_back(record);
+
+    // the simulators of x given the rest
+    CodeContext context;
+    std::string beta_code = this->scalar_code(given["beta"], context);
+    std::string sites_code = given.count("n") ? this->scalar_code(given["n"], context) : number_text(sites_value);
+    std::string sweep = "ilike_unnormalised_sweep_" + x, exact = "ilike_unnormalised_exact_" + x;
+    std::string head =
+      "  const arma::mat &nb = data[" + quoted(nb) + "];\n"
+      "  const arma::mat &nn = data[" + quoted(nn) + "];\n"
+      "  const double beta = " + beta_code + ";\n"
+      "  const size_t n = (size_t)std::lround(" + sites_code + ");\n";
+    std::string code = "// " + kind + " field " + x + " (dev/plan.md 3.20, S3): sweeps of single-site heat-bath updates given beta\n"
+                       "void " + sweep + "(RandomNumberGenerator &rng, Parameters &parameters, const Data &data)\n{\n" + head +
+                       "  arma::mat &x = parameters[" + quoted(x) + "];\n"
+                       "  if (x.n_elem != n)\n  {\n    // (a first draw: from the base measure)\n    x = arma::mat(n, 1);\n";
+    if (kind == "ising")
+      code += "    for (size_t i = 0; i < n; ++i) x(i) = (runif(rng) < 0.5) ? 1.0 : 0.0;\n  }\n"
+              "  for (size_t i = 0; i < n; ++i)\n  {\n"
+              "    double s = 0.0;\n"
+              "    for (size_t k = 0; k < (size_t)nn(i); ++k) s += 2.0 * x((size_t)nb(i, k) - 1) - 1.0;\n"
+              "    x(i) = (runif(rng) < 1.0 / (1.0 + std::exp(-2.0 * beta * s))) ? 1.0 : 0.0;\n  }\n}\n\n";
+    else
+      code += "    for (size_t i = 0; i < n; ++i) x(i) = 1.0 + std::min(std::floor(runif(rng) * (double)" + number_text(q) + "), (double)" +
+              number_text(q - 1.0) + ");\n  }\n"
+              "  std::vector<double> w(" + number_text(q) + ");\n"
+              "  for (size_t i = 0; i < n; ++i)\n  {\n"
+              "    std::fill(w.begin(), w.end(), 0.0);\n"
+              "    for (size_t k = 0; k < (size_t)nn(i); ++k) w[(size_t)x((size_t)nb(i, k) - 1) - 1] += 1.0;\n"
+              "    double top = *std::max_element(w.begin(), w.end()), total = 0.0;\n"
+              "    for (double &v : w) { v = std::exp(beta * (v - top)); total += v; }\n"
+              "    double u = runif(rng) * total;\n"
+              "    size_t c = 0;\n"
+              "    while ((c + 1 < w.size()) && (u > w[c])) { u -= w[c]; ++c; }\n"
+              "    x(i) = double(c + 1);\n  }\n}\n\n";
+    RecipeValue entry = RecipeValue::list();
+    entry.push_back(RecipeValue(x), "variable");
+    entry.push_back(RecipeValue(kind), "kind");
+    entry.push_back(this->placeholder(sweep, "unnormalised_sweep"), "sweep");
+    if (kind == "ising")
+    {
+      // monotone coupling from the past (Propp & Wilson 1996): two chains
+      // started from all 0 and all 1 at time -T, run with the same random
+      // numbers; heat-bath updates are monotone for beta >= 0, so when they
+      // meet at time 0, every chain started at -T would have, and the state
+      // is an exact draw. T doubles, reusing the random numbers of the most
+      // recent sweeps.
+      code += "// ising field " + x + ": an exact draw by monotone coupling from the past\n"
+              "Parameters " + exact + "(RandomNumberGenerator &rng, const Parameters &parameters, const Data &data)\n{\n" + head +
+              "  // (beta < 0: not monotone, so no draw; a field of NaN, which the\n"
+              "  // estimate of the normalising constant takes as density 0)\n"
+              "  if (beta < 0.0)\n"
+              "    return Parameters(" + quoted(x) + ", arma::mat(n, 1, arma::fill::value(arma::datum::nan)));\n"
+              "  std::vector<std::vector<double>> uniforms; // (the most recent sweep first: earlier sweeps are appended)\n"
+              "  size_t T = 1;\n"
+              "  arma::mat upper(n, 1), lower(n, 1);\n"
+              "  while (true)\n  {\n"
+              "    while (uniforms.size() < T)\n    {\n"
+              "      std::vector<double> u(n);\n"
+              "      for (size_t i = 0; i < n; ++i) u[i] = runif(rng);\n"
+              "      uniforms.push_back(u);\n    }\n"
+              "    upper.fill(1.0);\n    lower.fill(0.0);\n"
+              "    for (size_t back = T; back > 0; --back)\n"
+              "    {\n"
+              "      const std::vector<double> &u = uniforms[back - 1]; // (from time -T to time 0)\n"
+              "      for (size_t i = 0; i < n; ++i)\n      {\n"
+              "        double su = 0.0, sl = 0.0;\n"
+              "        for (size_t k = 0; k < (size_t)nn(i); ++k)\n        {\n"
+              "          su += 2.0 * upper((size_t)nb(i, k) - 1) - 1.0;\n"
+              "          sl += 2.0 * lower((size_t)nb(i, k) - 1) - 1.0;\n        }\n"
+              "        upper(i) = (u[i] < 1.0 / (1.0 + std::exp(-2.0 * beta * su))) ? 1.0 : 0.0;\n"
+              "        lower(i) = (u[i] < 1.0 / (1.0 + std::exp(-2.0 * beta * sl))) ? 1.0 : 0.0;\n      }\n"
+              "    }\n"
+              "    if (arma::approx_equal(upper, lower, \"absdiff\", 0.0))\n"
+              "      return Parameters(" + quoted(x) + ", upper);\n"
+              "    T = 2 * T;\n"
+              "    if (double(T) * double(n) > 1e8)\n"
+              "      Rcpp::stop(\"exact simulation of ising(...): coupling from the past did not coalesce: beta is far above the critical value, where exact draws take very long; use simulate = sweeps(m), approximate but in a fixed time.\");\n"
+              "  }\n}\n\n";
+      entry.push_back(this->placeholder(exact, "unnormalised_exact"), "exact");
+    }
+    std::vector<std::string> normaliser(record.normaliser.begin(), record.normaliser.end());
+    entry.push_back(RecipeValue(normaliser), "normaliser");
+    this->unnormalised_entries.push_back(entry);
+
+    // log gamma(field | beta) up to a constant (the potential), for the
+    // estimates of the normalising constant (dev/plan.md 3.20, S4)
+    std::string potential_function = "ilike_unnormalised_potential_" + x;
+    code += "double " + potential_function + "(const arma::mat &field, const Parameters &parameters, const Data &data)\n{\n" + head +
+            "  double total = 0.0;\n"
+            "  for (size_t i = 0; i < n; ++i)\n    for (size_t k = 0; k < (size_t)nn(i); ++k)\n" +
+            ((kind == "ising") ? std::string("      total += (2.0 * field(i) - 1.0) * (2.0 * field((size_t)nb(i, k) - 1) - 1.0);\n")
+                               : std::string("      total += (field(i) == field((size_t)nb(i, k) - 1)) ? 1.0 : 0.0;\n")) +
+            "  return 0.5 * beta * total;\n}\n\n";
+    this->deferred_function_code += code;
+
+    if (!normaliser_method.is_null())
+      this->normaliser_factor(statement, normaliser_method, x, kind, record, sweep, exact, potential_function);
+  }
+
+  // normaliser = sav(points = M, at = theta_hat, simulate = exact | sweeps(m))
+  // (dev/plan.md 3.20, S4): the factor x_normaliser, an estimate of
+  // 1/Z(theta) from M draws of the field (UnnormalisedNormaliserEstimator).
+  // It reads only the normaliser's parameters, so moves on the field do not
+  // evaluate it, and moves on its parameters draw new fields (pseudo-marginal).
+  void normaliser_factor(const RecipeValue &statement, const RecipeValue &method, const std::string &x, const std::string &kind,
+                         const UnnormalisedStatement &record, const std::string &sweep, const std::string &exact,
+                         const std::string &potential_function)
+  {
+    if ((kind_of(method) != "call") || (method["function"].as_string() != "sav"))
+      this->error(method, "normaliser = sav(points = M, at = value, simulate = exact | sweeps(m)): the single (M = 1) or "
+                          "multiple auxiliary variable method.");
+    if (record.normaliser.empty())
+      this->error(method, "the normalising constant of " + x + "'s distribution depends on no parameter, so it cancels: "
+                          "normaliser = … is not needed.");
+    if (record.normaliser.size() != 1)
+      this->error(method, "normaliser = sav(…): the normalising constant of " + x + "'s distribution depends on several parameters (" +
+                          joined(record.normaliser, ", ") + "); sav takes one for now.");
+    Arguments arguments = this->split_arguments(method);
+    this->allow_only(method, arguments, {"points", "at", "simulate"}, 2);
+    std::map<std::string, RecipeValue> given;
+    std::vector<std::string> order = {"points", "at"};
+    for (size_t k = 0; k < arguments.positional.size(); ++k)
+      given[order[k]] = arguments.positional[k];
+    for (const auto &kv : arguments.named)
+      given[kv.first] = kv.second;
+    if (!given.count("at"))
+      this->error(method, "sav(…): at = value, the value of " + record.normaliser[0] + " at which the auxiliary distribution of the "
+                          "draws is taken (a value near the posterior's, e.g. a pseudo-likelihood estimate), is needed.");
+    arma::mat number;
+    if (!this->numeric(given["at"], number) || (number.n_elem != 1))
+      this->error(given["at"], "sav(…): at is a number known when compiling.");
+    double at = number(0);
+    double points = 1.0;
+    if (given.count("points"))
+    {
+      if (!this->numeric(given["points"], number) || (number.n_elem != 1) || (number(0) < 1.0) || (number(0) != std::floor(number(0))))
+        this->error(given["points"], "sav(…): points is a whole number of at least 1.");
+      points = number(0);
+    }
+    // the draws: exact (coupling from the past, ising) by default; sweeps(m)
+    // otherwise (approximate: the estimate is then biased, by an amount that
+    // falls as m grows)
+    bool use_exact = (kind == "ising");
+    double sweeps = 100.0;
+    if (given.count("simulate"))
+    {
+      const RecipeValue &simulate = given["simulate"];
+      if ((kind_of(simulate) == "name") && (simulate["name"].as_string() == "exact"))
+      {
+        if (kind != "ising")
+          this->error(simulate, "simulate = exact: exact simulation is available for ising(…) fields so far; use sweeps(m).");
+        use_exact = true;
+      }
+      else if ((kind_of(simulate) == "call") && (simulate["function"].as_string() == "sweeps") && (simulate["arguments"].size() == 1) &&
+               this->numeric(simulate["arguments"][0], number) && (number.n_elem == 1) && (number(0) >= 1.0))
+      {
+        use_exact = false;
+        sweeps = std::floor(number(0));
+      }
+      else
+        this->error(simulate, "simulate = exact, or simulate = sweeps(m) (m heat-bath sweeps from the base measure, approximate).");
+    }
+    if (!use_exact)
+      this->notes.push_back("The draws of " + x + " for its normalising constant are made by " + number_text(sweeps) +
+                            " heat-bath sweeps, so they are approximate, and so is the posterior of " + record.normaliser[0] +
+                            " (more sweeps make it closer).");
+    RecipeValue settings = RecipeValue::list();
+    settings.push_back(RecipeValue(x), "variable");
+    settings.push_back(this->placeholder(potential_function, "unnormalised_potential"), "potential");
+    settings.push_back(this->placeholder(sweep, "unnormalised_sweep"), "sweep");
+    if (use_exact)
+      settings.push_back(this->placeholder(exact, "unnormalised_exact"), "exact");
+    settings.push_back(RecipeValue(sweeps), "sweeps");
+    settings.push_back(RecipeValue(points), "points");
+    settings.push_back(RecipeValue(record.normaliser), "normaliser");
+    settings.push_back(RecipeValue(std::vector<double>(1, at)), "at");
+    RecipeValue factor = RecipeValue::list();
+    factor.push_back(settings, "unnormalised_normaliser");
+    std::string name = x + "_normaliser";
+    this->add_factor(statement, name, factor);
+    this->generated_factor_reads[this->factor_numbers.at(name)] =
+      std::set<std::string>(record.normaliser.begin(), record.normaliser.end());
+  }
+
   void collect_model_statement(const RecipeValue &statement, std::vector<ModelLoop> loops)
   {
     std::string keyword = statement["keyword"].as_string();
+    if ((keyword.empty()) && statement.contains("operator") && (statement["operator"].as_string() == "~") &&
+        is_unnormalised_builtin(statement["value"]))
+    {
+      this->expand_unnormalised(statement, loops);
+      return;
+    }
     if (keyword == "for")
     {
       const RecipeValue &range = statement["range"];
@@ -5551,8 +5921,65 @@ inline double ilike_model_dbinom(double x, double n, double p)
   size_t sum_temporaries = 0;
   bool lowering_gibbs_block = false;
 
+  // the variables a move changes: the first argument of its proposal (a
+  // name, an element or a list), through metropolis(…), choose([…]), …
+  void moved_variables(const RecipeValue &call, std::set<std::string> &found) const
+  {
+    if (kind_of(call) != "call")
+      return;
+    static const std::set<std::string> wrappers = {"metropolis", "metropolis_hastings", "independent_mh", "unadjusted"};
+    std::string f = call["function"].as_string();
+    const RecipeValue &arguments = call["arguments"];
+    if (arguments.size() == 0)
+      return;
+    std::vector<std::string> keys = arguments.names();
+    if (wrappers.count(f) && call["namespace"].as_string().empty())
+    {
+      for (size_t k = 0; k < arguments.size(); ++k)
+        if ((k < keys.size()) && (keys[k] == "proposal"))
+          return this->moved_variables(arguments[k], found);
+      return this->moved_variables(arguments[0], found);
+    }
+    if ((f == "choose") && (kind_of(arguments[0]) == "vector"))
+    {
+      const RecipeValue &choices = arguments[0]["elements"];
+      for (size_t k = 0; k < choices.size(); ++k)
+        this->moved_variables(choices[k], found);
+      return;
+    }
+    if (!call["namespace"].as_string().empty() && (call["namespace"].as_string() != "ilike"))
+      return; // (a proposal written by the user: what it moves is not known)
+    std::function<void(const RecipeValue &)> names = [&](const RecipeValue &e) {
+      std::string kind = kind_of(e);
+      if (kind == "name")
+        found.insert(e["name"].as_string());
+      else if (kind == "index")
+        names(e["target"]);
+      else if (kind == "vector")
+        for (size_t k = 0; k < e["elements"].size(); ++k)
+          names(e["elements"][k]);
+    };
+    names(arguments[0]);
+  }
+
   Move lower_move(const RecipeValue &statement, const std::string &name, const RecipeValue &call)
   {
+    // (dev/plan.md 3.20, S3) a move that changes a parameter of an
+    // unnormalised distribution's normaliser would need Z at the proposed value
+    if (!this->normaliser_parameters.empty())
+    {
+      std::set<std::string> moved;
+      this->moved_variables(call, moved);
+      for (const std::string &v : moved)
+      {
+        auto found = this->normaliser_parameters.find(v);
+        if (found != this->normaliser_parameters.end())
+          this->error(statement, "move " + name + " changes " + v + ", a parameter of the normalising constant of " + found->second +
+                      "'s distribution, which is not known: the acceptance ratio would need it. Moves on " + found->second +
+                      " (with " + v + " fixed) are possible; methods for inferring " + v +
+                      " (doubly intractable: exchange, SAV, ABC) are planned (dev/plan.md 3.20).");
+      }
+    }
     if ((kind_of(call) == "call") && (call["function"].as_string() == "nuts") && call["namespace"].as_string().empty())
     {
       // move m = nuts(x, step = …) (C210): a move of its own, lowered as a

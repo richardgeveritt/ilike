@@ -128,3 +128,44 @@ test_that("SMC with MCMC moves runs without writing results", {
   z = ilike::SMC_with_MCMC(recipe, number_of_particles = 2000, seed = 1)
   expect_equal(z, annealed_log_evidence(1), tolerance = 0.05)
 })
+
+# (C241, dev/plan.md 3.20 S2) data tempering: the data points of a factor
+# written as model statements enter along the sequence, each annealed in
+data_tempering_file = function(sequence, target = "  target = cess(0.9)", move = "metropolis(norm_rw(mu, 0.3))",
+                               likelihood = NULL)
+{
+  set.seed(3)
+  y = round(rnorm(20, 1.5, 1), 3)
+  f = tempfile(fileext = ".ilike")
+  writeLines(c("ilike 1.0", paste0("data { y = [", paste(y, collapse = ", "), "] }"), "model {", "  mu ~ norm(0, 10)",
+               if (is.null(likelihood)) "  for (i in 1:20) y[i] ~ norm(mu, 1)" else likelihood, "}",
+               "algorithm smc {", paste0("  move = ", move), "  termination = iterations(5)",
+               paste0("  sequence = ", sequence), target, "  particles = 1000", "}"), f)
+  list(file = f, y = y)
+}
+
+test_that("data tempering gives the evidence and the posterior", {
+  skip_on_cran()
+  d = data_tempering_file("data(fraction, [0, 1])")
+  on.exit(unlink(c(d$file, "smc_data_tempering"), recursive = TRUE), add = TRUE)
+  z = ilike::SMC_with_MCMC(ilike::compile(d$file), results_name = "smc_data_tempering", seed = 1)
+  n = length(d$y); tau = 10
+  exact = -n/2 * log(2*pi) - 0.5 * log(1 + n * tau^2) - 0.5 * (sum(d$y^2) - tau^2 * sum(d$y)^2 / (1 + n * tau^2))
+  expect_lt(abs(z - exact), 0.2)
+  moments = smc_weighted_moments_by_target(ilike::load_smc_output("smc_data_tempering"))
+  expect_equal(unname(moments[nrow(moments), "mean"]), sum(d$y) / (n + 1/tau^2), tolerance = 0.05)
+  expect_equal(unname(moments[nrow(moments), "var"]), 1 / (n + 1/tau^2), tolerance = 0.2)
+})
+
+test_that("data tempering refuses what it cannot do", {
+  # whole data points with an adaptive target (the criterion is flat between data points)
+  d = data_tempering_file("data(fraction, [0, 1], anneal = false)")
+  expect_error(ilike::SMC_with_MCMC(ilike::compile(d$file), seed = 1), "anneal = false", fixed = TRUE)
+  # a factor written as a function
+  d = data_tempering_file("data(fraction, [0, 1])", likelihood = "  factor lik = r::sum(dnorm(y, parameters$mu, 1, log = TRUE))")
+  expect_error(ilike::SMC_with_MCMC(ilike::compile(d$file), seed = 1), "is not written as model statements", fixed = TRUE)
+  # gradients include every data point
+  d = data_tempering_file("data(fraction, [0, 1])", move = "metropolis_hastings(langevin(mu, 0.1, 1))")
+  expect_error(ilike::SMC_with_MCMC(ilike::compile(d$file), seed = 1), "under data tempering", fixed = TRUE)
+  unlink(d$file)
+})

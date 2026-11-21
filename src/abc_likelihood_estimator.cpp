@@ -82,6 +82,11 @@ void ABCLikelihoodEstimator::setup(const Parameters &parameters)
   
 }
 
+double ABCLikelihoodEstimator::log_maximum(const Parameters &parameters) const
+{
+  return this->abc_kernel->log_maximum(parameters);
+}
+
 void ABCLikelihoodEstimator::specific_change_data(Data* new_data)
 {
   this->abc_kernel->set_data(new_data);

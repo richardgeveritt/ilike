@@ -45,6 +45,11 @@ public:
   void evaluate_smcadaptive_part_given_smcfixed();
   
   void simulate(const Parameters &parameters);
+
+  // (dev/plan.md 3.21) a run deferred to evaluation (when the estimator
+  // defers it), and evaluated with early stopping
+  bool simulation_pending() const { return this->pending; }
+  double evaluate_with_threshold(const Parameters &parameters, double threshold, bool &below);
   void evaluate_smcfixed_part(const Parameters &parameters);
   void evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters);
   int adaptive_summary_size() const;
@@ -161,6 +166,9 @@ protected:
   void close_ofstreams(size_t deque_index);
   
   void make_copy(const SMCOutput &another);
+
+  bool pending = false;
+  void run_if_pending(const Parameters &parameters);
   
 };
 }

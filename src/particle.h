@@ -213,6 +213,9 @@ public:
   double evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index);
 
   double evaluate_likelihoods(const Index* index);
+  // (dev/plan.md 3.21) early rejection
+  bool simulation_pending(const Index* index) const;
+  double evaluate_likelihoods_with_threshold(const Index* index, double threshold, bool &below);
 
   // Sum of the cached factor values over index (no evaluation; see
   // FactorVariables::get_cached_likelihoods).

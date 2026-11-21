@@ -44,6 +44,7 @@ public:
   double evaluate_kernel_given_distance(const Parameters &input,
                                         double distance,
                                         double scale_constant) const;
+  double log_maximum(const Parameters &input) const;
   double evaluate_kernel_given_distance_at(double epsilon,
                                            double distance,
                                            double scale_constant) const;

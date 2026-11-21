@@ -186,6 +186,14 @@ namespace ilike
     // done from the summaries.
     bool can_run_flat_conditioned() const;
 
+    // (dev/plan.md 3.21) as a likelihood estimator with a single target and
+    // a fixed scale (each point's weight final once it is simulated): its
+    // run is deferred to evaluation, and may stop early
+    bool defers_simulation() const;
+    bool simulate_smc_with_threshold(SMCOutput* simulation,
+                                     const Parameters &conditioned_on_parameters,
+                                     double threshold);
+
     // The chunk loop. conditioned_on_parameters: NULL for an unconditioned
     // run. summarise: keep adaptive summaries (otherwise the weights at the
     // fixed target).

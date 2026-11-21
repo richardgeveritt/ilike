@@ -359,6 +359,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// do_simulate_unnormalised
+arma::mat do_simulate_unnormalised(const Rcpp::List& model_R, const std::string& variable, const Rcpp::List& parameters_in, size_t draws, const std::string& method, size_t sweeps, size_t seed);
+RcppExport SEXP _ilike_do_simulate_unnormalised(SEXP model_RSEXP, SEXP variableSEXP, SEXP parameters_inSEXP, SEXP drawsSEXP, SEXP methodSEXP, SEXP sweepsSEXP, SEXP seedSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type model_R(model_RSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type variable(variableSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type parameters_in(parameters_inSEXP);
+    Rcpp::traits::input_parameter< size_t >::type draws(drawsSEXP);
+    Rcpp::traits::input_parameter< const std::string& >::type method(methodSEXP);
+    Rcpp::traits::input_parameter< size_t >::type sweeps(sweepsSEXP);
+    Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
+    rcpp_result_gen = Rcpp::wrap(do_simulate_unnormalised(model_R, variable, parameters_in, draws, method, sweeps, seed));
+    return rcpp_result_gen;
+END_RCPP
+}
 // covariance_tools_check
 Rcpp::List covariance_tools_check(const arma::mat& points, const arma::colvec& weights, int block_size);
 RcppExport SEXP _ilike_covariance_tools_check(SEXP pointsSEXP, SEXP weightsSEXP, SEXP block_sizeSEXP) {
@@ -491,6 +508,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ilike_do_evaluate_log_with_fixed_params", (DL_FUNC) &_ilike_do_evaluate_log_with_fixed_params, 8},
     {"_ilike_shared_point_weights_check", (DL_FUNC) &_ilike_shared_point_weights_check, 2},
     {"_ilike_copy_audit", (DL_FUNC) &_ilike_copy_audit, 6},
+    {"_ilike_do_simulate_unnormalised", (DL_FUNC) &_ilike_do_simulate_unnormalised, 7},
     {"_ilike_covariance_tools_check", (DL_FUNC) &_ilike_covariance_tools_check, 3},
     {"_ilike_recipe_json", (DL_FUNC) &_ilike_recipe_json, 1},
     {"_ilike_builtin_registry_table", (DL_FUNC) &_ilike_builtin_registry_table, 0},

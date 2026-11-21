@@ -1,6 +1,7 @@
 #ifndef SMC_H
 #define SMC_H
 
+#include <functional>
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 
@@ -179,6 +180,16 @@ protected:
   SMCOutput* initialise_smc();
   virtual SMCOutput* specific_initialise_smc()=0;
   virtual void simulate_smc(SMCOutput* simulation)=0;
+
+  // (dev/plan.md 3.21) simulate as simulate_smc(simulation, parameters), but
+  // stop as soon as the estimate is known to be below threshold (true: it
+  // stopped, and the simulation is not usable); by default no early stop
+  virtual bool simulate_smc_with_threshold(SMCOutput* simulation,
+                                           const Parameters &conditioned_on_parameters,
+                                           double threshold);
+  // checked after each chunk of a sequential chunked generation: true stops it
+  std::function<bool(Particles &generation, size_t points_done)> chunk_stop;
+  bool chunk_stopped = false;
   virtual void evaluate_smc(SMCOutput* simulation)=0;
   virtual void evaluate_smcfixed_part_smc(SMCOutput* simulation)=0;
   virtual void evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* simulation)=0;

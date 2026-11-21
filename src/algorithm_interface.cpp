@@ -58,6 +58,21 @@ Parameters make_algorithm_parameters(const Rcpp::List &algorithm_parameter_list)
 }
 
 
+// (dev/plan.md 3.20, S3) an algorithm whose particles vary a parameter of an
+// unnormalised distribution's normaliser would weight them without Z
+static void refuse_unknown_normaliser(const RecipeValue &model, const std::string &algorithm)
+{
+  if (!model.contains("unnormalised_parameters"))
+    return;
+  std::vector<std::string> names = model["unnormalised_parameters"];
+  std::string list;
+  for (size_t i = 0; i < names.size(); ++i)
+    list += (i ? ", " : "") + names[i];
+  stop(algorithm + ": the parameter(s) " + list + " of an unnormalised distribution's normalising constant vary between "
+       "particles, and the constant is not known, so the weights would be wrong. Fix them (as data or constants), "
+       "or use MCMC with moves that do not change them; doubly intractable methods are planned (dev/plan.md 3.20).");
+}
+
 ImportanceSampler *get_importance_sampler(
     RandomNumberGenerator *rng, Data *the_data, const RecipeValue &model,
     const RecipeValue &parameters, const Parameters &algorithm_parameters,
@@ -65,6 +80,7 @@ ImportanceSampler *get_importance_sampler(
     const std::string &results_name_in, size_t *seed,
     std::vector<Data> &data_created_in_get_likelihood_estimators,
     std::vector<Data> &data_created_in_get_measurement_covariance_estimators) {
+  refuse_unknown_normaliser(model, "Importance sampling");
   // May need to alter for cases where the likelihood needs to be tuned
   // automatically (e.g. in ABC).
 
@@ -81,7 +97,7 @@ ImportanceSampler *get_importance_sampler(
   std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
 
   std::vector<int> factors_affected_by_smc_sequence;
-  if (sequencer_info.length() == 5) {
+  if (sequencer_info.length() >= 5) {
     std::vector<int> factors_affected_by_smc_sequence_temp = sequencer_info[4];
     for (auto &k : factors_affected_by_smc_sequence_temp) k = k - 1;
     factors_affected_by_smc_sequence = factors_affected_by_smc_sequence_temp;
@@ -90,35 +106,35 @@ ImportanceSampler *get_importance_sampler(
   VectorIndex *without_cancelled_index = NULL;
   VectorIndex *without_priors_index = NULL;
   VectorIndex *full_index = NULL;
-  bool any_annealing = false;
+  CancellationPlan plan;
 
   if (model.contains("is_proposal")) {
 
     proposal_in = get_proposal(model, parameters, the_data);
 
     likelihood_estimators = get_likelihood_estimators(
-        rng, seed, the_data, model, parameters, algorithm_parameters, true,
+        rng, seed, the_data, model, parameters, algorithm_parameters, KernelDeclaration(),
         sequencer_types, sequencer_variables, sequencer_schedules, proposal_in,
         without_cancelled_index, without_priors_index, full_index,
-        any_annealing, factors_affected_by_smc_sequence,
+        plan, factors_affected_by_smc_sequence,
         data_created_in_get_likelihood_estimators,
         data_created_in_get_measurement_covariance_estimators);
 
-    proposal_is_evaluated_in = true;
+    proposal_is_evaluated_in = plan.proposal_is_evaluated; // (dev/plan.md 3.20)
   } else {
     inform_once("No importance sampling proposal specified; using prior.");
 
     proposal_in = get_prior_as_simulate_only_proposal(model, parameters);
 
     likelihood_estimators = get_likelihood_estimators(
-        rng, seed, the_data, model, parameters, algorithm_parameters, false,
+        rng, seed, the_data, model, parameters, algorithm_parameters, prior_as_proposal(),
         sequencer_types, sequencer_variables, sequencer_schedules, proposal_in,
         without_cancelled_index, without_priors_index, full_index,
-        any_annealing, factors_affected_by_smc_sequence,
+        plan, factors_affected_by_smc_sequence,
         data_created_in_get_likelihood_estimators,
         data_created_in_get_measurement_covariance_estimators);
 
-    proposal_is_evaluated_in = false;
+    proposal_is_evaluated_in = plan.proposal_is_evaluated; // (dev/plan.md 3.20)
   }
 
 
@@ -289,7 +305,7 @@ void do_mcmc(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
   std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
 
   std::vector<int> factors_affected_by_smc_sequence;
-  if (sequencer_info.length() == 5) {
+  if (sequencer_info.length() >= 5) {
     std::vector<int> factors_affected_by_smc_sequence_temp = sequencer_info[4];
     for (auto &k : factors_affected_by_smc_sequence_temp) k = k - 1;
     factors_affected_by_smc_sequence = factors_affected_by_smc_sequence_temp;
@@ -298,13 +314,13 @@ void do_mcmc(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
   VectorIndex *without_cancelled_index = NULL;
   VectorIndex *without_priors_index = NULL;
   VectorIndex *full_index = NULL;
-  bool any_annealing = false;
+  CancellationPlan plan;
 
   std::vector<LikelihoodEstimator *> likelihood_estimators;
   likelihood_estimators = get_likelihood_estimators(
-      &rng, &seed, &the_data, model, parameters, algorithm_parameters, true,
+      &rng, &seed, &the_data, model, parameters, algorithm_parameters, KernelDeclaration(),
       sequencer_types, sequencer_variables, sequencer_schedules, NULL,
-      without_cancelled_index, without_priors_index, full_index, any_annealing,
+      without_cancelled_index, without_priors_index, full_index, plan,
       factors_affected_by_smc_sequence,
       data_created_in_get_likelihood_estimators,
       data_created_in_get_measurement_covariance_estimators);
@@ -397,7 +413,7 @@ void do_mcmc_with_fixed_params(
   std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
 
   std::vector<int> factors_affected_by_smc_sequence;
-  if (sequencer_info.length() == 5) {
+  if (sequencer_info.length() >= 5) {
     std::vector<int> factors_affected_by_smc_sequence_temp = sequencer_info[4];
     for (auto &k : factors_affected_by_smc_sequence_temp) k = k - 1;
     factors_affected_by_smc_sequence = factors_affected_by_smc_sequence_temp;
@@ -406,13 +422,13 @@ void do_mcmc_with_fixed_params(
   VectorIndex *without_cancelled_index = NULL;
   VectorIndex *without_priors_index = NULL;
   VectorIndex *full_index = NULL;
-  bool any_annealing = false;
+  CancellationPlan plan;
 
   std::vector<LikelihoodEstimator *> likelihood_estimators;
   likelihood_estimators = get_likelihood_estimators(
-      &rng, &seed, &the_data, model, parameters, algorithm_parameters, true,
+      &rng, &seed, &the_data, model, parameters, algorithm_parameters, KernelDeclaration(),
       sequencer_types, sequencer_variables, sequencer_schedules, NULL,
-      without_cancelled_index, without_priors_index, full_index, any_annealing,
+      without_cancelled_index, without_priors_index, full_index, plan,
       factors_affected_by_smc_sequence,
       data_created_in_get_likelihood_estimators,
       data_created_in_get_measurement_covariance_estimators);
@@ -476,18 +492,26 @@ SMCMCMCMove *get_smc_mcmc_move(
     bool parallel_in, size_t grain_size_in, const std::string &results_name_in,
     size_t *seed, std::vector<Data> &data_created_in_get_likelihood_estimators,
     std::vector<Data> &data_created_in_get_measurement_covariance_estimators) {
+  refuse_unknown_normaliser(model, "SMC");
   std::vector<LikelihoodEstimator *> likelihood_estimators;
   IndependentProposalKernel *proposal_in;
   bool proposal_is_evaluated_in;
 
   RecipeValue sequencer_info =
       get_smc_sequencer_info(model, parameters, smc_sequencer_method);
+  // (dev/plan.md 3.20, S2) data tempering's options
+  DataTemperingOptions data_tempering;
+  if (sequencer_info.length() >= 6) {
+    std::vector<double> options = sequencer_info[5];
+    data_tempering.random_order = (options[0] != 0.0);
+    data_tempering.anneal = (options[1] != 0.0);
+  }
   std::vector<std::string> sequencer_types = sequencer_info[0];
   std::vector<std::string> sequencer_variables = sequencer_info[1];
   std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
 
   std::vector<int> factors_affected_by_smc_sequence;
-  if (sequencer_info.length() == 5) {
+  if (sequencer_info.length() >= 5) {
     std::vector<int> factors_affected_by_smc_sequence_temp = sequencer_info[4];
     for (auto &k : factors_affected_by_smc_sequence_temp) k = k - 1;
     factors_affected_by_smc_sequence = factors_affected_by_smc_sequence_temp;
@@ -497,34 +521,34 @@ SMCMCMCMove *get_smc_mcmc_move(
   VectorIndex *without_priors_index = NULL;
   VectorIndex *full_index = NULL;
 
-  bool any_annealing = false;
+  CancellationPlan plan;
 
   if (model.contains("is_proposal")) {
     proposal_in = get_proposal(model, parameters, the_data);
 
     likelihood_estimators = get_likelihood_estimators(
-        rng, seed, the_data, model, parameters, algorithm_parameters, true,
+        rng, seed, the_data, model, parameters, algorithm_parameters, KernelDeclaration(),
         sequencer_types, sequencer_variables, sequencer_schedules, proposal_in,
         without_cancelled_index, without_priors_index, full_index,
-        any_annealing, factors_affected_by_smc_sequence,
+        plan, factors_affected_by_smc_sequence,
         data_created_in_get_likelihood_estimators,
-        data_created_in_get_measurement_covariance_estimators);
+        data_created_in_get_measurement_covariance_estimators, data_tempering);
 
-    proposal_is_evaluated_in = true;
+    proposal_is_evaluated_in = plan.proposal_is_evaluated; // (dev/plan.md 3.20)
   } else {
     inform_once("No importance sampling proposal specified; using prior.");
 
     proposal_in = get_prior_as_simulate_only_proposal(model, parameters);
 
     likelihood_estimators = get_likelihood_estimators(
-        rng, seed, the_data, model, parameters, algorithm_parameters, false,
+        rng, seed, the_data, model, parameters, algorithm_parameters, prior_as_proposal(),
         sequencer_types, sequencer_variables, sequencer_schedules, proposal_in,
         without_cancelled_index, without_priors_index, full_index,
-        any_annealing, factors_affected_by_smc_sequence,
+        plan, factors_affected_by_smc_sequence,
         data_created_in_get_likelihood_estimators,
-        data_created_in_get_measurement_covariance_estimators);
+        data_created_in_get_measurement_covariance_estimators, data_tempering);
 
-    proposal_is_evaluated_in = false;
+    proposal_is_evaluated_in = plan.proposal_is_evaluated; // (dev/plan.md 3.20)
   }
 
   // note that this will always result in the temperature being adapted in the
@@ -537,6 +561,17 @@ SMCMCMCMove *get_smc_mcmc_move(
 
   SMCCriterion *resampling_criterion =
       get_resampling_method(model, parameters, number_of_particles);
+
+  // (dev/plan.md 3.20, S2) with whole data points, the criterion is a step
+  // function of the fraction, flat between data points: a bisection converges
+  // onto a step from the side where no data point is added, and the sampler
+  // makes ever smaller steps without progress. Annealing each data point in
+  // makes it continuous.
+  if ((sequencer_info.length() >= 6) && !data_tempering.anneal &&
+      adaptive_target_method.contains("method") &&
+      (adaptive_target_method["method"].as_string() != "positive"))
+    stop("data(..., anneal = false) adds whole data points, between which an adaptive target (target = ...) "
+         "cannot choose; use anneal = true (each data point annealed in), or a fixed schedule without target.");
 
   SMCCriterion *adaptive_target_criterion = get_adaptive_target_method(
       model, parameters, adaptive_target_method, number_of_particles);
@@ -696,7 +731,7 @@ EnsembleKalmanInversion *get_enki(
   std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
 
   std::vector<int> factors_affected_by_smc_sequence;
-  if (sequencer_info.length() == 5) {
+  if (sequencer_info.length() >= 5) {
     std::vector<int> factors_affected_by_smc_sequence_temp = sequencer_info[4];
     for (auto &k : factors_affected_by_smc_sequence_temp) k = k - 1;
     factors_affected_by_smc_sequence = factors_affected_by_smc_sequence_temp;
@@ -706,7 +741,7 @@ EnsembleKalmanInversion *get_enki(
   VectorIndex *without_priors_index = NULL;
   VectorIndex *full_index = NULL;
 
-  bool any_annealing = false;
+  CancellationPlan plan;
 
   proposal_in = get_prior_as_simulate_only_proposal(model, parameters);
 
@@ -721,9 +756,9 @@ EnsembleKalmanInversion *get_enki(
       get_enk_likelihood_indices(model, parameters);
 
   likelihood_estimators = get_likelihood_estimators(
-      rng, seed, the_data, model, parameters, algorithm_parameters, true,
+      rng, seed, the_data, model, parameters, algorithm_parameters, KernelDeclaration(),
       sequencer_types, sequencer_variables, sequencer_schedules, proposal_in,
-      without_cancelled_index, without_priors_index, full_index, any_annealing,
+      without_cancelled_index, without_priors_index, full_index, plan,
       factors_affected_by_smc_sequence,
       data_created_in_get_likelihood_estimators,
       data_created_in_get_measurement_covariance_estimators);
@@ -1263,21 +1298,21 @@ ParticleFilter *get_particle_filter(
 
   std::vector<int> factors_affected_by_smc_sequence;
 
-  bool any_annealing;
+  CancellationPlan plan;
 
   if (model.contains("is_proposal")) {
 
     proposal_in = get_proposal(model, parameters, the_data);
 
     likelihood_estimators = get_likelihood_estimators(
-        rng, seed, the_data, model, parameters, algorithm_parameters, true,
+        rng, seed, the_data, model, parameters, algorithm_parameters, KernelDeclaration(),
         sequencer_types, sequencer_variables, sequencer_schedules, proposal_in,
         evaluated_in_initial_weight_update, evaluated_in_pf_weight_update,
-        full_index, any_annealing, factors_affected_by_smc_sequence,
+        full_index, plan, factors_affected_by_smc_sequence,
         data_created_in_get_likelihood_estimators,
         data_created_in_get_measurement_covariance_estimators);
 
-    proposal_is_evaluated_in = true;
+    proposal_is_evaluated_in = plan.proposal_is_evaluated; // (dev/plan.md 3.20)
   } else {
 
     inform_once("No importance sampling proposal specified; using prior.");
@@ -1285,14 +1320,14 @@ ParticleFilter *get_particle_filter(
     proposal_in = get_prior_as_simulate_only_proposal(model, parameters);
 
     likelihood_estimators = get_likelihood_estimators(
-        rng, seed, the_data, model, parameters, algorithm_parameters, false,
+        rng, seed, the_data, model, parameters, algorithm_parameters, prior_as_proposal(),
         sequencer_types, sequencer_variables, sequencer_schedules, proposal_in,
         evaluated_in_initial_weight_update, evaluated_in_pf_weight_update,
-        full_index, any_annealing, factors_affected_by_smc_sequence,
+        full_index, plan, factors_affected_by_smc_sequence,
         data_created_in_get_likelihood_estimators,
         data_created_in_get_measurement_covariance_estimators);
 
-    proposal_is_evaluated_in = false;
+    proposal_is_evaluated_in = plan.proposal_is_evaluated; // (dev/plan.md 3.20)
   }
 
   bool smcfixed_flag = true;
@@ -1323,15 +1358,18 @@ ParticleFilter *get_particle_filter(
   ProposalKernel *transition_proposal =
       get_transition_proposal(model, parameters);
 
+  // the bootstrap filter: a transition proposal that is the transition model
+  // simulates exactly from it, so both cancel in the weights (dev/plan.md
+  // 3.20, rule ii)
   bool transition_proposal_is_evaluated_in;
   if (transition_proposal == NULL) {
     inform_once("No transition proposal specified; using transition model.");
 
-    transition_proposal_is_evaluated_in = false;
+    transition_proposal_is_evaluated_in = kernel_density_is_evaluated(transition_model_as_proposal());
 
     transition_proposal = transition_model->proposal_kernel_duplicate();
   } else {
-    transition_proposal_is_evaluated_in = true;
+    transition_proposal_is_evaluated_in = kernel_density_is_evaluated(KernelDeclaration());
 
     if (!transition_model->can_be_evaluated()) {
       stop("No method supplied for the evaluation of the transition model.");
@@ -1494,11 +1532,11 @@ arma::mat do_evaluate_gradient_log(const Rcpp::List &model_R,
   std::vector<std::vector<double>> sequencer_schedules;
   std::vector<int> factors_affected_by_smc_sequence;
   VectorIndex *without_cancelled_index = NULL, *without_priors_index = NULL, *full_index = NULL;
-  bool any_annealing = false;
+  CancellationPlan plan;
   std::vector<LikelihoodEstimator *> likelihood_estimators = get_likelihood_estimators(
-      &rng, &seed, &the_data, model, model_parameters, algorithm_parameters, true,
+      &rng, &seed, &the_data, model, model_parameters, algorithm_parameters, KernelDeclaration(),
       sequencer_types, sequencer_variables, sequencer_schedules, NULL,
-      without_cancelled_index, without_priors_index, full_index, any_annealing,
+      without_cancelled_index, without_priors_index, full_index, plan,
       factors_affected_by_smc_sequence,
       data_created_in_get_likelihood_estimators,
       data_created_in_get_measurement_covariance_estimators);
@@ -1565,13 +1603,13 @@ double do_evaluate_log(const Rcpp::List &model_R,
   VectorIndex *without_cancelled_index = NULL;
   VectorIndex *without_priors_index = NULL;
   VectorIndex *full_index = NULL;
-  bool any_annealing = false;
+  CancellationPlan plan;
 
   std::vector<LikelihoodEstimator *> likelihood_estimators;
   likelihood_estimators = get_likelihood_estimators(
-      &rng, &seed, &the_data, model, model_parameters, algorithm_parameters, true,
+      &rng, &seed, &the_data, model, model_parameters, algorithm_parameters, KernelDeclaration(),
       sequencer_types, sequencer_variables, sequencer_schedules, NULL,
-      without_cancelled_index, without_priors_index, full_index, any_annealing,
+      without_cancelled_index, without_priors_index, full_index, plan,
       factors_affected_by_smc_sequence,
       data_created_in_get_likelihood_estimators,
       data_created_in_get_measurement_covariance_estimators);
@@ -1658,13 +1696,13 @@ double do_evaluate_log_with_fixed_params(const Rcpp::List &model_R,
   VectorIndex *without_cancelled_index = NULL;
   VectorIndex *without_priors_index = NULL;
   VectorIndex *full_index = NULL;
-  bool any_annealing = false;
+  CancellationPlan plan;
 
   std::vector<LikelihoodEstimator *> likelihood_estimators;
   likelihood_estimators = get_likelihood_estimators(
-                                                    &rng, &seed, &the_data, model, model_parameters, algorithm_parameters, true,
+                                                    &rng, &seed, &the_data, model, model_parameters, algorithm_parameters, KernelDeclaration(),
                                                     sequencer_types, sequencer_variables, sequencer_schedules, NULL,
-                                                    without_cancelled_index, without_priors_index, full_index, any_annealing,
+                                                    without_cancelled_index, without_priors_index, full_index, plan,
                                                     factors_affected_by_smc_sequence,
                                                     data_created_in_get_likelihood_estimators,
                                                     data_created_in_get_measurement_covariance_estimators);
@@ -1795,7 +1833,7 @@ Rcpp::List copy_audit(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
   std::vector<std::string> sequencer_variables = sequencer_info[1];
   std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
   std::vector<int> factors_affected_by_smc_sequence;
-  if (sequencer_info.length() == 5) {
+  if (sequencer_info.length() >= 5) {
     std::vector<int> temp = sequencer_info[4];
     for (auto &k : temp) k = k - 1;
     factors_affected_by_smc_sequence = temp;
@@ -1804,11 +1842,11 @@ Rcpp::List copy_audit(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
   VectorIndex *without_cancelled_index = NULL;
   VectorIndex *without_priors_index = NULL;
   VectorIndex *full_index = NULL;
-  bool any_annealing = false;
+  CancellationPlan plan;
   std::vector<LikelihoodEstimator *> likelihood_estimators = get_likelihood_estimators(
-      &rng, &seed, &the_data, model, parameters, algorithm_parameters, true,
+      &rng, &seed, &the_data, model, parameters, algorithm_parameters, KernelDeclaration(),
       sequencer_types, sequencer_variables, sequencer_schedules, NULL,
-      without_cancelled_index, without_priors_index, full_index, any_annealing,
+      without_cancelled_index, without_priors_index, full_index, plan,
       factors_affected_by_smc_sequence, data_created_in_get_likelihood_estimators,
       data_created_in_get_measurement_covariance_estimators);
 
@@ -1890,4 +1928,62 @@ Rcpp::List copy_audit(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
 // [[Rcpp::init]]
 void ilike_record_main_thread(DllInfo* dll) {
   ilike::ilike_main_thread() = std::this_thread::get_id();
+}
+
+
+// Draws from the simulator of an unnormalised distribution (dev/plan.md
+// 3.20, S3): method "exact" (coupling from the past) or "sweeps" (that many
+// heat-bath sweeps from the value of the variable in parameters, or from the
+// base measure if it is not there). Internal: for tests and later methods.
+typedef void (*UnnormalisedSweepPtr)(RandomNumberGenerator &rng, Parameters &parameters, const Data &data);
+typedef Parameters (*UnnormalisedExactPtr)(RandomNumberGenerator &rng, const Parameters &parameters, const Data &data);
+
+// [[Rcpp::export]]
+arma::mat do_simulate_unnormalised(const Rcpp::List &model_R,
+                                   const std::string &variable,
+                                   const Rcpp::List &parameters_in,
+                                   size_t draws,
+                                   const std::string &method,
+                                   size_t sweeps,
+                                   size_t seed)
+{
+  RecipeValue model = recipe_from_R(model_R);
+  if (!model.contains("unnormalised"))
+    stop("The recipe has no unnormalised distribution.");
+  const RecipeValue &entries = model["unnormalised"];
+  int found = -1;
+  for (size_t i = 0; i < entries.size(); ++i)
+    if (entries[i]["variable"].as_string() == variable)
+      found = int(i);
+  if (found < 0)
+    stop("The recipe has no unnormalised distribution for " + variable + ".");
+  const RecipeValue &entry = entries[size_t(found)];
+  Data the_data = get_data(model);
+  Parameters start = list_to_parameters(parameters_in);
+  RandomNumberGenerator rng;
+  rng.seed(seed);
+  arma::mat output;
+  for (size_t d = 0; d < draws; ++d)
+  {
+    arma::mat x;
+    if (method == "exact")
+    {
+      if (!entry.contains("exact"))
+        stop("No exact simulator for " + variable + " (" + entry["kind"].as_string() + ").");
+      Parameters draw = entry["exact"].function_pointer<UnnormalisedExactPtr>()(rng, start, the_data);
+      x = draw[variable];
+    }
+    else
+    {
+      Parameters state = start.deep_copy();
+      UnnormalisedSweepPtr sweep = entry["sweep"].function_pointer<UnnormalisedSweepPtr>();
+      for (size_t k = 0; k < std::max(sweeps, size_t(1)); ++k)
+        sweep(rng, state, the_data);
+      x = state[variable];
+    }
+    if (output.n_rows == 0)
+      output.set_size(draws, x.n_elem);
+    output.row(d) = arma::vectorise(x).t();
+  }
+  return output;
 }

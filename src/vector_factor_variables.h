@@ -43,6 +43,8 @@ public:
   double evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index);
   
   double evaluate_likelihoods(const Index* index) const;
+  bool simulation_pending(const Index* index) const;
+  double evaluate_likelihoods_with_threshold(const Index* index, double threshold, bool &below) const;
   double get_cached_likelihoods(const Index* index) const;
   std::vector<size_t> find_changed_exact_factors(const Index* new_outputs_index) const;
   

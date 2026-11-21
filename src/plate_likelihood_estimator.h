@@ -71,6 +71,15 @@ public:
   LikelihoodEstimatorOutput* initialise(const Parameters &parameters);
 
   size_t number_of_terms() const { return this->terms.n_rows; }
+
+  // data tempering (dev/plan.md 3.20, S2): the terms are put in tempering
+  // order (a random order fixed by the seed, or the order given) when the
+  // structure is built; at a value phi of the sequence variable, with n terms
+  // and n phi = k + r, the target has the first k terms and term k + 1 to the
+  // power r (anneal), or the first ceil(n phi) terms
+  void set_data_tempering(const std::string &variable_in, bool anneal_in, bool random_order_in, size_t seed_in);
+  bool is_tempered() const { return this->tempered; }
+  void tempering_point(const Parameters &parameters, size_t &k, double &r) const;
   void set_gradient(PlateGradientPtr gradient_in) { this->gradient_function = gradient_in; }
   void set_gradients(PlateGradientsPtr gradients_in) { this->gradients_function = gradients_in; }
   void set_value_gradients(PlateValueGradientsPtr value_gradients_in) { this->value_gradients_function = value_gradients_in; }
@@ -96,6 +105,13 @@ protected:
   // check_factor_index: after a partial evaluation, recompute every term and
   // stop if one not recomputed changed (a wrong dependency list)
   bool check;
+
+  // data tempering (set_data_tempering)
+  bool tempered = false;
+  std::string tempering_variable;
+  bool tempering_anneal = true;
+  bool tempering_random = true;
+  size_t tempering_seed = 0;
 
   Data* current_plate_data;
   bool structure_built;

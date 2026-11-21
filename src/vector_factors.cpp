@@ -20,6 +20,15 @@ VectorFactors::VectorFactors(const std::vector<LikelihoodEstimator*> &likelihood
   this->likelihood_estimators.reserve(likelihood_estimators_in.size());
   for (auto i=likelihood_estimators_in.begin(); i!=likelihood_estimators_in.end(); ++i)
     this->likelihood_estimators.emplace_back(*i);
+  this->find_deferring();
+}
+
+void VectorFactors::find_deferring()
+{
+  this->any_defers = false;
+  for (const auto &estimator : this->likelihood_estimators)
+    if ((estimator != NULL) && estimator->defers_simulation())
+      this->any_defers = true;
 }
 
 VectorFactors::~VectorFactors()
@@ -63,6 +72,7 @@ void VectorFactors::make_copy(const VectorFactors &another)
     else
       this->likelihood_estimators.emplace_back(nullptr);
   }
+  this->find_deferring();
   
   this->likelihood_estimator_temp_data = another.likelihood_estimator_temp_data;
 }

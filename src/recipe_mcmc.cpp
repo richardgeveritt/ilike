@@ -1083,6 +1083,9 @@ RecipeValue get_smc_sequencer_info(const RecipeValue &model, const RecipeValue &
   std::vector<double> factors_affected;
   bool any_factors = false;
   size_t number_of_bisections = 100;
+  // (dev/plan.md 3.20, S2) data tempering's options: random order, anneal
+  bool data_tempering = false;
+  std::vector<double> data_tempering_options;
 
   if (smc_sequencer_method.contains("sequences")) {
     const RecipeValue &sequences = smc_sequencer_method["sequences"];
@@ -1093,6 +1096,13 @@ RecipeValue get_smc_sequencer_info(const RecipeValue &model, const RecipeValue &
       variables.push_back(arguments.variable("variable"));
       arma::colvec schedule = arguments.vector("schedule");
       schedules.push_back(std::vector<double>(schedule.begin(), schedule.end()));
+      if (arguments.builtin() == "data") {
+        std::string order = arguments.string("order");
+        if ((order != "random") && (order != "given"))
+          stop("data(...): order is random or given.");
+        data_tempering = true;
+        data_tempering_options = {(order == "random") ? 1.0 : 0.0, arguments.logical("anneal") ? 1.0 : 0.0};
+      }
       if (arguments.given("factors")) {
         any_factors = true;
         arma::colvec factors = arguments.vector("factors");
@@ -1103,6 +1113,9 @@ RecipeValue get_smc_sequencer_info(const RecipeValue &model, const RecipeValue &
       inform_once("Bisections not set in adaptive target method, using 100.");
   }
 
+  if (data_tempering)
+    return RecipeValue::list({types, variables, schedules, number_of_bisections,
+                              factors_affected, data_tempering_options});
   if (any_factors)
     return RecipeValue::list({types, variables, schedules, number_of_bisections,
                               factors_affected});

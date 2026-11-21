@@ -86,6 +86,7 @@ SMCOutput* SMCOutput::smc_duplicate() const
 
 void SMCOutput::make_copy(const SMCOutput &another)
 {
+  this->pending = another.pending;
   this->all_particles = another.all_particles;
   this->all_proposed = another.all_proposed;
   this->lag = another.lag;
@@ -130,11 +131,40 @@ void SMCOutput::evaluate_smcadaptive_part_given_smcfixed()
 
 void SMCOutput::simulate(const Parameters &parameters)
 {
+  // (dev/plan.md 3.21) deferred to evaluation when the estimator allows it
+  if (this->estimator->defers_simulation())
+  {
+    this->pending = true;
+    return;
+  }
   this->estimator->simulate_smc(this, parameters);
+}
+
+void SMCOutput::run_if_pending(const Parameters &parameters)
+{
+  if (!this->pending)
+    return;
+  this->pending = false;
+  this->estimator->simulate_smc(this, parameters);
+}
+
+double SMCOutput::evaluate_with_threshold(const Parameters &parameters, double threshold, bool &below)
+{
+  below = false;
+  if (!this->pending)
+    return this->evaluate(parameters);
+  this->pending = false;
+  if (this->estimator->simulate_smc_with_threshold(this, parameters, threshold))
+  {
+    below = true;
+    return -arma::datum::inf;
+  }
+  return this->evaluate(parameters);
 }
 
 void SMCOutput::evaluate_smcfixed_part(const Parameters &parameters)
 {
+  this->run_if_pending(parameters);
   if (this->estimator->smcfixed_flag)
   {
     this->estimator->evaluate_smc(this, parameters);
@@ -147,6 +177,7 @@ void SMCOutput::evaluate_smcfixed_part(const Parameters &parameters)
 
 void SMCOutput::evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters)
 {
+  this->run_if_pending(parameters);
   if (!this->estimator->smcfixed_flag)
   {
     this->estimator->evaluate_smcadaptive_part_given_smcfixed_smc(this,parameters);
