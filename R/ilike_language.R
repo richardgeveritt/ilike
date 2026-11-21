@@ -33,7 +33,9 @@ internal_roles <- list(
   # the simulators of unnormalised distributions (dev/plan.md 3.20, S3)
   unnormalised_sweep = c("void", "RandomNumberGenerator &rng, Parameters &parameters, const Data &data"),
   unnormalised_exact = c("Parameters", "RandomNumberGenerator &rng, const Parameters &parameters, const Data &data"),
-  unnormalised_potential = c("double", "const arma::mat &field, const Parameters &parameters, const Data &data"))
+  unnormalised_potential = c("double", "const arma::mat &field, const Parameters &parameters, const Data &data"),
+  # the prior of a variable integrated out, given the outer parameters (dev/plan.md 3.21, step (b))
+  simulate_prior_given = c("Parameters", "RandomNumberGenerator &rng, const Parameters &ilike_given"))
 
 # The getter's name for a function used in a role
 placeholder_getter <- function(function_name, role)

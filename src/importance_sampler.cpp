@@ -2,6 +2,7 @@
 #include "smc_worker.h"
 #include "sequential_smc_worker.h"
 #include "smc_output.h"
+#include "utils.h"
 #include "exact_likelihood_estimator.h"
 #include "parameter_particle_simulator.h"
 #include "move_output.h"
@@ -526,6 +527,7 @@ namespace ilike
 
   void ImportanceSampler::make_copy(const ImportanceSampler &another)
   {
+    this->follows_caller_target = another.follows_caller_target;
     if (another.index != NULL)
       this->index.reset(another.index->duplicate());
     else
@@ -560,7 +562,7 @@ namespace ilike
     // so the target must be fixed: one schedule point and a criterion that
     // always accepts it (no bisection), and no scale computed from all the
     // points (ABC). Weighting at other targets is G2 (adaptive summaries).
-    if (this->force_rich_generations || this->proposed_particles_inputted)
+    if (this->force_rich_generations || this->proposed_particles_inputted || this->follows_caller_target)
       return false;
     if ((this->particle_simulator == NULL) || (this->number_of_particles == 0))
       return false;
@@ -714,6 +716,11 @@ namespace ilike
 
   void ImportanceSampler::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput *current_state)
   {
+    if (this->follows_caller_target)
+    {
+      this->weight_at_caller_target(current_state);
+      return;
+    }
 
     this->set_abc_scale(&current_state->back());
 
@@ -755,6 +762,29 @@ namespace ilike
     }
     this->the_worker->smcadaptive_given_smcfixed_weight(index,
                                                         current_particles);
+  }
+
+  // (dev/plan.md 3.21, step (b)) the points were drawn from the prior of the
+  // variable integrated out, which is the proposal and cancels, so each
+  // point's weight at the current target is its value of the other factors
+  // (the data's densities, which read the caller's target, e.g. an ABC
+  // tolerance, through the shared parameters): the estimate is their mean.
+  // The points are kept (no terminate()), to be weighted again at the
+  // caller's next target.
+  void ImportanceSampler::weight_at_caller_target(SMCOutput *current_state)
+  {
+    Particles &generation = current_state->back();
+    size_t n = generation.size();
+    double log_likelihood = -arma::datum::inf;
+    if (n > 0)
+    {
+      arma::colvec values(n);
+      for (size_t i = 0; i < n; ++i)
+        values[i] = generation[i]->back().evaluate_smcadaptive_part_given_smcfixed_likelihoods(this->index.get());
+      log_likelihood = log_sum_exp(values) - std::log(double(n));
+    }
+    current_state->log_likelihood = log_likelihood;
+    current_state->set_llhd(log_likelihood);
   }
 
   SMCOutput *ImportanceSampler::specific_run(const Parameters &conditioned_on_parameters)
@@ -809,6 +839,11 @@ namespace ilike
   void ImportanceSampler::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput *current_state,
                                                                        const Parameters &conditioned_on_parameters)
   {
+    if (this->follows_caller_target)
+    {
+      this->weight_at_caller_target(current_state);
+      return;
+    }
     if (!this->sequencer_limit_is_fixed)
     {
       // The target (e.g. the ABC tolerance) is set by the caller, through

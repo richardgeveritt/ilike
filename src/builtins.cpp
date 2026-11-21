@@ -972,6 +972,16 @@ static std::vector<Builtin> make_registry()
                    parallel(),
                    optional("grain_size", T::Integer, RecipeValue(64.0), "particles per parallel task").at_least(0.0)};
     table.push_back(b);
+
+    // integrate u with is(points = N) (dev/plan.md 3.21, step (b)): the
+    // "model" is the variable integrated out (set by the lowering)
+    b.name = "is";
+    b.description = "importance sampling over a variable integrated out of the model";
+    b.arguments = {required("model", T::String, "the variable integrated out"),
+                   required("points", T::Integer, "the number of importance points").at_least(1.0),
+                   parallel(),
+                   optional("grain_size", T::Integer, RecipeValue(100000.0), "points per parallel task").at_least(0.0)};
+    table.push_back(b);
   }
 
   // state-space model settings (bound only)

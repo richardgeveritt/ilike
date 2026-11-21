@@ -79,7 +79,11 @@ ImportanceSampler *get_importance_sampler(
     size_t number_of_importance_points, bool parallel_in, size_t grain_size_in,
     const std::string &results_name_in, size_t *seed,
     std::vector<Data> &data_created_in_get_likelihood_estimators,
-    std::vector<Data> &data_created_in_get_measurement_covariance_estimators) {
+    std::vector<Data> &data_created_in_get_measurement_covariance_estimators,
+    const NestedSequence *nested) {
+  // (nested: an inner estimator of a factor, integrate u with is(…),
+  // dev/plan.md 3.21 step (b): no message, no stored points, and the outer
+  // sequences that change the factor in place of the inner model's own)
   refuse_unknown_normaliser(model, "Importance sampling");
   // May need to alter for cases where the likelihood needs to be tuned
   // automatically (e.g. in ABC).
@@ -95,6 +99,11 @@ ImportanceSampler *get_importance_sampler(
   std::vector<std::string> sequencer_types = sequencer_info[0];
   std::vector<std::string> sequencer_variables = sequencer_info[1];
   std::vector<std::vector<double>> sequencer_schedules = sequencer_info[2];
+  if (nested) {
+    sequencer_types = nested->types;
+    sequencer_variables = nested->variables;
+    sequencer_schedules.assign(sequencer_types.size(), std::vector<double>());
+  }
 
   std::vector<int> factors_affected_by_smc_sequence;
   if (sequencer_info.length() >= 5) {
@@ -122,7 +131,8 @@ ImportanceSampler *get_importance_sampler(
 
     proposal_is_evaluated_in = plan.proposal_is_evaluated; // (dev/plan.md 3.20)
   } else {
-    inform_once("No importance sampling proposal specified; using prior.");
+    if (!nested)
+      inform_once("No importance sampling proposal specified; using prior.");
 
     proposal_in = get_prior_as_simulate_only_proposal(model, parameters);
 
@@ -138,10 +148,13 @@ ImportanceSampler *get_importance_sampler(
   }
 
 
-  return new ImportanceSampler(
+  ImportanceSampler *sampler = new ImportanceSampler(
       rng, seed, the_data, algorithm_parameters, number_of_importance_points,
-      "", likelihood_estimators, proposal_in, without_cancelled_index, proposal_is_evaluated_in, true,
+      "", likelihood_estimators, proposal_in, without_cancelled_index, proposal_is_evaluated_in, !nested,
       true, true, false, parallel_in, grain_size_in, "");
+  if (nested && !nested->types.empty())
+    sampler->set_follows_caller_target(true);
+  return sampler;
 }
 
 // Output options set by the R wrappers as elements of the recipe.

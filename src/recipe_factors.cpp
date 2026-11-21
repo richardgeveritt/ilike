@@ -861,6 +861,29 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
               if (model.contains("number_of_threads"))
                 inner_pf->set_number_of_threads(size_t((model["number_of_threads"]).as_double()));
               new_likelihood_estimator = inner_pf;
+            } else if (iequals(llhd_type, "is")) {
+              // integrate u with is(points = N) (dev/plan.md 3.21, step
+              // (b)): an importance sampler over u, given the outer
+              // parameters, on the inner model the lowering made (u's prior,
+              // the proposal, and the factors of the data that depend on u)
+              RecipeValue is_params = get_is_info(model_parameters, llhd_details);
+              // (dev/plan.md 3.21, step (b)) when the outer sequence changes
+              // this factor (an ABC tolerance read by the data's kernel), the
+              // inner points are kept and weighted again under each new outer
+              // target, as in the ABC-SMC of arXiv:2211.02172 (alg. 3)
+              NestedSequence nested;
+              if (!factor_is_fixed_in_smc) {
+                nested.types = sequencer_types;
+                nested.variables = sequencer_variables;
+              }
+              size_t number_of_points = is_params[0];
+              bool parallel = is_params[1];
+              size_t grain_size = is_params[2];
+              new_likelihood_estimator = get_importance_sampler(
+                  rng_in, data_in, llhd_model, model_parameters, algorithm_parameters,
+                  number_of_points, parallel, grain_size, "", seed_in,
+                  data_created_in_get_likelihood_estimators,
+                  data_created_in_get_measurement_covariance_estimators, &nested);
             } else {
               stop("Invalid type for 'likelihood'.");
             }

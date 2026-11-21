@@ -276,6 +276,16 @@ private:
   bool generate = false;
   bool generation_decided = false;
   std::map<std::string, size_t> model_factor_position; // "model_prior" or a data variable -> factor entry
+  // (dev/plan.md 3.21, step (b)) integrate u with is(…): the variable, the
+  // method's call, the statement (for messages); its factor is named u
+  struct Integration
+  {
+    std::string variable;
+    RecipeValue method;
+    RecipeValue node;
+  };
+  std::vector<Integration> integrations;
+  std::set<std::string> integrated_variables;
   RecipeValue constant_values;
   std::set<std::string> model_constants_used;
   std::set<std::string> element_constants_used; // (in moves on elements: values taken when compiling)
@@ -1348,6 +1358,25 @@ private:
       std::string name = target["name"].as_string();
       const RecipeValue &value = statement["value"];
 
+      if (keyword == "integrate")
+      {
+        // integrate u with is(points = N) (dev/plan.md 3.21, step (b)): the
+        // factor of the data that depend on u, estimated by an importance
+        // sampler over u for each value of the other parameters; the factor
+        // is named after u and sits here (finish_model_statements fills it)
+        if (op != "with" || kind_of(value) != "call" || !value["namespace"].as_string().empty() ||
+            (value["function"].as_string() != "is" && value["function"].as_string() != "abc"))
+          this->error(statement, "integrate " + name + " with is(points = N) (or abc(points = N)): a variable "
+                      "integrated out by importance sampling.");
+        if (!this->integrations.empty())
+          this->error(statement, "only one variable can be integrated out, for now (it may be a vector or matrix).");
+        this->add_factor(statement, name, RecipeValue::list());
+        this->integrations.push_back({name, value, statement});
+        this->integrated_variables.insert(name);
+        this->mfds_reasons.push_back(name + " is integrated out by an inner algorithm");
+        continue;
+      }
+
       if (op == "~" && keyword.empty())
       {
         // a built-in prior: theta ~ norm(0, 1)
@@ -1465,7 +1494,7 @@ private:
           const RecipeValue &st = statements[i];
           std::string keyword = st["keyword"].as_string();
           std::string op = st.contains("operator") ? st["operator"].as_string() : "";
-          if (keyword == "for" || op == "<-" || op == "+=")
+          if (keyword == "for" || op == "<-" || op == "+=" || keyword == "integrate")
             this->generate = true;
           if (op == "~" && keyword.empty())
           {
@@ -1964,6 +1993,21 @@ private:
     return false;
   }
 
+  // a deterministic node computed by a C++ function, x <- cpp::f(a, b, …)
+  // (dev/plan.md 3.21 (2)): a whole matrix
+  bool is_cpp_node(const std::string &name) const
+  {
+    if (!this->is_deterministic(name))
+      return false;
+    const RecipeValue &value = this->deterministic_statement(name).value;
+    return (kind_of(value) == "call") && (value["namespace"].as_string() == "cpp");
+  }
+  std::string cpp_node_call(const std::string &name, const CodeContext &context) const
+  {
+    std::string data = context.prior ? std::string("nullptr") : (context.node ? std::string("data") : std::string("&data"));
+    return "ilike_model_node_matrix_" + name + "(parameters, " + data + ")";
+  }
+
   const ModelStatement &deterministic_statement(const std::string &name) const
   {
     for (const ModelStatement &st : this->model_statements)
@@ -2042,6 +2086,8 @@ private:
         return "(data != nullptr ? (*data)[" + quoted(name) + "] : " + this->literal_data_matrix(name, node) + ")";
       return this->hoisted(context.data + "[" + quoted(name) + "]", "const arma::mat &", context);
     }
+    if (this->is_cpp_node(name))
+      return this->hoisted(this->cpp_node_call(name, context), "const arma::mat &", context); // (computed once per statement when hoisted)
     if (this->is_deterministic(name))
       this->error(node, name + " is a deterministic node: use it with its indices.");
     return this->hoisted("parameters[" + quoted(name) + "]", "const arma::mat &", context);
@@ -2324,6 +2370,18 @@ private:
   std::string deterministic_call(const std::string &name, const RecipeValue &indices, const RecipeValue &node, const CodeContext &context)
   {
     const ModelStatement &st = this->deterministic_statement(name);
+    if (this->is_cpp_node(name))
+    {
+      std::string matrix = this->variable_matrix(name, node, context);
+      if (indices.size() == 0)
+        return "(" + matrix + ")(0)";
+      std::string checked = "false, " + quoted(this->element_description(name, node));
+      if (indices.size() == 1)
+        return "ilike_model_at(" + matrix + ", " + this->index_code(indices[0], context) + ", " + checked + ")";
+      if (indices.size() == 2)
+        return "ilike_model_at(" + matrix + ", " + this->index_code(indices[0], context) + ", " + this->index_code(indices[1], context) + ", " + checked + ")";
+      this->error(node, "at most two indices.");
+    }
     if (indices.size() != st.indices.size())
       this->error(node, "the deterministic node " + name + " takes " + std::to_string(st.indices.size()) + " index(es).");
     if (context.prior && this->uses_runtime_data(st.value))
@@ -2345,7 +2403,7 @@ private:
     const RecipeValue &arguments = call["arguments"];
     std::vector<std::string> keys = arguments.names();
     for (const std::string &k : keys)
-      if (!k.empty())
+      if (!k.empty() && (f != "abc_uniform") && (f != "abc_gaussian")) // (the ABC kernels' optional scale and p are named)
         this->error(call, "model statements take the distribution's arguments in order (no names), as in BUGS.");
     static const std::map<std::string, std::pair<size_t, std::string>> densities = {
       {"norm", {2, "dnorm"}}, {"lnorm", {2, "dlnorm"}}, {"gamma", {2, "dgamma"}}, {"unif", {2, "dunif"}},
@@ -2403,6 +2461,31 @@ private:
       return "dmvnorm(arma::colvec(arma::vectorise(" + x + ")), arma::colvec(arma::vectorise(" + this->matrix_code(arguments[0], context) +
              ")), " + this->matrix_code(arguments[1], context) + ")";
     }
+    if ((f == "abc_uniform") || (f == "abc_gaussian"))
+    {
+      // y ~ abc_uniform(s, epsilon, scale = …, p = 2) / abc_gaussian(s, epsilon, scale = …)
+      // (dev/plan.md 3.21 (2)): the ABC kernel K_epsilon(y | s), y observed
+      Arguments split = this->split_arguments(call);
+      std::set<std::string> allowed = {"summaries", "epsilon", "scale"};
+      if (f == "abc_uniform")
+        allowed.insert("p");
+      this->allow_only(call, split, allowed, 2);
+      std::map<std::string, RecipeValue> given;
+      std::vector<std::string> order = {"summaries", "epsilon"};
+      for (size_t k = 0; k < split.positional.size(); ++k)
+        given[order[k]] = split.positional[k];
+      for (const auto &kv : split.named)
+        given[kv.first] = kv.second;
+      if (!given.count("summaries") || !given.count("epsilon"))
+        this->error(call, f + "(s, epsilon, …): the simulated data (or summaries) s and the tolerance epsilon are needed.");
+      std::string scale = given.count("scale") ? "arma::colvec(arma::vectorise(" + this->matrix_code(given["scale"], context) + "))"
+                                               : std::string("arma::colvec(1, arma::fill::ones)");
+      std::string head = "(arma::colvec(arma::vectorise(" + x + ")), arma::colvec(arma::vectorise(" +
+                         this->matrix_code(given["summaries"], context) + ")), " + this->scalar_code(given["epsilon"], context) + ", " + scale;
+      if (f == "abc_gaussian")
+        return "ilike_model_dabc_gaussian" + head + ")";
+      return "ilike_model_dabc_uniform" + head + ", " + (given.count("p") ? this->scalar_code(given["p"], context) : std::string("2.0")) + ")";
+    }
     auto found = densities.find(f);
     if (found == densities.end())
       this->error(call, "unknown distribution " + f + " in a model statement (norm, lnorm, gamma, invgamma, unif, exp, pois, tnorm, beta, t, cauchy, halfnorm, halfcauchy, halft, vonmises, chisq, weibull, laplace, logis, bern, binom, negbinom, geom, categorical, mvnorm, mvt, multinom, dirichlet, wishart, invwishart, lkj).");
@@ -2420,7 +2503,7 @@ private:
   static bool whole_target(const std::string &f)
   {
     return (f == "mvnorm") || (f == "multinom") || (f == "dirichlet") || (f == "mvt") ||
-           (f == "wishart") || (f == "invwishart") || (f == "lkj");
+           (f == "wishart") || (f == "invwishart") || (f == "lkj") || (f == "abc_uniform") || (f == "abc_gaussian");
   }
 
   // the dimension of an lkj matrix, for its simulation: lkj(eta, d), or the
@@ -2616,9 +2699,17 @@ private:
     return out;
   }
 
+  std::string node_gradient_call_checked(const std::string &name) const
+  {
+    if (this->is_cpp_node(name))
+      this->error(this->deterministic_statement(name).node, "the gradient through the C++ node " + name + " is not available.");
+    return "";
+  }
+
   std::string node_gradient_call(const std::string &name, const RecipeValue &indices, const std::string &adjoint,
                                  const CodeContext &context)
   {
+    this->node_gradient_call_checked(name);
     std::string data = context.prior ? std::string("nullptr") : (context.node ? std::string("data") : std::string("&data"));
     std::string call = "ilike_model_node_gradient_" + name + "(ilike_G, " + adjoint + ", parameters, " + data;
     for (size_t k = 0; k < indices.size(); ++k)
@@ -4239,6 +4330,39 @@ inline double ilike_model_dbinom(double x, double n, double p)
   if (x < 0.0 || x > n || x != std::floor(x)) return -std::numeric_limits<double>::infinity();
   return std::lgamma(n + 1.0) - std::lgamma(x + 1.0) - std::lgamma(n - x + 1.0) + x*std::log(p) + (n - x)*std::log(1.0 - p);
 }
+// ABC kernels as distributions of observed data y given simulated s (dev/plan.md
+// 3.21 (2)): scale is a standard deviation per element; at epsilon = Inf the
+// kernel is 1 (log 0), so an SMC can start from the prior predictive
+inline arma::colvec ilike_model_abc_scale(const arma::colvec &scale, arma::uword n)
+{
+  if (scale.n_elem == n) return scale;
+  if (scale.n_elem == 1) return arma::colvec(n, arma::fill::value(scale(0)));
+  Rcpp::stop("abc kernel: scale has " + std::to_string(scale.n_elem) + " elements, the data " + std::to_string(n) + ".");
+}
+inline double ilike_model_dabc_uniform(const arma::colvec &y, const arma::colvec &s, double epsilon, const arma::colvec &scale_in, double p)
+{
+  if (std::isinf(epsilon)) return 0.0;
+  if (y.n_elem != s.n_elem)
+    Rcpp::stop("abc_uniform: the data have " + std::to_string(y.n_elem) + " elements, the simulated data " + std::to_string(s.n_elem) + ".");
+  double n = double(y.n_elem);
+  arma::colvec scale = ilike_model_abc_scale(scale_in, y.n_elem);
+  arma::colvec d = arma::abs(y - s)/scale;
+  double distance = std::isinf(p) ? d.max() : std::pow(arma::accu(arma::pow(d, p)), 1.0/p);
+  if (!(distance <= epsilon)) return -std::numeric_limits<double>::infinity();
+  // 1 / the volume of the scaled Lp ball of radius epsilon
+  double log_unit_ball = std::isinf(p) ? n*std::log(2.0) : n*(std::log(2.0) + std::lgamma(1.0 + 1.0/p)) - std::lgamma(1.0 + n/p);
+  return -log_unit_ball - n*std::log(epsilon) - arma::accu(arma::log(scale));
+}
+inline double ilike_model_dabc_gaussian(const arma::colvec &y, const arma::colvec &s, double epsilon, const arma::colvec &scale_in)
+{
+  if (std::isinf(epsilon)) return 0.0;
+  if (y.n_elem != s.n_elem)
+    Rcpp::stop("abc_gaussian: the data have " + std::to_string(y.n_elem) + " elements, the simulated data " + std::to_string(s.n_elem) + ".");
+  double n = double(y.n_elem);
+  arma::colvec scale = ilike_model_abc_scale(scale_in, y.n_elem);
+  arma::colvec z = (y - s)/(epsilon*scale);
+  return -0.5*n*std::log(2.0*M_PI) - n*std::log(epsilon) - arma::accu(arma::log(scale)) - 0.5*arma::accu(z % z);
+}
 
 )ILIKE";
     // deterministic nodes: one function each (data may be absent, in the prior)
@@ -4254,6 +4378,33 @@ inline double ilike_model_dbinom(double x, double n, double p)
       CodeContext context;
       context.data = "(*data)";
       context.node = true;
+      if (this->is_cpp_node(st.variable))
+      {
+        // x <- cpp::f(a, b, …): the user's arma::mat f(const arma::mat &a, …),
+        // each argument a variable (or data, a constant, numbers), read whole
+        if ((st.indices.size() != 0) || !st.loops.empty())
+          this->error(st.node, "a node computed by C++ (" + st.variable + " <- cpp::f(…)) is a whole variable: no index, no loop.");
+        std::string f = st.value["function"].as_string();
+        if (find_cpp_function_signature(this->user_code, f).empty())
+          this->error(st.value, "cpp::" + f + " is not defined in a cpp section.");
+        const RecipeValue &arguments = st.value["arguments"];
+        std::string matrix_signature = "inline arma::mat ilike_model_node_matrix_" + st.variable + "(const Parameters &parameters, const Data *data)";
+        std::string call = "::" + f + "(";
+        std::string reads;
+        for (size_t k = 0; k < arguments.size(); ++k)
+        {
+          if (this->is_deterministic(kind_of(arguments[k]) == "name" ? arguments[k]["name"].as_string() : std::string("")))
+            this->error(arguments[k], "the arguments of a C++ node are variables, data, constants or numbers (not other nodes, for now).");
+          call += (k ? ", " : "") + this->matrix_code(arguments[k], context);
+          reads += this->reads_code(arguments[k], context, true);
+        }
+        node_code += matrix_signature + ";\n";
+        this->deferred_node_code += matrix_signature + "\n{\n  return arma::mat(" + call + "));\n}\n\n";
+        std::string reads_signature = "inline void ilike_model_node_reads_" + st.variable + "(std::vector<double> &reads, double term, const Data *data)";
+        node_code += reads_signature + ";\n";
+        this->deferred_node_code += reads_signature + "\n{\n  Parameters parameters; // (no index read here depends on the parameters)\n" + reads + "}\n\n";
+        continue;
+      }
       std::string signature = "inline double ilike_model_node_" + st.variable + "(const Parameters &parameters, const Data *data";
       for (size_t k = 0; k < st.indices.size(); ++k)
       {
@@ -4356,18 +4507,33 @@ inline double ilike_model_dbinom(double x, double n, double p)
       }
     }
 
-    // the joint prior: its log density, and its simulation in dependency order
-    std::vector<size_t> prior;
+    // the joint prior: its log density, and its simulation in dependency order.
+    // (dev/plan.md 3.21, step (b)) With "integrate u with is(…)", u's prior is
+    // a separate factor of the inner model (part 1), simulated given the outer
+    // parameters, which it may read; the rest is the outer prior (part 0).
+    std::vector<size_t> outer_prior, inner_prior;
+    std::set<std::string> prior_variables;
     for (size_t k = 0; k < this->model_statements.size(); ++k)
       if (this->model_statements[k].op == "~" && !this->model_statements[k].observed)
-        prior.push_back(k);
-    if (!prior.empty())
-    {
-      std::set<std::string> prior_variables;
-      for (size_t k : prior)
+      {
+        (this->integrated_variables.count(this->model_statements[k].variable) ? inner_prior : outer_prior).push_back(k);
         prior_variables.insert(this->model_statements[k].variable);
+      }
+    RecipeValue inner_prior_factor;
+    std::set<std::string> inner_prior_reads;
+    for (int part = 0; part < 2; ++part)
+    {
+      const bool inner = (part == 1);
+      const std::vector<size_t> &prior = inner ? inner_prior : outer_prior;
+      const std::string suffix = inner ? "_integrated" : "";
+      if (prior.empty())
+        continue;
+      std::set<std::string> part_variables;
+      for (size_t k : prior)
+        part_variables.insert(this->model_statements[k].variable);
       // the parameters each statement reads (arguments, indices and loop bounds)
       std::map<size_t, std::set<std::string>> reads;
+      bool reads_outer = false; // (the inner prior reads outer parameters)
       for (size_t k : prior)
       {
         const ModelStatement &st = this->model_statements[k];
@@ -4377,9 +4543,16 @@ inline double ilike_model_dbinom(double x, double n, double p)
         for (const ModelLoop &loop : st.loops) { this->read_parameters(loop.from, found); this->read_parameters(loop.to, found); }
         for (const ModelLoop &loop : st.loops) found.erase(loop.index);
         for (const std::string &name : found)
+        {
           if (!prior_variables.count(name))
             this->error(st.node, "the prior of " + st.variable + " depends on " + name +
                         ", which has no distribution in the model statements (and is not data or a constant).");
+          if (!inner && this->integrated_variables.count(name))
+            this->error(st.node, "the prior of " + st.variable + " depends on " + name + ", which is integrated out "
+                        "(integrate " + name + " with …): only data may depend on a variable integrated out.");
+          if (!part_variables.count(name))
+            reads_outer = true;
+        }
         found.erase(st.variable); // (an element may depend on earlier elements, e.g. x[t] on x[t-1])
         reads[k] = found;
       }
@@ -4412,7 +4585,9 @@ inline double ilike_model_dbinom(double x, double n, double p)
       }
 
       std::string log_body = "double log_density = 0.0;\n";
-      std::string simulate_body = "Parameters parameters;\n";
+      // (the inner prior given the outer parameters starts from them, and
+      // returns only its own variables)
+      std::string simulate_body = (inner && reads_outer) ? "Parameters parameters = ilike_given;\n" : "Parameters parameters;\n";
       std::set<std::string> allocated;
       for (size_t k : order)
       {
@@ -4450,23 +4625,50 @@ inline double ilike_model_dbinom(double x, double n, double p)
         simulate_body += this->loops_code(st, fresh2, assign, "");
       }
       log_body += "return log_density;\n";
-      simulate_body += "return parameters;\n";
+      if (inner && reads_outer)
+      {
+        simulate_body += "Parameters ilike_own;\n";
+        for (const std::string &v : part_variables)
+          simulate_body += "ilike_own[" + quoted(v) + "] = parameters[" + quoted(v) + "];\n";
+        simulate_body += "return ilike_own;\n";
+      }
+      else
+        simulate_body += "return parameters;\n";
       auto indent = [](const std::string &body) {
         std::string out, line;
         std::stringstream lines(body);
         while (std::getline(lines, line)) out += "  " + line + "\n";
         return out;
       };
-      this->deferred_function_code += "double ilike_model_log_prior(const Parameters &parameters)\n{\n  try\n  {\n" + indent(log_body) +
+      this->deferred_function_code += "double ilike_model_log_prior" + suffix + "(const Parameters &parameters)\n{\n  try\n  {\n" + indent(log_body) +
                                       "  }\n" + std::string("  catch (const ilike_model_outside &)\n  {\n    return -std::numeric_limits<double>::infinity(); // (an index that reads parameters is outside its variable)\n  }\n") + "}\n\n";
-      this->deferred_function_code += "Parameters ilike_model_simulate_prior(RandomNumberGenerator &rng)\n{\n" + indent(simulate_body) + "}\n\n";
       RecipeValue factor = RecipeValue::list();
-      factor.push_back(this->placeholder("ilike_model_log_prior", "evaluate_log_prior"), "evaluate_log_prior");
-      factor.push_back(this->placeholder("ilike_model_simulate_prior", "simulate_prior"), "simulate_prior");
+      factor.push_back(this->placeholder("ilike_model_log_prior" + suffix, "evaluate_log_prior"), "evaluate_log_prior");
+      if (inner)
+      {
+        // simulated given the outer parameters (proposal_parameters merged
+        // with them, CustomIndependentProposalKernel)
+        this->deferred_function_code += "Parameters ilike_model_simulate_prior" + suffix +
+                                        "(RandomNumberGenerator &rng, const Parameters &ilike_given)\n{\n" + indent(simulate_body) + "}\n\n";
+        factor.push_back(this->placeholder("ilike_model_simulate_prior" + suffix, "simulate_prior_given"), "simulate_prior_given");
+      }
+      else
+      {
+        this->deferred_function_code += "Parameters ilike_model_simulate_prior(RandomNumberGenerator &rng)\n{\n" + indent(simulate_body) + "}\n\n";
+        factor.push_back(this->placeholder("ilike_model_simulate_prior", "simulate_prior"), "simulate_prior");
+      }
 
       std::vector<const ModelStatement*> statements;
       for (size_t k : order)
         statements.push_back(&this->model_statements[k]);
+      if (inner)
+      {
+        // (no gradient or plate: the inner importance sampler only simulates
+        // from this factor, and cancels it)
+        inner_prior_factor = factor;
+        inner_prior_reads = this->statements_read(statements);
+        continue;
+      }
       // its gradient (I4e)
       std::string gradient = this->generate_gradient("prior", statements, true);
       if (!gradient.empty())
@@ -4512,9 +4714,129 @@ inline double ilike_model_dbinom(double x, double n, double p)
       this->factor_entries[plate.position].push_back(entry, "plate");
     }
 
+    if (!this->integrations.empty())
+      this->integrate_out(inner_prior_factor, inner_prior_reads, outer_prior.empty());
+
     // a deterministic node defined but never used is harmless; a parameter
     // read by a likelihood but given no distribution may be given by another factor
     this->model_code = code;
+  }
+
+  // (dev/plan.md 3.21, step (b)) integrate u with is(points = N): u's prior
+  // and the factors of the data that depend on u (directly or through nodes)
+  // become an inner model. Its likelihood, ∫ p(y | θ, u) φ(u | θ) du, is
+  // estimated for each value of the outer parameters θ by an importance
+  // sampler over u whose proposal is φ (which cancels, so the weights are the
+  // data's densities): with an ABC kernel as the data's distribution this is
+  // the usual ABC likelihood estimate. The inner factors leave the outer list
+  // (which is renumbered), and the factor named u, at the integrate
+  // statement's place, holds the importance sampler.
+  void integrate_out(const RecipeValue &inner_prior_factor, const std::set<std::string> &inner_prior_reads, bool no_outer_prior)
+  {
+    const Integration &integration = this->integrations[0];
+    const std::string &u = integration.variable;
+    if (inner_prior_factor.is_null())
+      this->error(integration.node, "integrate " + u + ": " + u + " has no distribution in the model statements (" + u + " ~ …).");
+    // the data factors that read u, in their order
+    std::vector<std::string> inner_observed;
+    for (const ModelStatement &st : this->model_statements)
+    {
+      if (!this->likelihood_term(st) ||
+          std::find(inner_observed.begin(), inner_observed.end(), st.variable) != inner_observed.end())
+        continue;
+      if (this->statements_read({&st}).count(u))
+        inner_observed.push_back(st.variable);
+    }
+    if (inner_observed.empty())
+      this->error(integration.node, "integrate " + u + ": no data depend on " + u + ", so there is nothing to integrate.");
+    std::sort(inner_observed.begin(), inner_observed.end(), [this](const std::string &a, const std::string &b) {
+      return this->model_factor_position.at(a) < this->model_factor_position.at(b);
+    });
+    RecipeValue inner_factors = RecipeValue::list();
+    inner_factors.push_back(inner_prior_factor);
+    std::set<size_t> removed;
+    // what the factor reads (so that a move on other parameters skips it)
+    std::set<std::string> reads = inner_prior_reads;
+    for (const std::string &name : inner_observed)
+    {
+      size_t position = this->model_factor_position.at(name);
+      inner_factors.push_back(this->factor_entries[position]);
+      removed.insert(position);
+      auto found = this->generated_factor_reads.find(position + 1);
+      if (found != this->generated_factor_reads.end())
+        reads.insert(found->second.begin(), found->second.end());
+    }
+    reads.erase(u);
+    // (a model whose only prior was u's: its outer prior factor is empty)
+    if (no_outer_prior && this->model_factor_position.count("model_prior"))
+      removed.insert(this->model_factor_position.at("model_prior"));
+
+    // the importance sampler's settings: named (abc(…) is the same as is(…))
+    const RecipeValue &arguments = integration.method["arguments"];
+    std::vector<std::string> keys = arguments.names();
+    RecipeValue parameters = RecipeValue::list();
+    for (size_t k = 0; k < arguments.size(); ++k)
+    {
+      std::string key = (k < keys.size()) ? keys[k] : "";
+      if (key.empty())
+        this->error(arguments[k], integration.method["function"].as_string() + "(…): its settings are named (e.g. points = 1000).");
+      parameters.push_back(this->value_of(arguments[k]), key);
+    }
+    RecipeValue inner = RecipeValue::list();
+    inner.push_back(inner_factors, "factor");
+    RecipeValue node = RecipeValue::list();
+    node.push_back(RecipeValue("is"), "type");
+    node.push_back(RecipeValue(u), "model_file");
+    node.push_back(inner, "model");
+    node.push_back(parameters, "parameters");
+    RecipeValue factor = RecipeValue::list();
+    factor.push_back(node, "algorithmic_likelihood");
+    size_t position = this->factor_numbers.at(u) - 1;
+    this->factor_entries[position] = factor;
+    this->generated_factor_reads[position + 1] = reads;
+    this->remove_factor_positions(removed);
+  }
+
+  // remove factor entries (positions from 0), renumbering the factors after them
+  void remove_factor_positions(const std::set<size_t> &removed)
+  {
+    if (removed.empty())
+      return;
+    std::vector<size_t> new_position(this->factor_entries.size(), 0);
+    std::vector<RecipeValue> kept;
+    for (size_t p = 0; p < this->factor_entries.size(); ++p)
+      if (!removed.count(p))
+      {
+        new_position[p] = kept.size();
+        kept.push_back(this->factor_entries[p]);
+      }
+    this->factor_entries = kept;
+    for (auto it = this->factor_numbers.begin(); it != this->factor_numbers.end();)
+    {
+      size_t p = it->second - 1;
+      if (removed.count(p))
+        it = this->factor_numbers.erase(it);
+      else
+      {
+        it->second = new_position[p] + 1;
+        ++it;
+      }
+    }
+    for (auto it = this->model_factor_position.begin(); it != this->model_factor_position.end();)
+    {
+      if (removed.count(it->second))
+        it = this->model_factor_position.erase(it);
+      else
+      {
+        it->second = new_position[it->second];
+        ++it;
+      }
+    }
+    std::map<size_t, std::set<std::string>> reads;
+    for (const auto &kv : this->generated_factor_reads)
+      if (!removed.count(kv.first - 1))
+        reads[new_position[kv.first - 1] + 1] = kv.second;
+    this->generated_factor_reads = reads;
   }
 
   // a matrix argument of a Gaussian model: a function (cpp::f, r::f, …), or
@@ -4704,6 +5026,9 @@ inline double ilike_model_dbinom(double x, double n, double p)
   RecipeValue algorithmic_likelihood(const RecipeValue &call)
   {
     std::string type = this->builtin_name(call);
+    if (type == "is")
+      this->error(call, "is(…) as a factor integrates out a variable of the model statements: "
+                  "integrate u with is(points = N).");
     const RecipeValue &arguments = call["arguments"];
     std::vector<std::string> keys = arguments.names();
     RecipeValue module;
@@ -5972,6 +6297,17 @@ inline double ilike_model_dbinom(double x, double n, double p)
 
   Move lower_move(const RecipeValue &statement, const std::string &name, const RecipeValue &call)
   {
+    // (dev/plan.md 3.21, step (b)) a variable integrated out is not a
+    // parameter of the outer algorithm
+    if (!this->integrated_variables.empty())
+    {
+      std::set<std::string> moved;
+      this->moved_variables(call, moved);
+      for (const std::string &v : moved)
+        if (this->integrated_variables.count(v))
+          this->error(statement, "move " + name + " changes " + v + ", which is integrated out (integrate " + v +
+                      " with …), so it is not a parameter here. Remove the integrate statement for inference on " + v + " too.");
+    }
     // (dev/plan.md 3.20, S3) a move that changes a parameter of an
     // unnormalised distribution's normaliser would need Z at the proposed value
     if (!this->normaliser_parameters.empty())

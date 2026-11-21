@@ -172,6 +172,16 @@ get_prior_as_simulate_only_proposal(const RecipeValue &model,
           if (proposal != NULL) {
             proposals.push_back(proposal);
           }
+        } else if (current_factor.contains("simulate_prior_given")) {
+          // the prior of a variable integrated out (dev/plan.md 3.21, step
+          // (b)), simulated given the outer parameters: the kernel merges
+          // its (empty) proposal parameters with them
+          static Parameters no_proposal_parameters;
+          CustomIndependentProposalKernel *given = new CustomIndependentProposalKernel(
+              (current_factor["simulate_prior_given"]).function_pointer<SimulateIndependentProposalPtr>());
+          given->set_proposal_parameters(&no_proposal_parameters);
+          proposal = given;
+          proposals.push_back(proposal);
         }
       } else {
         stop("Error in factors section of model file.");

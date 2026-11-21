@@ -156,6 +156,17 @@ namespace ilike
     const Index* get_weighting_index() const { return this->index.get(); }
     bool reweights_at_caller_target() const { return !this->sequencer_limit_is_fixed; }
 
+    // (dev/plan.md 3.21, step (b)) inside a factor that the caller's SMC
+    // sequence changes (integrate u with is(…) under an ABC tolerance
+    // sequence): the points are kept, and each evaluation weights them at the
+    // caller's current target (the factors read it through the shared
+    // parameters), as in the ABC-SMC of arXiv:2211.02172 (alg. 3)
+    void set_follows_caller_target(bool follows)
+    {
+      this->follows_caller_target = follows;
+      this->smcfixed_flag = !follows;
+    }
+
     MoveOutput *move(RandomNumberGenerator &rng,
                      const Particle &particle) const;
 
@@ -245,6 +256,12 @@ namespace ilike
     void set_target_from_parameters(const Parameters &parameters);
 
     void make_copy(const ImportanceSampler &another);
+
+    // the estimate at the caller's current target from the kept points: a
+    // function of the points and the target only, so that a caller's
+    // bisection over targets can try values in any order
+    void weight_at_caller_target(SMCOutput *current_state);
+    bool follows_caller_target = false;
 
     // stored here
     // owned (dev/plan.md 3.5, CH3)

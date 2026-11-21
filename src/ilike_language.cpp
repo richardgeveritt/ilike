@@ -645,7 +645,16 @@ private:
     std::string op;
     RecipeValue value;
     const Token &next = this->lexer.peek();
-    if (this->is_symbol(next, "=") || this->is_symbol(next, "~"))
+    if (keyword == "integrate" && next.type == TokenType::Identifier && next.text == "with")
+    {
+      // integrate u with is(points = N): a variable integrated out by an
+      // inner algorithm (dev/plan.md 3.21, step (b))
+      this->lexer.next();
+      op = "with";
+      this->skip_newlines_inside();
+      value = this->expression();
+    }
+    else if (this->is_symbol(next, "=") || this->is_symbol(next, "~"))
     {
       op = this->lexer.next().text;
       this->skip_newlines_inside();
