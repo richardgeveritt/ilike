@@ -50,6 +50,9 @@ public:
   // sampler of an ABC likelihood with a tolerance sequence, C62); then its
   // output's adaptive summary is that generation's summaries (G2/G5).
   virtual bool reweights_at_caller_target() const { return false; }
+  // (dev/plan.md 3.21 (c2)) an inner SMC following the caller's target:
+  // the random part of its step, at the caller's move stage
+  virtual void advance_at_caller_target_smc(SMCOutput *current_state, const Parameters &conditioned_on_parameters) {}
   
   SMC();
   SMC(RandomNumberGenerator* rng_in,

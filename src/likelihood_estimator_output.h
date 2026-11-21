@@ -176,6 +176,11 @@ protected:
   // algorithms draw exactly as before); by default, at once
   virtual void simulate_when_needed(const Parameters &parameters) { this->simulate(parameters); }
   virtual double log_upper_bound(const Parameters &parameters) const { return arma::datum::inf; }
+  // (dev/plan.md 3.21 (c2)) at the move stage of the caller's SMC step, an
+  // estimator that keeps an inner state following the caller's target takes
+  // the random part of its own step there (rare-event ABC-SMC^2: reweight to
+  // the chosen target, resample, MCMC moves on u); by default, nothing
+  virtual void advance_at_caller_target(const Parameters &parameters) {}
   virtual double evaluate_with_threshold(const Parameters &parameters, double threshold, bool &below)
   {
     below = false;

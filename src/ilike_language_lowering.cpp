@@ -286,6 +286,7 @@ private:
   };
   std::vector<Integration> integrations;
   std::set<std::string> integrated_variables;
+  bool lowering_inner_algorithm = false; // (the moves of integrate u with smc(…))
   RecipeValue constant_values;
   std::set<std::string> model_constants_used;
   std::set<std::string> element_constants_used; // (in moves on elements: values taken when compiling)
@@ -1364,10 +1365,12 @@ private:
         // factor of the data that depend on u, estimated by an importance
         // sampler over u for each value of the other parameters; the factor
         // is named after u and sits here (finish_model_statements fills it)
+        static const std::set<std::string> methods = {"is", "abc", "smc", "rare_event_abc"};
         if (op != "with" || kind_of(value) != "call" || !value["namespace"].as_string().empty() ||
-            (value["function"].as_string() != "is" && value["function"].as_string() != "abc"))
-          this->error(statement, "integrate " + name + " with is(points = N) (or abc(points = N)): a variable "
-                      "integrated out by importance sampling.");
+            !methods.count(value["function"].as_string()))
+          this->error(statement, "integrate " + name + " with is(points = N) (or abc(…)), or with smc(particles = N, "
+                      "move = …, sequence = …) (or rare_event_abc(…)): a variable integrated out by importance "
+                      "sampling or by SMC.");
         if (!this->integrations.empty())
           this->error(statement, "only one variable can be integrated out, for now (it may be a vector or matrix).");
         this->add_factor(statement, name, RecipeValue::list());
@@ -4771,21 +4774,57 @@ inline double ilike_model_dabc_gaussian(const arma::colvec &y, const arma::colve
     if (no_outer_prior && this->model_factor_position.count("model_prior"))
       removed.insert(this->model_factor_position.at("model_prior"));
 
-    // the importance sampler's settings: named (abc(…) is the same as is(…))
+    // the settings: named (abc(…) is the same as is(…), rare_event_abc(…) as
+    // smc(…)); for smc, the moves, sequence, termination, target and
+    // resampling make the inner algorithm, as in an algorithm section
+    const std::string method = integration.method["function"].as_string();
+    const bool smc = (method == "smc") || (method == "rare_event_abc");
+    static const std::set<std::string> algorithm_keys = {"move", "sequence", "termination", "target", "resampling"};
     const RecipeValue &arguments = integration.method["arguments"];
     std::vector<std::string> keys = arguments.names();
     RecipeValue parameters = RecipeValue::list();
+    RecipeValue statements = RecipeValue::list();
     for (size_t k = 0; k < arguments.size(); ++k)
     {
       std::string key = (k < keys.size()) ? keys[k] : "";
       if (key.empty())
-        this->error(arguments[k], integration.method["function"].as_string() + "(…): its settings are named (e.g. points = 1000).");
+        this->error(arguments[k], method + "(…): its settings are named (e.g. " + (smc ? "particles" : "points") + " = 1000).");
+      if (smc && algorithm_keys.count(key))
+      {
+        // as the statement "key = value" (or "move m = value") of an algorithm section
+        RecipeValue statement = integration.node;
+        RecipeValue target = integration.node["target"];
+        target.set("name", RecipeValue(key == "move" ? "m" + std::to_string(statements.size() + 1) : key));
+        statement.set("keyword", RecipeValue(key == "move" ? "move" : ""));
+        statement.set("target", target);
+        statement.set("operator", RecipeValue("="));
+        statement.set("value", arguments[k]);
+        statements.push_back(statement);
+        continue;
+      }
       parameters.push_back(this->value_of(arguments[k]), key);
     }
     RecipeValue inner = RecipeValue::list();
     inner.push_back(inner_factors, "factor");
+    if (smc)
+    {
+      // the inner algorithm: its moves on u evaluate every inner factor (no
+      // index computed from the outer factors' numbers), and may move u
+      RecipeValue section = RecipeValue::list();
+      section.push_back(RecipeValue("integrate_" + u), "name");
+      section.push_back(statements, "statements");
+      std::map<size_t, std::set<std::string>> outer_reads;
+      std::swap(outer_reads, this->generated_factor_reads);
+      this->lowering_inner_algorithm = true;
+      RecipeValue algorithm = this->build_algorithm(section);
+      this->lowering_inner_algorithm = false;
+      std::swap(outer_reads, this->generated_factor_reads);
+      RecipeValue algorithms = RecipeValue::list();
+      algorithms.push_back(algorithm, "main");
+      inner.push_back(algorithms, "algorithms");
+    }
     RecipeValue node = RecipeValue::list();
-    node.push_back(RecipeValue("is"), "type");
+    node.push_back(RecipeValue(smc ? "smc" : "is"), "type");
     node.push_back(RecipeValue(u), "model_file");
     node.push_back(inner, "model");
     node.push_back(parameters, "parameters");
@@ -6299,7 +6338,7 @@ inline double ilike_model_dabc_gaussian(const arma::colvec &y, const arma::colve
   {
     // (dev/plan.md 3.21, step (b)) a variable integrated out is not a
     // parameter of the outer algorithm
-    if (!this->integrated_variables.empty())
+    if (!this->integrated_variables.empty() && !this->lowering_inner_algorithm)
     {
       std::set<std::string> moved;
       this->moved_variables(call, moved);
@@ -6775,7 +6814,13 @@ inline double ilike_model_dabc_gaussian(const arma::colvec &y, const arma::colve
       name = "main";
     if (this->algorithms.contains(name))
       this->error(section, "algorithm " + name + " is defined more than once.");
+    this->algorithms.push_back(this->build_algorithm(section), name);
+  }
 
+  // an algorithm section's entry (its moves, methods and run-time settings);
+  // also the inner algorithm of integrate u with smc(…) (dev/plan.md 3.21, (c1))
+  RecipeValue build_algorithm(const RecipeValue &section)
+  {
     std::vector<Move> moves;
     std::vector<std::string> sweep;
     bool has_sweep = false;
@@ -6993,7 +7038,7 @@ inline double ilike_model_dabc_gaussian(const arma::colvec &y, const arma::colve
     if (!algorithm_transform.is_null() && (algorithm_transform.size() > 0))
       algorithm.push_back(algorithm_transform, "algorithm_transform");
     algorithm.push_back(settings, "settings");
-    this->algorithms.push_back(algorithm, name);
+    return algorithm;
   }
 
   // transition_proposal = density(simulate = cpp::f, log = cpp::g), or a

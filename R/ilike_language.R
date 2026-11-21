@@ -241,6 +241,48 @@ compile_ilike_language <- function(filenames, texts, keep_temporary_recipe_code 
   recipe$compiled_constants = compiled_constants
   recipe$language = "ilike"
   recipe$uses_r_functions = isTRUE(lowered$uses_foreign)
+  resolve_integrations(recipe)
+}
+
+# integrate u with smc(…) (dev/plan.md 3.21, (c1)): the inner algorithm (its
+# moves, sequence, termination, target and resampling, lowered as an algorithm
+# section) prepared as SMC_with_MCMC prepares a file's algorithm, with the
+# defaults it uses; the engine reads the methods from the factor
+resolve_integrations <- function(recipe)
+{
+  if (is.null(recipe$factor))
+    return(recipe)
+  for (k in seq_along(recipe$factor))
+  {
+    node = recipe$factor[[k]]$algorithmic_likelihood
+    if (is.null(node) || !identical(node$type, "smc") || is.null(node$model$algorithms))
+      next
+    inner = node$model
+    inner$constants = recipe$constants
+    inner$declared_constants = recipe$declared_constants
+    inner$compiled_constants = recipe$compiled_constants
+    inner$language = "ilike"
+    prepared = prepare_recipe(inner, names(inner$algorithms)[1], list())
+    p = prepared$recipe
+    p$language = NULL
+    mcmc_termination = get_method(p, "mcmc_termination")
+    if (is.null(mcmc_termination))
+      mcmc_termination = list(method = "iterations", values = list(as.character(1)))
+    adaptive_target = get_method(p, "adaptive_target")
+    if (is.null(adaptive_target))
+      adaptive_target = list(method = "positive")
+    # (none: the inner SMC follows an outer sequence, or the engine refuses it)
+    smc_sequence = get_smc_sequences(p, prepared$model_parameter_list)
+    smc_termination = get_method(p, "smc_termination")
+    mcmc_weights = get_method(p, "mcmc_weights")
+    node$methods = list(mcmc_termination = mcmc_termination,
+                        mcmc_weights = if (is.null(mcmc_weights)) list() else mcmc_weights,
+                        smc_sequence = if (is.null(smc_sequence)) list() else smc_sequence,
+                        adaptive_target = adaptive_target,
+                        smc_termination = if (is.null(smc_termination)) list() else smc_termination)
+    node$model = p
+    recipe$factor[[k]]$algorithmic_likelihood = node
+  }
   recipe
 }
 

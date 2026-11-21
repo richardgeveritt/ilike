@@ -195,6 +195,15 @@ double VectorFactorVariables::evaluate_smcadaptive_part_given_smcfixed_likelihoo
   return result;
 }
 
+// (dev/plan.md 3.21 (c2)) every factor's output (only an inner SMC that
+// follows the caller's target does anything)
+void VectorFactorVariables::advance_at_caller_target()
+{
+  for (size_t i = 0; i < this->likelihood_estimator_outputs.size(); ++i)
+    if (this->likelihood_estimator_outputs[i] != NULL)
+      this->likelihood_estimator_outputs[i]->advance_at_caller_target(this->particle->parameters);
+}
+
 double VectorFactorVariables::subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index)
 {
   double result = 0.0;

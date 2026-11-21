@@ -51,6 +51,16 @@ public:
   bool simulation_pending() const { return this->pending; }
   void simulate_when_needed(const Parameters &parameters);
   double evaluate_with_threshold(const Parameters &parameters, double threshold, bool &below);
+  void advance_at_caller_target(const Parameters &parameters);
+  // (dev/plan.md 3.21 (c2)) the latest generation's log likelihood, replaced
+  // (its entry was made when it was made: one entry per generation)
+  void set_latest_llhd(double llhd_in);
+  // (dev/plan.md 3.21 (c2)) an inner SMC following the caller's target: TRUE
+  // once its run from the start has been made (later evaluations are trials
+  // at the caller's candidate targets), and its log likelihood at the last
+  // target it was advanced to
+  bool caught_up = false;
+  double committed_log_likelihood = 0.0;
   void evaluate_smcfixed_part(const Parameters &parameters);
   void evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters);
   int adaptive_summary_size() const;

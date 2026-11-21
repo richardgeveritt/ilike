@@ -41,6 +41,9 @@ public:
   // (dev/plan.md 3.21) the sum of the log maxima of the factors in index
   // (LikelihoodEstimator::log_maximum), +inf if one is not known
   virtual double log_maximum(const Index* index, const Parameters &parameters) const { return arma::datum::inf; }
+  // (dev/plan.md 3.21 (c2)) TRUE if a factor's estimator keeps an inner state
+  // that follows the SMC target (LikelihoodEstimator::advances_at_caller_target)
+  virtual bool advances_at_caller_target() const { return false; }
 
   // True if every factor is in index or in other_index (other_index may be
   // NULL), the estimators of index support restore_from_summary and those of

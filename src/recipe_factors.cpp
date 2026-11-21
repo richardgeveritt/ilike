@@ -884,6 +884,45 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                   number_of_points, parallel, grain_size, "", seed_in,
                   data_created_in_get_likelihood_estimators,
                   data_created_in_get_measurement_covariance_estimators, &nested);
+            } else if (iequals(llhd_type, "smc")) {
+              // integrate u with smc(particles = N, move = …, sequence = …)
+              // (dev/plan.md 3.21, (c1)): an SMC sampler with MCMC moves over
+              // u, given the outer parameters, through its own sequence (e.g.
+              // decreasing ABC tolerances: Prangle et al.'s rare-event ABC);
+              // its evidence estimate is the factor's likelihood. The methods
+              // were prepared by the R binding (resolve_integrations).
+              if (!llhd_details.contains("methods"))
+                stop("integrate ... with smc(...): the inner algorithm was not prepared (compile the file with ilike::compile).");
+              RecipeValue smc_params = get_integrate_smc_info(model_parameters, llhd_details);
+              size_t number_of_particles = smc_params[0];
+              bool parallel = smc_params[1];
+              size_t grain_size = smc_params[2];
+              RecipeValue methods = llhd_details["methods"];
+              // (dev/plan.md 3.21 (c2)) an outer sequence that changes this
+              // factor (a decreasing tolerance): the inner SMC follows it,
+              // one step per outer step (rare-event ABC-SMC^2,
+              // arXiv:2211.02172); otherwise it runs its own sequence
+              // (rare-event ABC-MCMC, Prangle et al.)
+              std::string u_name = llhd_details["model_file"].as_string();
+              bool own_sequence = methods["smc_sequence"].contains("sequences");
+              NestedSequence nested;
+              if (!factor_is_fixed_in_smc) {
+                if (own_sequence)
+                  stop("integrate " + u_name + " with smc(...): the outer SMC's sequence changes this factor, so the "
+                       "inner SMC follows the outer targets: remove sequence (and target) from smc(...).");
+                nested.types = sequencer_types;
+                nested.variables = sequencer_variables;
+              } else if (!own_sequence) {
+                stop("integrate " + u_name + " with smc(...): the SMC's sequence is needed (e.g. sequence = "
+                     "parameter(epsilon, [Inf, 2, 1, 0.5])), unless an outer SMC sequence changes this factor.");
+              }
+              new_likelihood_estimator = get_smc_mcmc_move(
+                  rng_in, data_in, llhd_model, model_parameters, algorithm_parameters,
+                  number_of_particles, methods["mcmc_termination"], methods["mcmc_weights"],
+                  methods["smc_sequence"], methods["adaptive_target"], methods["smc_termination"],
+                  2, false, parallel, grain_size, "", seed_in,
+                  data_created_in_get_likelihood_estimators,
+                  data_created_in_get_measurement_covariance_estimators, &nested);
             } else {
               stop("Invalid type for 'likelihood'.");
             }

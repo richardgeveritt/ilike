@@ -87,6 +87,8 @@ SMCOutput* SMCOutput::smc_duplicate() const
 void SMCOutput::make_copy(const SMCOutput &another)
 {
   this->pending = another.pending;
+  this->caught_up = another.caught_up;
+  this->committed_log_likelihood = another.committed_log_likelihood;
   this->all_particles = another.all_particles;
   this->all_proposed = another.all_proposed;
   this->lag = another.lag;
@@ -144,6 +146,13 @@ void SMCOutput::simulate_when_needed(const Parameters &parameters)
     return;
   }
   this->estimator->simulate_smc(this, parameters);
+}
+
+// (dev/plan.md 3.21 (c2)) the caller's move stage: the estimator takes the
+// random part of its step at the caller's current target
+void SMCOutput::advance_at_caller_target(const Parameters &parameters)
+{
+  this->estimator->advance_at_caller_target_smc(this, parameters);
 }
 
 void SMCOutput::run_if_pending(const Parameters &parameters)
@@ -380,6 +389,14 @@ void SMCOutput::set_time()
     this->times.push_back(elapsed_time.count()+this->times.back());
   else
     this->times.push_back(elapsed_time.count());
+}
+
+void SMCOutput::set_latest_llhd(double llhd_in)
+{
+  if (this->llhds.empty())
+    this->llhds.push_back(llhd_in);
+  else
+    this->llhds.back() = llhd_in;
 }
 
 void SMCOutput::set_llhd(double llhd_in)

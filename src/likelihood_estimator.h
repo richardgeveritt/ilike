@@ -77,6 +77,10 @@ public:
   // (dev/plan.md 3.21) an upper bound on the log value of one term of this
   // estimator (an ABC kernel's maximum), +inf if none is known
   virtual double log_maximum(const Parameters &parameters) const { return arma::datum::inf; }
+  // (dev/plan.md 3.21 (c2)) its outputs keep an inner state that follows the
+  // caller's SMC target, advanced at the caller's move stage
+  // (LikelihoodEstimatorOutput::advance_at_caller_target)
+  virtual bool advances_at_caller_target() const { return false; }
   virtual bool supports_reinitialise() const { return false; }
 
   // True if this estimator's outputs may be simulated and evaluated for

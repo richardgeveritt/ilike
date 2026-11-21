@@ -727,6 +727,9 @@ void SMCMCMCMove::make_copy(const SMCMCMCMove &another)
     this->cancelled_index.reset();
   
   this->mcmc_at_last_step = another.mcmc_at_last_step;
+  this->follows_caller_target = another.follows_caller_target;
+  this->followed_variable = another.followed_variable;
+  this->followed_targets = another.followed_targets;
   // (the tuned kernels are this copy's own: found again)
   this->tuners.clear();
   this->tuners_found = false;
@@ -1399,6 +1402,11 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state)
   }
   else
   {
+    // (dev/plan.md 3.21 (c2)) the factors' inner states that follow this
+    // SMC's target take the random part of their step (rare-event
+    // ABC-SMC^2), before resampling, as in arXiv:2211.02172's algorithm 4
+    this->advance_inner_states(current_state);
+
     // update MCMC proposals
     this->mcmc->smc_adapt(current_state);
     
@@ -1570,6 +1578,8 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state,
   }
   else
   {
+    this->advance_inner_states(current_state); // (dev/plan.md 3.21 (c2))
+
     // update MCMC proposals
     this->mcmc->smc_adapt(current_state);
     
@@ -1607,6 +1617,25 @@ void SMCMCMCMove::evaluate_smcfixed_part_smc(SMCOutput* current_state,
 void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current_state,
                                                                const Parameters &conditioned_on_parameters)
 {
+  if (this->follows_caller_target)
+  {
+    // (dev/plan.md 3.21 (c2)) a new output is run through the caller's
+    // targets so far; afterwards an evaluation is a trial at the caller's
+    // current (candidate) target: the log likelihood at the last target it
+    // was advanced to, times the estimate of the ratio from its weighted
+    // points (no random numbers, so the caller's bisection may try any target)
+    if (!current_state->caught_up)
+    {
+      this->follow_from_start(current_state, conditioned_on_parameters);
+      return;
+    }
+    // (an estimate of zero stays zero: its points cannot be reweighted)
+    double ratio = (current_state->committed_log_likelihood == -arma::datum::inf) ? 0.0 :
+      this->step_to_target(current_state, this->followed_target(conditioned_on_parameters));
+    current_state->log_likelihood = current_state->committed_log_likelihood + ratio;
+    current_state->set_latest_llhd(current_state->log_likelihood); // (the latest generation's, as weighted now)
+    return;
+  }
   // set sequencer to have values from conditioned_on_parameters
   if (!this->sequencer_limit_is_fixed)
     this->sequencer.set_next_with_parameter(conditioned_on_parameters);
@@ -1856,6 +1885,134 @@ void SMCMCMCMove::subsample_weight_for_adapting_sequence(const Index* index,
 {
   this->the_worker->subsample_smcadaptive_given_smcfixed_weight(this->index.get(),
                                                                 current_particles);
+}
+
+
+// --- rare-event ABC-SMC^2: the inner SMC following the caller's target
+// (dev/plan.md 3.21 (c2); arXiv:2211.02172, algorithms 2 and 4) -------------
+
+void SMCMCMCMove::set_follows_caller_target(const std::string &variable)
+{
+  this->follows_caller_target = true;
+  this->followed_variable = variable;
+  // the caller re-evaluates this factor at each of its targets
+  this->smcfixed_flag = false;
+  // each point is reweighted and moved through its own particle
+  this->force_rich_generations = true;
+}
+
+double SMCMCMCMove::followed_target(const Parameters &conditioned_on_parameters) const
+{
+  return conditioned_on_parameters[this->followed_variable][0];
+}
+
+// reweight the latest generation from its previous target to `target` (the
+// points read it through the sequencer's shared schedule parameters, merged
+// after the caller's parameters): the weights start again from the step's
+// starting weights on each call, so trials leave nothing behind; returns the
+// log of the estimated ratio of likelihoods
+double SMCMCMCMove::step_to_target(SMCOutput *current_state, double target)
+{
+  this->sequencer.schedule_parameters[this->followed_variable] = target;
+  this->weight_for_adapting_sequence(this->index.get(), current_state->back());
+  current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
+  return current_state->calculate_latest_log_normalising_constant_ratio();
+}
+
+// the entries of a generation just made (one log likelihood and one time per
+// generation, as SMCOutput's writing expects); a later reweighting of the same
+// generation replaces its log likelihood
+static void record_generation(SMCOutput *current_state)
+{
+  current_state->set_llhd(current_state->committed_log_likelihood);
+  current_state->set_time_and_reset_start();
+}
+
+// a step at the current target: reweight to it (the trial the caller has just
+// made, now kept), then resample and move u (the MCMC kernel at this target)
+void SMCMCMCMove::advance_at_current_target(SMCOutput *current_state, const Parameters &conditioned_on_parameters)
+{
+  double target = this->followed_target(conditioned_on_parameters);
+  // an estimate of zero (every point outside the kernel) stays zero, and its
+  // weights cannot be normalised: the state stops there (the caller's
+  // particle has weight zero)
+  if (current_state->committed_log_likelihood != -arma::datum::inf)
+  {
+    current_state->committed_log_likelihood += this->step_to_target(current_state, target);
+    current_state->back().set_previous_target_evaluated_to_target_evaluated();
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
+    current_state->set_latest_llhd(current_state->committed_log_likelihood);
+    if (current_state->committed_log_likelihood != -arma::datum::inf)
+    {
+      this->simulate_smc(current_state, conditioned_on_parameters);
+      current_state->back().set_previous_target_evaluated_to_target_evaluated();
+      record_generation(current_state);
+    }
+  }
+  current_state->log_likelihood = current_state->committed_log_likelihood;
+}
+
+// the caller's move stage: the caller's chosen target joins the targets so
+// far (every caller particle is at the same one), and this output steps to it
+void SMCMCMCMove::advance_at_caller_target_smc(SMCOutput *current_state, const Parameters &conditioned_on_parameters)
+{
+  if (!this->follows_caller_target || !current_state->caught_up)
+    return;
+  double target = this->followed_target(conditioned_on_parameters);
+  if (this->followed_targets.empty() || (this->followed_targets.back() != target))
+    this->followed_targets.push_back(target);
+  this->advance_at_current_target(current_state, conditioned_on_parameters);
+}
+
+// a new output (its points just drawn from u's distribution given theta): the
+// same steps as an output that has followed the caller from its start, so
+// that both have the same law (the pseudo-marginal ratio of the caller's
+// moves needs this): reweighted, resampled and moved at each of the targets
+// the caller has advanced to so far (none, for an output made at the
+// caller's start: it is then the draws themselves, unweighted). Its value is
+// then a trial at the caller's current target if it is not among those —
+// as for an output made at the caller's start, which the caller evaluates at
+// a first target its sequencer may still change (an adaptive schedule
+// searches from there in either direction), so nothing is kept at it.
+void SMCMCMCMove::follow_from_start(SMCOutput *current_state, const Parameters &conditioned_on_parameters)
+{
+  double current = this->followed_target(conditioned_on_parameters);
+  current_state->committed_log_likelihood = 0.0;
+  record_generation(current_state); // (the first generation's entries)
+  for (size_t k = 0; k < this->followed_targets.size(); ++k)
+  {
+    current_state->committed_log_likelihood += this->step_to_target(current_state, this->followed_targets[k]);
+    current_state->back().set_previous_target_evaluated_to_target_evaluated();
+    current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
+    current_state->set_latest_llhd(current_state->committed_log_likelihood);
+    if (current_state->committed_log_likelihood == -arma::datum::inf)
+      break; // (an estimate of zero stays zero)
+    this->simulate_smc(current_state, conditioned_on_parameters);
+    current_state->back().set_previous_target_evaluated_to_target_evaluated();
+    record_generation(current_state);
+  }
+  current_state->caught_up = true;
+  current_state->log_likelihood = current_state->committed_log_likelihood;
+  if ((current_state->committed_log_likelihood != -arma::datum::inf) &&
+      (this->followed_targets.empty() || (this->followed_targets.back() != current)))
+  {
+    current_state->log_likelihood += this->step_to_target(current_state, current);
+    current_state->set_latest_llhd(current_state->log_likelihood);
+  }
+}
+
+// at this SMC's move stage: the inner states of the particles' factors
+void SMCMCMCMove::advance_inner_states(SMCOutput *current_state)
+{
+  if ((this->factors == NULL) || !this->factors->advances_at_caller_target())
+    return;
+  Particles &generation = current_state->back();
+  for (size_t i = 0; i < generation.size(); ++i)
+  {
+    Particle &particle = generation[i]->back();
+    if (particle.factor_variables != NULL)
+      particle.factor_variables->advance_at_caller_target();
+  }
 }
 
 }

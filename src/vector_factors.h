@@ -55,6 +55,7 @@ public:
   // (dev/plan.md 3.21) whether any of its estimators may defer its draws,
   // found when the list is made, so that a move checks one flag
   bool can_defer() const { return this->any_defers; }
+  bool advances_at_caller_target() const;
 
 protected:
 

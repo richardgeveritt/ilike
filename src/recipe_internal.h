@@ -171,6 +171,7 @@ RecipeValue get_kf_info(const RecipeValue &model_parameters, const RecipeValue &
 RecipeValue get_enkf_info(const RecipeValue &model_parameters, const RecipeValue &current_likelihood, const std::string &likelihood_name);
 RecipeValue get_pf_info(const RecipeValue &model_parameters, const RecipeValue &current_likelihood, const std::string &likelihood_name);
 RecipeValue get_is_info(const RecipeValue &model_parameters, const RecipeValue &current_likelihood);
+RecipeValue get_integrate_smc_info(const RecipeValue &model_parameters, const RecipeValue &current_likelihood);
 std::vector<size_t> get_enk_likelihood_indices(const RecipeValue &model, const RecipeValue &model_parameters);
 RecipeValue get_ssm_info(const RecipeValue &model, const RecipeValue &model_parameters);
 bool is_linear_gaussian_data_model(const RecipeValue &current_factor);
@@ -209,10 +210,8 @@ SMCCriterion *get_resampling_method(const RecipeValue &model, const RecipeValue 
 SMCCriterion *get_adaptive_target_method(const RecipeValue &model, const RecipeValue &model_parameters, const RecipeValue &adaptive_target_method, size_t number_of_particles);
 SMCTermination *get_smc_termination_method(const RecipeValue &model, const RecipeValue &model_parameters, const RecipeValue &smc_termination_method);
 EnsembleShifter *get_enk_shifter_method(const RecipeValue &model, const RecipeValue &model_parameters);
-RecipeValue get_smc_sequencer_info(const RecipeValue &model, const RecipeValue &model_parameters, const RecipeValue &smc_sequencer_method,
-                                   BuiltinRole role = BuiltinRole::SMCSequence);
-// An importance sampler inside a factor (integrate u with is(…), dev/plan.md
-// 3.21 step (b)): the outer SMC sequences that change the factor (none if it
+// An importance sampler or SMC inside a factor (integrate u with is(…) /
+// smc(…), dev/plan.md 3.21 (b), (c2)): the outer SMC sequences that change the factor (none if it
 // is fixed along the outer sequence). The inner factors then change with the
 // outer target, and the inner points are kept and weighted again under each
 // new target (Kerama, Thorne & Everitt's ABC-SMC, arXiv:2211.02172, alg. 3).
@@ -220,8 +219,10 @@ struct NestedSequence {
   std::vector<std::string> types;
   std::vector<std::string> variables;
 };
+RecipeValue get_smc_sequencer_info(const RecipeValue &model, const RecipeValue &model_parameters, const RecipeValue &smc_sequencer_method,
+                                   BuiltinRole role = BuiltinRole::SMCSequence);
 ImportanceSampler *get_importance_sampler( RandomNumberGenerator *rng, Data *the_data, const RecipeValue &model, const RecipeValue &parameters, const Parameters &algorithm_parameters, size_t number_of_importance_points, bool parallel_in, size_t grain_size_in, const std::string &results_name_in, size_t *seed, std::vector<Data> &data_created_in_get_likelihood_estimators, std::vector<Data> &data_created_in_get_measurement_covariance_estimators, const NestedSequence *nested = NULL);
-SMCMCMCMove *get_smc_mcmc_move( RandomNumberGenerator *rng, Data *the_data, const RecipeValue &model, const RecipeValue &parameters, const Parameters &algorithm_parameters, size_t number_of_particles, const RecipeValue &mcmc_termination_method, const RecipeValue &mcmc_weights_method, const RecipeValue &smc_sequencer_method, const RecipeValue &adaptive_target_method, const RecipeValue &smc_termination_method, size_t smc_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const std::string &results_name_in, size_t *seed, std::vector<Data> &data_created_in_get_likelihood_estimators, std::vector<Data> &data_created_in_get_measurement_covariance_estimators);
+SMCMCMCMove *get_smc_mcmc_move( RandomNumberGenerator *rng, Data *the_data, const RecipeValue &model, const RecipeValue &parameters, const Parameters &algorithm_parameters, size_t number_of_particles, const RecipeValue &mcmc_termination_method, const RecipeValue &mcmc_weights_method, const RecipeValue &smc_sequencer_method, const RecipeValue &adaptive_target_method, const RecipeValue &smc_termination_method, size_t smc_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const std::string &results_name_in, size_t *seed, std::vector<Data> &data_created_in_get_likelihood_estimators, std::vector<Data> &data_created_in_get_measurement_covariance_estimators, const NestedSequence *nested = NULL);
 EnsembleKalmanInversion *get_enki( RandomNumberGenerator *rng, Data *the_data, const RecipeValue &model, const RecipeValue &parameters, const Parameters &algorithm_parameters, size_t number_of_ensemble_members, const RecipeValue &mcmc_termination_method, const RecipeValue &mcmc_weights_method, const RecipeValue &enk_sequencer_method, const RecipeValue &adaptive_target_method, const RecipeValue &enk_termination_method, size_t enk_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const std::string &results_name_in, size_t *seed, std::vector<Data> &data_created_in_get_likelihood_estimators, std::vector<Data> &data_created_in_get_measurement_covariance_estimators);
 KalmanFilter *get_kalman_filter(Data *the_data, const RecipeValue &model, const RecipeValue &parameters, const Parameters &algorithm_parameters, size_t kf_iterations_to_store, bool write_to_file_at_each_iteration, const std::string &results_name_in);
 EnsembleKalmanFilter *get_ensemble_kalman_filter( RandomNumberGenerator *rng, Data *the_data, const RecipeValue &model, const RecipeValue &parameters, const Parameters &algorithm_parameters, size_t number_of_ensemble_members, EnsembleShifter *shifter, size_t enk_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const std::string &results_name_in, size_t *seed, std::vector<Data> &data_created_in_get_measurement_covariance_estimators);

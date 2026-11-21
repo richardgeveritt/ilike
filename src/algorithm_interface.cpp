@@ -504,14 +504,31 @@ SMCMCMCMove *get_smc_mcmc_move(
     size_t smc_iterations_to_store, bool write_to_file_at_each_iteration,
     bool parallel_in, size_t grain_size_in, const std::string &results_name_in,
     size_t *seed, std::vector<Data> &data_created_in_get_likelihood_estimators,
-    std::vector<Data> &data_created_in_get_measurement_covariance_estimators) {
+    std::vector<Data> &data_created_in_get_measurement_covariance_estimators,
+    const NestedSequence *nested) {
+  // (nested: the inner SMC of integrate u with smc(…), dev/plan.md 3.21 (c1):
+  // no message; with outer sequences, (c2): it follows the outer target, its
+  // sequence variable the outer one, its factors changing with it)
   refuse_unknown_normaliser(model, "SMC");
   std::vector<LikelihoodEstimator *> likelihood_estimators;
   IndependentProposalKernel *proposal_in;
   bool proposal_is_evaluated_in;
+  const bool follows = (nested != NULL) && !nested->types.empty();
 
-  RecipeValue sequencer_info =
-      get_smc_sequencer_info(model, parameters, smc_sequencer_method);
+  RecipeValue sequencer_info;
+  if (follows) {
+    if ((nested->types.size() != 1) || !iequals(nested->types[0], "parameter"))
+      stop("integrate ... with smc(...): the outer SMC's sequence must be one parameter sequence (e.g. "
+           "parameter(epsilon, ...)) for the inner SMC to follow it.");
+    // the outer variable, with a placeholder schedule (each output's targets
+    // are set as it follows the outer ones: SMCMCMCMove::follow_from_start)
+    sequencer_info = RecipeValue::list({std::vector<std::string>{"parameter"},
+                                        std::vector<std::string>{nested->variables[0]},
+                                        std::vector<std::vector<double>>{std::vector<double>{arma::datum::inf}},
+                                        size_t(100)});
+  } else {
+    sequencer_info = get_smc_sequencer_info(model, parameters, smc_sequencer_method);
+  }
   // (dev/plan.md 3.20, S2) data tempering's options
   DataTemperingOptions data_tempering;
   if (sequencer_info.length() >= 6) {
@@ -549,7 +566,8 @@ SMCMCMCMove *get_smc_mcmc_move(
 
     proposal_is_evaluated_in = plan.proposal_is_evaluated; // (dev/plan.md 3.20)
   } else {
-    inform_once("No importance sampling proposal specified; using prior.");
+    if (nested == NULL)
+      inform_once("No importance sampling proposal specified; using prior.");
 
     proposal_in = get_prior_as_simulate_only_proposal(model, parameters);
 
@@ -613,6 +631,8 @@ SMCMCMCMove *get_smc_mcmc_move(
         grain_size_in, "");
   }
   delete full_index; // MCMC moves keep their own copies of it
+  if (follows)
+    alg->set_follows_caller_target(nested->variables[0]);
   return alg;
 }
 

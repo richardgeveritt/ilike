@@ -271,4 +271,15 @@ double VectorFactors::log_maximum(const Index* index, const Parameters &paramete
   }
   return output;
 }
+
+// (dev/plan.md 3.21 (c2)) a factor's estimator keeps an inner state following
+// the SMC target (checked once per SMC step, not per particle)
+bool VectorFactors::advances_at_caller_target() const
+{
+  for (const auto &estimator : this->likelihood_estimators)
+    if (estimator->advances_at_caller_target())
+      return true;
+  return false;
+}
+
 }

@@ -41,6 +41,7 @@ public:
   
   void evaluate_smcfixed_part_of_likelihoods(const Index* index);
   double evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index);
+  void advance_at_caller_target();
   
   double evaluate_likelihoods(const Index* index) const;
   bool simulation_pending(const Index* index) const;

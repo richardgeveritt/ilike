@@ -29,6 +29,7 @@
 #include "truncated_normal_distribution_factor.h"
 #include "truncated_normal_independent_proposal_kernel.h"
 #include "truncated_normal_random_walk_proposal_kernel.h"
+#include "pcn_proposal_kernel.h"
 #include "esjd_adaptor.h"
 #include "barker_dynamics_proposal_kernel.h"
 #include "mirror_proposal_kernel.h"
@@ -288,6 +289,20 @@ static std::vector<Builtin> make_registry()
     b.roles = {R::MHProposal};
     b.proposal = [](const BuiltinArguments &a) -> ProposalKernel* {
       return new TruncatedNormalRandomWalkProposalKernel(a.variable("variable"), a.real("sd"), a.real("lower"), a.real("upper")); };
+    table.push_back(b);
+  }
+  {
+    Builtin b;
+    b.name = "pcn";
+    b.description = "preconditioned Crank-Nicolson: u* = mean + rho (u - mean) + sqrt(1 - rho^2) N(0, cov); "
+                    "leaves N(mean, cov) invariant (dev/plan.md 3.21)";
+    b.arguments = {the_variable(), required("mean", T::Vector, "the mean of u's Gaussian distribution"),
+                   required("cov", T::Matrix, "the covariance of u's Gaussian distribution"),
+                   required("rho", T::Real, "the autocorrelation, in [0, 1)").at_least(0.0)};
+    // (not symmetric: q(u* | u) is N(mean + rho (u - mean), (1 - rho^2) cov))
+    b.roles = {R::MHProposal};
+    b.proposal = [](const BuiltinArguments &a) -> ProposalKernel* {
+      return new PCNProposalKernel(a.variable("variable"), a.vector("mean"), a.matrix("cov"), a.real("rho")); };
     table.push_back(b);
   }
   {
@@ -981,6 +996,17 @@ static std::vector<Builtin> make_registry()
                    required("points", T::Integer, "the number of importance points").at_least(1.0),
                    parallel(),
                    optional("grain_size", T::Integer, RecipeValue(100000.0), "points per parallel task").at_least(0.0)};
+    table.push_back(b);
+
+    // integrate u with smc(particles = N, move = …, sequence = …) (dev/plan.md
+    // 3.21, (c1)): the moves, sequence, termination, target and resampling
+    // are lowered into the inner algorithm, not passed here
+    b.name = "smc";
+    b.description = "SMC with MCMC moves over a variable integrated out of the model";
+    b.arguments = {required("model", T::String, "the variable integrated out"),
+                   required("particles", T::Integer, "the number of particles").at_least(1.0),
+                   parallel(),
+                   optional("grain_size", T::Integer, RecipeValue(64.0), "particles per parallel task").at_least(0.0)};
     table.push_back(b);
   }
 

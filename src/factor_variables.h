@@ -40,6 +40,9 @@ public:
   
   virtual void evaluate_smcfixed_part_of_likelihoods(const Index* index)=0;
   virtual double evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index)=0;
+  // (dev/plan.md 3.21 (c2)) advance the factors' inner states at the
+  // caller's move stage (LikelihoodEstimatorOutput::advance_at_caller_target)
+  virtual void advance_at_caller_target() {}
   virtual double evaluate_likelihoods(const Index* index) const=0;
 
   // (dev/plan.md 3.21) whether an output in index has deferred its draws, and

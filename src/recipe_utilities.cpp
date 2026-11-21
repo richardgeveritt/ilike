@@ -152,6 +152,12 @@ RecipeValue get_enkf_info(const RecipeValue &model_parameters, const RecipeValue
                             size_t(a.integer("grain_size"))});
 }
 
+// integrate u with smc(particles = N, …) (dev/plan.md 3.21, (c1))
+RecipeValue get_integrate_smc_info(const RecipeValue &model_parameters, const RecipeValue &current_likelihood) {
+  BuiltinArguments a = bind_algorithmic_likelihood(current_likelihood, model_parameters);
+  return RecipeValue::list({size_t(a.integer("particles")), a.logical("parallel"), size_t(a.integer("grain_size"))});
+}
+
 // integrate u with is(points = N) (dev/plan.md 3.21, step (b))
 RecipeValue get_is_info(const RecipeValue &model_parameters, const RecipeValue &current_likelihood) {
   BuiltinArguments a = bind_algorithmic_likelihood(current_likelihood, model_parameters);

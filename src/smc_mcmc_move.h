@@ -209,7 +209,29 @@ public:
   void subsample_weight_for_adapting_sequence(const Index* index,
                                               Particles &current_particles);
 
+  // (dev/plan.md 3.21 (c2); Kerama, Thorne & Everitt, arXiv:2211.02172,
+  // alg. 4) the inner SMC of integrate u with smc(…) inside a factor that the
+  // caller's SMC sequence changes (rare-event ABC-SMC^2): its sequence
+  // variable is the caller's (e.g. the ABC tolerance), and each output keeps
+  // its points between the caller's steps. Evaluations are trials at the
+  // caller's candidate targets (no random numbers); at the caller's move
+  // stage it reweights to the chosen target, resamples and moves u
+  // (advance_at_caller_target_smc); a new output (a new caller particle, or
+  // a proposed one) is run through the caller's targets so far.
+  void set_follows_caller_target(const std::string &variable);
+  bool advances_at_caller_target() const { return this->follows_caller_target; }
+  void advance_at_caller_target_smc(SMCOutput *current_state, const Parameters &conditioned_on_parameters);
+
 protected:
+
+  bool follows_caller_target = false;
+  std::string followed_variable;
+  std::vector<double> followed_targets; // the caller's targets so far
+  double followed_target(const Parameters &conditioned_on_parameters) const;
+  double step_to_target(SMCOutput *current_state, double target);
+  void advance_at_current_target(SMCOutput *current_state, const Parameters &conditioned_on_parameters);
+  void follow_from_start(SMCOutput *current_state, const Parameters &conditioned_on_parameters);
+  void advance_inner_states(SMCOutput *current_state);
 
   SMCOutput* specific_run();
 
