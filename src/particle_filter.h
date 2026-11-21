@@ -87,6 +87,20 @@ protected:
   
   void increment_time_index();
 
+  // (dev/plan.md 3.21) as a likelihood estimator in a Metropolis-Hastings
+  // move: a bootstrap filter defers its run to evaluation, and stops when the
+  // log-likelihood so far plus the measurement models' maxima at the
+  // remaining steps is below the threshold
+  bool defers_simulation() const;
+  double run_with_threshold(SMCOutput* simulation,
+                            const Parameters &conditioned_on_parameters,
+                            double threshold,
+                            bool &below);
+  bool threshold_active = false;
+  bool threshold_stopped = false;
+  double stop_threshold = 0.0;
+  std::vector<double> stop_remaining; // [k]: the sum of the bounds of the steps from first_index + k on
+
   // Chunked moves and weights (dev/plan.md 2.6b, G5): when the data model
   // uses no random numbers and keeps no run state, the particles are moved
   // grain_size at a time, each chunk with its own random-number stream, and

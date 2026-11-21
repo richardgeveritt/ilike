@@ -615,14 +615,7 @@ namespace ilike
                                                       double threshold)
   {
     const Parameters &schedule_parameters = this->sequencer.schedule_parameters;
-    double M = arma::datum::inf;
-    const VectorFactors* vector_factors = dynamic_cast<const VectorFactors*>(this->factors.get());
-    if (vector_factors != NULL)
-    {
-      M = 0.0;
-      for (auto i = this->index->begin(); i != this->index->end(); ++i)
-        M = M + vector_factors->get_likelihood_estimator(*i)->log_maximum(schedule_parameters);
-    }
+    double M = (this->factors != NULL) ? this->factors->log_maximum(this->index.get(), schedule_parameters) : arma::datum::inf;
     size_t N = this->number_of_particles;
     if (!std::isfinite(M) || (N == 0) || !this->can_run_flat_conditioned())
     {

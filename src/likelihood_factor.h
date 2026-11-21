@@ -25,6 +25,10 @@ public:
   
   double evaluate(const Parameters &input) const;
   virtual double likelihood_evaluate(const Parameters &input) const=0;
+  // (dev/plan.md 3.21) the largest log value over the variables that are not
+  // in input (e.g. the state of a measurement model), at its data: +inf if
+  // not known
+  virtual double log_maximum(const Parameters &input) const { return arma::datum::inf; }
   
   arma::mat evaluate_gradient(const std::string &variable,
                               const Parameters &input) const;

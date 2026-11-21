@@ -75,6 +75,10 @@ public:
   // factors get new outputs (the behaviour of the overload above).
   // (virtual: the HMC proposal builds its particle with its momenta's
   // energies, C208)
+  // (dev/plan.md 3.21) as a measurement model: the largest log density of
+  // its variables given the others, over the others (+inf if not known)
+  virtual double log_density_maximum(const Parameters &parameters) const { return arma::datum::inf; }
+
   virtual Particle move(RandomNumberGenerator &rng,
                         const Particle &particle,
                         const Index* new_outputs_index) const;

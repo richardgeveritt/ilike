@@ -170,6 +170,11 @@ protected:
   // value is known to be below threshold (below is then true and the value
   // is not meaningful); by default it evaluates fully.
   virtual bool simulation_pending() const { return false; }
+  // the simulation a move's proposed particle needs: deferred to the first
+  // evaluation when the estimator allows it (simulate_when_needed is called
+  // only where Metropolis-Hastings builds a proposed particle, so other
+  // algorithms draw exactly as before); by default, at once
+  virtual void simulate_when_needed(const Parameters &parameters) { this->simulate(parameters); }
   virtual double log_upper_bound(const Parameters &parameters) const { return arma::datum::inf; }
   virtual double evaluate_with_threshold(const Parameters &parameters, double threshold, bool &below)
   {

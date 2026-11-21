@@ -1,3 +1,4 @@
+#include "vector_factors.h"
 #include <numeric>
 #include "particle_filter.h"
 #include "factors.h"
@@ -501,6 +502,53 @@ void ParticleFilter::evaluate_smcfixed_part_smc(SMCOutput* current_state,
   
 }
 
+bool ParticleFilter::defers_simulation() const
+{
+  return this->sequencer_limit_is_fixed && !this->transition_proposal_is_evaluated && !this->proposal_is_evaluated;
+}
+
+// The likelihood estimate is the product over the steps of the mean weight,
+// and in a bootstrap filter a step's weights are the measurement density at
+// the particles: each mean is at most the density's maximum over the state.
+// So after step t the final log estimate is at most the log estimate so far
+// plus the logs of the maxima at the later steps.
+double ParticleFilter::run_with_threshold(SMCOutput* simulation,
+                                          const Parameters &conditioned_on_parameters,
+                                          double threshold,
+                                          bool &below)
+{
+  below = false;
+  this->simulate_smc(simulation, conditioned_on_parameters);
+  if (!this->defers_simulation() || (this->factors == NULL) || (this->last_index < this->first_index))
+    return simulation->evaluate(conditioned_on_parameters);
+  // the maxima at each step (the factors' data and index set for that step)
+  size_t T = this->last_index - this->first_index + 1;
+  this->stop_remaining.assign(T + 1, 0.0);
+  Parameters at_step = conditioned_on_parameters.deep_copy();
+  for (size_t k = 0; k < T; ++k)
+  {
+    size_t step = this->first_index + k;
+    this->factors->set_data(step);
+    this->index->set_time_index(step);
+    if (!this->index_name.empty())
+      at_step[this->index_name] = arma::mat(1, 1, arma::fill::value(double(step)));
+    this->stop_remaining[k] = this->factors->log_maximum(this->index.get(), at_step);
+  }
+  for (size_t k = T; k > 0; --k)
+    this->stop_remaining[k - 1] = this->stop_remaining[k - 1] + this->stop_remaining[k];
+  this->stop_threshold = threshold;
+  this->threshold_stopped = false;
+  this->threshold_active = true;
+  double value = simulation->evaluate(conditioned_on_parameters); // (sets the data and index back to the first step)
+  this->threshold_active = false;
+  if (this->threshold_stopped)
+  {
+    below = true;
+    return -arma::datum::inf;
+  }
+  return value;
+}
+
 void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current_state,
                                                                   const Parameters &conditioned_on_parameters)
 {
@@ -556,6 +604,20 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
 
     current_state->set_time_and_reset_start();
+
+    // (dev/plan.md 3.21) stop when the estimate cannot reach the threshold:
+    // the log estimate so far plus the maxima of the steps not yet weighted
+    if (this->threshold_active)
+    {
+      size_t done = this->current_index - this->first_index + 1;
+      double remaining = (done < this->stop_remaining.size()) ? this->stop_remaining[done] : 0.0;
+      if (current_state->log_likelihood + remaining < this->stop_threshold)
+      {
+        this->threshold_stopped = true;
+        current_state->terminate();
+        break;
+      }
+    }
 
     // check termination, using sequencer
     if (this->check_termination())

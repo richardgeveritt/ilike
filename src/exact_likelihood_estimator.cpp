@@ -1,3 +1,4 @@
+#include "proposal_kernel.h"
 #include "exact_likelihood_estimator.h"
 #include "exact_likelihood_estimator_output.h"
 #include "independent_proposal_kernel.h"
@@ -411,4 +412,16 @@ void ExactLikelihoodEstimator::specific_change_data(Data* new_data)
   }
 }
 
+
+double ExactLikelihoodEstimator::log_maximum(const Parameters &parameters) const
+{
+  if (!this->numerator_distribution_factors.empty() || !this->numerator_proposals.empty())
+    return arma::datum::inf;
+  double output = 0.0;
+  for (const auto &factor : this->numerator_likelihood_factors)
+    output = output + factor->log_maximum(parameters);
+  for (const ProposalKernel* proposal : this->numerator_likelihood_proposals)
+    output = output + proposal->log_density_maximum(parameters);
+  return output;
+}
 }

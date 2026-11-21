@@ -71,7 +71,7 @@ EnKF = function(recipe,
     seed = ilike_rdtsc()
   }
 
-  set.seed(as.numeric(substr(as.character(seed),1,9)))
+  set.seed(r_seed(seed))
 
   # Sort filter method.
   filter_method = get_method(recipe,"ssm")

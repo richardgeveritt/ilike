@@ -311,3 +311,13 @@ test_that("a division of whole numbers in a statement is not integer division", 
   expect_equal(ilike::evaluate_log(ilike::compile(f), parameters = list(mu = 0.1)),
                dnorm(0.1, log = TRUE) + dnorm(0.3, 0.1, 1.25, log = TRUE), tolerance = 1e-12)
 })
+
+test_that("a seed written in scientific notation by as.character is accepted", {
+  # (C247) a clock-like seed ending in zeros: as.character(1234567000000) is
+  # "1.234567e+12", whose first nine characters set.seed used to reject
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(f), add = TRUE)
+  writeLines(c("ilike 1.0", "model {", "  theta ~ norm(0, 1)", "}"), f)
+  expect_equal(ilike::evaluate_log(ilike::compile(f), parameters = list(theta = 0.5), seed = 1234567000000),
+               dnorm(0.5, log = TRUE))
+})

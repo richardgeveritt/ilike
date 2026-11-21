@@ -1296,12 +1296,20 @@ private:
     std::set<std::string> allowed = {"log", "gradient", "second_gradient"};
     if (prior)
       allowed.insert("simulate");
+    else
+      allowed.insert("maximum"); // (dev/plan.md 3.21)
     this->allow_only(value, arguments, allowed, 0);
     if (arguments.has("log"))
       factor.push_back(this->log_placeholder(arguments.named["log"], prior, "log"), "evaluate_log_" + suffix);
     if (arguments.has("simulate"))
       factor.push_back(this->function_placeholder(arguments.named["simulate"], "simulate_prior", "simulate"),
                        "simulate_prior");
+    // maximum = cpp::f: the log likelihood's largest value over the state, at
+    // the data (a function with the log likelihood's arguments), so that a
+    // particle filter can stop early (dev/plan.md 3.21)
+    if (arguments.has("maximum"))
+      factor.push_back(this->function_placeholder(arguments.named["maximum"], "evaluate_log_likelihood", "maximum"),
+                       "maximum_log_likelihood");
     if (arguments.has("gradient"))
     {
       std::string backend = this->autodiff_backend(arguments.named["gradient"]);

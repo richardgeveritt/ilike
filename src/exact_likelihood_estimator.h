@@ -118,6 +118,10 @@ public:
   void setup();
   void setup(const Parameters &parameters);
 
+  // (dev/plan.md 3.21) the sum of its factors' maxima (+inf unless every
+  // part has one)
+  double log_maximum(const Parameters &parameters) const;
+
 protected:
   
   void specific_change_data(Data* new_data);

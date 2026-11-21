@@ -259,4 +259,16 @@ Data* VectorFactors::get_current_data()
   
   return NULL;
 }
+
+double VectorFactors::log_maximum(const Index* index, const Parameters &parameters) const
+{
+  double output = 0.0;
+  for (auto i = index->begin(); i != index->end(); ++i)
+  {
+    if ((*i >= this->likelihood_estimators.size()) || (this->likelihood_estimators[*i] == NULL))
+      return arma::datum::inf;
+    output = output + this->likelihood_estimators[*i]->log_maximum(parameters);
+  }
+  return output;
+}
 }

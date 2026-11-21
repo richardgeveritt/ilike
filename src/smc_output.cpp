@@ -131,7 +131,13 @@ void SMCOutput::evaluate_smcadaptive_part_given_smcfixed()
 
 void SMCOutput::simulate(const Parameters &parameters)
 {
-  // (dev/plan.md 3.21) deferred to evaluation when the estimator allows it
+  this->estimator->simulate_smc(this, parameters);
+}
+
+// (dev/plan.md 3.21) a proposed particle's run, deferred to evaluation when
+// the estimator allows it
+void SMCOutput::simulate_when_needed(const Parameters &parameters)
+{
   if (this->estimator->defers_simulation())
   {
     this->pending = true;
@@ -154,12 +160,7 @@ double SMCOutput::evaluate_with_threshold(const Parameters &parameters, double t
   if (!this->pending)
     return this->evaluate(parameters);
   this->pending = false;
-  if (this->estimator->simulate_smc_with_threshold(this, parameters, threshold))
-  {
-    below = true;
-    return -arma::datum::inf;
-  }
-  return this->evaluate(parameters);
+  return this->estimator->run_with_threshold(this, parameters, threshold, below);
 }
 
 void SMCOutput::evaluate_smcfixed_part(const Parameters &parameters)

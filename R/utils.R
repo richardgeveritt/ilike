@@ -136,3 +136,13 @@ make_results_directory <- function(results_name,results_path)
   results_directory = paste(results_directory,"/ilike",sep="")
   return(results_directory)
 }
+
+# R's seed from an algorithm's seed: its first nine digits. The seed is
+# written without scientific notation: as.character() writes a number with
+# few significant digits (a clock reading ending in zeros, as from a coarse
+# clock when no seed is given) as e.g. "1.234567e+12", whose first nine
+# characters are not a number, and set.seed() then failed.
+r_seed = function(seed)
+{
+  as.numeric(substr(format(seed, scientific = FALSE, trim = TRUE), 1, 9))
+}

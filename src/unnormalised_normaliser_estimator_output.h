@@ -42,6 +42,7 @@ public:
   // a Metropolis-Hastings proposal rejected early (e.g. outside the prior's
   // range) never makes them
   bool simulation_pending() const { return this->pending; }
+  void simulate_when_needed(const Parameters &parameters);
 
   void forget_you_were_already_written_to_file();
   void close_ofstreams();

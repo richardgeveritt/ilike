@@ -189,6 +189,12 @@ protected:
                                            double threshold);
   // checked after each chunk of a sequential chunked generation: true stops it
   std::function<bool(Particles &generation, size_t points_done)> chunk_stop;
+  // simulate and evaluate with the threshold (below: stopped early); by
+  // default simulate_smc_with_threshold, then a full evaluation
+  virtual double run_with_threshold(SMCOutput* simulation,
+                                    const Parameters &conditioned_on_parameters,
+                                    double threshold,
+                                    bool &below);
   bool chunk_stopped = false;
   virtual void evaluate_smc(SMCOutput* simulation)=0;
   virtual void evaluate_smcfixed_part_smc(SMCOutput* simulation)=0;

@@ -39,6 +39,7 @@ public:
   FactorVariables* simulate_factor_variables(const Parameters &simulated_parameters) const;
   FactorVariables* subsample_simulate_factor_variables(const Parameters &simulated_parameters) const;
   
+  double log_maximum(const Index* index, const Parameters &parameters) const;
   void setup();
   void setup(const Parameters &conditioned_on_parameters);
   

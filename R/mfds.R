@@ -87,7 +87,7 @@ MFDS = function(recipe,
 
   if (is.null(seed))
     seed = ilike_rdtsc()
-  set.seed(as.numeric(substr(as.character(seed), 1, 9)))
+  set.seed(r_seed(seed))
 
   do_enkmfds(recipe,
              model_parameter_list,

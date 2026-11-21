@@ -65,6 +65,7 @@ public:
   
   void set_proposal_parameters(Parameters* proposal_parameters_in);
   
+  double log_density_maximum(const Parameters &parameters) const;
   std::vector<std::string> get_variables() const;
   
   GradientEstimatorOutput* simulate_gradient_estimator_output() const;

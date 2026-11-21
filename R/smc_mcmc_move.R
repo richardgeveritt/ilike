@@ -85,7 +85,7 @@ SMC_with_MCMC = function(recipe,
     seed = ilike_rdtsc()
   }
 
-  set.seed(as.numeric(substr(as.character(seed),1,9)))
+  set.seed(r_seed(seed))
 
   # Sort MCMC termination method.
   mcmc_termination_method = get_method(recipe,"mcmc_termination")

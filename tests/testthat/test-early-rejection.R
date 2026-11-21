@@ -41,3 +41,42 @@ test_that("ABC-MCMC with early stopping targets the ABC posterior", {
   expect_equal(mean(b), sum(p * grid), tolerance = 0.05)
   expect_equal(sd(b), sqrt(sum(p * grid^2) - sum(p * grid)^2), tolerance = 0.1)
 })
+
+test_that("a particle filter with a bounded measurement density stops early and targets the posterior", {
+  # (C246) density(log = …, maximum = …) in the inner state-space model; the
+  # posterior of a against the one from the Kalman filter's exact likelihood
+  skip_on_cran()
+  set.seed(4); n = 50; x = numeric(n); x[1] = rnorm(1)
+  for (t in 2:n) x[t] = 0.7*x[t-1] + rnorm(1, 0, sqrt(0.5))
+  y = round(x + rnorm(n), 3)
+  d = tempfile(); dir.create(d)
+  on.exit(unlink(c(d, "early_rejection_pf", "early_rejection_kf"), recursive = TRUE), add = TRUE)
+  writeLines(c("ilike 1.0", "model {", "  x ~ norm(0, 1)",
+               "  transition x = linear_gaussian(matrix = cpp::transition_matrix, covariance = 0.5)",
+               "  factor obs = density(log = cpp::meas, maximum = cpp::meas_max)",
+               paste0("  time = ssm(index = i, first_index = 0, last_index = ", n - 1, ", time = t, initial_time = 0,"),
+               "             time_difference = dt, time_step = 1, predictions_per_update = 1)", "}", "cpp {",
+               "arma::mat transition_matrix(const Parameters &parameters) { arma::mat A(1, 1); A(0, 0) = parameters[\"a\"][0]; return A; }",
+               "double meas(const Parameters &parameters, const Data &data) { return dnorm(data[\"y\"][0], parameters[\"x\"][0], 1.0); }",
+               "double meas_max(const Parameters &parameters, const Data &data) { return -0.5*std::log(2.0*M_PI); }",
+               "}", "algorithm filter {", "  particles = 200", "}"), file.path(d, "inner.ilike"))
+  writeLines(c("ilike 1.0", "model {", "  x ~ norm(0, 1)",
+               "  transition x = linear_gaussian(matrix = cpp::transition_matrix, covariance = 0.5)",
+               "  factor obs = linear_gaussian(data = y, state = x, matrix = 1, covariance = 1)",
+               paste0("  time = ssm(index = i, first_index = 0, last_index = ", n - 1, ", time = t, initial_time = 0,"),
+               "             time_difference = dt, time_step = 1, predictions_per_update = 1)", "}", "cpp {",
+               "arma::mat transition_matrix(const Parameters &parameters) { arma::mat A(1, 1); A(0, 0) = parameters[\"a\"][0]; return A; }",
+               "}", "algorithm kalman {", "}"), file.path(d, "inner_kf.ilike"))
+  outer = function(import, factor) c("ilike 1.0", paste0("import \"", import, "\" as inner"),
+                                     paste0("data { y = [", paste(y, collapse = ", "), "] }"), "model {", "  a ~ unif(-1, 1)",
+                                     paste0("  factor filter = ", factor), "}", "algorithm mcmc {",
+                                     "  move m = metropolis(norm_rw(a, 0.3))", "  termination = iterations(4000)", "}")
+  writeLines(outer("inner.ilike", "pf(inner)"), file.path(d, "pf.ilike"))
+  writeLines(outer("inner_kf.ilike", "kf(inner)"), file.path(d, "kf.ilike"))
+  ilike::MCMC(ilike::compile(file.path(d, "pf.ilike")), results_name = "early_rejection_pf", seed = 1, initial_values = list(list(a = 0.5)))
+  ilike::MCMC(ilike::compile(file.path(d, "kf.ilike")), results_name = "early_rejection_kf", seed = 1, initial_values = list(list(a = 0.5)))
+  a_pf = ilike::load_mcmc_output("early_rejection_pf"); a_pf = a_pf$Value[a_pf$ParameterName == "a"][-(1:200)]
+  a_kf = ilike::load_mcmc_output("early_rejection_kf"); a_kf = a_kf$Value[a_kf$ParameterName == "a"][-(1:200)]
+  expect_equal(mean(a_pf), mean(a_kf), tolerance = 0.05)
+  expect_equal(sd(a_pf), sd(a_kf), tolerance = 0.15)
+})

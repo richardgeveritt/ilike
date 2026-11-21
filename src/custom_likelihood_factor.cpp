@@ -60,6 +60,7 @@ void CustomLikelihoodFactor::make_copy(const CustomLikelihoodFactor &another)
 {
   this->likelihood = another.likelihood;
   this->likelihood_gradient = another.likelihood_gradient;
+  this->maximum = another.maximum;
 }
 
 double CustomLikelihoodFactor::likelihood_evaluate(const Parameters &input) const

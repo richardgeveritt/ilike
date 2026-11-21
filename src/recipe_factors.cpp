@@ -234,6 +234,11 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                 (evaluate_log_likelihood_value).function_pointer<EvaluateLogLikelihoodPtr>(),
                 data_in);
           }
+          // (dev/plan.md 3.21) density(…, maximum = cpp::f): its largest value
+          // over the state, for early stopping in particle filters
+          if (current_factor.contains("maximum_log_likelihood"))
+            static_cast<CustomLikelihoodFactor*>(new_factor)->set_maximum(
+                current_factor["maximum_log_likelihood"].function_pointer<EvaluateLogLikelihoodPtr>());
           LikelihoodEstimator *new_likelihood_estimator;
           if (current_factor.contains("plate")) {
             delete new_factor;

@@ -56,9 +56,15 @@ void UnnormalisedNormaliserEstimatorOutput::simulate()
   Rcpp::stop("The estimate of a normalising constant needs the parameters.");
 }
 
-// the auxiliary variables, M draws of the field at these parameters: made at
-// the first evaluation (dev/plan.md 3.21)
+// the auxiliary variables, M draws of the field at these parameters
 void UnnormalisedNormaliserEstimatorOutput::simulate(const Parameters &parameters)
+{
+  this->pending = true;
+  this->draw_if_pending(parameters);
+}
+
+// (dev/plan.md 3.21) for a proposed particle: made at the first evaluation
+void UnnormalisedNormaliserEstimatorOutput::simulate_when_needed(const Parameters &parameters)
 {
   this->fields.clear();
   this->pending = true;

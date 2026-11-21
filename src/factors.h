@@ -38,6 +38,9 @@ public:
   // True if every estimator of the index supports flat generations
   // (LikelihoodEstimator::supports_flat_generations). Default: false.
   virtual bool supports_flat_generations(const Index* index) const { return false; }
+  // (dev/plan.md 3.21) the sum of the log maxima of the factors in index
+  // (LikelihoodEstimator::log_maximum), +inf if one is not known
+  virtual double log_maximum(const Index* index, const Parameters &parameters) const { return arma::datum::inf; }
 
   // True if every factor is in index or in other_index (other_index may be
   // NULL), the estimators of index support restore_from_summary and those of

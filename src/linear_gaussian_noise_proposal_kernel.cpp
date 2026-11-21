@@ -266,4 +266,19 @@ void LinearGaussianNoiseProposalKernel::set_index(Index* index_in)
 void LinearGaussianNoiseProposalKernel::set_index_if_null(Index* index_in)
 {
 }
+
+// (dev/plan.md 3.21) a Gaussian density is largest at its mean, whatever the
+// mean (here a function of the state): the density at the mean, for each
+// variable, with the covariances fixed
+double LinearGaussianNoiseProposalKernel::log_density_maximum(const Parameters &parameters) const
+{
+  double output = 0.0;
+  for (auto i=this->proposal_info.begin(); i!=this->proposal_info.end(); ++i)
+  {
+    arma::colvec at_mean(i->second.get_inv().n_rows, arma::fill::zeros);
+    output = output + dmvnorm_scaled_precomp(at_mean, at_mean, i->second.get_inv(),
+                                             i->second.get_double_scale(), i->second.get_logdet());
+  }
+  return output;
+}
 }

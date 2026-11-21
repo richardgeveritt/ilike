@@ -33,6 +33,11 @@ public:
   
   double likelihood_evaluate(const Parameters &input) const;
   
+  void set_maximum(EvaluateLogLikelihoodPtr maximum_in) { this->maximum = maximum_in; }
+  double log_maximum(const Parameters &input) const
+  {
+    return (this->maximum != NULL) ? this->maximum(input, *this->data) : arma::datum::inf;
+  }
   arma::mat likelihood_evaluate_gradient(const std::string &variable,
                                          const Parameters &input) const;
   
@@ -44,6 +49,7 @@ protected:
   
   EvaluateLogLikelihoodPtr likelihood;
   EvaluateGradientLogLikelihoodPtr likelihood_gradient;
+  EvaluateLogLikelihoodPtr maximum = NULL; // (density(…, maximum = cpp::f), dev/plan.md 3.21)
   
 };
 }

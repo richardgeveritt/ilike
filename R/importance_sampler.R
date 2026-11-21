@@ -75,7 +75,7 @@ IS = function(recipe,
     seed = ilike_rdtsc()
   }
 
-  set.seed(as.numeric(substr(as.character(seed),1,9)))
+  set.seed(r_seed(seed))
 
   if (length(fixed_parameter_list)==0)
   {

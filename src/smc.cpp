@@ -327,6 +327,17 @@ bool SMC::simulate_smc_with_threshold(SMCOutput* simulation,
   return false;
 }
 
+double SMC::run_with_threshold(SMCOutput* simulation,
+                               const Parameters &conditioned_on_parameters,
+                               double threshold,
+                               bool &below)
+{
+  below = this->simulate_smc_with_threshold(simulation, conditioned_on_parameters, threshold);
+  if (below)
+    return -arma::datum::inf;
+  return simulation->evaluate(conditioned_on_parameters);
+}
+
 void SMC::simulate_generation_in_chunks(SMCOutput *current_state,
                                        const Parameters* conditioned_on_parameters,
                                        bool summarise,

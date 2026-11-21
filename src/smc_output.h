@@ -49,6 +49,7 @@ public:
   // (dev/plan.md 3.21) a run deferred to evaluation (when the estimator
   // defers it), and evaluated with early stopping
   bool simulation_pending() const { return this->pending; }
+  void simulate_when_needed(const Parameters &parameters);
   double evaluate_with_threshold(const Parameters &parameters, double threshold, bool &below);
   void evaluate_smcfixed_part(const Parameters &parameters);
   void evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters);

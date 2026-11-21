@@ -102,7 +102,7 @@ FactorVariables* VectorFactorVariables::copy_with_new_outputs(const Parameters &
     if (new_output)
     {
       outputs.push_back(this->vector_factors->get_likelihood_estimator(i)->initialise(new_parameters));
-      outputs.back()->simulate(new_parameters);
+      outputs.back()->simulate_when_needed(new_parameters); // (dev/plan.md 3.21)
       outputs.back()->write_to_file_flag = false;
       if ((this->likelihood_estimator_outputs[i]!=NULL) && (this->particle!=NULL) && outputs.back()->carries_over())
       {
@@ -541,7 +541,7 @@ bool VectorFactorVariables::recycle_with_new_outputs(const FactorVariables* sour
     {
       if ((output == NULL) || !output->reinitialise(new_parameters))
         return false;
-      output->simulate(new_parameters);
+      output->simulate_when_needed(new_parameters); // (dev/plan.md 3.21)
       if ((source->likelihood_estimator_outputs[i]!=NULL) && (source->particle!=NULL) && output->carries_over())
       {
         if (changed_known < 0)
