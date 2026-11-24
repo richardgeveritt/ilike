@@ -26,6 +26,7 @@ SMC_with_MCMC(
   grain_size = 64,
   check_factor_index = FALSE,
   waste_free_chains = 0,
+  move_only_after_resampling = FALSE,
   progress = getOption("ilike.progress", interactive()),
   algorithm = NULL
 )
@@ -118,6 +119,13 @@ SMC_with_MCMC(
 
   (optional) If FALSE (default), the .cpp file generated for compilation
   is deleted. If TRUE,
+
+- move_only_after_resampling:
+
+  (optional) If TRUE, the particles are moved only at the steps where
+  they are resampled (as in SMC^2, Chopin, Jacob and Papaspiliopoulos,
+  2013); at the other steps they go to the next target unmoved. Default
+  FALSE: moved at every step.
 
 - seed:
 
