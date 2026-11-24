@@ -18,6 +18,7 @@
 #' @param keep_temporary_recipe_code (optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE,
 #' @param check_factor_index (optional) If TRUE, after every accepted MCMC move that has a factor index, re-evaluate the exact factors that were left out of the move (neither in its factor index nor its cut factor index) and stop if any changed value, i.e. did not cancel in the acceptance ratio. Slower; for checking a model file. Default FALSE.
 #' @param waste_free_chains (optional) If greater than 0 (M), run waste-free SMC (Dau and Chopin, 2022): at every step M particles are resampled and each is run as an MCMC chain of number_of_particles/M states (itself and number_of_particles/M - 1 moves, whatever mcmc_termination says), and all the states form the next generation. Must divide number_of_particles. Needs exact or annealed factors, a move that does not adapt, and mcmc_termination ilike::iterations. Default 0: standard SMC.
+#' @param move_only_after_resampling (optional) If TRUE, the particles are moved only at the steps where they are resampled (as in SMC^2, Chopin, Jacob and Papaspiliopoulos, 2013); at the other steps they go to the next target unmoved. Default FALSE: moved at every step.
 #' @param seed (optional) The seed for the random number generator.
 #' @param progress (optional) If TRUE, show a progress bar (cli) while the algorithm runs. Default getOption("ilike.progress", interactive()): shown in interactive sessions only.
 #' @param grain_size (optional) The number of particles moved together (default 64). Each chunk of particles has its own random-number stream, determined by the seed and the chunk's position, so results depend on the seed and on grain_size when there are more particles than grain_size (and will not depend on whether the run is parallel).
@@ -44,6 +45,7 @@ SMC_with_MCMC = function(recipe,
                          grain_size = 64,
                          check_factor_index = FALSE,
                          waste_free_chains = 0,
+                         move_only_after_resampling = FALSE,
                          progress = getOption("ilike.progress", interactive()),
                          algorithm = NULL)
 {
@@ -74,6 +76,8 @@ SMC_with_MCMC = function(recipe,
   # Read in C++ (apply_output_options).
   recipe$write_factor_output = write_factor_output
   recipe$waste_free_chains = waste_free_chains
+  # (dev/plan.md 3.21 (c2')) move only at the steps with resampling (as in SMC^2)
+  recipe$move_only_after_resampling = isTRUE(move_only_after_resampling)
 
   if (!results_name == "")
     results_directory = make_results_directory(results_name,results_path)

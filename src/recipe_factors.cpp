@@ -131,7 +131,12 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
 
       // (S2) data tempering takes the terms of a factor written as model
       // statements one at a time; another factor cannot be tempered this way
-      if (factor_plan.data_tempered &&
+      // (dev/plan.md 3.21 (c2')) a nested particle filter takes its
+      // observations in one at a time (SMC^2)
+      const bool tempered_filter = factor_plan.data_tempered && (factors[i]).is_list() &&
+        factors[i].contains("algorithmic_likelihood") && factors[i]["algorithmic_likelihood"].contains("type") &&
+        iequals(factors[i]["algorithmic_likelihood"]["type"].as_string(), "pf");
+      if (factor_plan.data_tempered && !tempered_filter &&
           !((factors[i]).is_list() && factors[i].contains("evaluate_log_likelihood") &&
             factors[i].contains("plate")))
         stop("smc_sequence data tempering: factor " + std::to_string(i + 1) +
@@ -245,6 +250,15 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
             new_likelihood_estimator = make_model_statement_estimator(
                 current_factor, model, rng_in, seed_in, data_in,
                 factor_is_fixed_in_smc);
+            // (dev/plan.md 3.21 (c5)) an ABC kernel's summaries
+            if (current_factor.contains("abc_summary") && current_factor.contains("abc_from_summary"))
+              static_cast<PlateLikelihoodEstimator *>(new_likelihood_estimator)->set_kernel_summary(
+                  current_factor["abc_summary"].function_pointer<AbcSummaryPtr>(),
+                  current_factor["abc_from_summary"].function_pointer<AbcFromSummaryPtr>());
+            // (dev/plan.md 3.21 (c4)) its maximum, generated from its terms
+            if (current_factor.contains("maximum_log_likelihood"))
+              static_cast<PlateLikelihoodEstimator *>(new_likelihood_estimator)->set_maximum(
+                  current_factor["maximum_log_likelihood"].function_pointer<EvaluateLogLikelihoodPtr>());
             // (S2) its data points taken in along the sequence
             if (factor_plan.data_tempered)
               static_cast<PlateLikelihoodEstimator *>(new_likelihood_estimator)
@@ -328,6 +342,10 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
 
                 arma::colvec temp_scale_in = info[5];
                 scale_in = temp_scale_in;
+                // a scale given without a variable's name: kept under a name of its own
+                // (it used to be ignored: the kernel then used a scale of 1; dev/plan.md C253)
+                if (scale_variable_in.empty() && (scale_in.n_elem > 0))
+                  scale_variable_in = "ilike_abc_scale";
 
                 parallel = info[6];
                 grain_size = info[7];
@@ -345,6 +363,10 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                 scale_variable_in = temp_scale_variable_in;
                 arma::colvec temp_scale_in = info[6];
                 scale_in = temp_scale_in;
+                // a scale given without a variable's name: kept under a name of its own
+                // (it used to be ignored: the kernel then used a scale of 1; dev/plan.md C253)
+                if (scale_variable_in.empty() && (scale_in.n_elem > 0))
+                  scale_variable_in = "ilike_abc_scale";
 
                 parallel = info[7];
                 grain_size = info[8];
@@ -426,6 +448,10 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
               scale_variable_in = temp_scale_variable_in;
               arma::colvec temp_scale_in = info[5];
               scale_in = temp_scale_in;
+              // a scale given without a variable's name: kept under a name of its own
+              // (it used to be ignored: the kernel then used a scale of 1; dev/plan.md C253)
+              if (scale_variable_in.empty() && (scale_in.n_elem > 0))
+                scale_variable_in = "ilike_abc_scale";
 
               parallel = info[6];
               grain_size = info[7];
@@ -857,6 +883,17 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
               // nested: keep its stored generations compactly and write them
               // concatenated over the outer points
               inner_pf->set_compact_stored_output(true);
+              // (dev/plan.md 3.21 (c2')) SMC^2: the caller's data tempering
+              // takes in the filter's observations one at a time
+              if (factor_plan.data_tempered) {
+                // (a filter takes its observations in time order, whatever
+                // data(..., order = ...) says: that is for factors whose
+                // terms may enter in any order)
+                if (data_tempering.anneal)
+                  stop("SMC^2: a particle filter takes in whole observations for now: use data(..., anneal = false) "
+                       "with a fraction going up by 1/n each step.");
+                inner_pf->set_follows_caller_target(plan.data_variable);
+              }
               // threads for an inner particle filter with parallel = TRUE
               if (model.contains("number_of_threads"))
                 inner_pf->set_number_of_threads(size_t((model["number_of_threads"]).as_double()));
@@ -923,6 +960,11 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                   2, false, parallel, grain_size, "", seed_in,
                   data_created_in_get_likelihood_estimators,
                   data_created_in_get_measurement_covariance_estimators, &nested);
+              // (dev/plan.md 3.21 (c4)) early stopping in an outer MCMC
+              // move: ABC kernels (the lowering's flag), tolerances not increasing
+              if (nested.types.empty())
+                static_cast<SMCMCMCMove*>(new_likelihood_estimator)->set_stops_early(
+                    llhd_details.contains("kernels_only") && llhd_details["kernels_only"].as_bool());
             } else {
               stop("Invalid type for 'likelihood'.");
             }

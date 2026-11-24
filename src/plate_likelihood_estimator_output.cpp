@@ -64,6 +64,8 @@ LikelihoodEstimatorOutput* PlateLikelihoodEstimatorOutput::duplicate() const
 
 void PlateLikelihoodEstimatorOutput::make_copy(const PlateLikelihoodEstimatorOutput &another)
 {
+  this->kernel_values[0] = another.kernel_values[0];
+  this->kernel_values[1] = another.kernel_values[1];
   this->plate = another.plate;
   this->tree = another.tree;
   this->leaves = another.leaves;
@@ -84,6 +86,33 @@ void PlateLikelihoodEstimatorOutput::evaluate_smcfixed_part(const Parameters &pa
 {
   if (this->plate->smcfixed_flag)
     this->log_likelihood_smcfixed_part = this->plate_evaluate(parameters);
+  else if (this->plate->has_kernel_summary())
+    this->plate->kernel_summary(parameters, this->kernel_values); // (c5: no random numbers)
+}
+
+int PlateLikelihoodEstimatorOutput::adaptive_summary_size() const
+{
+  if (this->plate->smcfixed_flag)
+    return ExactLikelihoodEstimatorOutput::adaptive_summary_size();
+  return this->plate->has_kernel_summary() ? 2 : -1;
+}
+
+void PlateLikelihoodEstimatorOutput::adaptive_summary(double *values) const
+{
+  if (this->plate->smcfixed_flag)
+  {
+    ExactLikelihoodEstimatorOutput::adaptive_summary(values);
+    return;
+  }
+  values[0] = this->kernel_values[0];
+  values[1] = this->kernel_values[1];
+}
+
+double PlateLikelihoodEstimatorOutput::smcadaptive_from_summary(const double *values, const Parameters &parameters) const
+{
+  if (this->plate->smcfixed_flag)
+    return ExactLikelihoodEstimatorOutput::smcadaptive_from_summary(values, parameters);
+  return this->plate->kernel_from_summary(values, parameters);
 }
 
 void PlateLikelihoodEstimatorOutput::evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters)

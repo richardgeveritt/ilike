@@ -71,6 +71,7 @@ void MCMC::operator=(const MCMC &another)
 void MCMC::make_copy(const MCMC &another)
 {
   this->thin = another.thin;
+  this->store_iterations = another.store_iterations;
   if (another.termination!=NULL)
     this->termination.reset(another.termination->duplicate());
   else
@@ -197,7 +198,9 @@ MoveOutput* MCMC::run(RandomNumberGenerator &rng,
     current_particle.tell_factors_to_forget_they_were_already_written_to_file();
     // Store the iteration compactly (its values and factor records), not a
     // copy of the particle; the state itself is handed over at the end.
-    mcmc_output->record(current_particle);
+    // (Not in an SMC's moves, which use only the final state: c5.)
+    if (this->store_iterations || adapting || !diagnostics.empty())
+      mcmc_output->record(current_particle);
   }
   if (adapting)
     mcmc_output->finish_adaptation();

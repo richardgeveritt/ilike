@@ -260,7 +260,7 @@ namespace ilike
     // the estimate at the caller's current target from the kept points: a
     // function of the points and the target only, so that a caller's
     // bisection over targets can try values in any order
-    void weight_at_caller_target(SMCOutput *current_state);
+    void weight_at_caller_target(SMCOutput *current_state, const Parameters &caller_parameters);
     bool follows_caller_target = false;
 
     // stored here

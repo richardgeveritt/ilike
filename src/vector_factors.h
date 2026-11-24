@@ -56,6 +56,8 @@ public:
   // found when the list is made, so that a move checks one flag
   bool can_defer() const { return this->any_defers; }
   bool advances_at_caller_target() const;
+  bool any_estimate() const;
+  void set_outputs_written(bool written);
 
 protected:
 

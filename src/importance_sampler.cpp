@@ -562,7 +562,9 @@ namespace ilike
     // so the target must be fixed: one schedule point and a criterion that
     // always accepts it (no bisection), and no scale computed from all the
     // points (ABC). Weighting at other targets is G2 (adaptive summaries).
-    if (this->force_rich_generations || this->proposed_particles_inputted || this->follows_caller_target)
+    // (following a caller's target, c5: flat when every factor gives
+    // summaries, checked below; otherwise rich)
+    if (this->force_rich_generations || this->proposed_particles_inputted)
       return false;
     if ((this->particle_simulator == NULL) || (this->number_of_particles == 0))
       return false;
@@ -616,7 +618,10 @@ namespace ilike
                                                       const Parameters &conditioned_on_parameters,
                                                       double threshold)
   {
-    const Parameters &schedule_parameters = this->sequencer.schedule_parameters;
+    // (the factors' maxima and values read the sequence's variable and, for
+    // generated factors, the caller's parameters (c5): the schedule first,
+    // since merge keeps the first value of a name)
+    const Parameters schedule_parameters = this->sequencer.schedule_parameters.merge(conditioned_on_parameters);
     double M = (this->factors != NULL) ? this->factors->log_maximum(this->index.get(), schedule_parameters) : arma::datum::inf;
     size_t N = this->number_of_particles;
     if (!std::isfinite(M) || (N == 0) || !this->can_run_flat_conditioned())
@@ -683,7 +688,9 @@ namespace ilike
 
   bool ImportanceSampler::supports_parallel_copies() const
   {
-    return this->can_run_flat_conditioned() && (this->lag == 0) &&
+    // (not when following the caller's target, c5: its outputs keep their
+    // points between the caller's steps, tied to this estimator)
+    return !this->follows_caller_target && this->can_run_flat_conditioned() && (this->lag == 0) &&
       (this->factors != NULL) && this->factors->supports_parallel_copies();
   }
 
@@ -718,7 +725,7 @@ namespace ilike
   {
     if (this->follows_caller_target)
     {
-      this->weight_at_caller_target(current_state);
+      this->weight_at_caller_target(current_state, this->sequencer.schedule_parameters);
       return;
     }
 
@@ -771,7 +778,7 @@ namespace ilike
   // tolerance, through the shared parameters): the estimate is their mean.
   // The points are kept (no terminate()), to be weighted again at the
   // caller's next target.
-  void ImportanceSampler::weight_at_caller_target(SMCOutput *current_state)
+  void ImportanceSampler::weight_at_caller_target(SMCOutput *current_state, const Parameters &caller_parameters)
   {
     Particles &generation = current_state->back();
     size_t n = generation.size();
@@ -779,8 +786,21 @@ namespace ilike
     if (n > 0)
     {
       arma::colvec values(n);
-      for (size_t i = 0; i < n; ++i)
-        values[i] = generation[i]->back().evaluate_smcadaptive_part_given_smcfixed_likelihoods(this->index.get());
+      if (generation.is_flat())
+      {
+        // (c5) from the points' summaries (an ABC kernel: two numbers each),
+        // at the caller's target, which the parameters hold
+        if ((generation.adaptive_summary_state != 1) || (generation.adaptive_summary_evaluator == NULL))
+          Rcpp::stop("ImportanceSampler::weight_at_caller_target: the generation has no summaries.");
+        size_t stride = generation.adaptive_summaries.n_rows;
+        generation.adaptive_summary_evaluator->smcadaptive_from_summaries(this->index.get(), generation.adaptive_summaries.memptr(),
+                                                                         stride, n, caller_parameters, values.memptr());
+      }
+      else
+      {
+        for (size_t i = 0; i < n; ++i)
+          values[i] = generation[i]->back().evaluate_smcadaptive_part_given_smcfixed_likelihoods(this->index.get());
+      }
       log_likelihood = log_sum_exp(values) - std::log(double(n));
     }
     current_state->log_likelihood = log_likelihood;
@@ -841,7 +861,7 @@ namespace ilike
   {
     if (this->follows_caller_target)
     {
-      this->weight_at_caller_target(current_state);
+      this->weight_at_caller_target(current_state, conditioned_on_parameters);
       return;
     }
     if (!this->sequencer_limit_is_fixed)

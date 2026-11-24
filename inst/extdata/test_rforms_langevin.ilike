@@ -1,5 +1,5 @@
 // MH Langevin proposal; use with test_rforms_gaussian_posterior.ilike.
 
-/***mh_proposal,ilike::langevin(θ,1,0.5)***/
+/***mh_proposal,ilike::langevin(theta,1,0.5)***/
 
 /***mcmc_termination,ilike::iterations(10000)***/

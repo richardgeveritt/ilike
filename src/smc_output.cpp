@@ -89,6 +89,7 @@ void SMCOutput::make_copy(const SMCOutput &another)
   this->pending = another.pending;
   this->caught_up = another.caught_up;
   this->committed_log_likelihood = another.committed_log_likelihood;
+  this->followed_steps = another.followed_steps;
   this->all_particles = another.all_particles;
   this->all_proposed = another.all_proposed;
   this->lag = another.lag;

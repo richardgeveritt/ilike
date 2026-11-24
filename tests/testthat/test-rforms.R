@@ -81,3 +81,18 @@ test_that("a block header of exactly eight characters is accepted and an empty o
   writeLines(c("/******/", "/***data,x=1***/"), f)
   expect_error(ilike::compile(f), "needs a name")
 })
+
+test_that("variable names may be non-ASCII (in a UTF-8 locale)", {
+  # (the other tests use ASCII names, so that they pass in any locale; this
+  # one checks a Greek name, written with escapes to keep this file ASCII)
+  skip_if_not(isTRUE(l10n_info()[["UTF-8"]]))
+  theta_name = "θ"
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(f), add = TRUE)
+  writeLines(enc2utf8(c("ilike 1.0", "data { y = [1.2] }", "model {", paste0("  ", theta_name, " ~ norm(0, 1)"),
+                        paste0("  y ~ norm(", theta_name, ", 1)"), "}")), f, useBytes = TRUE)
+  parameters = list(0.5)
+  names(parameters) = theta_name
+  expect_equal(ilike::evaluate_log(ilike::compile(f), parameters = parameters),
+               dnorm(0.5, log = TRUE) + dnorm(1.2, 0.5, 1, log = TRUE), tolerance = 1e-10)
+})

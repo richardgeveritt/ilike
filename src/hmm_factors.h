@@ -55,6 +55,7 @@ protected:
 public:
   // G5 (dev/plan.md 2.6b): the data-model estimators; the transition kernel
   // is only read
+  void set_outputs_written(bool written);
   bool supports_parallel_chunks() const;
   bool supports_parallel_copies() const;
   void redirect_random_numbers(RandomNumberGenerator* rng_in,

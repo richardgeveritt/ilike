@@ -4,6 +4,16 @@
 namespace ilike
 {
 
+// -log of the volume of the unit ball {x in R^n : ||x||_p <= 1}:
+// (2 Gamma(1/p + 1))^n / Gamma(n/p + 1); for p = Inf the cube [-1, 1]^n
+static double lp_unit_ball_log_inverse_volume(double n, double p)
+{
+  if (std::isinf(p))
+    return -n*log(2.0);
+  return lgamma(n/p + 1.0) - n*(log(2.0) + lgamma(1/p + 1));
+}
+
+
 LpUniformABCKernelFactor::LpUniformABCKernelFactor()
 :ABCKernelFactor()
 {
@@ -19,7 +29,7 @@ LpUniformABCKernelFactor::LpUniformABCKernelFactor(double p_in,
 {
   this->p = p_in;
   double n = double(this->data_colvec.n_elem);
-  this->constant = lgamma(n/p + 1.0) - n*(log(2.0) + lgamma(1/p + 1));
+  this->constant = lp_unit_ball_log_inverse_volume(n, this->p);
 }
 
 LpUniformABCKernelFactor::LpUniformABCKernelFactor(double p_in,
@@ -34,7 +44,7 @@ LpUniformABCKernelFactor::LpUniformABCKernelFactor(double p_in,
 {
   this->p = p_in;
   double n = double(this->data_colvec.n_elem);
-  this->constant = lgamma(n/p + 1.0) - n*(log(2.0) + lgamma(1/p + 1));
+  this->constant = lp_unit_ball_log_inverse_volume(n, this->p);
 }
 
 LpUniformABCKernelFactor::~LpUniformABCKernelFactor()
@@ -164,13 +174,15 @@ void LpUniformABCKernelFactor::specific_set_data()
   this->data_colvec = this->data->get_colvec(this->data_variables);
   this->packing_instructions.set_info(*this->data,this->data_variables);
   double n = double(this->data_colvec.n_elem);
-  this->constant = lgamma(n/2.0 + 1.0) - (n/2.0)*log(M_PI);
+  // (the unit Lp ball's volume for this p: it used to be the Euclidean
+  // ball's here, right only for p = 2; dev/plan.md C253)
+  this->constant = lp_unit_ball_log_inverse_volume(n, this->p);
 }
 
 arma::mat LpUniformABCKernelFactor::likelihood_evaluate_gradient(const std::string &variable,
                                                                  const Parameters &input) const
 {
-  return arma::mat(input[variable].n_elem,1);
+  return arma::zeros(input[variable].n_elem,1); // (the kernel is flat where it is not 0; it was uninitialised)
 }
 
 

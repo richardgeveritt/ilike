@@ -30,6 +30,9 @@
 #include "truncated_normal_independent_proposal_kernel.h"
 #include "truncated_normal_random_walk_proposal_kernel.h"
 #include "pcn_proposal_kernel.h"
+#include "pcn_langevin_proposal_kernel.h"
+#include "slice_point_proposal_kernel.h"
+#include "adaptive_iterations_mcmc_termination.h"
 #include "esjd_adaptor.h"
 #include "barker_dynamics_proposal_kernel.h"
 #include "mirror_proposal_kernel.h"
@@ -303,6 +306,37 @@ static std::vector<Builtin> make_registry()
     b.roles = {R::MHProposal};
     b.proposal = [](const BuiltinArguments &a) -> ProposalKernel* {
       return new PCNProposalKernel(a.variable("variable"), a.vector("mean"), a.matrix("cov"), a.real("rho")); };
+    table.push_back(b);
+  }
+  {
+    Builtin b;
+    b.name = "pcn_mala";
+    b.description = "preconditioned Crank-Nicolson Langevin (pCN-MALA, Cotter et al. 2013): pCN for u with distribution "
+                    "N(mean, cov), with a step along the gradient of the other factors; delta > 0 the step size";
+    b.arguments = {the_variable(), required("mean", T::Vector, "the mean of u's Gaussian distribution"),
+                   required("cov", T::Matrix, "the covariance of u's Gaussian distribution"),
+                   required("delta", T::Real, "the step size (delta > 0; small: close to u)").above(0.0)};
+    b.roles = {R::MHProposal};
+    b.proposal = [](const BuiltinArguments &a) -> ProposalKernel* {
+      return new PCNLangevinProposalKernel(a.variable("variable"), a.vector("mean"), a.matrix("cov"), a.real("delta"),
+                                           new DirectGradientEstimator()); };
+    table.push_back(b);
+  }
+  {
+    Builtin b;
+    b.name = "slice";
+    b.description = "slice sampling, each element in turn (a move: move m = slice(...); Neal 2003): the interval "
+                    "is [lower, upper] when no width is given, otherwise stepped out by width";
+    b.arguments = {the_variable(),
+                   optional("width", T::Real, RecipeValue(0.0), "the step of the stepping out (0: the whole of [lower, upper])").at_least(0.0),
+                   optional("lower", T::Real, RecipeValue(-arma::datum::inf), "the lower limit (default -Inf)"),
+                   optional("upper", T::Real, RecipeValue(arma::datum::inf), "the upper limit (default Inf)"),
+                   optional("max_steps", T::Integer, RecipeValue(50.0), "the most steps of the stepping out").at_least(1.0)};
+    // (the settings of a SliceMCMC made by the recipe, as nuts's)
+    b.roles = {R::MHProposal};
+    b.proposal = [](const BuiltinArguments &a) -> ProposalKernel* {
+      return new SlicePointProposalKernel(a.variable("variable"), a.real("width"), a.real("lower"), a.real("upper"),
+                                          size_t(a.integer("max_steps"))); };
     table.push_back(b);
   }
   {
@@ -756,6 +790,19 @@ static std::vector<Builtin> make_registry()
     b.roles = {R::MCMCTermination};
     b.mcmc_termination = [](const BuiltinArguments &a) -> MCMCTermination* {
       return new IterationsMCMCTermination(size_t(a.integer("n"))); };
+    table.push_back(b);
+  }
+  {
+    Builtin b;
+    b.name = "adaptive_iterations";
+    b.description = "in SMC, each step's number of iterations from the particles' acceptance rate p in one "
+                    "pilot iteration: ceil(log c / log(1 - p)), so each particle moves with probability about "
+                    "1 - c (South, Pettitt & Drovandi 2019)";
+    b.arguments = {optional("c", T::Real, RecipeValue(0.2), "the probability of a particle not moving"),
+                   optional("max", T::Integer, RecipeValue(100.0), "the largest number of iterations").at_least(1.0)};
+    b.roles = {R::MCMCTermination};
+    b.mcmc_termination = [](const BuiltinArguments &a) -> MCMCTermination* {
+      return new AdaptiveIterationsMCMCTermination(a.real("c"), size_t(a.integer("max"))); };
     table.push_back(b);
   }
   {

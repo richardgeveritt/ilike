@@ -93,7 +93,7 @@ test_that("nuts is refused where it cannot be used", {
                  paste0("  move m = ", move), "  termination = iterations(10)", "}"), f)
     expect_error(ilike::compile(f), message, fixed = TRUE)
   }
-  check("metropolis_hastings(nuts(theta, step = 0.1))", "nuts is a move of its own, not a proposal: move m = nuts(x, step = …).")
+  check("metropolis_hastings(nuts(theta, step = 0.1))", "nuts is a move of its own, not a proposal: move m = nuts(x, step = ") # (ASCII only)
   check("metropolis(nuts(theta, step = 0.1))", "nuts is a move of its own, not a proposal")
 })
 

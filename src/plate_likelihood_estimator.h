@@ -23,6 +23,10 @@ namespace ilike
 // Each output keeps its terms' values, so that a move recomputes only the
 // terms whose inputs changed (PlateLikelihoodEstimatorOutput).
 typedef Data (*PlateStructurePtr)(const Data &data);
+// (dev/plan.md 3.21 (c5)) a factor that is one ABC kernel: a point's two
+// summary numbers, and the kernel at the current tolerance from them
+typedef void (*AbcSummaryPtr)(const Parameters &parameters, const Data &data, double *values);
+typedef double (*AbcFromSummaryPtr)(const double *values, const Parameters &parameters, const Data &data);
 typedef double (*PlateTermPtr)(const Parameters &parameters,
                                const Data &data,
                                const arma::mat &terms,
@@ -81,10 +85,39 @@ public:
   bool is_tempered() const { return this->tempered; }
   void tempering_point(const Parameters &parameters, size_t &k, double &r) const;
   void set_gradient(PlateGradientPtr gradient_in) { this->gradient_function = gradient_in; }
+  // (dev/plan.md 3.21 (c4)) the factor's largest value (generated from its
+  // terms' maxima), for early rejection; without it, not known (+Inf). (It
+  // used to be ExactLikelihoodEstimator's, which with no factors of its own
+  // gave 0, as if known.)
+  void set_maximum(EvaluateLogLikelihoodPtr maximum_in) { this->maximum_function = maximum_in; }
+  // (dev/plan.md 3.21 (c5)) an ABC kernel's summaries: with them the factor
+  // supports flat generations even when it changes along the SMC sequence
+  // (an outer tolerance), its points weighted from two numbers each
+  void set_kernel_summary(AbcSummaryPtr summary_in, AbcFromSummaryPtr from_summary_in)
+  {
+    this->summary_function = summary_in;
+    this->from_summary_function = from_summary_in;
+  }
+  bool has_kernel_summary() const { return (this->summary_function != NULL) && !this->tempered; }
+  void kernel_summary(const Parameters &parameters, double *values) const { this->summary_function(parameters, *this->data, values); }
+  double kernel_from_summary(const double *values, const Parameters &parameters) const
+  {
+    return this->from_summary_function(values, parameters, *this->data);
+  }
+  bool supports_flat_generations() const { return this->smcfixed_flag || this->has_kernel_summary(); }
+  double log_maximum(const Parameters &parameters) const
+  {
+    if (this->maximum_function == NULL)
+      return arma::datum::inf;
+    return this->maximum_function(parameters, *this->data);
+  }
   void set_gradients(PlateGradientsPtr gradients_in) { this->gradients_function = gradients_in; }
   void set_value_gradients(PlateValueGradientsPtr value_gradients_in) { this->value_gradients_function = value_gradients_in; }
 
 protected:
+  AbcSummaryPtr summary_function = NULL;
+  AbcFromSummaryPtr from_summary_function = NULL;
+  EvaluateLogLikelihoodPtr maximum_function = NULL;
 
   friend PlateLikelihoodEstimatorOutput;
 

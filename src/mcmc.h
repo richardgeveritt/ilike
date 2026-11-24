@@ -94,6 +94,12 @@ public:
   // Store every thin-th iteration of a run (MCMC(..., thin); default 1).
   void set_thin(size_t thin_in);
   size_t get_thin() const { return this->thin; }
+  // (dev/plan.md 3.21 (c5)) whether a run stores its iterations: an SMC's
+  // moves need only each chain's final state (kept apart), so the SMC turns
+  // this off (not for MCMC runs, whose chains are their output, nor for
+  // waste-free SMC, which uses every state; a chain that adapts or records
+  // diagnostics still records)
+  void set_store_iterations(bool store_iterations_in) { this->store_iterations = store_iterations_in; }
 
   // The number of iterations a run makes, when the termination fixes it in
   // advance (iterations(n)); 0 otherwise.
@@ -140,11 +146,13 @@ public:
                   size_t iteration_counter);
   
   MCMCTermination* get_duplicated_termination() const;
+  MCMCTermination* get_termination() const { return this->termination.get(); }
 
 protected:
 
   // Every thin-th iteration of a run is stored.
   size_t thin = 1;
+  bool store_iterations = true;
   
   friend StochasticScanMCMC;
   friend DeterministicScanMCMC;

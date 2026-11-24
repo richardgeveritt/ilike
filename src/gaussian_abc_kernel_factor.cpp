@@ -96,7 +96,9 @@ double GaussianABCKernelFactor::likelihood_evaluate(const Parameters &input) con
     }
     
     double distance = arma::sum(arma::pow((input.get_colvec(this->data_variables)-this->data_colvec)/scale,2.0));
-    return this->constant - 0.5*(1.0/epsilon2)*distance - 0.5*scale.n_elem*log(epsilon2) - 0.5*arma::sum(log(scale));
+    // (scale a standard deviation, as in the distance: the normalising
+    // constant has sum log(scale), not half of it; dev/plan.md C253)
+    return this->constant - 0.5*(1.0/epsilon2)*distance - 0.5*scale.n_elem*log(epsilon2) - arma::sum(log(scale));
   }
 }
 
@@ -108,7 +110,7 @@ void GaussianABCKernelFactor::find_distance(const Parameters &input,
   if (this->scale_variable!="")
   {
     scale = input[this->scale_variable];
-    scale_constant = 0.5*arma::sum(log(scale));
+    scale_constant = arma::sum(log(scale)); // (scale a standard deviation, C253)
   }
   else
   {
@@ -159,25 +161,25 @@ void GaussianABCKernelFactor::specific_set_data()
 arma::mat GaussianABCKernelFactor::likelihood_evaluate_gradient(const std::string &variable,
                                                                 const Parameters &input) const
 {
+  // d/dx of -(1/2) sum ((x - y)/(epsilon s))^2: -(x - y)/(epsilon s)^2 (the
+  // branches were the wrong way round, and the scale multiplied; C253)
   double epsilon = input[this->epsilon_variable][0];
-
-  if (this->scale_variable!="")
-    return -(1.0/(epsilon*epsilon))*(input[variable]-this->data_colvec(arma::span(this->packing_instructions[variable].first,
-                                                                                  this->packing_instructions[variable].second)));
-  else
-  {
-    arma::colvec variable_scale = input[this->scale_variable](arma::span(this->packing_instructions[variable].first,
-                                                                         this->packing_instructions[variable].second),0);
-    return -(1.0/(epsilon*epsilon))*variable_scale%(input[variable]-this->data_colvec(arma::span(this->packing_instructions[variable].first,
-                                                                                                 this->packing_instructions[variable].second)));
-  }
+  if (std::isinf(epsilon))
+    return arma::zeros(input[variable].n_elem, 1);
+  arma::colvec difference = arma::vectorise(input[variable]) -
+    this->data_colvec(arma::span(this->packing_instructions[variable].first, this->packing_instructions[variable].second));
+  if (this->scale_variable == "")
+    return -(1.0/(epsilon*epsilon))*difference;
+  arma::colvec variable_scale = arma::colvec(arma::vectorise(input[this->scale_variable])).subvec(this->packing_instructions[variable].first,
+                                                                                    this->packing_instructions[variable].second);
+  return -(1.0/(epsilon*epsilon))*difference/arma::square(variable_scale);
 }
 
 
 // (dev/plan.md 3.21) the kernel at distance 0: its largest value
 double GaussianABCKernelFactor::log_maximum(const Parameters &input) const
 {
-  double scale_constant = (this->scale_variable != "") ? 0.5*arma::sum(log(arma::colvec(input[this->scale_variable]))) : 0.0;
+  double scale_constant = (this->scale_variable != "") ? arma::sum(log(arma::colvec(input[this->scale_variable]))) : 0.0;
   return this->evaluate_kernel_given_distance_at(input[this->epsilon_variable][0], 0.0, scale_constant);
 }
 }

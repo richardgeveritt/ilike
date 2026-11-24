@@ -138,7 +138,7 @@ test_that("MFDS says why a model written in the language cannot be used", {
                                "model { theta ~ lnorm(0, 1); factor sim = sbi(simulate = cpp::simulate_y, data = y) }",
                                lognormal_simulator, "algorithm mfds { transform = cpp::to_positive }"),
                              members = 10, iterations = 1),
-               "with transform = …, the prior gives the Gaussian")
+               "the prior gives the Gaussian on the scale the ensemble moves on") # (ASCII only)
   # other algorithms ask for a method
   f = tempfile(fileext = ".ilike")
   on.exit(unlink(f), add = TRUE)

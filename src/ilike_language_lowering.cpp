@@ -2092,7 +2092,13 @@ private:
     if (this->is_cpp_node(name))
       return this->hoisted(this->cpp_node_call(name, context), "const arma::mat &", context); // (computed once per statement when hoisted)
     if (this->is_deterministic(name))
+    {
+      // (dev/plan.md 3.21 (c3)) a node with no index, read whole: a 1 x 1
+      // matrix of its value (e.g. a summary s <- … in y ~ abc_gaussian(s, …))
+      if (this->deterministic_statement(name).indices.size() == 0)
+        return "arma::mat(1, 1, arma::fill::value((double)(" + this->scalar_code(node, context) + ")))";
       this->error(node, name + " is a deterministic node: use it with its indices.");
+    }
     return this->hoisted("parameters[" + quoted(name) + "]", "const arma::mat &", context);
   }
 
@@ -2399,6 +2405,88 @@ private:
 
   // the log density of target ~ dist(arguments), and (for priors) the code
   // that simulates it
+  // (dev/plan.md 3.21 (c4)) the largest value of one term's log density, as
+  // a function of its other arguments: the density at its mode — norm and
+  // mvnorm at their mean, the ABC kernels with the simulated data equal to
+  // the data — or "" if not known. The factors' maxima (their sums) bound the
+  // terms an early rejection has not evaluated yet.
+  bool density_at_mode = false;
+
+  // (dev/plan.md 3.21 (c5)) a factor that is one ABC kernel statement (no
+  // loop; its scale and p reading no parameters: only epsilon may) gets
+  // summaries: the call that writes a point's two numbers, and the kernel at
+  // the current tolerance from them; false if not such a factor
+  bool abc_summary_code(const ModelStatement &st, std::string &summary_call, std::string &from_summary_call)
+  {
+    if ((st.op != "~") || !st.loops.empty())
+      return false;
+    std::string f = st.value["function"].as_string();
+    if ((f != "abc_uniform") && (f != "abc_gaussian"))
+      return false;
+    Arguments split = this->split_arguments(st.value);
+    std::map<std::string, RecipeValue> given;
+    std::vector<std::string> order = {"summaries", "epsilon"};
+    for (size_t k = 0; (k < split.positional.size()) && (k < order.size()); ++k)
+      given[order[k]] = split.positional[k];
+    for (const auto &kv : split.named)
+      given[kv.first] = kv.second;
+    if (!given.count("summaries") || !given.count("epsilon"))
+      return false;
+    for (const std::string &fixed : {"scale", "p"})
+      if (given.count(fixed))
+      {
+        std::set<std::string> found;
+        this->read_parameters(given[fixed], found);
+        if (!found.empty())
+          return false;
+      }
+    CodeContext context;
+    std::string y = this->target_code(st, context, false);
+    std::string scale = given.count("scale") ? "arma::mat(" + this->matrix_code(given["scale"], context) + ")" : std::string("ilike_model_one()");
+    std::string p = given.count("p") ? this->scalar_code(given["p"], context) : std::string("2.0");
+    std::string epsilon = this->scalar_code(given["epsilon"], context);
+    std::string n = "(double)arma::mat(" + y + ").n_elem";
+    if (f == "abc_uniform")
+    {
+      summary_call = "ilike_model_sabc_uniform(" + y + ", " + this->matrix_code(given["summaries"], context) + ", " + scale + ", " + p + ", values)";
+      from_summary_call = "ilike_model_fabc_uniform(values, " + n + ", " + epsilon + ", " + p + ")";
+    }
+    else
+    {
+      summary_call = "ilike_model_sabc_gaussian(" + y + ", " + this->matrix_code(given["summaries"], context) + ", " + scale + ", values)";
+      from_summary_call = "ilike_model_fabc_gaussian(values, " + n + ", " + epsilon + ")";
+    }
+    return true;
+  }
+
+  std::string term_maximum_code(const ModelStatement &st, const CodeContext &context)
+  {
+    // (a term written in C++: its maximum = cpp::g, if given)
+    if ((st.op == "+=") && cpp_term(st.value))
+    {
+      std::string g = this->cpp_term_maximum(st.value);
+      return g.empty() ? std::string() : this->cpp_term_code(st.value, context, g);
+    }
+    if (st.op != "~")
+      return "";
+    std::string f = st.value["function"].as_string();
+    const RecipeValue &arguments = st.value["arguments"];
+    std::vector<std::string> keys = arguments.names();
+    auto positional = [&](size_t k) { return (arguments.size() > k) && ((k >= keys.size()) || keys[k].empty()); };
+    if ((f == "norm") && positional(0) && positional(1) && (arguments.size() == 2))
+      return this->density_code(st, "(double)(" + this->scalar_code(arguments[0], context) + ")", context);
+    if ((f == "mvnorm") && positional(0) && positional(1) && (arguments.size() == 2))
+      return this->density_code(st, "arma::mat(" + this->matrix_code(arguments[0], context) + ")", context);
+    if ((f == "abc_uniform") || (f == "abc_gaussian"))
+    {
+      this->density_at_mode = true;
+      std::string code = this->density_code(st, this->target_code(st, context, false), context);
+      this->density_at_mode = false;
+      return code;
+    }
+    return "";
+  }
+
   std::string density_code(const ModelStatement &st, const std::string &x, const CodeContext &context)
   {
     const RecipeValue &call = st.value;
@@ -2481,10 +2569,12 @@ private:
         given[kv.first] = kv.second;
       if (!given.count("summaries") || !given.count("epsilon"))
         this->error(call, f + "(s, epsilon, …): the simulated data (or summaries) s and the tolerance epsilon are needed.");
-      std::string scale = given.count("scale") ? "arma::colvec(arma::vectorise(" + this->matrix_code(given["scale"], context) + "))"
-                                               : std::string("arma::colvec(1, arma::fill::ones)");
-      std::string head = "(arma::colvec(arma::vectorise(" + x + ")), arma::colvec(arma::vectorise(" +
-                         this->matrix_code(given["summaries"], context) + ")), " + this->scalar_code(given["epsilon"], context) + ", " + scale;
+      // (the matrices passed as they are: no copies, c5)
+      std::string scale = given.count("scale") ? "arma::mat(" + this->matrix_code(given["scale"], context) + ")"
+                                               : std::string("ilike_model_one()");
+      // (at the mode, for the kernel's maximum: the simulated data equal to the data)
+      std::string summaries = this->density_at_mode ? x : this->matrix_code(given["summaries"], context);
+      std::string head = "(" + x + ", " + summaries + ", " + this->scalar_code(given["epsilon"], context) + ", " + scale;
       if (f == "abc_gaussian")
         return "ilike_model_dabc_gaussian" + head + ")";
       return "ilike_model_dabc_uniform" + head + ", " + (given.count("p") ? this->scalar_code(given["p"], context) : std::string("2.0")) + ")";
@@ -2556,24 +2646,69 @@ private:
                 "(i, reads = [mu[group[i]], sigma]) (each a variable, all of it, or an element).");
     return arguments; // (not reached)
   }
-  std::string cpp_term_code(const RecipeValue &call, const CodeContext &context)
+  // (function: the C++ function called; another one, with the same
+  // arguments, for the term's maximum)
+  std::string cpp_term_code(const RecipeValue &call, const CodeContext &context, const std::string &function = "")
   {
     const RecipeValue &arguments = call["arguments"];
     std::vector<std::string> keys = arguments.names();
     // (::f: the user's function is at global scope, and the generated function
     // around this call has arguments, such as term, that would hide it)
-    std::string code = "::" + call["function"].as_string() + "(parameters, " + context.data;
+    std::string code = "::" + (function.empty() ? call["function"].as_string() : function) + "(parameters, " + context.data;
     for (size_t k = 0; k < arguments.size(); ++k)
     {
       std::string key = (k < keys.size()) ? keys[k] : "";
-      if (key == "reads")
+      if ((key == "reads") || (key == "maximum") || (key == "kernel"))
         continue;
       if (!key.empty())
-        this->error(arguments[k], "a term written in C++ takes index arguments and reads = [...] only.");
+        this->error(arguments[k], "a term written in C++ takes index arguments, reads = [...], maximum = cpp::g and kernel = true only.");
       code += ", (int)std::lround(" + this->scalar_code(arguments[k], context) + ")";
     }
     this->cpp_term_reads(call); // (checked)
     return "(double)" + code + ")";
+  }
+
+  // (dev/plan.md 3.21 (c4)) a C++ term's settings maximum = cpp::g (its
+  // largest value, by a function with the same arguments) and kernel = true
+  // (it behaves as an ABC kernel along decreasing tolerances: the ratio of
+  // its values at two tolerances is largest at its maximum)
+  std::string cpp_term_maximum(const RecipeValue &call)
+  {
+    const RecipeValue &arguments = call["arguments"];
+    std::vector<std::string> keys = arguments.names();
+    for (size_t k = 0; k < arguments.size(); ++k)
+      if ((k < keys.size()) && (keys[k] == "maximum"))
+      {
+        if (!this->is_function_reference(arguments[k]) || (arguments[k]["namespace"].as_string() != "cpp"))
+          this->error(arguments[k], "maximum is a C++ function with the term's arguments: maximum = cpp::g.");
+        std::string g = arguments[k]["name"].as_string();
+        if (find_cpp_function_signature(this->user_code, g).empty())
+          this->error(arguments[k], "cpp::" + g + " is not defined in a cpp section.");
+        return g;
+      }
+    return "";
+  }
+  bool cpp_term_kernel(const RecipeValue &call)
+  {
+    const RecipeValue &arguments = call["arguments"];
+    std::vector<std::string> keys = arguments.names();
+    for (size_t k = 0; k < arguments.size(); ++k)
+      if ((k < keys.size()) && (keys[k] == "kernel"))
+      {
+        // (true/false are logical literals; 1/0 also accepted)
+        bool logical = (kind_of(arguments[k]) == "logical");
+        arma::mat number;
+        bool yes = (logical && arguments[k]["value"].as_bool()) ||
+                   (!logical && this->numeric(arguments[k], number) && (number.n_elem == 1) && (number(0) != 0.0));
+        bool no = (logical && !arguments[k]["value"].as_bool()) ||
+                  (!logical && this->numeric(arguments[k], number) && (number.n_elem == 1) && (number(0) == 0.0));
+        if (!yes && !no)
+          this->error(arguments[k], "kernel is true or false.");
+        if (yes && this->cpp_term_maximum(call).empty())
+          this->error(arguments[k], "kernel = true needs the term's maximum: maximum = cpp::g.");
+        return yes;
+      }
+    return false;
   }
 
   std::string term_code(const ModelStatement &st, const CodeContext &context)
@@ -2878,6 +3013,40 @@ private:
         // (C232) d/dS = -S^-1/2 + S^-1 r r' S^-1/2 (= -S^-1/2 + r r'/2 in terms of r = S^-1 (x - m))
         code += std::string("  if (arma::mat *ilike_gv = ilike_G.find(") + quoted(arguments[1]["name"].as_string()) + ")) "
                 "*ilike_gv += -0.5*arma::inv_sympd(ilike_S) + 0.5*ilike_r*ilike_r.t();\n";
+      }
+      return code + "}\n";
+    }
+    if (f == "abc_gaussian")
+    {
+      // (dev/plan.md 3.21 (c3), for pCN-MALA) y ~ abc_gaussian(s, epsilon,
+      // scale = …): sum_j log N(y_j; s_j, (epsilon scale_j)^2), so the
+      // derivative with respect to s_j is (y_j - s_j)/(epsilon scale_j)^2 (0
+      // at epsilon = Inf: the kernel is 1), passed on to s — a parameter
+      // written by its name, or a scalar expression or node (whose chain
+      // rule gradient_code writes; a C++ node has none); not with respect to
+      // epsilon or the scale
+      Arguments given = this->split_arguments(call);
+      if (given.positional.size() < 2)
+        this->error(call, "abc_gaussian(s, epsilon): the simulated data and the tolerance epsilon are needed.");
+      const RecipeValue &s_argument = given.positional[0];
+      std::string code = "{\n  arma::colvec ilike_y = arma::vectorise(" + this->target_code(st, context, false) + ");\n"
+                         "  arma::colvec ilike_s = arma::vectorise(" + this->matrix_code(s_argument, context) + ");\n"
+                         "  double ilike_e = " + this->scalar_code(given.positional[1], context) + ";\n"
+                         "  arma::colvec ilike_sc = " + (given.has("scale") ? "arma::vectorise(" + this->matrix_code(given.named["scale"], context) + ")"
+                                                                          : std::string("arma::colvec(1, arma::fill::ones)")) + ";\n"
+                         "  if (ilike_sc.n_elem == 1) ilike_sc = arma::colvec(ilike_s.n_elem, arma::fill::value(ilike_sc(0)));\n"
+                         "  arma::colvec ilike_d = std::isfinite(ilike_e) ? arma::colvec((ilike_y - ilike_s)/arma::square(ilike_e*ilike_sc))\n"
+                         "                                                : arma::colvec(ilike_s.n_elem, arma::fill::zeros);\n";
+      if ((kind_of(s_argument) == "name") && !this->data_names.count(s_argument["name"].as_string()) &&
+          !this->constant_names.count(s_argument["name"].as_string()) && !this->is_deterministic(s_argument["name"].as_string()))
+        code += "  if (arma::mat *ilike_gv = ilike_G.find(" + quoted(s_argument["name"].as_string()) +
+                ")) *ilike_gv += arma::reshape(ilike_d, ilike_gv->n_rows, ilike_gv->n_cols);\n";
+      else
+      {
+        std::string chain = this->gradient_code(s_argument, "ilike_d(0)", context);
+        if (!chain.empty())
+          code += "  if (ilike_d.n_elem != 1)\n    Rcpp::stop(\"abc_gaussian: the gradient is available for simulated data that are one number, "
+                  "or a parameter written by its name.\");\n" + indented_code(chain);
       }
       return code + "}\n";
     }
@@ -4336,35 +4505,91 @@ inline double ilike_model_dbinom(double x, double n, double p)
 // ABC kernels as distributions of observed data y given simulated s (dev/plan.md
 // 3.21 (2)): scale is a standard deviation per element; at epsilon = Inf the
 // kernel is 1 (log 0), so an SMC can start from the prior predictive
-inline arma::colvec ilike_model_abc_scale(const arma::colvec &scale, arma::uword n)
+// (dev/plan.md 3.21 (c5)) the ABC kernels evaluate element by element from
+// the matrices as they are (no copies: they are called for every point at
+// every trial tolerance); scale is one number or one per element
+inline const arma::mat &ilike_model_one()
 {
-  if (scale.n_elem == n) return scale;
-  if (scale.n_elem == 1) return arma::colvec(n, arma::fill::value(scale(0)));
-  Rcpp::stop("abc kernel: scale has " + std::to_string(scale.n_elem) + " elements, the data " + std::to_string(n) + ".");
+  static const arma::mat one(1, 1, arma::fill::ones);
+  return one;
 }
-inline double ilike_model_dabc_uniform(const arma::colvec &y, const arma::colvec &s, double epsilon, const arma::colvec &scale_in, double p)
+inline void ilike_model_abc_check(const char *kernel, const arma::mat &y, const arma::mat &s, const arma::mat &scale)
+{
+  if (y.n_elem != s.n_elem)
+    Rcpp::stop(std::string(kernel) + ": the data have " + std::to_string(y.n_elem) + " elements, the simulated data " + std::to_string(s.n_elem) + ".");
+  if ((scale.n_elem != 1) && (scale.n_elem != y.n_elem))
+    Rcpp::stop("abc kernel: scale has " + std::to_string(scale.n_elem) + " elements, the data " + std::to_string(y.n_elem) + ".");
+}
+// the kernels' summaries of a point (dev/plan.md 3.21 (c5)): values[0] the
+// scaled distance (uniform: the Lp distance; Gaussian: the sum of squares),
+// values[1] the sum of the logs of the scale; the kernel at any tolerance is
+// then a function of them alone (the densities below are made from these, so
+// a value from a summary is the density's to the last bit)
+inline void ilike_model_sabc_uniform(const arma::mat &y, const arma::mat &s, const arma::mat &scale, double p, double *values)
+{
+  ilike_model_abc_check("abc_uniform", y, s, scale);
+  const arma::uword n = y.n_elem;
+  const bool one_scale = (scale.n_elem == 1);
+  double distance = 0.0, log_scale = 0.0;
+  for (arma::uword k = 0; k < n; ++k)
+  {
+    const double sc = one_scale ? scale(0) : scale(k);
+    const double d = std::abs(y(k) - s(k))/sc;
+    if (!one_scale) log_scale += std::log(sc);
+    if (std::isinf(p)) distance = std::max(distance, d);
+    else if (p == 2.0) distance += d*d;
+    else if (p == 1.0) distance += d;
+    else distance += std::pow(d, p);
+  }
+  if (one_scale) log_scale = double(n)*std::log(scale(0));
+  if (!std::isinf(p))
+    distance = (p == 2.0) ? std::sqrt(distance) : ((p == 1.0) ? distance : std::pow(distance, 1.0/p));
+  values[0] = distance;
+  values[1] = log_scale;
+}
+inline double ilike_model_fabc_uniform(const double *values, double n, double epsilon, double p)
 {
   if (std::isinf(epsilon)) return 0.0;
-  if (y.n_elem != s.n_elem)
-    Rcpp::stop("abc_uniform: the data have " + std::to_string(y.n_elem) + " elements, the simulated data " + std::to_string(s.n_elem) + ".");
-  double n = double(y.n_elem);
-  arma::colvec scale = ilike_model_abc_scale(scale_in, y.n_elem);
-  arma::colvec d = arma::abs(y - s)/scale;
-  double distance = std::isinf(p) ? d.max() : std::pow(arma::accu(arma::pow(d, p)), 1.0/p);
-  if (!(distance <= epsilon)) return -std::numeric_limits<double>::infinity();
+  if (!(values[0] <= epsilon)) return -std::numeric_limits<double>::infinity();
   // 1 / the volume of the scaled Lp ball of radius epsilon
   double log_unit_ball = std::isinf(p) ? n*std::log(2.0) : n*(std::log(2.0) + std::lgamma(1.0 + 1.0/p)) - std::lgamma(1.0 + n/p);
-  return -log_unit_ball - n*std::log(epsilon) - arma::accu(arma::log(scale));
+  return -log_unit_ball - n*std::log(epsilon) - values[1];
 }
-inline double ilike_model_dabc_gaussian(const arma::colvec &y, const arma::colvec &s, double epsilon, const arma::colvec &scale_in)
+inline double ilike_model_dabc_uniform(const arma::mat &y, const arma::mat &s, double epsilon, const arma::mat &scale, double p)
 {
   if (std::isinf(epsilon)) return 0.0;
-  if (y.n_elem != s.n_elem)
-    Rcpp::stop("abc_gaussian: the data have " + std::to_string(y.n_elem) + " elements, the simulated data " + std::to_string(s.n_elem) + ".");
-  double n = double(y.n_elem);
-  arma::colvec scale = ilike_model_abc_scale(scale_in, y.n_elem);
-  arma::colvec z = (y - s)/(epsilon*scale);
-  return -0.5*n*std::log(2.0*M_PI) - n*std::log(epsilon) - arma::accu(arma::log(scale)) - 0.5*arma::accu(z % z);
+  double values[2];
+  ilike_model_sabc_uniform(y, s, scale, p, values);
+  return ilike_model_fabc_uniform(values, double(y.n_elem), epsilon, p);
+}
+inline void ilike_model_sabc_gaussian(const arma::mat &y, const arma::mat &s, const arma::mat &scale, double *values)
+{
+  ilike_model_abc_check("abc_gaussian", y, s, scale);
+  const arma::uword n = y.n_elem;
+  const bool one_scale = (scale.n_elem == 1);
+  double sum_d2 = 0.0, log_scale = 0.0;
+  for (arma::uword k = 0; k < n; ++k)
+  {
+    const double sc = one_scale ? scale(0) : scale(k);
+    const double d = (y(k) - s(k))/sc;
+    sum_d2 += d*d;
+    if (!one_scale) log_scale += std::log(sc);
+  }
+  if (one_scale) log_scale = double(n)*std::log(scale(0));
+  values[0] = sum_d2;
+  values[1] = log_scale;
+}
+inline double ilike_model_fabc_gaussian(const double *values, double n, double epsilon)
+{
+  if (std::isinf(epsilon)) return 0.0;
+  return -0.5*n*std::log(2.0*M_PI) - n*std::log(epsilon) - values[1] - 0.5*values[0]/(epsilon*epsilon);
+}
+inline double ilike_model_dabc_gaussian(const arma::mat &y, const arma::mat &s, double epsilon, const arma::mat &scale)
+{
+  if (std::isinf(epsilon)) return 0.0;
+  double values[2];
+  ilike_model_sabc_gaussian(y, s, scale, values);
+  return ilike_model_fabc_gaussian(values, double(y.n_elem), epsilon);
 }
 
 )ILIKE";
@@ -4491,6 +4716,69 @@ inline double ilike_model_dabc_gaussian(const arma::colvec &y, const arma::colve
                                       indented + "  }\n" + std::string("  catch (const ilike_model_outside &)\n  {\n    return -std::numeric_limits<double>::infinity(); // (an index that reads parameters is outside its variable)\n  }\n") + "}\n\n";
       RecipeValue factor = RecipeValue::list();
       factor.push_back(this->placeholder(function, "evaluate_log_likelihood"), "evaluate_log_likelihood");
+
+      // (dev/plan.md 3.21 (c4)) its largest value given the parameters its
+      // terms' maxima read (the sum of the terms' maxima), when every term's
+      // is known: for early rejection, which bounds the terms not evaluated
+      // yet by it
+      {
+        std::string maximum_body = "double log_maximum = 0.0;\n";
+        bool known = true;
+        for (const ModelStatement &st : this->model_statements)
+        {
+          if (!this->likelihood_term(st) || st.variable != first.variable)
+            continue;
+          CodeContext maximum_context;
+          for (const ModelLoop &loop : st.loops) maximum_context.indices.insert(loop.index);
+          Hoist hoist;
+          maximum_context.hoist = &hoist;
+          std::string term = this->term_maximum_code(st, maximum_context);
+          if (term.empty())
+          {
+            known = false;
+            break;
+          }
+          CodeContext fresh;
+          maximum_body += "{\n" + hoist.declarations + this->loops_code(st, fresh, "log_maximum += " + term + ";\n", "") + "}\n";
+        }
+        if (known)
+        {
+          maximum_body += "return log_maximum;\n";
+          std::string maximum_function = "ilike_model_log_maximum_" + first.variable;
+          std::string indented_maximum;
+          std::stringstream maximum_lines(maximum_body);
+          std::string maximum_line;
+          while (std::getline(maximum_lines, maximum_line)) indented_maximum += "  " + maximum_line + "\n";
+          this->deferred_function_code += "double " + maximum_function + "(const Parameters &parameters, const Data &data)\n{\n  try\n  {\n" +
+                                          indented_maximum + "  }\n  catch (const ilike_model_outside &)\n  {\n    return arma::datum::inf; // (not known here)\n  }\n}\n\n";
+          factor.push_back(this->placeholder(maximum_function, "evaluate_log_likelihood"), "maximum_log_likelihood");
+        }
+      }
+
+      // (dev/plan.md 3.21 (c5)) a factor that is one ABC kernel: its points'
+      // summaries, from which the kernel at any tolerance is computed
+      {
+        const ModelStatement *only = NULL;
+        size_t count = 0;
+        for (const ModelStatement &st : this->model_statements)
+          if (this->likelihood_term(st) && st.variable == first.variable)
+          {
+            only = &st;
+            ++count;
+          }
+        std::string summary_call, from_summary_call;
+        if ((count == 1) && this->abc_summary_code(*only, summary_call, from_summary_call))
+        {
+          std::string summary_function = "ilike_model_abc_summary_" + first.variable;
+          std::string from_function = "ilike_model_abc_from_summary_" + first.variable;
+          this->deferred_function_code += "void " + summary_function + "(const Parameters &parameters, const Data &data, double *values)\n{\n  " +
+                                          summary_call + ";\n}\n\n";
+          this->deferred_function_code += "double " + from_function + "(const double *values, const Parameters &parameters, const Data &data)\n{\n  return " +
+                                          from_summary_call + ";\n}\n\n";
+          factor.push_back(this->placeholder(summary_function, "abc_summary"), "abc_summary");
+          factor.push_back(this->placeholder(from_function, "abc_from_summary"), "abc_from_summary");
+        }
+      }
 
       // its plate (I4b): the same terms, in the same order
       std::vector<const ModelStatement*> statements;
@@ -4666,8 +4954,12 @@ inline double ilike_model_dabc_gaussian(const arma::colvec &y, const arma::colve
         statements.push_back(&this->model_statements[k]);
       if (inner)
       {
-        // (no gradient or plate: the inner importance sampler only simulates
-        // from this factor, and cancels it)
+        // (no plate: the inner algorithm cancels this factor in its weights;
+        // its gradient is for gradient-based moves on u in an inner SMC, e.g.
+        // pcn_mala, dev/plan.md 3.21 (c3))
+        std::string gradient = this->generate_gradient("prior" + suffix, statements, true);
+        if (!gradient.empty())
+          factor.push_back(this->placeholder(gradient, "evaluate_gradient_log_prior"), "evaluate_gradient_log_prior");
         inner_prior_factor = factor;
         inner_prior_reads = this->statements_read(statements);
         continue;
@@ -4828,6 +5120,21 @@ inline double ilike_model_dabc_gaussian(const arma::colvec &y, const arma::colve
     node.push_back(RecipeValue(u), "model_file");
     node.push_back(inner, "model");
     node.push_back(parameters, "parameters");
+    // (dev/plan.md 3.21 (c4)) the data depending on u are ABC kernels only:
+    // an inner SMC through decreasing tolerances may then stop early in an
+    // outer MCMC move (its increments are bounded by the kernels' maxima)
+    bool kernels_only = true;
+    for (const ModelStatement &st : this->model_statements)
+      if (this->likelihood_term(st) &&
+          (std::find(inner_observed.begin(), inner_observed.end(), st.variable) != inner_observed.end()))
+      {
+        std::string f = (st.op == "~") ? st.value["function"].as_string() : std::string();
+        bool kernel = (f == "abc_uniform") || (f == "abc_gaussian") ||
+                      ((st.op == "+=") && cpp_term(st.value) && this->cpp_term_kernel(st.value));
+        if (!kernel)
+          kernels_only = false;
+      }
+    node.push_back(RecipeValue(kernels_only), "kernels_only");
     RecipeValue factor = RecipeValue::list();
     factor.push_back(node, "algorithmic_likelihood");
     size_t position = this->factor_numbers.at(u) - 1;
@@ -6363,8 +6670,12 @@ inline double ilike_model_dabc_gaussian(const arma::colvec &y, const arma::colve
                       " (doubly intractable: exchange, SAV, ABC) are planned (dev/plan.md 3.20).");
       }
     }
-    if ((kind_of(call) == "call") && (call["function"].as_string() == "nuts") && call["namespace"].as_string().empty())
+    if ((kind_of(call) == "call") && ((call["function"].as_string() == "nuts") || (call["function"].as_string() == "slice")) &&
+        call["namespace"].as_string().empty())
     {
+      // (slice, dev/plan.md 3.21 (c3): lowered in the same way, its
+      // settings in a proposal slice(…); the recipe makes it a SliceMCMC)
+      const std::string own = call["function"].as_string();
       // move m = nuts(x, step = …) (C210): a move of its own, lowered as a
       // Metropolis-Hastings move whose proposal is nuts(…) (its Hamiltonian
       // system); the recipe makes it a NoUTurnMCMC. The move's own arguments
@@ -6380,7 +6691,7 @@ inline double ilike_model_dabc_gaussian(const arma::colvec &y, const arma::colve
           continue;
         inner.push_back(arguments[i], key);
       }
-      outer.push_back(call_with(call, "nuts", inner), "");
+      outer.push_back(call_with(call, own, inner), "");
       for (size_t i = 0; i < arguments.size(); ++i)
       {
         std::string key = (i < keys.size()) ? keys[i] : "";
@@ -6397,7 +6708,7 @@ inline double ilike_model_dabc_gaussian(const arma::colvec &y, const arma::colve
       {"independent_mh", {"imh", 2}}, {"unadjusted", {"unadjusted", 4}}};
     if (kind_of(call) != "call" || !kinds.count(call["function"].as_string()))
       this->error(statement["value"], "a move is metropolis(…), metropolis_hastings(…), independent_mh(…), unadjusted(…), "
-                  "nuts(…) or gibbs(…).");
+                  "nuts(…), slice(…) or gibbs(…).");
     std::string kind = call["function"].as_string();
     Move move;
     move.name = name;
@@ -6448,7 +6759,7 @@ inline double ilike_model_dabc_gaussian(const arma::colvec &y, const arma::colve
         if ((kind_of(item) != "call") || this->is_function_value(item))
           this->error(item, "choose's proposals are built-in proposals (norm_rw, langevin, hmc, …).");
         std::string type = this->builtin_name(item);
-        if ((type == "choose") || (type == "nuts") || (type == "normal_block"))
+        if ((type == "choose") || (type == "nuts") || (type == "slice") || (type == "normal_block"))
           this->error(item, "choose's proposals are built-in proposals of metropolis_hastings (norm_rw, langevin, hmc, …).");
         if (!role_exists(type, BuiltinRole::MHProposal))
           find_builtin(type, BuiltinRole::MHProposal);
@@ -6505,6 +6816,8 @@ inline double ilike_model_dabc_gaussian(const arma::colvec &y, const arma::colve
       std::string type = this->builtin_name(proposal);
       if ((type == "nuts") && !this->lowering_nuts)
         this->error(proposal, "nuts is a move of its own, not a proposal: move m = nuts(x, step = …).");
+      if ((type == "slice") && !this->lowering_nuts)
+        this->error(proposal, "slice is a move of its own, not a proposal: move m = slice(x, lower = …, upper = …).");
       if (((type == "normal_block") || (type == "dirichlet_block") || (type == "normal_invgamma_block")) && !this->lowering_gibbs_block)
         this->error(proposal, type + " is not a proposal to write: write move m = gibbs(…).");
       if (!role_exists(type, role))

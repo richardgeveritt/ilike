@@ -72,6 +72,7 @@ ParticleFilter::ParticleFilter(RandomNumberGenerator* rng_in,
   this->predictions_per_update = predictions_per_update_in;
   this->update_time_step = update_time_step_in;
   this->current_time = initial_time_in;
+  this->initial_time = initial_time_in;
   this->current_index = this->first_index;
   
   this->index.reset(new HMMIndex(evaluated_in_initial_weight_update->get_indices(),
@@ -167,6 +168,10 @@ void ParticleFilter::make_copy(const ParticleFilter &another)
   this->predictions_per_update = another.predictions_per_update;
   this->update_time_step = another.update_time_step;
   this->current_time = another.current_time;
+  this->initial_time = another.initial_time;
+  this->follows_caller_target = another.follows_caller_target;
+  this->followed_variable = another.followed_variable;
+  this->followed_steps = another.followed_steps;
   this->current_index = another.current_index;
   this->lag = another.lag;
   this->transition_proposal_is_evaluated = another.transition_proposal_is_evaluated;
@@ -189,6 +194,7 @@ SMCOutput* ParticleFilter::specific_initialise_smc()
   SMCOutput* output = new SMCOutput(this, this->lag, this->lag_proposed, this->results_name);
   this->first_index = 0;
   this->current_index = this->first_index;
+  this->current_time = this->initial_time; // (it carried over from the previous run: c2')
   this->factors->set_data(this->current_index);
   this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
   this->sequencer.schedule_parameters[this->time_name] = this->current_time;
@@ -249,6 +255,7 @@ void ParticleFilter::evaluate_smc(SMCOutput* current_state)
   else
   {
     this->current_index = this->first_index;
+    this->current_time = this->initial_time; // (it carried over from the previous run: c2')
     this->factors->set_data(this->current_index);
     this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
     this->sequencer.schedule_parameters[this->time_name] = this->current_time;
@@ -418,6 +425,7 @@ SMCOutput* ParticleFilter::specific_initialise_smc(const Parameters &conditioned
   SMCOutput* output = new SMCOutput(this, this->lag, this->lag_proposed, this->results_name);
   this->first_index = 0;
   this->current_index = this->first_index;
+  this->current_time = this->initial_time; // (it carried over from the previous run: c2')
   this->factors->set_data(this->current_index);
   this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
   this->sequencer.schedule_parameters[this->time_name] = this->current_time;
@@ -481,6 +489,7 @@ void ParticleFilter::evaluate_smc(SMCOutput* current_state,
   else
   {
     this->current_index = this->first_index;
+    this->current_time = this->initial_time; // (it carried over from the previous run: c2')
     this->factors->set_data(this->current_index);
     this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
     this->sequencer.schedule_parameters[this->time_name] = this->current_time;
@@ -504,7 +513,8 @@ void ParticleFilter::evaluate_smcfixed_part_smc(SMCOutput* current_state,
 
 bool ParticleFilter::defers_simulation() const
 {
-  return this->sequencer_limit_is_fixed && !this->transition_proposal_is_evaluated && !this->proposal_is_evaluated;
+  return !this->follows_caller_target && this->sequencer_limit_is_fixed &&
+    !this->transition_proposal_is_evaluated && !this->proposal_is_evaluated;
 }
 
 // The likelihood estimate is the product over the steps of the mean weight,
@@ -552,6 +562,30 @@ double ParticleFilter::run_with_threshold(SMCOutput* simulation,
 void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current_state,
                                                                   const Parameters &conditioned_on_parameters)
 {
+  if (this->follows_caller_target)
+  {
+    // (c2') a new output is run through the observations committed so far;
+    // afterwards an evaluation is a trial at the caller's current number of
+    // observations: one more than committed, or the same
+    if (!current_state->caught_up)
+    {
+      this->follow_from_start(current_state, conditioned_on_parameters);
+      return;
+    }
+    size_t target = this->observations_at(conditioned_on_parameters);
+    double value = current_state->committed_log_likelihood;
+    if ((target > current_state->followed_steps) && (value != -arma::datum::inf))
+    {
+      if (target != current_state->followed_steps + 1)
+        Rcpp::stop("SMC^2: data tempering of a particle filter takes in one observation at a time (data(..., anneal = false) "
+                   "with a fraction going up by 1/n each step).");
+      this->set_time_step(this->first_index + current_state->followed_steps);
+      value = value + this->weight_current(current_state);
+    }
+    current_state->log_likelihood = value;
+    current_state->set_latest_llhd(value);
+    return;
+  }
   // set sequencer to have values from conditioned_on_parameters
   if (!this->sequencer_limit_is_fixed)
     this->sequencer.set_next_with_parameter(conditioned_on_parameters);
@@ -675,6 +709,7 @@ void ParticleFilter::subsample_evaluate_smc(SMCOutput* current_state)
   else
   {
     this->current_index = this->first_index;
+    this->current_time = this->initial_time; // (it carried over from the previous run: c2')
     this->factors->set_data(this->current_index);
     this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
     this->sequencer.schedule_parameters[this->time_name] = this->current_time;
@@ -794,6 +829,7 @@ void ParticleFilter::subsample_evaluate_smc(SMCOutput* current_state,
   else
   {
     this->current_index = this->first_index;
+    this->current_time = this->initial_time; // (it carried over from the previous run: c2')
     this->factors->set_data(this->current_index);
     this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
     this->sequencer.schedule_parameters[this->time_name] = this->current_time;
@@ -1029,6 +1065,115 @@ void ParticleFilter::weight_in_chunks(SMCOutput* current_state)
                      }
                    });
   this->the_worker->set_unnormalised_log_incremental_weights(weights);
+}
+
+
+// --- SMC^2: the filter following data tempering (dev/plan.md 3.21 (c2')) ----
+
+void ParticleFilter::set_follows_caller_target(const std::string &fraction_variable)
+{
+  this->follows_caller_target = true;
+  this->followed_variable = fraction_variable;
+  this->smcfixed_flag = false;
+  this->force_rich_generations = true;
+  this->compact_stored_output = false;
+}
+
+// the number of observations in the caller's target: ceil(n fraction), as
+// data(…, anneal = false) adds whole data points to factors of model
+// statements (allowing for rounding: a fraction written as j/n gives j)
+size_t ParticleFilter::observations_at(const Parameters &conditioned_on_parameters) const
+{
+  double fraction = conditioned_on_parameters[this->followed_variable][0];
+  double n = double(this->observations());
+  double k = std::ceil(n*fraction - 1e-9*n);
+  if (k < 0.0) k = 0.0;
+  if (k > n) k = n;
+  return size_t(k);
+}
+
+void ParticleFilter::set_time_step(size_t step)
+{
+  this->current_index = step;
+  this->current_time = this->initial_time + double(step - this->first_index)*this->update_time_step;
+  this->sequencer.schedule_parameters[this->index_name] = this->current_index;
+  this->sequencer.schedule_parameters[this->time_name] = this->current_time;
+  this->factors->set_data(this->current_index);
+  this->index->set_time_index(this->current_index);
+}
+
+// the current particles weighted by the observation at the current time (the
+// weights start again from the step's starting weights: no state is kept);
+// the log of the estimated ratio
+double ParticleFilter::weight_current(SMCOutput *current_state)
+{
+  if (current_state->number_of_smc_iterations() == 1)
+    this->the_worker->weight(this->index.get(), current_state->back());
+  else
+    this->the_worker->pf_weight(this->index.get(), current_state->back(), *(current_state->end() - 2),
+                                this->transition_proposal_is_evaluated ? this->transition_proposal.get() : NULL);
+  current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
+  return current_state->calculate_latest_log_normalising_constant_ratio();
+}
+
+// the generation's entries (one log likelihood and one time each)
+static void record_filter_generation(SMCOutput *current_state)
+{
+  current_state->set_llhd(current_state->committed_log_likelihood);
+  current_state->set_time_and_reset_start();
+}
+
+// keep the weighting by the next observation, then (unless it was the last)
+// resample and propagate to the next time
+void ParticleFilter::commit_observation(SMCOutput *current_state, const Parameters &conditioned_on_parameters)
+{
+  size_t k = current_state->followed_steps; // (committed so far)
+  this->set_time_step(this->first_index + k);
+  current_state->committed_log_likelihood += this->weight_current(current_state);
+  current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
+  current_state->set_latest_llhd(current_state->committed_log_likelihood);
+  current_state->followed_steps = k + 1;
+  if (current_state->followed_steps > this->followed_steps)
+    this->followed_steps = current_state->followed_steps;
+  if ((current_state->followed_steps < this->observations()) && (current_state->committed_log_likelihood != -arma::datum::inf))
+  {
+    this->simulate_smc(current_state, conditioned_on_parameters); // (resample, then increment_time_index and move)
+    record_filter_generation(current_state);
+  }
+}
+
+void ParticleFilter::advance_at_caller_target_smc(SMCOutput *current_state, const Parameters &conditioned_on_parameters)
+{
+  if (!this->follows_caller_target || !current_state->caught_up)
+    return;
+  size_t target = this->observations_at(conditioned_on_parameters);
+  if ((current_state->committed_log_likelihood != -arma::datum::inf) && (target == current_state->followed_steps + 1))
+    this->commit_observation(current_state, conditioned_on_parameters);
+  current_state->log_likelihood = current_state->committed_log_likelihood;
+}
+
+// a new output (its particles drawn at the first time): committed and moved
+// through the observations committed so far (the same steps as an output
+// that has followed from the caller's start: the PMMH ratio needs the same
+// law), then a trial at the caller's current observation if it is one more
+void ParticleFilter::follow_from_start(SMCOutput *current_state, const Parameters &conditioned_on_parameters)
+{
+  size_t target = this->observations_at(conditioned_on_parameters);
+  size_t committed = std::min(this->followed_steps, target);
+  current_state->followed_steps = 0;
+  current_state->committed_log_likelihood = 0.0;
+  record_filter_generation(current_state);
+  while ((current_state->followed_steps < committed) && (current_state->committed_log_likelihood != -arma::datum::inf))
+    this->commit_observation(current_state, conditioned_on_parameters);
+  current_state->caught_up = true;
+  double value = current_state->committed_log_likelihood;
+  if ((target > current_state->followed_steps) && (value != -arma::datum::inf))
+  {
+    this->set_time_step(this->first_index + current_state->followed_steps);
+    value = value + this->weight_current(current_state);
+    current_state->set_latest_llhd(value);
+  }
+  current_state->log_likelihood = value;
 }
 
 }

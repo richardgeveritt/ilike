@@ -282,4 +282,21 @@ bool VectorFactors::advances_at_caller_target() const
   return false;
 }
 
+
+bool VectorFactors::any_estimate() const
+{
+  for (const auto &estimator : this->likelihood_estimators)
+    if (estimator->is_estimate())
+      return true;
+  return false;
+}
+
+
+void VectorFactors::set_outputs_written(bool written)
+{
+  for (auto &estimator : this->likelihood_estimators)
+    if (estimator != NULL)
+      estimator->set_outputs_written(written);
+}
+
 }

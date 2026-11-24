@@ -25,6 +25,7 @@ SMC_with_MCMC(
   grain_size = 64,
   check_factor_index = FALSE,
   waste_free_chains = 0,
+  move_only_after_resampling = FALSE,
   progress = getOption("ilike.progress", interactive()),
   algorithm = NULL
 )
@@ -61,6 +62,8 @@ SMC_with_MCMC(
 \item{verify_cpp_function_types}{(optional) If TRUE, check the types of the parameters of user-defined .cpp functions. If FALSE (default), types are not checked.}
 
 \item{keep_temporary_recipe_code}{(optional) If FALSE (default), the .cpp file generated for compilation is deleted. If TRUE,}
+
+\item{move_only_after_resampling}{(optional) If TRUE, the particles are moved only at the steps where they are resampled (as in SMC^2, Chopin, Jacob and Papaspiliopoulos, 2013); at the other steps they go to the next target unmoved. Default FALSE: moved at every step.}
 
 \item{seed}{(optional) The seed for the random number generator.}
 

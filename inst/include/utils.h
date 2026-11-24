@@ -230,7 +230,12 @@ inline double scaled_Lp_distance(const arma::colvec &x,
                                  const arma::colvec &s,
                                  double p)
 {
-  return std::pow(arma::sum(arma::pow((x-y)/s,p)),1/p);
+  // (the absolute differences: without them, for odd p positive and negative
+  // differences cancelled; p = Inf: the largest, dev/plan.md C253)
+  arma::colvec d = arma::abs((x-y)/s);
+  if (std::isinf(p))
+    return d.n_elem == 0 ? 0.0 : d.max();
+  return std::pow(arma::sum(arma::pow(d,p)),1/p);
 }
 
 /*!

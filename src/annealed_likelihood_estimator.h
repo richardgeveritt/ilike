@@ -22,6 +22,8 @@ class AnnealedLikelihoodEstimator : public LikelihoodEstimator
 {
   
 public:
+  bool is_estimate() const { return (this->estimator != NULL) && this->estimator->is_estimate(); } // (dev/plan.md 3.21 (c3))
+
   
   AnnealedLikelihoodEstimator();
   

@@ -19,6 +19,7 @@ namespace ilike
   class SMCOutput;
   class Index;
   class ImportanceSampler;
+  class SMCMCMCMove;
 
   class Sequencer
   {
@@ -81,6 +82,7 @@ namespace ilike
 
   protected:
     friend ImportanceSampler;
+    friend SMCMCMCMove; // (dev/plan.md 3.21 (c4): the schedule, for early stopping)
 
     void setup(SMCWorker *the_worker_in,
                const std::vector<std::vector<double>> &schedules_in,

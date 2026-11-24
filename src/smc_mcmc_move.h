@@ -9,6 +9,8 @@
 namespace ilike
 {
 
+class AdaptiveIterationsMCMCTermination;
+
 class ESJDAdaptor;
 
 class SMCOutput;
@@ -224,6 +226,30 @@ public:
 
 protected:
 
+  // (dev/plan.md 3.21 (c4)) early stopping of a run inside an MCMC move's
+  // proposal (rare-event ABC-MCMC): with ABC kernels as the changing factors
+  // and tolerances that never increase, each step's increment is at most
+  // log max K_t - log max K_{t-1}, so after step s the estimate is at most
+  // the estimate so far + log max K_T - log max K_s (the factors' maxima at
+  // the final and the current tolerance)
+  bool stops_early = false;
+  double run_threshold = arma::datum::nan;
+  bool run_stopped = false;
+  double remaining_maximum(const Parameters &conditioned_on_parameters) const;
+public:
+  void set_stops_early(bool kernels_only);
+  bool defers_simulation() const { return this->stops_early && !this->follows_caller_target; }
+  double run_with_threshold(SMCOutput* simulation,
+                            const Parameters &conditioned_on_parameters,
+                            double threshold,
+                            bool &below);
+protected:
+
+  // (dev/plan.md 3.21 (c3)) adaptive_iterations
+  AdaptiveIterationsMCMCTermination* adaptive_termination() const;
+  void start_adaptive_moves();
+  void finish_adaptive_moves(Particles* next_particles);
+
   bool follows_caller_target = false;
   std::string followed_variable;
   std::vector<double> followed_targets; // the caller's targets so far
@@ -283,8 +309,17 @@ public:
   // MCMC(…) runs its chains as one SMC move step: choose has no particles to
   // learn from there (C224)
   void set_chains_only(bool chains_only_in) { this->chains_only = chains_only_in; }
+  // (dev/plan.md 3.21 (c2')) move the particles only at the steps where they
+  // are resampled, as in SMC^2 (Chopin et al. 2013): at the other steps they
+  // go to the next generation unmoved
+  void set_move_only_after_resampling(bool move_only_after_resampling_in)
+  {
+    this->move_only_after_resampling = move_only_after_resampling_in;
+  }
 protected:
   bool chains_only = false;
+  bool move_only_after_resampling = false;
+  void carry_generation(SMCOutput* current_state);
   std::vector<std::pair<int, ESJDAdaptor*>> tuners;
   bool tuners_found = false;
   std::vector<ParticleTuning> particle_tunings;

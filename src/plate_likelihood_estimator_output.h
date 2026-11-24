@@ -36,6 +36,11 @@ public:
 
   void evaluate_smcfixed_part(const Parameters &parameters);
   void evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters);
+  // (dev/plan.md 3.21 (c5)) an ABC kernel factor that changes along the
+  // sequence: its two summary numbers, kept when the smcfixed part is evaluated
+  int adaptive_summary_size() const;
+  void adaptive_summary(double *values) const;
+  double smcadaptive_from_summary(const double *values, const Parameters &parameters) const;
   void subsample_evaluate_smcfixed_part(const Parameters &parameters);
   void subsample_evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters);
 
@@ -73,6 +78,7 @@ public:
   void prepare_in_place(const Parameters &parameters);
 
 protected:
+  double kernel_values[2] = {0.0, 0.0};
 
   bool reinitialise(const Parameters &parameters);
   bool assign_from(const LikelihoodEstimatorOutput &another);

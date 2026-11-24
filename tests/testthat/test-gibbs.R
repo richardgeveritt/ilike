@@ -82,7 +82,7 @@ test_that("gibbs is refused where the full conditional is not normal", {
     expect_error(ilike::compile(f), message, fixed = TRUE)
   }
   check(c("  mu ~ norm(0, 1)", "  for (i in 1:2) y[i] ~ norm(exp(mu), 1)"), "move m = gibbs(mu)",
-        "gibbs(mu): mu is not discrete (bern, binom, or values = [...]), and its full conditional is not normal: mu enters the mean nonlinearly: mu is inside exp(…)")
+        "gibbs(mu): mu is not discrete (bern, binom, or values = [...]), and its full conditional is not normal: mu enters the mean nonlinearly: mu is inside exp(") # (ASCII only: the message continues with an ellipsis)
   check(c("  mu ~ norm(0, 1)", "  s ~ lnorm(0, 1)", "  for (i in 1:2) y[i] ~ norm(mu, s)"), "move m = gibbs(s)",
         "s's distribution is lnorm")
   check(c("  mu ~ norm(0, 1)", "  for (i in 1:2) y[i] ~ norm(mu, abs(mu) + 1)"), "move m = gibbs(mu)", "mu is in the standard deviation")

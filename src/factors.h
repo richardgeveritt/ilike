@@ -44,6 +44,11 @@ public:
   // (dev/plan.md 3.21 (c2)) TRUE if a factor's estimator keeps an inner state
   // that follows the SMC target (LikelihoodEstimator::advances_at_caller_target)
   virtual bool advances_at_caller_target() const { return false; }
+  // (dev/plan.md 3.21 (c3)) TRUE if a factor's value is an estimate
+  // (LikelihoodEstimator::is_estimate)
+  virtual bool any_estimate() const { return false; }
+  // (c5) tell the estimators whether their outputs will be written
+  virtual void set_outputs_written(bool written) {}
 
   // True if every factor is in index or in other_index (other_index may be
   // NULL), the estimators of index support restore_from_summary and those of

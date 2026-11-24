@@ -1,4 +1,6 @@
 #include "recipe_internal.h"
+#include "slice_mcmc.h"
+#include "slice_point_proposal_kernel.h"
 #include "choice_proposal_kernel.h"
 #include "esjd_adaptor.h"
 #include "hmc_proposal_kernel.h"
@@ -732,7 +734,17 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
           RecipeValue mh_info = proposal_infos[simulate_mh_proposal_index];
           bool nuts = mh_info.contains("mh_proposal") && mh_info["mh_proposal"].is_list() &&
                       mh_info["mh_proposal"].contains("type") && (mh_info["mh_proposal"]["type"].as_string() == "nuts");
-          if (nuts) {
+          bool slice = mh_info.contains("mh_proposal") && mh_info["mh_proposal"].is_list() &&
+                       mh_info["mh_proposal"].contains("type") && (mh_info["mh_proposal"]["type"].as_string() == "slice");
+          if (slice) {
+            // slice sampling (dev/plan.md 3.21 (c3)): its own move, with the
+            // settings held by its proposal
+            SlicePointProposalKernel *settings = dynamic_cast<SlicePointProposalKernel*>(proposal);
+            if (order_of_mcmc.size() > 1)
+              mcmc = new SliceMCMC(1, settings);
+            else
+              mcmc = new SliceMCMC(termination_method, settings);
+          } else if (nuts) {
             HMCProposalKernel *system = dynamic_cast<HMCProposalKernel*>(proposal);
             if (order_of_mcmc.size() > 1)
               mcmc = new NoUTurnMCMC(1, system);

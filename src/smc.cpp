@@ -153,6 +153,7 @@ void SMC::operator=(const SMC &another)
 void SMC::make_copy(const SMC &another)
 {
   this->write_factor_output = another.write_factor_output;
+  this->outputs_written = another.outputs_written;
   this->compact_stored_output = another.compact_stored_output;
   this->chunk_size = another.chunk_size;
   this->force_rich_generations = another.force_rich_generations;
@@ -820,4 +821,12 @@ void SMC::specific_change_data(Data* new_data)
 {
   
 }
+
+void SMC::set_outputs_written(bool written)
+{
+  this->outputs_written = written;
+  if (this->factors != NULL)
+    this->factors->set_outputs_written(written && this->write_factor_output);
+}
+
 }

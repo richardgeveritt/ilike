@@ -28,8 +28,14 @@ class ParticleSimulator;
 class SMC : public LikelihoodEstimator
 {
 public:
+  bool is_estimate() const { return true; } // (dev/plan.md 3.21 (c3))
+
 
   void set_write_factor_output(bool write_factor_output_in) { this->write_factor_output = write_factor_output_in; }
+  // (dev/plan.md 3.21 (c5)) whether this SMC's output will be written; its
+  // factors' estimators are told whether theirs will (written, and factor
+  // outputs written)
+  void set_outputs_written(bool written);
   void set_compact_stored_output(bool compact_stored_output_in) { this->compact_stored_output = compact_stored_output_in; }
   void set_chunk_size(size_t chunk_size_in) { this->chunk_size = chunk_size_in; }
   void set_force_rich_generations(bool force_rich_generations_in) { this->force_rich_generations = force_rich_generations_in; }
@@ -281,6 +287,7 @@ protected:
   // iterationK/factorJ_* files). Set from the recipe (R argument
   // write_factor_output, default TRUE).
   bool write_factor_output = true;
+  bool outputs_written = true;
 
   // Set for an SMC run used inside a factor (e.g. an algorithmic likelihood):
   // at the end of each run its stored generations are kept in compact form

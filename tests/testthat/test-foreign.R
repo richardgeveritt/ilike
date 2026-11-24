@@ -6,7 +6,7 @@ foreign_ext = function(f) system.file("extdata", f, package = "ilike")
 foreign_mcmc = function(recipe, name)
 {
   on.exit(unlink(name, recursive = TRUE), add = TRUE)
-  ilike::MCMC(recipe, results_name = name, initial_values = list(list("θ" = 1)), seed = 1)
+  ilike::MCMC(recipe, results_name = name, initial_values = list(list("theta" = 1)), seed = 1)
   ilike::load_mcmc_output(name)$Value
 }
 
@@ -52,7 +52,7 @@ test_that("old files read through the converter give the same results as the old
               c("test_rforms_gaussian_posterior.ilike", "test_rforms_mh_proposal.ilike"))
   for (k in seq_along(sets))
   {
-    start = if (k == 2) list(theta1 = 1, theta2 = 1) else if (k == 3) list("θ" = 1) else list(theta = 1)
+    start = if (k == 2) list(theta1 = 1, theta2 = 1) else if (k == 3) list("theta" = 1) else list(theta = 1)
     run = function(recipe, name)
     {
       on.exit(unlink(name, recursive = TRUE), add = TRUE)

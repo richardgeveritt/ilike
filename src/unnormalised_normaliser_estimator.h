@@ -29,6 +29,8 @@ class UnnormalisedNormaliserEstimatorOutput;
 class UnnormalisedNormaliserEstimator : public LikelihoodEstimator
 {
 public:
+  bool is_estimate() const { return true; } // (dev/plan.md 3.21 (c3))
+
 
   UnnormalisedNormaliserEstimator();
   UnnormalisedNormaliserEstimator(RandomNumberGenerator* rng_in,

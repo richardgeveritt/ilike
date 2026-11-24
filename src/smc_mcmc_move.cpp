@@ -1,6 +1,8 @@
 #include <numeric>
 #include <algorithm>
 #include "smc_mcmc_move.h"
+#include "single_point_move_output.h"
+#include "adaptive_iterations_mcmc_termination.h"
 #include "esjd_adaptor.h"
 #include "filesystem.h"
 #include <fstream>
@@ -727,6 +729,7 @@ void SMCMCMCMove::make_copy(const SMCMCMCMove &another)
     this->cancelled_index.reset();
   
   this->mcmc_at_last_step = another.mcmc_at_last_step;
+  this->move_only_after_resampling = another.move_only_after_resampling;
   this->follows_caller_target = another.follows_caller_target;
   this->followed_variable = another.followed_variable;
   this->followed_targets = another.followed_targets;
@@ -1004,7 +1007,7 @@ bool SMCMCMCMove::can_move_flat() const
   // fixed in advance (iterations(n): no termination reading the chain); and
   // every factor restorable from its summary (the SMC's factors) or
   // reinitialisable (the cancelled ones).
-  if (this->force_rich_generations)
+  if (this->force_rich_generations || this->move_only_after_resampling)
     return false;
   if (dynamic_cast<const SequentialSMCWorker*>(this->the_worker.get()) == NULL)
     return false;
@@ -1411,6 +1414,13 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state)
     this->mcmc->smc_adapt(current_state);
     
     current_state->normalise_and_resample_weights();
+    // (c2') no move at a step without resampling, if asked
+    if (this->move_only_after_resampling && !current_state->back().resampled_flag)
+    {
+      this->carry_generation(current_state);
+      current_state->increment_smc_iteration();
+      return;
+    }
     // each particle's own tuning values (esjd, C211)
     this->prepare_tuning(current_state);
     
@@ -1418,8 +1428,17 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state)
     Particles* current_particles = &current_state->back();
     Particles* next_particles = current_state->add_particles(current_particles);
     
+    // (dev/plan.md 3.21 (c5)) the chains' iterations need not be stored when
+    // the output is not written: only their final states are used (MCMC runs
+    // and waste-free SMC use them all)
+    this->mcmc->set_store_iterations(this->chains_only || (this->waste_free_chains > 0) || this->outputs_written);
+    // (dev/plan.md 3.21 (c3)) adaptive_iterations: a pilot pass of one
+    // iteration first
+    this->start_adaptive_moves();
     if (this->waste_free_chains > 0)
     {
+      if (this->adaptive_termination() != NULL)
+        Rcpp::stop("SMC_with_MCMC: waste_free_chains needs a fixed number of MCMC iterations, not adaptive_iterations.");
       if (!this->can_move_flat())
         Rcpp::stop("SMC_with_MCMC: waste_free_chains needs exact or annealed factors, a move that does not adapt and a fixed number of MCMC iterations.");
       this->move_waste_free(next_particles,
@@ -1443,6 +1462,7 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state)
       this->the_worker->move(next_particles,
                              current_particles);
     }
+    this->finish_adaptive_moves(next_particles);
     
     current_state->increment_smc_iteration();
     
@@ -1584,12 +1604,22 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state,
     this->mcmc->smc_adapt(current_state);
     
     current_state->normalise_and_resample_weights();
+    // (c2') no move at a step without resampling, if asked
+    if (this->move_only_after_resampling && !current_state->back().resampled_flag)
+    {
+      this->carry_generation(current_state);
+      current_state->increment_smc_iteration();
+      return;
+    }
     
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     Particles* current_particles = &current_state->back();
     Particles* next_particles = current_state->add_particles(current_particles);
+    this->mcmc->set_store_iterations(this->chains_only || this->outputs_written); // (c5: stored only when written)
+    this->start_adaptive_moves(); // (dev/plan.md 3.21 (c3))
     this->the_worker->move(next_particles,
                            current_particles);
+    this->finish_adaptive_moves(next_particles);
     
     current_state->increment_smc_iteration();
     // involves complete evaluation of weights using current adaptive param
@@ -1659,6 +1689,15 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
     current_state->set_time_and_reset_start();
+
+    // (dev/plan.md 3.21 (c4)) early stopping in an MCMC move's proposal
+    if (!std::isnan(this->run_threshold) &&
+        (current_state->log_likelihood + this->remaining_maximum(conditioned_on_parameters) < this->run_threshold))
+    {
+      this->run_stopped = true;
+      current_state->terminate();
+      break;
+    }
 
     // check termination, using sequencer
     if (this->sequencer.check_termination())
@@ -2013,6 +2052,149 @@ void SMCMCMCMove::advance_inner_states(SMCOutput *current_state)
     if (particle.factor_variables != NULL)
       particle.factor_variables->advance_at_caller_target();
   }
+}
+
+
+// --- adaptive number of MCMC iterations (dev/plan.md 3.21 (c3); South,
+// Pettitt & Drovandi 2019, as in arXiv:2211.02172 §3.3.3) --------------------
+
+AdaptiveIterationsMCMCTermination* SMCMCMCMove::adaptive_termination() const
+{
+  if (this->mcmc == NULL)
+    return NULL;
+  return dynamic_cast<AdaptiveIterationsMCMCTermination*>(this->mcmc->get_termination());
+}
+
+void SMCMCMCMove::start_adaptive_moves()
+{
+  AdaptiveIterationsMCMCTermination* termination = this->adaptive_termination();
+  if (termination == NULL)
+    return;
+  if (this->chains_only)
+    Rcpp::stop("adaptive_iterations chooses the number of iterations of each SMC step from the particles: "
+               "it is for SMC moves, not MCMC (use iterations(n)).");
+  termination->set_iterations(1);
+}
+
+// TRUE if a particle's own (non-fixed) variables differ from its ancestor's
+static bool particle_moved(const Particle &now, const Particle &before)
+{
+  for (const std::string &name : now.parameters.get_nonfixed_vector_variables())
+  {
+    const arma::mat &x = now.parameters[name];
+    const arma::mat &y = before.parameters[name];
+    if ((x.n_rows != y.n_rows) || (x.n_cols != y.n_cols) || arma::any(arma::vectorise(x != y)))
+      return true;
+  }
+  return false;
+}
+
+// after the pilot pass: the acceptance rate p (the fraction of particles that
+// moved), then R - 1 more iterations from each particle, R = ceil(log c /
+// log(1 - p)) (sequentially, with their own seeds; each particle's output is
+// replaced by the longer chain's, whose start was the pilot's state)
+void SMCMCMCMove::finish_adaptive_moves(Particles* next_particles)
+{
+  AdaptiveIterationsMCMCTermination* termination = this->adaptive_termination();
+  if (termination == NULL)
+    return;
+  size_t N = next_particles->size();
+  size_t moved = 0;
+  for (size_t i = 0; i < N; ++i)
+  {
+    const Particle &now = (*next_particles)[i]->back();
+    if ((now.previous_self != NULL) && particle_moved(now, *now.previous_self))
+      ++moved;
+  }
+  double acceptance_rate = (N == 0) ? 0.0 : double(moved)/double(N);
+  size_t R = termination->iterations_for(acceptance_rate);
+  if (R > 1)
+  {
+    termination->set_iterations(R - 1);
+    RandomNumberGenerator local_rng(*this->rng);
+    size_t seed = this->the_worker->get_seed();
+    local_rng.seed(seed);
+    for (size_t i = 0; i < N; ++i)
+    {
+      Particle &start = (*next_particles)[i]->back();
+      const Particle* ancestor = start.previous_self;
+      MoveOutput* longer = this->move(local_rng, start);
+      longer->back().previous_self = ancestor;
+      next_particles->particles[i].reset(longer);
+    }
+    this->the_worker->set_seed(seed + N);
+  }
+  termination->set_iterations(1);
+}
+
+
+// --- early stopping in rare-event ABC-MCMC (dev/plan.md 3.21 (c4)) ----------
+
+// only for ABC kernels (the lowering's flag) and tolerances that never increase
+void SMCMCMCMove::set_stops_early(bool kernels_only)
+{
+  this->stops_early = false;
+  if (!kernels_only || this->sequencer.schedules.empty())
+    return;
+  const std::vector<double> &schedule = this->sequencer.schedules.back();
+  for (size_t k = 1; k < schedule.size(); ++k)
+    if (schedule[k] > schedule[k - 1])
+      return;
+  this->stops_early = true;
+}
+
+// log max K_T - log max K_s: the factors' maxima at the final tolerance and at
+// the current one (+Inf if one is not known: no stop)
+double SMCMCMCMove::remaining_maximum(const Parameters &conditioned_on_parameters) const
+{
+  if ((this->factors == NULL) || this->sequencer.variable_names.empty() || this->sequencer.schedules.empty())
+    return arma::datum::inf;
+  const std::string &variable = this->sequencer.variable_names.back();
+  // (the schedule's value first: merge keeps the first set's value of a name)
+  Parameters at_current = this->sequencer.schedule_parameters.deep_copy().merge(conditioned_on_parameters);
+  double current = this->factors->log_maximum(this->index.get(), at_current);
+  Parameters at_final = at_current.deep_copy();
+  at_final[variable] = this->sequencer.schedules.back().back();
+  double final_maximum = this->factors->log_maximum(this->index.get(), at_final);
+  if (!std::isfinite(current) || !std::isfinite(final_maximum))
+    return arma::datum::inf;
+  return final_maximum - current;
+}
+
+double SMCMCMCMove::run_with_threshold(SMCOutput* simulation,
+                                       const Parameters &conditioned_on_parameters,
+                                       double threshold,
+                                       bool &below)
+{
+  this->run_threshold = threshold;
+  this->run_stopped = false;
+  this->simulate_smc(simulation, conditioned_on_parameters);
+  double value = simulation->evaluate(conditioned_on_parameters);
+  this->run_threshold = arma::datum::nan;
+  below = this->run_stopped;
+  this->run_stopped = false;
+  return below ? -arma::datum::inf : value;
+}
+
+
+// (dev/plan.md 3.21 (c2')) the next generation without moves: each particle
+// copied (its weight carried on; not resampled, so its own ancestor), and
+// the next resampling's random numbers drawn as a move would (the same seeds)
+void SMCMCMCMove::carry_generation(SMCOutput* current_state)
+{
+  Particles* current_particles = &current_state->back();
+  Particles* next_particles = current_state->add_particles(current_particles);
+  size_t N = current_particles->size();
+  for (size_t i = 0; i < N; ++i)
+  {
+    const Particle &ancestor = (*current_particles)[current_particles->ancestor_variables[i]]->back();
+    next_particles->push_back(new SinglePointMoveOutput(ancestor));
+    next_particles->back()->back().previous_self = &ancestor;
+  }
+  this->the_worker->set_seed(this->the_worker->get_seed() + this->the_worker->get_number_of_particles());
+  this->rng->seed(this->the_worker->get_seed());
+  next_particles->simulate_resampling_variables(*this->rng);
+  this->the_worker->set_seed(this->the_worker->get_seed() + this->the_worker->get_number_of_particles());
 }
 
 }

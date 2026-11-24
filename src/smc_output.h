@@ -61,6 +61,7 @@ public:
   // target it was advanced to
   bool caught_up = false;
   double committed_log_likelihood = 0.0;
+  size_t followed_steps = 0; // (a particle filter following data tempering, c2': the observations committed)
   void evaluate_smcfixed_part(const Parameters &parameters);
   void evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters);
   int adaptive_summary_size() const;

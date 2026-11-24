@@ -158,7 +158,7 @@ ImportanceSampler *get_importance_sampler(
 }
 
 // Output options set by the R wrappers as elements of the recipe.
-static void apply_output_options(const RecipeValue &model, SMC *alg) {
+static void apply_output_options(const RecipeValue &model, SMC *alg, const std::string &results_name) {
   if (model.contains("write_factor_output"))
     alg->set_write_factor_output((model["write_factor_output"]).as_bool());
   // testing switch: never keep a generation in flat form (dev/plan.md 2.6a)
@@ -175,6 +175,17 @@ static void apply_output_options(const RecipeValue &model, SMC *alg) {
   // waste-free SMC (SMC_with_MCMC only)
   if (model.contains("waste_free_chains"))
     alg->set_waste_free_chains(size_t((model["waste_free_chains"]).as_double()));
+  // (dev/plan.md 3.21 (c5)) nothing is written without a results name: the
+  // SMCs (this one and those inside its factors) then store only the final
+  // states of their moves' chains
+  alg->set_outputs_written(!results_name.empty());
+  // (dev/plan.md 3.21 (c2')) SMC_with_MCMC(..., move_only_after_resampling = TRUE)
+  if (model.contains("move_only_after_resampling") && (model["move_only_after_resampling"]).as_bool())
+  {
+    SMCMCMCMove* moves = dynamic_cast<SMCMCMCMove*>(alg);
+    if (moves != NULL)
+      moves->set_move_only_after_resampling(true);
+  }
 }
 
 // After a run with parallel = TRUE (dev/plan.md 2.6a, G4).
@@ -221,7 +232,7 @@ double do_importance_sampler(const Rcpp::List &model_R, const Rcpp::List &parame
       &seed, data_created_in_get_likelihood_estimators,
       data_created_in_measurement_covariance_estimators);
 
-  apply_output_options(model, alg);
+  apply_output_options(model, alg, results_name_in);
   // nothing will be written: the factor outputs need not be kept
   if (strcmp(results_name_in.c_str(), "") == 0)
     alg->set_write_factor_output(false);
@@ -262,7 +273,7 @@ double do_importance_sampler_with_fixed_params(
       &seed, data_created_in_get_likelihood_estimators,
       data_created_in_measurement_covariance_estimators);
 
-  apply_output_options(model, alg);
+  apply_output_options(model, alg, results_name_in);
 
   // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
   std::unique_ptr<SMC> alg_owner(alg);
@@ -370,7 +381,7 @@ void do_mcmc(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
                           parallel_in, grain_size_in, "");
   }
 
-  apply_output_options(model, alg);
+  apply_output_options(model, alg, results_name_in);
   alg->set_chains_only(true); // (MCMC: chains, not particles to tune from; C224)
 
   // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
@@ -478,7 +489,7 @@ void do_mcmc_with_fixed_params(
                           parallel_in, grain_size_in, "");
   }
 
-  apply_output_options(model, alg);
+  apply_output_options(model, alg, results_name_in);
   alg->set_chains_only(true); // (MCMC: chains, not particles to tune from; C224)
 
   // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
@@ -670,7 +681,7 @@ double do_smc_mcmc_move(
       data_created_in_get_likelihood_estimators,
       data_created_in_get_measurement_covariance_estimators);
 
-  apply_output_options(model, alg);
+  apply_output_options(model, alg, results_name_in);
 
   // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
   std::unique_ptr<SMC> alg_owner(alg);
@@ -723,7 +734,7 @@ double do_smc_mcmc_move_with_fixed_params(
                                        data_created_in_get_likelihood_estimators,
                                        data_created_in_get_measurement_covariance_estimators);
 
-  apply_output_options(model, alg);
+  apply_output_options(model, alg, results_name_in);
 
   // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
   std::unique_ptr<SMC> alg_owner(alg);
@@ -1462,7 +1473,7 @@ double do_particle_filter(const Rcpp::List &model_R, const Rcpp::List &parameter
       results_name_in, &seed, data_created_in_get_likelihood_estimators,
       data_created_in_get_measurement_covariance_estimators);
 
-  apply_output_options(model, alg);
+  apply_output_options(model, alg, results_name_in);
 
   // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
   std::unique_ptr<SMC> alg_owner(alg);
@@ -1507,7 +1518,7 @@ double do_particle_filter_with_fixed_params(
       results_name_in, &seed, data_created_in_get_likelihood_estimators,
       data_created_in_get_measurement_covariance_estimators);
 
-  apply_output_options(model, alg);
+  apply_output_options(model, alg, results_name_in);
 
   // owned here, so that an interrupt (or an error) frees them (dev/plan.md 3.11)
   std::unique_ptr<SMC> alg_owner(alg);

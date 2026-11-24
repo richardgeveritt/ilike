@@ -228,4 +228,13 @@ double HMMFactors::log_maximum(const Index* index, const Parameters &parameters)
   }
   return output;
 }
+
+// (dev/plan.md 3.21 (c5))
+void HMMFactors::set_outputs_written(bool written)
+{
+  for (auto &estimator : this->likelihood_estimators)
+    if (estimator != NULL)
+      estimator->set_outputs_written(written);
+}
+
 }

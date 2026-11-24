@@ -92,6 +92,30 @@ protected:
   // log-likelihood so far plus the measurement models' maxima at the
   // remaining steps is below the threshold
   bool defers_simulation() const;
+  // (dev/plan.md 3.21 (c2'); Chopin, Jacob & Papaspiliopoulos's SMC^2) a
+  // filter inside a factor that the caller's SMC takes in one observation at
+  // a time (data tempering, data(fraction, …, anneal = false)): each output
+  // keeps its particles between the caller's steps; an evaluation is a trial
+  // (the current particles weighted by the next observation's density, no
+  // random numbers); at the caller's move stage the output keeps that
+  // weighting, resamples and propagates to the next time; a new output (a
+  // new caller particle, or a PMMH proposal) is run through the observations
+  // the caller has committed so far
+public:
+  void set_follows_caller_target(const std::string &fraction_variable);
+  bool advances_at_caller_target() const { return this->follows_caller_target; }
+  void advance_at_caller_target_smc(SMCOutput *current_state, const Parameters &conditioned_on_parameters);
+protected:
+  bool follows_caller_target = false;
+  std::string followed_variable;
+  size_t followed_steps = 0; // (the most observations any output has committed)
+  double initial_time = 0.0;
+  size_t observations() const { return this->last_index - this->first_index + 1; }
+  size_t observations_at(const Parameters &conditioned_on_parameters) const;
+  void set_time_step(size_t step);
+  double weight_current(SMCOutput *current_state);
+  void commit_observation(SMCOutput *current_state, const Parameters &conditioned_on_parameters);
+  void follow_from_start(SMCOutput *current_state, const Parameters &conditioned_on_parameters);
   double run_with_threshold(SMCOutput* simulation,
                             const Parameters &conditioned_on_parameters,
                             double threshold,

@@ -5,12 +5,12 @@
 
 /***data,y=c(1)***/
 
-/***evaluate_log_prior,dnorm(parameters$θ,1,1,log=TRUE)***/
+/***evaluate_log_prior,dnorm(parameters$theta,1,1,log=TRUE)***/
 
-/***simulate_prior,θ=rnorm(1,1,1)***/
+/***simulate_prior,theta=rnorm(1,1,1)***/
 
-/***evaluate_gradient_log_prior,if (variable=="θ") {-(parameters$θ-1)} else {stop("Unknown variable in prior gradient.")}***/
+/***evaluate_gradient_log_prior,if (variable=="theta") {-(parameters$theta-1)} else {stop("Unknown variable in prior gradient.")}***/
 
-/***evaluate_log_likelihood,sum(dnorm(data$y,parameters$θ,1.0,log=TRUE))***/
+/***evaluate_log_likelihood,sum(dnorm(data$y,parameters$theta,1.0,log=TRUE))***/
 
-/***evaluate_gradient_log_likelihood,if (variable=="θ") {sum((data$y-parameters$θ)/1.0)} else {stop("Unknown variable in likelihood gradient.")}***/
+/***evaluate_gradient_log_likelihood,if (variable=="theta") {sum((data$y-parameters$theta)/1.0)} else {stop("Unknown variable in likelihood gradient.")}***/

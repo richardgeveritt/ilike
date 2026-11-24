@@ -81,6 +81,14 @@ public:
   // caller's SMC target, advanced at the caller's move stage
   // (LikelihoodEstimatorOutput::advance_at_caller_target)
   virtual bool advances_at_caller_target() const { return false; }
+  // (dev/plan.md 3.21 (c3)) its value is a Monte Carlo estimate (an inner
+  // algorithm, a synthetic likelihood, an estimated normalising constant):
+  // moves that need the exact target (slice sampling) refuse it
+  virtual bool is_estimate() const { return false; }
+  // (dev/plan.md 3.21 (c5)) whether this estimator's outputs will be written
+  // (an SMC's moves then store their chains' iterations, which are written;
+  // otherwise only the final states, which are all that is used)
+  virtual void set_outputs_written(bool written) {}
   virtual bool supports_reinitialise() const { return false; }
 
   // True if this estimator's outputs may be simulated and evaluated for

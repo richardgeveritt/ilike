@@ -35,7 +35,10 @@ internal_roles <- list(
   unnormalised_exact = c("Parameters", "RandomNumberGenerator &rng, const Parameters &parameters, const Data &data"),
   unnormalised_potential = c("double", "const arma::mat &field, const Parameters &parameters, const Data &data"),
   # the prior of a variable integrated out, given the outer parameters (dev/plan.md 3.21, step (b))
-  simulate_prior_given = c("Parameters", "RandomNumberGenerator &rng, const Parameters &ilike_given"))
+  simulate_prior_given = c("Parameters", "RandomNumberGenerator &rng, const Parameters &ilike_given"),
+  # an ABC kernel factor's points' summaries, and the kernel from them (dev/plan.md 3.21 (c5))
+  abc_summary = c("void", "const Parameters &parameters, const Data &data, double *values"),
+  abc_from_summary = c("double", "const double *values, const Parameters &parameters, const Data &data"))
 
 # The getter's name for a function used in a role
 placeholder_getter <- function(function_name, role)
