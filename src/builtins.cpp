@@ -1014,7 +1014,10 @@ static std::vector<Builtin> make_registry()
     b.roles = {R::AlgorithmicLikelihood};
     b.name = "kf";
     b.description = "Kalman filter on a linear-Gaussian inner model";
-    b.arguments = {model(), optional("iterations_to_store", T::Integer, RecipeValue(0.0), "filter iterations stored").at_least(0.0)};
+    b.arguments = {model(), optional("iterations_to_store", T::Integer, RecipeValue(0.0), "filter iterations stored").at_least(0.0),
+                   // (C276) off by default
+                   optional("steady_state", T::Real, RecipeValue(0.0),
+                            "freeze the covariances once the predicted covariance changes by at most this (relative) between steps; 0: never").at_least(0.0)};
     table.push_back(b);
 
     b.name = "enkf";

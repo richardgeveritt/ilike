@@ -215,52 +215,56 @@ void KalmanFilterOutput::set_current_posterior_statistics(const arma::colvec &la
   this->current_posterior_covariance = latest_covariance;
 }
 
+// (C274) push a copy of value, keeping at most lag entries: the oldest
+// entries are dropped (C271), and the memory of the last one dropped holds the
+// new copy (the same size: no allocation at each step)
+template<class T>
+static void push_keeping_lag(std::deque<T> &entries, const T &value, size_t lag)
+{
+  size_t keep = (lag > 0) ? lag - 1 : 0;
+  if (entries.size() > keep)
+  {
+    while (entries.size() > keep + 1)
+      entries.pop_front();
+    T reused = std::move(entries.front());
+    entries.pop_front();
+    reused = value;
+    entries.push_back(std::move(reused));
+  }
+  else
+  {
+    entries.push_back(value);
+  }
+}
+
 void KalmanFilterOutput::add_predicted_statistics()
 {
-  size_t num_to_pop_back = std::max<int>(0,this->predicted_means.size()-this->lag+1);
-  for (size_t i=0; i<num_to_pop_back; ++i)
-  {
-    this->predicted_means.pop_back();
-  }
-  this->predicted_means.push_back(this->current_predicted_mean);
-  for (size_t i=0; i<num_to_pop_back; ++i)
-  {
-    this->predicted_covariances.pop_back();
-  }
-  this->predicted_covariances.push_back(this->current_predicted_covariance);
+  push_keeping_lag(this->predicted_means, this->current_predicted_mean, this->lag);
+  push_keeping_lag(this->predicted_covariances, this->current_predicted_covariance, this->lag);
 }
 
 void KalmanFilterOutput::add_posterior_statistics()
 {
-  size_t num_to_pop_back = std::max<int>(0,this->posterior_means.size()-this->lag+1);
-  for (size_t i=0; i<num_to_pop_back; ++i)
-  {
-    this->posterior_means.pop_back();
-  }
-  this->posterior_means.push_back(this->current_posterior_mean);
-  for (size_t i=0; i<num_to_pop_back; ++i)
-  {
-    this->posterior_covariances.pop_back();
-  }
-  this->posterior_covariances.push_back(this->current_posterior_covariance);
+  push_keeping_lag(this->posterior_means, this->current_posterior_mean, this->lag);
+  push_keeping_lag(this->posterior_covariances, this->current_posterior_covariance, this->lag);
 }
 
 void KalmanFilterOutput::add_schedule_parameters(const Parameters &current_schedule_parameters)
 {
-  size_t num_to_pop_back = std::max<int>(0,this->schedule_parameters.size()-this->lag+1);
-  for (size_t i=0; i<num_to_pop_back; ++i)
+  size_t num_to_pop_front = std::max<int>(0,this->schedule_parameters.size()-this->lag+1);
+  for (size_t i=0; i<num_to_pop_front; ++i)
   {
-    this->schedule_parameters.pop_back();
+    this->schedule_parameters.pop_front(); // (C271: the oldest, as for times and llhds)
   }
   this->schedule_parameters.push_back(current_schedule_parameters);
 }
 
 void KalmanFilterOutput::add_log_normalising_constant_ratio(double log_normalising_constant_ratio)
 {
-  size_t num_to_pop_back = std::max<int>(0,this->log_normalising_constant_ratios.size()-this->lag+1);
-  for (size_t i=0; i<num_to_pop_back; ++i)
+  size_t num_to_pop_front = std::max<int>(0,this->log_normalising_constant_ratios.size()-this->lag+1);
+  for (size_t i=0; i<num_to_pop_front; ++i)
   {
-    this->log_normalising_constant_ratios.pop_back();
+    this->log_normalising_constant_ratios.pop_front(); // (C271: the oldest, as for times and llhds)
   }
   this->log_normalising_constant_ratios.push_back(log_normalising_constant_ratio);
 }
@@ -269,6 +273,12 @@ void KalmanFilterOutput::set_current_predicted_to_be_current_posterior()
 {
   this->current_predicted_mean = this->current_posterior_mean;
   this->current_predicted_covariance = this->current_posterior_covariance;
+}
+
+void KalmanFilterOutput::set_current_posterior_to_be_current_predicted()
+{
+  this->current_posterior_mean = this->current_predicted_mean;
+  this->current_posterior_covariance = this->current_predicted_covariance;
 }
 
 void KalmanFilterOutput::increment_kf_iteration()

@@ -33,8 +33,8 @@ do_enkmfds <- function(model_R, parameters_R, number_of_ensemble_members, number
     invisible(.Call(`_ilike_do_enkmfds`, model_R, parameters_R, number_of_ensemble_members, number_of_iterations, delta_t, iterations_to_store, results_name_in, seed))
 }
 
-do_kalman_filter <- function(model_R, parameters_R, algorithm_parameter_list_R, kf_iterations_to_store, write_to_file_at_each_iteration, results_name_in) {
-    .Call(`_ilike_do_kalman_filter`, model_R, parameters_R, algorithm_parameter_list_R, kf_iterations_to_store, write_to_file_at_each_iteration, results_name_in)
+do_kalman_filter <- function(model_R, parameters_R, algorithm_parameter_list_R, kf_iterations_to_store, write_to_file_at_each_iteration, results_name_in, steady_state) {
+    .Call(`_ilike_do_kalman_filter`, model_R, parameters_R, algorithm_parameter_list_R, kf_iterations_to_store, write_to_file_at_each_iteration, results_name_in, steady_state)
 }
 
 do_ensemble_kalman_filter <- function(model_R, parameters_R, algorithm_parameter_list_R, number_of_ensemble_members, enk_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed) {

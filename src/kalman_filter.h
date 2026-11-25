@@ -91,6 +91,12 @@ public:
   // and the shared state an evaluation changes) runs in each chunk group; the
   // filter draws no random numbers; its outputs are repointed afterwards
   bool supports_parallel_copies() const { return true; }
+  // (C276) the steady-state option: once the matrices stay the same and the
+  // predicted covariance changes by at most `tolerance` (relative to its
+  // largest element) from one step to the next, the covariances and gains are
+  // frozen and only the mean is propagated; any change of the matrices ends
+  // it. 0 (the default): off. Not with SMC^2 (refused by the recipe).
+  void set_steady_state_tolerance(double tolerance);
   size_t observations() const { return this->last_index - this->first_index + 1; }
   void advance_at_caller_target_kf(KalmanFilterOutput* current_state, const Parameters &conditioned_on_parameters);
   
@@ -106,6 +112,29 @@ protected:
                             size_t k, double r);
   void follow_commit(KalmanFilterOutput* current_state, const Parameters &conditioned_on_parameters);
   void follow_from_start(KalmanFilterOutput* current_state, const Parameters &conditioned_on_parameters);
+
+  // (C273) one step: the prior (initial) or the predictions from the last
+  // posterior, then the updates with the observation at `index`. The model's
+  // matrix functions are given the parameters with the step's index, time and
+  // time difference, as the particle filter gives them to its transition and
+  // data models (so matrices may depend on time).
+  // schedule: the step's index, time and time difference, written at each
+  // step; all_parameters: the caller's parameters merged with schedule (set
+  // up once per run, merged last so that the schedule's values win, sharing
+  // its memory)
+  void kf_step(KalmanFilterOutput* current_state, const Parameters &all_parameters,
+               Parameters &schedule, size_t index, double time, bool initial);
+  void step_parameters_for_run(const Parameters &conditioned_on_parameters,
+                               Parameters &schedule, Parameters &all_parameters) const;
+  // (C276) the steady-state option and its state during a run
+  double steady_state_tolerance = 0.0;
+  bool in_steady_state = false;
+  arma::mat previous_predicted_covariance;
+  arma::mat frozen_predicted_covariance;
+  arma::mat frozen_posterior_covariance;
+  bool steady_state_possible() const;
+  // the steps of a run, from current_index to last_index
+  void run_steps(KalmanFilterOutput* current_state, const Parameters &conditioned_on_parameters);
   
   void specific_change_data(Data* new_data);
   
@@ -125,6 +154,7 @@ protected:
   size_t last_index;
   size_t predictions_per_update;
   double update_time_step;
+  double initial_time; // (C273: each run starts its time here)
   double current_time;
   size_t current_index;
   bool last_index_is_fixed;

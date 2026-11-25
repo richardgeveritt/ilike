@@ -66,6 +66,20 @@ public:
   arma::mat posterior_covariance_back() const;
   
   void set_current_predicted_to_be_current_posterior();
+  // (C271) the updates start from the current prediction, and each update
+  // from the one before (several measurement factors); the predictions
+  // likewise start from the current posterior, each from the one before
+  // (predictions_per_update > 1)
+  void set_current_posterior_to_be_current_predicted();
+  // (C276) the steady-state option: the mean or the covariance alone
+  void set_current_predicted_mean(const arma::colvec &mean) { this->current_predicted_mean = mean; }
+  void set_current_posterior_mean(const arma::colvec &mean) { this->current_posterior_mean = mean; }
+  void set_current_predicted_covariance(const arma::mat &covariance) { this->current_predicted_covariance = covariance; }
+  void set_current_posterior_covariance(const arma::mat &covariance) { this->current_posterior_covariance = covariance; }
+  const arma::colvec& get_current_predicted_mean() const { return this->current_predicted_mean; }
+  const arma::mat& get_current_predicted_covariance() const { return this->current_predicted_covariance; }
+  const arma::colvec& get_current_posterior_mean() const { return this->current_posterior_mean; }
+  const arma::mat& get_current_posterior_covariance() const { return this->current_posterior_covariance; }
   
   size_t predicted_size() const;
   

@@ -214,3 +214,76 @@ test_that("a transition's reads = [...] gives the same chain, and is checked", {
   expect_error(ilike::compile(file.path(d, "outer.ilike")), "reads may not name the state", fixed = TRUE)
   expect_error(run(", reads = [a, s, i]"), "may name only parameters, not the state", fixed = TRUE)
 })
+
+# (C271) the Kalman filter chains its predictions (predictions_per_update > 1)
+# and its updates (several measurement factors): each used to start again
+# from the stored posterior or prediction. Checked against a Kalman filter
+# written here, on a 2-d state with a 2-d and a 1-d measurement factor
+test_that("KF chains several predictions per update and several measurement factors", {
+  m = 2; n = 8; H1 = matrix(c(1, 0.3, -0.5, 1), 2, 2); H2 = matrix(c(0.7, 0.2), 1, 2)
+  set.seed(3); x = rnorm(m); Y1 = matrix(0, n, 2); Y2 = matrix(0, n, 1)
+  for (t in 1:n) { x = 0.8*x + rnorm(m, 0, sqrt(0.5)); Y1[t, ] = round(H1 %*% x + rnorm(2), 3); Y2[t, ] = round(H2 %*% x + rnorm(1, 0, 2), 3) }
+  mat = function(M) paste0("[", paste(apply(M, 1, function(r) paste0("[", paste(r, collapse = ", "), "]")), collapse = ", "), "]")
+  kf_here = function(a, k) {
+    H = rbind(H1, H2); R = diag(c(1, 1, 4)); Y = cbind(Y1, Y2); mu = rep(0, m); P = diag(m); ll = 0
+    for (t in 1:n) {
+      if (t > 1) for (j in 1:k) { mu = a*mu; P = a^2*P + 0.5*diag(m) }
+      S = H %*% P %*% t(H) + R; v = Y[t, ] - H %*% mu
+      ll = ll - 0.5*(3*log(2*pi) + determinant(S)$modulus[1] + sum(v*solve(S, v)))
+      K = P %*% t(H) %*% solve(S); mu = mu + K %*% v; P = P - K %*% H %*% P
+    }
+    ll
+  }
+  d = tempfile(); dir.create(d); on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  for (k in 1:2) {
+    writeLines(c("ilike 1.0", "model {", "  x ~ mvnorm([0, 0], [[1, 0], [0, 1]])",
+                 "  transition x = linear_gaussian(matrix = cpp::transition_matrix, covariance = [[0.5, 0], [0, 0.5]])",
+                 paste0("  factor obs1 = linear_gaussian(data = y1, state = x, matrix = ", mat(H1), ", covariance = [[1, 0], [0, 1]])"),
+                 paste0("  factor obs2 = linear_gaussian(data = y2, state = x, matrix = ", mat(H2), ", covariance = [[4]])"),
+                 paste0("  time = ssm(index = i, first_index = 0, last_index = ", n - 1, ", time = t, initial_time = 0,"),
+                 paste0("             time_difference = dt, time_step = 1, predictions_per_update = ", k, ")"), "}", "cpp {",
+                 "arma::mat transition_matrix(const Parameters &parameters) { return parameters[\"a\"][0]*arma::eye(2, 2); }",
+                 "}", "algorithm kalman {", "}"), file.path(d, "inner.ilike"))
+    writeLines(c("ilike 1.0", "import \"inner.ilike\" as inner", "data {", paste0("  y1 = ", mat(Y1)), paste0("  y2 = ", mat(Y2)), "}",
+                 "model {", "  a ~ unif(-1, 1)", "  factor filter = kf(inner)", "}"), file.path(d, "outer.ilike"))
+    r = suppressMessages(ilike::compile(file.path(d, "outer.ilike")))
+    expect_equal(suppressMessages(ilike::evaluate_log(r, parameters = list(a = 0.6))) - log(0.5), kf_here(0.6, k), tolerance = 1e-10)
+  }
+})
+
+# (C273) matrices that depend on time: each step's matrix functions are given
+# the step's index i, time t and time difference dt, as the particle filter's
+# are (the k predictions of a step all see the step's values). (C276) With
+# steady_state the covariances are frozen once they stop changing, and a
+# change of the matrices ends it: a model whose matrices change at every step
+# is filtered exactly, and one whose data covariance jumps at step 30 within
+# about the tolerance. Both against a Kalman filter written here.
+test_that("KF handles time-varying matrices, and steady_state freezes and unfreezes", {
+  mat = function(M) paste0("[", paste(apply(M, 1, function(r) paste0("[", paste(r, collapse = ", "), "]")), collapse = ", "), "]")
+  H = matrix(c(1, 0.5), 1, 2); t0 = 0.5; step = 0.25
+  run = function(n, k, A_of, R_of, A_cpp, R_cpp, steady) {
+    set.seed(5); Y = matrix(round(rnorm(n, 0, 2), 3), n, 1)
+    d = tempfile(); dir.create(d); on.exit(unlink(d, recursive = TRUE))
+    writeLines(c("ilike 1.0", "model {", "  x ~ mvnorm([0, 0], [[1, 0], [0, 1]])",
+                 "  transition x = linear_gaussian(matrix = cpp::transition_matrix, covariance = [[0.5, 0], [0, 0.5]])",
+                 paste0("  factor obs = linear_gaussian(data = y, state = x, matrix = ", mat(H), ", covariance = cpp::data_cov)"),
+                 paste0("  time = ssm(index = i, first_index = 0, last_index = ", n - 1, ", time = t, initial_time = ", t0, ","),
+                 paste0("             time_difference = dt, time_step = ", step, ", predictions_per_update = ", k, ")"), "}", "cpp {",
+                 paste0("arma::mat transition_matrix(const Parameters &parameters) { double a = parameters[\"a\"][0], t = parameters[\"t\"][0]; return (", A_cpp, ")*arma::eye(2, 2); }"),
+                 paste0("arma::mat data_cov(const Parameters &parameters) { double i = parameters[\"i\"][0]; arma::mat R(1, 1); R(0, 0) = ", R_cpp, "; return R; }"),
+                 "}", "algorithm kalman {", "}"), file.path(d, "inner.ilike"))
+    writeLines(c("ilike 1.0", "import \"inner.ilike\" as inner", "data {", paste0("  y = ", mat(Y)), "}", "model {", "  a ~ unif(-1, 1)",
+                 paste0("  factor filter = kf(inner", if (steady > 0) paste0(", steady_state = ", steady), ")"), "}"), file.path(d, "outer.ilike"))
+    r = suppressMessages(ilike::compile(file.path(d, "outer.ilike")))
+    mu = c(0, 0); P = diag(2); ll = 0; a = 0.7
+    for (j in 1:n) { i = j - 1; t = t0 + i*step
+      if (j > 1) for (s in 1:k) { A = A_of(a, t); mu = A*mu; P = A^2*P + 0.5*diag(2) }
+      S = c(H %*% P %*% t(H)) + R_of(i); v = Y[j] - c(H %*% mu)
+      ll = ll - 0.5*(log(2*pi) + log(S) + v^2/S); K = P %*% t(H)/S; mu = mu + K*v; P = P - K %*% H %*% P }
+    c(ilike = suppressMessages(ilike::evaluate_log(r, parameters = list(a = a))) - log(0.5), exact = ll)
+  }
+  z = run(10, 2, function(a, t) a*(1 + 0.1*t), function(i) 1 + 0.2*i, "a*(1.0 + 0.1*t)", "1.0 + 0.2*i", 1e-6)
+  expect_equal(z[["ilike"]], z[["exact"]], tolerance = 1e-10)
+  z = run(80, 1, function(a, t) a, function(i) if (i >= 30) 3 else 1, "a", "(i >= 30) ? 3.0 : 1.0", 1e-9)
+  expect_lt(abs(z[["ilike"]] - z[["exact"]]), 1e-6)
+})

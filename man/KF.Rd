@@ -9,6 +9,7 @@ KF(
   results_name = "",
   results_path = getwd(),
   kf_iterations_to_store = 2,
+  steady_state = 0,
   write_to_file_at_each_iteration = TRUE,
   model_parameter_list = list(),
   algorithm_parameter_list = list(),
@@ -28,6 +29,8 @@ KF(
 \item{results_path}{(optional) The path in which the results folder will be created (current working directory is the default).}
 
 \item{kf_iterations_to_store}{(optional) The number of iterations of filter output stored in memory as the algorithm is running (cannot be fewer than 2).}
+
+\item{steady_state}{(optional) A tolerance: once the model's matrices stay the same and the predicted covariance changes by at most this (relative to its largest element) between two steps, the covariances are frozen and only the mean is updated (faster for long series; the result differs from the exact filter by about this tolerance). 0 (the default) never freezes.}
 
 \item{write_to_file_at_each_iteration}{(optional) Do we write the algorithm output to file at each filtering step (TRUE/FALSE)?}
 

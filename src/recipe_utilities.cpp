@@ -141,7 +141,7 @@ static BuiltinArguments bind_algorithmic_likelihood(const RecipeValue &current_l
 RecipeValue get_kf_info(const RecipeValue &model_parameters, const RecipeValue &current_likelihood,
                  const std::string &likelihood_name) {
   BuiltinArguments a = bind_algorithmic_likelihood(current_likelihood, model_parameters);
-  return RecipeValue::list({int(a.integer("iterations_to_store"))});
+  return RecipeValue::list({int(a.integer("iterations_to_store")), a.real("steady_state")});
 }
 
 RecipeValue get_enkf_info(const RecipeValue &model_parameters, const RecipeValue &current_likelihood,

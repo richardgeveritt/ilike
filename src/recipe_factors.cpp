@@ -840,10 +840,22 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                   get_kf_info(model_parameters, llhd_details, llhd_type);
 
               size_t iterations_to_store = kf_params[0];
+              double steady_state = kf_params[1];
 
               KalmanFilter *inner_kf = get_kalman_filter(
                   data_in, llhd_model, model_parameters,
                   algorithm_parameters, iterations_to_store, false, "");
+              // (C276) the steady-state option: not with SMC^2, whose outputs
+              // take their steps in turn (the frozen state is the filter's)
+              if (steady_state > 0.0)
+              {
+                if (factor_plan.data_tempered)
+                {
+                  delete inner_kf;
+                  stop("kf: steady_state is not available when the caller's sequence takes in the filter's observations one at a time (SMC^2).");
+                }
+                inner_kf->set_steady_state_tolerance(steady_state);
+              }
               // (dev/plan.md 3.21 (c2''')) SMC^2 with a Kalman filter: the
               // caller's data tempering takes in its observations one at a time
               if (factor_plan.data_tempered)

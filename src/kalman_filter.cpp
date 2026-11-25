@@ -59,6 +59,7 @@ KalmanFilter::KalmanFilter(Data* data_in,
   this->last_index = last_index_in;
   this->predictions_per_update = predictions_per_update_in;
   this->update_time_step = update_time_step_in;
+  this->initial_time = initial_time_in;
   this->current_time = initial_time_in;
   this->current_index = this->first_index;
   this->last_index_is_fixed = last_index_is_fixed_in;
@@ -115,7 +116,10 @@ void KalmanFilter::make_copy(const KalmanFilter &another)
   this->last_index = another.last_index;
   this->predictions_per_update = another.predictions_per_update;
   this->update_time_step = another.update_time_step;
+  this->initial_time = another.initial_time;
   this->current_time = another.current_time;
+  this->steady_state_tolerance = another.steady_state_tolerance;
+  this->in_steady_state = false;
   this->current_index = another.current_index;
   this->last_index_is_fixed = another.last_index_is_fixed;
   this->lag = another.lag;
@@ -187,111 +191,11 @@ KalmanFilterOutput* KalmanFilter::kalman_filter_initialise()
 
 void KalmanFilter::evaluate(KalmanFilterOutput* current_state)
 {
-
   if (!this->last_index_is_fixed)
-  {
     Rcpp::stop("KalmanFilter::evaluate - need to read in a parameter to determine last measurement index.");
-  }
-  else
-  {
-    this->current_index = this->first_index;
-  }
-  
-  this->schedule_parameters = Parameters();//this->time_name,this->current_time);
-  this->schedule_parameters[this->index_name] = this->current_index;
-  double predict_time_step = this->update_time_step/double(this->predictions_per_update);
-  this->schedule_parameters[this->time_diff_name] = predict_time_step;
-  
-  Parameters all_parameters;
-  all_parameters.merge_with_fixed(this->schedule_parameters);
-  
-  // Set predictor and updater with parameters.
-  this->predictor->set_parameters(all_parameters);
-  
-  for (auto i=this->updaters.begin();
-       i!=this->updaters.end();
-       ++i)
-  {
-    (*i)->set_parameters(all_parameters);
-  }
-  
-  if (current_state->predicted_size()==0)
-  {
-    // Initial step.
-    current_state->set_current_predicted_statistics(this->prior_mean,
-                                                    this->prior_covariance);
-    current_state->add_predicted_statistics();
-    
-    for (auto i=this->updaters.begin();
-         i!=this->updaters.end();
-         ++i)
-    {
-      // For a particle filter, we instead need to use
-      // Data current_measurement = this->data->get_using_time_index(this->measurements_names);
-      // Returns the data for a time slice, which will include a bunch of variables.
-      arma::colvec current_measurement = arma::vectorise(this->data->row(this->current_index)[(*i)->get_measurement_variable()]);
-      
-      // Update at initial step.
-      (*i)->update(current_state,
-                   current_measurement);
-    }
-    
-    current_state->set_llhd(current_state->log_likelihood);
-    
-    current_state->add_posterior_statistics();
-    current_state->add_schedule_parameters(this->schedule_parameters);
-    
-    current_state->set_time();
-    if (current_state->results_name!="")
-      current_state->write(results_name);
-    current_state->start_time = std::chrono::high_resolution_clock::now();
-    
-    current_state->increment_kf_iteration();
-  }
-  
-  while (1)
-  {
-    current_state->set_current_predicted_to_be_current_posterior();
-    for (size_t i=0; i<this->predictions_per_update; ++i)
-    {
-      this->current_time = this->current_time + predict_time_step;
-
-      this->predictor->predict(current_state);
-    }
-    current_state->add_predicted_statistics();
-    this->current_index = this->current_index + 1;
-    
-    this->schedule_parameters[this->index_name] = this->current_index;
-    
-    for (auto i=this->updaters.begin();
-         i!=this->updaters.end();
-         ++i)
-    {
-      arma::colvec current_measurement = arma::vectorise(this->data->row(this->current_index)[(*i)->get_measurement_variable()]);
-      
-      // Update at initial step.
-      (*i)->update(current_state,
-                   current_measurement);
-    }
-    
-    current_state->set_llhd(current_state->log_likelihood);
-    
-    current_state->add_posterior_statistics();
-    current_state->add_schedule_parameters(this->schedule_parameters);
-    
-    current_state->set_time();
-    if (current_state->results_name!="")
-      current_state->write(results_name);
-    current_state->start_time = std::chrono::high_resolution_clock::now();
-    
-    if (this->check_termination())
-    {
-      current_state->terminate();
-      break;
-    }
-    
-    current_state->increment_kf_iteration();
-  }
+  this->current_index = this->first_index;
+  this->current_time = this->initial_time;
+  this->run_steps(current_state, Parameters());
 }
 
 void KalmanFilter::subsample_evaluate(KalmanFilterOutput* current_state)
@@ -344,111 +248,174 @@ void KalmanFilter::evaluate(KalmanFilterOutput* current_state,
     this->last_index = size_t(conditioned_on_parameters[this->index_name][0]);
     if (this->first_index>this->last_index)
       Rcpp::stop("KalmanFilter::evaluate - last index from parameters is before the current state of the filter.");
+    this->current_time = this->current_time + this->update_time_step; // (continues from the last run's last step)
   }
   else
   {
     this->current_index = this->first_index;
+    this->current_time = this->initial_time;
   }
-  
-  this->schedule_parameters = Parameters();//this->time_name,this->current_time);
-  this->schedule_parameters[this->index_name] = this->current_index;
-  this->schedule_parameters[this->time_diff_name] = 0.0;
-  
-  Parameters all_parameters;
-  all_parameters.merge_with_fixed(conditioned_on_parameters);
-  all_parameters.merge_with_fixed(this->schedule_parameters);
-  
-  // Set predictor and updater with parameters.
-  this->predictor->set_parameters(all_parameters);
-  
-  for (auto i=this->updaters.begin();
-       i!=this->updaters.end();
-       ++i)
-  {
-    (*i)->set_parameters(all_parameters);
-  }
-  
+  this->run_steps(current_state, conditioned_on_parameters);
+}
+
+// (C273) the two evaluate functions used to carry two copies of this loop,
+// setting the matrices once per run (with the first index, and a time
+// difference of 0 in one and the prediction step in the other)
+void KalmanFilter::run_steps(KalmanFilterOutput* current_state,
+                             const Parameters &conditioned_on_parameters)
+{
   if (current_state->predicted_size()==0)
-  {
-    // Initial step.
-    current_state->set_current_predicted_statistics(this->prior_mean,
-                                                    this->prior_covariance);
-    current_state->add_predicted_statistics();
-    
-    for (auto i=this->updaters.begin();
-         i!=this->updaters.end();
-         ++i)
-    {
-      // For a particle filter, we instead need to use
-      // Data current_measurement = this->data->get_using_time_index(this->measurements_names);
-      // Returns the data for a time slice, which will include a bunch of variables.
-      arma::colvec current_measurement = arma::vectorise(this->data->row(this->current_index)[(*i)->get_measurement_variable()]);
-      
-      // Update at initial step.
-      (*i)->update(current_state,
-                   current_measurement);
-    }
-    
-    current_state->set_llhd(current_state->log_likelihood);
-    
-    current_state->add_posterior_statistics();
-    current_state->add_schedule_parameters(this->schedule_parameters);
-    
-    current_state->set_time();
-    if (current_state->results_name!="")
-      current_state->write(results_name);
     current_state->start_time = std::chrono::high_resolution_clock::now();
-  }
-  
-  double predict_time_step = this->update_time_step/double(this->predictions_per_update);
-  
+  Parameters schedule, all_parameters;
+  this->step_parameters_for_run(conditioned_on_parameters, schedule, all_parameters);
+  this->in_steady_state = false; // (C276: a run starts from its prior)
+  this->previous_predicted_covariance.reset();
   while (1)
   {
-    current_state->set_current_predicted_to_be_current_posterior();
-    for (size_t i=0; i<this->predictions_per_update; ++i)
-    {
-      this->current_time = this->current_time + predict_time_step;
-      
-      this->schedule_parameters[this->time_diff_name] = predict_time_step;
-
-      this->predictor->predict(current_state);
-    }
-    current_state->add_predicted_statistics();
-    this->current_index = this->current_index + 1;
-    this->schedule_parameters[this->index_name] = this->current_index;
-    
-    for (auto i=this->updaters.begin();
-         i!=this->updaters.end();
-         ++i)
-    {
-      // For a particle filter, we instead need to use
-      // Data current_measurement = this->data->get_using_time_index(this->measurements_names);
-      // Returns the data for a time slice, which will include a bunch of variables.
-      arma::colvec current_measurement = arma::vectorise(this->data->row(this->current_index)[(*i)->get_measurement_variable()]);
-      
-      // Update at initial step.
-      (*i)->update(current_state,
-                   current_measurement);
-    }
-    
-    current_state->set_llhd(current_state->log_likelihood);
-    
-    current_state->add_posterior_statistics();
-    current_state->add_schedule_parameters(this->schedule_parameters);
-    
+    this->kf_step(current_state, all_parameters, schedule, this->current_index, this->current_time,
+                  current_state->predicted_size()==0);
     current_state->set_time();
     if (current_state->results_name!="")
       current_state->write(results_name);
     current_state->start_time = std::chrono::high_resolution_clock::now();
-    
-    if (this->check_termination())
+    if (this->current_index >= this->last_index)
     {
       current_state->terminate();
       break;
     }
-    
     current_state->increment_kf_iteration();
+    this->current_index = this->current_index + 1;
+    this->current_time = this->current_time + this->update_time_step;
   }
+}
+
+void KalmanFilter::step_parameters_for_run(const Parameters &conditioned_on_parameters,
+                                           Parameters &schedule, Parameters &all_parameters) const
+{
+  schedule[this->index_name] = 0.0;
+  schedule[this->time_name] = 0.0;
+  schedule[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+  all_parameters.merge_with_fixed(conditioned_on_parameters);
+  all_parameters.merge_with_fixed(schedule);
+}
+
+void KalmanFilter::kf_step(KalmanFilterOutput* current_state,
+                           const Parameters &all_parameters,
+                           Parameters &schedule, size_t index, double time, bool initial)
+{
+  schedule[this->index_name] = double(index); // (seen through all_parameters)
+  schedule[this->time_name] = time;
+
+  // the matrices for this step (the k predictions all see the step's values,
+  // as the particle filter's k moves do)
+  if (!initial)
+    this->predictor->set_parameters(all_parameters);
+  for (auto i=this->updaters.begin(); i!=this->updaters.end(); ++i)
+    (*i)->set_parameters(all_parameters);
+
+  // (C276) the steady-state option
+  bool steady = (this->steady_state_tolerance > 0.0) && !this->follows_caller_target && !initial;
+  bool unchanged = false;
+  if (steady)
+  {
+    unchanged = !this->predictor->matrices_changed();
+    for (auto i=this->updaters.begin(); i!=this->updaters.end(); ++i)
+      if ((*i)->matrices_changed())
+        unchanged = false;
+    if (!unchanged)
+      this->in_steady_state = false;
+  }
+  if (steady && this->in_steady_state)
+  {
+    // the mean alone, with the frozen covariances and gains
+    current_state->set_current_predicted_to_be_current_posterior();
+    for (size_t i=0; i<this->predictions_per_update; ++i)
+      this->predictor->predict_mean(current_state);
+    current_state->set_current_predicted_covariance(this->frozen_predicted_covariance);
+    current_state->add_predicted_statistics();
+    current_state->set_current_posterior_to_be_current_predicted();
+    for (auto i=this->updaters.begin(); i!=this->updaters.end(); ++i)
+    {
+      arma::colvec current_measurement = arma::vectorise(this->data->row(index)[(*i)->get_measurement_variable()]);
+      (*i)->update_mean(current_state, current_measurement);
+    }
+    current_state->set_current_posterior_covariance(this->frozen_posterior_covariance);
+    current_state->set_llhd(current_state->log_likelihood);
+    current_state->add_posterior_statistics();
+    current_state->add_schedule_parameters(schedule.deep_copy());
+    return;
+  }
+
+  if (initial)
+  {
+    current_state->set_current_predicted_statistics(this->prior_mean, this->prior_covariance);
+  }
+  else
+  {
+    current_state->set_current_predicted_to_be_current_posterior();
+    for (size_t i=0; i<this->predictions_per_update; ++i)
+      this->predictor->predict(current_state);
+  }
+  current_state->add_predicted_statistics();
+
+  // (C276) converged: the matrices are the same as at the last step, and the
+  // predicted covariance has changed by at most the tolerance; the gains are
+  // frozen in this step's updates
+  bool freeze = false;
+  if (steady)
+  {
+    const arma::mat &P = current_state->get_current_predicted_covariance();
+    if (unchanged && (this->previous_predicted_covariance.n_elem == P.n_elem) && (P.n_elem > 0))
+    {
+      double change = arma::abs(P - this->previous_predicted_covariance).max();
+      double size = arma::abs(P).max();
+      freeze = (change <= this->steady_state_tolerance*size);
+    }
+    this->previous_predicted_covariance = P;
+  }
+
+  current_state->set_current_posterior_to_be_current_predicted(); // (C271)
+  for (auto i=this->updaters.begin(); i!=this->updaters.end(); ++i)
+  {
+    if (freeze)
+      (*i)->freeze_gain(current_state->get_current_posterior_covariance());
+    arma::colvec current_measurement = arma::vectorise(this->data->row(index)[(*i)->get_measurement_variable()]);
+    (*i)->update(current_state, current_measurement);
+  }
+  if (freeze)
+  {
+    this->frozen_predicted_covariance = current_state->get_current_predicted_covariance();
+    this->frozen_posterior_covariance = current_state->get_current_posterior_covariance();
+    this->in_steady_state = true;
+  }
+  current_state->set_llhd(current_state->log_likelihood);
+  current_state->add_posterior_statistics();
+  current_state->add_schedule_parameters(schedule.deep_copy());
+}
+
+void KalmanFilter::set_steady_state_tolerance(double tolerance)
+{
+  if (!(tolerance >= 0.0))
+    Rcpp::stop("kf: steady_state must be a tolerance of 0 or more.");
+  this->steady_state_tolerance = tolerance;
+  if (tolerance > 0.0)
+  {
+    if (!this->steady_state_possible())
+      Rcpp::stop("kf: steady_state is available for linear-Gaussian transition and data models only.");
+    this->predictor->track_matrix_changes();
+    for (auto i=this->updaters.begin(); i!=this->updaters.end(); ++i)
+      (*i)->track_matrix_changes();
+  }
+}
+
+bool KalmanFilter::steady_state_possible() const
+{
+  if ((this->predictor == NULL) || !this->predictor->supports_steady_state())
+    return false;
+  for (auto i=this->updaters.begin(); i!=this->updaters.end(); ++i)
+    if (!(*i)->supports_steady_state())
+      return false;
+  return true;
 }
 
 bool KalmanFilter::check_termination() const
@@ -472,47 +439,17 @@ void KalmanFilter::set_follows_caller_target(const std::string &fraction_variabl
 }
 
 // one predict-and-update step: the output's next observation (the first one:
-// the prior, then the update, as evaluate's initial step does). The model's
-// functions are given the particle's parameters with the step's index and
-// time difference (evaluate gives them once per run; the same values for
-// models whose matrices do not read the index or time).
+// the prior, then the update, as a run's initial step does), with the step's
+// index, time and time difference (C273: kf_step, shared with evaluate)
 void KalmanFilter::follow_step(KalmanFilterOutput* current_state,
                                const Parameters &conditioned_on_parameters)
 {
   size_t step = current_state->followed_steps; // (observations already in this output)
-  size_t index = this->first_index + step;
-  double predict_time_step = this->update_time_step/double(this->predictions_per_update);
-  Parameters step_parameters;
-  step_parameters[this->index_name] = double(index);
-  step_parameters[this->time_diff_name] = (step == 0) ? 0.0 : predict_time_step;
-  Parameters all_parameters;
-  all_parameters.merge_with_fixed(conditioned_on_parameters);
-  all_parameters.merge_with_fixed(step_parameters);
-  this->predictor->set_parameters(all_parameters);
-  for (auto i=this->updaters.begin(); i!=this->updaters.end(); ++i)
-    (*i)->set_parameters(all_parameters);
-
-  if (step == 0)
-  {
-    current_state->set_current_predicted_statistics(this->prior_mean, this->prior_covariance);
-    current_state->add_predicted_statistics();
-  }
-  else
-  {
-    current_state->set_current_predicted_to_be_current_posterior();
-    for (size_t i=0; i<this->predictions_per_update; ++i)
-      this->predictor->predict(current_state);
-    current_state->add_predicted_statistics();
-  }
-  for (auto i=this->updaters.begin(); i!=this->updaters.end(); ++i)
-  {
-    arma::colvec current_measurement = arma::vectorise(this->data->row(index)[(*i)->get_measurement_variable()]);
-    (*i)->update(current_state, current_measurement);
-  }
-  current_state->set_llhd(current_state->log_likelihood);
-  current_state->add_posterior_statistics();
-  current_state->add_schedule_parameters(step_parameters);
-  current_state->set_time();
+  Parameters schedule, all_parameters;
+  this->step_parameters_for_run(conditioned_on_parameters, schedule, all_parameters);
+  this->kf_step(current_state, all_parameters, schedule, this->first_index + step,
+                this->initial_time + double(step)*this->update_time_step, step == 0);
+  current_state->set_time(); // (the output's times are written beside its other records)
   current_state->followed_steps = step + 1;
 }
 

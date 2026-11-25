@@ -1168,7 +1168,8 @@ double do_kalman_filter(const Rcpp::List &model_R, const Rcpp::List &parameters_
                         const Rcpp::List &algorithm_parameter_list_R,
                         size_t kf_iterations_to_store,
                         bool write_to_file_at_each_iteration,
-                        const std::string &results_name_in) {
+                        const std::string &results_name_in,
+                        double steady_state) {
   RecipeValue model = recipe_from_R(model_R);
   RecipeValue parameters = recipe_from_R(parameters_R);
   Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list_R);
@@ -1180,6 +1181,8 @@ double do_kalman_filter(const Rcpp::List &model_R, const Rcpp::List &parameters_
       get_kalman_filter(&the_data, model, parameters, algorithm_parameters,
                         kf_iterations_to_store, write_to_file_at_each_iteration,
                         results_name_in.c_str());
+  if (steady_state > 0.0)
+    alg->set_steady_state_tolerance(steady_state); // (C276)
 
   KalmanFilterOutput *output = alg->run();
 

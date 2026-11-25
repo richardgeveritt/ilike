@@ -184,8 +184,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // do_kalman_filter
-double do_kalman_filter(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, size_t kf_iterations_to_store, bool write_to_file_at_each_iteration, const std::string& results_name_in);
-RcppExport SEXP _ilike_do_kalman_filter(SEXP model_RSEXP, SEXP parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP kf_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP results_name_inSEXP) {
+double do_kalman_filter(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, size_t kf_iterations_to_store, bool write_to_file_at_each_iteration, const std::string& results_name_in, double steady_state);
+RcppExport SEXP _ilike_do_kalman_filter(SEXP model_RSEXP, SEXP parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP kf_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP results_name_inSEXP, SEXP steady_stateSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -195,7 +195,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< size_t >::type kf_iterations_to_store(kf_iterations_to_storeSEXP);
     Rcpp::traits::input_parameter< bool >::type write_to_file_at_each_iteration(write_to_file_at_each_iterationSEXP);
     Rcpp::traits::input_parameter< const std::string& >::type results_name_in(results_name_inSEXP);
-    rcpp_result_gen = Rcpp::wrap(do_kalman_filter(model_R, parameters_R, algorithm_parameter_list_R, kf_iterations_to_store, write_to_file_at_each_iteration, results_name_in));
+    Rcpp::traits::input_parameter< double >::type steady_state(steady_stateSEXP);
+    rcpp_result_gen = Rcpp::wrap(do_kalman_filter(model_R, parameters_R, algorithm_parameter_list_R, kf_iterations_to_store, write_to_file_at_each_iteration, results_name_in, steady_state));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -498,7 +499,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ilike_do_smc_mcmc_move_with_fixed_params", (DL_FUNC) &_ilike_do_smc_mcmc_move_with_fixed_params, 16},
     {"_ilike_do_enki", (DL_FUNC) &_ilike_do_enki, 15},
     {"_ilike_do_enkmfds", (DL_FUNC) &_ilike_do_enkmfds, 8},
-    {"_ilike_do_kalman_filter", (DL_FUNC) &_ilike_do_kalman_filter, 6},
+    {"_ilike_do_kalman_filter", (DL_FUNC) &_ilike_do_kalman_filter, 7},
     {"_ilike_do_ensemble_kalman_filter", (DL_FUNC) &_ilike_do_ensemble_kalman_filter, 10},
     {"_ilike_do_ensemble_kalman_filter_with_fixed_params", (DL_FUNC) &_ilike_do_ensemble_kalman_filter_with_fixed_params, 11},
     {"_ilike_do_particle_filter", (DL_FUNC) &_ilike_do_particle_filter, 10},

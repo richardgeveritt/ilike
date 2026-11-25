@@ -34,6 +34,11 @@ public:
   void predict(KalmanFilterOutput* current_state);
   
   void set_parameters(const Parameters &conditioned_on_parameters_in);
+
+  bool supports_steady_state() const { return true; }
+  void track_matrix_changes() { this->tracks_matrix_changes = true; }
+  bool matrices_changed() const { return this->changed_at_last_set; }
+  void predict_mean(KalmanFilterOutput* current_state);
   
 protected:
   
@@ -46,6 +51,15 @@ protected:
   
   arma::mat transition_matrix;
   arma::mat process_noise;
+
+  // (C274) workspace, kept between steps so that its memory is reused
+  arma::colvec new_mean;
+  arma::mat new_covariance;
+
+  // (C276) whether set_parameters compares the new matrices with the last
+  // ones, and whether they differed (constant matrices never change)
+  bool tracks_matrix_changes = false;
+  bool changed_at_last_set = false;
   
   GetMatrixPtr transition_matrix_function;
   GetMatrixPtr process_noise_function;

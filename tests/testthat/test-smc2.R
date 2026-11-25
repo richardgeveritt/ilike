@@ -249,3 +249,9 @@ test_that("SMC^2 with Kalman or ensemble Kalman filters gives the same run in pa
                      suppressMessages(ilike::SMC_with_MCMC(r, seed = 1, parallel = FALSE, grain_size = 64)))
   }
 })
+
+test_that("SMC^2 refuses a Kalman filter's steady_state (C276)", {
+  d = smc2_files(6, 50, 10, pf = "kf(inner, steady_state = 1e-9)", inner_file = "inner_kf.ilike")
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  expect_error(suppressMessages(ilike::SMC_with_MCMC(ilike::compile(file.path(d, "smc2.ilike")), seed = 1)), "steady_state is not available")
+})
