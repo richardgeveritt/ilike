@@ -81,6 +81,9 @@
 - [`load_mcmc_output()`](https://richardgeveritt.github.io/ilike/reference/load_mcmc_output.md)
   : Loading MCMC output into R memory.
 
+- [`load_smc_inner_particles()`](https://richardgeveritt.github.io/ilike/reference/load_smc_inner_particles.md)
+  : Load the number of particles of SMC^2's filters at each step.
+
 - [`load_smc_output()`](https://richardgeveritt.github.io/ilike/reference/load_smc_output.md)
   : Loading SMC output into R memory.
 
