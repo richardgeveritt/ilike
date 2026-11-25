@@ -10,6 +10,7 @@ KF(
   results_name = "",
   results_path = getwd(),
   kf_iterations_to_store = 2,
+  steady_state = 0,
   write_to_file_at_each_iteration = TRUE,
   model_parameter_list = list(),
   algorithm_parameter_list = list(),
@@ -43,6 +44,15 @@ KF(
 
   (optional) The number of iterations of filter output stored in memory
   as the algorithm is running (cannot be fewer than 2).
+
+- steady_state:
+
+  (optional) A tolerance: once the model's matrices stay the same and
+  the predicted covariance changes by at most this (relative to its
+  largest element) between two steps, the covariances are frozen and
+  only the mean is updated (faster for long series; the result differs
+  from the exact filter by about this tolerance). 0 (the default) never
+  freezes.
 
 - write_to_file_at_each_iteration:
 

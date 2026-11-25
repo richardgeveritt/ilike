@@ -47,6 +47,7 @@
 <span>  results_name <span class="op">=</span> <span class="st">""</span>,</span>
 <span>  results_path <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/getwd.html" class="external-link">getwd</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  kf_iterations_to_store <span class="op">=</span> <span class="fl">2</span>,</span>
+<span>  steady_state <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  write_to_file_at_each_iteration <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  model_parameter_list <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  algorithm_parameter_list <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
@@ -77,6 +78,10 @@
 
 <dt id="arg-kf-iterations-to-store">kf_iterations_to_store<a class="anchor" aria-label="anchor" href="#arg-kf-iterations-to-store"></a></dt>
 <dd><p>(optional) The number of iterations of filter output stored in memory as the algorithm is running (cannot be fewer than 2).</p></dd>
+
+
+<dt id="arg-steady-state">steady_state<a class="anchor" aria-label="anchor" href="#arg-steady-state"></a></dt>
+<dd><p>(optional) A tolerance: once the model's matrices stay the same and the predicted covariance changes by at most this (relative to its largest element) between two steps, the covariances are frozen and only the mean is updated (faster for long series; the result differs from the exact filter by about this tolerance). 0 (the default) never freezes.</p></dd>
 
 
 <dt id="arg-write-to-file-at-each-iteration">write_to_file_at_each_iteration<a class="anchor" aria-label="anchor" href="#arg-write-to-file-at-each-iteration"></a></dt>
