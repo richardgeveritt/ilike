@@ -287,18 +287,12 @@ void EnsembleKalmanFilter::move_compact_member(RandomNumberGenerator &rng,
   }
   else
   {
-    // (a member object's k moves each simulate its measurement, drawing the
-    // noise k times, of which the last is kept: the same draws are made here,
-    // so that the noise stream is the same; dev/plan.md C279 notes this as a
-    // possible clean-up, which would change results)
+    // (C282) the intermediate positions need no measurement: the k moves are
+    // made, and the measurement is simulated once, for the last position (as
+    // in move())
     Particle moved = this->transition_model_kernel->move(rng, this->compact_current);
     for (size_t k = 1; k < this->predictions_per_update; ++k)
-    {
-      arma::colvec measurement_state, noise;
-      for (size_t j = 0; j < next_ensemble->compact_noise.size(); ++j)
-        this->ensemble_factors->compact_simulate(j, moved.parameters, measurement_state, noise);
       moved = this->transition_model_kernel->move(rng, moved);
-    }
     this->compact_member_rows(next_ensemble, i, moved.parameters);
   }
 }
@@ -321,19 +315,30 @@ MoveOutput* EnsembleKalmanFilter::move(RandomNumberGenerator &rng,
 {
   this->point_at_current_schedule(ensemble_member);
   Particle moved_ensemble_member;
-  for (size_t i=0; i<this->predictions_per_update; ++i)
+  if (this->predictions_per_update <= 1)
   {
-    
-    if (i==0)
-    {
-      moved_ensemble_member = this->transition_model_kernel->move(rng,
-                                                                  ensemble_member);
-    }
-    else
-    {
-      moved_ensemble_member = this->transition_model_kernel->move(rng,
-                                                                  moved_ensemble_member);
-    }
+    moved_ensemble_member = this->transition_model_kernel->move(rng,
+                                                                ensemble_member);
+  }
+  else
+  {
+    // (C282) with several predictions per update, only the last position is
+    // assimilated, so only it needs a predicted measurement (h(x) and its
+    // noise). The intermediate positions are moved as bare parameters (a
+    // particle without ensemble factor variables simulates no measurement);
+    // the measurement is simulated once, after the last move, as move() would
+    // have done.
+    Particle intermediate;
+    intermediate.parameters = ensemble_member.parameters;
+    intermediate.proposals_to_transform_for_pointer = ensemble_member.proposals_to_transform_for_pointer;
+    intermediate.proposals_to_find_gradient_for_pointer = ensemble_member.proposals_to_find_gradient_for_pointer;
+    for (size_t i=1; i<this->predictions_per_update; ++i)
+      intermediate = this->transition_model_kernel->move(rng, intermediate);
+    moved_ensemble_member = this->transition_model_kernel->move(rng, intermediate);
+    if ( (ensemble_member.ensemble_factor_variables!=NULL) &&
+         (ensemble_member.ensemble_factor_variables->get_ensemble_factors()!=NULL) )
+      moved_ensemble_member.simulate_ensemble_factor_variables(ensemble_member.ensemble_factor_variables->get_ensemble_factors());
+    moved_ensemble_member.previous_self = &ensemble_member;
   }
 
   MoveOutput* moved_output = new SinglePointMoveOutput(std::move(moved_ensemble_member));
@@ -472,19 +477,25 @@ MoveOutput* EnsembleKalmanFilter::subsample_move(RandomNumberGenerator &rng,
 {
   
   Particle moved_ensemble_member;
-  for (size_t i=0; i<this->predictions_per_update; ++i)
+  if (this->predictions_per_update <= 1)
   {
-    
-    if (i==0)
-    {
-      moved_ensemble_member = this->transition_model_kernel->subsample_move(rng,
-                                                                            ensemble_member);
-    }
-    else
-    {
-      moved_ensemble_member = this->transition_model_kernel->subsample_move(rng,
-                                                                            moved_ensemble_member);
-    }
+    moved_ensemble_member = this->transition_model_kernel->subsample_move(rng,
+                                                                          ensemble_member);
+  }
+  else
+  {
+    // (C282) as move(): only the last position gets a measurement
+    Particle intermediate;
+    intermediate.parameters = ensemble_member.parameters;
+    intermediate.proposals_to_transform_for_pointer = ensemble_member.proposals_to_transform_for_pointer;
+    intermediate.proposals_to_find_gradient_for_pointer = ensemble_member.proposals_to_find_gradient_for_pointer;
+    for (size_t i=1; i<this->predictions_per_update; ++i)
+      intermediate = this->transition_model_kernel->subsample_move(rng, intermediate);
+    moved_ensemble_member = this->transition_model_kernel->subsample_move(rng, intermediate);
+    if ( (ensemble_member.ensemble_factor_variables!=NULL) &&
+         (ensemble_member.ensemble_factor_variables->get_ensemble_factors()!=NULL) )
+      moved_ensemble_member.subsample_simulate_ensemble_factor_variables(ensemble_member.ensemble_factor_variables->get_ensemble_factors());
+    moved_ensemble_member.previous_self = &ensemble_member;
   }
 
   MoveOutput* moved_output = new SinglePointMoveOutput(std::move(moved_ensemble_member));

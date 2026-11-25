@@ -2,7 +2,8 @@
 # matrices when they can (compact ensembles), and as member objects
 # otherwise; ILIKE_RICH_ENSEMBLES (a developer switch) forces member objects.
 # The two give the same numbers: the same draws in the same order. Checked on
-# short runs of the filter (two measurement factors, square-root shifter),
+# short runs of the filter (two measurement factors, square-root shifter,
+# one and two predictions per update),
 # SMC^2 with an ensemble Kalman filter (outer particles copied when
 # resampled: their copies once shared their members' states), EnKI and MFDS
 # (with a transform and given initial points).
@@ -21,6 +22,12 @@ test_that("compact ensembles give the same runs as member objects", {
   eval(parse(text = src[grep("^enkf_check_files", src):(grep("^test_that\\(\"EnKF runs a data covariance", src) - 1)]))
   d = enkf_check_files(TRUE, TRUE, 100, "sqrt")
   on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  z = both_ways(function() enkf_check(d)[["enkf"]])
+  expect_identical(z$compact, z$rich)
+  # (C282) two predictions per update: the measurement is simulated for the
+  # last position only, on both paths
+  l = readLines(file.path(d, "inner.ilike"))
+  writeLines(sub("predictions_per_update = 1", "predictions_per_update = 2", l), file.path(d, "inner.ilike"))
   z = both_ways(function() enkf_check(d)[["enkf"]])
   expect_identical(z$compact, z$rich)
 
