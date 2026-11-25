@@ -123,6 +123,7 @@ public:
   double committed_log_likelihood = 0.0;
   bool caught_up = false;
   void advance_at_caller_target(const Parameters &parameters);
+  bool repoint_estimator(LikelihoodEstimator* estimator_in); // (C270)
   void close_ofstreams();
   
 protected:

@@ -79,19 +79,34 @@ double PCNProposalKernel::specific_subsample_evaluate_kernel(const Particle &pro
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
 
+// the proposed value of the variable (the same draws for simulate and simulate_into)
+static arma::colvec pcn_step(RandomNumberGenerator &rng, const Parameters &current, const std::string &variable,
+                             const arma::colvec &mean, const arma::mat &lower_chol, double rho)
+{
+  arma::colvec u = current.get_colvec(variable);
+  if (u.n_elem != mean.n_elem)
+    Rcpp::stop("ilike::pcn: the variable has " + std::to_string(u.n_elem) + " element(s), the mean " +
+               std::to_string(mean.n_elem) + ".");
+  return rmvnorm_using_lower_chol(rng, mean + rho*(u - mean), lower_chol, std::sqrt(1.0 - rho*rho));
+}
+
 Parameters PCNProposalKernel::simulate(RandomNumberGenerator &rng,
                                                              const Particle &particle) const
 {
   const Parameters &current = particle.get_transformed_parameters(this);
-  arma::colvec u = current.get_colvec(this->variable);
-  if (u.n_elem != this->mean.n_elem)
-    Rcpp::stop("ilike::pcn: the variable has " + std::to_string(u.n_elem) + " element(s), the mean " +
-               std::to_string(this->mean.n_elem) + ".");
-  arma::colvec x = rmvnorm_using_lower_chol(rng, this->mean + this->rho*(u - this->mean), this->lower_chol,
-                                            std::sqrt(1.0 - this->rho*this->rho));
+  arma::colvec x = pcn_step(rng, current, this->variable, this->mean, this->lower_chol, this->rho);
   Parameters output;
   output.set_stacked(this->variable, x, current);
   return output;
+}
+
+// (C268) as simulate, written into the target (same draws, same values)
+void PCNProposalKernel::simulate_into(RandomNumberGenerator &rng,
+                                      const Particle &particle,
+                                      ProposalTarget &target) const
+{
+  const Parameters &current = particle.get_transformed_parameters(this);
+  target.write(this->variable, pcn_step(rng, current, this->variable, this->mean, this->lower_chol, this->rho), current);
 }
 
 Parameters PCNProposalKernel::subsample_simulate(RandomNumberGenerator &rng,

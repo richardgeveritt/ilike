@@ -236,3 +236,16 @@ test_that("SMC^2's exchange step for an ensemble Kalman filter, never triggered,
   z2 = suppressMessages(ilike::SMC_with_MCMC(ilike::compile(file.path(d2, "smc2.ilike")), seed = 1))
   expect_identical(z1, z2)
 })
+
+# (C270) parallel outer moves with a Kalman or ensemble Kalman filter: a copy
+# of the filter in each chunk group, drawing from the chunk's streams, so a
+# parallel run gives exactly the sequential one (as for particle filters, G5)
+test_that("SMC^2 with Kalman or ensemble Kalman filters gives the same run in parallel", {
+  for (factor in c("kf(inner)", "enkf(inner, ensemble_members = 20, shifter = \"stochastic\")")) {
+    d = smc2_files(6, 200, 10, pf = factor, inner_file = "inner_kf.ilike")
+    on.exit(unlink(d, recursive = TRUE), add = TRUE)
+    r = suppressMessages(ilike::compile(file.path(d, "smc2.ilike")))
+    expect_identical(suppressMessages(ilike::SMC_with_MCMC(r, seed = 1, parallel = TRUE, grain_size = 64)),
+                     suppressMessages(ilike::SMC_with_MCMC(r, seed = 1, parallel = FALSE, grain_size = 64)))
+  }
+})

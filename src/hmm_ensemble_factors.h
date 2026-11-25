@@ -19,6 +19,9 @@ class Ensemble;
 class HMMEnsembleFactors : public EnsembleFactors
 {
   friend class HMMEnsembleFactorVariables; // (C265: repointing to a copy's estimators)
+public:
+  void redirect_random_numbers(RandomNumberGenerator* rng_in, size_t* seed_in); // (C270)
+private:
   
 public:
   

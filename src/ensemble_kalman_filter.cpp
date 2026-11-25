@@ -559,6 +559,10 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcfixed_part(EnsembleKalman
 void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcadaptive_part_given_smcfixed(EnsembleKalmanOutput* current_state,
                                                                                     const Parameters &conditioned_on_parameters)
 {
+  // (C269, PMMH P1) the transition's values that depend only on its declared
+  // parameters, for this run
+  if (this->transition_model_kernel != NULL)
+    this->transition_model_kernel->prepare_for_parameters(conditioned_on_parameters);
   if (this->follows_caller_target)
   {
     this->follow_evaluate(current_state, conditioned_on_parameters);
@@ -812,6 +816,8 @@ void EnsembleKalmanFilter::advance_at_caller_target_enk(EnsembleKalmanOutput* cu
 {
   if (!this->follows_caller_target || !current_state->caught_up)
     return;
+  if (this->transition_model_kernel != NULL)
+    this->transition_model_kernel->prepare_for_parameters(conditioned_on_parameters); // (C269)
   size_t k;
   double r;
   caller_tempering_point(conditioned_on_parameters[this->followed_variable][0], this->observations(),
@@ -853,6 +859,14 @@ void EnsembleKalmanFilter::set_number_of_inner_particles(size_t number_of_inner_
   if (worker == NULL)
     Rcpp::stop("SMC^2: the exchange step needs the ensemble filter's sequential worker.");
   worker->resize_for_members();
+}
+
+// (C270) this filter and its measurement estimators draw from rng_in, seed_in
+void EnsembleKalmanFilter::redirect_random_numbers(RandomNumberGenerator* rng_in, size_t* seed_in)
+{
+  LikelihoodEstimator::redirect_random_numbers(rng_in, seed_in);
+  if (this->ensemble_factors != NULL)
+    this->ensemble_factors->redirect_random_numbers(rng_in, seed_in);
 }
 
 }

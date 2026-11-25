@@ -213,15 +213,15 @@ namespace ilike
     return output;
   }
 
-  Parameters BarkerDynamicsProposalKernel::simulate(RandomNumberGenerator &rng,
-                                                    const Particle &current_particle) const
+  void BarkerDynamicsProposalKernel::barker_steps(RandomNumberGenerator &rng,
+                                                  const Particle &current_particle,
+                                                  const std::function<void(const std::string&, const arma::colvec&, const Parameters&)> &put) const
   {
     GradientEstimatorOutput *gradient_estimator_output = current_particle.get_gradient_estimator_output(this);
 
     // points simulated are in transformed space (the standard normal steps,
     // under each block's name)
     Parameters proposed = this->proposal_simulate->independent_simulate(rng);
-    Parameters output;
 
     for (auto i = this->proposal_info.begin();
          i != this->proposal_info.end();
@@ -243,10 +243,29 @@ namespace ilike
         }
       }
       const Parameters &current = current_particle.get_transformed_parameters(this);
-      output.set_stacked(i->first, current.get_colvec(i->first) + (current_proposed * sqrt(i->second.get_double_scale()) * i->second.get_chol()).t(), current);
+      put(i->first, current.get_colvec(i->first) + (current_proposed * sqrt(i->second.get_double_scale()) * i->second.get_chol()).t(), current);
     }
 
+  }
+
+  Parameters BarkerDynamicsProposalKernel::simulate(RandomNumberGenerator &rng,
+                                                    const Particle &current_particle) const
+  {
+    Parameters output;
+    this->barker_steps(rng, current_particle,
+                       [&output](const std::string &name, const arma::colvec &value, const Parameters &shapes)
+                       { output.set_stacked(name, value, shapes); });
     return output;
+  }
+
+  // (C268) as simulate, written into the target (same draws, same values)
+  void BarkerDynamicsProposalKernel::simulate_into(RandomNumberGenerator &rng,
+                                                   const Particle &current_particle,
+                                                   ProposalTarget &target) const
+  {
+    this->barker_steps(rng, current_particle,
+                       [&target](const std::string &name, const arma::colvec &value, const Parameters &shapes)
+                       { target.write(name, value, shapes); });
   }
 
   Parameters BarkerDynamicsProposalKernel::subsample_simulate(RandomNumberGenerator &rng,

@@ -117,6 +117,10 @@ public:
   virtual bool supports_parallel_copies() const { return this->supports_parallel_chunks(); }
   virtual void redirect_random_numbers(RandomNumberGenerator* rng_in,
                                        size_t* seed_in);
+  // (C270) the generator and seed counter it draws from (to give an output's
+  // own copy of a filter the main filter's, after a parallel chunk group)
+  RandomNumberGenerator* get_rng_pointer() const { return this->rng; }
+  size_t* get_seed_pointer() const { return this->seed; }
   
   Parameters algorithm_parameters;
   

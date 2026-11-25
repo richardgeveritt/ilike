@@ -5337,16 +5337,41 @@ inline double ilike_model_dabc_gaussian(const arma::mat &y, const arma::mat &s, 
       bool linear = (function == "linear_gaussian");
       std::vector<std::string> order = linear ? std::vector<std::string>{"matrix", "covariance"}
                                               : std::vector<std::string>{"function", "covariance"};
-      this->allow_only(value, arguments, std::set<std::string>(order.begin(), order.end()), order.size());
+      std::set<std::string> allowed(order.begin(), order.end());
+      allowed.insert("reads"); // (C269: what the matrix and covariance functions read)
+      this->allow_only(value, arguments, allowed, order.size());
       for (size_t k = 0; k < arguments.positional.size(); ++k)
         arguments.named[order[k]] = arguments.positional[k];
       for (const std::string &a : order)
         if (!arguments.has(a))
           this->error(value, function + ": " + a + " is missing.");
       std::string prefix = linear ? "linear_gaussian_transition_" : "nonlinear_gaussian_transition_";
+      // (C269, PMMH P1, owner's "declared reads") reads = [a, b]: the
+      // parameters the matrix and covariance functions read (not the state,
+      // nor the time index's variables, checked when the model is built);
+      // their values are then computed once per filter run
+      std::vector<std::string> declared_reads;
+      if (arguments.has("reads"))
+      {
+        const RecipeValue &reads = arguments.named["reads"];
+        if (kind_of(reads) != "vector")
+          this->error(reads, function + ": reads is a list of the parameters its functions read: reads = [a, b].");
+        const RecipeValue &elements = reads["elements"];
+        for (size_t k = 0; k < elements.size(); ++k)
+        {
+          if ((kind_of(elements[k]) != "name") || this->is_function_reference(elements[k]))
+            this->error(elements[k], function + ": reads lists whole parameters by name (e.g. reads = [a, b]).");
+          std::string name = elements[k]["name"].as_string();
+          if (name == variable)
+            this->error(elements[k], function + ": reads may not name the state (" + variable + "): its value changes at every step.");
+          declared_reads.push_back(name);
+        }
+      }
       arma::mat a, b;
       if (linear && this->numeric(arguments.named["matrix"], a) && this->numeric(arguments.named["covariance"], b))
       {
+        if (!declared_reads.empty())
+          this->error(arguments.named["reads"], function + ": reads declares what the matrix and covariance functions read; here both are numbers.");
         RecipeValue node = RecipeValue::list();
         node.push_back(RecipeValue("linear_gaussian_transition_model"), "type");
         node.push_back(RecipeValue(variable), "variables");
@@ -5366,6 +5391,15 @@ inline double ilike_model_dabc_gaussian(const arma::mat &y, const arma::mat &s, 
         entry.push_back(this->function_placeholder(arguments.named["function"], prefix + "function", "function"),
                         prefix + "function");
       entry.push_back(this->matrix_placeholder(arguments.named["covariance"], "covariance", with_parameters, prefix + "covariance"), prefix + "covariance");
+      // (C269, PMMH P1) a constant covariance given beside a function: its
+      // Cholesky factor (and inverse, log-determinant) is computed once
+      {
+        arma::mat constant_covariance;
+        if (this->numeric(arguments.named["covariance"], constant_covariance))
+          entry.push_back(RecipeValue::logicals(std::vector<int>(1, 1)), prefix + "covariance_constant");
+      }
+      if (!declared_reads.empty())
+        entry.push_back(RecipeValue(declared_reads), prefix + "reads");
       return entry;
     }
     if (function == "density")

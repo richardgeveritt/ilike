@@ -533,6 +533,7 @@ double ParticleFilter::run_with_threshold(SMCOutput* simulation,
                                           bool &below)
 {
   below = false;
+  this->transition_proposal->prepare_for_parameters(conditioned_on_parameters); // (C269)
   this->simulate_smc(simulation, conditioned_on_parameters);
   if (!this->defers_simulation() || (this->factors == NULL) || (this->last_index < this->first_index))
     return simulation->evaluate(conditioned_on_parameters);
@@ -567,6 +568,9 @@ double ParticleFilter::run_with_threshold(SMCOutput* simulation,
 void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* current_state,
                                                                   const Parameters &conditioned_on_parameters)
 {
+  // (C269, PMMH P1) the transition's values that depend only on its declared
+  // parameters, for this run (a sequential point: before any parallel chunk)
+  this->transition_proposal->prepare_for_parameters(conditioned_on_parameters);
   if (this->follows_caller_target)
   {
     // (c2') a new output is run through the observations committed so far;
@@ -1222,6 +1226,7 @@ void ParticleFilter::advance_at_caller_target_smc(SMCOutput *current_state, cons
 {
   if (!this->follows_caller_target || !current_state->caught_up)
     return;
+  this->transition_proposal->prepare_for_parameters(conditioned_on_parameters); // (C269)
   // (F1) an observation is committed only once whole: at a share r > 0 the
   // filter is left as it is (the trial weighting is recomputed at the next
   // reweighting)

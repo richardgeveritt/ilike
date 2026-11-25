@@ -21,6 +21,9 @@ public:
   
   EnsembleFactors();
   virtual ~EnsembleFactors();
+  // (C270) the measurement estimators draw from this generator and seed
+  // counter instead; nothing by default
+  virtual void redirect_random_numbers(RandomNumberGenerator* rng_in, size_t* seed_in) {}
   
   EnsembleFactors(const EnsembleFactors &another);
   

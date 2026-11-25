@@ -218,4 +218,25 @@ void LinearGaussianNoiseFunctionProposalKernel::set_index(Index* index_in)
 void LinearGaussianNoiseFunctionProposalKernel::set_index_if_null(Index* index_in)
 {
 }
+
+// (C269, PMMH P1)
+void LinearGaussianNoiseFunctionProposalKernel::set_covariance_constant()
+{
+  for (auto i=this->proposal_info.begin(); i!=this->proposal_info.end(); ++i)
+    i->second.set_covariance_constant();
+}
+
+// (C269)
+void LinearGaussianNoiseFunctionProposalKernel::set_declared_reads(const std::vector<std::string> &reads)
+{
+  for (auto i=this->proposal_info.begin(); i!=this->proposal_info.end(); ++i)
+    i->second.set_declared_reads(reads);
+}
+
+void LinearGaussianNoiseFunctionProposalKernel::prepare_for_parameters(const Parameters &parameters)
+{
+  for (auto i=this->proposal_info.begin(); i!=this->proposal_info.end(); ++i)
+    i->second.prepare(parameters);
+}
+
 }

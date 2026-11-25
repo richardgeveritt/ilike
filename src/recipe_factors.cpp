@@ -1,4 +1,5 @@
 #include "recipe_internal.h"
+#include <set>
 #include "plate_likelihood_estimator.h"
 
 // The target of an algorithm, from the recipe's factors and its SMC sequence
@@ -1192,6 +1193,38 @@ KalmanPredictor *get_kalman_predictor(const RecipeValue &model,
   stop("Valid Kalman predictor not found.");
 }
 
+// (C269, PMMH P1) a transition's reads = [...] (what its matrix and covariance
+// functions read): never the state variable nor the time index's variables
+static std::vector<std::string> transition_declared_reads(const RecipeValue &model, const RecipeValue &model_parameters,
+                                                          const RecipeValue &factor, const std::string &key,
+                                                          const std::string &state_variable)
+{
+  std::vector<std::string> reads;
+  if (!factor.contains(key))
+    return reads;
+  reads = factor[key].as_strings();
+  std::set<std::string> forbidden;
+  forbidden.insert(state_variable);
+  if (model.contains("method"))
+  {
+    RecipeValue methods = model["method"];
+    for (size_t i = 0; i < methods.size(); ++i)
+      if (methods[i].contains("ssm"))
+      {
+        RecipeValue ssm = get_ssm_info(model, model_parameters);
+        forbidden.insert(ssm[0].as_string()); // (the index)
+        forbidden.insert(ssm[3].as_string()); // (the time)
+        forbidden.insert(ssm[5].as_string()); // (the time difference)
+        break;
+      }
+  }
+  for (const std::string &name : reads)
+    if (forbidden.count(name))
+      stop("a transition's reads = [...] may name only parameters, not the state (" + state_variable +
+           ") or the time index's variables: " + name + " is one of them (its value changes within a filter run).");
+  return reads;
+}
+
 ProposalKernel *get_transition_proposal(const RecipeValue &model,
                                         const RecipeValue &model_parameters) {
 
@@ -1236,11 +1269,18 @@ ProposalKernel *get_transition_proposal(const RecipeValue &model,
                 (linear_gaussian_transition_matrix_value).function_pointer<GetNoParamsMatrixPtr>()(),
                 (linear_gaussian_transition_covariance_value).function_pointer<GetNoParamsMatrixPtr>()());
           } else if (type == 2) {
-            proposal = new LinearGaussianNoiseFunctionProposalKernel(
+            LinearGaussianNoiseFunctionProposalKernel *kernel = new LinearGaussianNoiseFunctionProposalKernel(
                 (linear_gaussian_transition_variable_value).function_pointer<StringPtr>()(),
                 (linear_gaussian_transition_variable_value).function_pointer<StringPtr>()(),
                 (linear_gaussian_transition_matrix_value).function_pointer<GetMatrixPtr>(),
                 (linear_gaussian_transition_covariance_value).function_pointer<GetMatrixPtr>());
+            // (C269, PMMH P1) a constant covariance beside a matrix function
+            if (current_factor.contains("linear_gaussian_transition_covariance_constant") &&
+                current_factor["linear_gaussian_transition_covariance_constant"].as_bool())
+              kernel->set_covariance_constant();
+            kernel->set_declared_reads(transition_declared_reads(model, model_parameters, current_factor,
+                                                                 "linear_gaussian_transition_reads", (linear_gaussian_transition_variable_value).function_pointer<StringPtr>()()));
+            proposal = kernel;
           } else {
             stop("linear_gaussian_transition specificiation is invalid.");
           }
@@ -1279,10 +1319,17 @@ ProposalKernel *get_transition_proposal(const RecipeValue &model,
                 std::make_shared<Transform>((nonlinear_gaussian_transition_function_value).function_pointer<TransformPtr>()),
                 (nonlinear_gaussian_transition_covariance_value).function_pointer<GetNoParamsMatrixPtr>()());
           } else if (type == 2) {
-            proposal = new NonLinearGaussianNoiseFunctionProposalKernel(
+            NonLinearGaussianNoiseFunctionProposalKernel *kernel = new NonLinearGaussianNoiseFunctionProposalKernel(
                 (nonlinear_gaussian_transition_variable_value).function_pointer<StringPtr>()(),
                 std::make_shared<Transform>((nonlinear_gaussian_transition_function_value).function_pointer<TransformPtr>()),
                 (nonlinear_gaussian_transition_covariance_value).function_pointer<GetMatrixPtr>());
+            // (C269, PMMH P1) a constant covariance beside a function
+            if (current_factor.contains("nonlinear_gaussian_transition_covariance_constant") &&
+                current_factor["nonlinear_gaussian_transition_covariance_constant"].as_bool())
+              kernel->set_covariance_constant();
+            kernel->set_declared_reads(transition_declared_reads(model, model_parameters, current_factor,
+                                                                 "nonlinear_gaussian_transition_reads", (nonlinear_gaussian_transition_variable_value).function_pointer<StringPtr>()()));
+            proposal = kernel;
           } else {
             stop("nonlinear_gaussian_transition specificiation is invalid.");
           }
@@ -1351,9 +1398,16 @@ ProposalKernel *get_transition_model(const RecipeValue &model,
             proposal = new LinearGaussianNoiseProposalKernel(
                 lg.variable, lg.variable, lg.matrix, lg.covariance);
           } else {
-            proposal = new LinearGaussianNoiseFunctionProposalKernel(
+            LinearGaussianNoiseFunctionProposalKernel *kernel = new LinearGaussianNoiseFunctionProposalKernel(
                 lg.variable, lg.variable, lg.matrix_function,
                 lg.covariance_function);
+            // (C269, PMMH P1) a constant covariance beside a matrix function
+            if (current_factor.contains("linear_gaussian_transition_covariance_constant") &&
+                current_factor["linear_gaussian_transition_covariance_constant"].as_bool())
+              kernel->set_covariance_constant();
+            kernel->set_declared_reads(transition_declared_reads(model, model_parameters, current_factor,
+                                                                 "linear_gaussian_transition_reads", lg.variable));
+            proposal = kernel;
           }
 
           return proposal;
@@ -1390,10 +1444,17 @@ ProposalKernel *get_transition_model(const RecipeValue &model,
                 std::make_shared<Transform>((nonlinear_gaussian_transition_function_value).function_pointer<TransformPtr>()),
                 (nonlinear_gaussian_transition_covariance_value).function_pointer<GetNoParamsMatrixPtr>()());
           } else if (type == 2) {
-            proposal = new NonLinearGaussianNoiseFunctionProposalKernel(
+            NonLinearGaussianNoiseFunctionProposalKernel *kernel = new NonLinearGaussianNoiseFunctionProposalKernel(
                 (nonlinear_gaussian_transition_variable_value).function_pointer<StringPtr>()(),
                 std::make_shared<Transform>((nonlinear_gaussian_transition_function_value).function_pointer<TransformPtr>()),
                 (nonlinear_gaussian_transition_covariance_value).function_pointer<GetMatrixPtr>());
+            // (C269, PMMH P1) a constant covariance beside a function
+            if (current_factor.contains("nonlinear_gaussian_transition_covariance_constant") &&
+                current_factor["nonlinear_gaussian_transition_covariance_constant"].as_bool())
+              kernel->set_covariance_constant();
+            kernel->set_declared_reads(transition_declared_reads(model, model_parameters, current_factor,
+                                                                 "nonlinear_gaussian_transition_reads", (nonlinear_gaussian_transition_variable_value).function_pointer<StringPtr>()()));
+            proposal = kernel;
           } else {
             stop("nonlinear_gaussian_transition specificiation is invalid.");
           }

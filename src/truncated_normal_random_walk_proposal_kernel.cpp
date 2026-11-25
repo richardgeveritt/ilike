@@ -85,6 +85,18 @@ Parameters TruncatedNormalRandomWalkProposalKernel::simulate(RandomNumberGenerat
   return output;
 }
 
+// (C268) as simulate, written into the target (same draws, same values)
+void TruncatedNormalRandomWalkProposalKernel::simulate_into(RandomNumberGenerator &rng,
+                                                            const Particle &particle,
+                                                            ProposalTarget &target) const
+{
+  const Parameters &current = particle.get_transformed_parameters(this);
+  arma::colvec x = current.get_colvec(this->variable);
+  for (arma::uword k = 0; k < x.n_elem; ++k)
+    x[k] = rtnorm(rng, x[k], this->sd, this->lower, this->upper);
+  target.write(this->variable, x, current);
+}
+
 Parameters TruncatedNormalRandomWalkProposalKernel::subsample_simulate(RandomNumberGenerator &rng,
                                                                        const Particle &particle) const
 {

@@ -100,6 +100,16 @@ void KalmanFilterOutput::make_copy(const KalmanFilterOutput &another)
   
 }
 
+// (C270) belong to the main filter after a parallel chunk group
+bool KalmanFilterOutput::repoint_estimator(LikelihoodEstimator* estimator_in)
+{
+  KalmanFilter* filter = dynamic_cast<KalmanFilter*>(estimator_in);
+  if (filter == NULL)
+    return false;
+  this->estimator = filter;
+  return true;
+}
+
 // (dev/plan.md 3.21 (c2''')) the caller's move stage
 void KalmanFilterOutput::advance_at_caller_target(const Parameters &parameters)
 {

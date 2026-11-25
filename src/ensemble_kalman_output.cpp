@@ -234,6 +234,17 @@ void EnsembleKalmanOutput::calculate_kalman_gains(double inverse_incremental_tem
   this->all_ensembles.back().calculate_kalman_gains(inverse_incremental_temperature);
 }
 
+// (C270) after a parallel chunk group: this output's own copy of the filter
+// was made from the group's copy, so it would draw from the group's
+// generator (gone with the group); it draws from the main filter's instead
+bool EnsembleKalmanOutput::repoint_estimator(LikelihoodEstimator* estimator_in)
+{
+  if ((estimator_in == NULL) || (this->estimator == NULL))
+    return false;
+  this->estimator->redirect_random_numbers(estimator_in->get_rng_pointer(), estimator_in->get_seed_pointer());
+  return true;
+}
+
 // (dev/plan.md 3.21 (c2''')) the caller's move stage
 void EnsembleKalmanOutput::advance_at_caller_target(const Parameters &parameters)
 {

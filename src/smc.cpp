@@ -449,7 +449,10 @@ void SMC::simulate_generation_in_chunks(SMCOutput *current_state,
       for (size_t j = 0; j < n; ++j)
       {
         if (mode == copies)
+        {
           w.seed = size_t(local_rng());
+          w.rng.seed(w.seed); // (C270: as in SMCMCMCMove::move_rich_in_chunks)
+        }
         if (conditioned_on_parameters == NULL)
           this->particle_simulator->simulate_into(local_rng,
                                                   slots[j],

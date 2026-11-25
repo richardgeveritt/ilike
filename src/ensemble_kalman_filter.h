@@ -83,6 +83,12 @@ public:
   // the next time); a new output is run through the observations committed.
   void set_follows_caller_target(const std::string &fraction_variable, bool anneal);
   bool advances_at_caller_target() const { return this->follows_caller_target; }
+  // (C270) parallel outer chunks: a copy runs in each chunk group, drawing
+  // from the group's stream (its measurement estimators too); each output owns
+  // its own copy of the filter, which is given the main filter's generator
+  // afterwards (EnsembleKalmanOutput::repoint_estimator)
+  bool supports_parallel_copies() const { return true; }
+  void redirect_random_numbers(RandomNumberGenerator* rng_in, size_t* seed_in);
   size_t observations() const { return this->last_index - this->first_index + 1; }
   void advance_at_caller_target_enk(EnsembleKalmanOutput* current_state,
                                     const Parameters &conditioned_on_parameters);

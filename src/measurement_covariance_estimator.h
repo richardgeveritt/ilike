@@ -42,6 +42,9 @@ public:
   
   MeasurementCovarianceEstimator();
   
+  // (C270) draw from this generator and seed counter instead (a copy run in
+  // a parallel chunk group)
+  void redirect_random_numbers(RandomNumberGenerator* rng_in, size_t* seed_in) { this->rng = rng_in; this->seed = seed_in; }
   MeasurementCovarianceEstimator(RandomNumberGenerator* rng_in,
                                  size_t* seed_in,
                                  Data* data_in,

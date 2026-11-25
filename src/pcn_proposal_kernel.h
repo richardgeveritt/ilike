@@ -52,6 +52,10 @@ protected:
                                             const Particle &old_particle) const;
   Parameters simulate(RandomNumberGenerator &rng,
                       const Particle &particle) const;
+  // (C268) simulate, written into the proposal's own storage
+  void simulate_into(RandomNumberGenerator &rng,
+                     const Particle &particle,
+                     ProposalTarget &target) const;
   Parameters subsample_simulate(RandomNumberGenerator &rng,
                                 const Particle &particle) const;
   Parameters subsample_simulate(RandomNumberGenerator &rng,

@@ -453,4 +453,12 @@ ProposalKernel* HMMEnsembleFactors::get_transition_kernel() const
   return this->transition_kernel.get();
 }
 
+// (C270) each measurement estimator draws its noise from this generator
+void HMMEnsembleFactors::redirect_random_numbers(RandomNumberGenerator* rng_in, size_t* seed_in)
+{
+  for (auto &estimator : this->measurement_covariance_estimators)
+    if (estimator != NULL)
+      estimator->redirect_random_numbers(rng_in, seed_in);
+}
+
 }

@@ -174,3 +174,43 @@ test_that("KF and EnKF likelihoods in MCMC write their output and the chain load
                           list.files(out, recursive = TRUE), fixed = TRUE)))
   }
 })
+
+# (C269, PMMH P1) a transition's matrix and covariance written as C++
+# functions, with reads = [...] declaring the parameters they read: computed
+# once per filter run (the same chain as without the declaration); the
+# declaration is checked (a function reading another variable stops), and the
+# state or the time index cannot be declared
+test_that("a transition's reads = [...] gives the same chain, and is checked", {
+  n = 5
+  set.seed(3); y = matrix(round(rnorm(2*n), 3), n, 2)
+  d = tempfile(); dir.create(d); on.exit(unlink(c(d, "transition_reads_output"), recursive = TRUE), add = TRUE)
+  inner = function(reads, q = "parameters[\"s\"][0]*parameters[\"s\"][0]") c("ilike 1.0", "data { vector y }", "model {",
+    "  x ~ mvnorm([0, 0], [[1, 0], [0, 1]])",
+    paste0("  transition x = linear_gaussian(matrix = cpp::A, covariance = cpp::Q", reads, ")"),
+    "  factor obs = density(log = cpp::meas)",
+    paste0("  time = ssm(index = i, first_index = 0, last_index = ", n - 1, ", time = t, initial_time = 0,"),
+    "             time_difference = dt, time_step = 1, predictions_per_update = 1)", "}", "cpp {",
+    "arma::mat A(const Parameters &parameters) { return parameters[\"a\"][0]*arma::eye(2, 2); }",
+    paste0("arma::mat Q(const Parameters &parameters) { return (", q, ")*arma::eye(2, 2); }"),
+    "double meas(const Parameters &parameters, const Data &data) { arma::colvec yy = arma::vectorise(data[\"y\"]); return -0.5*arma::accu(arma::square(yy - arma::vectorise(parameters[\"x\"]))); }",
+    "}", "algorithm filter {", "  particles = 20", "}")
+  outer = c("ilike 1.0", "import \"inner.ilike\" as inner",
+            paste0("data { y = [", paste(apply(y, 1, function(r) paste0("[", paste(r, collapse = ", "), "]")), collapse = ", "), "] }"),
+            "model {", "  a ~ unif(-1, 1)", "  s ~ unif(0.2, 2)", "  factor filter = pf(inner)", "}",
+            "algorithm mcmc {", "  move m = metropolis(mvnorm_rw([a, s], [[0.01, 0], [0, 0.01]]))", "  termination = iterations(30)", "}")
+  writeLines(outer, file.path(d, "outer.ilike"))
+  run = function(reads, ...) {
+    writeLines(inner(reads, ...), file.path(d, "inner.ilike"))
+    unlink("transition_reads_output", recursive = TRUE)
+    suppressMessages(ilike::MCMC(ilike::compile(file.path(d, "outer.ilike")), results_name = "transition_reads_output", seed = 1,
+                                 initial_values = list(list(a = 0.5, s = 0.8))))
+    ilike::load_mcmc_output("transition_reads_output")$Value
+  }
+  expect_identical(run(", reads = [a, s]"), run(""))
+  # Q reads s, but only a is declared
+  expect_error(run(", reads = [a]"), "do they read another variable?", fixed = TRUE)
+  # the state, and the time index, cannot be declared
+  writeLines(inner(", reads = [a, x]"), file.path(d, "inner.ilike"))
+  expect_error(ilike::compile(file.path(d, "outer.ilike")), "reads may not name the state", fixed = TRUE)
+  expect_error(run(", reads = [a, s, i]"), "may name only parameters, not the state", fixed = TRUE)
+})

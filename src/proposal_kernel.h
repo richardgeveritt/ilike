@@ -163,6 +163,11 @@ public:
   // transform). Default: target.write_all(simulate(rng, particle)). Kernels
   // override it with the body of their simulate, writing into the target;
   // the random numbers and the values must be those of simulate.
+  // (C269, PMMH P1) called at the start of a filter run with the run's
+  // parameters, at a sequential point: a kernel may keep what depends only on
+  // declared variables (see GaussianProposalFunctionsInfo::prepare); nothing
+  // by default
+  virtual void prepare_for_parameters(const Parameters &parameters) {}
   virtual void simulate_into(RandomNumberGenerator &rng,
                              const Particle &particle,
                              ProposalTarget &target) const;

@@ -86,6 +86,7 @@ public:
   double committed_log_likelihood = 0.0;
   bool caught_up = false;
   void advance_at_caller_target(const Parameters &parameters);
+  bool repoint_estimator(LikelihoodEstimator* estimator_in); // (C270)
   
   // (C264) a compact record when nothing is stored (iterations_to_store =
   // 0, the default inside another algorithm): the log-likelihood, and the

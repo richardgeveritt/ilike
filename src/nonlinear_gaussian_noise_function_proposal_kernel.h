@@ -63,6 +63,14 @@ protected:
   double specific_subsample_evaluate_kernel(const Particle &proposed_particle,
                                             const Particle &old_particle) const;
 
+public:
+  // (C269, PMMH P1) the covariance is a constant: factorised once
+  void set_covariance_constant();
+  // (C269) the functions read only these variables (reads = [...]): their
+  // values are kept for a filter run (prepare_for_parameters)
+  void set_declared_reads(const std::vector<std::string> &reads);
+  void prepare_for_parameters(const Parameters &parameters);
+protected:
   Parameters simulate(RandomNumberGenerator &rng,
                       const Particle &particle) const;
   // (dev/plan.md, PMMH P2) simulate, written into the proposal's own storage

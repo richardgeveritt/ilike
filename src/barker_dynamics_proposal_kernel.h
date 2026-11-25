@@ -2,6 +2,7 @@
 #define BARKERDYNAMICSPROPOSALKERNEL_H
 
 #include <RcppArmadillo.h>
+#include <functional>
 #include <memory>
 using namespace Rcpp;
 
@@ -80,6 +81,15 @@ namespace ilike
 
     Parameters simulate(RandomNumberGenerator &rng,
                         const Particle &particle) const;
+    // (C268) simulate, written into the proposal's own storage
+    void simulate_into(RandomNumberGenerator &rng,
+                       const Particle &particle,
+                       ProposalTarget &target) const;
+    // the proposal, block by block, handed to put(name, value, shapes): the
+    // same draws for simulate and simulate_into
+    void barker_steps(RandomNumberGenerator &rng,
+                      const Particle &current_particle,
+                      const std::function<void(const std::string&, const arma::colvec&, const Parameters&)> &put) const;
 
     Parameters subsample_simulate(RandomNumberGenerator &rng,
                                   const Particle &particle) const;

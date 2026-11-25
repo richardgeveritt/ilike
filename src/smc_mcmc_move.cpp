@@ -963,6 +963,13 @@ void SMCMCMCMove::move_rich_in_chunks(Particles* next_particles,
                          if (copies)
                          {
                            group_seed = size_t(local_rng());
+                           // (C270) the group's generator too, from the
+                           // particle's seed: an estimator that draws from it
+                           // directly (the ensemble filter's measurement
+                           // noise) then draws the same numbers whatever the
+                           // grouping of the chunks (one group when run
+                           // sequentially, several in parallel)
+                           group_rng.seed(group_seed);
                            Particle start = ancestor;
                            if (tuned)
                              start.tuning = &this->particle_tunings[i];
