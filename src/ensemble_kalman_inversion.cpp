@@ -779,6 +779,18 @@ namespace ilike
     }
   }
 
+  // (C280) as move without an MCMC (copy_without_factor_variables, then
+  // simulate_ensemble_factor_variables): the state kept, its predicted
+  // measurement and noise made again, in the same order of draws
+  void EnsembleKalmanInversion::move_compact_member(RandomNumberGenerator &rng,
+                                                    const Ensemble* current_ensemble,
+                                                    size_t i,
+                                                    Ensemble* next_ensemble)
+  {
+    this->compact_member_state(current_ensemble, i, this->compact_current);
+    this->compact_member_rows(next_ensemble, i, this->compact_current.parameters);
+  }
+
   MoveOutput *EnsembleKalmanInversion::move(RandomNumberGenerator &rng,
                                             Particle &particle)
   {

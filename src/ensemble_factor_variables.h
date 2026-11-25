@@ -23,6 +23,10 @@ public:
   // (C265) point these variables (and their measurement outputs) at
   // ensemble_factors_in, the copy owned by a copied filter; false if not possible
   virtual bool repoint_ensemble_factors(const EnsembleFactors* ensemble_factors_in) { return false; }
+  // (C278) the member's predicted measurement for measurement factor j from
+  // its current state (after the earlier factors' updates), without random
+  // numbers; false if this kind of measurement cannot do it
+  virtual bool recompute_measurement_state(size_t j, const Parameters &parameters) { return false; }
   virtual ~EnsembleFactorVariables();
   
   EnsembleFactorVariables(const EnsembleFactorVariables &another);

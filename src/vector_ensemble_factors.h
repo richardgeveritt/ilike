@@ -22,6 +22,20 @@ class VectorEnsembleFactors : public EnsembleFactors
 {
   
 public:
+  // (C280) compact ensembles
+  void compact_simulate(size_t j, const Parameters &parameters, arma::colvec &measurement_state, arma::colvec &noise);
+  arma::colvec compact_shift(size_t j, const arma::colvec &measurement_state, const arma::colvec &noise, double inverse_incremental_temperature) const;
+  double compact_ensemble_likelihood_ratios(const Index* index,
+                                            const Ensemble* ensemble,
+                                            size_t i,
+                                            double inverse_incremental_temperature,
+                                            const std::vector<arma::mat> &inv_sigma_precomps,
+                                            const std::vector<double> &log_det_precomps) const;
+  size_t number_of_measurement_factors() const { return this->measurement_covariance_estimators.size(); }
+  bool supports_compact_members() const;
+  arma::colvec compact_measurement_state(size_t j, const Parameters &parameters);
+  arma::colvec compact_noise(size_t j);
+
   
   VectorEnsembleFactors();
   VectorEnsembleFactors(const std::vector<MeasurementCovarianceEstimator*> &measurement_covariance_estimators_in);

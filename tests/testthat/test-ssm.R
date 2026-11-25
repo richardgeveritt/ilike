@@ -287,3 +287,55 @@ test_that("KF handles time-varying matrices, and steady_state freezes and unfree
   z = run(80, 1, function(a, t) a, function(i) if (i >= 30) 3 else 1, "a", "(i >= 30) ? 3.0 : 1.0", 1e-9)
   expect_lt(abs(z[["ilike"]] - z[["exact"]]), 1e-6)
 })
+
+# (C277, C278) The ensemble Kalman filter against the Kalman filter on models
+# it used to get wrong: two measurement factors (it took them from the same
+# ensemble: the product of their marginal densities; now one after another),
+# and a data covariance depending on the index (its members kept the first
+# step's index). The square-root shifter with fewer measurement components
+# than states stopped with a dimension error (an identity of the wrong size).
+enkf_check_files = function(two_factors, time_varying, members, shifter)
+{
+  mat = function(M) paste0("[", paste(apply(M, 1, function(r) paste0("[", paste(r, collapse = ", "), "]")), collapse = ", "), "]")
+  n = 10; set.seed(7); H1 = matrix(c(1, 0.3, -0.5, 1), 2, 2); H2 = matrix(c(0.7, 0.2), 1, 2)
+  R1 = function(i) if (time_varying) 1 + 0.2*i else 1
+  x = rnorm(2); Y1 = matrix(0, n, 2); Y2 = matrix(0, n, 1)
+  for (j in 1:n) { if (j > 1) x = 0.7*x + rnorm(2, 0, sqrt(0.5))
+    Y1[j, ] = round(H1 %*% x + rnorm(2, 0, sqrt(R1(j - 1))), 3); Y2[j, ] = round(H2 %*% x + rnorm(1, 0, 2), 3) }
+  d = tempfile(); dir.create(d)
+  inner = c("ilike 1.0", "model {", "  x ~ mvnorm([0, 0], [[1, 0], [0, 1]])",
+            "  transition x = linear_gaussian(matrix = cpp::transition_matrix, covariance = [[0.5, 0], [0, 0.5]])",
+            paste0("  factor obs1 = linear_gaussian(data = y1, state = x, matrix = ", mat(H1), ", covariance = cpp::data_cov)"),
+            if (two_factors) paste0("  factor obs2 = linear_gaussian(data = y2, state = x, matrix = ", mat(H2), ", covariance = [[4]])"),
+            paste0("  time = ssm(index = i, first_index = 0, last_index = ", n - 1, ", time = t, initial_time = 0,"),
+            "             time_difference = dt, time_step = 1, predictions_per_update = 1)", "}", "cpp {",
+            "arma::mat transition_matrix(const Parameters &parameters) { return parameters[\"a\"][0]*arma::eye(2, 2); }",
+            paste0("arma::mat data_cov(const Parameters &parameters) { return ", if (time_varying) "(1.0 + 0.2*parameters[\"i\"][0])" else "1.0", "*arma::eye(2, 2); }"),
+            "}", "algorithm kalman {", "}")
+  writeLines(inner, file.path(d, "inner.ilike"))
+  outer = function(f) c("ilike 1.0", "import \"inner.ilike\" as inner", "data {", paste0("  y1 = ", mat(Y1)), paste0("  y2 = ", mat(Y2)), "}",
+                        "model {", "  a ~ unif(-1, 1)", paste0("  factor filter = ", f), "}")
+  writeLines(outer("kf(inner)"), file.path(d, "kf.ilike"))
+  writeLines(outer(paste0("enkf(inner, ensemble_members = ", members, ", shifter = \"", shifter, "\")")), file.path(d, "enkf.ilike"))
+  d
+}
+
+enkf_check = function(d, seed = 1)
+  sapply(c("kf", "enkf"), function(f) suppressMessages(ilike::evaluate_log(ilike::compile(file.path(d, paste0(f, ".ilike"))),
+                                                                           parameters = list(a = 0.7), seed = seed)))
+
+test_that("EnKF runs a data covariance that reads the index, and the square-root shifter with a 1-d measurement of a 2-d state", {
+  d = enkf_check_files(TRUE, TRUE, 50, "sqrt")
+  on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  expect_true(is.finite(enkf_check(d)[["enkf"]]))
+})
+
+test_that("EnKF agrees with the KF with two measurement factors and with a time-varying data covariance", {
+  skip_on_cran()
+  for (case in list(list(TRUE, FALSE, "stochastic"), list(TRUE, FALSE, "sqrt"), list(FALSE, TRUE, "stochastic"))) {
+    d = enkf_check_files(case[[1]], case[[2]], 5000, case[[3]])
+    z = enkf_check(d)
+    unlink(d, recursive = TRUE)
+    expect_lt(abs(z[["enkf"]] - z[["kf"]]), 0.15)
+  }
+})

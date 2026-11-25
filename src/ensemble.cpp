@@ -180,6 +180,13 @@ void Ensemble::make_copy(const Ensemble &another)
   this->ess = another.ess;
   this->log_measurement_likelihood_means = another.log_measurement_likelihood_means;
   this->log_measurement_likelihood_variances = another.log_measurement_likelihood_variances;
+  this->compact = another.compact;
+  this->compact_measurement_states = another.compact_measurement_states;
+  this->compact_noise = another.compact_noise;
+  this->compact_fixed_parameters = another.compact_fixed_parameters;
+  this->compact_predicted_states = another.compact_predicted_states;
+  this->compact_predicted_measurement_states = another.compact_predicted_measurement_states;
+  this->compact_predicted_noise = another.compact_predicted_noise;
 }
 
 void Ensemble::make_copy(Ensemble &&another)
@@ -209,6 +216,20 @@ void Ensemble::make_copy(Ensemble &&another)
   this->ess = std::move(another.ess);
   this->log_measurement_likelihood_means = std::move(another.log_measurement_likelihood_means);
   this->log_measurement_likelihood_variances = std::move(another.log_measurement_likelihood_variances);
+  this->compact = another.compact;
+  this->compact_measurement_states = std::move(another.compact_measurement_states);
+  this->compact_noise = std::move(another.compact_noise);
+  this->compact_fixed_parameters = std::move(another.compact_fixed_parameters);
+  this->compact_predicted_states = std::move(another.compact_predicted_states);
+  this->compact_predicted_measurement_states = std::move(another.compact_predicted_measurement_states);
+  this->compact_predicted_noise = std::move(another.compact_predicted_noise);
+  another.compact_predicted_states = arma::mat();
+  another.compact_predicted_measurement_states = std::vector<arma::mat>();
+  another.compact_predicted_noise = std::vector<arma::mat>();
+  another.compact = false;
+  another.compact_measurement_states = std::vector<arma::mat>();
+  another.compact_noise = std::vector<arma::mat>();
+  another.compact_fixed_parameters = Parameters();
   
   another.members.clear();
   
@@ -359,7 +380,17 @@ MoveOutput* Ensemble::back() const
 
 size_t Ensemble::size() const
 {
+  if (this->compact)
+    return this->packed_members.n_rows;
   return(this->members.size());
+}
+
+void Ensemble::release_packed_working_copies()
+{
+  this->partially_packed_members_col = std::vector<arma::colvec>();
+  this->partially_packed_members_row = std::vector<arma::rowvec>();
+  this->partially_packed_measurement_states = std::vector< std::vector<arma::rowvec> >();
+  this->packed_measurement_states = std::vector<arma::mat>();
 }
 
 void Ensemble::update_weights(const arma::colvec &latest_unnormalised_log_incremental_weights)
@@ -426,6 +457,11 @@ void Ensemble::calculate_kalman_gains(double inverse_incremental_temperature)
 arma::rowvec Ensemble::get_output_lengths() const
 {
   arma::rowvec output_lengths(this->size());
+  if (this->compact)
+  {
+    output_lengths.ones(); // (one point per member, as a member object's length)
+    return output_lengths;
+  }
   
   for (size_t i=0; i<this->members.size(); ++i)
   {

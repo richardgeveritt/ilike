@@ -35,14 +35,11 @@ void StochasticEnsembleShifter::setup(Ensemble *ensemble,
                                       double inverse_incremental_temperature) {}
 
 void StochasticEnsembleShifter::shift(
-    const EnsembleFactorVariables *ensemble_factor_variables,
+    const std::vector<arma::colvec> &shift_terms,
     arma::colvec &position, const std::vector<arma::colvec *> &measurements,
     const std::vector<arma::mat> &kalman_gains,
     const std::vector<arma::colvec> &myys,
     double inverse_incremental_temperature) const {
-  std::vector<arma::colvec> shift_terms =
-      ensemble_factor_variables->get_shifts(inverse_incremental_temperature);
-
   for (size_t j = 0; j < kalman_gains.size(); ++j) {
     position = position + kalman_gains[j] * (*measurements[j] - shift_terms[j]);
   }

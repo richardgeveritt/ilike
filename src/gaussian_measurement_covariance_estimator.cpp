@@ -53,6 +53,20 @@ void GaussianMeasurementCovarianceEstimator::find_Cygivenx(const arma::mat &inv_
   // blank on purpose
 }
 
+// (C280) the ratio a member output computes (moved here so that a compact
+// ensemble's rows use the same arithmetic)
+double GaussianMeasurementCovarianceEstimator::ensemble_likelihood_ratio(const arma::colvec &measurement_state,
+                                                                        double inverse_incremental_temperature,
+                                                                        const arma::mat &inv_sigma_precomp,
+                                                                        double log_det_precomp) const
+{
+  double c = (double(inv_sigma_precomp.n_rows)/2.0)*(1.0/inverse_incremental_temperature)*log(inverse_incremental_temperature) + (double(inv_sigma_precomp.n_rows)/2.0)*(1.0-(1.0/inverse_incremental_temperature))*log(2.0*M_PI) + (1.0/2.0)*(1.0-(1.0/inverse_incremental_temperature))*log_det_precomp;
+  return c + dmvnorm_using_precomp(this->measurement,
+                                   measurement_state,
+                                   inv_sigma_precomp,
+                                   log_det_precomp);
+}
+
 arma::mat GaussianMeasurementCovarianceEstimator::get_unconditional_measurement_covariance(const arma::mat &Cyy,
                                                                                            double inverse_incremental_temperature) const
 {

@@ -20,8 +20,32 @@ class HMMEnsembleFactors : public EnsembleFactors
 {
   friend class HMMEnsembleFactorVariables; // (C265: repointing to a copy's estimators)
 public:
+  // (C280) compact ensembles
+  void compact_simulate(size_t j, const Parameters &parameters, arma::colvec &measurement_state, arma::colvec &noise);
+  arma::colvec compact_shift(size_t j, const arma::colvec &measurement_state, const arma::colvec &noise, double inverse_incremental_temperature) const;
+  double compact_ensemble_likelihood_ratios(const Index* index,
+                                            const Ensemble* ensemble,
+                                            size_t i,
+                                            double inverse_incremental_temperature,
+                                            const std::vector<arma::mat> &inv_sigma_precomps,
+                                            const std::vector<double> &log_det_precomps) const;
+
   void redirect_random_numbers(RandomNumberGenerator* rng_in, size_t* seed_in); // (C270)
+  // (C278) see EnsembleFactors; the loops of the filter's update (gains,
+  // likelihood, adjustments, measurements, and the members' measurement
+  // states and shifts) take only the active factor's estimator
+  size_t number_of_measurement_factors() const { return this->measurement_covariance_estimators.size(); }
+  void set_active_measurement_factor(int factor) { this->active_measurement_factor = factor; }
+  const std::vector<size_t>& active_measurement_factors() const;
+  bool supports_compact_members() const; // (C279)
+  std::vector<size_t> active_measurement_factor_indices() const { return this->active_measurement_factors(); }
+  arma::colvec compact_measurement_state(size_t j, const Parameters &parameters);
+  arma::colvec compact_noise(size_t j);
 private:
+  int active_measurement_factor = -1;
+  // (the list active_measurement_factors returns, kept so that the loops per
+  // member allocate nothing)
+  mutable std::vector<size_t> active_factors;
   
 public:
   

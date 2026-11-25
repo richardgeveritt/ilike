@@ -94,6 +94,43 @@ void HMMEnsembleFactors::make_copy(const HMMEnsembleFactors &another)
   this->measurement_covariance_estimator_temp_data = another.measurement_covariance_estimator_temp_data;
 }
 
+const std::vector<size_t>& HMMEnsembleFactors::active_measurement_factors() const
+{
+  if (this->active_measurement_factor >= 0)
+  {
+    if ((this->active_factors.size() != 1) || (this->active_factors[0] != size_t(this->active_measurement_factor)))
+      this->active_factors.assign(1, size_t(this->active_measurement_factor));
+  }
+  else if (this->active_factors.size() != this->measurement_covariance_estimators.size() ||
+           ((this->active_factors.size() == 1) && (this->active_factors[0] != 0)))
+  {
+    this->active_factors.resize(this->measurement_covariance_estimators.size());
+    for (size_t i = 0; i < this->active_factors.size(); ++i)
+      this->active_factors[i] = i;
+  }
+  return this->active_factors;
+}
+
+bool HMMEnsembleFactors::supports_compact_members() const
+{
+  if (this->measurement_covariance_estimators.empty())
+    return false;
+  for (auto i = this->measurement_covariance_estimators.begin(); i != this->measurement_covariance_estimators.end(); ++i)
+    if ((*i == NULL) || !(*i)->supports_compact_members())
+      return false;
+  return true;
+}
+
+arma::colvec HMMEnsembleFactors::compact_measurement_state(size_t j, const Parameters &parameters)
+{
+  return this->measurement_covariance_estimators[j]->compact_measurement_state(parameters);
+}
+
+arma::colvec HMMEnsembleFactors::compact_noise(size_t j)
+{
+  return this->measurement_covariance_estimators[j]->compact_noise();
+}
+
 void HMMEnsembleFactors::set_data(const Index* index)
 {
   if (this->measurement_covariance_estimators.size()==0)
@@ -158,15 +195,8 @@ EnsembleFactorVariables* HMMEnsembleFactors::subsample_simulate_ensemble_factor_
 std::vector<arma::colvec*> HMMEnsembleFactors::get_measurements()
 {
   std::vector<arma::colvec*> measurements;
-  measurements.reserve(this->measurement_covariance_estimators.size());
-  
-  for (auto i=this->measurement_covariance_estimators.begin();
-       i != this->measurement_covariance_estimators.end();
-       ++i)
-  {
-    measurements.push_back((*i)->get_measurement_pointer());
-  }
-  
+  for (size_t i : this->active_measurement_factors())
+    measurements.push_back(this->measurement_covariance_estimators[i]->get_measurement_pointer());
   return measurements;
 }
 
@@ -189,13 +219,12 @@ void HMMEnsembleFactors::find_Cygivenx(const arma::mat &inv_Cxx,
                                        const std::vector<arma::mat> &Cxys,
                                        const std::vector<arma::mat> &Cyys) const
 {
-  for (size_t i=0;
-       i<this->measurement_covariance_estimators.size();
-       ++i)
+  const std::vector<size_t> &active = this->active_measurement_factors();
+  for (size_t k=0; k<active.size(); ++k)
   {
-    this->measurement_covariance_estimators[i]->find_Cygivenx(inv_Cxx,
-                                                              Cxys[i],
-                                                              Cyys[i]);
+    this->measurement_covariance_estimators[active[k]]->find_Cygivenx(inv_Cxx,
+                                                                      Cxys[k],
+                                                                      Cyys[k]);
   }
 }
 
@@ -207,17 +236,15 @@ std::vector<arma::mat> HMMEnsembleFactors::get_adjustments(const arma::mat &Zf,
                                                            double inverse_incremental_temperature) const
 {
   std::vector<arma::mat> adjustments;
-  adjustments.reserve(this->measurement_covariance_estimators.size());
-  for (size_t i=0;
-       i<this->measurement_covariance_estimators.size();
-       ++i)
+  const std::vector<size_t> &active = this->active_measurement_factors();
+  for (size_t k=0; k<active.size(); ++k)
   {
-    adjustments.push_back(this->measurement_covariance_estimators[i]->get_adjustment(Zf,
-                                                                                     Dhathalf,
-                                                                                     P,
-                                                                                     Vtranspose,
-                                                                                     Yhats[i],
-                                                                                     inverse_incremental_temperature));
+    adjustments.push_back(this->measurement_covariance_estimators[active[k]]->get_adjustment(Zf,
+                                                                                             Dhathalf,
+                                                                                             P,
+                                                                                             Vtranspose,
+                                                                                             Yhats[k],
+                                                                                             inverse_incremental_temperature));
   }
   return adjustments;
 }
@@ -227,14 +254,12 @@ std::vector<arma::mat> HMMEnsembleFactors::get_sqrt_adjustments(const std::vecto
                                                                 double inverse_incremental_temperature) const
 {
   std::vector<arma::mat> adjustments;
-  adjustments.reserve(this->measurement_covariance_estimators.size());
-  for (size_t i=0;
-       i<this->measurement_covariance_estimators.size();
-       ++i)
+  const std::vector<size_t> &active = this->active_measurement_factors();
+  for (size_t k=0; k<active.size(); ++k)
   {
-    adjustments.push_back(this->measurement_covariance_estimators[i]->get_sqrt_adjustment(Cxys[i],
-                                                                                          Cyys[i],
-                                                                                          inverse_incremental_temperature));
+    adjustments.push_back(this->measurement_covariance_estimators[active[k]]->get_sqrt_adjustment(Cxys[k],
+                                                                                                  Cyys[k],
+                                                                                                  inverse_incremental_temperature));
   }
   return adjustments;
 }
@@ -245,17 +270,18 @@ double HMMEnsembleFactors::get_incremental_likelihood(Ensemble* ensemble) const
   
   double llhd = 0.0;
   ensemble->kalman_gains.clear();
-  ensemble->kalman_gains.reserve(this->measurement_covariance_estimators.size());
-  
-  for (size_t i=0;
-       i<this->measurement_covariance_estimators.size();
-       ++i)
+  const std::vector<size_t> &active = this->active_measurement_factors();
+  // (C278) with several factors the filter makes one pass per factor (only
+  // that factor active); summing over factors here, from one ensemble, gave
+  // the product of their marginal densities instead of the joint density
+  for (size_t k=0; k<active.size(); ++k)
   {
-    arma::mat unconditional_measurement_covariance = this->measurement_covariance_estimators[i]->get_unconditional_measurement_covariance(ensemble->Cyys[i],
+    size_t i = active[k];
+    arma::mat unconditional_measurement_covariance = this->measurement_covariance_estimators[i]->get_unconditional_measurement_covariance(ensemble->Cyys[k],
                                                                                                                                           inverse_incremental_temperature);
     
-    ensemble->kalman_gains.push_back(ensemble->Cxys[i]*unconditional_measurement_covariance.i());
-    llhd = llhd + dmvnorm(*this->measurement_covariance_estimators[i]->get_measurement_pointer(),ensemble->myys[i],unconditional_measurement_covariance);
+    ensemble->kalman_gains.push_back(ensemble->Cxys[k]*unconditional_measurement_covariance.i());
+    llhd = llhd + dmvnorm(*this->measurement_covariance_estimators[i]->get_measurement_pointer(),ensemble->myys[k],unconditional_measurement_covariance);
   }
   
   return llhd;
@@ -396,16 +422,13 @@ void HMMEnsembleFactors::calculate_kalman_gains(Ensemble* ensemble,
                                                 double inverse_incremental_temperature) const
 {
   ensemble->kalman_gains.clear();
-  ensemble->kalman_gains.reserve(this->measurement_covariance_estimators.size());
-  
-  for (size_t i=0;
-       i<this->measurement_covariance_estimators.size();
-       ++i)
+  const std::vector<size_t> &active = this->active_measurement_factors();
+  for (size_t k=0; k<active.size(); ++k)
   {
-    arma::mat unconditional_measurement_covariance = this->measurement_covariance_estimators[i]->get_unconditional_measurement_covariance(ensemble->Cyys[i],
-                                                                                                                                          inverse_incremental_temperature);
+    arma::mat unconditional_measurement_covariance = this->measurement_covariance_estimators[active[k]]->get_unconditional_measurement_covariance(ensemble->Cyys[k],
+                                                                                                                                                  inverse_incremental_temperature);
     
-    ensemble->kalman_gains.push_back(ensemble->Cxys[i]*unconditional_measurement_covariance.i());
+    ensemble->kalman_gains.push_back(ensemble->Cxys[k]*unconditional_measurement_covariance.i());
   }
   
 }
@@ -461,4 +484,31 @@ void HMMEnsembleFactors::redirect_random_numbers(RandomNumberGenerator* rng_in, 
       estimator->redirect_random_numbers(rng_in, seed_in);
 }
 
+
+// (C280) member i's weight from its rows, as its outputs' ratios add up
+double HMMEnsembleFactors::compact_ensemble_likelihood_ratios(const Index* index,
+                                               const Ensemble* ensemble,
+                                               size_t i,
+                                               double inverse_incremental_temperature,
+                                               const std::vector<arma::mat> &inv_sigma_precomps,
+                                               const std::vector<double> &log_det_precomps) const
+{
+  double result = 0.0;
+  for (auto j=index->begin(); j!=index->end(); ++j)
+    result = result + this->measurement_covariance_estimators[*j]->ensemble_likelihood_ratio(arma::colvec(ensemble->compact_measurement_states[*j].row(i).t()),
+                                                                                            inverse_incremental_temperature,
+                                                                                            inv_sigma_precomps[*j],
+                                                                                            log_det_precomps[*j]);
+  return result;
+}
+
+void HMMEnsembleFactors::compact_simulate(size_t j, const Parameters &parameters, arma::colvec &measurement_state, arma::colvec &noise)
+{
+  this->measurement_covariance_estimators[j]->compact_simulate(parameters, measurement_state, noise);
+}
+
+arma::colvec HMMEnsembleFactors::compact_shift(size_t j, const arma::colvec &measurement_state, const arma::colvec &noise, double inverse_incremental_temperature) const
+{
+  return this->measurement_covariance_estimators[j]->compact_shift(measurement_state, noise, inverse_incremental_temperature);
+}
 }

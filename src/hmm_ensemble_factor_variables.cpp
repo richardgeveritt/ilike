@@ -82,41 +82,32 @@ void HMMEnsembleFactorVariables::make_copy(const HMMEnsembleFactorVariables &ano
 
 std::vector<arma::rowvec> HMMEnsembleFactorVariables::get_measurement_states_for_covariance() const
 {
-  std::vector<arma::rowvec> measurements;
-  measurements.reserve(this->measurement_covariance_estimator_outputs.size());
-  for (auto i=this->measurement_covariance_estimator_outputs.begin();
-       i!=this->measurement_covariance_estimator_outputs.end();
-       ++i)
-  {
-    measurements.push_back((*i)->get_measurement_state_for_covariance());
-  }
-  return measurements;
+  // (C278) the active measurement factor's only, when the filter assimilates
+  // its factors one after another (all of them otherwise)
+  std::vector<arma::rowvec> output;
+  for (size_t i : this->hmm_ensemble_factors->active_measurement_factors())
+    output.push_back(this->measurement_covariance_estimator_outputs[i]->get_measurement_state_for_covariance());
+  return output;
 }
 
 std::vector<arma::colvec> HMMEnsembleFactorVariables::get_shifts(double inverse_incremental_temperature) const
 {
-  std::vector<arma::colvec> shifts;
-  shifts.reserve(this->measurement_covariance_estimator_outputs.size());
-  for (auto i=this->measurement_covariance_estimator_outputs.begin();
-       i!=this->measurement_covariance_estimator_outputs.end();
-       ++i)
-  {
-    shifts.push_back((*i)->get_shift(inverse_incremental_temperature));
-  }
-  return shifts;
+  // (C278) the active measurement factor's only, when the filter assimilates
+  // its factors one after another (all of them otherwise)
+  std::vector<arma::colvec> output;
+  for (size_t i : this->hmm_ensemble_factors->active_measurement_factors())
+    output.push_back(this->measurement_covariance_estimator_outputs[i]->get_shift(inverse_incremental_temperature));
+  return output;
 }
 
 std::vector<arma::colvec> HMMEnsembleFactorVariables::get_deterministic_shifts() const
 {
-  std::vector<arma::colvec> shifts;
-  shifts.reserve(this->measurement_covariance_estimator_outputs.size());
-  for (auto i=this->measurement_covariance_estimator_outputs.begin();
-       i!=this->measurement_covariance_estimator_outputs.end();
-       ++i)
-  {
-    shifts.push_back((*i)->get_deterministic_shift());
-  }
-  return shifts;
+  // (C278) the active measurement factor's only, when the filter assimilates
+  // its factors one after another (all of them otherwise)
+  std::vector<arma::colvec> output;
+  for (size_t i : this->hmm_ensemble_factors->active_measurement_factors())
+    output.push_back(this->measurement_covariance_estimator_outputs[i]->get_deterministic_shift());
+  return output;
 }
 
 std::vector<arma::colvec*> HMMEnsembleFactorVariables::get_measurements() const
@@ -188,6 +179,11 @@ double HMMEnsembleFactorVariables::subsample_evaluate_likelihoods(const Index* i
     result = result + this->measurement_covariance_estimator_outputs[*i]->subsample_evaluate_likelihood();
   }
   return result;
+}
+
+bool HMMEnsembleFactorVariables::recompute_measurement_state(size_t j, const Parameters &parameters)
+{
+  return this->measurement_covariance_estimator_outputs[j]->recompute_measurement_state(parameters);
 }
 
 const EnsembleFactors* HMMEnsembleFactorVariables::get_ensemble_factors() const

@@ -84,6 +84,25 @@ public:
   // (C264) as move, building the moved member in a dropped ensemble's member
   // (spare), when reuses_member_objects(); the default deletes spare and moves
   virtual bool reuses_member_objects() const { return false; }
+  // (C279) compact ensembles (dev/plan.md, "members stored compactly"):
+  // whether this method keeps its members as rows of matrices; the start of a
+  // new compact ensemble (initial, or the next one for a move); one member
+  // simulated from the proposal or moved, written into its rows. Not used
+  // by default (the members stay objects).
+  bool uses_compact_members() const;
+  void start_compact_ensemble(Ensemble* next_ensemble,
+                              const Ensemble* current_ensemble,
+                              const Parameters* conditioned_on_parameters);
+  void simulate_compact_member(RandomNumberGenerator &rng,
+                               Ensemble* next_ensemble,
+                               size_t i,
+                               const Parameters* conditioned_on_parameters);
+  // each method's move of one member (the filter: the transition; EnKI and
+  // MFDS: the state kept, its predicted measurement and noise made again)
+  virtual void move_compact_member(RandomNumberGenerator &rng,
+                                   const Ensemble* current_ensemble,
+                                   size_t i,
+                                   Ensemble* next_ensemble) { Rcpp::stop("EnsembleKalman::move_compact_member - not available."); }
   // (dev/plan.md 3.21 (c2''')) the caller's move stage, for a filter that
   // follows the caller's data tempering; by default, nothing
   virtual void advance_at_caller_target_enk(EnsembleKalmanOutput* current_state,
@@ -98,6 +117,25 @@ public:
 protected:
   
   void specific_change_data(Data* new_data);
+
+  // (C279, C280) compact ensembles: a method's own conditions on top of the
+  // shared ones (default: not compact); the decision (-1: not made yet; made
+  // once the set-up has found the variables); and the two scratch members
+  // a compact ensemble's members go through (not copied: a copy makes its own)
+  virtual bool compact_conditions() const { return false; }
+  // (C281) whether a transform on the members is allowed (MFDS: drawn
+  // members are transformed, written ones transformed back), and whether the
+  // scratch member is pointed at the current schedule before a move (C277;
+  // MFDS's moved members are its predicted members, which carry only their
+  // states, so its member objects do not see the schedule there)
+  virtual bool compact_allows_transform() const { return false; }
+  virtual bool compact_points_at_schedule() const { return true; }
+  mutable int compact_decision = -1;
+  Particle compact_current;
+  Particle compact_next;
+  void compact_member_state(const Ensemble* ensemble, size_t i, Particle &member) const;
+  void compact_member_rows(Ensemble* ensemble, size_t i, const Parameters &parameters);
+  void compact_from_points(Ensemble* next_ensemble, const Parameters* conditioned_on_parameters);
   
   friend EnsembleKalmanOutput;
   friend EnsembleKalmanWorker;

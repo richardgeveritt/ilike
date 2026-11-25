@@ -235,7 +235,7 @@ arma::mat DirectLinearGaussianMeasurementCovarianceEstimator::get_sqrt_adjustmen
   arma::mat K = Cxy * arma::inv_sympd(sqrtS) * arma::inv_sympd(sqrtS + sqrtV);
   
   arma::mat I;
-  I.eye(Cxy.n_cols,Cxy.n_cols);
+  I.eye(Cxy.n_rows,Cxy.n_rows); // (C278: I - K H is state x state; n_cols, the measurement dimension, worked only when the two were equal)
   
   return I-K*stacked_H;
 }

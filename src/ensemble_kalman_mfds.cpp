@@ -420,7 +420,21 @@ void EnsembleKalmanMFDS::ensemble_kalman_simulate(EnsembleKalmanOutput* current_
     
     // move (sometimes only do this when resample - to do this, adapt number of moves based on diversity of positions);
     
-    current_state->back().members = std::move(current_state->back().predicted_members);
+    if (current_state->back().compact)
+    {
+      // (C281) the predicted rows become the members' rows; the predicted
+      // members carry only their states (no outer parameters, no schedule)
+      Ensemble &ensemble = current_state->back();
+      ensemble.packed_members = std::move(ensemble.compact_predicted_states);
+      ensemble.compact_measurement_states = std::move(ensemble.compact_predicted_measurement_states);
+      ensemble.compact_noise = std::move(ensemble.compact_predicted_noise);
+      ensemble.compact_predicted_states = arma::mat();
+      ensemble.compact_predicted_measurement_states = std::vector<arma::mat>();
+      ensemble.compact_predicted_noise = std::vector<arma::mat>();
+      ensemble.compact_fixed_parameters = Parameters();
+    }
+    else
+      current_state->back().members = std::move(current_state->back().predicted_members);
     
     Ensemble* current_particles = &current_state->back();
     Ensemble* next_particles = current_state->add_ensemble(this->ensemble_factors.get());
@@ -481,6 +495,17 @@ void EnsembleKalmanMFDS::ensemble_kalman_evaluate_smcadaptive_part_given_smcfixe
     
     this->ensemble_kalman_simulate(current_state);
   }
+}
+
+// (C281) as move without an MCMC: the state kept, its predicted measurement
+// and noise made again (with the member's own variables: only its state)
+void EnsembleKalmanMFDS::move_compact_member(RandomNumberGenerator &rng,
+                                             const Ensemble* current_ensemble,
+                                             size_t i,
+                                             Ensemble* next_ensemble)
+{
+  this->compact_member_state(current_ensemble, i, this->compact_current);
+  this->compact_member_rows(next_ensemble, i, this->compact_current.parameters);
 }
 
 MoveOutput* EnsembleKalmanMFDS::move(RandomNumberGenerator &rng,

@@ -1,3 +1,4 @@
+#include "transform.h"
 
 #include "mixed_generic_direct_gaussian_measurement_covariance_estimator.h"
 #include "mixed_generic_direct_gaussian_measurement_covariance_estimator_output.h"
@@ -242,6 +243,58 @@ arma::mat MixedGenericDirectGaussianMeasurementCovarianceEstimator::get_measurem
   output.submat(0, 0, likelihood_part.n_rows-1, likelihood_part.n_rows-1) = likelihood_part;
   output.submat(likelihood_part.n_rows, likelihood_part.n_rows, likelihood_part.n_rows+prior_part.n_rows-1, likelihood_part.n_rows+prior_part.n_rows-1) = prior_part;
   return output;
+}
+
+// (C281) as MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::
+// simulate (simulate_at at the model's parameters, T^{-1}(u) with a
+// transform, and the ensemble point u), with the same draws in the same order
+// (the simulator, the likelihood noise, then the prior noise after
+// set_parameters)
+void MixedGenericDirectGaussianMeasurementCovarianceEstimator::compact_simulate(const Parameters &parameters,
+                                                                                arma::colvec &measurement_state,
+                                                                                arma::colvec &noise)
+{
+  Parameters model_parameters = (this->transform == NULL) ? parameters : this->transform->inverse_transform(parameters);
+  arma::colvec likelihood_measurement_state;
+  if (this->summary_statistics==NULL)
+    likelihood_measurement_state = this->simulate(model_parameters).get_colvec(this->measurement_variables);
+  else
+    likelihood_measurement_state = this->summary_statistics->transform(this->simulate(model_parameters)).get_colvec(this->measurement_variables);
+  arma::colvec prior_measurement_state;
+  if (this->transform_function!=NULL)
+    prior_measurement_state = this->transform_function(parameters).get_colvec(this->prior_measurement_variables);
+  else
+    prior_measurement_state = parameters.get_colvec(this->prior_measurement_variables);
+  arma::colvec likelihood_random_shift = this->gaussian_simulate();
+  this->set_parameters(parameters);
+  arma::colvec prior_random_shift = this->kernel.independent_simulate(*this->rng).get_colvec(this->prior_measurement_variables);
+  measurement_state = arma::join_cols(likelihood_measurement_state, prior_measurement_state);
+  noise = arma::join_cols(likelihood_random_shift, prior_random_shift);
+}
+
+// (C281) as the output's get_shift, from the rows: the likelihood part is the
+// first measurement_dimension entries of each row (the simulator's
+// measurement, set up from its output; the likelihood noise has this length,
+// and get_shift adds the two), the prior part the rest
+arma::colvec MixedGenericDirectGaussianMeasurementCovarianceEstimator::compact_shift(const arma::colvec &measurement_state,
+                                                                                      const arma::colvec &noise,
+                                                                                      double inverse_incremental_temperature) const
+{
+  arma::uword n_likelihood = arma::uword(this->measurement_dimension);
+  arma::colvec likelihood_measurement_state = measurement_state.head(n_likelihood);
+  arma::colvec prior_measurement_state = measurement_state.tail(measurement_state.n_elem - n_likelihood);
+  arma::colvec likelihood_random_shift = noise.head(n_likelihood);
+  arma::colvec prior_random_shift = noise.tail(noise.n_elem - n_likelihood);
+  arma::colvec blank_measurement = arma::colvec(likelihood_measurement_state.n_elem);
+  arma::colvec blank_prior = arma::colvec(prior_measurement_state.n_elem);
+  if ((inverse_incremental_temperature-1.0)==0.0)
+  {
+    return arma::join_cols(likelihood_measurement_state,prior_measurement_state) + arma::join_cols(blank_measurement,prior_random_shift);
+  }
+  else
+  {
+    return arma::join_cols(likelihood_measurement_state,prior_measurement_state) + arma::join_cols(arma::chol((inverse_incremental_temperature-1.0)*this->likelihood_Cygivenx, "lower")*likelihood_random_shift,blank_prior) + arma::join_cols(blank_measurement,sqrt(inverse_incremental_temperature)*prior_random_shift);
+  }
 }
 
 Parameters MixedGenericDirectGaussianMeasurementCovarianceEstimator::simulate(const Parameters &current_state)

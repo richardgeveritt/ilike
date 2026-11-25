@@ -36,6 +36,10 @@ public:
                      const arma::mat &Cxy,
                      const arma::mat &Cyy);
   
+  double ensemble_likelihood_ratio(const arma::colvec &measurement_state,
+                                   double inverse_incremental_temperature,
+                                   const arma::mat &inv_sigma_precomp,
+                                   double log_det_precomp) const; // (C280)
   arma::mat get_unconditional_measurement_covariance(const arma::mat &Cyy,
                                                      double inverse_incremental_temperature) const;
   

@@ -70,9 +70,19 @@ public:
   EnsembleKalmanOutput* specific_run();
   EnsembleKalmanOutput* specific_run(const Parameters &conditioned_on_parameters);
   
+  void point_at_current_schedule(Particle &ensemble_member) const; // (C277)
+  // (C278) the update with the current observation: its log-likelihood
+  // increment; with commit, the members are shifted (and unpacked), without
+  // it (an SMC^2 trial) they are left as they were
+  double assimilate(EnsembleKalmanOutput* current_state, bool commit);
   MoveOutput* move(RandomNumberGenerator &rng,
                    Particle &particle);
   bool reuses_member_objects() const { return this->predictions_per_update == 1; }
+  // (C279) compact ensembles (dev/plan.md, "members stored compactly")
+  void move_compact_member(RandomNumberGenerator &rng,
+                           const Ensemble* current_ensemble,
+                           size_t i,
+                           Ensemble* next_ensemble);
 
   // (dev/plan.md 3.21 (c2''')) SMC^2 with an ensemble Kalman filter: the
   // caller's data tempering takes in the filter's observations one at a time
@@ -166,6 +176,7 @@ protected:
   double initial_time = 0.0; // (each run starts here, C265)
   size_t current_index;
   bool follows_caller_target = false;
+  bool compact_conditions() const; // (C279)
   std::string followed_variable;
   bool followed_anneal = false;
   double exchange_below = -1.0; // (C267: no exchange when negative)

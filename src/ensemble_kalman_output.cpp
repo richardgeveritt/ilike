@@ -1,3 +1,4 @@
+#include "transform.h"
 #include "ensemble_kalman_output.h"
 #include "ensemble_factor_variables.h"
 #include "ensemble_kalman.h"
@@ -469,7 +470,35 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
         h5_write_string(iter_grp, "schedule_parameters", oss.str());
       }
 
-      // vector_points: collect all ensemble members into one matrix
+      // vector_points: collect all ensemble members into one matrix (C279: a
+      // compact ensemble's rows are that matrix: its members hold only the
+      // state variables, without a transform)
+      if (this->all_ensembles[deque_index].compact)
+      {
+        const arma::mat &rows = this->all_ensembles[deque_index].packed_members;
+        if ((rows.n_rows > 0) && (this->transform == NULL))
+          h5_write_mat(iter_grp, "vector_points", rows);
+        else if (rows.n_rows > 0)
+        {
+          // (C281, MFDS) each member through the inverse transform, as a
+          // member object's get_matrix_of_vector_points
+          const PackingInstructions &packing = this->estimator->packing_instructions;
+          arma::mat points;
+          for (arma::uword i = 0; i < rows.n_rows; ++i)
+          {
+            Parameters member;
+            for (size_t j = 0; j < packing.states_names.size(); ++j)
+              member[packing.states_names[j]] = arma::colvec(rows.row(i).subvec(packing.states_start_and_end[j].first,
+                                                                                 packing.states_start_and_end[j].second).t());
+            arma::rowvec point = this->transform->inverse_transform(member).get_rowvec(this->estimator->vector_variables);
+            if (i == 0)
+              points.set_size(rows.n_rows, point.n_elem);
+            points.row(i) = point;
+          }
+          h5_write_mat(iter_grp, "vector_points", points);
+        }
+      }
+      else
       {
         std::vector<arma::mat> mats;
         mats.reserve(this->all_ensembles[deque_index].members.size());

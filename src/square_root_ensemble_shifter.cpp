@@ -56,15 +56,13 @@ void SquareRootEnsembleShifter::setup(Ensemble* ensemble,
   
 }
 
-void SquareRootEnsembleShifter::shift(const EnsembleFactorVariables* ensemble_factor_variables,
+void SquareRootEnsembleShifter::shift(const std::vector<arma::colvec> &shift_terms,
                                       arma::colvec &position,
                                       const std::vector<arma::colvec*> &measurements,
                                       const std::vector<arma::mat> &kalman_gains,
                                       const std::vector<arma::colvec> &myys,
                                       double inverse_incremental_temperature) const
 {
-  std::vector<arma::colvec> shift_terms = ensemble_factor_variables->get_deterministic_shifts();
-
   arma::colvec second_part_shiftee = position - this->mean_position;
   
   // shift taken from https://arxiv.org/abs/2204.04386

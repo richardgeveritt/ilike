@@ -58,6 +58,40 @@ public:
   
   void operator=(const MeasurementCovarianceEstimator &another);
   virtual MeasurementCovarianceEstimator* duplicate() const=0;
+
+  // (C279) compact ensembles: whether a member's predicted measurement is a
+  // function of its parameters and its noise a draw independent of them (so
+  // both can be kept as rows of matrices instead of an output object per
+  // member); the predicted measurement for given parameters; and the noise
+  // drawn with the move (from this estimator's generator, in the order the
+  // outputs' simulate draws it)
+  virtual bool supports_compact_members() const { return false; }
+  virtual arma::colvec compact_measurement_state(const Parameters &parameters) { Rcpp::stop("MeasurementCovarianceEstimator::compact_measurement_state - not available."); }
+  virtual arma::colvec compact_noise() { Rcpp::stop("MeasurementCovarianceEstimator::compact_noise - not available."); }
+  // (C281) a member's predicted measurement and noise for these parameters,
+  // drawn as its output's simulate draws them (by default: the two
+  // functions above, in that order); and its shift terms from them, as its
+  // output's get_shift computes them (by default: the measurement plus the
+  // noise times sqrt(inverse incremental temperature))
+  virtual void compact_simulate(const Parameters &parameters,
+                                arma::colvec &measurement_state,
+                                arma::colvec &noise)
+  {
+    measurement_state = this->compact_measurement_state(parameters);
+    noise = this->compact_noise();
+  }
+  virtual arma::colvec compact_shift(const arma::colvec &measurement_state,
+                                     const arma::colvec &noise,
+                                     double inverse_incremental_temperature) const
+  {
+    return measurement_state + sqrt(inverse_incremental_temperature)*noise;
+  }
+  // (C280) the weight a member with this predicted measurement gets at an
+  // incremental temperature (a member output's evaluate_ensemble_likelihood_ratio)
+  virtual double ensemble_likelihood_ratio(const arma::colvec &measurement_state,
+                                           double inverse_incremental_temperature,
+                                           const arma::mat &inv_sigma_precomp,
+                                           double log_det_precomp) const { Rcpp::stop("MeasurementCovarianceEstimator::ensemble_likelihood_ratio - not available."); }
   
   MeasurementCovarianceEstimatorOutput* initialise();
   MeasurementCovarianceEstimatorOutput* initialise(const Parameters &conditioned_on_parameters);

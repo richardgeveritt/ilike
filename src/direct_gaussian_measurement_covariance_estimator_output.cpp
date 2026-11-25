@@ -51,21 +51,17 @@ void DirectGaussianMeasurementCovarianceEstimatorOutput::make_copy(const DirectG
 
 void DirectGaussianMeasurementCovarianceEstimatorOutput::specific_simulate(const Parameters &parameters)
 {
-  this->direct_estimator->set_parameters(parameters);
-  
-  // do transform on params (could actually leave until later since deterministic, but choose to do now and store result
-  std::shared_ptr<Transform> summary_statistics = this->direct_estimator->summary_statistics;
-  if (summary_statistics==NULL)
-  {
-    this->measurement_state = this->direct_estimator->get_measurement_state(parameters);
-  }
-  else
-  {
-    this->measurement_state = summary_statistics->transform(this->direct_estimator->get_measurement_state_parameters(parameters)).get_colvec(this->direct_estimator->measurement_variables);
-    
-  }
-  
-  this->random_shift = this->direct_estimator->kernel.independent_simulate(*this->direct_estimator->rng).get_colvec(this->direct_estimator->measurement_variables);
+  // (C279) the estimator's functions, shared with compact ensembles
+  this->measurement_state = this->direct_estimator->compact_measurement_state(parameters);
+  this->random_shift = this->direct_estimator->compact_noise();
+}
+
+// (C278) as specific_simulate without the noise draw: h(x) for the member's
+// current state; the noise (random_shift) drawn with the move is kept
+bool DirectGaussianMeasurementCovarianceEstimatorOutput::recompute_measurement_state(const Parameters &parameters)
+{
+  this->measurement_state = this->direct_estimator->compact_measurement_state(parameters);
+  return true;
 }
 
 void DirectGaussianMeasurementCovarianceEstimatorOutput::subsample_specific_simulate(const Parameters &parameters)

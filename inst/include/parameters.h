@@ -532,6 +532,14 @@ public:
   void deep_overwrite_with_variables_in_argument(const Parameters &new_parameters);
 
   /**
+   * @brief (C279) Sets one variable as deep_overwrite_with_variables_in_argument
+   * does: in place when this object alone owns the matrix and the shape is
+   * the same, otherwise in a new matrix (a copy of this Parameters sharing
+   * the old one does not see the change).
+   */
+  void overwrite_variable(const std::string &variable, const arma::mat &value);
+
+  /**
    * @brief Gets an iterator to the beginning of vector parameters.
    * @return Iterator to the beginning of vector parameters.
    */
@@ -1146,6 +1154,23 @@ inline void Parameters::self_deep_copy_nonfixed()
       i->second.first = std::make_shared<boost::any>(*i->second.first);
     }
   }
+}
+
+inline void Parameters::overwrite_variable(const std::string &variable, const arma::mat &value)
+{
+  auto found = this->vector_parameters.find(variable);
+  if (found == this->vector_parameters.end())
+  {
+    this->vector_parameters.insert({variable, std::pair<std::shared_ptr<arma::mat>, bool>(std::make_shared<arma::mat>(value), false)});
+    return;
+  }
+  if (found->second.second == true)
+    Rcpp::stop("Parameters::overwrite_variable - parameter is fixed and cannot be changed.");
+  std::shared_ptr<arma::mat> &old_matrix = found->second.first;
+  if ((old_matrix.use_count() == 1) && (old_matrix->n_rows == value.n_rows) && (old_matrix->n_cols == value.n_cols))
+    *old_matrix = value;
+  else
+    old_matrix = std::make_shared<arma::mat>(value);
 }
 
 inline void Parameters::deep_overwrite_with_variables_in_argument(const Parameters &new_parameters)

@@ -73,6 +73,18 @@ public:
   Parameters simulate(const Parameters &current_state);
   
   arma::colvec gaussian_simulate();
+
+  // (C281) compact ensembles (MFDS): a member's rows are its output's
+  // measurement state (likelihood part, then prior part) and its noise
+  // (likelihood part, then prior part); simulated and turned into shift
+  // terms as the output's simulate and get_shift do
+  bool supports_compact_members() const { return true; }
+  void compact_simulate(const Parameters &parameters,
+                        arma::colvec &measurement_state,
+                        arma::colvec &noise);
+  arma::colvec compact_shift(const arma::colvec &measurement_state,
+                             const arma::colvec &noise,
+                             double inverse_incremental_temperature) const;
   
   arma::mat get_prior_measurement_covariance() const;
   arma::mat get_prior_measurement_covariance_embedded_in_full_space() const;

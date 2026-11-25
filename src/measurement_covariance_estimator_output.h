@@ -23,6 +23,9 @@ public:
   // (C265) point this output at estimator_in, the copy of its estimator owned
   // by a copied filter; false if this output keeps no estimator pointer
   virtual bool repoint_estimator(MeasurementCovarianceEstimator* estimator_in) { return false; }
+  // (C278) the predicted measurement from new parameters, keeping the noise
+  // drawn when it was simulated; false if not possible
+  virtual bool recompute_measurement_state(const Parameters &parameters) { return false; }
   
   MeasurementCovarianceEstimatorOutput(const MeasurementCovarianceEstimatorOutput &another);
   

@@ -24,6 +24,35 @@ public:
   // (C270) the measurement estimators draw from this generator and seed
   // counter instead; nothing by default
   virtual void redirect_random_numbers(RandomNumberGenerator* rng_in, size_t* seed_in) {}
+  // (C278) several measurement factors are assimilated one after another: the
+  // number of measurement factors, and which one the next pass uses (-1: all,
+  // the default for every other use)
+  virtual size_t number_of_measurement_factors() const { return 1; }
+  virtual void set_active_measurement_factor(int factor) {}
+  // (C279) compact ensembles: whether every measurement factor supports them,
+  // and factor j's predicted measurement and noise (see
+  // MeasurementCovarianceEstimator)
+  virtual bool supports_compact_members() const { return false; }
+  // the measurement factors the update uses now (all, or the active one, C278)
+  virtual std::vector<size_t> active_measurement_factor_indices() const
+  {
+    std::vector<size_t> all(this->number_of_measurement_factors());
+    for (size_t i = 0; i < all.size(); ++i)
+      all[i] = i;
+    return all;
+  }
+  virtual arma::colvec compact_measurement_state(size_t j, const Parameters &parameters) { Rcpp::stop("EnsembleFactors::compact_measurement_state - not available."); }
+  virtual arma::colvec compact_noise(size_t j) { Rcpp::stop("EnsembleFactors::compact_noise - not available."); }
+  virtual void compact_simulate(size_t j, const Parameters &parameters, arma::colvec &measurement_state, arma::colvec &noise) { Rcpp::stop("EnsembleFactors::compact_simulate - not available."); }
+  virtual arma::colvec compact_shift(size_t j, const arma::colvec &measurement_state, const arma::colvec &noise, double inverse_incremental_temperature) const { Rcpp::stop("EnsembleFactors::compact_shift - not available."); }
+  // (C280) member i's weight from its rows: the sum over the estimators in
+  // index of each one's ratio (a member's evaluate_ensemble_likelihood_ratios)
+  virtual double compact_ensemble_likelihood_ratios(const Index* index,
+                                                    const Ensemble* ensemble,
+                                                    size_t i,
+                                                    double inverse_incremental_temperature,
+                                                    const std::vector<arma::mat> &inv_sigma_precomps,
+                                                    const std::vector<double> &log_det_precomps) const { Rcpp::stop("EnsembleFactors::compact_ensemble_likelihood_ratios - not available."); }
   
   EnsembleFactors(const EnsembleFactors &another);
   

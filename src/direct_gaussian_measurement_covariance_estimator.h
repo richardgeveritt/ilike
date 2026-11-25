@@ -42,6 +42,12 @@ public:
 
   arma::mat get_Cygivenx() const;
 
+  // (C279) see MeasurementCovarianceEstimator; the output's simulate uses the
+  // same two functions
+  bool supports_compact_members() const { return this->transform == NULL; }
+  arma::colvec compact_measurement_state(const Parameters &parameters);
+  arma::colvec compact_noise();
+
   arma::mat get_measurement_covariance() const;
   
   void setup();

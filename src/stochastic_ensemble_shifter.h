@@ -26,7 +26,8 @@ public:
   void setup(Ensemble* ensemble,
              double inverse_incremental_temperature);
   
-  void shift(const EnsembleFactorVariables* ensemble_factor_variables,
+  bool uses_shift_terms() const { return true; }
+  void shift(const std::vector<arma::colvec> &shift_terms,
              arma::colvec &position,
              const std::vector<arma::colvec*> &measurements,
              const std::vector<arma::mat> &kalman_gains,

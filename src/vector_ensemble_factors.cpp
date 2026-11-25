@@ -448,4 +448,51 @@ void VectorEnsembleFactors::precompute_gaussian_covariance(double inverse_increm
   }
 }
 
+
+// (C280) member i's weight from its rows, as its outputs' ratios add up
+double VectorEnsembleFactors::compact_ensemble_likelihood_ratios(const Index* index,
+                                               const Ensemble* ensemble,
+                                               size_t i,
+                                               double inverse_incremental_temperature,
+                                               const std::vector<arma::mat> &inv_sigma_precomps,
+                                               const std::vector<double> &log_det_precomps) const
+{
+  double result = 0.0;
+  for (auto j=index->begin(); j!=index->end(); ++j)
+    result = result + this->measurement_covariance_estimators[*j]->ensemble_likelihood_ratio(arma::colvec(ensemble->compact_measurement_states[*j].row(i).t()),
+                                                                                            inverse_incremental_temperature,
+                                                                                            inv_sigma_precomps[*j],
+                                                                                            log_det_precomps[*j]);
+  return result;
+}
+
+bool VectorEnsembleFactors::supports_compact_members() const
+{
+  if (this->measurement_covariance_estimators.empty())
+    return false;
+  for (auto i = this->measurement_covariance_estimators.begin(); i != this->measurement_covariance_estimators.end(); ++i)
+    if ((*i == NULL) || !(*i)->supports_compact_members())
+      return false;
+  return true;
+}
+
+arma::colvec VectorEnsembleFactors::compact_measurement_state(size_t j, const Parameters &parameters)
+{
+  return this->measurement_covariance_estimators[j]->compact_measurement_state(parameters);
+}
+
+arma::colvec VectorEnsembleFactors::compact_noise(size_t j)
+{
+  return this->measurement_covariance_estimators[j]->compact_noise();
+}
+
+void VectorEnsembleFactors::compact_simulate(size_t j, const Parameters &parameters, arma::colvec &measurement_state, arma::colvec &noise)
+{
+  this->measurement_covariance_estimators[j]->compact_simulate(parameters, measurement_state, noise);
+}
+
+arma::colvec VectorEnsembleFactors::compact_shift(size_t j, const arma::colvec &measurement_state, const arma::colvec &noise, double inverse_incremental_temperature) const
+{
+  return this->measurement_covariance_estimators[j]->compact_shift(measurement_state, noise, inverse_incremental_temperature);
+}
 }

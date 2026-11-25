@@ -59,6 +59,8 @@ public:
   
   void close_ofstreams();
 
+  bool recompute_measurement_state(size_t j, const Parameters &parameters); // (C278)
+
 protected:
   
   // Stored in likelihood_estimator.

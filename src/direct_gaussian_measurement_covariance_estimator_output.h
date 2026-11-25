@@ -31,6 +31,7 @@ public:
   GaussianMeasurementCovarianceEstimatorOutput* gaussian_duplicate() const;
   
   void specific_simulate(const Parameters &parameters);
+  bool recompute_measurement_state(const Parameters &parameters); // (C278)
   void subsample_specific_simulate(const Parameters &parameters);
 
   MeasurementCovarianceEstimator* get_estimator();

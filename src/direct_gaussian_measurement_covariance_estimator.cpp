@@ -76,6 +76,22 @@ arma::mat DirectGaussianMeasurementCovarianceEstimator::get_measurement_covarian
   return this->kernel.get_covariance(this->measurement_variables);
 }
 
+// (C279) h(x) for these parameters: the matrices for them first (they may
+// depend on the parameters and on the time, C277), then the measurement state
+// (through the summary statistics when there are some)
+arma::colvec DirectGaussianMeasurementCovarianceEstimator::compact_measurement_state(const Parameters &parameters)
+{
+  this->set_parameters(parameters);
+  if (this->summary_statistics==NULL)
+    return this->get_measurement_state(parameters);
+  return this->summary_statistics->transform(this->get_measurement_state_parameters(parameters)).get_colvec(this->measurement_variables);
+}
+
+arma::colvec DirectGaussianMeasurementCovarianceEstimator::compact_noise()
+{
+  return this->kernel.independent_simulate(*this->rng).get_colvec(this->measurement_variables);
+}
+
 arma::mat DirectGaussianMeasurementCovarianceEstimator::get_Cygivenx() const
 {
   return this->kernel.get_covariance(this->measurement_variables);

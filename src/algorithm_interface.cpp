@@ -893,6 +893,9 @@ EnsembleKalmanInversion *get_enki(
         grain_size_in, "");
   }
   delete full_index; // MCMC moves keep their own copies of it
+  // (C280) EnKI takes no MCMC (no constructor has one): the one made above
+  // (whose making checks the moves) is not kept, and was leaked before
+  delete the_mcmc;
   return alg;
 }
 

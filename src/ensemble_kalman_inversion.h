@@ -137,6 +137,14 @@ public:
   
   void set_abc_schedule(EnsembleKalmanOutput* current_state);
   
+  // (C280) compact ensembles: without MCMC moves (always, from R), a member's
+  // move keeps its state and makes its predicted measurement and noise again
+  bool compact_conditions() const { return this->mcmc == NULL; }
+  void move_compact_member(RandomNumberGenerator &rng,
+                           const Ensemble* current_ensemble,
+                           size_t i,
+                           Ensemble* next_ensemble);
+  
   MoveOutput* move(RandomNumberGenerator &rng,
                    Particle &particle);
   

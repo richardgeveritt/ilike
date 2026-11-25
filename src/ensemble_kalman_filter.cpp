@@ -107,7 +107,12 @@ EnsembleKalmanFilter::EnsembleKalmanFilter(RandomNumberGenerator* rng_in,
 
   // needed to store schedule parameters
   this->sequencer = EnsembleSequencer();
-  
+  // (C277) the first step's index, time and time difference, so that the
+  // set-up (ensemble_kalman_initialise calls setup before the run sets them)
+  // can evaluate a data model whose functions read them
+  this->sequencer.schedule_parameters[this->index_name] = this->current_index;
+  this->sequencer.schedule_parameters[this->time_diff_name] = this->update_time_step/double(this->predictions_per_update);
+  this->sequencer.schedule_parameters[this->time_name] = this->current_time;
 }
 
 EnsembleKalmanFilter::~EnsembleKalmanFilter()
@@ -260,9 +265,61 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcfixed_part(EnsembleKalman
 {
 }
 
+// (C279) the filter's own condition for compact ensembles (the shared ones
+// are EnsembleKalman::uses_compact_members): a transition to move with
+bool EnsembleKalmanFilter::compact_conditions() const
+{
+  return this->transition_model_kernel != NULL;
+}
+
+// a member moved: its state from its row, the transition (k predictions, as
+// move and move_reusing make them), and its rows in the next ensemble
+void EnsembleKalmanFilter::move_compact_member(RandomNumberGenerator &rng,
+                                               const Ensemble* current_ensemble,
+                                               size_t i,
+                                               Ensemble* next_ensemble)
+{
+  this->compact_member_state(current_ensemble, i, this->compact_current);
+  if (this->predictions_per_update == 1)
+  {
+    this->transition_model_kernel->move_into(rng, this->compact_current, NULL, this->compact_next);
+    this->compact_member_rows(next_ensemble, i, this->compact_next.parameters);
+  }
+  else
+  {
+    // (a member object's k moves each simulate its measurement, drawing the
+    // noise k times, of which the last is kept: the same draws are made here,
+    // so that the noise stream is the same; dev/plan.md C279 notes this as a
+    // possible clean-up, which would change results)
+    Particle moved = this->transition_model_kernel->move(rng, this->compact_current);
+    for (size_t k = 1; k < this->predictions_per_update; ++k)
+    {
+      arma::colvec measurement_state, noise;
+      for (size_t j = 0; j < next_ensemble->compact_noise.size(); ++j)
+        this->ensemble_factors->compact_simulate(j, moved.parameters, measurement_state, noise);
+      moved = this->transition_model_kernel->move(rng, moved);
+    }
+    this->compact_member_rows(next_ensemble, i, moved.parameters);
+  }
+}
+
+// (C277) a member's index, time and time difference are shared with the
+// filter's schedule (merged in when it was made), but each run, and each
+// SMC^2 step, replaces the schedule's object, so a member made before kept the
+// old values: the data model, and the transition, read the first step's index
+// and time throughout. Before the move, the member is pointed at the
+// filter's current schedule, so the transition, the moved member and its
+// measurement (simulated with the move) see this step's values. Values that
+// no function reads are unaffected.
+void EnsembleKalmanFilter::point_at_current_schedule(Particle &ensemble_member) const
+{
+  ensemble_member.parameters.merge_with_fixed(this->sequencer.schedule_parameters);
+}
+
 MoveOutput* EnsembleKalmanFilter::move(RandomNumberGenerator &rng,
                                        Particle &ensemble_member)
 {
+  this->point_at_current_schedule(ensemble_member);
   Particle moved_ensemble_member;
   for (size_t i=0; i<this->predictions_per_update; ++i)
   {
@@ -296,15 +353,7 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcadaptive_part_given_smcfi
   bool terminate = FALSE;
   while (terminate==FALSE)
   {
-    this->the_worker->pack(&current_state->back());
-    this->find_measurement_covariances(current_state);
-    
-    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
-    
-    // will need to change sequencer to have temperature within t - at the moment temperature will not be set correctly
-    
-    this->the_worker->shift(&current_state->back(),1.0);
-    this->the_worker->unpack(&current_state->back());
+    current_state->log_likelihood = current_state->log_likelihood + this->assimilate(current_state, true);
 
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
@@ -413,6 +462,7 @@ MoveOutput* EnsembleKalmanFilter::move_reusing(RandomNumberGenerator &rng,
     delete spare;
     return this->move(rng, ensemble_member);
   }
+  this->point_at_current_schedule(ensemble_member); // (C277)
   this->transition_model_kernel->move_into(rng, ensemble_member, NULL, output->back());
   return output;
 }
@@ -509,14 +559,7 @@ void EnsembleKalmanFilter::ensemble_kalman_subsample_evaluate_smcadaptive_part_g
   bool terminate = FALSE;
   while (terminate==FALSE)
   {
-    this->the_worker->pack(&current_state->back());
-    this->find_measurement_covariances(current_state);
-    
-    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
-    
-    this->the_worker->shift(&current_state->back(),
-                            1.0);
-    this->the_worker->unpack(&current_state->back());
+    current_state->log_likelihood = current_state->log_likelihood + this->assimilate(current_state, true);
     
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
@@ -578,14 +621,7 @@ void EnsembleKalmanFilter::ensemble_kalman_evaluate_smcadaptive_part_given_smcfi
   bool terminate = FALSE;
   while (terminate==FALSE)
   {
-    this->the_worker->pack(&current_state->back());
-    this->find_measurement_covariances(current_state);
-    
-    current_state->log_likelihood = current_state->log_likelihood + current_state->calculate_latest_log_normalising_constant_ratio();
-    
-    this->the_worker->shift(&current_state->back(),
-                            1.0);
-    this->the_worker->unpack(&current_state->back());
+    current_state->log_likelihood = current_state->log_likelihood + this->assimilate(current_state, true);
     
     current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
     
@@ -717,9 +753,106 @@ void EnsembleKalmanFilter::follow_set_time_step(size_t step)
 // so a trial can be repeated
 double EnsembleKalmanFilter::follow_increment(EnsembleKalmanOutput* current_state)
 {
-  this->the_worker->pack(&current_state->back());
-  this->find_measurement_covariances(current_state);
-  return current_state->calculate_latest_log_normalising_constant_ratio();
+  return this->assimilate(current_state, false);
+}
+
+// (C278) The update with the current observation. With one measurement
+// factor: pack, the measurement covariances, the log-likelihood increment and
+// the gains, then (commit) the shift and unpack, as before. With several
+// factors, one pass per factor (the factors' noises are independent, so
+// conditioning on all of them is conditioning on the first, then on the second
+// given the first, ...): factor j is made the active one; for j > 0 the
+// members' predicted measurements for factor j are recomputed from their
+// shifted states (h(x) again; the noise drawn with the move is kept, so no
+// random numbers); then the pass as for one factor. The increments add up to
+// the joint density. Before C278 all factors were taken from the same
+// ensemble, which gave the product of their marginal densities and gains that
+// ignored the other factors (and the square-root and adjustment shifters kept
+// only the last factor's shift). Without commit (an SMC^2 trial, which may be
+// repeated) the members are shifted for the later factors' passes and then
+// put back: their packed positions restored and unpacked, and the predicted
+// measurements recomputed from them (the same numbers).
+double EnsembleKalmanFilter::assimilate(EnsembleKalmanOutput* current_state, bool commit)
+{
+  Ensemble* ensemble = &current_state->back();
+  size_t J = this->ensemble_factors->number_of_measurement_factors();
+  if (J <= 1)
+  {
+    this->the_worker->pack(ensemble);
+    this->find_measurement_covariances(current_state);
+    double increment = current_state->calculate_latest_log_normalising_constant_ratio();
+    if (commit)
+    {
+      this->the_worker->shift(ensemble, 1.0);
+      this->the_worker->unpack(ensemble);
+    }
+    if (ensemble->compact)
+      ensemble->release_packed_working_copies(); // (C279: the rows are what it keeps)
+    return increment;
+  }
+
+  // (C279) a compact ensemble's members are its rows: factor j's predicted
+  // measurements are recomputed from the (shifted) rows through a scratch
+  // member, keeping the noise rows
+  if (ensemble->compact)
+  {
+    this->compact_current = Particle();
+    this->compact_current.parameters = ensemble->compact_fixed_parameters;
+    this->compact_current.parameters.merge_with_fixed(this->sequencer.schedule_parameters);
+  }
+  auto recompute = [&](size_t j)
+  {
+    if (ensemble->compact)
+    {
+      for (size_t m = 0; m < ensemble->size(); ++m)
+      {
+        this->compact_member_state(ensemble, m, this->compact_current);
+        ensemble->compact_measurement_states[j].row(m) =
+          this->ensemble_factors->compact_measurement_state(j, this->compact_current.parameters).t();
+      }
+      return;
+    }
+    for (size_t m = 0; m < ensemble->members.size(); ++m)
+    {
+      Particle &member = ensemble->members[m]->back();
+      if (!member.ensemble_factor_variables->recompute_measurement_state(j, member.parameters))
+        Rcpp::stop("enkf: with several measurement factors, each must be a Gaussian data model (linear_gaussian or nonlinear_gaussian).");
+    }
+  };
+
+  std::vector<arma::colvec> original_positions;
+  double increment = 0.0;
+  for (size_t j = 0; j < J; ++j)
+  {
+    this->ensemble_factors->set_active_measurement_factor(int(j));
+    if (j > 0)
+    {
+      this->the_worker->unpack(ensemble);
+      recompute(j);
+    }
+    this->the_worker->pack(ensemble);
+    if ((j == 0) && !commit)
+      original_positions = ensemble->partially_packed_members_col;
+    this->find_measurement_covariances(current_state);
+    increment += current_state->calculate_latest_log_normalising_constant_ratio();
+    this->the_worker->shift(ensemble, 1.0);
+  }
+  if (commit)
+  {
+    this->the_worker->unpack(ensemble);
+  }
+  else
+  {
+    ensemble->partially_packed_members_col = original_positions;
+    this->the_worker->unpack(ensemble);
+    for (size_t j = 1; j < J; ++j)
+      recompute(j);
+  }
+  this->ensemble_factors->set_active_measurement_factor(-1);
+  ensemble->log_normalising_constant_ratio = increment; // (the sum of the passes)
+  if (ensemble->compact)
+    ensemble->release_packed_working_copies();
+  return increment;
 }
 
 double EnsembleKalmanFilter::follow_trial_value(EnsembleKalmanOutput* current_state,
@@ -749,9 +882,7 @@ void EnsembleKalmanFilter::follow_commit(EnsembleKalmanOutput* current_state,
 {
   size_t step = current_state->followed_steps;
   this->follow_set_time_step(step);
-  current_state->committed_log_likelihood += this->follow_increment(current_state);
-  this->the_worker->shift(&current_state->back(), 1.0);
-  this->the_worker->unpack(&current_state->back());
+  current_state->committed_log_likelihood += this->assimilate(current_state, true);
   current_state->back().schedule_parameters = this->sequencer.schedule_parameters.deep_copy();
   current_state->log_likelihood = current_state->committed_log_likelihood;
   current_state->set_llhd(current_state->committed_log_likelihood);

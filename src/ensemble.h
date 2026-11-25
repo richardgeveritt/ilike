@@ -14,6 +14,9 @@ class SquareRootEnsembleShifter;
 class MoveOutput;
 class GaussianSMCAdaptor;
 class EnsembleKalmanMFDS;
+class EnsembleKalmanFilter;
+class EnsembleKalmanOutput;
+class EnsembleKalman;
 class EnsembleKalmanInversion;
 class VectorEnsembleFactors;
 class HMMEnsembleFactors;
@@ -119,6 +122,26 @@ public:
   std::vector<double> log_measurement_likelihood_variances;
   
   void close_ofstreams();
+
+  // (C279) a compact ensemble: no member objects; the members' states are
+  // the rows of packed_members, and, per measurement factor, their predicted
+  // measurements and the noise drawn with their moves are the rows of
+  // compact_measurement_states[j] and compact_noise[j]. The members share
+  // compact_fixed_parameters (the outer parameters they were made with), as
+  // member objects share them through their parameter maps.
+  bool compact = false;
+  std::vector<arma::mat> compact_measurement_states;
+  std::vector<arma::mat> compact_noise;
+  Parameters compact_fixed_parameters;
+  // (C281) MFDS's predicted members (the inflated analysis), as rows: their
+  // states, predicted measurements and noise (drawn when they are made, as
+  // the predicted member objects simulate theirs)
+  arma::mat compact_predicted_states;
+  std::vector<arma::mat> compact_predicted_measurement_states;
+  std::vector<arma::mat> compact_predicted_noise;
+  // the packed working copies the update makes, freed after it (the rows
+  // above are what the ensemble keeps)
+  void release_packed_working_copies();
   
 protected: // Things that can be accessed in this class and subclasses.
   
@@ -129,6 +152,9 @@ protected: // Things that can be accessed in this class and subclasses.
   friend AdjustmentEnsembleShifter;
   friend SquareRootEnsembleShifter;
   friend EnsembleKalmanMFDS;
+  friend EnsembleKalmanFilter; // (C278: saves and restores the packed positions in an SMC^2 trial)
+  friend EnsembleKalmanOutput; // (C279: writes a compact ensemble's rows)
+  friend EnsembleKalman; // (C280: compact members, for every method)
   friend EnsembleKalmanInversion;
   friend VectorEnsembleFactors;
   friend HMMEnsembleFactors;

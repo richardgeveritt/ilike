@@ -80,6 +80,15 @@ public:
   EnsembleKalman* ensemble_kalman_duplicate() const;
   LikelihoodEstimator* duplicate() const;
   
+  // (C281) compact ensembles (dev/plan.md, "members stored compactly")
+  bool compact_conditions() const { return this->mcmc == NULL; }
+  bool compact_allows_transform() const { return true; }
+  bool compact_points_at_schedule() const { return false; }
+  void move_compact_member(RandomNumberGenerator &rng,
+                           const Ensemble* current_ensemble,
+                           size_t i,
+                           Ensemble* next_ensemble);
+  
   MoveOutput* move(RandomNumberGenerator &rng,
                    Particle &particle);
   

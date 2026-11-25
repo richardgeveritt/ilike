@@ -66,13 +66,42 @@ void SequentialEnsembleKalmanWorker::shift(Ensemble* ensemble,
                                          inverse_incremental_temperature);
   
   std::vector<arma::colvec*> measurements = this->the_enk->ensemble_factors->get_measurements();
+  bool uses_terms = this->the_enk->ensemble_shifter->uses_shift_terms();
+  std::vector<arma::colvec> shift_terms;
+
+  if (ensemble->compact)
+  {
+    // (C279) a member's shift terms from its rows: the predicted measurement
+    // plus the noise times sqrt(inverse incremental temperature), as a
+    // member's outputs give them (get_shift)
+    std::vector<size_t> active = this->the_enk->ensemble_factors->active_measurement_factor_indices();
+    for (size_t i=0; i<ensemble->size(); ++i)
+    {
+      shift_terms.clear();
+      if (uses_terms)
+        for (size_t j : active)
+          shift_terms.push_back(this->the_enk->ensemble_factors->compact_shift(j,
+                                                                             arma::colvec(ensemble->compact_measurement_states[j].row(i).t()),
+                                                                             arma::colvec(ensemble->compact_noise[j].row(i).t()),
+                                                                             inverse_incremental_temperature));
+      this->the_enk->ensemble_shifter->shift(shift_terms,
+                                             ensemble->partially_packed_members_col[i],
+                                             measurements,
+                                             ensemble->kalman_gains,
+                                             ensemble->myys,
+                                             inverse_incremental_temperature);
+    }
+    return;
+  }
   
   // parallel part (may not be better in parallel)
   for (size_t i=0;
        i<ensemble->members.size();
        ++i)
   {
-    this->the_enk->ensemble_shifter->shift(ensemble->members[i]->back().ensemble_factor_variables.get(),
+    if (uses_terms)
+      shift_terms = ensemble->members[i]->back().ensemble_factor_variables->get_shifts(inverse_incremental_temperature);
+    this->the_enk->ensemble_shifter->shift(shift_terms,
                                            ensemble->partially_packed_members_col[i],
                                            measurements,
                                            ensemble->kalman_gains,
@@ -83,6 +112,19 @@ void SequentialEnsembleKalmanWorker::shift(Ensemble* ensemble,
 
 void SequentialEnsembleKalmanWorker::pack(Ensemble* ensemble)
 {
+  if (ensemble->compact)
+  {
+    // (C279) the rows are the packed members already: the columns the shift
+    // works on, and the active factors' predicted measurements
+    size_t N = ensemble->size();
+    ensemble->partially_packed_members_col.resize(N);
+    for (size_t i = 0; i < N; ++i)
+      ensemble->partially_packed_members_col[i] = ensemble->packed_members.row(i).t();
+    ensemble->packed_measurement_states.clear();
+    for (size_t j : this->the_enk->ensemble_factors->active_measurement_factor_indices())
+      ensemble->packed_measurement_states.push_back(ensemble->compact_measurement_states[j]);
+    return;
+  }
   ensemble->partially_packed_members_row.clear();
   ensemble->partially_packed_members_row.reserve(ensemble->members.size());
   // (the columns too: shift and unpack index them by member, so packing the
@@ -129,6 +171,13 @@ void SequentialEnsembleKalmanWorker::pack(Ensemble* ensemble)
 
 void SequentialEnsembleKalmanWorker::unpack(Ensemble* ensemble)
 {
+  if (ensemble->compact)
+  {
+    // (C279) the shifted columns back into the rows
+    for (size_t i = 0; i < ensemble->partially_packed_members_col.size(); ++i)
+      ensemble->packed_members.row(i) = ensemble->partially_packed_members_col[i].t();
+    return;
+  }
   // only need to unpack state variables
   
   // can be done in parallel
@@ -140,8 +189,12 @@ void SequentialEnsembleKalmanWorker::unpack(Ensemble* ensemble)
          j<this->the_enk->packing_instructions.states_names.size();
          ++j)
     {
-      ensemble->members[i]->back().parameters[this->the_enk->packing_instructions.states_names[j]] = ensemble->partially_packed_members_col[i](arma::span(this->the_enk->packing_instructions.states_start_and_end[j].first,
-                                                                                                                                                          this->the_enk->packing_instructions.states_start_and_end[j].second));
+      // (C279) not through operator[], which wrote into a matrix that a copied
+      // member (an output copied when an outer SMC resampled) shares: the
+      // copy's state moved with this one's update
+      ensemble->members[i]->back().parameters.overwrite_variable(this->the_enk->packing_instructions.states_names[j],
+                                                                 ensemble->partially_packed_members_col[i](arma::span(this->the_enk->packing_instructions.states_start_and_end[j].first,
+                                                                                                                      this->the_enk->packing_instructions.states_start_and_end[j].second)));
     }
   }
   
@@ -149,6 +202,42 @@ void SequentialEnsembleKalmanWorker::unpack(Ensemble* ensemble)
 
 void SequentialEnsembleKalmanWorker::unpack_with_predicted(Ensemble* ensemble)
 {
+  if (ensemble->compact)
+  {
+    // (C281) the analysis into the rows; the predicted members' rows: their
+    // states, and, member by member, their predicted measurements and noise
+    // simulated from their states alone (as a predicted member object, made
+    // from those states, simulates them)
+    size_t N = ensemble->partially_packed_members_col.size();
+    for (size_t i = 0; i < N; ++i)
+      ensemble->packed_members.row(i) = ensemble->partially_packed_members_col[i].t();
+    size_t J = ensemble->compact_measurement_states.size();
+    ensemble->compact_predicted_states.set_size(N, ensemble->packed_members.n_cols);
+    ensemble->compact_predicted_measurement_states.assign(J, arma::mat());
+    ensemble->compact_predicted_noise.assign(J, arma::mat());
+    arma::colvec measurement_state, noise;
+    for (size_t i = 0; i < N; ++i)
+    {
+      const arma::colvec &predicted = ensemble->partially_packed_predicted_members_col[i];
+      ensemble->compact_predicted_states.row(i) = predicted.t();
+      Parameters new_parameters;
+      for (size_t j=0; j<this->the_enk->packing_instructions.states_names.size(); ++j)
+        new_parameters[this->the_enk->packing_instructions.states_names[j]] = predicted(arma::span(this->the_enk->packing_instructions.states_start_and_end[j].first,
+                                                                                                    this->the_enk->packing_instructions.states_start_and_end[j].second));
+      for (size_t k = 0; k < J; ++k)
+      {
+        ensemble->ensemble_factors->compact_simulate(k, new_parameters, measurement_state, noise);
+        if (ensemble->compact_predicted_measurement_states[k].n_rows != N)
+        {
+          ensemble->compact_predicted_measurement_states[k].set_size(N, measurement_state.n_elem);
+          ensemble->compact_predicted_noise[k].set_size(N, noise.n_elem);
+        }
+        ensemble->compact_predicted_measurement_states[k].row(i) = measurement_state.t();
+        ensemble->compact_predicted_noise[k].row(i) = noise.t();
+      }
+    }
+    return;
+  }
   // only need to unpack state variables
   
   ensemble->predicted_members.clear();
@@ -165,8 +254,12 @@ void SequentialEnsembleKalmanWorker::unpack_with_predicted(Ensemble* ensemble)
          j<this->the_enk->packing_instructions.states_names.size();
          ++j)
     {
-      ensemble->members[i]->back().parameters[this->the_enk->packing_instructions.states_names[j]] = ensemble->partially_packed_members_col[i](arma::span(this->the_enk->packing_instructions.states_start_and_end[j].first,
-                                                                                                                                                          this->the_enk->packing_instructions.states_start_and_end[j].second));
+      // (C279) not through operator[], which wrote into a matrix that a copied
+      // member (an output copied when an outer SMC resampled) shares: the
+      // copy's state moved with this one's update
+      ensemble->members[i]->back().parameters.overwrite_variable(this->the_enk->packing_instructions.states_names[j],
+                                                                 ensemble->partially_packed_members_col[i](arma::span(this->the_enk->packing_instructions.states_start_and_end[j].first,
+                                                                                                                      this->the_enk->packing_instructions.states_start_and_end[j].second)));
 
       //ensemble->predicted_members[i]->back().
       
@@ -184,6 +277,18 @@ void SequentialEnsembleKalmanWorker::weight(Ensemble* ensemble,
                                             double inverse_incremental_temperature)
 {
   ensemble->precompute_gaussian_covariance(inverse_incremental_temperature);
+  if (ensemble->compact)
+  {
+    // (C280) from the members' rows
+    for (size_t i = 0; i < ensemble->size(); ++i)
+      this->log_unnormalised_incremental_weights[i] = ensemble->ensemble_factors->compact_ensemble_likelihood_ratios(index,
+                                                                                                                   ensemble,
+                                                                                                                   i,
+                                                                                                                   inverse_incremental_temperature,
+                                                                                                                   ensemble->inv_sigma_precomps,
+                                                                                                                   ensemble->log_det_precomps);
+    return;
+  }
   for (size_t i = 0; i < ensemble->size(); ++i)
   {
     this->log_unnormalised_incremental_weights[i] = (*ensemble)[i]->back().evaluate_ensemble_likelihood_ratios(index,
@@ -197,6 +302,8 @@ void SequentialEnsembleKalmanWorker::subsample_weight(Ensemble* ensemble,
                                                       const Index* index,
                                                       double inverse_incremental_temperature)
 {
+  if (ensemble->compact)
+    Rcpp::stop("SequentialEnsembleKalmanWorker: weights are not available for a compact ensemble yet.");
   ensemble->precompute_gaussian_covariance(inverse_incremental_temperature);
   for (size_t i = 0; i < ensemble->size(); ++i)
   {
@@ -218,6 +325,15 @@ void SequentialEnsembleKalmanWorker::specific_simulate(Ensemble* next_ensemble,
   RandomNumberGenerator local_rng(*this->get_rng());
   local_rng.seed(this->get_seed());
   
+  if (this->the_enk->uses_compact_members())
+  {
+    // (C279) the same draws, in the same order, written into rows
+    this->the_enk->start_compact_ensemble(next_ensemble, NULL, NULL);
+    for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
+      this->the_enk->simulate_compact_member(local_rng, next_ensemble, i, NULL);
+    return;
+  }
+  
   for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
   {
     Particle* new_particle = next_ensemble->add_ensemble_member();
@@ -234,6 +350,14 @@ void SequentialEnsembleKalmanWorker::specific_simulate(Ensemble* next_ensemble,
 {
   RandomNumberGenerator local_rng(*this->get_rng());
   local_rng.seed(this->get_seed());
+  
+  if (this->the_enk->uses_compact_members())
+  {
+    this->the_enk->start_compact_ensemble(next_ensemble, NULL, &conditioned_on_parameters);
+    for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
+      this->the_enk->simulate_compact_member(local_rng, next_ensemble, i, &conditioned_on_parameters);
+    return;
+  }
   
   for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
   {
@@ -253,6 +377,15 @@ void SequentialEnsembleKalmanWorker::specific_move(Ensemble* next_particles,
   RandomNumberGenerator local_rng(*this->get_rng());
   local_rng.seed(this->get_seed());
   
+  if (current_particles->compact)
+  {
+    // (C279) each member moved from its row into the next ensemble's rows
+    this->the_enk->start_compact_ensemble(next_particles, current_particles, NULL);
+    for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
+      this->the_enk->move_compact_member(local_rng, current_particles, i, next_particles);
+    return;
+  }
+  
   for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
   {
     // (C264) in a dropped ensemble's member when there is one
@@ -271,6 +404,8 @@ void SequentialEnsembleKalmanWorker::specific_move(Ensemble* next_particles,
 void SequentialEnsembleKalmanWorker::subsample_specific_move(Ensemble* next_particles,
                                                              Ensemble* current_particles)
 {
+  if (current_particles->compact)
+    Rcpp::stop("SequentialEnsembleKalmanWorker::subsample_specific_move - not available for a compact ensemble.");
   RandomNumberGenerator local_rng(*this->get_rng());
   local_rng.seed(this->get_seed());
   
