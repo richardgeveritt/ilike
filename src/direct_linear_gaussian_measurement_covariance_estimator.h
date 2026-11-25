@@ -50,6 +50,7 @@ public:
   void set_parameters(const Parameters &conditioned_on_parameters_in);
   
   Parameters get_measurement_state_parameters(const Parameters &parameters) const;
+  arma::colvec get_measurement_state(const Parameters &parameters) const;
   
   arma::mat get_adjustment(const arma::mat &Zf,
                            const arma::mat &Dhathalf,

@@ -72,6 +72,30 @@ public:
   
   MoveOutput* move(RandomNumberGenerator &rng,
                    Particle &particle);
+  bool reuses_member_objects() const { return this->predictions_per_update == 1; }
+
+  // (dev/plan.md 3.21 (c2''')) SMC^2 with an ensemble Kalman filter: the
+  // caller's data tempering takes in the filter's observations one at a time
+  // (or a share of one, with anneal). Each output keeps its ensemble, already
+  // moved to the next time; a trial is the next observation's likelihood
+  // increment from that ensemble (no random numbers); the caller's move stage
+  // commits the observation once it is whole (the update, then the move to
+  // the next time); a new output is run through the observations committed.
+  void set_follows_caller_target(const std::string &fraction_variable, bool anneal);
+  bool advances_at_caller_target() const { return this->follows_caller_target; }
+  size_t observations() const { return this->last_index - this->first_index + 1; }
+  void advance_at_caller_target_enk(EnsembleKalmanOutput* current_state,
+                                    const Parameters &conditioned_on_parameters);
+  // (C267) SMC^2's exchange step for the ensemble size (see
+  // LikelihoodEstimator::has_exchange)
+  void set_exchange(double below, double multiply, size_t maximum);
+  bool has_exchange() const { return this->exchange_below >= 0.0; }
+  size_t exchange_size(double acceptance_rate, const Parameters &caller_parameters) const;
+  size_t get_number_of_inner_particles() const { return this->number_of_ensemble_members; }
+  void set_number_of_inner_particles(size_t number_of_inner_particles_in);
+  MoveOutput* move_reusing(RandomNumberGenerator &rng,
+                           Particle &particle,
+                           MoveOutput* spare);
   
   MoveOutput* subsample_move(RandomNumberGenerator &rng,
                              Particle &particle);
@@ -117,7 +141,7 @@ protected:
   friend EnsembleKalmanOutput;
 
   // A flag to determine if the terms are deemed to be "smcfixed" (will not be reevaluated when finding the next target in adaptive SMC).
-  bool smcfixed_flag;
+  // (C265: no smcfixed_flag of its own here: it hid LikelihoodEstimator::smcfixed_flag, which the outputs read)
   
   // point to the one in the hmm_ensemble_factors required to construct this class
   ProposalKernel* transition_model_kernel;
@@ -133,7 +157,24 @@ protected:
   size_t predictions_per_update;
   double update_time_step;
   double current_time;
+  double initial_time = 0.0; // (each run starts here, C265)
   size_t current_index;
+  bool follows_caller_target = false;
+  std::string followed_variable;
+  bool followed_anneal = false;
+  double exchange_below = -1.0; // (C267: no exchange when negative)
+  double exchange_multiply = 2.0;
+  size_t exchange_max = 0; // (no limit when 0)
+  // (the most observations any output has committed; shared by the copies of
+  // this filter, since each output owns its own copy of the filter)
+  std::shared_ptr<size_t> followed_steps = std::make_shared<size_t>(0);
+  void follow_set_time_step(size_t step);
+  double follow_increment(EnsembleKalmanOutput* current_state);
+  double follow_trial_value(EnsembleKalmanOutput* current_state, const Parameters &conditioned_on_parameters,
+                            size_t k, double r);
+  void follow_commit(EnsembleKalmanOutput* current_state, const Parameters &conditioned_on_parameters);
+  void follow_from_start(EnsembleKalmanOutput* current_state, const Parameters &conditioned_on_parameters);
+  void follow_evaluate(EnsembleKalmanOutput* current_state, const Parameters &conditioned_on_parameters);
 
   // Stored here.
   //EnsembleKalmanFilterOutput* output;

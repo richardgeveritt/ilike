@@ -94,7 +94,16 @@ void KalmanFilterOutput::make_copy(const KalmanFilterOutput &another)
   this->iteration_written_to_file = another.iteration_written_to_file;
   this->results_name = another.results_name;
   this->start_time = another.start_time;
+  this->followed_steps = another.followed_steps;
+  this->committed_log_likelihood = another.committed_log_likelihood;
+  this->caught_up = another.caught_up;
   
+}
+
+// (dev/plan.md 3.21 (c2''')) the caller's move stage
+void KalmanFilterOutput::advance_at_caller_target(const Parameters &parameters)
+{
+  this->estimator->advance_at_caller_target_kf(this, parameters);
 }
 
 void KalmanFilterOutput::set_time()
@@ -332,27 +341,42 @@ void KalmanFilterOutput::terminate()
   }
 }
 
-void KalmanFilterOutput::write_to_file(const std::string &dir_name,
-                                       const std::string &index)
+// the output file (made with its attributes the first time)
+HighFive::File& KalmanFilterOutput::output_file(const std::string &dir_name)
 {
+  KalmanFilter* estimator = this->estimator;
   std::string directory_name = dir_name + "_kf";
 
   if (!directory_exists(directory_name))
     make_directory(directory_name);
 
-  if (!this->estimator->h5_file)
+  if (!estimator->h5_file)
   {
-    this->estimator->h5_file_path = directory_name + "/output.h5";
-    this->estimator->h5_file = h5_open_or_create(this->estimator->h5_file_path);
+    estimator->h5_file_path = directory_name + "/output.h5";
+    estimator->h5_file = h5_open_or_create(estimator->h5_file_path);
 
-    auto root = this->estimator->h5_file->getGroup("/");
+    auto root = estimator->h5_file->getGroup("/");
     h5_set_str_attr(root, "variable_names",
-                    std::vector<std::string>{this->estimator->state_name});
-    std::vector<size_t> vsizes{this->estimator->state_dimension};
+                    std::vector<std::string>{estimator->state_name});
+    std::vector<size_t> vsizes{estimator->state_dimension};
     h5_set_sizet_attr(root, "variable_sizes", vsizes);
   }
+  return *estimator->h5_file;
+}
 
-  HighFive::File &hf = *this->estimator->h5_file;
+// (C264) with nothing stored, write_to_file makes the file and writes no
+// iteration: the same here
+void KalmanFilterOutput::write_compact_values(const std::string &dir_name,
+                                              const std::string &index,
+                                              const double *values)
+{
+  this->output_file(dir_name);
+}
+
+void KalmanFilterOutput::write_to_file(const std::string &dir_name,
+                                       const std::string &index)
+{
+  HighFive::File &hf = this->output_file(dir_name);
 
   for (size_t iteration = this->iteration_written_to_file+1;
        iteration < this->kf_iteration+1;

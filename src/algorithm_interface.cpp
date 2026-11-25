@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "vector_factor_variables.h"
 #include "recipe_internal.h"
 #include "recipe_from_r.h"
@@ -614,6 +615,51 @@ SMCMCMCMove *get_smc_mcmc_move(
       (adaptive_target_method["method"].as_string() != "positive"))
     stop("data(..., anneal = false) adds whole data points, between which an adaptive target (target = ...) "
          "cannot choose; use anneal = true (each data point annealed in), or a fixed schedule without target.");
+
+  // (dev/plan.md 3.21 (c2''), F1) SMC^2 with each observation annealed in: a
+  // step may take in a share of the next observation but not pass a whole
+  // one (that would need the filter's propagation, which draws random
+  // numbers, inside a reweighting). With an adaptive target each whole
+  // observation j/n becomes a point of the schedule, so the search stops
+  // there (the sequencer adapts between consecutive points); a fixed
+  // schedule must contain them
+  if (data_tempering.anneal && !plan.followed_observations.empty() && !sequencer_schedules.empty()) {
+    std::vector<double> &schedule = sequencer_schedules.back();
+    const bool adaptive = adaptive_target_method.contains("method") &&
+                          (adaptive_target_method["method"].as_string() != "positive");
+    if (schedule.size() >= 1) {
+      const double lo = *std::min_element(schedule.begin(), schedule.end());
+      const double hi = *std::max_element(schedule.begin(), schedule.end());
+      std::vector<double> points;
+      for (size_t n : plan.followed_observations)
+        for (size_t j = 0; j <= n; ++j) {
+          double point = double(j)/double(n);
+          if ((point > lo + 1e-9) && (point < hi - 1e-9))
+            points.push_back(point);
+        }
+      auto in_schedule = [&](double point) {
+        for (double value : schedule)
+          if (std::abs(value - point) <= 1e-9)
+            return true;
+        return false;
+      };
+      if (adaptive) {
+        const bool increasing = (schedule.front() <= schedule.back());
+        for (double point : points)
+          if (!in_schedule(point))
+            schedule.push_back(point);
+        std::sort(schedule.begin(), schedule.end());
+        if (!increasing)
+          std::reverse(schedule.begin(), schedule.end());
+      } else {
+        for (double point : points)
+          if (!in_schedule(point))
+            stop("SMC^2: data(..., anneal = true) with a particle filter takes in at most one observation per step: a fixed "
+                 "schedule must contain every whole observation j/n (missing: " + std::to_string(point) +
+                 "); or give an adaptive target (target = ...), which stops at each of them.");
+      }
+    }
+  }
 
   SMCCriterion *adaptive_target_criterion = get_adaptive_target_method(
       model, parameters, adaptive_target_method, number_of_particles);

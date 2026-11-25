@@ -50,6 +50,7 @@ public:
   double subsample_evaluate_likelihoods(const Index* index) const;
   
   const EnsembleFactors* get_ensemble_factors() const;
+  bool repoint_ensemble_factors(const EnsembleFactors* ensemble_factors_in);
   
   void write_to_file(const std::string &directory_name,
                      const std::string &index) const;

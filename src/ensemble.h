@@ -103,6 +103,11 @@ public:
   // stored here
   std::vector<std::unique_ptr<MoveOutput>> members;
   std::vector<std::unique_ptr<MoveOutput>> predicted_members;
+  // (C264) the members of a dropped ensemble, for this one's moves to reuse
+  // (EnsembleKalman::move_reusing); never copied (a copy starts with none)
+  std::vector<std::unique_ptr<MoveOutput>> spare;
+  void set_ensemble_factors(EnsembleFactors* ensemble_factors_in) { this->ensemble_factors = ensemble_factors_in; } // (C265)
+  MoveOutput* take_spare();
   
   // only here for output
   Parameters schedule_parameters;

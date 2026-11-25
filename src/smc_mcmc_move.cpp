@@ -27,6 +27,8 @@
 #include "custom_distribution_proposal_kernel.h"
 #include "vector_factors.h"
 #include "vector_index.h"
+#include "particle_filter.h"
+#include "vector_factor_variables.h"
 
 namespace ilike
 {
@@ -740,7 +742,7 @@ void SMCMCMCMove::make_copy(const SMCMCMCMove &another)
 }
 
 // esjd (C211): the tuned kernels' values for this move step, and each
-// particle's rows; with a summary of the values in results/esjd.csv
+// particle's rows; with a summary of the values in output.h5 (group tuning)
 void SMCMCMCMove::prepare_tuning(SMCOutput* current_state)
 {
   if (!this->tuners_found)
@@ -824,33 +826,52 @@ void SMCMCMCMove::prepare_tuning(SMCOutput* current_state)
     }
   }
 
-  // the values' summary, one row per move step and tuned kernel
+  // the values' summary, one row per move step and tuned kernel (written to
+  // output.h5 with the output: write_step_records)
   if (!this->results_name.empty())
   {
-    // (beside the SMC's output.h5, in <results>/ilike_smc)
-    std::string directory = this->results_name + "_smc";
-    if (!directory_exists(directory))
-      make_directory(directory);
-    std::string path = directory + "/esjd.csv";
-    bool exists = std::ifstream(path).good();
-    std::ofstream file(path, std::ios::app);
-    if (file.good())
+    for (size_t k = 0; k < this->tuners.size(); ++k)
     {
-      // (long format: one row per statistic, as tuners differ in their
-      // statistics; load_smc_tuning widens it, C224)
-      if (!exists)
-        file << "step,tuner,variable,statistic,value\n";
-      for (size_t k = 0; k < this->tuners.size(); ++k)
-      {
-        std::vector<std::string> names;
-        std::vector<double> numbers;
-        this->tuners[k].second->summary(names, numbers);
-        for (size_t j = 0; j < names.size(); ++j)
-          file << this->tuners[k].second->get_updates() << "," << (k + 1) << ","
-               << stacked_display_name(this->tuners[k].second->get_variable()) << "," << names[j] << "," << numbers[j] << "\n";
-      }
+      TuningRecord record;
+      record.step = this->tuners[k].second->get_updates();
+      record.tuner = k + 1;
+      record.variable = stacked_display_name(this->tuners[k].second->get_variable());
+      this->tuners[k].second->summary(record.names, record.numbers);
+      this->tuning_records.push_back(std::move(record));
     }
   }
+}
+
+// the per-step records kept since the last write: group tuning/<tuner> (an
+// attribute variable; datasets step and one per statistic) and group
+// inner_particles/<factor> (datasets step, acceptance_rate,
+// particles_before, particles_after), one value appended per step
+void SMCMCMCMove::write_step_records(HighFive::File &file)
+{
+  for (const TuningRecord &record : this->tuning_records)
+  {
+    std::string group = "tuning/" + std::to_string(record.tuner);
+    HighFive::Group grp = h5_ensure_group(file, group);
+    if (!grp.hasAttribute("variable"))
+    {
+      h5_set_str_attr(grp, "variable", std::vector<std::string>(1, record.variable));
+      h5_set_str_attr(grp, "statistics", record.names); // (their order, for the loader)
+    }
+    h5_append_double(file, group + "/step", double(record.step));
+    for (size_t j = 0; j < record.names.size(); ++j)
+      h5_append_double(file, group + "/" + record.names[j], record.numbers[j]);
+  }
+  this->tuning_records.clear();
+  for (const ExchangeRecord &record : this->exchange_records)
+  {
+    std::string group = "inner_particles/" + std::to_string(record.factor);
+    h5_ensure_group(file, group);
+    h5_append_double(file, group + "/step", double(record.step));
+    h5_append_double(file, group + "/acceptance_rate", record.acceptance_rate);
+    h5_append_double(file, group + "/particles_before", double(record.before));
+    h5_append_double(file, group + "/particles_after", double(record.after));
+  }
+  this->exchange_records.clear();
 }
 
 SMCOutput* SMCMCMCMove::specific_run()
@@ -1409,6 +1430,7 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state)
     // SMC's target take the random part of their step (rare-event
     // ABC-SMC^2), before resampling, as in arXiv:2211.02172's algorithm 4
     this->advance_inner_states(current_state);
+    this->last_step_moved = false;
 
     // update MCMC proposals
     this->mcmc->smc_adapt(current_state);
@@ -1463,6 +1485,7 @@ void SMCMCMCMove::simulate_smc(SMCOutput* current_state)
                              current_particles);
     }
     this->finish_adaptive_moves(next_particles);
+    this->last_step_moved = true;
     
     current_state->increment_smc_iteration();
     
@@ -1535,6 +1558,7 @@ void SMCMCMCMove::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* curren
     }
     
     this->simulate_smc(current_state);
+    this->exchange_inner_filters(current_state); // (dev/plan.md 3.21 (c2''), F2)
     current_state->back().set_previous_target_evaluated_to_target_evaluated();
   }
 }
@@ -1559,7 +1583,7 @@ MoveOutput* SMCMCMCMove::move(RandomNumberGenerator &rng,
   {
     Particle start = particle;
     start.evaluate_likelihoods(this->cancelled_index.get());
-    output = this->mcmc->run(rng, start);
+    output = this->mcmc->run(rng, std::move(start)); // (its own copy: moved in, c6)
   }
   else
   {
@@ -1569,6 +1593,36 @@ MoveOutput* SMCMCMCMove::move(RandomNumberGenerator &rng,
   // The SMC uses target_evaluated (over its own index) in its next weight
   // update, so set it from the cache rather than leaving whatever the last
   // move happened to store there.
+  output->back().target_evaluated = output->back().get_cached_likelihoods(this->index.get());
+  return output;
+}
+
+// (dev/plan.md 3.21 (c6), step 2) as move, the chain run in spare
+bool SMCMCMCMove::reuses_particle_objects() const
+{
+  return this->mcmc && this->mcmc->reads_cached_factors() && !this->mcmc->adapts();
+}
+
+MoveOutput* SMCMCMCMove::move_reusing(RandomNumberGenerator &rng,
+                                      const Particle &particle,
+                                      MoveOutput* spare) const
+{
+  if (!this->reuses_particle_objects())
+  {
+    delete spare;
+    return this->move(rng, particle);
+  }
+  MoveOutput* output;
+  if (this->cancelled_index!=NULL)
+  {
+    Particle start = particle;
+    start.evaluate_likelihoods(this->cancelled_index.get());
+    output = this->mcmc->run_reusing(rng, std::move(start), spare); // (moved in, c6)
+  }
+  else
+  {
+    output = this->mcmc->run_reusing(rng, particle, spare);
+  }
   output->back().target_evaluated = output->back().get_cached_likelihoods(this->index.get());
   return output;
 }
@@ -2051,6 +2105,91 @@ void SMCMCMCMove::advance_inner_states(SMCOutput *current_state)
     Particle &particle = generation[i]->back();
     if (particle.factor_variables != NULL)
       particle.factor_variables->advance_at_caller_target();
+  }
+}
+
+
+// --- SMC^2's exchange step (dev/plan.md 3.21 (c2''), F2; Chopin, Jacob &
+// Papaspiliopoulos §3.6.1) ---------------------------------------------------
+//
+// After the moves of a step that is not the last: the acceptance rate p (the
+// fraction of particles that moved). For each particle filter in the factors
+// that has increase = exchange(below, multiply, max): if p < below, the
+// caller's target is at a whole observation, and the filter is below its
+// limit, the filter's number of particles is multiplied, and each particle
+// gets a new filter of the new size through the same observations. The
+// extended target keeps its marginal (the same ψ-integral for any number of
+// filter particles), so this is an importance-sampling step with weight
+// u = Zhat_new/Zhat_old (backward kernel ψ, as in the paper): the weights are
+// multiplied by u and renormalised, and log sum_m W_m u_m (expectation 0 in
+// u's mean, i.e. log 1) is added to the evidence, as for any reweighting.
+static bool particle_moved(const Particle &now, const Particle &before);
+
+void SMCMCMCMove::exchange_inner_filters(SMCOutput *current_state)
+{
+  if ((this->factors == NULL) || !this->last_step_moved)
+    return;
+  VectorFactors* vector_factors = dynamic_cast<VectorFactors*>(this->factors.get());
+  if (vector_factors == NULL)
+    return;
+  Particles &generation = current_state->back();
+  size_t N = generation.size();
+  if ((N == 0) || generation.is_flat())
+    return;
+  // (C267) any filter that offers the exchange step (a particle or an
+  // ensemble Kalman filter)
+  std::vector<std::pair<size_t, LikelihoodEstimator*>> filters;
+  for (size_t j = 0; j < vector_factors->number_of_likelihood_estimators(); ++j)
+  {
+    LikelihoodEstimator* filter = vector_factors->get_likelihood_estimator(j);
+    if ((filter != NULL) && filter->has_exchange())
+      filters.push_back(std::make_pair(j, filter));
+  }
+  if (filters.empty())
+    return;
+
+  size_t moved = 0;
+  for (size_t i = 0; i < N; ++i)
+  {
+    const Particle &now = generation[i]->back();
+    if ((now.previous_self != NULL) && particle_moved(now, *now.previous_self))
+      ++moved;
+  }
+  double acceptance_rate = double(moved)/double(N);
+
+  for (auto &f : filters)
+  {
+    size_t j = f.first;
+    LikelihoodEstimator* filter = f.second;
+    size_t before = filter->get_number_of_inner_particles();
+    size_t new_size = filter->exchange_size(acceptance_rate, generation[0]->back().parameters);
+    if (new_size > 0)
+    {
+      filter->set_number_of_inner_particles(new_size);
+      arma::colvec log_u(N);
+      for (size_t i = 0; i < N; ++i)
+      {
+        Particle &particle = generation[i]->back();
+        VectorFactorVariables* variables = dynamic_cast<VectorFactorVariables*>(particle.factor_variables.get());
+        if (variables == NULL)
+          Rcpp::stop("SMC^2: the exchange step needs the particles' factor variables.");
+        double change = variables->replace_output(j);
+        if (std::isnan(change))
+          change = -arma::datum::inf; // (an old estimate of zero stays at weight zero)
+        log_u[i] = change;
+        particle.target_evaluated = particle.target_evaluated + change;
+      }
+      arma::colvec weights = generation.previous_normalised_log_weights + log_u;
+      double log_mean = log_sum_exp(weights);
+      if (log_mean == -arma::datum::inf)
+        Rcpp::stop("SMC^2: after the exchange step every particle has weight zero.");
+      generation.previous_normalised_log_weights = weights - log_mean;
+      current_state->log_likelihood = current_state->log_likelihood + log_mean;
+    }
+    // one record per step and filter (written to output.h5 with the output)
+    if (!this->results_name.empty())
+      this->exchange_records.push_back(ExchangeRecord{current_state->get_smc_iteration(), j + 1, acceptance_rate,
+                                                      before, filter->get_number_of_inner_particles()});
   }
 }
 

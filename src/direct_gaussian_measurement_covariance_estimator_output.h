@@ -14,6 +14,9 @@ class DirectGaussianMeasurementCovarianceEstimatorOutput : public GaussianMeasur
 {
   
 public:
+  // (C265) see MeasurementCovarianceEstimatorOutput::repoint_estimator
+  bool repoint_estimator(MeasurementCovarianceEstimator* estimator_in);
+
   
   DirectGaussianMeasurementCovarianceEstimatorOutput();
   

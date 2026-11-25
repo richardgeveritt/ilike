@@ -9,6 +9,7 @@ using namespace Rcpp;
 #include <chrono>
 
 #include "likelihood_estimator_output.h"
+#include "ilike_hdf5_utils.h"
 #include "ensemble.h"
 #include "ilike_header.h"
 
@@ -105,6 +106,23 @@ public:
   
   void skip_to_end_of_sequence_if_points_are_gaussian(double significance_level);
   
+  // (C264) a compact record when nothing is stored (iterations_to_store =
+  // 0, the default inside another algorithm): the log-likelihood, and the
+  // file write_to_file would make (its attributes only); an MCMC chain then
+  // stores each iteration as numbers instead of a copy of the particle
+  size_t compact_size() const { return (this->output_lag == 0) ? 1 : 0; }
+  void compact_values(double *values) const { values[0] = this->log_likelihood; }
+  void write_compact_values(const std::string &directory_name,
+                            const std::string &index,
+                            const double *values);
+  HighFive::File& output_file(const std::string &dir_name);
+  // (dev/plan.md 3.21 (c2''')) following the caller's data tempering: the
+  // observations committed, their log-likelihood, and whether this output has
+  // been run through the caller's committed observations yet
+  size_t followed_steps = 0;
+  double committed_log_likelihood = 0.0;
+  bool caught_up = false;
+  void advance_at_caller_target(const Parameters &parameters);
   void close_ofstreams();
   
 protected:

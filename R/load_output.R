@@ -756,20 +756,74 @@ load_mcmc_adaptation = function(results_directory,
 #' @export
 load_smc_tuning = function(results_directory)
 {
-  path = file.path(results_directory, "ilike_smc", "esjd.csv")
-  if (!file.exists(path))
-    stop("load_smc_tuning: no tuning values in ", results_directory, " (the run used no esjd adaptation).")
-  long = utils::read.csv(path, stringsAsFactors = FALSE)
-  # one row per step and tuner, one column per statistic (NA where a tuner has none)
-  keys = unique(long[, c("step", "tuner", "variable")])
-  statistics = unique(long$statistic)
-  output = keys
-  for (s in statistics)
+  h5_path = file.path(results_directory, "ilike_smc", "output.h5")
+  h5f = if (file.exists(h5_path)) hdf5r::H5File$new(h5_path, mode = "r") else NULL
+  if (is.null(h5f) || !h5f$exists("tuning"))
   {
-    rows = long[long$statistic == s, ]
-    output[[s]] = rows$value[match(paste(keys$step, keys$tuner), paste(rows$step, rows$tuner))]
+    if (!is.null(h5f)) h5f$close_all()
+    stop("load_smc_tuning: no tuning values in ", results_directory, " (the run used no esjd adaptation).")
   }
+  on.exit(h5f$close_all(), add = TRUE)
+  # one group per tuner: the variable as an attribute, the step and each
+  # statistic as datasets with one value per move step
+  tuners = h5f[["tuning"]]$ls()$name
+  tuners = tuners[order(as.integer(tuners))]
+  parts = lapply(tuners, function(k)
+  {
+    g = h5f[["tuning"]][[k]]
+    statistics = g$attr_open("statistics")$read()
+    step = as.numeric(g[["step"]]$read())
+    frame = data.frame(step = step, tuner = as.integer(k), variable = g$attr_open("variable")$read(),
+                       stringsAsFactors = FALSE)
+    for (s in statistics)
+      frame[[s]] = as.numeric(g[[s]]$read())
+    frame
+  })
+  # one row per step and tuner, one column per statistic (NA where a tuner has none)
+  statistics = unique(unlist(lapply(parts, function(f) setdiff(names(f), c("step", "tuner", "variable")))))
+  parts = lapply(parts, function(f) { for (s in setdiff(statistics, names(f))) f[[s]] = NA_real_; f[, c("step", "tuner", "variable", statistics)] })
+  output = do.call(rbind, parts)
   output = output[order(output$tuner, output$step), ]
+  rownames(output) = NULL
+  output
+}
+
+#' Load the number of particles of SMC^2's filters at each step.
+#'
+#' In SMC^2 (an outer `SMC_with_MCMC` whose `sequence = data(...)` takes in the
+#' observations of a factor `pf(inner, ...)`), the setting
+#' `increase = exchange(below = b, multiply = m, max = M)` of `pf` gives the
+#' filters more particles when the acceptance rate of the moves falls below
+#' `b` (the exchange step of Chopin, Jacob and Papaspiliopoulos, 2013). This
+#' function reads the record of each step that moved the particles.
+#'
+#' @param results_directory The results directory of the run (`results_name`).
+#' @return A data frame with one row per step that moved the particles and filter with `exchange`: columns step,
+#'   factor (the factor's number in the model), acceptance_rate (the fraction of particles the step's moves
+#'   changed), particles_before and particles_after (the filters' number of particles before and after the step's
+#'   exchange; equal when there was none).
+#' @export
+load_smc_inner_particles = function(results_directory)
+{
+  h5_path = file.path(results_directory, "ilike_smc", "output.h5")
+  h5f = if (file.exists(h5_path)) hdf5r::H5File$new(h5_path, mode = "r") else NULL
+  if (is.null(h5f) || !h5f$exists("inner_particles"))
+  {
+    if (!is.null(h5f)) h5f$close_all()
+    stop("load_smc_inner_particles: no record in ", results_directory, " (no filter with increase = exchange(...)).")
+  }
+  on.exit(h5f$close_all(), add = TRUE)
+  factors = h5f[["inner_particles"]]$ls()$name
+  factors = factors[order(as.integer(factors))]
+  output = do.call(rbind, lapply(factors, function(k)
+  {
+    g = h5f[["inner_particles"]][[k]]
+    data.frame(step = as.numeric(g[["step"]]$read()), factor = as.integer(k),
+               acceptance_rate = as.numeric(g[["acceptance_rate"]]$read()),
+               particles_before = as.numeric(g[["particles_before"]]$read()),
+               particles_after = as.numeric(g[["particles_after"]]$read()))
+  }))
+  output = output[order(output$factor, output$step), ]
   rownames(output) = NULL
   output
 }

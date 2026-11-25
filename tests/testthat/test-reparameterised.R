@@ -209,6 +209,26 @@ test_that("integrate u with smc estimates the integrated likelihood", {
                exact, tolerance = 0.02)
 })
 
+# (dev/plan.md 3.21 (c6), step 1) the inner SMC of rare-event ABC-MCMC keeps
+# its stored generations compactly, as a nested filter does: the outer
+# chain's stored iterations do not each hold a rich inner run (2.6 GB for
+# 10 000 iterations before), and the inner points load as nested output
+test_that("rare-event ABC-MCMC writes its inner SMC compactly, and it loads", {
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(c(f, "rare_event_nested"), recursive = TRUE), add = TRUE)
+  m = integrated_model(10, c("algorithm mcmc {", "  move a = metropolis(norm_rw(theta, 1.5))", "  termination = iterations(20)", "}"))
+  m[m == "  integrate u with is(points = 10)"] = rare_event_setting(5, "metropolis(norm_rw(u, 0.5))", method = "rare_event_abc")
+  m[m == "  ybar ~ abc_uniform(u, 0.5)"] = "  ybar ~ abc_uniform(u, epsilon)"
+  writeLines(m, f)
+  suppressMessages(ilike::MCMC(ilike::compile(f), results_name = "rare_event_nested", seed = 1, initial_values = list(list(theta = 0.9))))
+  files = list.files("rare_event_nested", recursive = TRUE)
+  expect_false(any(grepl("factor2_smc/iteration", files, fixed = TRUE))) # (no rich inner files)
+  o = ilike::load_smc_output("rare_event_nested", nesting_level = 1, factor = 2)
+  expect_setequal(unique(o$ParameterName), "u")
+  chain = ilike::load_mcmc_output("rare_event_nested")
+  expect_equal(length(unique(o$ExternalIndex)), length(unique(chain$Iteration))) # (one inner run per stored iteration)
+})
+
 test_that("rare-event ABC-MCMC targets the ABC posterior", {
   skip_on_cran()
   ybar = 0.9; eps = 0.5

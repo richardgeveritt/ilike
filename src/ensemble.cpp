@@ -316,6 +316,15 @@ void Ensemble::push_back(Parameters &&parameters_in,
   this->members.emplace_back(single_particle);
 }
 
+MoveOutput* Ensemble::take_spare()
+{
+  if (this->spare.empty())
+    return NULL;
+  MoveOutput* output = this->spare.back().release();
+  this->spare.pop_back();
+  return output;
+}
+
 void Ensemble::push_back(MoveOutput* move_output_in)
 {
   this->members.emplace_back(move_output_in);

@@ -280,6 +280,11 @@ protected:
   std::vector<const ProposalKernel*> proposals_to_find_gradient_for;
   
   std::shared_ptr<HighFive::File> h5_file;
+  // per-step records of the algorithm (not of a generation), appended to the
+  // output file when it is written (SMCOutput::write_to_file); none by default
+public:
+  virtual void write_step_records(HighFive::File &file) {}
+protected:
   
   std::string h5_file_path;
 
@@ -327,8 +332,6 @@ protected:
   bool progress_counts_points = false;
   bool parallel_refused = false;
 
-  // Stored here.
-  //SMCOutput* output;
   
 };
 }

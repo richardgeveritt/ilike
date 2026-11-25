@@ -1,6 +1,7 @@
 #include "vector_factors.h"
 #include <numeric>
 #include "particle_filter.h"
+#include "caller_tempering.h"
 #include "factors.h"
 #include "chunk_parallel.h"
 #include "progress_reporter.h"
@@ -171,6 +172,10 @@ void ParticleFilter::make_copy(const ParticleFilter &another)
   this->initial_time = another.initial_time;
   this->follows_caller_target = another.follows_caller_target;
   this->followed_variable = another.followed_variable;
+  this->followed_anneal = another.followed_anneal;
+  this->exchange_below = another.exchange_below;
+  this->exchange_multiply = another.exchange_multiply;
+  this->exchange_max = another.exchange_max;
   this->followed_steps = another.followed_steps;
   this->current_index = another.current_index;
   this->lag = another.lag;
@@ -565,23 +570,17 @@ void ParticleFilter::evaluate_smcadaptive_part_given_smcfixed_smc(SMCOutput* cur
   if (this->follows_caller_target)
   {
     // (c2') a new output is run through the observations committed so far;
-    // afterwards an evaluation is a trial at the caller's current number of
-    // observations: one more than committed, or the same
+    // afterwards an evaluation is a trial at the caller's current target:
+    // the committed observations, plus the next one whole or (F1) a share
     if (!current_state->caught_up)
     {
       this->follow_from_start(current_state, conditioned_on_parameters);
       return;
     }
-    size_t target = this->observations_at(conditioned_on_parameters);
-    double value = current_state->committed_log_likelihood;
-    if ((target > current_state->followed_steps) && (value != -arma::datum::inf))
-    {
-      if (target != current_state->followed_steps + 1)
-        Rcpp::stop("SMC^2: data tempering of a particle filter takes in one observation at a time (data(..., anneal = false) "
-                   "with a fraction going up by 1/n each step).");
-      this->set_time_step(this->first_index + current_state->followed_steps);
-      value = value + this->weight_current(current_state);
-    }
+    size_t k;
+    double r;
+    this->tempering_point(conditioned_on_parameters, k, r);
+    double value = this->trial_value(current_state, k, r);
     current_state->log_likelihood = value;
     current_state->set_latest_llhd(value);
     return;
@@ -1070,26 +1069,89 @@ void ParticleFilter::weight_in_chunks(SMCOutput* current_state)
 
 // --- SMC^2: the filter following data tempering (dev/plan.md 3.21 (c2')) ----
 
-void ParticleFilter::set_follows_caller_target(const std::string &fraction_variable)
+void ParticleFilter::set_follows_caller_target(const std::string &fraction_variable, bool anneal)
 {
   this->follows_caller_target = true;
   this->followed_variable = fraction_variable;
+  this->followed_anneal = anneal;
   this->smcfixed_flag = false;
   this->force_rich_generations = true;
   this->compact_stored_output = false;
 }
 
-// the number of observations in the caller's target: ceil(n fraction), as
-// data(…, anneal = false) adds whole data points to factors of model
-// statements (allowing for rounding: a fraction written as j/n gives j)
-size_t ParticleFilter::observations_at(const Parameters &conditioned_on_parameters) const
+// --- SMC^2's exchange step (dev/plan.md 3.21 (c2''), F2) ---------------------
+
+void ParticleFilter::set_exchange(double below, double multiply, size_t maximum)
 {
-  double fraction = conditioned_on_parameters[this->followed_variable][0];
-  double n = double(this->observations());
-  double k = std::ceil(n*fraction - 1e-9*n);
-  if (k < 0.0) k = 0.0;
-  if (k > n) k = n;
-  return size_t(k);
+  this->exchange_below = below;
+  this->exchange_multiply = multiply;
+  this->exchange_max = maximum;
+}
+
+// the new number of particles, or 0 for no exchange: only when the caller's
+// acceptance rate is below the threshold, the number is below the limit, and
+// the caller's target is at a whole observation (between two, its targets
+// for different numbers of particles have different marginals: C258)
+size_t ParticleFilter::exchange_size(double acceptance_rate, const Parameters &caller_parameters) const
+{
+  if (!this->has_exchange() || !this->follows_caller_target)
+    return 0;
+  size_t k;
+  double r;
+  this->tempering_point(caller_parameters, k, r);
+  return caller_exchange_size(this->number_of_particles, acceptance_rate, this->exchange_below,
+                              this->exchange_multiply, this->exchange_max, r);
+}
+
+// a new number of particles for the outputs made from now on: the worker's
+// weights, the default ancestors, and the resampling threshold (a number of
+// particles: ess(p) is p N) follow it
+void ParticleFilter::set_number_of_particles(size_t number_of_particles_in)
+{
+  if (number_of_particles_in == this->number_of_particles)
+    return;
+  double ratio = double(number_of_particles_in)/double(this->number_of_particles);
+  this->number_of_particles = number_of_particles_in;
+  this->setup_default_ancestor_variables();
+  SequentialSMCWorker* worker = dynamic_cast<SequentialSMCWorker*>(this->the_worker.get());
+  if (worker == NULL)
+    Rcpp::stop("SMC^2: the exchange step needs the filter's sequential worker.");
+  worker->resize_for_particles();
+  if (this->resampling_criterion)
+    this->resampling_criterion->scale_desired_criterion(ratio);
+}
+
+// the caller's target: n fraction = k + r, k whole observations and a share
+// r in [0, 1) of the next. Without anneal, k = ceil(n fraction) and r = 0, as
+// data(…, anneal = false) adds whole data points to factors of model
+// statements; with anneal, k = floor(n fraction), as plates do
+// (tempering_point). A fraction written as j/n gives k = j, r = 0 in both
+// (rounding allowed for)
+void ParticleFilter::tempering_point(const Parameters &conditioned_on_parameters, size_t &k, double &r) const
+{
+  caller_tempering_point(conditioned_on_parameters[this->followed_variable][0], this->observations(),
+                         this->followed_anneal, k, r);
+}
+
+// the value at the caller's target (k, r): the committed observations, plus
+// the next one's weighting (the share r of it with anneal); no random numbers
+double ParticleFilter::trial_value(SMCOutput *current_state, size_t k, double r)
+{
+  double value = current_state->committed_log_likelihood;
+  if (value == -arma::datum::inf)
+    return value;
+  size_t committed = current_state->followed_steps;
+  switch (caller_trial(committed, k, r))
+  {
+    case CallerTrial::committed:
+      return value;
+    case CallerTrial::next:
+      this->set_time_step(this->first_index + committed);
+      return value + this->weight_current(current_state, (r > 0.0) ? r : 1.0);
+    default:
+      Rcpp::stop(caller_trial_too_far_message());
+  }
+  return value;
 }
 
 void ParticleFilter::set_time_step(size_t step)
@@ -1105,13 +1167,27 @@ void ParticleFilter::set_time_step(size_t step)
 // the current particles weighted by the observation at the current time (the
 // weights start again from the step's starting weights: no state is kept);
 // the log of the estimated ratio
-double ParticleFilter::weight_current(SMCOutput *current_state)
+//
+// (F1) power r < 1: the log ratio times r. The caller's intermediate target
+// is then the geometric bridge between the two extended targets, the start
+// (the committed observations, with the particles already propagated: the
+// same psi) and the end (one more observation): p(theta) psi Zhat_start^(1-r)
+// Zhat_end^r, as between any two targets of a main sequence (geometric
+// annealing in SMC with transformations, arXiv:1612.06468 §2.4.1). It needs
+// nothing of the filter beyond its two estimates, so it holds whatever the
+// filter's proposals are
+double ParticleFilter::weight_current(SMCOutput *current_state, double power)
 {
   if (current_state->number_of_smc_iterations() == 1)
     this->the_worker->weight(this->index.get(), current_state->back());
   else
     this->the_worker->pf_weight(this->index.get(), current_state->back(), *(current_state->end() - 2),
                                 this->transition_proposal_is_evaluated ? this->transition_proposal.get() : NULL);
+  if (power != 1.0)
+  {
+    current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
+    return power*current_state->calculate_latest_log_normalising_constant_ratio();
+  }
   current_state->update_weights(this->the_worker->get_unnormalised_log_incremental_weights());
   return current_state->calculate_latest_log_normalising_constant_ratio();
 }
@@ -1146,10 +1222,26 @@ void ParticleFilter::advance_at_caller_target_smc(SMCOutput *current_state, cons
 {
   if (!this->follows_caller_target || !current_state->caught_up)
     return;
-  size_t target = this->observations_at(conditioned_on_parameters);
-  if ((current_state->committed_log_likelihood != -arma::datum::inf) && (target == current_state->followed_steps + 1))
+  // (F1) an observation is committed only once whole: at a share r > 0 the
+  // filter is left as it is (the trial weighting is recomputed at the next
+  // reweighting)
+  size_t k;
+  double r;
+  this->tempering_point(conditioned_on_parameters, k, r);
+  if ((current_state->committed_log_likelihood != -arma::datum::inf) && (k == current_state->followed_steps + 1) && (r == 0.0))
     this->commit_observation(current_state, conditioned_on_parameters);
-  current_state->log_likelihood = current_state->committed_log_likelihood;
+  if (r > 0.0)
+  {
+    // the value stays the one at the caller's current target, committed +
+    // r log(ratio): the next reweighting's increments are measured from it
+    // (recomputed, since the caller's last trial may have been at another
+    // fraction; no random numbers)
+    double value = this->trial_value(current_state, k, r);
+    current_state->set_latest_llhd(value);
+    current_state->log_likelihood = value;
+  }
+  else
+    current_state->log_likelihood = current_state->committed_log_likelihood;
 }
 
 // a new output (its particles drawn at the first time): committed and moved
@@ -1158,21 +1250,21 @@ void ParticleFilter::advance_at_caller_target_smc(SMCOutput *current_state, cons
 // law), then a trial at the caller's current observation if it is one more
 void ParticleFilter::follow_from_start(SMCOutput *current_state, const Parameters &conditioned_on_parameters)
 {
-  size_t target = this->observations_at(conditioned_on_parameters);
-  size_t committed = std::min(this->followed_steps, target);
+  size_t k;
+  double r;
+  this->tempering_point(conditioned_on_parameters, k, r);
+  size_t committed = std::min(this->followed_steps, k);
   current_state->followed_steps = 0;
   current_state->committed_log_likelihood = 0.0;
   record_filter_generation(current_state);
   while ((current_state->followed_steps < committed) && (current_state->committed_log_likelihood != -arma::datum::inf))
     this->commit_observation(current_state, conditioned_on_parameters);
   current_state->caught_up = true;
-  double value = current_state->committed_log_likelihood;
-  if ((target > current_state->followed_steps) && (value != -arma::datum::inf))
-  {
-    this->set_time_step(this->first_index + current_state->followed_steps);
-    value = value + this->weight_current(current_state);
+  bool trial = (current_state->committed_log_likelihood != -arma::datum::inf) &&
+               ((k > current_state->followed_steps) || (r > 0.0));
+  double value = this->trial_value(current_state, k, r);
+  if (trial)
     current_state->set_latest_llhd(value);
-  }
   current_state->log_likelihood = value;
 }
 

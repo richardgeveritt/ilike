@@ -1,4 +1,5 @@
 #include "ensemble_kalman_output.h"
+#include "ensemble_factor_variables.h"
 #include "ensemble_kalman.h"
 #include "ensemble_kalman_worker.h"
 #include "move_output.h"
@@ -80,6 +81,9 @@ LikelihoodEstimatorOutput* EnsembleKalmanOutput::duplicate() const
 
 void EnsembleKalmanOutput::make_copy(const EnsembleKalmanOutput &another)
 {
+  this->followed_steps = another.followed_steps;
+  this->committed_log_likelihood = another.committed_log_likelihood;
+  this->caught_up = another.caught_up;
   if (another.estimator!=NULL)
     this->estimator.reset(another.estimator->ensemble_kalman_duplicate());
   else
@@ -90,6 +94,24 @@ void EnsembleKalmanOutput::make_copy(const EnsembleKalmanOutput &another)
   this->log_likelihood_smcfixed_part = another.log_likelihood_smcfixed_part;
   this->subsample_log_likelihood_smcfixed_part = another.subsample_log_likelihood_smcfixed_part;
   this->all_ensembles = another.all_ensembles;
+  // (C265) the copied ensembles' members point at this output's own copy of
+  // the filter, not at the one copied from (deleted with its output: a
+  // following filter, which goes on moving a copied output's ensemble, then
+  // read freed memory)
+  if (this->estimator != NULL)
+  {
+    EnsembleFactors* factors = this->estimator->ensemble_factors.get();
+    for (Ensemble &ensemble : this->all_ensembles)
+    {
+      ensemble.set_ensemble_factors(factors);
+      for (auto &member : ensemble.members)
+        if ((member != NULL) && (member->back().ensemble_factor_variables != NULL))
+          member->back().ensemble_factor_variables->repoint_ensemble_factors(factors);
+      for (auto &member : ensemble.predicted_members)
+        if ((member != NULL) && (member->back().ensemble_factor_variables != NULL))
+          member->back().ensemble_factor_variables->repoint_ensemble_factors(factors);
+    }
+  }
   this->lag = another.lag;
   this->output_lag = another.output_lag;
   this->start_time = another.start_time;
@@ -102,11 +124,16 @@ void EnsembleKalmanOutput::make_copy(const EnsembleKalmanOutput &another)
 Ensemble* EnsembleKalmanOutput::add_ensemble(EnsembleFactors* ensemble_factors)
 {
   size_t num_to_pop_front = std::max<int>(0,this->all_ensembles.size()-this->lag+1);
+  // (C264) the dropped ensemble's members are kept for the new one's moves
+  std::vector<std::unique_ptr<MoveOutput>> recycled;
   for (size_t i=0; i<num_to_pop_front; ++i)
   {
+    if (this->estimator->reuses_member_objects() && recycled.empty())
+      recycled.swap(this->all_ensembles.front().members);
     this->all_ensembles.pop_front();
   }
   this->all_ensembles.push_back(Ensemble(ensemble_factors));
+  this->all_ensembles.back().spare.swap(recycled);
   this->all_ensembles.back().reserve(this->estimator->number_of_ensemble_members);
   return &this->all_ensembles.back();
 }
@@ -205,6 +232,12 @@ void EnsembleKalmanOutput::calculate_path2_inversion_initial_quantities(std::vec
 void EnsembleKalmanOutput::calculate_kalman_gains(double inverse_incremental_temperature)
 {
   this->all_ensembles.back().calculate_kalman_gains(inverse_incremental_temperature);
+}
+
+// (dev/plan.md 3.21 (c2''')) the caller's move stage
+void EnsembleKalmanOutput::advance_at_caller_target(const Parameters &parameters)
+{
+  this->estimator->advance_at_caller_target_enk(this, parameters);
 }
 
 void EnsembleKalmanOutput::simulate()
@@ -352,8 +385,8 @@ void EnsembleKalmanOutput::skip_to_end_of_sequence_if_points_are_gaussian(double
   }
 }
 
-void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
-                                         const std::string &index)
+// the output file (made with its attributes the first time)
+HighFive::File& EnsembleKalmanOutput::output_file(const std::string &dir_name)
 {
   std::string directory_name = dir_name + "_enk";
 
@@ -371,8 +404,23 @@ void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
                                this->estimator->vector_variable_sizes.end());
     h5_set_sizet_attr(root, "variable_sizes", vsizes);
   }
+  return *this->estimator->h5_file;
+}
 
-  HighFive::File &hf = *this->estimator->h5_file;
+// (C264) with nothing stored, write_to_file makes the file and writes no
+// iteration: the same here
+void EnsembleKalmanOutput::write_compact_values(const std::string &dir_name,
+                                                const std::string &index,
+                                                const double *values)
+{
+  this->output_file(dir_name);
+}
+
+void EnsembleKalmanOutput::write_to_file(const std::string &dir_name,
+                                         const std::string &index)
+{
+  HighFive::File &hf = this->output_file(dir_name);
+  std::string directory_name = dir_name + "_enk";
 
   for (size_t iteration = this->iteration_written_to_file+1;
        iteration < this->enk_iteration+1;

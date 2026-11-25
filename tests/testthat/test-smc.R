@@ -169,3 +169,18 @@ test_that("data tempering refuses what it cannot do", {
   expect_error(ilike::SMC_with_MCMC(ilike::compile(d$file), seed = 1), "under data tempering", fixed = TRUE)
   unlink(d$file)
 })
+
+# (dev/plan.md 3.21 (c6), step 2) with few stored generations, the dropped
+# generations' chain outputs are reused by the next moves (Particles::spare,
+# SMCMCMCMove::move_reusing): the same random numbers and results as building
+# them anew (all generations stored, none dropped)
+test_that("SMC moves that reuse dropped generations' outputs give the same run", {
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(f), add = TRUE)
+  writeLines(c("ilike 1.0", "data { y = 1 }", "model {", "  theta ~ norm(0, 1)", "  y ~ norm(theta, 0.5)", "}",
+               "algorithm smc {", "  move m = metropolis(norm_rw(theta, 0.5))", "  termination = iterations(3)",
+               "  sequence = annealing(power, [0, 0.1, 0.3, 0.6, 1])", "}"), f)
+  r = suppressMessages(ilike::compile(f))
+  z = sapply(c(2, 100), function(k) suppressMessages(ilike::SMC_with_MCMC(r, number_of_particles = 200, smc_iterations_to_store = k, seed = 3)))
+  expect_identical(z[1], z[2])
+})

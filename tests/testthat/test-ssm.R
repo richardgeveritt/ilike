@@ -114,3 +114,63 @@ test_that("KF and the stochastic and square-root EnKF handle a 2-D measurement w
   adjustment_enkf = ilike::compile(c(model, adjustment), model_parameter_list = pl)
   expect_lt(abs(ilike::EnKF(adjustment_enkf, model_parameter_list = pl, number_of_ensemble_members = 20000, seed = 1) - truth), 0.15)
 })
+
+# (C260) a measurement written as a model statement in a state-space model:
+# with its data declared (data { vector y }) the filter uses it; undeclared,
+# it would be a prior on a parameter y depending on the state (a filter that
+# ignored the measurement, silently), which is refused
+test_that("a state-space model's measurement can be a model statement on declared data", {
+  set.seed(4); n = 20; x = numeric(n); x[1] = rnorm(1)
+  for (t in 2:n) x[t] = 0.7*x[t-1] + rnorm(1, 0, sqrt(0.5))
+  y = round(x + rnorm(n), 3)
+  ssm = function(meas, first, last) c(first, "model {", "  x ~ norm(0, 1)",
+    "  transition x = linear_gaussian(matrix = cpp::transition_matrix, covariance = 0.5)", meas,
+    paste0("  time = ssm(index = i, first_index = 0, last_index = ", n - 1, ", time = t, initial_time = 0,"),
+    "             time_difference = dt, time_step = 1, predictions_per_update = 1)", "}", "cpp {",
+    "arma::mat transition_matrix(const Parameters &parameters) { arma::mat A(1, 1); A(0, 0) = parameters[\"a\"][0]; return A; }", "}", last)
+  outer = function(factor, inner) c("ilike 1.0", paste0("import \"", inner, "\" as inner"), paste0("data { y = [", paste(y, collapse = ", "), "] }"),
+    "model {", "  a ~ unif(-1, 1)", paste0("  factor filter = ", factor), "}")
+  d = tempfile(); dir.create(d); on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  writeLines(ssm("  factor obs = linear_gaussian(data = y, state = x, matrix = 1, covariance = 1)", "ilike 1.0", c("algorithm kalman {", "}")),
+             file.path(d, "inner_kf.ilike"))
+  writeLines(outer("kf(inner)", "inner_kf.ilike"), file.path(d, "kf.ilike"))
+  writeLines(ssm("  y ~ norm(x, 1)", c("ilike 1.0", "data { vector y }"), c("algorithm filter {", "  particles = 2000", "}")),
+             file.path(d, "inner.ilike"))
+  writeLines(outer("pf(inner)", "inner.ilike"), file.path(d, "pf.ilike"))
+  exact = suppressMessages(ilike::evaluate_log(ilike::compile(file.path(d, "kf.ilike")), parameters = list(a = 0.7)))
+  estimate = suppressMessages(ilike::evaluate_log(ilike::compile(file.path(d, "pf.ilike")), parameters = list(a = 0.7), seed = 1))
+  expect_lt(abs(estimate - exact), 0.3)
+  # undeclared: refused
+  writeLines(ssm("  y ~ norm(x, 1)", "ilike 1.0", c("algorithm filter {", "  particles = 20", "}")), file.path(d, "inner.ilike"))
+  expect_error(ilike::compile(file.path(d, "pf.ilike")), "y is not data, so this would be a prior on a parameter y that depends on the state x",
+               fixed = TRUE)
+})
+
+# (C264) a Kalman or ensemble Kalman filter as the likelihood in MCMC stores
+# each iteration compactly (nothing of the filter is stored by default): the
+# chain and the filters' output files are as before
+test_that("KF and EnKF likelihoods in MCMC write their output and the chain loads", {
+  n = 10
+  set.seed(4); x = numeric(n); x[1] = rnorm(1)
+  for (t in 2:n) x[t] = 0.7*x[t-1] + rnorm(1, 0, sqrt(0.5))
+  y = round(x + rnorm(n), 3)
+  d = tempfile(); dir.create(d); on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  writeLines(c("ilike 1.0", "model {", "  x ~ norm(0, 1)", "  transition x = linear_gaussian(matrix = cpp::transition_matrix, covariance = 0.5)",
+               "  factor obs = linear_gaussian(data = y, state = x, matrix = 1, covariance = 1)",
+               paste0("  time = ssm(index = i, first_index = 0, last_index = ", n - 1, ", time = t, initial_time = 0,"),
+               "             time_difference = dt, time_step = 1, predictions_per_update = 1)", "}", "cpp {",
+               "arma::mat transition_matrix(const Parameters &parameters) { arma::mat A(1, 1); A(0, 0) = parameters[\"a\"][0]; return A; }", "}",
+               "algorithm kalman {", "}"), file.path(d, "inner.ilike"))
+  for (factor in c("kf(inner)", "enkf(inner, ensemble_members = 20, shifter = \"stochastic\")")) {
+    writeLines(c("ilike 1.0", "import \"inner.ilike\" as inner", paste0("data { y = [", paste(y, collapse = ", "), "] }"), "model {",
+                 "  a ~ unif(-1, 1)", paste0("  factor filter = ", factor), "}",
+                 "algorithm mcmc {", "  move m = metropolis(norm_rw(a, 0.2))", "  termination = iterations(50)", "}"), file.path(d, "outer.ilike"))
+    out = "kf_enkf_mcmc_output"; unlink(out, recursive = TRUE)
+    on.exit(unlink(out, recursive = TRUE), add = TRUE)
+    suppressMessages(ilike::MCMC(ilike::compile(file.path(d, "outer.ilike")), results_name = out, seed = 1, initial_values = list(list(a = 0.5))))
+    o = ilike::load_mcmc_output(out)
+    expect_equal(length(unique(o$Iteration)), 50)
+    expect_true(any(grepl(if (grepl("^kf", factor)) "factor2_kf/output.h5" else "factor2_enk/output.h5",
+                          list.files(out, recursive = TRUE), fixed = TRUE)))
+  }
+})

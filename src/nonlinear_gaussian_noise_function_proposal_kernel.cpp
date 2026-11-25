@@ -93,6 +93,24 @@ double NonLinearGaussianNoiseFunctionProposalKernel::specific_subsample_evaluate
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
 
+// (dev/plan.md, PMMH P2) simulate, written into the target: the same random
+// numbers and values, without a new Parameters for the output
+void NonLinearGaussianNoiseFunctionProposalKernel::simulate_into(RandomNumberGenerator &rng,
+                                                                 const Particle &particle,
+                                                                 ProposalTarget &target) const
+{
+  Parameters transformed = this->transform->transform(particle.get_transformed_parameters(this));
+  for (auto i=this->proposal_info.begin();
+       i!=this->proposal_info.end();
+       ++i)
+  {
+    double scale = i->second.get_double_scale();
+    target.matrix(i->first) = rmvnorm_using_chol(rng,
+                                                 transformed.get_colvec(i->first),
+                                                 sqrt(scale)*i->second.get_chol(transformed));
+  }
+}
+
 Parameters NonLinearGaussianNoiseFunctionProposalKernel::simulate(RandomNumberGenerator &rng,
                                                                   const Particle &particle) const
 {

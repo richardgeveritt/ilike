@@ -57,6 +57,9 @@ protected:
   void make_copy(const SequentialEnsembleKalmanWorker &another);
   
   arma::colvec log_unnormalised_incremental_weights;
+public:
+  // (C267) after the filter's number of ensemble members changed
+  void resize_for_members() { this->log_unnormalised_incremental_weights.set_size(this->get_number_of_ensemble_members()); }
 
 };
 

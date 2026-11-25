@@ -1,4 +1,5 @@
 #include "kalman_filter.h"
+#include "caller_tempering.h"
 #include "kalman_filter_output.h"
 #include "kalman_updater.h"
 #include "kalman_predictor.h"
@@ -119,6 +120,10 @@ void KalmanFilter::make_copy(const KalmanFilter &another)
   this->last_index_is_fixed = another.last_index_is_fixed;
   this->lag = another.lag;
   this->results_name = another.results_name;
+  this->follows_caller_target = another.follows_caller_target;
+  this->followed_variable = another.followed_variable;
+  this->followed_anneal = another.followed_anneal;
+  this->followed_steps = another.followed_steps;
   
   // its own matrices (the filter writes its time variables in place)
   this->schedule_parameters = another.schedule_parameters.deep_copy();
@@ -325,6 +330,12 @@ KalmanFilterOutput* KalmanFilter::kalman_filter_initialise(const Parameters &par
 void KalmanFilter::evaluate(KalmanFilterOutput* current_state,
                             const Parameters &conditioned_on_parameters)
 {
+  if (this->follows_caller_target)
+  {
+    this->follow_evaluate(current_state, conditioned_on_parameters);
+    return;
+  }
+
   // use conditioned_on_parameters to set the next index to stop on
   if (!this->last_index_is_fixed)
   {
@@ -449,4 +460,153 @@ void KalmanFilter::specific_change_data(Data* new_data)
 {
   
 }
+
+// --- SMC^2 with a Kalman filter (dev/plan.md 3.21 (c2''')) --------------------
+
+void KalmanFilter::set_follows_caller_target(const std::string &fraction_variable, bool anneal)
+{
+  this->follows_caller_target = true;
+  this->followed_variable = fraction_variable;
+  this->followed_anneal = anneal;
+  this->smcfixed_flag = false; // (the value changes along the caller's sequence)
+}
+
+// one predict-and-update step: the output's next observation (the first one:
+// the prior, then the update, as evaluate's initial step does). The model's
+// functions are given the particle's parameters with the step's index and
+// time difference (evaluate gives them once per run; the same values for
+// models whose matrices do not read the index or time).
+void KalmanFilter::follow_step(KalmanFilterOutput* current_state,
+                               const Parameters &conditioned_on_parameters)
+{
+  size_t step = current_state->followed_steps; // (observations already in this output)
+  size_t index = this->first_index + step;
+  double predict_time_step = this->update_time_step/double(this->predictions_per_update);
+  Parameters step_parameters;
+  step_parameters[this->index_name] = double(index);
+  step_parameters[this->time_diff_name] = (step == 0) ? 0.0 : predict_time_step;
+  Parameters all_parameters;
+  all_parameters.merge_with_fixed(conditioned_on_parameters);
+  all_parameters.merge_with_fixed(step_parameters);
+  this->predictor->set_parameters(all_parameters);
+  for (auto i=this->updaters.begin(); i!=this->updaters.end(); ++i)
+    (*i)->set_parameters(all_parameters);
+
+  if (step == 0)
+  {
+    current_state->set_current_predicted_statistics(this->prior_mean, this->prior_covariance);
+    current_state->add_predicted_statistics();
+  }
+  else
+  {
+    current_state->set_current_predicted_to_be_current_posterior();
+    for (size_t i=0; i<this->predictions_per_update; ++i)
+      this->predictor->predict(current_state);
+    current_state->add_predicted_statistics();
+  }
+  for (auto i=this->updaters.begin(); i!=this->updaters.end(); ++i)
+  {
+    arma::colvec current_measurement = arma::vectorise(this->data->row(index)[(*i)->get_measurement_variable()]);
+    (*i)->update(current_state, current_measurement);
+  }
+  current_state->set_llhd(current_state->log_likelihood);
+  current_state->add_posterior_statistics();
+  current_state->add_schedule_parameters(step_parameters);
+  current_state->set_time();
+  current_state->followed_steps = step + 1;
+}
+
+// keep the next observation's update: the output's log-likelihood starts
+// from the committed value (a trial's value is not a base for the update)
+void KalmanFilter::follow_commit(KalmanFilterOutput* current_state,
+                                 const Parameters &conditioned_on_parameters)
+{
+  current_state->log_likelihood = current_state->committed_log_likelihood;
+  this->follow_step(current_state, conditioned_on_parameters);
+  current_state->committed_log_likelihood = current_state->log_likelihood;
+  if (current_state->followed_steps > this->followed_steps)
+    this->followed_steps = current_state->followed_steps;
+}
+
+// the value at the caller's target (k, r): the committed observations, plus
+// the next one's exact log predictive density (times r with anneal), from a
+// step on a copy of the output; no random numbers
+double KalmanFilter::follow_trial_value(KalmanFilterOutput* current_state,
+                                        const Parameters &conditioned_on_parameters,
+                                        size_t k, double r)
+{
+  double value = current_state->committed_log_likelihood;
+  if (value == -arma::datum::inf)
+    return value;
+  switch (caller_trial(current_state->followed_steps, k, r))
+  {
+    case CallerTrial::committed:
+      return value;
+    case CallerTrial::next:
+    {
+      KalmanFilterOutput trial(*current_state);
+      trial.log_likelihood = value;
+      this->follow_step(&trial, conditioned_on_parameters);
+      return value + ((r > 0.0) ? r : 1.0)*(trial.log_likelihood - value);
+    }
+    default:
+      Rcpp::stop(caller_trial_too_far_message());
+  }
+  return value;
+}
+
+// a new output: run through the observations committed so far (the same
+// steps as an output that has followed the caller from its start), then a
+// trial at the caller's current target
+void KalmanFilter::follow_from_start(KalmanFilterOutput* current_state,
+                                     const Parameters &conditioned_on_parameters)
+{
+  size_t k;
+  double r;
+  caller_tempering_point(conditioned_on_parameters[this->followed_variable][0], this->observations(),
+                         this->followed_anneal, k, r);
+  size_t committed = std::min(this->followed_steps, k);
+  current_state->followed_steps = 0;
+  current_state->committed_log_likelihood = 0.0;
+  current_state->log_likelihood = 0.0;
+  while ((current_state->followed_steps < committed) && (current_state->committed_log_likelihood != -arma::datum::inf))
+    this->follow_commit(current_state, conditioned_on_parameters);
+  current_state->caught_up = true;
+  current_state->log_likelihood = this->follow_trial_value(current_state, conditioned_on_parameters, k, r);
+}
+
+// an evaluation: a new output is run from the start; afterwards a trial at
+// the caller's target
+void KalmanFilter::follow_evaluate(KalmanFilterOutput* current_state,
+                                   const Parameters &conditioned_on_parameters)
+{
+  if (!current_state->caught_up)
+  {
+    this->follow_from_start(current_state, conditioned_on_parameters);
+    return;
+  }
+  size_t k;
+  double r;
+  caller_tempering_point(conditioned_on_parameters[this->followed_variable][0], this->observations(),
+                         this->followed_anneal, k, r);
+  current_state->log_likelihood = this->follow_trial_value(current_state, conditioned_on_parameters, k, r);
+}
+
+// the caller's move stage: commit the next observation once it is whole
+// (nothing random to do: the step is deterministic); the value stays the one
+// at the caller's current target
+void KalmanFilter::advance_at_caller_target_kf(KalmanFilterOutput* current_state,
+                                               const Parameters &conditioned_on_parameters)
+{
+  if (!this->follows_caller_target || !current_state->caught_up)
+    return;
+  size_t k;
+  double r;
+  caller_tempering_point(conditioned_on_parameters[this->followed_variable][0], this->observations(),
+                         this->followed_anneal, k, r);
+  if ((current_state->committed_log_likelihood != -arma::datum::inf) && (k == current_state->followed_steps + 1) && (r == 0.0))
+    this->follow_commit(current_state, conditioned_on_parameters);
+  current_state->log_likelihood = this->follow_trial_value(current_state, conditioned_on_parameters, k, r);
+}
+
 }

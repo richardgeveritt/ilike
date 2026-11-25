@@ -133,9 +133,12 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
       // statements one at a time; another factor cannot be tempered this way
       // (dev/plan.md 3.21 (c2')) a nested particle filter takes its
       // observations in one at a time (SMC^2)
+      // (3.21 (c2''')) and a Kalman or ensemble Kalman filter
       const bool tempered_filter = factor_plan.data_tempered && (factors[i]).is_list() &&
         factors[i].contains("algorithmic_likelihood") && factors[i]["algorithmic_likelihood"].contains("type") &&
-        iequals(factors[i]["algorithmic_likelihood"]["type"].as_string(), "pf");
+        (iequals(factors[i]["algorithmic_likelihood"]["type"].as_string(), "pf") ||
+         iequals(factors[i]["algorithmic_likelihood"]["type"].as_string(), "kf") ||
+         iequals(factors[i]["algorithmic_likelihood"]["type"].as_string(), "enkf"));
       if (factor_plan.data_tempered && !tempered_filter &&
           !((factors[i]).is_list() && factors[i].contains("evaluate_log_likelihood") &&
             factors[i].contains("plate")))
@@ -837,9 +840,17 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
 
               size_t iterations_to_store = kf_params[0];
 
-              new_likelihood_estimator = get_kalman_filter(
+              KalmanFilter *inner_kf = get_kalman_filter(
                   data_in, llhd_model, model_parameters,
                   algorithm_parameters, iterations_to_store, false, "");
+              // (dev/plan.md 3.21 (c2''')) SMC^2 with a Kalman filter: the
+              // caller's data tempering takes in its observations one at a time
+              if (factor_plan.data_tempered)
+              {
+                inner_kf->set_follows_caller_target(plan.data_variable, data_tempering.anneal);
+                plan.followed_observations.push_back(inner_kf->observations());
+              }
+              new_likelihood_estimator = inner_kf;
             } else if (iequals(llhd_type, "enkf")) {
               RecipeValue enkf_params =
                   get_enkf_info(model_parameters, llhd_details, llhd_type);
@@ -856,11 +867,31 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
               // setup functions called before running the method)
               EnsembleShifter *shifter = make_builtin_enk_shifter(shifter_name);
 
-              new_likelihood_estimator = get_ensemble_kalman_filter(
+              EnsembleKalmanFilter *inner_enkf = get_ensemble_kalman_filter(
                   rng_in, data_in, llhd_model, model_parameters,
                   algorithm_parameters, number_of_ensemble_members, shifter,
                   iterations_to_store, false, parallel, grain_size, "", seed_in,
                   data_created_in_get_measurement_covariance_estimators);
+              // (dev/plan.md 3.21 (c2''')) SMC^2 with an ensemble Kalman filter
+              if (factor_plan.data_tempered)
+              {
+                inner_enkf->set_follows_caller_target(plan.data_variable, data_tempering.anneal);
+                plan.followed_observations.push_back(inner_enkf->observations());
+              }
+              // (C267) the exchange step: SMC^2 only, as for a particle filter
+              double exchange_below = enkf_params[5];
+              if (exchange_below >= 0.0)
+              {
+                if (!factor_plan.data_tempered)
+                  stop("enkf(..., increase = exchange(...)) is for SMC^2: an outer SMC whose sequence = data(...) takes in the "
+                       "filter's observations (in MCMC it would change the target of a running chain).");
+                double exchange_multiply = enkf_params[6];
+                size_t exchange_max = enkf_params[7];
+                if (exchange_multiply <= 1.0)
+                  stop("exchange(..., multiply = m): m must be more than 1.");
+                inner_enkf->set_exchange(exchange_below, exchange_multiply, exchange_max);
+              }
+              new_likelihood_estimator = inner_enkf;
             } else if (iequals(llhd_type, "pf")) {
               RecipeValue pf_params =
                   get_pf_info(model_parameters, llhd_details, llhd_type);
@@ -889,10 +920,25 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                 // (a filter takes its observations in time order, whatever
                 // data(..., order = ...) says: that is for factors whose
                 // terms may enter in any order)
-                if (data_tempering.anneal)
-                  stop("SMC^2: a particle filter takes in whole observations for now: use data(..., anneal = false) "
-                       "with a fraction going up by 1/n each step.");
-                inner_pf->set_follows_caller_target(plan.data_variable);
+                // (3.21 (c2''), F1) with anneal = true the caller may take in
+                // a share of an observation; the SMC builder makes each whole
+                // observation a point of the schedule (followed_observations)
+                inner_pf->set_follows_caller_target(plan.data_variable, data_tempering.anneal);
+                plan.followed_observations.push_back(inner_pf->observations());
+              }
+              // (3.21 (c2''), F2) the exchange step: SMC^2 only (an outer SMC
+              // whose data tempering takes in the filter's observations)
+              double exchange_below = pf_params[4];
+              if (exchange_below >= 0.0)
+              {
+                if (!factor_plan.data_tempered)
+                  stop("pf(..., increase = exchange(...)) is for SMC^2: an outer SMC whose sequence = data(...) takes in the "
+                       "filter's observations (in MCMC it would change the target of a running chain).");
+                double exchange_multiply = pf_params[5];
+                size_t exchange_max = pf_params[6];
+                if (exchange_multiply <= 1.0)
+                  stop("exchange(..., multiply = m): m must be more than 1.");
+                inner_pf->set_exchange(exchange_below, exchange_multiply, exchange_max);
               }
               // threads for an inner particle filter with parallel = TRUE
               if (model.contains("number_of_threads"))
@@ -963,8 +1009,16 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
               // (dev/plan.md 3.21 (c4)) early stopping in an outer MCMC
               // move: ABC kernels (the lowering's flag), tolerances not increasing
               if (nested.types.empty())
+              {
                 static_cast<SMCMCMCMove*>(new_likelihood_estimator)->set_stops_early(
                     llhd_details.contains("kernels_only") && llhd_details["kernels_only"].as_bool());
+                // (dev/plan.md 3.21 (c6), step 1) its own sequence (rare-event
+                // ABC-MCMC): the stored generations kept compactly, as a nested
+                // filter's (C100), so an outer chain's stored iterations do not
+                // each hold a rich copy of the inner run. (An inner SMC that
+                // follows the outer sequence keeps rich states between steps.)
+                static_cast<SMCMCMCMove*>(new_likelihood_estimator)->set_compact_stored_output(true);
+              }
             } else {
               stop("Invalid type for 'likelihood'.");
             }

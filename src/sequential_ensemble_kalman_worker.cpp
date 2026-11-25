@@ -104,32 +104,24 @@ void SequentialEnsembleKalmanWorker::pack(Ensemble* ensemble)
     ensemble->partially_packed_measurement_states.push_back((*i)->back().ensemble_factor_variables->get_measurement_states_for_covariance());
   }
   
-  // must be serial
-  for (size_t i=0;
-       i<ensemble->partially_packed_members_row.size();
-       ++i)
+  // must be serial. Each matrix is filled row by row at its final size: it
+  // used to grow by join_cols one member at a time, copying O(N^2) numbers for
+  // N members (EnKF profile, dev/plan.md C264); the values are the same.
+  size_t N = ensemble->partially_packed_members_row.size();
+  if (N > 0)
   {
-    if (i==0)
+    ensemble->packed_members.set_size(N, ensemble->partially_packed_members_row[0].n_elem);
+    for (size_t i = 0; i < N; ++i)
+      ensemble->packed_members.row(i) = ensemble->partially_packed_members_row[i];
+    size_t number_of_states = ensemble->partially_packed_measurement_states[0].size();
+    ensemble->packed_measurement_states.clear();
+    ensemble->packed_measurement_states.reserve(number_of_states);
+    for (size_t j = 0; j < number_of_states; ++j)
     {
-      ensemble->packed_members = ensemble->partially_packed_members_row[i];
-      ensemble->packed_measurement_states.clear();
-      ensemble->packed_measurement_states.reserve(ensemble->partially_packed_measurement_states[i].size());
-      for (auto j=ensemble->partially_packed_measurement_states[i].begin();
-           j!=ensemble->partially_packed_measurement_states[i].end();
-           ++j)
-      {
-        ensemble->packed_measurement_states.push_back(*j);
-      }
-    }
-    else
-    {
-      ensemble->packed_members = join_cols(ensemble->packed_members,ensemble->partially_packed_members_row[i]);
-      for (size_t j=0;
-           j<ensemble->partially_packed_measurement_states[i].size();
-           ++j)
-      {
-        ensemble->packed_measurement_states[j] = join_cols(ensemble->packed_measurement_states[j],ensemble->partially_packed_measurement_states[i][j]);
-      }
+      arma::mat packed(N, ensemble->partially_packed_measurement_states[0][j].n_elem);
+      for (size_t i = 0; i < N; ++i)
+        packed.row(i) = ensemble->partially_packed_measurement_states[i][j];
+      ensemble->packed_measurement_states.push_back(std::move(packed));
     }
   }
   
@@ -263,8 +255,15 @@ void SequentialEnsembleKalmanWorker::specific_move(Ensemble* next_particles,
   
   for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
   {
-    next_particles->push_back(this->the_enk->move(local_rng,
-                                                  (*current_particles)[i]->back()));
+    // (C264) in a dropped ensemble's member when there is one
+    MoveOutput* spare = next_particles->take_spare();
+    if (spare != NULL)
+      next_particles->push_back(this->the_enk->move_reusing(local_rng,
+                                                            (*current_particles)[i]->back(),
+                                                            spare));
+    else
+      next_particles->push_back(this->the_enk->move(local_rng,
+                                                    (*current_particles)[i]->back()));
     
   }
 }

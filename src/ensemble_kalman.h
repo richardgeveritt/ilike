@@ -81,6 +81,16 @@ public:
   
   virtual MoveOutput* move(RandomNumberGenerator &rng,
                            Particle &particle)=0;
+  // (C264) as move, building the moved member in a dropped ensemble's member
+  // (spare), when reuses_member_objects(); the default deletes spare and moves
+  virtual bool reuses_member_objects() const { return false; }
+  // (dev/plan.md 3.21 (c2''')) the caller's move stage, for a filter that
+  // follows the caller's data tempering; by default, nothing
+  virtual void advance_at_caller_target_enk(EnsembleKalmanOutput* current_state,
+                                            const Parameters &conditioned_on_parameters) {}
+  virtual MoveOutput* move_reusing(RandomNumberGenerator &rng,
+                                   Particle &particle,
+                                   MoveOutput* spare);
   
   virtual MoveOutput* subsample_move(RandomNumberGenerator &rng,
                                      Particle &particle)=0;

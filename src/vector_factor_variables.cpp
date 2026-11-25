@@ -204,6 +204,19 @@ void VectorFactorVariables::advance_at_caller_target()
       this->likelihood_estimator_outputs[i]->advance_at_caller_target(this->particle->parameters);
 }
 
+// (dev/plan.md 3.21 (c2''), F2) as copy_with_new_outputs makes a proposal's
+// new output, then evaluated at once
+double VectorFactorVariables::replace_output(size_t i)
+{
+  double old_value = (this->likelihood_estimator_outputs[i] != NULL) ? this->likelihood_estimator_outputs[i]->log_likelihood : 0.0;
+  LikelihoodEstimatorOutput* fresh = this->vector_factors->get_likelihood_estimator(i)->initialise(this->particle->parameters);
+  fresh->simulate_when_needed(this->particle->parameters);
+  fresh->write_to_file_flag = false;
+  this->likelihood_estimator_outputs[i].reset(fresh);
+  double new_value = fresh->evaluate(this->particle->parameters);
+  return new_value - old_value;
+}
+
 double VectorFactorVariables::subsample_evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index)
 {
   double result = 0.0;

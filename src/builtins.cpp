@@ -1023,7 +1023,12 @@ static std::vector<Builtin> make_registry()
                    required("shifter", T::String, "the ensemble shifter: stochastic, sqrt or adjustment"),
                    optional("iterations_to_store", T::Integer, RecipeValue(0.0), "filter iterations stored").at_least(0.0),
                    parallel(),
-                   optional("grain_size", T::Integer, RecipeValue(100000.0), "members per parallel task").at_least(0.0)};
+                   optional("grain_size", T::Integer, RecipeValue(100000.0), "members per parallel task").at_least(0.0),
+                   // (dev/plan.md 3.21 (c2'''), C267) set by increase = exchange(below, multiply, max)
+                   optional("exchange_below", T::Real, RecipeValue(),
+                            "SMC^2: exchange for more members when the acceptance rate is below this").at_least(0.0),
+                   optional("exchange_multiply", T::Real, RecipeValue(2.0), "SMC^2: the factor by which an exchange multiplies the members").at_least(1.0),
+                   optional("exchange_max", T::Integer, RecipeValue(), "SMC^2: the largest number of members after an exchange").at_least(1.0)};
     table.push_back(b);
 
     b.name = "pf";
@@ -1032,7 +1037,12 @@ static std::vector<Builtin> make_registry()
                    optional("iterations_to_store", T::Integer, RecipeValue(1.0),
                             "generations stored for each outer point (1: the final one)").at_least(0.0),
                    parallel(),
-                   optional("grain_size", T::Integer, RecipeValue(64.0), "particles per parallel task").at_least(0.0)};
+                   optional("grain_size", T::Integer, RecipeValue(64.0), "particles per parallel task").at_least(0.0),
+                   // (dev/plan.md 3.21 (c2''), F2) set by increase = exchange(below, multiply, max)
+                   optional("exchange_below", T::Real, RecipeValue(),
+                            "SMC^2: exchange for more particles when the acceptance rate is below this").at_least(0.0),
+                   optional("exchange_multiply", T::Real, RecipeValue(2.0), "SMC^2: the factor by which an exchange multiplies the particles").at_least(1.0),
+                   optional("exchange_max", T::Integer, RecipeValue(), "SMC^2: the largest number of particles after an exchange").at_least(1.0)};
     table.push_back(b);
 
     // integrate u with is(points = N) (dev/plan.md 3.21, step (b)): the

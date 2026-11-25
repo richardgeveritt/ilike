@@ -90,6 +90,7 @@ struct CancellationPlan
   bool add_proposal_path_factor = false; // the q^(1 - p) factor that starts an annealing path at q
   std::string data_variable;             // (S2) the variable of data tempering
   bool proposal_is_evaluated = true;     // the importance proposal's density enters the first weights
+  std::vector<size_t> followed_observations; // (3.21 (c2'')) the observations of each filter following data tempering
 };
 
 // a kernel's density enters a weight unless the kernel simulates exactly from

@@ -222,4 +222,19 @@ void HMMEnsembleFactorVariables::close_ofstreams()
   }
 }
 
+// (C265) point at a copied filter's factors, and each measurement output at
+// the estimator in the same place among its factors
+bool HMMEnsembleFactorVariables::repoint_ensemble_factors(const EnsembleFactors* ensemble_factors_in)
+{
+  const HMMEnsembleFactors* factors = dynamic_cast<const HMMEnsembleFactors*>(ensemble_factors_in);
+  if ((factors == NULL) || (factors->measurement_covariance_estimators.size() != this->measurement_covariance_estimator_outputs.size()))
+    return false;
+  this->hmm_ensemble_factors = factors;
+  for (size_t i = 0; i < this->measurement_covariance_estimator_outputs.size(); ++i)
+    if ((this->measurement_covariance_estimator_outputs[i] != NULL) &&
+        !this->measurement_covariance_estimator_outputs[i]->repoint_estimator(factors->measurement_covariance_estimators[i].get()))
+      return false;
+  return true;
+}
+
 }

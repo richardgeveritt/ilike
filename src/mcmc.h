@@ -38,9 +38,29 @@ public:
   
   MoveOutput* run(RandomNumberGenerator &rng,
                   const Particle &particle) const;
+  // (dev/plan.md 3.21 (c6), step 2) as run, in a finished chain's output
+  // (spare), whose objects the chain reuses; the same random numbers and
+  // result as run. spare is used or deleted.
+  MoveOutput* run_reusing(RandomNumberGenerator &rng,
+                          const Particle &particle,
+                          MoveOutput* spare) const;
+  // (dev/plan.md 3.21 (c6)) the same, the chain starting from start itself
+  // (moved in, not copied: a caller that made its own copy hands it over)
+  MoveOutput* run(RandomNumberGenerator &rng,
+                  Particle &&start) const;
+  MoveOutput* run_reusing(RandomNumberGenerator &rng,
+                          Particle &&start,
+                          MoveOutput* spare) const;
 
   MoveOutput* subsample_run(RandomNumberGenerator &rng,
                             const Particle &particle) const;
+protected:
+  // the chain itself, in mcmc_output, building proposals in scratch
+  MoveOutput* run_chain(RandomNumberGenerator &rng,
+                        Particle &&current_particle,
+                        StandardMCMCOutput* mcmc_output,
+                        Particle &scratch) const;
+public:
 
   // One application of the kernel to particle, updating it in place. The
   // result is the same as particle = move(rng, particle), but a rejected

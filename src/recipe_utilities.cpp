@@ -147,9 +147,14 @@ RecipeValue get_kf_info(const RecipeValue &model_parameters, const RecipeValue &
 RecipeValue get_enkf_info(const RecipeValue &model_parameters, const RecipeValue &current_likelihood,
                    const std::string &likelihood_name) {
   BuiltinArguments a = bind_algorithmic_likelihood(current_likelihood, model_parameters);
+  // (C267) increase = exchange(below, multiply, max): below < 0 for no
+  // exchange, max 0 for no limit
+  double below = a.given("exchange_below") ? a.real("exchange_below") : -1.0;
+  double multiply = a.real("exchange_multiply");
+  size_t maximum = a.given("exchange_max") ? size_t(a.integer("exchange_max")) : size_t(0);
   return RecipeValue::list({size_t(a.integer("ensemble_members")), a.string("shifter"),
                             int(a.integer("iterations_to_store")), a.logical("parallel"),
-                            size_t(a.integer("grain_size"))});
+                            size_t(a.integer("grain_size")), below, multiply, maximum});
 }
 
 // integrate u with smc(particles = N, …) (dev/plan.md 3.21, (c1))
@@ -170,8 +175,14 @@ RecipeValue get_pf_info(const RecipeValue &model_parameters, const RecipeValue &
   // iterations_to_store defaults to 1: keep the final generation (its points
   // and weights) for each outer point (owner, 2026-11-15); grain_size to 64,
   // as PF() (dev/plan.md 2.6b, G5)
+  // (dev/plan.md 3.21 (c2''), F2) increase = exchange(below, multiply, max):
+  // below < 0 for no exchange, max 0 for no limit
+  double below = a.given("exchange_below") ? a.real("exchange_below") : -1.0;
+  double multiply = a.real("exchange_multiply");
+  size_t maximum = a.given("exchange_max") ? size_t(a.integer("exchange_max")) : size_t(0);
   return RecipeValue::list({size_t(a.integer("particles")), int(a.integer("iterations_to_store")),
-                            a.logical("parallel"), size_t(a.integer("grain_size"))});
+                            a.logical("parallel"), size_t(a.integer("grain_size")),
+                            below, multiply, maximum});
 }
 
 std::vector<size_t> get_enk_likelihood_indices(const RecipeValue &model,

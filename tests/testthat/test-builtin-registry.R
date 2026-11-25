@@ -148,7 +148,8 @@ test_that("every built-in is in the table", {
   tab = ilike:::builtin_table()
   expect_true(all(c("euclidean_uniform_abc", "gaussian_abc", "lp_uniform_abc", "ienki_abc", "sl", "kf", "enkf", "pf",
                     "ssm", "linear_gaussian_data_model", "linear_gaussian_transition_model") %in% tab$builtin))
-  expect_equal(tab$argument[tab$builtin == "pf"], c("model", "particles", "iterations_to_store", "parallel", "grain_size"))
+  expect_equal(tab$argument[tab$builtin == "pf"], c("model", "particles", "iterations_to_store", "parallel", "grain_size",
+                                                     "exchange_below", "exchange_multiply", "exchange_max")) # (exchange: C259)
   expect_equal(length(unique(tab$builtin)), 66) # (hmc, nuts, esjd, normal_block, tnorm, tnorm_rw, dual_averaging, pretune, dirichlet_block, normal_invgamma_block, data, is, smc, pcn, adaptive_iterations, slice and pcn_mala added, C208, C210, C211, C216, C217, C219, C223, C228, C241, C249, C250, C252)
 })
 

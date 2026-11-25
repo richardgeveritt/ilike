@@ -161,10 +161,45 @@ void MCMC::refresh_cut_factors(Particle &accepted_particle) const
 
 MoveOutput* MCMC::run(RandomNumberGenerator &rng,
                       const Particle &particle) const
+{
+  return this->run(rng, Particle(particle));
+}
 
+MoveOutput* MCMC::run(RandomNumberGenerator &rng,
+                      Particle &&start) const
 {
   StandardMCMCOutput* mcmc_output = this->initialise_mcmc_output();//new StandardMCMCOutput();
-  
+  // proposals are built here, reusing its objects (Stage 3 (a))
+  Particle scratch;
+  return this->run_chain(rng, std::move(start), mcmc_output, scratch);
+}
+
+MoveOutput* MCMC::run_reusing(RandomNumberGenerator &rng,
+                              const Particle &particle,
+                              MoveOutput* spare) const
+{
+  return this->run_reusing(rng, Particle(particle), spare);
+}
+
+MoveOutput* MCMC::run_reusing(RandomNumberGenerator &rng,
+                              Particle &&start,
+                              MoveOutput* spare) const
+{
+  StandardMCMCOutput* mcmc_output = dynamic_cast<StandardMCMCOutput*>(spare);
+  Particle scratch;
+  if ((mcmc_output == NULL) || this->adapts() || !mcmc_output->reset_for_new_chain(this, scratch))
+  {
+    delete spare;
+    return this->run(rng, std::move(start));
+  }
+  return this->run_chain(rng, std::move(start), mcmc_output, scratch);
+}
+
+MoveOutput* MCMC::run_chain(RandomNumberGenerator &rng,
+                            Particle &&current_particle,
+                            StandardMCMCOutput* mcmc_output,
+                            Particle &scratch) const
+{
   mcmc_output->set_thin(this->thin);
   bool adapting = this->adapts();
   if (adapting)
@@ -176,9 +211,6 @@ MoveOutput* MCMC::run(RandomNumberGenerator &rng,
   std::vector<double> row(diagnostics.size(), 0.0);
   if (!diagnostics.empty())
     mcmc_output->start_recording_diagnostics(diagnostics);
-  Particle current_particle = particle;
-  // proposals are built here, reusing its objects (Stage 3 (a))
-  Particle scratch;
   while (!mcmc_output->terminate())
   {
     // In place: a rejected proposal no longer copies the current state.

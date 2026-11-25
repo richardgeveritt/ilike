@@ -178,4 +178,15 @@ void MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::close_ofstr
 {
   
 }
+
+// (C265) point at a copied filter's estimator
+bool MixedGenericDirectGaussianMeasurementCovarianceEstimatorOutput::repoint_estimator(MeasurementCovarianceEstimator* estimator_in)
+{
+  MixedGenericDirectGaussianMeasurementCovarianceEstimator* found = dynamic_cast<MixedGenericDirectGaussianMeasurementCovarianceEstimator*>(estimator_in);
+  if (found == NULL)
+    return false;
+  this->estimator = found;
+  return true;
+}
+
 }

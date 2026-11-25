@@ -7,6 +7,7 @@ using namespace Rcpp;
 #include <deque>
 
 #include "likelihood_estimator_output.h"
+#include "ilike_hdf5_utils.h"
 
 namespace ilike
 {
@@ -78,7 +79,23 @@ public:
   void terminate();
   
   void increment_kf_iteration();
+  // (dev/plan.md 3.21 (c2''')) following the caller's data tempering: the
+  // observations committed, their log-likelihood, and whether this output has
+  // been run through the caller's committed observations yet
+  size_t followed_steps = 0;
+  double committed_log_likelihood = 0.0;
+  bool caught_up = false;
+  void advance_at_caller_target(const Parameters &parameters);
   
+  // (C264) a compact record when nothing is stored (iterations_to_store =
+  // 0, the default inside another algorithm): the log-likelihood, and the
+  // file write_to_file would make (its attributes only); an MCMC chain then
+  // stores each iteration as numbers instead of a copy of the particle
+  size_t compact_size() const { return (this->output_lag == 0) ? 1 : 0; }
+  void compact_values(double *values) const { values[0] = this->log_likelihood; }
+  void write_compact_values(const std::string &directory_name,
+                            const std::string &index,
+                            const double *values);
   void close_ofstreams();
   
   void print(std::ostream &os) const;
@@ -95,6 +112,7 @@ protected:
   
   // Stored in ModelAndAlgorithm.
   KalmanFilter* estimator;
+  HighFive::File& output_file(const std::string &dir_name);
   
   double log_likelihood_smcfixed_part;
   double subsample_log_likelihood_smcfixed_part;

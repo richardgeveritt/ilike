@@ -77,8 +77,31 @@ public:
                           const Parameters &conditioned_on_parameters);
 
   KalmanFilterOutput* run(const Parameters &conditioned_on_parameters);
+
+  // (dev/plan.md 3.21 (c2''')) SMC^2 with a Kalman filter: the caller's data
+  // tempering takes in the filter's observations one at a time (or a share of
+  // one, with anneal). Each output keeps its own committed statistics; a trial
+  // at the caller's target runs one predict-and-update step on a copy of the
+  // output (no random numbers: the increment is the exact predictive density);
+  // the caller's move stage commits the observation once it is whole; a new
+  // output is run through the observations committed so far.
+  void set_follows_caller_target(const std::string &fraction_variable, bool anneal);
+  bool advances_at_caller_target() const { return this->follows_caller_target; }
+  size_t observations() const { return this->last_index - this->first_index + 1; }
+  void advance_at_caller_target_kf(KalmanFilterOutput* current_state, const Parameters &conditioned_on_parameters);
   
 protected:
+
+  bool follows_caller_target = false;
+  std::string followed_variable;
+  bool followed_anneal = false;
+  size_t followed_steps = 0; // (the most observations any output has committed)
+  void follow_evaluate(KalmanFilterOutput* current_state, const Parameters &conditioned_on_parameters);
+  void follow_step(KalmanFilterOutput* current_state, const Parameters &conditioned_on_parameters);
+  double follow_trial_value(KalmanFilterOutput* current_state, const Parameters &conditioned_on_parameters,
+                            size_t k, double r);
+  void follow_commit(KalmanFilterOutput* current_state, const Parameters &conditioned_on_parameters);
+  void follow_from_start(KalmanFilterOutput* current_state, const Parameters &conditioned_on_parameters);
   
   void specific_change_data(Data* new_data);
   

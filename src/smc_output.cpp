@@ -820,6 +820,9 @@ void SMCOutput::write_to_file(const std::string &dir_name,
   }
   
   this->iteration_written_to_file = this->smc_iteration;
+  // the algorithm's per-step records (esjd tuning, SMC^2's exchange step):
+  // appended to the same file, then dropped from memory
+  this->estimator->write_step_records(hf);
 }
 
 void SMCOutput::close_ofstreams()

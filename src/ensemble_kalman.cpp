@@ -1,5 +1,6 @@
 #include "ensemble_kalman.h"
 #include "ensemble_kalman_output.h"
+#include "move_output.h"
 #include "ensemble_kalman_worker.h"
 #include "measurement_covariance_estimator.h"
 #include "measurement_covariance_estimator_output.h"
@@ -377,4 +378,14 @@ void EnsembleKalman::specific_change_data(Data* new_data)
 {
   
 }
+
+// (C264) defined here, where MoveOutput is complete (its virtual destructor)
+MoveOutput* EnsembleKalman::move_reusing(RandomNumberGenerator &rng,
+                                         Particle &particle,
+                                         MoveOutput* spare)
+{
+  delete spare;
+  return this->move(rng, particle);
+}
+
 }

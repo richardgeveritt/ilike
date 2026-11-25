@@ -29,6 +29,27 @@ StandardMCMCOutput::StandardMCMCOutput(MCMCTermination* termination_in)
   this->number_of_iterations_seen = 0;
 }
 
+bool StandardMCMCOutput::reset_for_new_chain(const MCMC* mcmc_in, Particle &scratch)
+{
+  if ((this->get_mcmc() != mcmc_in) || this->records_adaptation || this->diagnostics)
+    return false;
+  this->iteration_counter = 0;
+  if (this->storage_decided)
+    this->store = SampleStore(); // (a fresh store: its layout and extra columns are decided again by the new chain)
+  this->output.clear();
+  this->storage_decided = false;
+  this->rich_storage = false;
+  this->number_of_iterations_seen = 0;
+  this->adaptation_trace.clear();
+  this->adaptation_final.clear();
+  this->adaptation_columns = 0;
+  this->algorithm_parameters.clear();
+  if (this->termination != NULL)
+    this->termination->set_parameters(this); // (its counter: this output's)
+  scratch = std::move(this->current);
+  return true;
+}
+
 StandardMCMCOutput::~StandardMCMCOutput()
 {
   this->termination.reset();
@@ -56,7 +77,13 @@ void StandardMCMCOutput::operator=(const StandardMCMCOutput &another)
 void StandardMCMCOutput::make_copy(const StandardMCMCOutput &another)
 {
   if (another.termination!=NULL)
+  {
     this->termination.reset(another.termination->duplicate());
+    // the copy's rule reads the copy's own iteration counter (it read the
+    // original's: harmless while copies were never run again; a copied output
+    // reused for a new chain then never stopped, C262)
+    this->termination->set_parameters(this);
+  }
   else
     this->termination.reset();
   

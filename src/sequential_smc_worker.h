@@ -102,6 +102,9 @@ protected:
   //Particles* particles;
   
   arma::colvec log_unnormalised_incremental_weights;
+public:
+  // (dev/plan.md 3.21 (c2''), F2) after the SMC's number of particles changed
+  void resize_for_particles() { this->log_unnormalised_incremental_weights.set_size(this->get_number_of_particles()); }
   
 };
 }

@@ -71,4 +71,15 @@ const GaussianMeasurementCovarianceEstimator* EnKGaussianMeasurementCovarianceEs
 {
   return this->enk_estimator;
 }
+
+// (C265) point at a copied filter's estimator
+bool EnKGaussianMeasurementCovarianceEstimatorOutput::repoint_estimator(MeasurementCovarianceEstimator* estimator_in)
+{
+  EnKGaussianMeasurementCovarianceEstimator* found = dynamic_cast<EnKGaussianMeasurementCovarianceEstimator*>(estimator_in);
+  if (found == NULL)
+    return false;
+  this->enk_estimator = found;
+  return true;
+}
+
 }

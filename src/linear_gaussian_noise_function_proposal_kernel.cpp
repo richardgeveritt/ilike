@@ -109,11 +109,30 @@ double LinearGaussianNoiseFunctionProposalKernel::specific_subsample_evaluate_ke
   return this->specific_evaluate_kernel(proposed_particle, old_particle);
 }
 
+// (dev/plan.md, PMMH P2) simulate, written into the target: the same random
+// numbers and values (an n x 1 matrix per variable, as simulate stores),
+// without a new Parameters per particle and without copying the particle's
+void LinearGaussianNoiseFunctionProposalKernel::simulate_into(RandomNumberGenerator &rng,
+                                                              const Particle &particle,
+                                                              ProposalTarget &target) const
+{
+  const Parameters &current_parameters = particle.get_transformed_parameters(this);
+  for (auto i=this->proposal_info.begin();
+       i!=this->proposal_info.end();
+       ++i)
+  {
+    double scale = i->second.get_double_scale();
+    target.matrix(i->first) = rmvnorm_using_chol(rng,
+                                                 i->second.get_A(current_parameters)*current_parameters.get_colvec(i->first),
+                                                 sqrt(scale)*i->second.get_chol(current_parameters));
+  }
+}
+
 Parameters LinearGaussianNoiseFunctionProposalKernel::simulate(RandomNumberGenerator &rng,
                                                                const Particle &particle) const
 {
   Parameters output;
-  Parameters current_parameters = particle.get_transformed_parameters(this);
+  const Parameters &current_parameters = particle.get_transformed_parameters(this); // (a reference: P2)
   for (auto i=this->proposal_info.begin();
        i!=this->proposal_info.end();
        ++i)
@@ -141,7 +160,7 @@ Parameters LinearGaussianNoiseFunctionProposalKernel::subsample_simulate(RandomN
   auto found = this->proposal_info.find(variable);
   
   Parameters output;
-  Parameters current_parameters = particle.get_transformed_parameters(this);
+  const Parameters &current_parameters = particle.get_transformed_parameters(this); // (a reference: P2)
   output[variable] = rmvnorm_using_chol(rng,
                                         found->second.get_A(current_parameters)*current_parameters.get_colvec(variable),
                                         sqrt(found->second.get_double_scale())*found->second.get_chol(current_parameters));

@@ -166,6 +166,28 @@ Parameters DirectLinearGaussianMeasurementCovarianceEstimator::get_measurement_s
   return output;
 }
 
+// (C264) the stacked measurement state, as
+// get_measurement_state_parameters(parameters).get_colvec(measurement_variables)
+// gives it (each A_i x vectorised, in order), without building a Parameters
+// for every ensemble member at every step
+arma::colvec DirectLinearGaussianMeasurementCovarianceEstimator::get_measurement_state(const Parameters &parameters) const
+{
+  if (this->measurement_variables.size() == 1)
+    return arma::vectorise(arma::mat(this->As[0]*parameters[this->state_variables]));
+  arma::colvec stacked;
+  for (size_t i=0;
+       i<this->measurement_variables.size();
+       ++i)
+  {
+    arma::colvec part = arma::vectorise(arma::mat(this->As[i]*parameters[this->state_variables]));
+    if (i == 0)
+      stacked = part;
+    else
+      stacked = arma::join_cols(stacked, part);
+  }
+  return stacked;
+}
+
 arma::mat DirectLinearGaussianMeasurementCovarianceEstimator::get_adjustment(const arma::mat &Zf,
                                                                              const arma::mat &Dhathalf,
                                                                              const arma::mat &P,

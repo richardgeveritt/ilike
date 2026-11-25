@@ -42,6 +42,10 @@ public:
   void evaluate_smcfixed_part_of_likelihoods(const Index* index);
   double evaluate_smcadaptive_part_given_smcfixed_likelihoods(const Index* index);
   void advance_at_caller_target();
+  // (dev/plan.md 3.21 (c2''), F2) a new output for factor i at the
+  // particle's parameters (a new run of its estimator, e.g. a filter with
+  // more particles); returns the change in the factor's value
+  double replace_output(size_t i);
   
   double evaluate_likelihoods(const Index* index) const;
   bool simulation_pending(const Index* index) const;

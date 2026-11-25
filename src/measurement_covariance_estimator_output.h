@@ -20,6 +20,9 @@ public:
   
   MeasurementCovarianceEstimatorOutput();
   virtual ~MeasurementCovarianceEstimatorOutput();
+  // (C265) point this output at estimator_in, the copy of its estimator owned
+  // by a copied filter; false if this output keeps no estimator pointer
+  virtual bool repoint_estimator(MeasurementCovarianceEstimator* estimator_in) { return false; }
   
   MeasurementCovarianceEstimatorOutput(const MeasurementCovarianceEstimatorOutput &another);
   

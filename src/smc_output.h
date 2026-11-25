@@ -104,6 +104,7 @@ public:
   size_t number_of_smc_iterations() const;
   
   void increment_smc_iteration();
+  size_t get_smc_iteration() const { return this->smc_iteration; } // (the steps so far, whatever is kept)
   void decrement_smc_iteration();
   
   void set_time();

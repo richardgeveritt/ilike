@@ -201,6 +201,12 @@ public:
   
   MoveOutput* move(RandomNumberGenerator &rng,
                    const Particle &particle) const;
+  // (dev/plan.md 3.21 (c6), step 2) the chains reuse a dropped generation's
+  // outputs (Particles::spare)
+  bool reuses_particle_objects() const;
+  MoveOutput* move_reusing(RandomNumberGenerator &rng,
+                           const Particle &particle,
+                           MoveOutput* spare) const;
 
   void weight_for_adapting_sequence(const Index* index,
                                     Particles &current_particles);
@@ -258,6 +264,19 @@ protected:
   void advance_at_current_target(SMCOutput *current_state, const Parameters &conditioned_on_parameters);
   void follow_from_start(SMCOutput *current_state, const Parameters &conditioned_on_parameters);
   void advance_inner_states(SMCOutput *current_state);
+  // (dev/plan.md 3.21 (c2''), F2) SMC^2's exchange step, after the moves
+  void exchange_inner_filters(SMCOutput *current_state);
+  bool last_step_moved = false; // (the latest move stage moved the particles)
+  // per-step records written to output.h5 with the output (write_step_records),
+  // kept only until then: the esjd tuners' summaries (load_smc_tuning) and
+  // the exchange step's (load_smc_inner_particles)
+  struct TuningRecord { size_t step; size_t tuner; std::string variable; std::vector<std::string> names; std::vector<double> numbers; };
+  struct ExchangeRecord { size_t step; size_t factor; double acceptance_rate; size_t before; size_t after; };
+  std::vector<TuningRecord> tuning_records;
+  std::vector<ExchangeRecord> exchange_records;
+public:
+  void write_step_records(HighFive::File &file);
+protected:
 
   SMCOutput* specific_run();
 

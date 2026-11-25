@@ -101,4 +101,15 @@ const GaussianMeasurementCovarianceEstimator* DirectGaussianMeasurementCovarianc
 {
   return this->direct_estimator;
 }
+
+// (C265) point at a copied filter's estimator
+bool DirectGaussianMeasurementCovarianceEstimatorOutput::repoint_estimator(MeasurementCovarianceEstimator* estimator_in)
+{
+  DirectGaussianMeasurementCovarianceEstimator* found = dynamic_cast<DirectGaussianMeasurementCovarianceEstimator*>(estimator_in);
+  if (found == NULL)
+    return false;
+  this->direct_estimator = found;
+  return true;
+}
+
 }

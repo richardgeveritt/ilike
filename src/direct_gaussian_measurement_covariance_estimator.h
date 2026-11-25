@@ -36,7 +36,8 @@ public:
   
   virtual void set_parameters(const Parameters &conditioned_on_parameters_in)=0;
   
-  arma::colvec get_measurement_state(const Parameters &parameters) const;
+  // (C264: virtual, so the linear case can stack its values without a map)
+  virtual arma::colvec get_measurement_state(const Parameters &parameters) const;
   virtual Parameters get_measurement_state_parameters(const Parameters &parameters) const=0;
 
   arma::mat get_Cygivenx() const;

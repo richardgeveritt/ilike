@@ -40,6 +40,10 @@ public:
   virtual void find_desired_criterion(EnsembleKalmanOutput* current_state)=0;
 
   virtual bool always_positive() const=0;
+
+  // (dev/plan.md 3.21 (c2''), F2) a threshold in particles, for an SMC whose
+  // number of particles changed
+  void scale_desired_criterion(double factor) { this->desired_criterion *= factor; }
   
 protected:
   

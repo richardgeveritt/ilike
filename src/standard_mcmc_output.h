@@ -42,6 +42,11 @@ public:
   void set_current(Particle &&particle_in);
 
   void set_thin(size_t thin_in);
+  // (dev/plan.md 3.21 (c6), step 2) make a finished chain's output ready for
+  // a new chain run by mcmc_in, handing over its kept final particle (whose
+  // objects the new chain's proposals reuse); false when it cannot be reused
+  // (another kernel, or a kernel that adapts or records diagnostics)
+  bool reset_for_new_chain(const MCMC* mcmc_in, Particle &scratch);
 
   void mcmc_adapt(const Particle &current_particle);
   

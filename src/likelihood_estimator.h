@@ -81,6 +81,13 @@ public:
   // caller's SMC target, advanced at the caller's move stage
   // (LikelihoodEstimatorOutput::advance_at_caller_target)
   virtual bool advances_at_caller_target() const { return false; }
+  // (dev/plan.md 3.21 (c2''), F2; C267) SMC^2's exchange step: a filter whose
+  // number of inner particles (or ensemble members) the caller may increase,
+  // pf(..., increase = exchange(...)) or enkf(..., increase = exchange(...))
+  virtual bool has_exchange() const { return false; }
+  virtual size_t exchange_size(double acceptance_rate, const Parameters &caller_parameters) const { return 0; }
+  virtual size_t get_number_of_inner_particles() const { return 0; }
+  virtual void set_number_of_inner_particles(size_t number_of_inner_particles_in) {}
   // (dev/plan.md 3.21 (c3)) its value is a Monte Carlo estimate (an inner
   // algorithm, a synthetic likelihood, an estimated normalising constant):
   // moves that need the exact target (slice sampling) refuse it

@@ -18,6 +18,7 @@ class Ensemble;
 
 class HMMEnsembleFactors : public EnsembleFactors
 {
+  friend class HMMEnsembleFactorVariables; // (C265: repointing to a copy's estimators)
   
 public:
   

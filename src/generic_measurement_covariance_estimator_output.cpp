@@ -145,4 +145,15 @@ void GenericMeasurementCovarianceEstimatorOutput::close_ofstreams()
 {
   
 }
+
+// (C265) point at a copied filter's estimator
+bool GenericMeasurementCovarianceEstimatorOutput::repoint_estimator(MeasurementCovarianceEstimator* estimator_in)
+{
+  GenericMeasurementCovarianceEstimator* found = dynamic_cast<GenericMeasurementCovarianceEstimator*>(estimator_in);
+  if (found == NULL)
+    return false;
+  this->generic_estimator = found;
+  return true;
+}
+
 }

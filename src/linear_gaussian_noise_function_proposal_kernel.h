@@ -71,6 +71,10 @@ protected:
 
   Parameters simulate(RandomNumberGenerator &rng,
                       const Particle &particle) const;
+  // (dev/plan.md, PMMH P2) simulate, written into the proposal's own storage
+  void simulate_into(RandomNumberGenerator &rng,
+                     const Particle &particle,
+                     ProposalTarget &target) const;
 
   Parameters subsample_simulate(RandomNumberGenerator &rng,
                                 const Particle &particle) const;
