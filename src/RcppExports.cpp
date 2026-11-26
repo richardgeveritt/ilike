@@ -283,8 +283,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // do_evaluate_gradient_log
-arma::mat do_evaluate_gradient_log(const Rcpp::List& model_R, const Rcpp::List& model_parameters_R, const Rcpp::List& parameters_in, const std::string& variable, const IntegerVector& index_in);
-RcppExport SEXP _ilike_do_evaluate_gradient_log(SEXP model_RSEXP, SEXP model_parameters_RSEXP, SEXP parameters_inSEXP, SEXP variableSEXP, SEXP index_inSEXP) {
+arma::mat do_evaluate_gradient_log(const Rcpp::List& model_R, const Rcpp::List& model_parameters_R, const Rcpp::List& parameters_in, const std::string& variable, const IntegerVector& index_in, size_t seed);
+RcppExport SEXP _ilike_do_evaluate_gradient_log(SEXP model_RSEXP, SEXP model_parameters_RSEXP, SEXP parameters_inSEXP, SEXP variableSEXP, SEXP index_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -293,7 +293,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const Rcpp::List& >::type parameters_in(parameters_inSEXP);
     Rcpp::traits::input_parameter< const std::string& >::type variable(variableSEXP);
     Rcpp::traits::input_parameter< const IntegerVector& >::type index_in(index_inSEXP);
-    rcpp_result_gen = Rcpp::wrap(do_evaluate_gradient_log(model_R, model_parameters_R, parameters_in, variable, index_in));
+    Rcpp::traits::input_parameter< size_t >::type seed(seedSEXP);
+    rcpp_result_gen = Rcpp::wrap(do_evaluate_gradient_log(model_R, model_parameters_R, parameters_in, variable, index_in, seed));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -504,7 +505,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_ilike_do_ensemble_kalman_filter_with_fixed_params", (DL_FUNC) &_ilike_do_ensemble_kalman_filter_with_fixed_params, 11},
     {"_ilike_do_particle_filter", (DL_FUNC) &_ilike_do_particle_filter, 10},
     {"_ilike_do_particle_filter_with_fixed_params", (DL_FUNC) &_ilike_do_particle_filter_with_fixed_params, 11},
-    {"_ilike_do_evaluate_gradient_log", (DL_FUNC) &_ilike_do_evaluate_gradient_log, 5},
+    {"_ilike_do_evaluate_gradient_log", (DL_FUNC) &_ilike_do_evaluate_gradient_log, 6},
     {"_ilike_do_evaluate_log", (DL_FUNC) &_ilike_do_evaluate_log, 7},
     {"_ilike_do_evaluate_log_with_fixed_params", (DL_FUNC) &_ilike_do_evaluate_log_with_fixed_params, 8},
     {"_ilike_shared_point_weights_check", (DL_FUNC) &_ilike_shared_point_weights_check, 2},

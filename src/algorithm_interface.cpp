@@ -598,8 +598,14 @@ SMCMCMCMove *get_smc_mcmc_move(
   // SMC algorithm (not smcfixed)
 
 
+  // (dev/plan.md 3.22 U3b) the data tempering variable, for moves that need
+  // the number of replicates in the target (exchange)
+  RecipeValue moves_model = model;
+  for (size_t k = 0; k < sequencer_types.size(); ++k)
+    if (sequencer_types[k] == "data")
+      moves_model.push_back(RecipeValue(sequencer_variables[k]), "data_tempering_variable");
   MCMC *the_mcmc =
-      make_mcmc(model, parameters, the_data, mcmc_termination_method,
+      make_mcmc(moves_model, parameters, the_data, mcmc_termination_method,
                 mcmc_weights_method, full_index);
 
   SMCCriterion *resampling_criterion =
@@ -1613,14 +1619,16 @@ arma::mat do_evaluate_gradient_log(const Rcpp::List &model_R,
                                    const Rcpp::List &model_parameters_R,
                                    const Rcpp::List &parameters_in,
                                    const std::string &variable,
-                                   const IntegerVector &index_in)
+                                   const IntegerVector &index_in,
+                                   size_t seed)
 {
   RecipeValue model = recipe_from_R(model_R);
   RecipeValue model_parameters = recipe_from_R(model_parameters_R);
   Parameters algorithm_parameters;
   Parameters parameters = list_to_parameters(parameters_in);
+  // (C287) seeded, for factors whose gradient is estimated by simulation
   RandomNumberGenerator rng;
-  size_t seed = 1;
+  rng.seed(seed);
   Data the_data = get_data(model);
   std::vector<Data> data_created_in_get_likelihood_estimators;
   std::vector<Data> data_created_in_get_measurement_covariance_estimators;
@@ -1686,6 +1694,9 @@ double do_evaluate_log(const Rcpp::List &model_R,
   Parameters parameters = list_to_parameters(parameters_in);
 
   RandomNumberGenerator rng;
+  // (C283) the seed argument seeds the shared generator: estimators that
+  // draw from it (e.g. normaliser = sav(...)) gave the same value for every seed
+  rng.seed(seed);
   Data the_data = get_data(model);
   std::vector<Data> data_created_in_get_likelihood_estimators;
   std::vector<Data> data_created_in_get_measurement_covariance_estimators;
@@ -1779,6 +1790,9 @@ double do_evaluate_log_with_fixed_params(const Rcpp::List &model_R,
   Parameters algorithm_parameters = make_algorithm_parameters(algorithm_parameter_list_R);
 
   RandomNumberGenerator rng;
+  // (C283) the seed argument seeds the shared generator: estimators that
+  // draw from it (e.g. normaliser = sav(...)) gave the same value for every seed
+  rng.seed(seed);
   Data the_data = get_data(model);
   std::vector<Data> data_created_in_get_likelihood_estimators;
   std::vector<Data> data_created_in_get_measurement_covariance_estimators;

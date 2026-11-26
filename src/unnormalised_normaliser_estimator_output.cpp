@@ -46,7 +46,7 @@ LikelihoodEstimatorOutput* UnnormalisedNormaliserEstimatorOutput::duplicate() co
 void UnnormalisedNormaliserEstimatorOutput::make_copy(const UnnormalisedNormaliserEstimatorOutput &another)
 {
   this->estimator = another.estimator;
-  this->fields = another.fields;
+  this->replicate_log_estimates = another.replicate_log_estimates;
   this->pending = another.pending;
   this->log_likelihood_smcfixed_part = another.log_likelihood_smcfixed_part;
 }
@@ -61,12 +61,16 @@ void UnnormalisedNormaliserEstimatorOutput::simulate(const Parameters &parameter
 {
   this->pending = true;
   this->draw_if_pending(parameters);
+  // (the draws made now, as before replicates: under data tempering they are
+  // made when each replicate enters the target)
+  if (this->estimator->tempering_variable.empty())
+    this->current_log_estimate(parameters);
 }
 
 // (dev/plan.md 3.21) for a proposed particle: made at the first evaluation
 void UnnormalisedNormaliserEstimatorOutput::simulate_when_needed(const Parameters &parameters)
 {
-  this->fields.clear();
+  this->replicate_log_estimates.clear();
   this->pending = true;
 }
 
@@ -74,26 +78,37 @@ void UnnormalisedNormaliserEstimatorOutput::draw_if_pending(const Parameters &pa
 {
   if (!this->pending)
     return;
-  this->fields.resize(this->estimator->points);
-  for (size_t m = 0; m < this->estimator->points; ++m)
-    this->fields[m] = this->estimator->draw(parameters);
+  // (new parameters: no replicate's estimate is drawn yet)
+  this->replicate_log_estimates.assign(this->estimator->replicates, arma::datum::nan);
   this->pending = false;
+}
+
+double UnnormalisedNormaliserEstimatorOutput::current_log_estimate(const Parameters &parameters)
+{
+  this->draw_if_pending(parameters);
+  size_t active = this->estimator->active_replicates(parameters);
+  double total = 0.0;
+  for (size_t r = 0; r < active; ++r)
+  {
+    if (std::isnan(this->replicate_log_estimates[r]))
+      this->replicate_log_estimates[r] = this->estimator->draw_replicate_log_estimate(parameters);
+    total += this->replicate_log_estimates[r];
+  }
+  return total;
 }
 
 void UnnormalisedNormaliserEstimatorOutput::evaluate_smcfixed_part(const Parameters &parameters)
 {
-  this->draw_if_pending(parameters);
   if (this->estimator->smcfixed_flag)
-    this->log_likelihood_smcfixed_part = this->estimator->log_estimate(this->fields, parameters);
+    this->log_likelihood_smcfixed_part = this->current_log_estimate(parameters);
 }
 
 void UnnormalisedNormaliserEstimatorOutput::evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters)
 {
-  this->draw_if_pending(parameters);
   if (this->estimator->smcfixed_flag)
     this->log_likelihood = this->log_likelihood_smcfixed_part;
   else
-    this->log_likelihood = this->estimator->log_estimate(this->fields, parameters);
+    this->log_likelihood = this->current_log_estimate(parameters);
 }
 
 void UnnormalisedNormaliserEstimatorOutput::subsample_simulate(const Parameters &parameters)

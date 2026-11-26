@@ -93,14 +93,16 @@ evaluate_log = function(recipe,
 
 # The gradient of the log target with respect to one variable at a point (the
 # sum of the factors' gradients; index chooses factors, numbered from 1), for
-# checking gradients against finite differences (dev/plan.md I4e). Internal.
+# checking gradients against finite differences (dev/plan.md I4e), and the
+# estimated gradients of unnormalised distributions (seed). Internal.
 evaluate_gradient_log = function(recipe, parameters, variable, index = integer(0), model_parameter_list = list(),
-                                 algorithm = NULL)
+                                 algorithm = NULL, seed = 1)
 {
   if (is.character(recipe))
     recipe = compile(filenames = recipe, model_parameter_list = model_parameter_list)
   prepared = prepare_recipe(recipe, algorithm, model_parameter_list)
-  do_evaluate_gradient_log(prepared$recipe, prepared$model_parameter_list, parameters, variable, as.integer(index))
+  # (seed: for factors whose gradient is estimated by simulation, C287)
+  do_evaluate_gradient_log(prepared$recipe, prepared$model_parameter_list, parameters, variable, as.integer(index), seed)
 }
 
 # The gradient of a log density f(parameters, data) with respect to one

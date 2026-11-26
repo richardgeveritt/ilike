@@ -40,7 +40,8 @@ public:
   void operator=(const MetropolisMCMC &another);
   Kernel* duplicate() const;
   MCMC* mcmc_duplicate() const;
-  MetropolisMCMC* metropolis_mcmc_duplicate() const;
+  // (virtual, C284: a chain output copying an exchange move must copy an exchange move)
+  virtual MetropolisMCMC* metropolis_mcmc_duplicate() const;
   
   Particle move(RandomNumberGenerator &rng,
                 const Particle &particle) const;

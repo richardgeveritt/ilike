@@ -53,8 +53,8 @@ do_particle_filter_with_fixed_params <- function(model_R, parameters_R, algorith
     .Call(`_ilike_do_particle_filter_with_fixed_params`, model_R, parameters_R, algorithm_parameter_list_R, fixed_parameter_list, number_of_particles, smc_iterations_to_store, write_to_file_at_each_iteration, parallel_in, grain_size_in, results_name_in, seed)
 }
 
-do_evaluate_gradient_log <- function(model_R, model_parameters_R, parameters_in, variable, index_in) {
-    .Call(`_ilike_do_evaluate_gradient_log`, model_R, model_parameters_R, parameters_in, variable, index_in)
+do_evaluate_gradient_log <- function(model_R, model_parameters_R, parameters_in, variable, index_in, seed) {
+    .Call(`_ilike_do_evaluate_gradient_log`, model_R, model_parameters_R, parameters_in, variable, index_in, seed)
 }
 
 do_evaluate_log <- function(model_R, model_parameters_R, algorithm_parameter_list_R, parameters_in, index_in, results_name_in, seed) {

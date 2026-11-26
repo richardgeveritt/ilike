@@ -140,7 +140,21 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
         (iequals(factors[i]["algorithmic_likelihood"]["type"].as_string(), "pf") ||
          iequals(factors[i]["algorithmic_likelihood"]["type"].as_string(), "kf") ||
          iequals(factors[i]["algorithmic_likelihood"]["type"].as_string(), "enkf"));
-      if (factor_plan.data_tempered && !tempered_filter &&
+      // (dev/plan.md 3.22 U3b) and the estimate of 1/Z for replicated fields,
+      // whose replicates enter one at a time as random weights
+      const bool tempered_normaliser = factor_plan.data_tempered && (factors[i]).is_list() &&
+        factors[i].contains("unnormalised_normaliser");
+      if (tempered_normaliser) {
+        if (data_tempering.anneal || data_tempering.random_order)
+          stop("smc_sequence data tempering with normaliser = sav(…): the replicates are added whole and in the given order "
+               "(data(…, order = given, anneal = false)), since the estimate of a fraction of a normalising constant is not available.");
+        if (!factors[i]["unnormalised_normaliser"].contains("replicates"))
+          stop("smc_sequence data tempering with normaliser = sav(…): the field has no replicates (x ~ ising(…, replicates = R)), "
+               "so there is nothing to add one at a time.");
+      }
+      if (factor_plan.data_tempered && (factors[i]).is_list() && factors[i].contains("unnormalised_gradient"))
+        stop("smc_sequence data tempering with gradient = estimate(…): not written yet.");
+      if (factor_plan.data_tempered && !tempered_filter && !tempered_normaliser &&
           !((factors[i]).is_list() && factors[i].contains("evaluate_log_likelihood") &&
             factors[i].contains("plate")))
         stop("smc_sequence data tempering: factor " + std::to_string(i + 1) +
@@ -1068,6 +1082,19 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
               entry["sweep"].function_pointer<UnnormalisedSweepFunctionPtr>(),
               size_t(entry["sweeps"].as_double()), size_t(entry["points"].as_double()),
               normaliser, at, factor_is_fixed_in_smc);
+          if (entry.contains("bridges"))
+            static_cast<UnnormalisedNormaliserEstimator*>(new_likelihood_estimator)->set_bridges(
+              size_t(entry["bridges"].as_double()), size_t(entry["bridge_sweeps"].as_double()));
+          if (entry.contains("replicates"))
+            static_cast<UnnormalisedNormaliserEstimator*>(new_likelihood_estimator)->set_replicates(size_t(entry["replicates"].as_double()));
+          if (factor_plan.data_tempered)
+            static_cast<UnnormalisedNormaliserEstimator*>(new_likelihood_estimator)->set_data_tempering(plan.data_variable);
+          if (entry.contains("normalise")) {
+            RecipeValue normalise = entry["normalise"];
+            static_cast<UnnormalisedNormaliserEstimator*>(new_likelihood_estimator)->set_normalise(
+              size_t(normalise["particles"].as_double()), size_t(normalise["steps"].as_double()),
+              size_t(normalise["sweeps"].as_double()), *seed_in);
+          }
           full_index_vector.push_back(likelihood_estimators.size());
           if (factor_plan.in_weight)
             without_cancelled_index_vector.push_back(likelihood_estimators.size());
@@ -1080,6 +1107,27 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
           } else {
             likelihood_estimators.push_back(new_likelihood_estimator);
           }
+        } else if (current_factor.contains("unnormalised_gradient")) {
+          // (dev/plan.md 3.22 U1b) the estimated gradient of log 1/Z(beta),
+          // value 0 (gradient = estimate(...))
+          RecipeValue entry = current_factor["unnormalised_gradient"];
+          UnnormalisedExactFunctionPtr exact = NULL;
+          if (entry.contains("exact"))
+            exact = entry["exact"].function_pointer<UnnormalisedExactFunctionPtr>();
+          LikelihoodEstimator *new_likelihood_estimator = new UnnormalisedGradientEstimator(
+              rng_in, seed_in, data_in, entry["variable"].as_string(),
+              entry["statistic"].function_pointer<UnnormalisedPotentialPtr>(), exact,
+              entry["sweep"].function_pointer<UnnormalisedSweepFunctionPtr>(),
+              size_t(entry["sweeps"].as_double()), size_t(entry["points"].as_double()),
+              entry["parameter"].as_string());
+          if (entry.contains("replicates"))
+            static_cast<UnnormalisedGradientEstimator*>(new_likelihood_estimator)->set_replicates(size_t(entry["replicates"].as_double()));
+          full_index_vector.push_back(likelihood_estimators.size());
+          if (factor_plan.in_weight)
+            without_cancelled_index_vector.push_back(likelihood_estimators.size());
+          if (factor_plan.in_without_priors)
+            without_priors_index_vector.push_back(likelihood_estimators.size());
+          likelihood_estimators.push_back(new_likelihood_estimator);
         } else if (current_factor.contains("simulate_data_model")) {
           // sbi(simulate = …, data = …) without a method: only MFDS uses a
           // simulator directly

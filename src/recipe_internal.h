@@ -27,6 +27,7 @@
 #include "annealed_likelihood_estimator.h"
 #include "cancellation_plan.h"
 #include "unnormalised_normaliser_estimator.h"
+#include "unnormalised_gradient_estimator.h"
 #include "barker_dynamics_proposal_kernel.h"
 #include "cess_smc_criterion.h"
 #include "composite_independent_proposal_kernel.h"

@@ -291,6 +291,11 @@ private:
   std::vector<Integration> integrations;
   std::set<std::string> integrated_variables;
   bool lowering_inner_algorithm = false; // (the moves of integrate u with smc(…))
+  bool lowering_exchange = false;        // (dev/plan.md 3.22 U1: exchange(…) may change a normaliser's parameters)
+  // (dev/plan.md 3.22 U3b) in the algorithm being lowered: the parameters
+  // exchange moves change whose normaliser is estimated (sav), and those other
+  // moves change (the two may not be mixed)
+  std::set<std::string> exchange_estimated_parameters, estimated_parameters_moved_otherwise;
   RecipeValue constant_values;
   std::set<std::string> model_constants_used;
   std::set<std::string> element_constants_used; // (in moves on elements: values taken when compiling)
@@ -324,6 +329,14 @@ private:
   {
     std::string variable, kind, factor;
     std::vector<std::string> normaliser;
+    // (dev/plan.md 3.22 U1) its generated functions, for the exchange move,
+    // and whether its normaliser is estimated (normaliser = sav(…))
+    std::string sweep, exact, potential;
+    bool estimated = false;
+    // (dev/plan.md 3.22 U3b) replicates = R: x is R independent fields (R x n)
+    double replicates = 1.0;
+    // (dev/plan.md 3.22 U1b) gradient = estimate(…): the factor x_log_normaliser
+    bool gradient_estimated = false;
   };
   std::vector<UnnormalisedStatement> unnormalised;
   std::map<std::string, std::string> normaliser_parameters;
@@ -1605,6 +1618,9 @@ private:
     std::set<std::string> allowed(order.begin(), order.end());
     allowed.insert("n");
     allowed.insert("normaliser");
+    allowed.insert("gradient");
+    allowed.insert("replicates");
+    allowed.insert("likelihood");
     this->allow_only(value, arguments, allowed, order.size());
     std::map<std::string, RecipeValue> given;
     for (size_t k = 0; k < arguments.positional.size(); ++k)
@@ -1616,6 +1632,37 @@ private:
     {
       normaliser_method = given["normaliser"];
       given.erase("normaliser");
+    }
+    RecipeValue gradient_method;
+    if (given.count("gradient"))
+    {
+      gradient_method = given["gradient"];
+      given.erase("gradient");
+    }
+    // likelihood = abc(…) | sl(…) (dev/plan.md 3.22 U3b): an observed field's
+    // likelihood replaced by simulation-based inference with its own simulator
+    RecipeValue likelihood_method;
+    if (given.count("likelihood"))
+    {
+      likelihood_method = given["likelihood"];
+      given.erase("likelihood");
+      if (!normaliser_method.is_null() || !gradient_method.is_null())
+        this->error(likelihood_method, kind + "(…, likelihood = …) replaces the field's likelihood by simulation, so normaliser = … and gradient = … do not apply.");
+      if (!this->data_names.count(x))
+        this->error(likelihood_method, kind + "(…, likelihood = …): " + x + " is an observed field (a data variable); simulation-based "
+                                       "inference with the field's simulator needs the field to be the data.");
+    }
+    // replicates = R (dev/plan.md 3.22 U3b): x is R x n, R independent fields
+    double replicates = 1.0;
+    bool replicated = false;
+    if (given.count("replicates"))
+    {
+      arma::mat number;
+      if (!this->numeric(given["replicates"], number) || (number.n_elem != 1) || (number(0) < 1.0) || (number(0) != std::floor(number(0))))
+        this->error(given["replicates"], kind + "(…): replicates is a whole number of at least 1, known when compiling.");
+      replicates = number(0);
+      replicated = true;
+      given.erase("replicates");
     }
     for (const std::string &name : order)
       if (!given.count(name))
@@ -1650,13 +1697,17 @@ private:
     std::string beta = this->ilike_text(given["beta"]);
     std::string factor = x + "_potential";
 
-    // the statements, written in ilike and parsed
+    // the statements, written in ilike and parsed (with replicates, x is
+    // indexed [replicate, site], and the potential has one term per replicate,
+    // the field's whole potential, so that data tempering adds whole replicates)
+    auto site = [&](const std::string &index) {
+      return replicated ? x + "[ilike_r, " + index + "]" : x + "[" + index + "]";
+    };
     std::string base, potential;
     if (kind == "ising")
     {
       base = "bern(0.5)";
-      potential = "(" + beta + ") / 2 * (2 * " + x + "[ilike_site] - 1) * sum(ilike_k in 1:" + nn + "[ilike_site], 2 * " + x + "[" + nb +
-                  "[ilike_site, ilike_k]] - 1)";
+      potential = "(2 * " + site("ilike_site") + " - 1) * sum(ilike_k in 1:" + nn + "[ilike_site], 2 * " + site(nb + "[ilike_site, ilike_k]") + " - 1)";
     }
     else
     {
@@ -1664,15 +1715,24 @@ private:
       for (int c = 0; c < int(q); ++c)
         base += (c ? ", " : "") + number_text(1.0 / q);
       base += "])";
-      potential = "(" + beta + ") / 2 * sum(ilike_k in 1:" + nn + "[ilike_site], equals(" + x + "[ilike_site], " + x + "[" + nb +
-                  "[ilike_site, ilike_k]]))";
+      potential = "sum(ilike_k in 1:" + nn + "[ilike_site], equals(" + site("ilike_site") + ", " + site(nb + "[ilike_site, ilike_k]") + "))";
     }
-    std::string text = "ilike 1.0\nmodel {\n  for (ilike_site in 1:" + sites + ") " + x + "[ilike_site] ~ " + base + "\n" +
-                       "  for (ilike_site in 1:" + sites + ") factor " + factor + " += " + potential + "\n}\n";
-    RecipeValue tree = parse_ilike_language(text, this->file + " (" + kind + " of " + x + ")");
-    const RecipeValue &statements = tree["sections"][0]["statements"];
-    for (size_t k = 0; k < statements.size(); ++k)
-      this->collect_model_statement(statements[k], std::vector<ModelLoop>());
+    std::string text;
+    if (!replicated)
+      text = "ilike 1.0\nmodel {\n  for (ilike_site in 1:" + sites + ") " + x + "[ilike_site] ~ " + base + "\n" +
+             "  for (ilike_site in 1:" + sites + ") factor " + factor + " += (" + beta + ") / 2 * " + potential + "\n}\n";
+    else
+      text = "ilike 1.0\nmodel {\n  for (ilike_r in 1:" + number_text(replicates) + ") for (ilike_site in 1:" + sites + ") " + site("ilike_site") +
+             " ~ " + base + "\n" +
+             "  for (ilike_r in 1:" + number_text(replicates) + ") factor " + factor + " += (" + beta + ") / 2 * sum(ilike_site in 1:" + sites +
+             ", " + potential + ")\n}\n";
+    if (likelihood_method.is_null())
+    {
+      RecipeValue tree = parse_ilike_language(text, this->file + " (" + kind + " of " + x + ")");
+      const RecipeValue &statements = tree["sections"][0]["statements"];
+      for (size_t k = 0; k < statements.size(); ++k)
+        this->collect_model_statement(statements[k], std::vector<ModelLoop>());
+    }
 
     // the parameters the normaliser depends on
     UnnormalisedStatement record;
@@ -1686,7 +1746,7 @@ private:
     for (const std::string &parameter : found)
     {
       record.normaliser.push_back(parameter);
-      if (normaliser_method.is_null())
+      if (normaliser_method.is_null() && likelihood_method.is_null())
         this->normaliser_parameters[parameter] = x;
     }
     this->unnormalised.push_back(record);
@@ -1783,10 +1843,236 @@ private:
             ((kind == "ising") ? std::string("      total += (2.0 * field(i) - 1.0) * (2.0 * field((size_t)nb(i, k) - 1) - 1.0);\n")
                                : std::string("      total += (field(i) == field((size_t)nb(i, k) - 1)) ? 1.0 : 0.0;\n")) +
             "  return 0.5 * beta * total;\n}\n\n";
+    // d log gamma(field | beta)/d beta (the potential is beta times this), for
+    // the estimated gradient of log 1/Z (dev/plan.md 3.22 U1b)
+    std::string statistic_function = "ilike_unnormalised_statistic_" + x;
+    code += "double " + statistic_function + "(const arma::mat &field, const Parameters &parameters, const Data &data)\n{\n" +
+            "  const arma::mat &nb = data[" + quoted(nb) + "];\n  const arma::mat &nn = data[" + quoted(nn) + "];\n" +
+            "  const size_t n = (size_t)std::lround(" + sites_code + ");\n" +
+            "  double total = 0.0;\n"
+            "  for (size_t i = 0; i < n; ++i)\n    for (size_t k = 0; k < (size_t)nn(i); ++k)\n" +
+            ((kind == "ising") ? std::string("      total += (2.0 * field(i) - 1.0) * (2.0 * field((size_t)nb(i, k) - 1) - 1.0);\n")
+                               : std::string("      total += (field(i) == field((size_t)nb(i, k) - 1)) ? 1.0 : 0.0;\n")) +
+            "  return 0.5 * total;\n}\n\n";
     this->deferred_function_code += code;
+    this->unnormalised.back().sweep = sweep;
+    this->unnormalised.back().exact = (kind == "ising") ? exact : "";
+    this->unnormalised.back().potential = potential_function;
+    this->unnormalised.back().estimated = !normaliser_method.is_null();
+    this->unnormalised.back().replicates = replicates;
+
+    if (!gradient_method.is_null())
+      this->gradient_factor(statement, gradient_method, x, kind, given["beta"], sweep, exact, statistic_function);
+
+    if (!likelihood_method.is_null())
+      this->simulation_likelihood_factor(statement, likelihood_method, x, kind, nb, nn, sites_code, replicates, replicated, sweep, exact, statistic_function);
 
     if (!normaliser_method.is_null())
       this->normaliser_factor(statement, normaliser_method, x, kind, record, sweep, exact, potential_function);
+  }
+
+  // likelihood = abc(points = N, tolerance = e, kernel = uniform | gaussian,
+  // tolerance_variable = v, simulate = …) | sl(points = N, simulate = …)
+  // (dev/plan.md 3.22 U3b): the observed field's likelihood estimated by ABC or
+  // synthetic likelihood (an sbi factor), with the field's generated simulator
+  // (R fields with replicates) and its sufficient statistic (summed over
+  // replicates) as the summary. sbi simulators and summaries do not see the
+  // data, so the neighbour lists are written into the generated code: they
+  // must be given as values in the data section.
+  void simulation_likelihood_factor(const RecipeValue &statement, const RecipeValue &method, const std::string &x, const std::string &kind,
+                                    const std::string &nb, const std::string &nn, const std::string &sites_code, double replicates, bool replicated,
+                                    const std::string &sweep, const std::string &exact, const std::string &statistic_function)
+  {
+    std::string which = (kind_of(method) == "call") ? method["function"].as_string() : "";
+    if ((which != "abc") && (which != "sl"))
+      this->error(method, "likelihood = abc(points = N, tolerance = e) or sl(points = N): ABC or synthetic likelihood with the field's simulator.");
+    Arguments arguments = this->split_arguments(method);
+    if (which == "abc")
+      this->allow_only(method, arguments, {"points", "tolerance", "kernel", "tolerance_variable", "scale", "simulate"}, 0);
+    else
+      this->allow_only(method, arguments, {"points", "simulate"}, 0);
+    arma::mat number;
+    double points = 100.0;
+    if (arguments.has("points"))
+    {
+      if (!this->numeric(arguments.named["points"], number) || (number.n_elem != 1) || (number(0) < 1.0) || (number(0) != std::floor(number(0))))
+        this->error(arguments.named["points"], which + "(…): points is a whole number of at least 1.");
+      points = number(0);
+    }
+    // the draws: exact for ising (coupling from the past), sweeps(m) otherwise
+    bool use_exact = (kind == "ising");
+    double sweeps = 100.0;
+    if (arguments.has("simulate"))
+    {
+      const RecipeValue &simulate = arguments.named["simulate"];
+      if ((kind_of(simulate) == "name") && (simulate["name"].as_string() == "exact"))
+      {
+        if (kind != "ising")
+          this->error(simulate, "simulate = exact: exact simulation is available for ising(…) fields so far; use sweeps(m).");
+        use_exact = true;
+      }
+      else if ((kind_of(simulate) == "call") && (simulate["function"].as_string() == "sweeps") && (simulate["arguments"].size() == 1) &&
+               this->numeric(simulate["arguments"][0], number) && (number.n_elem == 1) && (number(0) >= 1.0))
+      {
+        use_exact = false;
+        sweeps = std::floor(number(0));
+      }
+      else
+        this->error(simulate, "simulate = exact, or simulate = sweeps(m) (m heat-bath sweeps, approximate).");
+    }
+    if (!use_exact)
+      this->notes.push_back("The simulations of " + x + " for " + which + "(…) are made by " + number_text(sweeps) +
+                            " heat-bath sweeps, so they are approximate (more sweeps make them closer).");
+    // the neighbour lists, written into the code
+    auto literal = [&](const std::string &name) {
+      for (const auto &item : this->literal_data)
+        if (item.first == name)
+          return item.second.as_matrix();
+      this->error(method, kind + "(…, likelihood = …): " + name + " must be given as values in the data section (its values are written "
+                          "into the simulator, which does not see the data).");
+      return arma::mat();
+    };
+    auto matrix_code = [](const arma::mat &m) {
+      std::string values;
+      for (arma::uword k = 0; k < m.n_elem; ++k)
+        values += (k ? ", " : "") + number_text(m(k));
+      return "[]() { arma::mat m(std::vector<double>{" + values + "}); m.reshape(" + number_text(double(m.n_rows)) + ", " +
+             number_text(double(m.n_cols)) + "); return m; }()";
+    };
+    arma::mat nb_values = literal(nb), nn_values = literal(nn);
+    std::string data_function = "ilike_unnormalised_data_" + x, simulate_function = "ilike_unnormalised_simulate_" + x,
+                summary_function = "ilike_unnormalised_summary_" + x;
+    std::string code =
+      "// the neighbour lists of " + x + ", for its simulator and summary (dev/plan.md 3.22 U3b)\n"
+      "static Data " + data_function + "()\n{\n  Data data;\n"
+      "  data[" + quoted(nb) + "] = " + matrix_code(nb_values) + ";\n"
+      "  data[" + quoted(nn) + "] = " + matrix_code(nn_values) + ";\n  return data;\n}\n\n"
+      "// " + number_text(replicates) + " field(s) " + x + " drawn at the parameters, for " + which + "(…)\n"
+      "Data " + simulate_function + "(RandomNumberGenerator &rng, const Parameters &parameters)\n{\n"
+      "  static const Data data = " + data_function + "();\n"
+      "  const size_t n = (size_t)std::lround(" + sites_code + ");\n"
+      "  arma::mat out(" + (replicated ? number_text(replicates) + ", n" : std::string("n, 1")) + ");\n"
+      "  for (size_t r = 0; r < " + number_text(replicates) + "; ++r)\n  {\n"
+      "    arma::mat u;\n";
+    if (use_exact)
+      code += "    Parameters drawn = " + exact + "(rng, parameters, data);\n    u = drawn[" + quoted(x) + "];\n";
+    else
+      code += "    Parameters state = parameters.deep_copy();\n"
+              "    for (size_t k = 0; k < " + number_text(sweeps) + "; ++k) " + sweep + "(rng, state, data);\n"
+              "    u = state[" + quoted(x) + "];\n";
+    code += std::string(replicated ? "    out.row(r) = arma::vectorise(u).t();\n" : "    out = arma::vectorise(u);\n") +
+      "  }\n  return Data(" + quoted(x) + ", out);\n}\n\n"
+      "// the sufficient statistic of " + x + " (summed over replicates)\n"
+      "Data " + summary_function + "(const Data &inputs)\n{\n"
+      "  static const Data data = " + data_function + "();\n"
+      "  const arma::mat &x = inputs[" + quoted(x) + "];\n"
+      "  double total = 0.0;\n";
+    if (replicated)
+      code += "  for (arma::uword r = 0; r < x.n_rows; ++r)\n    total += " + statistic_function + "(arma::mat(x.row(r).t()), Parameters(), data);\n";
+    else
+      code += "  total = " + statistic_function + "(arma::vectorise(x), Parameters(), data);\n";
+    // (under the data variable's own name, which the sbi estimators read)
+    code += "  return Data(" + quoted(x) + ", arma::mat(1, 1, arma::fill::value(total)));\n}\n\n";
+    this->deferred_function_code += code;
+    // the method, as the sbi builtin
+    std::string method_text;
+    if (which == "sl")
+      method_text = "sl(number_of_points = " + number_text(points) + ")";
+    else
+    {
+      if (!arguments.has("tolerance"))
+        this->error(method, "abc(…): the tolerance is missing (tolerance = e).");
+      std::string kernel = "uniform";
+      if (arguments.has("kernel"))
+      {
+        const RecipeValue &k = arguments.named["kernel"];
+        if ((kind_of(k) != "name") || ((k["name"].as_string() != "uniform") && (k["name"].as_string() != "gaussian")))
+          this->error(k, "abc(…): kernel is uniform or gaussian.");
+        kernel = k["name"].as_string();
+      }
+      std::string variable = x + "_epsilon";
+      if (arguments.has("tolerance_variable"))
+      {
+        if (kind_of(arguments.named["tolerance_variable"]) != "name")
+          this->error(arguments.named["tolerance_variable"], "abc(…): tolerance_variable is a name.");
+        variable = arguments.named["tolerance_variable"]["name"].as_string();
+      }
+      method_text = std::string(kernel == "uniform" ? "euclidean_uniform_abc" : "gaussian_abc") + "(number_of_points = " + number_text(points) +
+                    ", tolerance_variable = " + variable + ", tolerance = " + this->ilike_text(arguments.named["tolerance"]) +
+                    ", scale = [" + (arguments.has("scale") ? this->ilike_text(arguments.named["scale"]) : std::string("1")) + "])";
+    }
+    RecipeValue tree = parse_ilike_language("ilike 1.0\nmodel {\n  factor ilike_method = " + method_text + "\n}\n",
+                                            this->file + " (" + which + " for " + x + ")");
+    RecipeValue method_call = tree["sections"][0]["statements"][0]["value"];
+    RecipeValue factor = RecipeValue::list();
+    factor.push_back(this->placeholder(simulate_function, "simulate_data_model"), "simulate_data_model");
+    factor.push_back(this->builtin_node(method_call, false), "sbi_likelihood");
+    factor.push_back(this->placeholder(this->generate_string_function(x), "data_variable"), "data_variable");
+    factor.push_back(this->placeholder(summary_function, "summary_statistics"), "summary_statistics");
+    this->add_factor(statement, x + "_likelihood", factor);
+  }
+
+  // gradient = estimate(points = N, simulate = exact | sweeps(m)) (dev/plan.md
+  // 3.22 U1b): the factor x_log_normaliser, whose value is 0 and whose
+  // gradient in beta is an estimate of that of log 1/Z(beta), -E_beta[S(u)],
+  // from N fields drawn at beta (UnnormalisedGradientEstimator), for
+  // gradient-based proposals on beta (noisy Langevin, MALA-exchange)
+  void gradient_factor(const RecipeValue &statement, const RecipeValue &method, const std::string &x, const std::string &kind,
+                       const RecipeValue &beta, const std::string &sweep, const std::string &exact, const std::string &statistic_function)
+  {
+    if ((kind_of(method) != "call") || (method["function"].as_string() != "estimate"))
+      this->error(method, "gradient = estimate(points = N, simulate = exact | sweeps(m)): the gradient of log 1/Z(beta), estimated from N draws.");
+    if ((kind_of(beta) != "name") || this->data_names.count(beta["name"].as_string()) || this->constant_names.count(beta["name"].as_string()))
+      this->error(beta, "gradient = estimate(…): beta is a parameter itself (a function of parameters is not written yet).");
+    const std::string parameter = beta["name"].as_string();
+    Arguments arguments = this->split_arguments(method);
+    this->allow_only(method, arguments, {"points", "simulate"}, 1);
+    double points = 10.0;
+    arma::mat number;
+    RecipeValue given_points = !arguments.positional.empty() ? arguments.positional[0]
+                             : (arguments.has("points") ? arguments.named["points"] : RecipeValue());
+    if (!given_points.is_null())
+    {
+      if (!this->numeric(given_points, number) || (number.n_elem != 1) || (number(0) < 1.0) || (number(0) != std::floor(number(0))))
+        this->error(given_points, "estimate(…): points is a whole number of at least 1.");
+      points = number(0);
+    }
+    bool use_exact = (kind == "ising");
+    double sweeps = 100.0;
+    if (arguments.has("simulate"))
+    {
+      const RecipeValue &simulate = arguments.named["simulate"];
+      if ((kind_of(simulate) == "name") && (simulate["name"].as_string() == "exact"))
+      {
+        if (kind != "ising")
+          this->error(simulate, "simulate = exact: exact simulation is available for ising(…) fields so far; use sweeps(m).");
+        use_exact = true;
+      }
+      else if ((kind_of(simulate) == "call") && (simulate["function"].as_string() == "sweeps") && (simulate["arguments"].size() == 1) &&
+               this->numeric(simulate["arguments"][0], number) && (number.n_elem == 1) && (number(0) >= 1.0))
+      {
+        use_exact = false;
+        sweeps = std::floor(number(0));
+      }
+      else
+        this->error(simulate, "simulate = exact, or simulate = sweeps(m) (m heat-bath sweeps, approximate).");
+    }
+    RecipeValue settings = RecipeValue::list();
+    settings.push_back(RecipeValue(x), "variable");
+    settings.push_back(this->placeholder(statistic_function, "unnormalised_potential"), "statistic");
+    settings.push_back(this->placeholder(sweep, "unnormalised_sweep"), "sweep");
+    if (use_exact)
+      settings.push_back(this->placeholder(exact, "unnormalised_exact"), "exact");
+    settings.push_back(RecipeValue(sweeps), "sweeps");
+    settings.push_back(RecipeValue(points), "points");
+    settings.push_back(RecipeValue(parameter), "parameter");
+    settings.push_back(RecipeValue(this->unnormalised.back().replicates), "replicates");
+    RecipeValue factor = RecipeValue::list();
+    factor.push_back(settings, "unnormalised_gradient");
+    std::string name = x + "_log_normaliser";
+    this->add_factor(statement, name, factor);
+    this->generated_factor_reads[this->factor_numbers.at(name)] = std::set<std::string>{parameter};
+    this->unnormalised.back().gradient_estimated = true;
   }
 
   // normaliser = sav(points = M, at = theta_hat, simulate = exact | sweeps(m))
@@ -1808,7 +2094,7 @@ private:
       this->error(method, "normaliser = sav(…): the normalising constant of " + x + "'s distribution depends on several parameters (" +
                           joined(record.normaliser, ", ") + "); sav takes one for now.");
     Arguments arguments = this->split_arguments(method);
-    this->allow_only(method, arguments, {"points", "at", "simulate"}, 2);
+    this->allow_only(method, arguments, {"points", "at", "simulate", "bridges", "bridge_sweeps", "normalise"}, 2);
     std::map<std::string, RecipeValue> given;
     std::vector<std::string> order = {"points", "at"};
     for (size_t k = 0; k < arguments.positional.size(); ++k)
@@ -1829,6 +2115,19 @@ private:
         this->error(given["points"], "sav(…): points is a whole number of at least 1.");
       points = number(0);
     }
+    // (dev/plan.md 3.22 U0) bridges = K: the annealed estimate, with
+    // bridge_sweeps heat-bath sweeps at each of the K bridges
+    double bridges = 0.0, bridge_sweeps = 1.0;
+    for (const char *setting : {"bridges", "bridge_sweeps"})
+      if (given.count(setting))
+      {
+        double lowest = (std::string(setting) == "bridges") ? 0.0 : 1.0;
+        if (!this->numeric(given[setting], number) || (number.n_elem != 1) || (number(0) < lowest) || (number(0) != std::floor(number(0))))
+          this->error(given[setting], std::string("sav(…): ") + setting + " is a whole number of at least " + number_text(lowest) + ".");
+        (std::string(setting) == "bridges" ? bridges : bridge_sweeps) = number(0);
+      }
+    if (given.count("bridge_sweeps") && (bridges == 0.0))
+      this->error(given["bridge_sweeps"], "sav(…): bridge_sweeps is the number of sweeps at each bridge, so it goes with bridges = K (K ≥ 1).");
     // the draws: exact (coupling from the past, ising) by default; sweeps(m)
     // otherwise (approximate: the estimate is then biased, by an amount that
     // falls as m grows)
@@ -1866,6 +2165,35 @@ private:
     settings.push_back(RecipeValue(points), "points");
     settings.push_back(RecipeValue(record.normaliser), "normaliser");
     settings.push_back(RecipeValue(std::vector<double>(1, at)), "at");
+    if (this->unnormalised.back().replicates > 1.0)
+      settings.push_back(RecipeValue(this->unnormalised.back().replicates), "replicates");
+    if (bridges > 0.0)
+    {
+      settings.push_back(RecipeValue(bridges), "bridges");
+      settings.push_back(RecipeValue(bridge_sweeps), "bridge_sweeps");
+    }
+    // (dev/plan.md 3.22 U3b) normalise = smc(particles = P, steps = T, sweeps = m):
+    // log Z(at) estimated before the run and removed, so that evidence is reported
+    if (given.count("normalise"))
+    {
+      const RecipeValue &normalise = given["normalise"];
+      if ((kind_of(normalise) != "call") || (normalise["function"].as_string() != "smc"))
+        this->error(normalise, "sav(…, normalise = smc(particles = P, steps = T, sweeps = m)): log Z(at), estimated by SMC from the field's base measure.");
+      Arguments smc_arguments = this->split_arguments(normalise);
+      this->allow_only(normalise, smc_arguments, {"particles", "steps", "sweeps"}, 0);
+      std::map<std::string, double> values = {{"particles", 200.0}, {"steps", 100.0}, {"sweeps", 1.0}};
+      for (auto &kv : values)
+        if (smc_arguments.has(kv.first))
+        {
+          if (!this->numeric(smc_arguments.named[kv.first], number) || (number.n_elem != 1) || (number(0) < 1.0) || (number(0) != std::floor(number(0))))
+            this->error(smc_arguments.named[kv.first], "smc(…): " + kv.first + " is a whole number of at least 1.");
+          kv.second = number(0);
+        }
+      RecipeValue entry = RecipeValue::list();
+      for (const auto &kv : values)
+        entry.push_back(RecipeValue(kv.second), kv.first);
+      settings.push_back(entry, "normalise");
+    }
     RecipeValue factor = RecipeValue::list();
     factor.push_back(settings, "unnormalised_normaliser");
     std::string name = x + "_normaliser";
@@ -6721,6 +7049,257 @@ inline double ilike_model_dabc_gaussian(const arma::mat &y, const arma::mat &s, 
     names(arguments[0]);
   }
 
+  // move b = exchange(norm_rw(beta, 0.2), simulate = exact | sweeps(m))
+  // (dev/plan.md 3.22 U1): the exchange algorithm of Murray, Ghahramani &
+  // MacKay (2006). Lowered as metropolis(proposal, …) with, in its entry, the
+  // unnormalised distributions whose normalising constants the proposal
+  // changes (their generated potential, sweep and exact draw); the recipe makes
+  // it an ExchangeMCMC.
+  Move lower_exchange(const RecipeValue &statement, const std::string &name, const RecipeValue &call)
+  {
+    Arguments arguments = this->split_arguments(call);
+    this->allow_only(call, arguments, {"proposal", "simulate", "points", "noisy", "parallel", "factors", "cut_factors", "adapt", "transform"}, 1);
+    RecipeValue proposal = !arguments.positional.empty() ? arguments.positional[0]
+                         : (arguments.has("proposal") ? arguments.named["proposal"] : RecipeValue());
+    if (proposal.is_null())
+      this->error(call, "exchange(proposal, simulate = …): the proposal is missing.");
+    RecipeValue outer = RecipeValue::list();
+    outer.push_back(proposal, "");
+    for (const char *key : {"factors", "cut_factors", "adapt", "transform"})
+      if (arguments.has(key))
+        outer.push_back(arguments.named[key], key);
+    std::set<std::string> moved;
+    this->moved_variables(proposal, moved);
+    std::vector<const UnnormalisedStatement*> changed;
+    for (const UnnormalisedStatement &record : this->unnormalised)
+      for (const std::string &parameter : record.normaliser)
+        if (moved.count(parameter))
+        {
+          changed.push_back(&record);
+          break;
+        }
+    if (changed.empty())
+      this->error(call, "exchange(…): its proposal changes no parameter of the normalising constant of an unnormalised distribution "
+                        "(x ~ ising(…) or potts(…)), so a metropolis move does the same.");
+    // the draws: exact for ising (coupling from the past), sweeps(m) otherwise
+    // (approximate: Everitt 2012 describes the approximation from simulating by MCMC)
+    bool exact_asked = false;
+    double sweeps = 100.0;
+    bool sweeps_asked = false;
+    if (arguments.has("simulate"))
+    {
+      const RecipeValue &simulate = arguments.named["simulate"];
+      arma::mat number;
+      if ((kind_of(simulate) == "name") && (simulate["name"].as_string() == "exact"))
+        exact_asked = true;
+      else if ((kind_of(simulate) == "call") && (simulate["function"].as_string() == "sweeps") && (simulate["arguments"].size() == 1) &&
+               this->numeric(simulate["arguments"][0], number) && (number.n_elem == 1) && (number(0) >= 1.0))
+      {
+        sweeps_asked = true;
+        sweeps = std::floor(number(0));
+      }
+      else
+        this->error(simulate, "simulate = exact, or simulate = sweeps(m) (m heat-bath sweeps, approximate).");
+    }
+    // a symmetric proposal: a Metropolis move; otherwise (e.g. langevin: the
+    // MALA-exchange of Alquier et al. 2016) a Metropolis-Hastings move, whose
+    // gradient-based proposals need the estimated gradient of log 1/Z
+    std::string proposal_type = ((kind_of(proposal) == "call") && !this->is_function_value(proposal)) ? this->builtin_name(proposal) : "";
+    bool symmetric = !proposal_type.empty() && role_exists(proposal_type, BuiltinRole::MProposal);
+    static const std::set<std::string> gradient_proposals = {"langevin", "hmc", "barker", "pcn_mala"};
+    if (gradient_proposals.count(proposal_type))
+      for (const UnnormalisedStatement *record : changed)
+        if (!record->gradient_estimated)
+          this->error(proposal, "exchange(" + proposal_type + "(…)): the proposal uses the gradient in " + joined(record->normaliser, ", ") +
+                                ", which includes that of log 1/Z; ask for its estimate in " + record->variable + "'s statement, " +
+                                record->variable + " ~ " + record->kind + "(…, gradient = estimate(points = N)).");
+    this->lowering_exchange = true;
+    Move move = this->lower_move(statement, name, call_with(call, symmetric ? "metropolis" : "metropolis_hastings", outer));
+    this->lowering_exchange = false;
+    RecipeValue fields = RecipeValue::list();
+    for (const UnnormalisedStatement *record : changed)
+    {
+      bool use_exact = !sweeps_asked && !record->exact.empty();
+      if (exact_asked && record->exact.empty())
+        this->error(arguments.named["simulate"], "simulate = exact: exact simulation is available for ising(…) fields so far; use sweeps(m).");
+      if (!use_exact)
+        this->notes.push_back("The exchange move " + name + " draws " + record->variable + " by " + number_text(sweeps) +
+                              " heat-bath sweeps, so the draws are approximate, and so is the posterior of " + joined(record->normaliser, ", ") +
+                              " (more sweeps make it closer).");
+      RecipeValue field = RecipeValue::list();
+      field.push_back(RecipeValue(record->variable), "variable");
+      field.push_back(this->placeholder(record->potential, "unnormalised_potential"), "potential");
+      field.push_back(this->placeholder(record->sweep, "unnormalised_sweep"), "sweep");
+      if (use_exact)
+        field.push_back(this->placeholder(record->exact, "unnormalised_exact"), "exact");
+      field.push_back(RecipeValue(sweeps), "sweeps");
+      field.push_back(RecipeValue(record->replicates), "replicates");
+      fields.push_back(field, "");
+    }
+    move.entry.push_back(fields, "exchange");
+    // (dev/plan.md 3.22 U3b) with normaliser = sav(…) on a statement, its
+    // estimate is not part of this move's ratio (exchange cancels Z itself):
+    // under data tempering the estimate is a random weight, not a density.
+    // The move's factor index leaves it out, and other moves on the same
+    // parameters are refused (their ratios would read an estimate made at a
+    // value this move has since changed).
+    std::set<size_t> left_out;
+    for (const UnnormalisedStatement *record : changed)
+      if (record->estimated)
+      {
+        left_out.insert(this->factor_numbers.at(record->variable + "_normaliser"));
+        for (const std::string &parameter : record->normaliser)
+          this->exchange_estimated_parameters.insert(parameter);
+      }
+    if (!left_out.empty())
+    {
+      if (arguments.has("factors"))
+        this->error(arguments.named["factors"], "exchange(…): with normaliser = sav(…), the move's factors are chosen for it (its estimate is left out).");
+      std::set<std::string> moved_set(moved.begin(), moved.end());
+      std::string joined_names;
+      for (const std::string &v : moved_set)
+        joined_names += (joined_names.empty() ? "" : ";") + v;
+      std::vector<size_t> numbers;
+      for (size_t n : this->automatic_factor_index(joined_names))
+        if (!left_out.count(n))
+          numbers.push_back(n);
+      RecipeValue replaced = RecipeValue::list();
+      std::vector<std::string> keys = move.entry.names();
+      for (size_t k = 0; k < move.entry.size(); ++k)
+        if ((k >= keys.size()) || (keys[k] != move.prefix + "_factor_index"))
+          replaced.push_back(move.entry[k], (k < keys.size()) ? keys[k] : "");
+      replaced.push_back(this->placeholder(this->generate_factor_index_numbers(numbers), move.prefix + "_factor_index"), move.prefix + "_factor_index");
+      move.entry = replaced;
+      for (const std::string &v : moved_set)
+        if (this->estimated_parameters_moved_otherwise.count(v))
+          this->error(call, "exchange(…) changes " + v + ", which another move also changes with the normalising constant's estimate in its ratio; "
+                            "with an exchange move on " + v + ", use exchange moves only.");
+    }
+    // points = N (dev/plan.md 3.22 U2): the averaged acceptance ratio (MHAAR)
+    if (arguments.has("points"))
+    {
+      arma::mat number;
+      if (!this->numeric(arguments.named["points"], number) || (number.n_elem != 1) || (number(0) < 1.0) || (number(0) != std::floor(number(0))))
+        this->error(arguments.named["points"], "exchange(…): points is a whole number of at least 1.");
+      if (number(0) > 1.0)
+        move.entry.push_back(RecipeValue(number(0)), "exchange_points");
+    }
+    // noisy = true: the plain average of the N draws (Alquier et al. 2016's
+    // noisy exchange; approximate)
+    if (arguments.has("noisy"))
+    {
+      const RecipeValue &value = arguments.named["noisy"];
+      if (kind_of(value) != "logical")
+        this->error(value, "exchange(…): noisy is true or false.");
+      if (value["value"].as_bool())
+      {
+        if (!move.entry.contains("exchange_points"))
+          this->error(value, "exchange(…, noisy = true) averages the draws of points = N (N > 1) without the averaged ratio's correction; with one draw it is the exchange move.");
+        move.entry.push_back(RecipeValue(true), "exchange_noisy");
+        this->notes.push_back("The move " + name + " uses the noisy exchange algorithm (Alquier et al. 2016): the plain average of " +
+                              "its draws, which makes it approximate (the error falls as points grows); without noisy = true, points = N is exact.");
+      }
+    }
+    // parallel = true: the N draws in parallel threads (the same results)
+    if (arguments.has("parallel"))
+    {
+      const RecipeValue &value = arguments.named["parallel"];
+      if (kind_of(value) != "logical")
+        this->error(value, "exchange(…): parallel is true or false.");
+      if (value["value"].as_bool())
+      {
+        if (!move.entry.contains("exchange_points"))
+          this->error(value, "exchange(…, parallel = true) runs the draws of points = N (N > 1) in parallel; with one draw there is nothing to share out.");
+        move.entry.push_back(RecipeValue(true), "exchange_parallel");
+      }
+    }
+    return move;
+  }
+
+  // move m = involution(x, auxiliary = cpp::q_draw, log_auxiliary = cpp::q_log,
+  // map = cpp::phi, log_jacobian = cpp::log_jacobian, check = k) (dev/plan.md
+  // 3.22 E2): a move written as an involution by the user, lowered as a
+  // Metropolis-Hastings entry holding its functions; the recipe makes it an
+  // InvolutiveMCMC
+  Move lower_involution(const RecipeValue &statement, const std::string &name, const RecipeValue &call)
+  {
+    Arguments arguments = this->split_arguments(call);
+    this->allow_only(call, arguments, {"variables", "auxiliary", "log_auxiliary", "map", "log_jacobian", "check", "factors", "cut_factors"}, 1);
+    RecipeValue variables = !arguments.positional.empty() ? arguments.positional[0]
+                          : (arguments.has("variables") ? arguments.named["variables"] : RecipeValue());
+    if (variables.is_null())
+      this->error(call, "involution(x, auxiliary = …, log_auxiliary = …, map = …): the state variables it changes are missing.");
+    std::vector<std::string> names;
+    std::vector<RecipeValue> items;
+    if (kind_of(variables) == "vector")
+      for (size_t k = 0; k < variables["elements"].size(); ++k)
+        items.push_back(variables["elements"][k]);
+    else
+      items.push_back(variables);
+    for (const RecipeValue &item : items)
+    {
+      if (kind_of(item) != "name")
+        this->error(item, "involution(…): its state variables are names (x, or [x, y]).");
+      std::string v = item["name"].as_string();
+      if (this->data_names.count(v) || this->constant_names.count(v))
+        this->error(item, "involution(…): " + v + " is not a parameter of the model.");
+      if (this->normaliser_parameters.count(v))
+        this->error(item, "involution(…) changes " + v + ", a parameter of the normalising constant of " + this->normaliser_parameters.at(v) +
+                          "'s distribution, which is not known: the acceptance ratio would need it.");
+      if (this->integrated_variables.count(v) && !this->lowering_inner_algorithm)
+        this->error(item, "involution(…) changes " + v + ", which is integrated out, so it is not a parameter here.");
+      names.push_back(v);
+    }
+    RecipeValue settings = RecipeValue::list();
+    settings.push_back(RecipeValue(names), "variables");
+    static const std::vector<std::pair<std::string, std::string>> functions = {
+      {"auxiliary", "involution_auxiliary"}, {"log_auxiliary", "involution_log_auxiliary"},
+      {"map", "involution_map"}, {"log_jacobian", "involution_log_jacobian"}};
+    for (const auto &f : functions)
+    {
+      if (!arguments.has(f.first))
+      {
+        if (f.first == "log_jacobian")
+          continue; // (volume-preserving, or discrete)
+        this->error(call, "involution(…): " + f.first + " = cpp::… is needed (the auxiliary variables' draw and log density, and the map).");
+      }
+      const RecipeValue &value = arguments.named[f.first];
+      if (!this->is_function_reference(value) || this->is_foreign(value))
+        this->error(value, "involution(…): " + f.first + " is a function written in C++ (cpp::name).");
+      settings.push_back(this->function_placeholder(value, f.second, f.first), f.first);
+    }
+    double check = 10.0;
+    if (arguments.has("check"))
+    {
+      arma::mat number;
+      if (!this->numeric(arguments.named["check"], number) || (number.n_elem != 1) || (number(0) < 0.0) || (number(0) != std::floor(number(0))))
+        this->error(arguments.named["check"], "involution(…): check is a whole number (the proposals on which the map is checked to be an involution).");
+      check = number(0);
+    }
+    settings.push_back(RecipeValue(check), "check");
+    Move move;
+    move.name = name;
+    move.prefix = "mh";
+    move.code = 1;
+    RecipeValue entry = RecipeValue::list();
+    entry.push_back(settings, "involution");
+    if (arguments.has("factors"))
+      entry.push_back(this->placeholder(this->generate_factor_index(arguments.named["factors"]), "mh_factor_index"), "mh_factor_index");
+    else
+    {
+      std::string joined_names;
+      for (const std::string &v : names)
+        joined_names += (joined_names.empty() ? "" : ";") + v;
+      std::vector<size_t> numbers = this->automatic_factor_index(joined_names);
+      if (!numbers.empty())
+        entry.push_back(this->placeholder(this->generate_factor_index_numbers(numbers), "mh_factor_index"), "mh_factor_index");
+    }
+    if (arguments.has("cut_factors"))
+      entry.push_back(this->placeholder(this->generate_factor_index(arguments.named["cut_factors"]), "mh_cut_factor_index"), "mh_cut_factor_index");
+    move.entry = entry;
+    return move;
+  }
+
   Move lower_move(const RecipeValue &statement, const std::string &name, const RecipeValue &call)
   {
     // (dev/plan.md 3.21, step (b)) a variable integrated out is not a
@@ -6734,21 +7313,55 @@ inline double ilike_model_dabc_gaussian(const arma::mat &y, const arma::mat &s, 
           this->error(statement, "move " + name + " changes " + v + ", which is integrated out (integrate " + v +
                       " with …), so it is not a parameter here. Remove the integrate statement for inference on " + v + " too.");
     }
+    if ((kind_of(call) == "call") && (call["function"].as_string() == "exchange") && call["namespace"].as_string().empty())
+      return this->lower_exchange(statement, name, call);
+    if ((kind_of(call) == "call") && (call["function"].as_string() == "involution") && call["namespace"].as_string().empty())
+      return this->lower_involution(statement, name, call);
     // (dev/plan.md 3.20, S3) a move that changes a parameter of an
     // unnormalised distribution's normaliser would need Z at the proposed value
-    if (!this->normaliser_parameters.empty())
+    if (!this->normaliser_parameters.empty() && !this->lowering_exchange)
     {
       std::set<std::string> moved;
       this->moved_variables(call, moved);
       for (const std::string &v : moved)
       {
         auto found = this->normaliser_parameters.find(v);
+        // (dev/plan.md 3.22 U1b) an unadjusted move never evaluates factors:
+        // with the estimated gradient of log 1/Z it is the noisy Langevin
+        // algorithm of Alquier et al. (2016), approximate
+        bool noisy_langevin = false;
+        if ((found != this->normaliser_parameters.end()) && (kind_of(call) == "call") && (call["function"].as_string() == "unadjusted"))
+          for (const UnnormalisedStatement &record : this->unnormalised)
+            if ((record.variable == found->second) && record.gradient_estimated)
+              noisy_langevin = true;
+        if (noisy_langevin)
+        {
+          this->notes.push_back("The move " + name + " is unadjusted, with the gradient of log 1/Z estimated by simulation: the noisy "
+                                "Langevin algorithm (Alquier et al. 2016), approximate (through its step and the estimate's noise).");
+          continue;
+        }
         if (found != this->normaliser_parameters.end())
           this->error(statement, "move " + name + " changes " + v + ", a parameter of the normalising constant of " + found->second +
                       "'s distribution, which is not known: the acceptance ratio would need it. Moves on " + found->second +
-                      " (with " + v + " fixed) are possible; methods for inferring " + v +
-                      " (doubly intractable: exchange, SAV, ABC) are planned (dev/plan.md 3.20).");
+                      " (with " + v + " fixed) are possible; to infer " + v + ", use move … = exchange(proposal) (the exchange "
+                      "algorithm), or normaliser = sav(…) in " + found->second + "'s statement.");
       }
+    }
+    if (!this->lowering_exchange)
+    {
+      std::set<std::string> moved;
+      this->moved_variables(call, moved);
+      for (const UnnormalisedStatement &record : this->unnormalised)
+        if (record.estimated)
+          for (const std::string &parameter : record.normaliser)
+            if (moved.count(parameter))
+            {
+              if (this->exchange_estimated_parameters.count(parameter))
+                this->error(statement, "move " + name + " changes " + parameter + ", which an exchange move also changes; with an exchange move on " +
+                                       parameter + ", use exchange moves only (this move's ratio would read the normalising constant's estimate, "
+                                       "made at a value the exchange move has since changed).");
+              this->estimated_parameters_moved_otherwise.insert(parameter);
+            }
     }
     if ((kind_of(call) == "call") && ((call["function"].as_string() == "nuts") || (call["function"].as_string() == "slice")) &&
         call["namespace"].as_string().empty())
@@ -6788,7 +7401,7 @@ inline double ilike_model_dabc_gaussian(const arma::mat &y, const arma::mat &s, 
       {"independent_mh", {"imh", 2}}, {"unadjusted", {"unadjusted", 4}}};
     if (kind_of(call) != "call" || !kinds.count(call["function"].as_string()))
       this->error(statement["value"], "a move is metropolis(…), metropolis_hastings(…), independent_mh(…), unadjusted(…), "
-                  "nuts(…), slice(…) or gibbs(…).");
+                  "nuts(…), slice(…), exchange(…), involution(…) or gibbs(…).");
     std::string kind = call["function"].as_string();
     Move move;
     move.name = name;
@@ -7202,6 +7815,8 @@ inline double ilike_model_dabc_gaussian(const arma::mat &y, const arma::mat &s, 
 
   void algorithm_section(const RecipeValue &section)
   {
+    this->exchange_estimated_parameters.clear();
+    this->estimated_parameters_moved_otherwise.clear();
     std::string name = section["name"].as_string();
     if (name.empty())
       name = "main";

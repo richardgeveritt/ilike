@@ -53,9 +53,14 @@ protected:
   // Stored in ModelAndAlgorithm.
   UnnormalisedNormaliserEstimator* estimator;
 
-  std::vector<arma::mat> fields;
+  // one log estimate per replicate (dev/plan.md 3.22 U0, U3b), made from
+  // fresh draws when first needed (NaN until then)
+  std::vector<double> replicate_log_estimates;
   bool pending;
   void draw_if_pending(const Parameters &parameters);
+  // the sum of the log estimates of the replicates in the target, drawing
+  // those not drawn yet
+  double current_log_estimate(const Parameters &parameters);
   double log_likelihood_smcfixed_part;
 
   void make_copy(const UnnormalisedNormaliserEstimatorOutput &another);

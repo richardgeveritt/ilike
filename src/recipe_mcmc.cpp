@@ -1,5 +1,9 @@
 #include "recipe_internal.h"
 #include "slice_mcmc.h"
+#include "ratio_estimating_mcmc.h"
+#include "ratio_estimating_mh_mcmc.h"
+#include "involutive_mcmc.h"
+#include "exchange_ratio_step.h"
 #include "slice_point_proposal_kernel.h"
 #include "choice_proposal_kernel.h"
 #include "esjd_adaptor.h"
@@ -710,7 +714,32 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
 
     for (auto i = order_of_mcmc.begin(); i != order_of_mcmc.end(); ++i) {
 
-      if ((*i) == 1) {
+      // a move written as an involution (dev/plan.md 3.22 E2)
+      bool involution_move = ((*i) == 1) && model.contains("mh_proposal") &&
+                             model["mh_proposal"][simulate_mh_proposal_index].is_list() &&
+                             model["mh_proposal"][simulate_mh_proposal_index].contains("involution");
+      if (involution_move) {
+        RecipeValue info = model["mh_proposal"][simulate_mh_proposal_index];
+        RecipeValue settings = info["involution"];
+        std::vector<std::string> state_variables = settings["variables"];
+        InvolutionLogDensityPtr log_jacobian = NULL;
+        if (settings.contains("log_jacobian"))
+          log_jacobian = settings["log_jacobian"].function_pointer<InvolutionLogDensityPtr>();
+        InvolutionProposalKernel *kernel = new InvolutionProposalKernel(
+            state_variables,
+            settings["auxiliary"].function_pointer<InvolutionAuxiliaryPtr>(),
+            settings["log_auxiliary"].function_pointer<InvolutionLogDensityPtr>(),
+            settings["map"].function_pointer<InvolutionMapPtr>(),
+            log_jacobian, size_t(settings["check"].as_double()));
+        if (order_of_mcmc.size() > 1)
+          mcmc = new InvolutiveMCMC(1, kernel, data);
+        else
+          mcmc = new InvolutiveMCMC(termination_method, kernel, data);
+        move_factors.push_back(set_move_factor_indices(
+            mcmc, info, "mh", full_index,
+            check_factor_index, simulate_mh_proposal_index + 1));
+        simulate_mh_proposal_index = simulate_mh_proposal_index + 1;
+      } else if ((*i) == 1) {
         ProposalKernel *proposal;
 
         if (model.contains("mh_proposal")) {
@@ -744,6 +773,38 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
               mcmc = new SliceMCMC(1, settings);
             else
               mcmc = new SliceMCMC(termination_method, settings);
+          } else if (proposal_infos[simulate_mh_proposal_index].contains("exchange")) {
+            // the exchange algorithm with a proposal that is not symmetric
+            // (MALA-exchange, dev/plan.md 3.22 U1b)
+            RecipeValue entries = proposal_infos[simulate_mh_proposal_index]["exchange"];
+            std::vector<ExchangeField> fields;
+            for (size_t k = 0; k < entries.size(); ++k) {
+              RecipeValue entry = entries[k];
+              ExchangeField field;
+              field.variable = entry["variable"].as_string();
+              field.potential = entry["potential"].function_pointer<UnnormalisedPotentialPtr>();
+              field.sweep = entry["sweep"].function_pointer<UnnormalisedSweepFunctionPtr>();
+              if (entry.contains("exact"))
+                field.exact = entry["exact"].function_pointer<UnnormalisedExactFunctionPtr>();
+              field.sweeps = size_t(entry["sweeps"].as_double());
+              if (entry.contains("replicates"))
+                field.replicates = size_t(entry["replicates"].as_double());
+              fields.push_back(field);
+            }
+            RatioEstimatingMHMCMC *ratio_move;
+            if (order_of_mcmc.size() > 1)
+              ratio_move = new RatioEstimatingMHMCMC(1, proposal, new ExchangeRatioStep(fields, data, model.contains("data_tempering_variable") ? model["data_tempering_variable"].as_string() : std::string()));
+            else
+              ratio_move = new RatioEstimatingMHMCMC(termination_method, proposal, new ExchangeRatioStep(fields, data, model.contains("data_tempering_variable") ? model["data_tempering_variable"].as_string() : std::string()));
+            RecipeValue info = proposal_infos[simulate_mh_proposal_index];
+            if (info.contains("exchange_points"))
+              ratio_move->estimated_ratio().set_points(size_t(info["exchange_points"].as_double()));
+            if (info.contains("exchange_noisy"))
+              ratio_move->estimated_ratio().set_noisy(info["exchange_noisy"].as_bool());
+            if (info.contains("exchange_parallel"))
+              ratio_move->estimated_ratio().set_parallel(info["exchange_parallel"].as_bool(),
+                                                         model.contains("number_of_threads") ? size_t(model["number_of_threads"].as_double()) : 1);
+            mcmc = ratio_move;
           } else if (nuts) {
             HMCProposalKernel *system = dynamic_cast<HMCProposalKernel*>(proposal);
             if (order_of_mcmc.size() > 1)
@@ -935,7 +996,38 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
             stop("Error in mcmc proposals part of model file.");
           }
 
-          if (order_of_mcmc.size() > 1) {
+          if (proposal_infos[simulate_m_proposal_index].contains("exchange")) {
+            // the exchange algorithm (dev/plan.md 3.22 U1): one entry per
+            // unnormalised distribution whose normaliser the move changes
+            RecipeValue entries = proposal_infos[simulate_m_proposal_index]["exchange"];
+            std::vector<ExchangeField> fields;
+            for (size_t k = 0; k < entries.size(); ++k) {
+              RecipeValue entry = entries[k];
+              ExchangeField field;
+              field.variable = entry["variable"].as_string();
+              field.potential = entry["potential"].function_pointer<UnnormalisedPotentialPtr>();
+              field.sweep = entry["sweep"].function_pointer<UnnormalisedSweepFunctionPtr>();
+              if (entry.contains("exact"))
+                field.exact = entry["exact"].function_pointer<UnnormalisedExactFunctionPtr>();
+              field.sweeps = size_t(entry["sweeps"].as_double());
+              if (entry.contains("replicates"))
+                field.replicates = size_t(entry["replicates"].as_double());
+              fields.push_back(field);
+            }
+            RatioEstimatingMCMC *ratio_move;
+            if (order_of_mcmc.size() > 1)
+              ratio_move = new RatioEstimatingMCMC(1, proposal, new ExchangeRatioStep(fields, data, model.contains("data_tempering_variable") ? model["data_tempering_variable"].as_string() : std::string()));
+            else
+              ratio_move = new RatioEstimatingMCMC(termination_method, proposal, new ExchangeRatioStep(fields, data, model.contains("data_tempering_variable") ? model["data_tempering_variable"].as_string() : std::string()));
+            if (proposal_infos[simulate_m_proposal_index].contains("exchange_points"))
+              ratio_move->estimated_ratio().set_points(size_t(proposal_infos[simulate_m_proposal_index]["exchange_points"].as_double()));
+            if (proposal_infos[simulate_m_proposal_index].contains("exchange_noisy"))
+              ratio_move->estimated_ratio().set_noisy(proposal_infos[simulate_m_proposal_index]["exchange_noisy"].as_bool());
+            if (proposal_infos[simulate_m_proposal_index].contains("exchange_parallel"))
+              ratio_move->estimated_ratio().set_parallel(proposal_infos[simulate_m_proposal_index]["exchange_parallel"].as_bool(),
+                                       model.contains("number_of_threads") ? size_t(model["number_of_threads"].as_double()) : 1);
+            mcmc = ratio_move;
+          } else if (order_of_mcmc.size() > 1) {
             mcmc = new MetropolisMCMC(1, proposal);
           } else {
             mcmc = new MetropolisMCMC(termination_method, proposal);

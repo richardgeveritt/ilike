@@ -34,6 +34,11 @@ internal_roles <- list(
   unnormalised_sweep = c("void", "RandomNumberGenerator &rng, Parameters &parameters, const Data &data"),
   unnormalised_exact = c("Parameters", "RandomNumberGenerator &rng, const Parameters &parameters, const Data &data"),
   unnormalised_potential = c("double", "const arma::mat &field, const Parameters &parameters, const Data &data"),
+  # a move written as an involution (dev/plan.md 3.22 E2)
+  involution_auxiliary = c("Parameters", "RandomNumberGenerator &rng, const Parameters &parameters, const Data &data"),
+  involution_log_auxiliary = c("double", "const Parameters &parameters, const Data &data"),
+  involution_map = c("Parameters", "const Parameters &parameters, const Data &data"),
+  involution_log_jacobian = c("double", "const Parameters &parameters, const Data &data"),
   # the prior of a variable integrated out, given the outer parameters (dev/plan.md 3.21, step (b))
   simulate_prior_given = c("Parameters", "RandomNumberGenerator &rng, const Parameters &ilike_given"),
   # an ABC kernel factor's points' summaries, and the kernel from them (dev/plan.md 3.21 (c5))
