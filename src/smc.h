@@ -46,6 +46,17 @@ public:
     this->progress_counts_iterations = progress_counts_iterations_in;
   }
   void set_waste_free_chains(size_t waste_free_chains_in) { this->waste_free_chains = waste_free_chains_in; }
+  // (dev/plan.md 3.22 U4) the particles the next run starts from (as many as
+  // the number of particles; used once). With from_first_target they are
+  // draws from the first target, so the first weights are its ratio to the
+  // next target (an annealed path from given states: exchange, SAV/MAV).
+  void set_initial_particles(const std::vector<Parameters> &points, bool from_first_target);
+  // (dev/plan.md 3.22 U4) an annealed path: parameters moved with the last
+  // schedule variable, from start to end
+  void set_path(const std::vector<std::string> &names, const Parameters &start, const Parameters &end)
+  {
+    this->sequencer.set_path(names, start, end);
+  }
   // parallel = TRUE was asked for but some step ran sequentially (G4)
   bool parallel_was_refused() const { return this->parallel_refused; }
   // The index over which this SMC weights (for repointing a flat
@@ -179,6 +190,7 @@ protected:
   virtual SMCOutput* specific_run()=0;
   
   void simulate_proposal(SMCOutput* simulation);
+  void finish_initial_particles(Particles &particles);
   
   virtual SMCOutput* specific_run(const Parameters &conditioned_on_parameters)=0;
   
@@ -263,6 +275,8 @@ protected:
   bool proposed_particles_inputted;
   std::vector<Parameters> initial_particles; // not needed, unless initial values provided
   arma::colvec log_probabilities_of_initial_values;
+  bool initial_particles_once = false;      // (U4: set_initial_particles, for the next run only)
+  bool initial_from_first_target = false;
   
   std::vector<std::string> vector_variables;
   std::vector<std::string> any_variables;

@@ -599,10 +599,10 @@ private:
         break;
       }
       after = &this->lexer.peek();
-      if (after->type == TokenType::Identifier)
+      if ((after->type == TokenType::Identifier) && (after->text != "in"))
         declaration_like = true;
     }
-    else if (after->type == TokenType::Identifier)
+    else if ((after->type == TokenType::Identifier) && (after->text != "in"))
     {
       declaration_like = true;
     }
@@ -659,6 +659,59 @@ private:
       op = this->lexer.next().text;
       this->skip_newlines_inside();
       value = this->expression();
+      // (dev/plan.md 3.22 U4) x ~ unnormalised(…) { statements }: the
+      // statements of the distribution (its base measure, and the terms of
+      // its log density, log += …)
+      if ((op == "~") && value.contains("expression") && (value["expression"].as_string() == "call") &&
+          (value["function"].as_string() == "unnormalised") && this->is_symbol(this->lexer.peek(), "{"))
+      {
+        Token open = this->lexer.next();
+        RecipeValue body = RecipeValue::list();
+        while (true)
+        {
+          this->skip_newlines();
+          const Token &token = this->lexer.peek();
+          if (this->is_symbol(token, "}"))
+          {
+            this->lexer.next();
+            break;
+          }
+          if (token.type == TokenType::End)
+            this->lexer.error(open.line, open.column, "the block of unnormalised(…) has no closing brace.");
+          body.push_back(this->statement());
+          this->end_of_statement();
+        }
+        node.push_back(body, "body");
+      }
+    }
+    else if (!declaration_like && (next.type == TokenType::Identifier) && (next.text == "in"))
+    {
+      // (dev/plan.md 3.22 U4 step 2b) a domain declaration in the block of
+      // unnormalised(…): x[i] in {0, 1}, or x[i] in 1:q
+      this->lexer.next();
+      op = "in";
+      if (this->is_symbol(this->lexer.peek(), "{"))
+      {
+        Token open = this->lexer.next();
+        RecipeValue elements = RecipeValue::list();
+        while (true)
+        {
+          elements.push_back(this->expression(), "");
+          if (this->is_symbol(this->lexer.peek(), ","))
+          {
+            this->lexer.next();
+            continue;
+          }
+          this->expect_symbol("}", "to close the set of values");
+          break;
+        }
+        value = RecipeValue::list();
+        value.push_back(RecipeValue("vector"), "expression");
+        value.push_back(elements, "elements");
+        add_position(value, open);
+      }
+      else
+        value = this->expression();
     }
     else if (this->is_symbol(next, "<") && this->is_symbol(this->lexer.peek(1), "-") &&
              this->lexer.peek(1).line == next.line && this->lexer.peek(1).column == next.column + 1)
@@ -931,7 +984,9 @@ private:
   }
 
   // arguments up to the closing symbol; "name = value" is a keyword argument
-  RecipeValue arguments(const std::string &close)
+  // (named: name = value elements, as in calls; also in vector literals,
+  // e.g. sav(…, at = [beta = 0.3, h = 0.1]), dev/plan.md 3.22 C301)
+  RecipeValue arguments(const std::string &close, bool named = false)
   {
     RecipeValue output = RecipeValue::list();
     if (this->is_symbol(this->lexer.peek(), close))
@@ -942,7 +997,7 @@ private:
     while (true)
     {
       const Token &token = this->lexer.peek();
-      if (token.type == TokenType::Identifier && this->is_symbol(this->lexer.peek(1), "=") && close == ")")
+      if (token.type == TokenType::Identifier && this->is_symbol(this->lexer.peek(1), "=") && ((close == ")") || named))
       {
         Token name = this->lexer.next();
         this->lexer.next();
@@ -1020,7 +1075,7 @@ private:
         if (token.text == "[")
         {
           node.push_back(RecipeValue("vector"), "expression");
-          node.push_back(this->arguments("]"), "elements");
+          node.push_back(this->arguments("]", true), "elements");
           add_position(node, token);
           return node;
         }

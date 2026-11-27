@@ -74,6 +74,21 @@ static void refuse_unknown_normaliser(const RecipeValue &model, const std::strin
        "or use MCMC with moves that do not change them; doubly intractable methods are planned (dev/plan.md 3.20).");
 }
 
+// (dev/plan.md 3.22 U9 R2) factor estimates that may be negative (debias =
+// roulette(…)) are for MCMC only: importance sampling and SMC would need signed
+// weights (planned, U9 R5)
+static void refuse_signed_factors(const RecipeValue &model, const std::string &algorithm)
+{
+  if (!model.contains("factor"))
+    return;
+  const RecipeValue &factors = model["factor"];
+  for (size_t i = 0; i < factors.size(); ++i)
+    if (factors[i].is_list() && factors[i].contains("unnormalised_normaliser") &&
+        (factors[i]["unnormalised_normaliser"].contains("roulette") || factors[i]["unnormalised_normaliser"].contains("block_poisson")))
+      stop(algorithm + ": factor " + std::to_string(i + 1) + " is an estimate that may be negative (debias = roulette(…) or block_poisson(…)), "
+           "which only MCMC uses (signed pseudo-marginal); importance sampling and SMC with signed weights are planned.");
+}
+
 ImportanceSampler *get_importance_sampler(
     RandomNumberGenerator *rng, Data *the_data, const RecipeValue &model,
     const RecipeValue &parameters, const Parameters &algorithm_parameters,
@@ -86,6 +101,7 @@ ImportanceSampler *get_importance_sampler(
   // dev/plan.md 3.21 step (b): no message, no stored points, and the outer
   // sequences that change the factor in place of the inner model's own)
   refuse_unknown_normaliser(model, "Importance sampling");
+  refuse_signed_factors(model, "Importance sampling");
   // May need to alter for cases where the likelihood needs to be tuned
   // automatically (e.g. in ABC).
 
@@ -522,6 +538,8 @@ SMCMCMCMove *get_smc_mcmc_move(
   // no message; with outer sequences, (c2): it follows the outer target, its
   // sequence variable the outer one, its factors changing with it)
   refuse_unknown_normaliser(model, "SMC");
+  if (nested == NULL)
+    refuse_signed_factors(model, "SMC");
   std::vector<LikelihoodEstimator *> likelihood_estimators;
   IndependentProposalKernel *proposal_in;
   bool proposal_is_evaluated_in;
@@ -538,6 +556,16 @@ SMCMCMCMove *get_smc_mcmc_move(
                                         std::vector<std::string>{nested->variables[0]},
                                         std::vector<std::vector<double>>{std::vector<double>{arma::datum::inf}},
                                         size_t(100)});
+  } else if (smc_sequencer_method.contains("ilike_path_schedule")) {
+    // (dev/plan.md 3.22 U4) the inner SMC of an annealed path (SMCPath): one
+    // schedule variable, given directly (a path on t, or an annealing power)
+    std::vector<double> schedule = smc_sequencer_method["ilike_path_schedule"];
+    sequencer_info = RecipeValue::list({std::vector<std::string>{smc_sequencer_method["ilike_path_type"].as_string()},
+                                        std::vector<std::string>{smc_sequencer_method["ilike_path_variable"].as_string()},
+                                        std::vector<std::vector<double>>{schedule},
+                                        size_t(100),
+                                        // the factors the path changes
+                                        static_cast<std::vector<double>>(smc_sequencer_method["ilike_path_factors"])});
   } else {
     sequencer_info = get_smc_sequencer_info(model, parameters, smc_sequencer_method);
   }

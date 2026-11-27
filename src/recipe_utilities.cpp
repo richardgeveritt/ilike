@@ -154,7 +154,8 @@ RecipeValue get_enkf_info(const RecipeValue &model_parameters, const RecipeValue
   size_t maximum = a.given("exchange_max") ? size_t(a.integer("exchange_max")) : size_t(0);
   return RecipeValue::list({size_t(a.integer("ensemble_members")), a.string("shifter"),
                             int(a.integer("iterations_to_store")), a.logical("parallel"),
-                            size_t(a.integer("grain_size")), below, multiply, maximum});
+                            size_t(a.integer("grain_size")), below, multiply, maximum,
+                            a.logical("correlated"), size_t(a.integer("refresh"))});
 }
 
 // integrate u with smc(particles = N, …) (dev/plan.md 3.21, (c1))

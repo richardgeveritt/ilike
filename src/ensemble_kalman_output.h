@@ -124,6 +124,16 @@ public:
   bool caught_up = false;
   void advance_at_caller_target(const Parameters &parameters);
   bool repoint_estimator(LikelihoodEstimator* estimator_in); // (C270)
+  // (dev/plan.md 3.22 U9 R3b) correlated estimates: a proposed output runs
+  // at its first evaluation, after carry_over_from has given it the current
+  // output's member seeds (refresh_members of them then replaced)
+  bool simulation_pending() const { return this->pending; }
+  void simulate_when_needed(const Parameters &parameters);
+  bool carries_over() const;
+  void carry_over_from(const LikelihoodEstimatorOutput &previous,
+                       const Parameters &previous_parameters,
+                       const Parameters &new_parameters,
+                       const std::vector<std::string>* changed = NULL);
   void close_ofstreams();
   
 protected:
@@ -158,6 +168,15 @@ protected:
   void make_copy(const EnsembleKalmanOutput &another);
   
   std::deque<Ensemble> all_ensembles;
+
+  // (U9 R3b) u: one seed per member (empty: drawn afresh when the run starts);
+  // the number of them to replace then; whether the run waits for the first
+  // evaluation
+  std::vector<uint64_t> member_seeds;
+  size_t members_to_refresh = 0;
+  bool pending = false;
+  void prepare_member_seeds();
+  void run_if_pending(const Parameters &parameters);
   
   std::deque<double> times;
   

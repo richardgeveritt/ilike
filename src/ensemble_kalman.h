@@ -36,6 +36,23 @@ class EnsembleKalman : public LikelihoodEstimator
 public:
   bool is_estimate() const { return true; } // (dev/plan.md 3.21 (c3))
 
+  // (dev/plan.md 3.22 U9 R3b) correlated pseudo-marginal MCMC with this
+  // estimate: each member's random numbers from its own seed (its output's
+  // member_seeds), and a proposed output keeping the current seeds but k
+  // (refresh_members), so that successive estimates are correlated. While a
+  // correlated output runs, member_seeds points at its seeds; NULL otherwise
+  // (then the members draw as before). The output holds its own copy of the
+  // estimator, so the pointer belongs to that copy.
+  void set_correlated(bool correlated_in, size_t refresh_members_in)
+  {
+    this->correlated = correlated_in;
+    this->refresh_members = std::max(refresh_members_in, size_t(1));
+  }
+  bool correlated = false;
+  size_t refresh_members = 1;
+  const std::vector<uint64_t>* member_seeds = NULL;
+  uint64_t member_step = 0; // (the step's tag: 0 at the initial draw, then one more per move)
+
   
   EnsembleKalman();
   

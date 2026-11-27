@@ -101,6 +101,8 @@ void StandardMCMCOutput::make_copy(const StandardMCMCOutput &another)
   this->adaptation_trace = another.adaptation_trace;
   this->adaptation_final = another.adaptation_final;
   this->diagnostics.reset(another.diagnostics ? new Diagnostics(*another.diagnostics) : NULL);
+  this->signs_recorded = another.signs_recorded;
+  this->signs = another.signs;
 }
 
 void StandardMCMCOutput::push_back(const Particle &particle_in)
@@ -144,8 +146,12 @@ void StandardMCMCOutput::record(const Particle &particle_in)
       if (known > 0)
         this->store.reserve_after_first(known/this->thin + 1);
     }
+    // (dev/plan.md 3.22 U9 R2) signed pseudo-marginal: each stored point's sign
+    this->signs_recorded = (particle_in.factor_variables!=NULL) && particle_in.factor_variables->may_be_negative();
     this->storage_decided = true;
   }
+  if (this->signs_recorded)
+    this->signs.push_back(particle_in.factor_variables->sign());
 
   if (this->rich_storage)
   {
@@ -467,6 +473,12 @@ size_t StandardMCMCOutput::fill_diagnostics_transposed(arma::mat &destination,
     for (size_t c=0; c<columns; ++c)
       destination(c, first_column + r) = this->diagnostics->rows[r*columns + c];
   return rows;
+}
+
+size_t StandardMCMCOutput::fill_signs(std::vector<double> &destination) const
+{
+  destination.insert(destination.end(), this->signs.begin(), this->signs.end());
+  return this->signs.size();
 }
 
 void StandardMCMCOutput::diagnostics_names(std::vector<std::string> &names) const

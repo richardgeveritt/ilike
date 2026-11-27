@@ -174,7 +174,7 @@ check_gradient = function(recipe, parameters, variables = names(parameters), ind
 
 # Draws from the simulator of an unnormalised distribution in a recipe
 # (x ~ ising(...), x ~ potts(...); dev/plan.md 3.20, S3): method "exact"
-# (coupling from the past, ising) or "sweeps" (that many heat-bath sweeps,
+# (coupling from the past: ising, and potts by its random-cluster representation) or "sweeps" (that many heat-bath sweeps,
 # from x in parameters if given, otherwise from the base measure). One row
 # per draw. Internal: for tests and for the doubly intractable methods to come.
 simulate_unnormalised = function(recipe, variable, parameters = list(), draws = 1, method = "exact", sweeps = 100,

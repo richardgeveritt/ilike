@@ -699,6 +699,23 @@ void VectorFactorVariables::smcadaptive_from_summaries(const Index* index,
   }
 }
 
+bool VectorFactorVariables::may_be_negative() const
+{
+  for (auto i = this->likelihood_estimator_outputs.begin(); i != this->likelihood_estimator_outputs.end(); ++i)
+    if ((*i != NULL) && ((*i)->get_likelihood_estimator() != NULL) && (*i)->get_likelihood_estimator()->may_be_negative())
+      return true;
+  return false;
+}
+
+double VectorFactorVariables::sign() const
+{
+  double product = 1.0;
+  for (auto i = this->likelihood_estimator_outputs.begin(); i != this->likelihood_estimator_outputs.end(); ++i)
+    if (*i != NULL)
+      product = product * (*i)->sign;
+  return product;
+}
+
 bool VectorFactorVariables::has_compact_values() const
 {
   for (auto i = this->likelihood_estimator_outputs.begin(); i != this->likelihood_estimator_outputs.end(); ++i)

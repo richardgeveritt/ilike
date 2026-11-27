@@ -682,6 +682,49 @@ void attach_smc_adaptor(ProposalKernel *proposal, const RecipeValue &proposal_in
   proposal->set_smc_adaptor(make_builtin_smc_adaptor(node, proposal, model_parameters));
 }
 
+// (dev/plan.md 3.22 U1) the fields of an exchange move: one entry per
+// unnormalised distribution whose normaliser the move changes
+static std::vector<ExchangeField> read_exchange_fields(const RecipeValue &entries, const RecipeValue &model,
+                                                       const RecipeValue &model_parameters, Data *data)
+{
+  std::vector<ExchangeField> fields;
+  for (size_t k = 0; k < entries.size(); ++k) {
+    RecipeValue entry = entries[k];
+    ExchangeField field;
+    field.variable = entry["variable"].as_string();
+    if (entry.contains("potential"))
+      field.potential = entry["potential"].function_pointer<UnnormalisedPotentialPtr>();
+    if (entry.contains("sweep"))
+      field.sweep = entry["sweep"].function_pointer<UnnormalisedSweepFunctionPtr>();
+    if (entry.contains("exact"))
+      field.exact = entry["exact"].function_pointer<UnnormalisedExactFunctionPtr>();
+    field.sweeps = size_t(entry["sweeps"].as_double());
+    if (entry.contains("replicates"))
+      field.replicates = size_t(entry["replicates"].as_double());
+    if (entry.contains("bridges")) {
+      field.bridges = size_t(entry["bridges"].as_double());
+      field.bridge_sweeps = size_t(entry["bridge_sweeps"].as_double());
+      if (entry.contains("reverse_sweep"))
+        field.reverse_sweep = entry["reverse_sweep"].function_pointer<UnnormalisedSweepFunctionPtr>();
+    }
+    field.normaliser = entry["normaliser"].as_strings();
+    if (entry.contains("engine")) {
+      // (dev/plan.md 3.22 U4) a distribution written as a block: the general
+      // engine, an SMC with one particle on its inner model (annealed
+      // importance sampling through the bridges). Its generator and seed
+      // counter are redirected to a stream of the move's own at each run;
+      // these are placeholders for its construction.
+      static RandomNumberGenerator placeholder_rng;
+      static size_t placeholder_seed = 0;
+      field.engine.reset(make_smc_path(&placeholder_rng, &placeholder_seed, data, model, model_parameters,
+                                       entry["engine"].as_string(), "path", 1, field.bridges + 1,
+                                       field.bridge_sweeps, 1.0, 0));
+    }
+    fields.push_back(field);
+  }
+  return fields;
+}
+
 MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, Data *data,
                 const RecipeValue &mcmc_termination_method,
                 const RecipeValue &mcmc_weights_method, Index *full_index) {
@@ -777,20 +820,7 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
             // the exchange algorithm with a proposal that is not symmetric
             // (MALA-exchange, dev/plan.md 3.22 U1b)
             RecipeValue entries = proposal_infos[simulate_mh_proposal_index]["exchange"];
-            std::vector<ExchangeField> fields;
-            for (size_t k = 0; k < entries.size(); ++k) {
-              RecipeValue entry = entries[k];
-              ExchangeField field;
-              field.variable = entry["variable"].as_string();
-              field.potential = entry["potential"].function_pointer<UnnormalisedPotentialPtr>();
-              field.sweep = entry["sweep"].function_pointer<UnnormalisedSweepFunctionPtr>();
-              if (entry.contains("exact"))
-                field.exact = entry["exact"].function_pointer<UnnormalisedExactFunctionPtr>();
-              field.sweeps = size_t(entry["sweeps"].as_double());
-              if (entry.contains("replicates"))
-                field.replicates = size_t(entry["replicates"].as_double());
-              fields.push_back(field);
-            }
+            std::vector<ExchangeField> fields = read_exchange_fields(entries, model, model_parameters, data);
             RatioEstimatingMHMCMC *ratio_move;
             if (order_of_mcmc.size() > 1)
               ratio_move = new RatioEstimatingMHMCMC(1, proposal, new ExchangeRatioStep(fields, data, model.contains("data_tempering_variable") ? model["data_tempering_variable"].as_string() : std::string()));
@@ -1000,20 +1030,7 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
             // the exchange algorithm (dev/plan.md 3.22 U1): one entry per
             // unnormalised distribution whose normaliser the move changes
             RecipeValue entries = proposal_infos[simulate_m_proposal_index]["exchange"];
-            std::vector<ExchangeField> fields;
-            for (size_t k = 0; k < entries.size(); ++k) {
-              RecipeValue entry = entries[k];
-              ExchangeField field;
-              field.variable = entry["variable"].as_string();
-              field.potential = entry["potential"].function_pointer<UnnormalisedPotentialPtr>();
-              field.sweep = entry["sweep"].function_pointer<UnnormalisedSweepFunctionPtr>();
-              if (entry.contains("exact"))
-                field.exact = entry["exact"].function_pointer<UnnormalisedExactFunctionPtr>();
-              field.sweeps = size_t(entry["sweeps"].as_double());
-              if (entry.contains("replicates"))
-                field.replicates = size_t(entry["replicates"].as_double());
-              fields.push_back(field);
-            }
+            std::vector<ExchangeField> fields = read_exchange_fields(entries, model, model_parameters, data);
             RatioEstimatingMCMC *ratio_move;
             if (order_of_mcmc.size() > 1)
               ratio_move = new RatioEstimatingMCMC(1, proposal, new ExchangeRatioStep(fields, data, model.contains("data_tempering_variable") ? model["data_tempering_variable"].as_string() : std::string()));

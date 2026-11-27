@@ -918,6 +918,16 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                   stop("exchange(..., multiply = m): m must be more than 1.");
                 inner_enkf->set_exchange(exchange_below, exchange_multiply, exchange_max);
               }
+              // (dev/plan.md 3.22 U9 R3b) correlated estimates
+              if (bool(enkf_params[8]))
+              {
+                if (factor_plan.data_tempered)
+                {
+                  delete inner_enkf;
+                  stop("enkf(..., correlated = true) is for MCMC moves on the parameters: not available when the caller's sequence takes in the filter's observations one at a time (SMC^2).");
+                }
+                inner_enkf->set_correlated(true, size_t(enkf_params[9]));
+              }
               new_likelihood_estimator = inner_enkf;
             } else if (iequals(llhd_type, "pf")) {
               RecipeValue pf_params =
@@ -1078,8 +1088,8 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
             exact = entry["exact"].function_pointer<UnnormalisedExactFunctionPtr>();
           LikelihoodEstimator *new_likelihood_estimator = new UnnormalisedNormaliserEstimator(
               rng_in, seed_in, data_in, entry["variable"].as_string(),
-              entry["potential"].function_pointer<UnnormalisedPotentialPtr>(), exact,
-              entry["sweep"].function_pointer<UnnormalisedSweepFunctionPtr>(),
+              entry.contains("potential") ? entry["potential"].function_pointer<UnnormalisedPotentialPtr>() : NULL, exact,
+              entry.contains("sweep") ? entry["sweep"].function_pointer<UnnormalisedSweepFunctionPtr>() : NULL,
               size_t(entry["sweeps"].as_double()), size_t(entry["points"].as_double()),
               normaliser, at, factor_is_fixed_in_smc);
           if (entry.contains("bridges"))
@@ -1087,13 +1097,61 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
               size_t(entry["bridges"].as_double()), size_t(entry["bridge_sweeps"].as_double()));
           if (entry.contains("replicates"))
             static_cast<UnnormalisedNormaliserEstimator*>(new_likelihood_estimator)->set_replicates(size_t(entry["replicates"].as_double()));
+          if (entry.contains("resampling"))
+            static_cast<UnnormalisedNormaliserEstimator*>(new_likelihood_estimator)->set_resampling(entry["resampling"].as_double());
           if (factor_plan.data_tempered)
             static_cast<UnnormalisedNormaliserEstimator*>(new_likelihood_estimator)->set_data_tempering(plan.data_variable);
+          if (entry.contains("engine")) {
+            // (dev/plan.md 3.22 U4) a distribution written as a block: the
+            // general engine (the package's SMC on its inner model) for its
+            // draws, its paths and normalise
+            std::string x = entry["engine"].as_string();
+            size_t bridges = entry.contains("bridges") ? size_t(entry["bridges"].as_double()) : 0;
+            size_t bridge_sweeps = entry.contains("bridge_sweeps") ? size_t(entry["bridge_sweeps"].as_double()) : 1;
+            size_t points = size_t(entry["points"].as_double());
+            size_t waste_free = entry.contains("waste_free") ? size_t(entry["waste_free"].as_double()) : 0;
+            SMCPath *single = NULL, *population = NULL, *normalise = NULL;
+            if (entry.contains("plugin")) {
+              // (dev/plan.md 3.22 U9 R1) only the SMC from the base measure
+              RecipeValue n = entry["plugin"];
+              normalise = make_smc_path(rng_in, seed_in, data_in, model, model_parameters, x, "evidence",
+                                        size_t(n["particles"].as_double()), size_t(n["steps"].as_double()),
+                                        size_t(n["sweeps"].as_double()), n["resampling"].as_double(), waste_free);
+            } else if (entry.contains("resampling"))
+              population = make_smc_path(rng_in, seed_in, data_in, model, model_parameters, x, "path", points, bridges + 1,
+                                         bridge_sweeps, entry["resampling"].as_double(), waste_free);
+            else
+              single = make_smc_path(rng_in, seed_in, data_in, model, model_parameters, x, "path", 1, bridges + 1,
+                                     bridge_sweeps, 1.0, 0);
+            if (entry.contains("normalise")) {
+              RecipeValue n = entry["normalise"];
+              normalise = make_smc_path(rng_in, seed_in, data_in, model, model_parameters, x, "evidence",
+                                        size_t(n["particles"].as_double()), size_t(n["steps"].as_double()),
+                                        size_t(n["sweeps"].as_double()),
+                                        n.contains("resampling") ? n["resampling"].as_double() : 1.0, waste_free);
+            }
+            static_cast<UnnormalisedNormaliserEstimator*>(new_likelihood_estimator)->set_engine(
+              single, population, normalise, size_t(entry["sweeps"].as_double()));
+          }
+          if (entry.contains("plugin")) {
+            RecipeValue n = entry["plugin"];
+            static_cast<UnnormalisedNormaliserEstimator*>(new_likelihood_estimator)->set_plugin(
+              size_t(n["particles"].as_double()), size_t(n["steps"].as_double()), size_t(n["sweeps"].as_double()),
+              n["resampling"].as_double());
+          }
+          if (entry.contains("roulette"))
+            static_cast<UnnormalisedNormaliserEstimator*>(new_likelihood_estimator)->set_roulette(
+              entry["roulette"]["continue"].as_double(), entry["roulette"]["scale"].as_double());
+          if (entry.contains("block_poisson"))
+            static_cast<UnnormalisedNormaliserEstimator*>(new_likelihood_estimator)->set_block_poisson(
+              size_t(entry["block_poisson"]["blocks"].as_double()), entry["block_poisson"]["mean"].as_double(),
+              entry["block_poisson"]["lower"].as_double(), entry["block_poisson"]["correlated"].as_bool());
           if (entry.contains("normalise")) {
             RecipeValue normalise = entry["normalise"];
             static_cast<UnnormalisedNormaliserEstimator*>(new_likelihood_estimator)->set_normalise(
               size_t(normalise["particles"].as_double()), size_t(normalise["steps"].as_double()),
-              size_t(normalise["sweeps"].as_double()), *seed_in);
+              size_t(normalise["sweeps"].as_double()), *seed_in,
+              normalise.contains("resampling") ? normalise["resampling"].as_double() : 1.0);
           }
           full_index_vector.push_back(likelihood_estimators.size());
           if (factor_plan.in_weight)
@@ -1117,7 +1175,7 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
           LikelihoodEstimator *new_likelihood_estimator = new UnnormalisedGradientEstimator(
               rng_in, seed_in, data_in, entry["variable"].as_string(),
               entry["statistic"].function_pointer<UnnormalisedPotentialPtr>(), exact,
-              entry["sweep"].function_pointer<UnnormalisedSweepFunctionPtr>(),
+              entry.contains("sweep") ? entry["sweep"].function_pointer<UnnormalisedSweepFunctionPtr>() : NULL,
               size_t(entry["sweeps"].as_double()), size_t(entry["points"].as_double()),
               entry["parameter"].as_string());
           if (entry.contains("replicates"))
@@ -1912,3 +1970,139 @@ get_measurement_covariance_estimators(
   return measurement_covariance_estimators;
 
 }
+
+
+// (dev/plan.md 3.22 U4, "The engines") The general engine of an unnormalised
+// distribution written as a block: its inner model (the base measure and the
+// terms, with the moves the lowering made and the R binding prepared:
+// model["unnormalised_engines"][x]) run by the package's SMC.
+//  mode "path": an annealed path between two values of the normaliser's
+//   parameters, through `steps` steps of t from 0 to 1, with `particles`
+//   particles started from given states (exchange, SAV/MAV);
+//  mode "evidence": from the base measure to the distribution at given
+//   parameters, the terms raised to a power from 0 to 1 in `steps` steps
+//   (normalise).
+// Both draw by MCMC (simulate = sweeps(m)) and from the base measure.
+// sweeps: iterations of the kernel at each step; resampling: the ESS
+// fraction below which the SMC resamples (1: at every step); waste_free:
+// waste-free chains (0: none).
+SMCPath *make_smc_path(RandomNumberGenerator *rng, size_t *seed, Data *data,
+                       const RecipeValue &model, const RecipeValue &model_parameters,
+                       const std::string &x, const std::string &mode,
+                       size_t particles, size_t steps, size_t sweeps,
+                       double resampling, size_t waste_free)
+{
+  if (!model.contains("unnormalised_engines") || !model["unnormalised_engines"].contains(x))
+    stop(x + " ~ unnormalised(…) { … }: its inner model was not prepared (compile the file with ilike::compile).");
+  const RecipeValue &engine = model["unnormalised_engines"][x];
+  if (!engine.contains("model"))
+    stop(x + " ~ unnormalised(…) { … }: its inner model was not prepared (compile the file with ilike::compile).");
+  RecipeValue inner = engine["model"];
+  std::vector<std::string> normaliser;
+  if (engine.contains("normaliser") && !engine["normaliser"].is_null())
+    normaliser = static_cast<std::vector<std::string>>(engine["normaliser"]);
+  RecipeValue weights = engine.contains("mcmc_weights") ? engine["mcmc_weights"] : RecipeValue::list();
+  // the SMC's resampling: an ESS fraction
+  {
+    RecipeValue parameters = RecipeValue::list();
+    parameters.push_back(RecipeValue(resampling), "");
+    RecipeValue criterion = RecipeValue::list();
+    criterion.push_back(RecipeValue("ess"), "type");
+    criterion.push_back(parameters, "parameters");
+    RecipeValue entry = RecipeValue::list();
+    entry.push_back(criterion, "adaptive_resampling");
+    RecipeValue methods = RecipeValue::list();
+    methods.push_back(entry, "");
+    inner.set("method", methods);
+  }
+  auto iterations = [](size_t k) {
+    RecipeValue values = RecipeValue::list();
+    values.push_back(RecipeValue(std::to_string(k)), "");
+    RecipeValue termination = RecipeValue::list();
+    termination.push_back(RecipeValue("iterations"), "method");
+    termination.push_back(values, "values");
+    return termination;
+  };
+  // (the inner estimators' data, kept alive by the engine)
+  std::shared_ptr<std::vector<Data>> data_a = std::make_shared<std::vector<Data>>();
+  std::shared_ptr<std::vector<Data>> data_b = std::make_shared<std::vector<Data>>();
+  std::shared_ptr<std::vector<Data>> data_c = std::make_shared<std::vector<Data>>();
+  std::shared_ptr<std::vector<Data>> data_d = std::make_shared<std::vector<Data>>();
+  data_a->reserve(64); data_b->reserve(64); data_c->reserve(64); data_d->reserve(64);
+
+  SMCMCMCMove *smc = NULL;
+  if ((mode == "path") || (mode == "evidence"))
+  {
+    // on a path the run starts from given states, not from the base measure,
+    // so the base measure is part of the target's ratio between steps (with
+    // the base measure as the importance proposal it would cancel): it enters
+    // the path's SMC as a factor of the target, like the terms
+    RecipeValue run_model = inner;
+    if (mode == "path")
+    {
+      RecipeValue factors = RecipeValue::list();
+      const RecipeValue &old_factors = inner["factor"];
+      for (size_t i = 0; i < old_factors.size(); ++i)
+      {
+        const RecipeValue &factor = old_factors[i];
+        if ((i == 0) && factor.contains("evaluate_log_prior"))
+        {
+          RecipeValue renamed = RecipeValue::list();
+          std::vector<std::string> names = factor.names();
+          for (size_t k = 0; k < factor.size(); ++k)
+            renamed.push_back(factor[k], (names[k] == "evaluate_log_prior") ? std::string("evaluate_log_likelihood") : names[k]);
+          factors.push_back(renamed, "");
+        }
+        else
+          factors.push_back(factor, "");
+      }
+      run_model.set("factor", factors);
+    }
+    const size_t T = std::max(steps, size_t(1));
+    std::vector<double> schedule(T + 1);
+    for (size_t k = 0; k <= T; ++k)
+      schedule[k] = (k == T) ? 1.0 : double(k)/double(T);
+    RecipeValue sequence = RecipeValue::list();
+    sequence.push_back(RecipeValue(mode == "path" ? std::string("parameter") : std::string("annealing")), "ilike_path_type");
+    sequence.push_back(RecipeValue(std::string("ilike_path_t")), "ilike_path_variable");
+    sequence.push_back(RecipeValue(schedule), "ilike_path_schedule");
+    // the factors the sequence changes: on a path, the base measure (whose
+    // parameters, if it reads any, are on the path: step 2b) and the terms;
+    // annealing raises only the terms to the power
+    sequence.push_back(RecipeValue(mode == "path" ? std::vector<double>{1.0, 2.0} : std::vector<double>{2.0}), "ilike_path_factors");
+    RecipeValue adaptive_target = RecipeValue::list();
+    adaptive_target.push_back(RecipeValue("positive"), "method");
+    NestedSequence nested; // (no message about the proposal)
+    smc = get_smc_mcmc_move(rng, data, run_model, model_parameters, Parameters(), std::max(particles, size_t(1)),
+                            iterations(std::max(sweeps, size_t(1))), weights, sequence, adaptive_target,
+                            RecipeValue::list(), 2, false, false, 1, "", seed, *data_a, *data_b, &nested);
+    if (waste_free > 0)
+      smc->set_waste_free_chains(waste_free);
+  }
+
+  // draws by MCMC: the inner model's factors and its kernel, one iteration at a time
+  VectorIndex *without_cancelled_index = NULL;
+  VectorIndex *without_priors_index = NULL;
+  VectorIndex *full_index = NULL;
+  CancellationPlan plan;
+  std::vector<std::string> no_types, no_variables;
+  std::vector<std::vector<double>> no_schedules;
+  std::vector<int> no_factors;
+  std::vector<LikelihoodEstimator *> estimators = get_likelihood_estimators(
+      rng, seed, data, inner, model_parameters, Parameters(), KernelDeclaration(),
+      no_types, no_variables, no_schedules, NULL,
+      without_cancelled_index, without_priors_index, full_index, plan, no_factors, *data_c, *data_d);
+  Factors *factors = new VectorFactors(estimators);
+  MCMC *kernel = make_mcmc(inner, model_parameters, data, iterations(1), weights, full_index);
+  delete without_cancelled_index;
+  delete without_priors_index;
+
+  SMCPath *path = new SMCPath(smc, factors, full_index, kernel, std::vector<std::string>{x}, normaliser);
+  path->set_base(get_prior_as_simulate_only_proposal(inner, model_parameters));
+  path->keep_data(data_a);
+  path->keep_data(data_b);
+  path->keep_data(data_c);
+  path->keep_data(data_d);
+  return path;
+}
+

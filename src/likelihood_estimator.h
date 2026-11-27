@@ -92,6 +92,9 @@ public:
   // algorithm, a synthetic likelihood, an estimated normalising constant):
   // moves that need the exact target (slice sampling) refuse it
   virtual bool is_estimate() const { return false; }
+  // (dev/plan.md 3.22 U9 R2) its estimates may be negative (signed
+  // pseudo-marginal): only MCMC uses it, writing each iteration's sign
+  virtual bool may_be_negative() const { return false; }
   // (dev/plan.md 3.21 (c5)) whether this estimator's outputs will be written
   // (an SMC's moves then store their chains' iterations, which are written;
   // otherwise only the final states, which are all that is used)

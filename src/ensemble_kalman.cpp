@@ -145,7 +145,9 @@ void EnsembleKalman::make_copy(const EnsembleKalman &another)
   this->initial_ensemble = another.initial_ensemble;
   
   this->initialised = another.initialised;
-  
+  this->correlated = another.correlated;
+  this->refresh_members = another.refresh_members;
+  this->member_seeds = NULL;
 }
 
 EnsembleKalmanOutput* EnsembleKalman::run()

@@ -319,6 +319,30 @@ arma::colvec SequentialEnsembleKalmanWorker::get_unnormalised_log_incremental_we
   return this->log_unnormalised_incremental_weights;
 }
 
+// (dev/plan.md 3.22 U9 R3b) correlated estimates: member i's generator at a
+// step, seeded from its seed and the step's tag alone (so that its draws do
+// not depend on the other members'), with the measurement estimators drawing
+// from it while that member is drawn (its perturbed observations), and drawing
+// from the estimator's own generator again afterwards
+namespace
+{
+struct MemberStreams
+{
+  EnsembleKalman* enk;
+  EnsembleFactors* factors;
+  size_t local_seed = 0;
+  MemberStreams(EnsembleKalman* enk_in, EnsembleFactors* factors_in) : enk(enk_in), factors(factors_in) {}
+  RandomNumberGenerator member(const RandomNumberGenerator &like, size_t i)
+  {
+    RandomNumberGenerator g(like);
+    g.seed(uint64_t((*this->enk->member_seeds)[i] + this->enk->member_step * 0x9e3779b97f4a7c15ULL));
+    return g;
+  }
+  void draw_from(RandomNumberGenerator &g) { this->factors->redirect_random_numbers(&g, &this->local_seed); }
+  ~MemberStreams() { this->factors->redirect_random_numbers(this->enk->get_rng_pointer(), this->enk->get_seed_pointer()); }
+};
+}
+
 void SequentialEnsembleKalmanWorker::specific_simulate(Ensemble* next_ensemble,
                                                        const Index* index)
 {
@@ -351,6 +375,27 @@ void SequentialEnsembleKalmanWorker::specific_simulate(Ensemble* next_ensemble,
   RandomNumberGenerator local_rng(*this->get_rng());
   local_rng.seed(this->get_seed());
   
+  if (this->the_enk->member_seeds != NULL)
+  {
+    // (U9 R3b) each member from its own stream
+    this->the_enk->member_step = 0;
+    MemberStreams streams(this->the_enk, this->the_enk->ensemble_factors.get());
+    const bool compact = this->the_enk->uses_compact_members();
+    if (compact)
+      this->the_enk->start_compact_ensemble(next_ensemble, NULL, &conditioned_on_parameters);
+    for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
+    {
+      RandomNumberGenerator g = streams.member(local_rng, i);
+      streams.draw_from(g);
+      if (compact)
+        this->the_enk->simulate_compact_member(g, next_ensemble, i, &conditioned_on_parameters);
+      else
+        this->the_enk->simulate_ensemble_member(g, next_ensemble->add_ensemble_member(),
+                                                this->the_enk->sequencer.schedule_parameters, conditioned_on_parameters);
+    }
+    return;
+  }
+  
   if (this->the_enk->uses_compact_members())
   {
     this->the_enk->start_compact_ensemble(next_ensemble, NULL, &conditioned_on_parameters);
@@ -376,6 +421,31 @@ void SequentialEnsembleKalmanWorker::specific_move(Ensemble* next_particles,
 {
   RandomNumberGenerator local_rng(*this->get_rng());
   local_rng.seed(this->get_seed());
+  
+  if (this->the_enk->member_seeds != NULL)
+  {
+    // (U9 R3b) each member moved with its own stream at this step
+    this->the_enk->member_step = this->the_enk->member_step + 1;
+    MemberStreams streams(this->the_enk, this->the_enk->ensemble_factors.get());
+    if (current_particles->compact)
+      this->the_enk->start_compact_ensemble(next_particles, current_particles, NULL);
+    for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
+    {
+      RandomNumberGenerator g = streams.member(local_rng, i);
+      streams.draw_from(g);
+      if (current_particles->compact)
+      {
+        this->the_enk->move_compact_member(g, current_particles, i, next_particles);
+        continue;
+      }
+      MoveOutput* spare = next_particles->take_spare();
+      if (spare != NULL)
+        next_particles->push_back(this->the_enk->move_reusing(g, (*current_particles)[i]->back(), spare));
+      else
+        next_particles->push_back(this->the_enk->move(g, (*current_particles)[i]->back()));
+    }
+    return;
+  }
   
   if (current_particles->compact)
   {

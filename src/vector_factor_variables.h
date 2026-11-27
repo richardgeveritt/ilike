@@ -109,6 +109,8 @@ public:
 
   bool repoint_to(const Factors* factors);
 
+  bool may_be_negative() const;
+  double sign() const;
   bool has_compact_values() const;
   size_t number_of_compact_values() const;
   void compact_values(double *values) const;

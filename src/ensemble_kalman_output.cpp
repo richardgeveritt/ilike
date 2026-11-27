@@ -95,6 +95,9 @@ void EnsembleKalmanOutput::make_copy(const EnsembleKalmanOutput &another)
   this->log_likelihood_smcfixed_part = another.log_likelihood_smcfixed_part;
   this->subsample_log_likelihood_smcfixed_part = another.subsample_log_likelihood_smcfixed_part;
   this->all_ensembles = another.all_ensembles;
+  this->member_seeds = another.member_seeds;
+  this->members_to_refresh = another.members_to_refresh;
+  this->pending = another.pending;
   // (C265) the copied ensembles' members point at this output's own copy of
   // the filter, not at the one copied from (deleted with its output: a
   // following filter, which goes on moving a copied output's ensemble, then
@@ -252,18 +255,96 @@ void EnsembleKalmanOutput::advance_at_caller_target(const Parameters &parameters
   this->estimator->advance_at_caller_target_enk(this, parameters);
 }
 
+// (dev/plan.md 3.22 U9 R3b) u for this run: fresh seeds, or the current
+// output's with k of them, chosen uniformly without replacement, replaced
+// (block pseudo-marginal with one block per member: a symmetric kernel that
+// leaves u's law invariant); the filter's members then draw from them
+void EnsembleKalmanOutput::prepare_member_seeds()
+{
+  if (!this->estimator->correlated)
+    return;
+  RandomNumberGenerator &rng = *this->estimator->get_rng_pointer();
+  const size_t N = this->estimator->number_of_ensemble_members;
+  if (this->member_seeds.size() != N)
+  {
+    this->member_seeds.resize(N);
+    for (size_t i = 0; i < N; ++i)
+      this->member_seeds[i] = uint64_t(rng());
+  }
+  else if (this->members_to_refresh > 0)
+  {
+    std::vector<size_t> order(N);
+    for (size_t i = 0; i < N; ++i)
+      order[i] = i;
+    const size_t k = std::min(this->members_to_refresh, N);
+    for (size_t j = 0; j < k; ++j)
+    {
+      size_t pick = j + std::min(size_t(runif(rng) * double(N - j)), N - j - 1);
+      std::swap(order[j], order[pick]);
+      this->member_seeds[order[j]] = uint64_t(rng());
+    }
+  }
+  this->members_to_refresh = 0;
+  this->estimator->member_seeds = &this->member_seeds;
+}
+
 void EnsembleKalmanOutput::simulate()
 {
+  this->pending = false;
+  this->prepare_member_seeds();
   this->estimator->ensemble_kalman_simulate(this);
 }
 
 void EnsembleKalmanOutput::simulate(const Parameters &parameters)
 {
+  this->pending = false;
+  this->prepare_member_seeds();
   this->estimator->ensemble_kalman_simulate(this, parameters);
+}
+
+void EnsembleKalmanOutput::simulate_when_needed(const Parameters &parameters)
+{
+  if (!this->estimator->correlated)
+  {
+    this->simulate(parameters);
+    return;
+  }
+  this->member_seeds.clear();
+  this->members_to_refresh = 0;
+  this->pending = true;
+}
+
+bool EnsembleKalmanOutput::carries_over() const
+{
+  return (this->estimator != NULL) && this->estimator->correlated;
+}
+
+void EnsembleKalmanOutput::carry_over_from(const LikelihoodEstimatorOutput &previous,
+                                           const Parameters &previous_parameters,
+                                           const Parameters &new_parameters,
+                                           const std::vector<std::string>* changed)
+{
+  if (!this->carries_over())
+    return;
+  const EnsembleKalmanOutput* source = dynamic_cast<const EnsembleKalmanOutput*>(&previous);
+  if ((source == NULL) || (source->member_seeds.size() != this->estimator->number_of_ensemble_members))
+    return;
+  this->member_seeds = source->member_seeds;
+  this->members_to_refresh = this->estimator->refresh_members;
+}
+
+void EnsembleKalmanOutput::run_if_pending(const Parameters &parameters)
+{
+  if (this->pending)
+    this->simulate(parameters);
+  // (a copied output's filter is a new copy: point it at these seeds again)
+  if (this->estimator->correlated)
+    this->estimator->member_seeds = &this->member_seeds;
 }
 
 void EnsembleKalmanOutput::evaluate_smcfixed_part(const Parameters &conditioned_on_parameters)
 {
+  this->run_if_pending(conditioned_on_parameters);
   if (this->estimator->smcfixed_flag)
   {
     this->estimator->ensemble_kalman_evaluate(this, conditioned_on_parameters);
@@ -276,6 +357,7 @@ void EnsembleKalmanOutput::evaluate_smcfixed_part(const Parameters &conditioned_
 
 void EnsembleKalmanOutput::evaluate_smcadaptive_part_given_smcfixed(const Parameters &conditioned_on_parameters)
 {
+  this->run_if_pending(conditioned_on_parameters);
   if (!this->estimator->smcfixed_flag)
   {
     this->estimator->ensemble_kalman_evaluate_smcadaptive_part_given_smcfixed(this,conditioned_on_parameters);

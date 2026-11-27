@@ -119,6 +119,8 @@ public:
   void start_recording_diagnostics(const std::vector<std::string> &names);
   void note_diagnostics(const double* row, bool after_warm_up);
   size_t diagnostics_columns() const { return this->diagnostics ? this->diagnostics->names.size() : 0; }
+  bool records_signs() const { return this->signs_recorded; }
+  size_t fill_signs(std::vector<double> &destination) const;
   size_t fill_diagnostics_transposed(arma::mat &destination,
                                      size_t first_column) const;
   void diagnostics_names(std::vector<std::string> &names) const;
@@ -138,6 +140,10 @@ protected:
     size_t iterations_after_warm_up = 0;
   };
   std::unique_ptr<Diagnostics> diagnostics;
+  // (dev/plan.md 3.22 U9 R2) each stored iteration's sign, when a factor's
+  // estimate may be negative
+  bool signs_recorded = false;
+  std::vector<double> signs;
 
   bool records_adaptation = false;
   size_t adaptation_columns = 0;

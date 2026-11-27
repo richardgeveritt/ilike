@@ -192,6 +192,8 @@ void SMC::make_copy(const SMC &another)
   this->proposal_is_evaluated = another.proposal_is_evaluated;
   this->proposed_particles_inputted = another.proposed_particles_inputted;
   this->initial_particles = another.initial_particles;
+  this->initial_particles_once = another.initial_particles_once;
+  this->initial_from_first_target = another.initial_from_first_target;
   this->vector_variables = another.vector_variables;
   this->any_variables = another.any_variables;
   this->vector_variable_sizes = another.vector_variable_sizes;
@@ -728,6 +730,45 @@ void SMC::finish_weighting_from_summaries(const Index* index,
   assign_schedule_values(this->sequencer.schedule_parameters, chosen);
 }
 
+// (dev/plan.md 3.22 U4) particles to start the next run from
+void SMC::set_initial_particles(const std::vector<Parameters> &points, bool from_first_target)
+{
+  if (points.size() != this->number_of_particles)
+    Rcpp::stop("SMC: " + std::to_string(points.size()) + " starting particles were given for " +
+               std::to_string(this->number_of_particles) + " particles.");
+  this->initial_particles = points;
+  this->log_probabilities_of_initial_values = arma::colvec(points.size(), arma::fill::zeros);
+  this->proposed_particles_inputted = true;
+  this->initial_particles_once = true;
+  this->initial_from_first_target = from_first_target;
+}
+
+// after particles given by set_initial_particles are set up: with
+// from_first_target, each one's value at the first target (the schedule's
+// first point) is its previous target, so the first incremental weight is
+// the ratio of the next target to the first. They are used once.
+void SMC::finish_initial_particles(Particles &particles)
+{
+  if (!this->initial_particles_once)
+    return;
+  if (this->initial_from_first_target)
+  {
+    const Index* index = this->get_weighting_index();
+    if (index == NULL)
+      Rcpp::stop("SMC: starting particles from the first target need a weighting index.");
+    // (at the schedule's first point: the sequencer is already at the next)
+    double next = this->sequencer.last_value();
+    this->sequencer.set_last_value(this->sequencer.first_point());
+    for (size_t i = 0; i < particles.size(); ++i)
+      particles[i]->back().previous_target_evaluated = particles[i]->back().evaluate_likelihoods(index);
+    this->sequencer.set_last_value(next);
+  }
+  this->initial_particles.clear();
+  this->proposed_particles_inputted = false;
+  this->initial_particles_once = false;
+  this->initial_from_first_target = false;
+}
+
 void SMC::simulate_proposal(SMCOutput* current_state)
 {
   // Simulate from proposal.
@@ -745,6 +786,7 @@ void SMC::simulate_proposal(SMCOutput* current_state)
                           &this->proposals_to_transform_for,
                           &this->proposals_to_find_gradient_for,
                           this->sequencer.schedule_parameters);
+    this->finish_initial_particles(*next_particles);
   }
   
   current_state->back().initialise_weights();
@@ -787,6 +829,7 @@ void SMC::simulate_proposal(SMCOutput* current_state,
                           &this->proposals_to_find_gradient_for,
                           conditioned_on_parameters,
                           this->sequencer.schedule_parameters);
+    this->finish_initial_particles(*next_particles);
   }
   
   current_state->back().initialise_weights();

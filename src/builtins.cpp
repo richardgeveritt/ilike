@@ -1031,7 +1031,11 @@ static std::vector<Builtin> make_registry()
                    optional("exchange_below", T::Real, RecipeValue(),
                             "SMC^2: exchange for more members when the acceptance rate is below this").at_least(0.0),
                    optional("exchange_multiply", T::Real, RecipeValue(2.0), "SMC^2: the factor by which an exchange multiplies the members").at_least(1.0),
-                   optional("exchange_max", T::Integer, RecipeValue(), "SMC^2: the largest number of members after an exchange").at_least(1.0)};
+                   optional("exchange_max", T::Integer, RecipeValue(), "SMC^2: the largest number of members after an exchange").at_least(1.0),
+                   // (dev/plan.md 3.22 U9 R3b) correlated pseudo-marginal MCMC
+                   optional("correlated", T::Logical, RecipeValue(false),
+                            "MCMC: each member's random numbers from its own seed, and a proposal keeping all but refresh members' (correlated estimates)"),
+                   optional("refresh", T::Integer, RecipeValue(1.0), "MCMC with correlated = true: the number of members whose random numbers a proposal replaces").at_least(1.0)};
     table.push_back(b);
 
     b.name = "pf";

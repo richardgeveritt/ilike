@@ -69,7 +69,7 @@ ilike_pivot_longer <- function(output)
 {
   index_names = c("ExternalIndex", "ExternalTarget", "ExternalTargetParameters", "Target", "Time",
                   "NormalisingConstant", "ISESS", "TargetParameters", "Iteration", "Particle",
-                  "Chain", "AncestorIndex", "LogWeight")
+                  "Chain", "AncestorIndex", "LogWeight", "Sign")
   output = as.data.frame(output)
   is_index = names(output) %in% index_names
   value_names = names(output)[!is_index]
@@ -421,6 +421,14 @@ load_smc_output = function(results_directory,
       index$Time = time_val
       index$Iteration = point_iteration
       index$Chain = point_chain
+      # (dev/plan.md 3.22 U9 R2) signed pseudo-marginal MCMC: each point's sign
+      if ("signs" %in% names(h5f[[iter_grp_path]]))
+      {
+        sign_raw = as.numeric(h5f[[iter_grp_path]][["signs"]]$read())
+        if (length(sign_raw) != number_of_points)
+          stop("load_mcmc_output: the output holds ", length(sign_raw), " signs for ", number_of_points, " points.")
+        index$Sign = sign_raw
+      }
     }
     else
     {
@@ -880,4 +888,32 @@ load_mcmc_diagnostics = function(results_directory,
   for (name in grep("(^|\\.)divergent$", names(output), value = TRUE))
     output[[name]] <- output[[name]] != 0
   output
+}
+
+#' Posterior expectations from a signed pseudo-marginal MCMC run.
+#'
+#' A chain whose factor estimates may be negative (normaliser =
+#' estimate(..., debias = roulette(...) or block_poisson(...))) targets the absolute value of the
+#' estimated posterior and records each iteration's sign. The expectation of
+#' a function of the parameters under the posterior is then the mean of the
+#' function weighted by the signs (Lyne et al. 2015): sum(s_i f_i)/sum(s_i).
+#'
+#' @param output The output of load_mcmc_output, with its Sign column.
+#' @param parameter The name of a parameter.
+#' @param dimension Its element (default 1).
+#' @param f A function of the parameter's values (default: the identity).
+#' @param burn_in The number of first iterations of each chain to leave out.
+#' @return A list: the estimate, and the mean sign (near 0 makes the estimate unreliable).
+#' @export
+signed_mean <- function(output, parameter, dimension = 1, f = identity, burn_in = 0)
+{
+  if (!("Sign" %in% names(output)))
+    stop("signed_mean: the output has no Sign column (no factor estimate of the run could be negative).")
+  rows = output[(output$ParameterName == parameter) & (output$Dimension == dimension) & (output$Iteration > burn_in), , drop = FALSE]
+  if (nrow(rows) == 0)
+    stop("signed_mean: no values of ", parameter, "[", dimension, "] after the burn-in.")
+  s = rows$Sign
+  if (sum(s) == 0)
+    stop("signed_mean: the signs sum to zero, so the estimate is not defined.")
+  list(estimate = sum(s * f(rows$Value)) / sum(s), mean_sign = mean(s))
 }

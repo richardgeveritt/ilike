@@ -198,9 +198,14 @@ public:
       this->recipe.push_back(this->model_methods, "method");
     if (this->mfds_entry.size() > 0)
       this->recipe.push_back(this->mfds_entry, "mfds");
+    if (this->unnormalised_engines.size() > 0)
+      this->recipe.push_back(this->unnormalised_engines, "unnormalised_engines");
     if (this->unnormalised_entries.size() > 0)
-    {
       this->recipe.push_back(this->unnormalised_entries, "unnormalised");
+    {
+      // (the parameters of normalising constants not known or estimated: IS
+      // and SMC over them are refused; also those of distributions written in
+      // C++ or as blocks, dev/plan.md 3.22 U4)
       std::vector<std::string> names;
       for (const auto &kv : this->normaliser_parameters)
         names.push_back(kv.first);
@@ -332,13 +337,35 @@ private:
     // (dev/plan.md 3.22 U1) its generated functions, for the exchange move,
     // and whether its normaliser is estimated (normaliser = sav(…))
     std::string sweep, exact, potential;
+    std::string reverse_sweep;   // (the sites in reverse order: with sweep, a reversible kernel, for annealed exchange)
     bool estimated = false;
     // (dev/plan.md 3.22 U3b) replicates = R: x is R independent fields (R x n)
     double replicates = 1.0;
+    // (dev/plan.md 3.22 U4) the sweeps a draw by sweeps makes by default, and
+    // d log gamma/d beta (for gradient = estimate and ABC/SL summaries)
+    double default_sweeps = 100.0;
+    std::string statistic;
     // (dev/plan.md 3.22 U1b) gradient = estimate(…): the factor x_log_normaliser
     bool gradient_estimated = false;
   };
   std::vector<UnnormalisedStatement> unnormalised;
+  // (dev/plan.md 3.22 U4) distributions written as a block: x ~ unnormalised(…) { … },
+  // whose inner models (unnormalised_engines) the general engine runs
+  std::vector<std::string> block_variables;
+  // (dev/plan.md 3.22 U4 step 2b) blocks whose base measure is given by domain
+  // declarations (x[i] in {0, 1}): the domain, the declarations, and the terms
+  // that read one element, which make the base measure the independence model
+  struct DeclaredBlock
+  {
+    std::string x;
+    std::vector<double> domain;
+    std::vector<ModelStatement> declarations;
+    std::vector<ModelStatement> unary;
+    size_t factor_position = 0;
+  };
+  std::vector<DeclaredBlock> declared_blocks;
+  std::map<std::string, std::set<std::string>> generated_reads_pending;
+  RecipeValue unnormalised_engines = RecipeValue::list();
   std::map<std::string, std::string> normaliser_parameters;
   RecipeValue unnormalised_entries = RecipeValue::list();
   std::vector<std::string> finite_difference_gradients;
@@ -1590,7 +1617,7 @@ private:
       return false;
     std::string name_space = value["namespace"].as_string();
     std::string f = value["function"].as_string();
-    return (name_space.empty() || (name_space == "ilike")) && ((f == "ising") || (f == "potts"));
+    return (name_space.empty() || (name_space == "ilike")) && ((f == "ising") || (f == "potts") || (f == "unnormalised"));
   }
 
   // x ~ ising(beta, nb, nn) and x ~ potts(beta, q, nb, nn) (dev/plan.md
@@ -1603,10 +1630,841 @@ private:
   // and algorithms that would need Z are refused. Also generated: the
   // simulators of x given beta (heat-bath sweeps; coupling from the past for
   // ising).
+  // x ~ unnormalised(log = cpp::potential, given = [beta, …],
+  //                  simulate = exact(cpp::draw) | sweeps(cpp::sweep, m),
+  //                  reverse = cpp::reverse_sweep, statistic = cpp::statistic,
+  //                  base = distribution, n = sites, replicates = R,
+  //                  normaliser = sav(…), gradient = estimate(…))
+  // (dev/plan.md 3.22 U4, the C++ form): an unnormalised distribution given by
+  // its functions, with the signatures of the generated ones (potential:
+  // double f(const arma::mat &field, const Parameters &parameters, const Data &data),
+  // log gamma up to Z, read at the `given` parameters; sweep and reverse:
+  // void f(RandomNumberGenerator &rng, Parameters &parameters, const Data &data),
+  // one sweep of the field in parameters[x] in place, filling it from scratch
+  // when its size is wrong; draw: Parameters f(RandomNumberGenerator &rng,
+  // const Parameters &parameters, const Data &data), an exact draw of x;
+  // statistic: as potential, d log gamma/d beta). The statement adds the
+  // factor x_potential (log gamma(x | given), summed over replicates); a
+  // latent x also needs its base measure, base = (per element; log is then
+  // relative to it) with n sites. Every method of the built-in fields
+  // applies, each refusing if a function it needs is missing.
+  void expand_user_unnormalised(const RecipeValue &statement, const std::vector<ModelLoop> &loops)
+  {
+    const RecipeValue &value = statement["value"];
+    if (!loops.empty())
+      this->error(statement, "unnormalised(…) is the distribution of a whole variable: write it outside loops.");
+    if (kind_of(statement["target"]) != "name")
+      this->error(statement, "unnormalised(…)'s target is a whole variable (x ~ unnormalised(…), without an index).");
+    const std::string x = statement["target"]["name"].as_string();
+    Arguments arguments = this->split_arguments(value);
+    const bool has_block = statement.contains("body") && (statement["body"].size() > 0);
+    if (has_block && !arguments.has("log"))
+      return this->expand_block_unnormalised(statement);
+    this->allow_only(value, arguments, {"log", "given", "simulate", "reverse", "statistic", "base", "n", "replicates",
+                                        "normaliser", "gradient", "likelihood"}, 0);
+    if (!arguments.has("log"))
+      this->error(value, "unnormalised(…): log = cpp::potential, the log density up to its normalising constant, is needed.");
+    if (arguments.has("likelihood"))
+      this->error(arguments.named["likelihood"], "unnormalised(…, likelihood = …): ABC and synthetic likelihood with a distribution written in C++ "
+                                                  "are not written yet (the sbi simulator does not see the data).");
+    auto function = [&](const char *key) {
+      return arguments.has(key) ? this->cpp_function(arguments.named[key], std::string(key)) : std::string();
+    };
+    UnnormalisedStatement record;
+    record.variable = x;
+    record.kind = "unnormalised";
+    record.factor = x + "_potential";
+    record.potential = function("log");
+    record.reverse_sweep = function("reverse");
+    record.statistic = function("statistic");
+    if (arguments.has("simulate"))
+    {
+      const RecipeValue &simulate = arguments.named["simulate"];
+      Arguments inner = (kind_of(simulate) == "call") ? this->split_arguments(simulate) : Arguments();
+      std::string f = (kind_of(simulate) == "call") ? simulate["function"].as_string() : "";
+      arma::mat number;
+      if ((f == "exact") && (inner.positional.size() == 1))
+        record.exact = this->cpp_function(inner.positional[0], "exact(…)");
+      else if ((f == "sweeps") && (inner.positional.size() >= 1) && (inner.positional.size() <= 2))
+      {
+        record.sweep = this->cpp_function(inner.positional[0], "sweeps(…)");
+        if (inner.positional.size() == 2)
+        {
+          if (!this->numeric(inner.positional[1], number) || (number.n_elem != 1) || (number(0) < 1.0))
+            this->error(inner.positional[1], "sweeps(cpp::sweep, m): m is a number of sweeps of at least 1.");
+          record.default_sweeps = std::floor(number(0));
+        }
+      }
+      else
+        this->error(simulate, "unnormalised(…): simulate = exact(cpp::draw) or sweeps(cpp::sweep, m).");
+    }
+    // the parameters of the normalising constant
+    std::vector<RecipeValue> given_items;
+    if (arguments.has("given"))
+    {
+      const RecipeValue &given = arguments.named["given"];
+      if (kind_of(given) == "vector")
+        for (size_t k = 0; k < given["elements"].size(); ++k)
+          given_items.push_back(given["elements"][k]);
+      else
+        given_items.push_back(given);
+    }
+    for (const RecipeValue &item : given_items)
+    {
+      if ((kind_of(item) != "name") || this->data_names.count(item["name"].as_string()) || this->constant_names.count(item["name"].as_string()))
+        this->error(item, "unnormalised(…): given lists the parameters the normalising constant depends on (names of parameters).");
+      record.normaliser.push_back(item["name"].as_string());
+    }
+    bool observed = this->data_names.count(x) > 0;
+    double replicates = 1.0;
+    arma::mat number;
+    if (arguments.has("replicates"))
+    {
+      if (!this->numeric(arguments.named["replicates"], number) || (number.n_elem != 1) || (number(0) < 1.0) || (number(0) != std::floor(number(0))))
+        this->error(arguments.named["replicates"], "unnormalised(…): replicates is a whole number of at least 1, known when compiling.");
+      replicates = number(0);
+    }
+    record.replicates = replicates;
+    record.estimated = arguments.has("normaliser");
+    // the base measure of a latent x
+    if (has_block)
+    {
+      // (dev/plan.md 3.22 U4) the base measure written as statements: x ~
+      // unnormalised(log = …, …) { for (i in 1:n) x[i] ~ … }
+      if (arguments.has("base") || arguments.has("n"))
+        this->error(value, "unnormalised(log = …, …) { … }: the block gives " + x + "'s base measure, so base = … and n = … are not needed.");
+      if (observed)
+        this->error(statement, "unnormalised(log = …, …) { … }: " + x + " is data, so it needs no base measure (log is its log density up to the normalising constant).");
+      if (replicates > 1.0)
+        this->error(arguments.named["replicates"], "unnormalised(log = …, …) { … } with replicates: give the base measure with base = … and n = … for now.");
+      const RecipeValue &body = statement["body"];
+      for (size_t k = 0; k < body.size(); ++k)
+      {
+        this->check_block_statement(body[k], x, false);
+        this->collect_model_statement(body[k], std::vector<ModelLoop>());
+      }
+    }
+    else if (!observed)
+    {
+      if (!arguments.has("base") || !arguments.has("n"))
+        this->error(value, "unnormalised(…): " + x + " is latent (not data), so it needs its base measure, base = (a distribution per element), "
+                           "and its number of elements, n = … (log is the log density relative to the base measure).");
+      std::string n = this->ilike_text(arguments.named["n"]), base = this->ilike_text(arguments.named["base"]);
+      std::string text = (replicates > 1.0)
+        ? "ilike 1.0\nmodel {\n  for (ilike_r in 1:" + number_text(replicates) + ") for (ilike_site in 1:" + n + ") " + x + "[ilike_r, ilike_site] ~ " + base + "\n}\n"
+        : "ilike 1.0\nmodel {\n  for (ilike_site in 1:" + n + ") " + x + "[ilike_site] ~ " + base + "\n}\n";
+      RecipeValue tree = parse_ilike_language(text, this->file + " (the base measure of " + x + ")");
+      const RecipeValue &statements = tree["sections"][0]["statements"];
+      for (size_t k = 0; k < statements.size(); ++k)
+        this->collect_model_statement(statements[k], std::vector<ModelLoop>());
+    }
+    // the factor: log gamma(x | given), summed over replicates
+    std::string wrapper = "ilike_unnormalised_log_" + x;
+    std::string source = observed ? "data[" + quoted(x) + "]" : "parameters[" + quoted(x) + "]";
+    std::string code = "// log gamma(" + x + " | " + joined(record.normaliser, ", ") + "), the user's potential (dev/plan.md 3.22 U4)\n"
+                       "double " + wrapper + "(const Parameters &parameters, const Data &data)\n{\n"
+                       "  const arma::mat &x = " + source + ";\n";
+    if (replicates > 1.0)
+      code += "  double total = 0.0;\n  for (arma::uword r = 0; r < x.n_rows; ++r)\n    total += " + record.potential +
+              "(arma::mat(x.row(r).t()), parameters, data);\n  return total;\n}\n\n";
+    else
+      code += "  return " + record.potential + "(x, parameters, data);\n}\n\n";
+    this->deferred_function_code += code;
+    RecipeValue factor = RecipeValue::list();
+    factor.push_back(this->placeholder(wrapper, "evaluate_log_likelihood"), "evaluate_log_likelihood");
+    this->add_factor(statement, record.factor, factor);
+    std::set<std::string> reads(record.normaliser.begin(), record.normaliser.end());
+    if (!observed)
+      reads.insert(x);
+    this->generated_factor_reads[this->factor_numbers.at(record.factor)] = reads;
+    if (!record.estimated)
+      for (const std::string &parameter : record.normaliser)
+        this->normaliser_parameters[parameter] = x;
+    this->unnormalised.push_back(record);
+    // the methods
+    if (arguments.has("gradient"))
+    {
+      if (given_items.size() != 1)
+        this->error(arguments.named["gradient"], "gradient = estimate(…): the normalising constant must depend on one parameter (given = [beta]).");
+      this->gradient_factor(statement, arguments.named["gradient"], x, "unnormalised", given_items[0], record.sweep, record.exact, record.statistic);
+    }
+    if (arguments.has("normaliser"))
+      this->normaliser_factor(statement, arguments.named["normaliser"], x, "unnormalised", this->unnormalised.back(), record.sweep, record.exact,
+                              record.potential);
+  }
+
+  // (dev/plan.md 3.22 U4) a statement of the block of x ~ unnormalised(…) { … }:
+  // loops down to x[…] ~ distribution (the base measure) or, with terms,
+  // log += expression (a term of the log density). Returns the statement
+  // with each "log += e" written "factor x_potential += e".
+  RecipeValue check_block_statement(const RecipeValue &statement, const std::string &x, bool terms)
+  {
+    std::string keyword = statement.contains("keyword") ? statement["keyword"].as_string() : std::string();
+    if (keyword == "for")
+    {
+      RecipeValue output = statement;
+      RecipeValue body = RecipeValue::list();
+      const RecipeValue &inner = statement["body"];
+      for (size_t k = 0; k < inner.size(); ++k)
+        body.push_back(this->check_block_statement(inner[k], x, terms), "");
+      output.set("body", body);
+      return output;
+    }
+    std::string op = statement["operator"].as_string();
+    const RecipeValue &target = statement["target"];
+    std::string name = (kind_of(target) == "index") ? target["target"]["name"].as_string()
+                     : ((kind_of(target) == "name") ? target["name"].as_string() : std::string());
+    if ((op == "~") && keyword.empty() && (name == x))
+      return statement;
+    if (terms && (op == "in") && keyword.empty() && (name == x))
+      return statement;
+    if (terms && (op == "+=") && keyword.empty() && (kind_of(target) == "name") && (name == "log"))
+    {
+      RecipeValue output = statement;
+      RecipeValue named = target;
+      named.set("name", RecipeValue(x + "_potential"));
+      output.set("target", named);
+      output.set("keyword", RecipeValue("factor"));
+      return output;
+    }
+    this->error(statement, terms ? "the block of " + x + " ~ unnormalised(…) { … } holds " + x + "'s base measure (" + x +
+                                   "[i] ~ distribution, in loops) and the terms of its log density (log += expression)."
+                                 : "the block of " + x + " ~ unnormalised(log = …, …) { … } holds " + x + "'s base measure (" + x +
+                                   "[i] ~ distribution, in loops).");
+  }
+
+  // the leaves of a block (its statements inside the loops), with their loops
+  void block_leaves(const RecipeValue &statement, std::vector<ModelLoop> loops,
+                    std::vector<std::pair<RecipeValue, std::vector<ModelLoop>>> &leaves)
+  {
+    if (statement.contains("keyword") && (statement["keyword"].as_string() == "for"))
+    {
+      ModelLoop loop;
+      loop.index = statement["index"].as_string();
+      loop.from = statement["range"]["left"];
+      loop.to = statement["range"]["right"];
+      loops.push_back(loop);
+      const RecipeValue &body = statement["body"];
+      for (size_t k = 0; k < body.size(); ++k)
+        this->block_leaves(body[k], loops, leaves);
+      return;
+    }
+    leaves.push_back({statement, loops});
+  }
+
+  // (dev/plan.md 3.22 U4, step 2) x ~ unnormalised(simulate = sweeps(m), …) { … }:
+  // a distribution written as statements, its base measure (x[i] ~ …) and the
+  // terms of its log density (log += …), known up to its normalising
+  // constant, which depends on the parameters the statements read. The
+  // statements become model statements (x's prior or likelihood, and the
+  // factor x_potential), and its inner model is run by the general engine.
+  void expand_block_unnormalised(const RecipeValue &statement)
+  {
+    const RecipeValue &value = statement["value"];
+    const std::string x = statement["target"]["name"].as_string();
+    Arguments arguments = this->split_arguments(value);
+    this->allow_only(value, arguments, {"simulate", "normaliser"}, 0);
+    UnnormalisedStatement record;
+    record.variable = x;
+    record.kind = "block";
+    record.factor = x + "_potential";
+    if (arguments.has("simulate"))
+    {
+      const RecipeValue &simulate = arguments.named["simulate"];
+      arma::mat number;
+      if ((kind_of(simulate) == "call") && (simulate["function"].as_string() == "sweeps") && (simulate["arguments"].size() == 1) &&
+          this->numeric(simulate["arguments"][0], number) && (number.n_elem == 1) && (number(0) >= 1.0))
+        record.default_sweeps = std::floor(number(0));
+      else
+        this->error(simulate, "unnormalised(…) { … }: simulate = sweeps(m), m sweeps of the moves ilike makes for " + x + "'s elements.");
+    }
+    // the statements: x's base measure and the terms
+    const RecipeValue &body = statement["body"];
+    std::vector<RecipeValue> rewritten;
+    for (size_t k = 0; k < body.size(); ++k)
+      rewritten.push_back(this->check_block_statement(body[k], x, true));
+    std::vector<std::pair<RecipeValue, std::vector<ModelLoop>>> leaves;
+    for (const RecipeValue &st : rewritten)
+      this->block_leaves(st, std::vector<ModelLoop>(), leaves);
+    for (const auto &leaf : leaves)
+      if (leaf.first["operator"].as_string() == "in")
+        return this->expand_declared_block(statement, x, record, arguments, rewritten, leaves);
+    bool has_base = false, has_term = false;
+    std::set<std::string> read;
+    for (const auto &leaf : leaves)
+    {
+      const RecipeValue &st = leaf.first;
+      std::set<std::string> found;
+      this->read_parameters(st["value"], found);
+      if (kind_of(st["target"]) == "index")
+        for (size_t i = 0; i < st["target"]["indices"].size(); ++i)
+          this->read_parameters(st["target"]["indices"][i], found);
+      for (const ModelLoop &loop : leaf.second)
+      {
+        this->read_parameters(loop.from, found);
+        this->read_parameters(loop.to, found);
+      }
+      for (const ModelLoop &loop : leaf.second)
+        found.erase(loop.index);
+      found.erase(x);
+      if (st["operator"].as_string() == "~")
+      {
+        has_base = true;
+        if (!found.empty())
+          this->error(st, "the base measure of " + x + " reads " + *found.begin() + ": in the block form the base measure is fixed, "
+                          "and the parameters enter through the terms (log += …), for now.");
+      }
+      else
+        has_term = true;
+      read.insert(found.begin(), found.end());
+    }
+    if (!has_base)
+      this->error(statement, x + " ~ unnormalised(…) { … }: the block needs " + x + "'s base measure (e.g. for (i in 1:n) " + x + "[i] ~ bern(0.5)).");
+    if (!has_term)
+      this->error(statement, x + " ~ unnormalised(…) { … }: the block has no terms (log += …), so " + x + "'s distribution is its base measure: "
+                             "write the base measure in the model statements.");
+    if (read.empty())
+      this->error(statement, x + " ~ unnormalised(…) { … }: the terms read no parameters, so the normalising constant is a constant and cancels: "
+                             "write them in the model statements (factor name += …).");
+    record.normaliser = std::vector<std::string>(read.begin(), read.end());
+    for (const RecipeValue &st : rewritten)
+      this->collect_model_statement(st, std::vector<ModelLoop>());
+    record.estimated = arguments.has("normaliser");
+    if (!record.estimated)
+      for (const std::string &parameter : record.normaliser)
+        this->normaliser_parameters[parameter] = x;
+    this->unnormalised.push_back(record);
+    this->block_variables.push_back(x);
+    if (arguments.has("normaliser"))
+      this->normaliser_factor(statement, arguments.named["normaliser"], x, "block", this->unnormalised.back(), "", "", "");
+  }
+
+  // the index expressions (as text) of the elements of x an expression reads,
+  // with one of each ("" for the whole of x)
+  void element_reads(const RecipeValue &node, const std::string &x, std::map<std::string, RecipeValue> &found) const
+  {
+    if (!node.is_list())
+      return;
+    if ((kind_of(node) == "index") && (kind_of(node["target"]) == "name") && (node["target"]["name"].as_string() == x))
+    {
+      std::string text;
+      for (size_t i = 0; i < node["indices"].size(); ++i)
+        text += (i > 0 ? ", " : "") + this->ilike_text(node["indices"][i]);
+      found[text] = node["indices"];
+      return;
+    }
+    if ((kind_of(node) == "name") && (node["name"].as_string() == x))
+    {
+      found[""] = RecipeValue::list();
+      return;
+    }
+    for (size_t k = 0; k < node.size(); ++k)
+      this->element_reads(node[k], x, found);
+  }
+
+  // the expression with each element of x replaced by the number v
+  RecipeValue with_element_value(const RecipeValue &node, const std::string &x, double v) const
+  {
+    if (!node.is_list())
+      return node;
+    if ((kind_of(node) == "index") && (kind_of(node["target"]) == "name") && (node["target"]["name"].as_string() == x))
+    {
+      RecipeValue number = RecipeValue::list();
+      number.push_back(RecipeValue("number"), "expression");
+      number.push_back(RecipeValue(v), "value");
+      if (node.contains("line"))
+      {
+        number.push_back(node["line"], "line");
+        number.push_back(node["column"], "column");
+      }
+      return number;
+    }
+    RecipeValue output = RecipeValue::list();
+    std::vector<std::string> names = node.names();
+    for (size_t k = 0; k < node.size(); ++k)
+      output.push_back(this->with_element_value(node[k], x, v), (k < names.size()) ? names[k] : std::string());
+    return output;
+  }
+
+  // a block statement with only its terms that read several elements of x
+  // (null if none is left)
+  RecipeValue keep_pairwise(const RecipeValue &statement, const std::string &x)
+  {
+    if (statement.contains("keyword") && (statement["keyword"].as_string() == "for"))
+    {
+      RecipeValue body = RecipeValue::list();
+      const RecipeValue &inner = statement["body"];
+      for (size_t k = 0; k < inner.size(); ++k)
+      {
+        RecipeValue kept = this->keep_pairwise(inner[k], x);
+        if (!kept.is_null())
+          body.push_back(kept, "");
+      }
+      if (body.size() == 0)
+        return RecipeValue();
+      RecipeValue output = statement;
+      output.set("body", body);
+      return output;
+    }
+    if (statement["operator"].as_string() != "+=")
+      return RecipeValue();
+    std::map<std::string, RecipeValue> elements;
+    this->element_reads(statement["value"], x, elements);
+    return (elements.size() > 1) ? statement : RecipeValue();
+  }
+
+  // (dev/plan.md 3.22 U4 step 2b) x ~ unnormalised(…) { for (i in 1:n) x[i] in
+  // {0, 1}; log += … }: the elements' domain is declared, and the terms are
+  // sorted by the elements of x each reads. A term that reads one element is
+  // unary: the unary terms on each element make the base measure the
+  // independence model, p(x_i) proportional to exp(the sum of x_i's unary
+  // terms) over the domain, normalised by summing over it (exactly: nothing is
+  // estimated). The terms that read several elements are the potential, whose
+  // normalising constant is left: gamma(x)/Z = p(x) exp(potential(x))/Z', with
+  // Z' = Z/prod_i z_i (the z_i computed exactly), which depends on the
+  // parameters of all the terms.
+  void expand_declared_block(const RecipeValue &statement, const std::string &x, UnnormalisedStatement record,
+                             Arguments &arguments, const std::vector<RecipeValue> &rewritten,
+                             const std::vector<std::pair<RecipeValue, std::vector<ModelLoop>>> &leaves)
+  {
+    if (!this->data_names.count(x))
+      this->error(statement, x + " ~ unnormalised(…) { " + x + "[i] in … }: domain declarations are for data for now; for a latent " + x +
+                             ", give its base measure (" + x + "[i] ~ …) with the terms written as log += ….");
+    DeclaredBlock block;
+    block.x = x;
+    std::set<std::string> read;
+    for (const auto &leaf : leaves)
+    {
+      const RecipeValue &st = leaf.first;
+      const std::string op = st["operator"].as_string();
+      ModelStatement copy;
+      copy.op = op;
+      copy.node = st;
+      copy.loops = leaf.second;
+      copy.value = st["value"];
+      copy.indices = (kind_of(st["target"]) == "index") ? st["target"]["indices"] : RecipeValue::list();
+      if (op == "~")
+        this->error(st, "the block of " + x + " declares the domain of its elements (" + x + "[i] in …), so its base measure is the "
+                        "independence model of the terms that read one element: give either domains or a base measure (" + x + "[i] ~ …), not both, for now.");
+      if (op == "in")
+      {
+        arma::mat number;
+        std::vector<double> domain;
+        const RecipeValue &value = st["value"];
+        if (kind_of(value) == "vector")
+        {
+          for (size_t k = 0; k < value["elements"].size(); ++k)
+          {
+            if (!this->numeric(value["elements"][k], number) || (number.n_elem != 1))
+              this->error(value, x + "[…] in {…}: the values are numbers known when compiling.");
+            domain.push_back(number(0));
+          }
+        }
+        else if ((kind_of(value) == "binary") && (value["operator"].as_string() == ":"))
+        {
+          arma::mat a, b;
+          if (!this->numeric(value["left"], a) || !this->numeric(value["right"], b) || (a.n_elem != 1) || (b.n_elem != 1) || (b(0) < a(0)))
+            this->error(value, x + "[…] in a:b: a and b are numbers known when compiling, a ≤ b.");
+          for (double v = a(0); v <= b(0) + 1e-9; v += 1.0)
+            domain.push_back(v);
+        }
+        else
+          this->error(value, x + "[…] in …: a set of values {v1, v2, …} or a range a:b.");
+        if (domain.size() < 2)
+          this->error(value, x + "[…] in …: the domain has at least two values.");
+        if (!block.domain.empty() && (domain != block.domain))
+          this->error(value, "the elements of " + x + " have one domain for now.");
+        block.domain = domain;
+        copy.variable = x;
+        block.declarations.push_back(copy);
+        continue;
+      }
+      // a term: the elements of x it reads
+      std::map<std::string, RecipeValue> elements;
+      this->element_reads(st["value"], x, elements);
+      if (elements.empty())
+        this->error(st, "this term reads no element of " + x + ", so it is not part of " + x + "'s distribution.");
+      if (elements.count(""))
+        this->error(st, "this term reads the whole of " + x + "; write its elements, " + x + "[i].");
+      std::set<std::string> found;
+      this->read_parameters(st["value"], found);
+      for (const ModelLoop &loop : leaf.second) { this->read_parameters(loop.from, found); this->read_parameters(loop.to, found); }
+      for (const ModelLoop &loop : leaf.second) found.erase(loop.index);
+      found.erase(x);
+      if (elements.size() == 1)
+      {
+        copy.variable = x + "_independence";
+        copy.observed = true;
+        copy.indices = elements.begin()->second;  // (the element it reads)
+        block.unary.push_back(copy);
+        this->generated_reads_pending[x].insert(found.begin(), found.end());
+      }
+      else
+        read.insert(found.begin(), found.end());
+    }
+    // the potential: the terms that read several elements, as x_potential
+    bool has_pairwise = false;
+    for (const RecipeValue &st : rewritten)
+    {
+      RecipeValue only = this->keep_pairwise(st, x);
+      if (!only.is_null())
+      {
+        this->collect_model_statement(only, std::vector<ModelLoop>());
+        has_pairwise = true;
+      }
+    }
+    // the independence model's factor (its code is made with the model code)
+    this->add_factor(statement, x + "_independence", RecipeValue::list());
+    block.factor_position = this->factor_numbers.at(x + "_independence") - 1;
+    this->generated_factor_reads[block.factor_position + 1] = this->generated_reads_pending[x];
+    this->declared_blocks.push_back(block);
+    // the normalising constant left, Z' = Z/prod_i z_i, is the expectation of
+    // exp(potential) under the independence model, so it depends on the
+    // parameters of the unary terms as well as the potential's
+    if (has_pairwise)
+      read.insert(this->generated_reads_pending[x].begin(), this->generated_reads_pending[x].end());
+    record.normaliser = std::vector<std::string>(read.begin(), read.end());
+    if (!has_pairwise || record.normaliser.empty())
+    {
+      // no unknown normalising constant: the independence model (times the
+      // exponential of terms that read no parameters) is all of it
+      if (arguments.has("normaliser"))
+        this->error(arguments.named["normaliser"], x + "'s normalising constant depends on no parameter once its terms that read one element "
+                                                   "are in its base measure, so normaliser = … is not needed.");
+      return;
+    }
+    record.estimated = arguments.has("normaliser");
+    if (!record.estimated)
+      for (const std::string &parameter : record.normaliser)
+        this->normaliser_parameters[parameter] = x;
+    this->unnormalised.push_back(record);
+    this->block_variables.push_back(x);
+    if (arguments.has("normaliser"))
+      this->normaliser_factor(statement, arguments.named["normaliser"], x, "block", this->unnormalised.back(), "", "", "");
+  }
+
+  // the code of the independence model of a declared block: its log density
+  // (x read from the data, or from the parameters in the inner model) and,
+  // for the inner model, a draw given the parameters
+  void independence_functions(const DeclaredBlock &block, const std::string &log_name, const std::string &simulate_name, bool from_parameters)
+  {
+    const std::string &x = block.x;
+    const size_t K = block.domain.size();
+    // the size of x, from the declarations' loops
+    std::string rows = "1", cols = "1";
+    for (const ModelStatement &st : block.declarations)
+    {
+      CodeContext size_context;
+      size_context.prior = true;
+      for (size_t i = 0; i < st.indices.size() && i < 2; ++i)
+      {
+        std::string extent;
+        const RecipeValue &index = st.indices[i];
+        if (kind_of(index) == "name")
+          for (const ModelLoop &loop : st.loops)
+            if (loop.index == index["name"].as_string())
+              extent = "(int)" + this->scalar_code(loop.to, size_context);
+        if (extent.empty())
+        {
+          arma::mat number;
+          if (!this->numeric(index, number))
+            this->error(st.node, "an index of " + x + " in its domain declarations is a loop index or a number.");
+          extent = std::to_string((int)number(0));
+        }
+        std::string &dimension = (i == 0) ? rows : cols;
+        dimension = "std::max(" + dimension + ", " + extent + ")";
+      }
+    }
+    std::string u_body = "const arma::uword ilike_rows = (arma::uword)(" + rows + "), ilike_cols = (arma::uword)(" + cols + ");\n"
+                         "arma::mat ilike_U(ilike_rows * ilike_cols, " + std::to_string(K) + ", arma::fill::zeros);\n";
+    for (const ModelStatement &st : block.unary)
+    {
+      // (as the prior's code: data through the generated globals, since the
+      // base measure's functions have no data argument)
+      CodeContext context;
+      context.prior = true;
+      for (const ModelLoop &loop : st.loops) context.indices.insert(loop.index);
+      Hoist hoist;
+      context.hoist = &hoist;
+      std::string element;
+      if (st.indices.size() == 1)
+        element = "(arma::uword)((int)(" + this->scalar_code(st.indices[0], context) + ") - 1)";
+      else if (st.indices.size() == 2)
+        element = "(arma::uword)(((int)(" + this->scalar_code(st.indices[0], context) + ") - 1) + ilike_rows * ((int)(" +
+                  this->scalar_code(st.indices[1], context) + ") - 1))";
+      else
+        this->error(st.node, "an element of " + x + " has one or two indices.");
+      std::string body = "{\nconst arma::uword ilike_e = " + element + ";\nif (ilike_e >= ilike_U.n_rows) throw ilike_model_outside(\"the independence model: an element outside its variable\");\n";
+      for (size_t k = 0; k < K; ++k)
+      {
+        ModelStatement valued = st;
+        valued.value = this->with_element_value(st.value, x, block.domain[k]);
+        body += "ilike_U(ilike_e, " + std::to_string(k) + ") += " + this->term_code(valued, context) + ";\n";
+      }
+      body += "}\n";
+      CodeContext fresh;
+      fresh.prior = true;
+      u_body += "{\n" + hoist.declarations + this->loops_code(st, fresh, body, "") + "}\n";
+    }
+    std::string values = "const double ilike_values[" + std::to_string(K) + "] = {";
+    for (size_t k = 0; k < K; ++k)
+      values += (k > 0 ? ", " : "") + number_text(block.domain[k]);
+    values += "};\n";
+    auto indent = [](const std::string &body) {
+      std::string out, line;
+      std::stringstream lines(body);
+      while (std::getline(lines, line)) out += "  " + line + "\n";
+      return out;
+    };
+    std::string source = from_parameters ? "parameters[" + quoted(x) + "]" : "data[" + quoted(x) + "]";
+    std::string log_body = u_body + values +
+      "const arma::mat &ilike_x = " + source + ";\n"
+      "if (ilike_x.n_elem != ilike_U.n_rows) throw ilike_model_outside(\"the independence model: an element outside its variable\");\n"
+      "double log_density = 0.0;\n"
+      "for (arma::uword e = 0; e < ilike_U.n_rows; ++e)\n{\n"
+      "  double m = ilike_U(e, 0);\n  for (arma::uword k = 1; k < ilike_U.n_cols; ++k) m = std::max(m, ilike_U(e, k));\n"
+      "  double total = 0.0;\n  for (arma::uword k = 0; k < ilike_U.n_cols; ++k) total += std::exp(ilike_U(e, k) - m);\n"
+      "  int found = -1;\n  for (arma::uword k = 0; k < ilike_U.n_cols; ++k) if (ilike_x(e) == ilike_values[k]) found = (int)k;\n"
+      "  if (found < 0) return -std::numeric_limits<double>::infinity();\n"
+      "  log_density += ilike_U(e, found) - m - std::log(total);\n}\nreturn log_density;\n";
+    std::string signature = from_parameters ? "(const Parameters &parameters)" : "(const Parameters &parameters, const Data &data)";
+    this->deferred_function_code += "// the independence model of " + x + ": its terms that read one element, normalised over its domain (dev/plan.md 3.22 U4 step 2b)\n"
+                                    "double " + log_name + signature + "\n{\n  try\n  {\n" + indent(log_body) +
+                                    "  }\n  catch (const ilike_model_outside &)\n  {\n    return -std::numeric_limits<double>::infinity();\n  }\n}\n\n";
+    if (simulate_name.empty())
+      return;
+    std::string simulate_body = "const Parameters &parameters = ilike_given;\n" + u_body + values +
+      "arma::mat ilike_draw(ilike_rows, ilike_cols);\n"
+      "for (arma::uword e = 0; e < ilike_U.n_rows; ++e)\n{\n"
+      "  double m = ilike_U(e, 0);\n  for (arma::uword k = 1; k < ilike_U.n_cols; ++k) m = std::max(m, ilike_U(e, k));\n"
+      "  double total = 0.0;\n  for (arma::uword k = 0; k < ilike_U.n_cols; ++k) total += std::exp(ilike_U(e, k) - m);\n"
+      "  double u = runif(rng) * total, c = 0.0;\n  arma::uword chosen = ilike_U.n_cols - 1;\n"
+      "  for (arma::uword k = 0; k < ilike_U.n_cols; ++k) { c += std::exp(ilike_U(e, k) - m); if (u < c) { chosen = k; break; } }\n"
+      "  ilike_draw(e) = ilike_values[chosen];\n}\n"
+      "Parameters ilike_output;\nilike_output[" + quoted(x) + "] = ilike_draw;\nreturn ilike_output;\n";
+    this->deferred_function_code += "Parameters " + simulate_name + "(RandomNumberGenerator &rng, const Parameters &ilike_given)\n{\n  try\n  {\n" +
+                                    indent(simulate_body) + "  }\n  catch (const ilike_model_outside &)\n  {\n    Rcpp::stop(\"the independence model of " + x +
+                                    ": an index is outside its variable.\");\n  }\n}\n\n";
+  }
+
+  // (dev/plan.md 3.22 U4) the inner model of each block, for the general
+  // engine: x as a parameter with its base measure (a prior factor, simulated
+  // given the parameters), the terms (a likelihood factor reading x from the
+  // parameters), and the moves on x's elements (gibbs on each element in
+  // turn: one sweep per iteration). Its algorithm is prepared by the R binding.
+  void build_block_engines()
+  {
+    // (step 2b) the outer factor of each declared block: its independence model
+    for (const DeclaredBlock &block : this->declared_blocks)
+    {
+      const std::string name = "ilike_unnormalised_independence_" + block.x;
+      this->independence_functions(block, name, "", false);
+      RecipeValue factor = RecipeValue::list();
+      factor.push_back(this->placeholder(name, "evaluate_log_likelihood"), "evaluate_log_likelihood");
+      this->factor_entries[block.factor_position] = factor;
+    }
+    for (const std::string &x : this->block_variables)
+    {
+      const DeclaredBlock *declared = NULL;
+      for (const DeclaredBlock &block : this->declared_blocks)
+        if (block.x == x)
+          declared = &block;
+      const UnnormalisedStatement *record = NULL;
+      for (const UnnormalisedStatement &r : this->unnormalised)
+        if (r.variable == x)
+          record = &r;
+      const bool observed = this->data_names.count(x) > 0;
+      std::vector<ModelStatement> base, terms;
+      for (const ModelStatement &st : this->model_statements)
+      {
+        if ((st.op == "~") && (st.variable == x))
+        {
+          base.push_back(st);
+          base.back().observed = false;
+        }
+        else if ((st.op == "+=") && (st.variable == record->factor))
+          terms.push_back(st);
+      }
+      // x read from the parameters while the inner code is made
+      if (observed)
+        this->data_names.erase(x);
+      auto indent = [](const std::string &body) {
+        std::string out, line;
+        std::stringstream lines(body);
+        while (std::getline(lines, line)) out += "  " + line + "\n";
+        return out;
+      };
+      const std::string catch_text = "  catch (const ilike_model_outside &)\n  {\n    return -std::numeric_limits<double>::infinity();\n  }\n";
+      // the base measure: its log density and a draw
+      std::string log_body = "double log_density = 0.0;\n";
+      std::string rows = "1", cols = "1";
+      if (!declared)
+        this->variable_extent(x, rows, cols);
+      std::string simulate_body = "Parameters parameters;\nparameters[" + quoted(x) + "] = arma::mat(" + rows + ", " + cols + ", arma::fill::zeros);\n";
+      for (const ModelStatement &st : (declared ? std::vector<ModelStatement>() : base))
+      {
+        if (whole_target(st.value["function"].as_string()))
+          this->error(st.node, "the base measure of " + x + " in a block is a distribution per element (" + x + "[i] ~ …).");
+        CodeContext loop_context;
+        loop_context.prior = true;
+        for (const ModelLoop &loop : st.loops) loop_context.indices.insert(loop.index);
+        Hoist hoist;
+        CodeContext log_context = loop_context;
+        log_context.hoist = &hoist;
+        std::string target = this->target_code(st, log_context, false);
+        CodeContext fresh;
+        fresh.prior = true;
+        log_body += "{\n" + hoist.declarations + this->loops_code(st, fresh, "log_density += " + this->density_code(st, target, log_context) + ";\n", "") + "}\n";
+        std::string assign = this->target_code(st, loop_context, true) + " = " + this->random_code(st, loop_context) + ";\n";
+        CodeContext fresh2;
+        fresh2.prior = true;
+        simulate_body += this->loops_code(st, fresh2, assign, "");
+      }
+      log_body += "return log_density;\n";
+      simulate_body += "return parameters;\n";
+      const std::string base_log = "ilike_unnormalised_base_log_" + x;
+      const std::string base_simulate = "ilike_unnormalised_base_simulate_" + x;
+      if (declared)
+        this->independence_functions(*declared, base_log, base_simulate, true);
+      else
+      {
+        this->deferred_function_code += "// the base measure of " + x + " (dev/plan.md 3.22 U4)\ndouble " + base_log + "(const Parameters &parameters)\n{\n  try\n  {\n" +
+                                        indent(log_body) + "  }\n" + catch_text + "}\n\n";
+        this->deferred_function_code += "Parameters " + base_simulate + "(RandomNumberGenerator &rng, const Parameters &ilike_given)\n{\n" + indent(simulate_body) + "}\n\n";
+      }
+      // the terms
+      std::string term_body = "double log_density = 0.0;\n";
+      for (const ModelStatement &st : terms)
+      {
+        CodeContext context;
+        for (const ModelLoop &loop : st.loops) context.indices.insert(loop.index);
+        Hoist hoist;
+        context.hoist = &hoist;
+        std::string statement_body = "log_density += " + this->term_code(st, context) + ";\n";
+        CodeContext fresh;
+        term_body += "{\n" + hoist.declarations + this->loops_code(st, fresh, statement_body, "") + "}\n";
+      }
+      term_body += "return log_density;\n";
+      const std::string terms_function = "ilike_unnormalised_terms_" + x;
+      this->deferred_function_code += "// the terms of the log density of " + x + " (dev/plan.md 3.22 U4)\ndouble " + terms_function +
+                                      "(const Parameters &parameters, const Data &data)\n{\n  try\n  {\n" + indent(term_body) + "  }\n" + catch_text + "}\n\n";
+      RecipeValue factors = RecipeValue::list();
+      RecipeValue base_factor = RecipeValue::list();
+      base_factor.push_back(this->placeholder(base_log, "evaluate_log_prior"), "evaluate_log_prior");
+      base_factor.push_back(this->placeholder(base_simulate, "simulate_prior_given"), "simulate_prior_given");
+      RecipeValue term_factor = RecipeValue::list();
+      term_factor.push_back(this->placeholder(terms_function, "evaluate_log_likelihood"), "evaluate_log_likelihood");
+      // their plates (as the outer model's factors have): a gibbs update of
+      // one element evaluates only the terms that read it, so a sweep costs
+      // O(n) rather than O(n^2) (dev/plan.md 3.22 U4, C297)
+      {
+        std::vector<const ModelStatement*> base_statements, term_statements;
+        for (const ModelStatement &st : base) base_statements.push_back(&st);
+        for (const ModelStatement &st : terms) term_statements.push_back(&st);
+        const std::string base_suffix = "unnormalised_base_" + x, terms_suffix = "unnormalised_terms_" + x;
+        const bool base_plate = !declared && this->plate_possible(base_statements), terms_plate = this->plate_possible(term_statements);
+        if (base_plate)
+          this->generate_plate(base_suffix, base_statements, true);
+        if (terms_plate)
+          this->generate_plate(terms_suffix, term_statements, false);
+        RecipeValue variables = RecipeValue::list();
+        for (const std::string &name : this->plate_variable_names)
+          variables.push_back(RecipeValue(name));
+        if (base_plate)
+        {
+          RecipeValue entry = this->plate_entry(base_suffix, x + "_base");
+          entry.push_back(variables, "variables");
+          base_factor.push_back(entry, "plate");
+        }
+        if (terms_plate)
+        {
+          RecipeValue entry = this->plate_entry(terms_suffix, x + "_terms");
+          entry.push_back(variables, "variables");
+          term_factor.push_back(entry, "plate");
+        }
+      }
+      factors.push_back(base_factor, "");
+      factors.push_back(term_factor, "");
+
+      // the moves: gibbs on each element of x, in the base measure's loops
+      std::string text = "ilike 1.0\nalgorithm ilike_engine {\n";
+      size_t number = 0;
+      if (declared)
+      {
+        // gibbs on each declared element, over its domain
+        std::string values = "[";
+        for (size_t k = 0; k < declared->domain.size(); ++k)
+          values += (k > 0 ? ", " : "") + number_text(declared->domain[k]);
+        values += "]";
+        for (const ModelStatement &st : declared->declarations)
+        {
+          std::string loops_text;
+          for (const ModelLoop &loop : st.loops)
+            loops_text += "for (" + loop.index + " in " + this->ilike_text(loop.from) + ":" + this->ilike_text(loop.to) + ") ";
+          std::string element = x + "[";
+          for (size_t i = 0; i < st.indices.size(); ++i)
+            element += (i > 0 ? ", " : "") + this->ilike_text(st.indices[i]);
+          element += "]";
+          ++number;
+          text += "  " + loops_text + "move ilike_sweep_" + std::to_string(number) + " = gibbs(" + element + ", values = " + values + ")\n";
+        }
+      }
+      for (const ModelStatement &st : (declared ? std::vector<ModelStatement>() : base))
+      {
+        std::string f = st.value["function"].as_string();
+        if ((f != "bern") && (f != "binom") && (f != "categorical") && (f != "pois") && (f != "geom") && (f != "negbinom"))
+          this->error(st.node, "the general engine moves " + x + "'s elements by gibbs moves, so its base measure is a discrete "
+                               "distribution per element (bern, binom, categorical, …) for now.");
+        std::string loops_text;
+        for (const ModelLoop &loop : st.loops)
+          loops_text += "for (" + loop.index + " in " + this->ilike_text(loop.from) + ":" + this->ilike_text(loop.to) + ") ";
+        std::string element = x + "[";
+        for (size_t i = 0; i < st.indices.size(); ++i)
+          element += (i > 0 ? ", " : "") + this->ilike_text(st.indices[i]);
+        element += "]";
+        ++number;
+        text += "  " + loops_text + "move ilike_sweep_" + std::to_string(number) + " = gibbs(" + element + ")\n";
+      }
+      text += "}\n";
+      RecipeValue tree = parse_ilike_language(text, this->file + " (the moves of the general engine of " + x + ")");
+      RecipeValue section = tree["sections"][0];
+      // (the moves evaluate every inner factor; x is a parameter there)
+      std::vector<bool> was_observed;
+      for (ModelStatement &st : this->model_statements)
+      {
+        was_observed.push_back(st.observed);
+        if ((st.op == "~") && (st.variable == x))
+          st.observed = false;
+      }
+      std::map<size_t, std::set<std::string>> outer_reads;
+      std::swap(outer_reads, this->generated_factor_reads);
+      this->lowering_inner_algorithm = true;
+      RecipeValue algorithm = this->build_algorithm(section);
+      this->lowering_inner_algorithm = false;
+      std::swap(outer_reads, this->generated_factor_reads);
+      for (size_t k = 0; k < this->model_statements.size(); ++k)
+        this->model_statements[k].observed = was_observed[k];
+      if (observed)
+        this->data_names.insert(x);
+
+      RecipeValue inner = RecipeValue::list();
+      inner.push_back(factors, "factor");
+      RecipeValue algorithms = RecipeValue::list();
+      algorithms.push_back(algorithm, "main");
+      inner.push_back(algorithms, "algorithms");
+      RecipeValue engine = RecipeValue::list();
+      engine.push_back(inner, "inner");
+      engine.push_back(RecipeValue(record->normaliser), "normaliser");
+      this->unnormalised_engines.push_back(engine, x);
+    }
+  }
+
   void expand_unnormalised(const RecipeValue &statement, const std::vector<ModelLoop> &loops)
   {
     const RecipeValue &value = statement["value"];
     std::string kind = value["function"].as_string();
+    if (kind == "unnormalised")
+      return this->expand_user_unnormalised(statement, loops);
     if (!loops.empty())
       this->error(statement, kind + "(…) is the distribution of a whole field: write it outside loops (x ~ " + kind + "(…)).");
     if (kind_of(statement["target"]) != "name")
@@ -1621,6 +2479,8 @@ private:
     allowed.insert("gradient");
     allowed.insert("replicates");
     allowed.insert("likelihood");
+    if (kind == "ising")
+      allowed.insert("field");
     this->allow_only(value, arguments, allowed, order.size());
     std::map<std::string, RecipeValue> given;
     for (size_t k = 0; k < arguments.positional.size(); ++k)
@@ -1696,6 +2556,40 @@ private:
     }
     std::string beta = this->ilike_text(given["beta"]);
     std::string factor = x + "_potential";
+    // (dev/plan.md 3.22 U4, C302) field = h: an external field, in the spin
+    // convention, adding h Σ_i s_i (s = 2x - 1) to the log density; h is a
+    // number or an expression (one field for every site), or a vector with one
+    // value per site (data given as values with several elements, or a
+    // parameter its statements index)
+    RecipeValue field;
+    bool field_per_site = false;
+    std::string field_vector;
+    if (given.count("field"))
+    {
+      field = given["field"];
+      given.erase("field");
+      if (kind_of(field) == "name")
+      {
+        const std::string name = field["name"].as_string();
+        for (const auto &item : this->literal_data)
+          if ((item.first == name) && (item.second.as_matrix().n_elem > 1))
+            field_per_site = true;
+        for (const ModelStatement &st : this->model_statements)
+          if ((st.variable == name) && (st.op == "~") && ((st.indices.size() > 0) || whole_target(st.value["function"].as_string())))
+            field_per_site = true;
+        if (field_per_site)
+          field_vector = name;
+      }
+      if (!likelihood_method.is_null())
+        this->error(likelihood_method, "ising(…, field = …, likelihood = …): simulation-based inference with an external field is not written yet "
+                                       "(its summary would need the sum of the spins as well).");
+      if (!gradient_method.is_null())
+        this->error(gradient_method, "ising(…, field = …, gradient = …): the estimated gradient uses the statistic of beta alone; "
+                                     "with an external field it is not written yet.");
+    }
+    std::string field_text;
+    if (!field.is_null())
+      field_text = field_per_site ? field_vector + "[ilike_site]" : "(" + this->ilike_text(field) + ")";
 
     // the statements, written in ilike and parsed (with replicates, x is
     // indexed [replicate, site], and the potential has one term per replicate,
@@ -1720,12 +2614,15 @@ private:
     std::string text;
     if (!replicated)
       text = "ilike 1.0\nmodel {\n  for (ilike_site in 1:" + sites + ") " + x + "[ilike_site] ~ " + base + "\n" +
-             "  for (ilike_site in 1:" + sites + ") factor " + factor + " += (" + beta + ") / 2 * " + potential + "\n}\n";
+             "  for (ilike_site in 1:" + sites + ") factor " + factor + " += (" + beta + ") / 2 * " + potential +
+             (field_text.empty() ? std::string() : " + " + field_text + " * (2 * " + site("ilike_site") + " - 1)") + "\n}\n";
     else
       text = "ilike 1.0\nmodel {\n  for (ilike_r in 1:" + number_text(replicates) + ") for (ilike_site in 1:" + sites + ") " + site("ilike_site") +
              " ~ " + base + "\n" +
              "  for (ilike_r in 1:" + number_text(replicates) + ") factor " + factor + " += (" + beta + ") / 2 * sum(ilike_site in 1:" + sites +
-             ", " + potential + ")\n}\n";
+             ", " + potential + ")" +
+             (field_text.empty() ? std::string() : " + sum(ilike_site in 1:" + sites + ", " + field_text + " * (2 * " + site("ilike_site") + " - 1))") +
+             "\n}\n";
     if (likelihood_method.is_null())
     {
       RecipeValue tree = parse_ilike_language(text, this->file + " (" + kind + " of " + x + ")");
@@ -1741,6 +2638,8 @@ private:
     record.factor = factor;
     std::set<std::string> found;
     this->read_parameters(given["beta"], found);
+    if (!field.is_null())
+      this->read_parameters(field, found);
     if (given.count("n"))
       this->read_parameters(given["n"], found);
     for (const std::string &parameter : found)
@@ -1761,6 +2660,19 @@ private:
       "  const arma::mat &nn = data[" + quoted(nn) + "];\n"
       "  const double beta = " + beta_code + ";\n"
       "  const size_t n = (size_t)std::lround(" + sites_code + ");\n";
+    // (C302) the external field at site i, h_i (spin convention)
+    std::string field_term;   // (" + h_i" in the heat-bath probabilities)
+    if (!field.is_null())
+    {
+      if (field_per_site)
+        head += "  const arma::mat &ilike_field = " + std::string(this->data_names.count(field_vector) ? "data" : "parameters") + "[\"" + field_vector + "\"];\n"
+                "  if (ilike_field.n_elem != n)\n    Rcpp::stop(\"ising(…, field = " + field_vector + "): " + field_vector + " has \" + std::to_string(ilike_field.n_elem) + \" values for \" + std::to_string(n) + \" sites.\");\n"
+                "  auto ilike_h = [&](size_t i) { return ilike_field(i); };\n";
+      else
+        head += "  const double ilike_field_value = " + this->scalar_code(field, context) + ";\n"
+                "  auto ilike_h = [&](size_t) { return ilike_field_value; };\n";
+      field_term = " + ilike_h(i)";
+    }
     std::string code = "// " + kind + " field " + x + " (dev/plan.md 3.20, S3): sweeps of single-site heat-bath updates given beta\n"
                        "void " + sweep + "(RandomNumberGenerator &rng, Parameters &parameters, const Data &data)\n{\n" + head +
                        "  arma::mat &x = parameters[" + quoted(x) + "];\n"
@@ -1770,7 +2682,7 @@ private:
               "  for (size_t i = 0; i < n; ++i)\n  {\n"
               "    double s = 0.0;\n"
               "    for (size_t k = 0; k < (size_t)nn(i); ++k) s += 2.0 * x((size_t)nb(i, k) - 1) - 1.0;\n"
-              "    x(i) = (runif(rng) < 1.0 / (1.0 + std::exp(-2.0 * beta * s))) ? 1.0 : 0.0;\n  }\n}\n\n";
+              "    x(i) = (runif(rng) < 1.0 / (1.0 + std::exp(-2.0 * (beta * s" + field_term + ")))) ? 1.0 : 0.0;\n  }\n}\n\n";
     else
       code += "    for (size_t i = 0; i < n; ++i) x(i) = 1.0 + std::min(std::floor(runif(rng) * (double)" + number_text(q) + "), (double)" +
               number_text(q - 1.0) + ");\n  }\n"
@@ -1784,6 +2696,22 @@ private:
               "    size_t c = 0;\n"
               "    while ((c + 1 < w.size()) && (u > w[c])) { u -= w[c]; ++c; }\n"
               "    x(i) = double(c + 1);\n  }\n}\n\n";
+    // the same sweep with the sites in reverse order (dev/plan.md 3.22 U3): a
+    // sweep then a reverse sweep is a reversible kernel, which annealed
+    // exchange needs (a sweep in one order alone is not reversible, and its
+    // annealed exchange is not exact: checked by enumeration, C292)
+    std::string reverse_sweep = "ilike_unnormalised_reverse_sweep_" + x;
+    {
+      std::string reversed = code;
+      const std::string signature = "void " + sweep + "(";
+      size_t at = reversed.find(signature);
+      reversed.replace(at, signature.size(), "void " + reverse_sweep + "(");
+      const std::string loop = "  for (size_t i = 0; i < n; ++i)\n  {\n";
+      size_t where = reversed.find(loop);
+      reversed.replace(where, loop.size(), "  for (size_t ilike_j = 0; ilike_j < n; ++ilike_j)\n  {\n    const size_t i = n - 1 - ilike_j;\n");
+      size_t comment_end = reversed.find("\n");
+      code += "// (in reverse order)" + reversed.substr(comment_end);
+    }
     RecipeValue entry = RecipeValue::list();
     entry.push_back(RecipeValue(x), "variable");
     entry.push_back(RecipeValue(kind), "kind");
@@ -1819,8 +2747,8 @@ private:
               "        for (size_t k = 0; k < (size_t)nn(i); ++k)\n        {\n"
               "          su += 2.0 * upper((size_t)nb(i, k) - 1) - 1.0;\n"
               "          sl += 2.0 * lower((size_t)nb(i, k) - 1) - 1.0;\n        }\n"
-              "        upper(i) = (u[i] < 1.0 / (1.0 + std::exp(-2.0 * beta * su))) ? 1.0 : 0.0;\n"
-              "        lower(i) = (u[i] < 1.0 / (1.0 + std::exp(-2.0 * beta * sl))) ? 1.0 : 0.0;\n      }\n"
+              "        upper(i) = (u[i] < 1.0 / (1.0 + std::exp(-2.0 * (beta * su" + field_term + ")))) ? 1.0 : 0.0;\n"
+              "        lower(i) = (u[i] < 1.0 / (1.0 + std::exp(-2.0 * (beta * sl" + field_term + ")))) ? 1.0 : 0.0;\n      }\n"
               "    }\n"
               "    if (arma::approx_equal(upper, lower, \"absdiff\", 0.0))\n"
               "      return Parameters(" + quoted(x) + ", upper);\n"
@@ -1828,6 +2756,82 @@ private:
               "    if (double(T) * double(n) > 1e8)\n"
               "      Rcpp::stop(\"exact simulation of ising(...): coupling from the past did not coalesce: beta is far above the critical value, where exact draws take very long; use simulate = sweeps(m), approximate but in a fixed time.\");\n"
               "  }\n}\n\n";
+      entry.push_back(this->placeholder(exact, "unnormalised_exact"), "exact");
+    }
+    else
+    {
+      // (dev/plan.md 3.22 U4 step 3) potts: coupling from the past on the
+      // Fortuin-Kasteleyn random-cluster representation (Propp & Wilson
+      // 1996). With p = 1 - exp(-beta), a configuration w of open edges has
+      // weight p^|w| (1 - p)^(|E| - |w|) q^(clusters of w); colouring each
+      // cluster uniformly from the q colours gives the potts field. The
+      // heat-bath update of an edge opens it with probability p if its ends
+      // are connected through the other open edges, and p/(p + q(1 - p))
+      // otherwise: for q >= 1 this is monotone in w, so two chains from all
+      // edges open and all closed, with the same random numbers, sandwich
+      // every chain, and when they meet at time 0 the state is an exact draw.
+      code += "// potts field " + x + ": an exact draw by coupling from the past on the random-cluster representation\n"
+              "Parameters " + exact + "(RandomNumberGenerator &rng, const Parameters &parameters, const Data &data)\n{\n" + head +
+              "  const double q = " + number_text(q) + ";\n"
+              "  // (beta < 0: no random-cluster representation, so no draw; a field\n"
+              "  // of NaN, which the estimate of the normalising constant takes as density 0)\n"
+              "  if (beta < 0.0)\n"
+              "    return Parameters(" + quoted(x) + ", arma::mat(n, 1, arma::fill::value(arma::datum::nan)));\n"
+              "  // the edges (i < j) and, for each site, its edges\n"
+              "  std::vector<size_t> from, to;\n"
+              "  std::vector<std::vector<std::pair<size_t, size_t>>> adjacent(n);\n"
+              "  for (size_t i = 0; i < n; ++i)\n"
+              "    for (size_t k = 0; k < (size_t)nn(i); ++k)\n    {\n"
+              "      size_t j = (size_t)nb(i, k) - 1;\n"
+              "      if (i < j)\n      {\n"
+              "        adjacent[i].push_back(std::make_pair(j, from.size()));\n"
+              "        adjacent[j].push_back(std::make_pair(i, from.size()));\n"
+              "        from.push_back(i);\n        to.push_back(j);\n      }\n    }\n"
+              "  const size_t E = from.size();\n"
+              "  const double p = 1.0 - std::exp(-beta);\n"
+              "  const double p_apart = p / (p + q * (1.0 - p));\n"
+              "  std::vector<size_t> stamp(n, 0), queue;\n"
+              "  size_t visit = 0;\n"
+              "  // are a and b connected through the open edges other than `skip`?\n"
+              "  auto connected = [&](const std::vector<char> &open, size_t a, size_t b, size_t skip) {\n"
+              "    ++visit;\n    queue.clear();\n    queue.push_back(a);\n    stamp[a] = visit;\n"
+              "    for (size_t h = 0; h < queue.size(); ++h)\n    {\n"
+              "      size_t s = queue[h];\n"
+              "      if (s == b)\n        return true;\n"
+              "      for (const std::pair<size_t, size_t> &edge : adjacent[s])\n"
+              "        if ((edge.second != skip) && open[edge.second] && (stamp[edge.first] != visit))\n        {\n"
+              "          stamp[edge.first] = visit;\n          queue.push_back(edge.first);\n        }\n    }\n"
+              "    return false;\n  };\n"
+              "  std::vector<std::vector<double>> uniforms; // (the most recent sweep first: earlier sweeps are appended)\n"
+              "  size_t T = 1;\n"
+              "  std::vector<char> upper(E), lower(E);\n"
+              "  while (true)\n  {\n"
+              "    while (uniforms.size() < T)\n    {\n"
+              "      std::vector<double> u(E);\n"
+              "      for (size_t e = 0; e < E; ++e) u[e] = runif(rng);\n"
+              "      uniforms.push_back(u);\n    }\n"
+              "    std::fill(upper.begin(), upper.end(), 1);\n    std::fill(lower.begin(), lower.end(), 0);\n"
+              "    for (size_t back = T; back > 0; --back)\n    {\n"
+              "      const std::vector<double> &u = uniforms[back - 1]; // (from time -T to time 0)\n"
+              "      for (size_t e = 0; e < E; ++e)\n      {\n"
+              "        upper[e] = (u[e] < (connected(upper, from[e], to[e], e) ? p : p_apart)) ? 1 : 0;\n"
+              "        lower[e] = (u[e] < (connected(lower, from[e], to[e], e) ? p : p_apart)) ? 1 : 0;\n      }\n    }\n"
+              "    if (upper == lower)\n      break;\n"
+              "    T = 2 * T;\n"
+              "    if (double(T) * double(E) > 1e8)\n"
+              "      Rcpp::stop(\"exact simulation of potts(...): coupling from the past did not coalesce: beta is far above the critical value, where exact draws take very long; use simulate = sweeps(m), approximate but in a fixed time.\");\n"
+              "  }\n"
+              "  // each cluster of the open edges takes a colour drawn uniformly\n"
+              "  arma::mat field(n, 1, arma::fill::zeros);\n"
+              "  for (size_t start = 0; start < n; ++start)\n  {\n"
+              "    if (field(start) != 0.0)\n      continue;\n"
+              "    const double colour = 1.0 + std::min(std::floor(runif(rng) * q), q - 1.0);\n"
+              "    queue.clear();\n    queue.push_back(start);\n    field(start) = colour;\n"
+              "    for (size_t h = 0; h < queue.size(); ++h)\n"
+              "      for (const std::pair<size_t, size_t> &edge : adjacent[queue[h]])\n"
+              "        if (upper[edge.second] && (field(edge.first) == 0.0))\n        {\n"
+              "          field(edge.first) = colour;\n          queue.push_back(edge.first);\n        }\n  }\n"
+              "  return Parameters(" + quoted(x) + ", field);\n}\n\n";
       entry.push_back(this->placeholder(exact, "unnormalised_exact"), "exact");
     }
     std::vector<std::string> normaliser(record.normaliser.begin(), record.normaliser.end());
@@ -1842,7 +2846,10 @@ private:
             "  for (size_t i = 0; i < n; ++i)\n    for (size_t k = 0; k < (size_t)nn(i); ++k)\n" +
             ((kind == "ising") ? std::string("      total += (2.0 * field(i) - 1.0) * (2.0 * field((size_t)nb(i, k) - 1) - 1.0);\n")
                                : std::string("      total += (field(i) == field((size_t)nb(i, k) - 1)) ? 1.0 : 0.0;\n")) +
-            "  return 0.5 * beta * total;\n}\n\n";
+            (field.is_null() ? std::string("  return 0.5 * beta * total;\n}\n\n")
+                             : std::string("  double ilike_potential = 0.5 * beta * total;\n"
+                                           "  for (size_t i = 0; i < n; ++i) ilike_potential += ilike_h(i) * (2.0 * field(i) - 1.0);\n"
+                                           "  return ilike_potential;\n}\n\n"));
     // d log gamma(field | beta)/d beta (the potential is beta times this), for
     // the estimated gradient of log 1/Z (dev/plan.md 3.22 U1b)
     std::string statistic_function = "ilike_unnormalised_statistic_" + x;
@@ -1856,7 +2863,8 @@ private:
             "  return 0.5 * total;\n}\n\n";
     this->deferred_function_code += code;
     this->unnormalised.back().sweep = sweep;
-    this->unnormalised.back().exact = (kind == "ising") ? exact : "";
+    this->unnormalised.back().reverse_sweep = reverse_sweep;
+    this->unnormalised.back().exact = exact;
     this->unnormalised.back().potential = potential_function;
     this->unnormalised.back().estimated = !normaliser_method.is_null();
     this->unnormalised.back().replicates = replicates;
@@ -1869,6 +2877,48 @@ private:
 
     if (!normaliser_method.is_null())
       this->normaliser_factor(statement, normaliser_method, x, kind, record, sweep, exact, potential_function);
+  }
+
+  // the draws of a field for a method (dev/plan.md 3.22 U4): exact if the
+  // distribution has an exact draw (unless sweeps are asked for), sweeps
+  // otherwise; simulate = exact | sweeps(m) chooses
+  struct DrawMethod { bool exact; double sweeps; };
+  DrawMethod draw_method(const RecipeValue *simulate, const UnnormalisedStatement &record, const RecipeValue &where)
+  {
+    DrawMethod d{!record.exact.empty(), record.default_sweeps};
+    if (simulate != NULL)
+    {
+      arma::mat number;
+      if ((kind_of(*simulate) == "name") && ((*simulate)["name"].as_string() == "exact"))
+      {
+        if (record.exact.empty())
+          this->error(*simulate, (record.kind == "potts")
+                                 ? std::string("simulate = exact: exact simulation is available for ising(…) fields so far; use sweeps(m).")
+                                 : "simulate = exact: " + record.variable + "'s distribution has no exact draw (give simulate = exact(cpp::draw) in its statement); use sweeps(m).");
+        d.exact = true;
+      }
+      else if ((kind_of(*simulate) == "call") && ((*simulate)["function"].as_string() == "sweeps") && ((*simulate)["arguments"].size() == 1) &&
+               this->numeric((*simulate)["arguments"][0], number) && (number.n_elem == 1) && (number(0) >= 1.0))
+      {
+        d.exact = false;
+        d.sweeps = std::floor(number(0));
+      }
+      else
+        this->error(*simulate, "simulate = exact, or simulate = sweeps(m) (m sweeps, approximate).");
+    }
+    if (!d.exact && record.sweep.empty() && (record.kind != "block"))
+      this->error(where, record.variable + "'s distribution has no sweep for draws by sweeps (give simulate = sweeps(cpp::sweep, m) in its statement).");
+    return d;
+  }
+
+  // resampling = ess(p) (dev/plan.md 3.22 U3c): p, as SMC's criterion
+  double ess_threshold(const RecipeValue &value, const std::string &where)
+  {
+    arma::mat number;
+    if ((kind_of(value) != "call") || (value["function"].as_string() != "ess") || (value["arguments"].size() != 1) ||
+        !this->numeric(value["arguments"][0], number) || (number.n_elem != 1) || !(number(0) > 0.0) || (number(0) > 1.0))
+      this->error(value, where + ": resampling = ess(p), with 0 < p ≤ 1 (resample when the effective sample size falls below p times the number of runs), as for SMC.");
+    return number(0);
   }
 
   // likelihood = abc(points = N, tolerance = e, kernel = uniform | gaussian,
@@ -1899,27 +2949,10 @@ private:
         this->error(arguments.named["points"], which + "(…): points is a whole number of at least 1.");
       points = number(0);
     }
-    // the draws: exact for ising (coupling from the past), sweeps(m) otherwise
-    bool use_exact = (kind == "ising");
-    double sweeps = 100.0;
-    if (arguments.has("simulate"))
-    {
-      const RecipeValue &simulate = arguments.named["simulate"];
-      if ((kind_of(simulate) == "name") && (simulate["name"].as_string() == "exact"))
-      {
-        if (kind != "ising")
-          this->error(simulate, "simulate = exact: exact simulation is available for ising(…) fields so far; use sweeps(m).");
-        use_exact = true;
-      }
-      else if ((kind_of(simulate) == "call") && (simulate["function"].as_string() == "sweeps") && (simulate["arguments"].size() == 1) &&
-               this->numeric(simulate["arguments"][0], number) && (number.n_elem == 1) && (number(0) >= 1.0))
-      {
-        use_exact = false;
-        sweeps = std::floor(number(0));
-      }
-      else
-        this->error(simulate, "simulate = exact, or simulate = sweeps(m) (m heat-bath sweeps, approximate).");
-    }
+    // the draws: exact where there is an exact draw, sweeps(m) otherwise
+    DrawMethod draws = this->draw_method(arguments.has("simulate") ? &arguments.named["simulate"] : NULL, this->unnormalised.back(), method);
+    bool use_exact = draws.exact;
+    double sweeps = draws.sweeps;
     if (!use_exact)
       this->notes.push_back("The simulations of " + x + " for " + which + "(…) are made by " + number_text(sweeps) +
                             " heat-bath sweeps, so they are approximate (more sweeps make them closer).");
@@ -2037,30 +3070,16 @@ private:
         this->error(given_points, "estimate(…): points is a whole number of at least 1.");
       points = number(0);
     }
-    bool use_exact = (kind == "ising");
-    double sweeps = 100.0;
-    if (arguments.has("simulate"))
-    {
-      const RecipeValue &simulate = arguments.named["simulate"];
-      if ((kind_of(simulate) == "name") && (simulate["name"].as_string() == "exact"))
-      {
-        if (kind != "ising")
-          this->error(simulate, "simulate = exact: exact simulation is available for ising(…) fields so far; use sweeps(m).");
-        use_exact = true;
-      }
-      else if ((kind_of(simulate) == "call") && (simulate["function"].as_string() == "sweeps") && (simulate["arguments"].size() == 1) &&
-               this->numeric(simulate["arguments"][0], number) && (number.n_elem == 1) && (number(0) >= 1.0))
-      {
-        use_exact = false;
-        sweeps = std::floor(number(0));
-      }
-      else
-        this->error(simulate, "simulate = exact, or simulate = sweeps(m) (m heat-bath sweeps, approximate).");
-    }
+    if (statistic_function.empty())
+      this->error(method, "gradient = estimate(…) needs d log gamma/d " + parameter + " (give statistic = cpp::f in " + x + "'s statement).");
+    DrawMethod draws = this->draw_method(arguments.has("simulate") ? &arguments.named["simulate"] : NULL, this->unnormalised.back(), method);
+    bool use_exact = draws.exact;
+    double sweeps = draws.sweeps;
     RecipeValue settings = RecipeValue::list();
     settings.push_back(RecipeValue(x), "variable");
     settings.push_back(this->placeholder(statistic_function, "unnormalised_potential"), "statistic");
-    settings.push_back(this->placeholder(sweep, "unnormalised_sweep"), "sweep");
+    if (!sweep.empty())
+      settings.push_back(this->placeholder(sweep, "unnormalised_sweep"), "sweep");
     if (use_exact)
       settings.push_back(this->placeholder(exact, "unnormalised_exact"), "exact");
     settings.push_back(RecipeValue(sweeps), "sweeps");
@@ -2080,34 +3099,228 @@ private:
   // 1/Z(theta) from M draws of the field (UnnormalisedNormaliserEstimator).
   // It reads only the normaliser's parameters, so moves on the field do not
   // evaluate it, and moves on its parameters draw new fields (pseudo-marginal).
+  // (dev/plan.md 3.22 U9 R1) normaliser = estimate(smc(particles = P, steps =
+  // T, sweeps = m, resampling = ess(p)), debias = none): log Z(theta) estimated
+  // at each value of the parameters by SMC from the base measure, and
+  // plugged in: the factor's value is -log Zhat(theta), kept with the state as
+  // any estimated factor. exp(-log Zhat) is not unbiased for 1/Z, so the
+  // posterior is approximate (the noisy plug-in), with a bias that falls as
+  // the SMC's estimate improves.
+  void estimate_factor(const RecipeValue &statement, const RecipeValue &method, const std::string &x, const std::string &kind,
+                       const UnnormalisedStatement &record, const std::string &sweep, const std::string &potential_function)
+  {
+    if (record.normaliser.empty())
+      this->error(method, "the normalising constant of " + x + "'s distribution depends on no parameter, so it cancels: normaliser = … is not needed.");
+    Arguments arguments = this->split_arguments(method);
+    this->allow_only(method, arguments, {"debias"}, 1);
+    if (arguments.positional.size() != 1 || (kind_of(arguments.positional[0]) != "call") ||
+        (arguments.positional[0]["function"].as_string() != "smc"))
+      this->error(method, "normaliser = estimate(smc(particles = P, steps = T, sweeps = m, resampling = ess(p))): log Z estimated by SMC from " +
+                          x + "'s base measure at each value of " + joined(record.normaliser, ", ") + ".");
+    // debias = none (the plug-in) or roulette(continue = q, scale = k) (U9 R2)
+    double roulette_continue = -1.0, roulette_scale = 1.0;
+    double bp_blocks = -1.0, bp_mean = 1.0, bp_lower = 0.0;
+    bool bp_correlated = true;
+    if (arguments.has("debias"))
+    {
+      const RecipeValue &debias = arguments.named["debias"];
+      if ((kind_of(debias) == "call") && (debias["function"].as_string() == "roulette"))
+      {
+        Arguments roulette = this->split_arguments(debias);
+        this->allow_only(debias, roulette, {"continue", "scale"}, 0);
+        roulette_continue = 0.5;
+        arma::mat number;
+        if (roulette.has("continue"))
+        {
+          if (!this->numeric(roulette.named["continue"], number) || (number.n_elem != 1) || !(number(0) > 0.0) || !(number(0) < 1.0))
+            this->error(roulette.named["continue"], "roulette(continue = q): q, the probability of continuing the series, is between 0 and 1.");
+          roulette_continue = number(0);
+        }
+        if (roulette.has("scale"))
+        {
+          if (!this->numeric(roulette.named["scale"], number) || (number.n_elem != 1) || !(number(0) > 0.0))
+            this->error(roulette.named["scale"], "roulette(scale = k): k, the scale of the series relative to the pilot estimate of Z, is positive.");
+          roulette_scale = number(0);
+        }
+      }
+      else if ((kind_of(debias) == "call") && (debias["function"].as_string() == "block_poisson"))
+      {
+        // (U9 R3a) block_poisson(blocks = lambda, mean = m, lower = a, correlated = true)
+        Arguments bp = this->split_arguments(debias);
+        this->allow_only(debias, bp, {"blocks", "mean", "lower", "correlated"}, 0);
+        bp_blocks = 10.0;
+        arma::mat number;
+        if (bp.has("blocks"))
+        {
+          if (!this->numeric(bp.named["blocks"], number) || (number.n_elem != 1) || (number(0) < 1.0) || (number(0) != std::floor(number(0))))
+            this->error(bp.named["blocks"], "block_poisson(blocks = lambda): lambda, the number of blocks, is a whole number of at least 1.");
+          bp_blocks = number(0);
+        }
+        if (bp.has("mean"))
+        {
+          if (!this->numeric(bp.named["mean"], number) || (number.n_elem != 1) || !(number(0) > 0.0))
+            this->error(bp.named["mean"], "block_poisson(mean = m): m, the mean number of estimates of Z in each block, is positive.");
+          bp_mean = number(0);
+        }
+        bp_lower = -1.0 - bp_mean * bp_blocks;
+        if (bp.has("lower"))
+        {
+          if (!this->numeric(bp.named["lower"], number) || (number.n_elem != 1) || !std::isfinite(number(0)))
+            this->error(bp.named["lower"], "block_poisson(lower = a): a, the soft lower bound of -nu Zhat, is a number (by default -1 - mean blocks).");
+          bp_lower = number(0);
+        }
+        if (bp.has("correlated"))
+        {
+          const RecipeValue &c = bp.named["correlated"];
+          if (kind_of(c) != "logical")
+            this->error(c, "block_poisson(correlated = true | false): whether a proposal keeps all blocks but one of the current estimate's random numbers.");
+          bp_correlated = c["value"].as_bool();
+        }
+        if (record.replicates > 1.0)
+          this->error(debias, "debias = block_poisson(…) with replicates is not available yet.");
+      }
+      else if (!((kind_of(debias) == "name") && (debias["name"].as_string() == "none")))
+        this->error(debias, "estimate(…, debias = none | roulette(continue = q, scale = k) | block_poisson(blocks = lambda, mean = m, lower = a, "
+                            "correlated = true)): the estimate of log Z plugged in (approximate), or an unbiased estimate, which may be "
+                            "negative (signed pseudo-marginal MCMC): Lyne et al.'s Russian roulette, or the block-Poisson estimate.");
+    }
+    if ((kind != "block") && sweep.empty())
+      this->error(method, "normaliser = estimate(smc(…)) moves fields by sweeps, and " + x + "'s distribution has none (give simulate = sweeps(cpp::sweep, m)).");
+    const RecipeValue &smc = arguments.positional[0];
+    Arguments smc_arguments = this->split_arguments(smc);
+    this->allow_only(smc, smc_arguments, {"particles", "steps", "sweeps", "resampling"}, 0);
+    std::map<std::string, double> values = {{"particles", 200.0}, {"steps", 100.0}, {"sweeps", 1.0}};
+    arma::mat number;
+    for (auto &kv : values)
+      if (smc_arguments.has(kv.first))
+      {
+        if (!this->numeric(smc_arguments.named[kv.first], number) || (number.n_elem != 1) || (number(0) < 1.0) || (number(0) != std::floor(number(0))))
+          this->error(smc_arguments.named[kv.first], "smc(…): " + kv.first + " is a whole number of at least 1.");
+        kv.second = number(0);
+      }
+    double resampling = 1.0;
+    if (smc_arguments.has("resampling"))
+      resampling = this->ess_threshold(smc_arguments.named["resampling"], "smc(…)");
+    if (bp_blocks > 0.0)
+      this->notes.push_back("normaliser = estimate(…, debias = block_poisson(…)): the block-Poisson estimate of exp(-nu Z) of " + x +
+                            "'s distribution, with nu an auxiliary variable, is unbiased but may be negative, so MCMC targets its absolute value "
+                            "and records each iteration's sign: estimate posterior expectations with signed_mean(…) (the Sign column of "
+                            "load_mcmc_output). Importance sampling and SMC refuse it.");
+    else if (roulette_continue < 0.0)
+      this->notes.push_back("normaliser = estimate(…): log Z of " + x + "'s distribution is estimated by SMC at each value of " +
+                            joined(record.normaliser, ", ") + " and plugged in, so the posterior is approximate (more particles and steps make it closer).");
+    else
+      this->notes.push_back("normaliser = estimate(…, debias = roulette(…)): the estimate of 1/Z of " + x + "'s distribution is unbiased but may be "
+                            "negative, so MCMC targets its absolute value and records each iteration's sign: estimate posterior expectations with "
+                            "signed_mean(…) (the Sign column of load_mcmc_output). Importance sampling and SMC refuse it.");
+    RecipeValue settings = RecipeValue::list();
+    settings.push_back(RecipeValue(x), "variable");
+    if (!potential_function.empty())
+      settings.push_back(this->placeholder(potential_function, "unnormalised_potential"), "potential");
+    if (!sweep.empty())
+      settings.push_back(this->placeholder(sweep, "unnormalised_sweep"), "sweep");
+    if (kind == "block")
+      settings.push_back(RecipeValue(x), "engine");
+    settings.push_back(RecipeValue(values["sweeps"]), "sweeps");
+    settings.push_back(RecipeValue(1.0), "points");
+    settings.push_back(RecipeValue(record.normaliser), "normaliser");
+    settings.push_back(RecipeValue(std::vector<double>(record.normaliser.size(), 0.0)), "at");
+    if (record.replicates > 1.0)
+      settings.push_back(RecipeValue(record.replicates), "replicates");
+    RecipeValue plugin = RecipeValue::list();
+    for (const auto &kv : values)
+      plugin.push_back(RecipeValue(kv.second), kv.first);
+    plugin.push_back(RecipeValue(resampling), "resampling");
+    settings.push_back(plugin, "plugin");
+    if (bp_blocks > 0.0)
+    {
+      RecipeValue bp = RecipeValue::list();
+      bp.push_back(RecipeValue(bp_blocks), "blocks");
+      bp.push_back(RecipeValue(bp_mean), "mean");
+      bp.push_back(RecipeValue(bp_lower), "lower");
+      bp.push_back(RecipeValue(bp_correlated), "correlated");
+      settings.push_back(bp, "block_poisson");
+    }
+    if (roulette_continue >= 0.0)
+    {
+      RecipeValue roulette = RecipeValue::list();
+      roulette.push_back(RecipeValue(roulette_continue), "continue");
+      roulette.push_back(RecipeValue(roulette_scale), "scale");
+      settings.push_back(roulette, "roulette");
+    }
+    RecipeValue factor = RecipeValue::list();
+    factor.push_back(settings, "unnormalised_normaliser");
+    std::string name = x + "_normaliser";
+    this->add_factor(statement, name, factor);
+    this->generated_factor_reads[this->factor_numbers.at(name)] =
+      std::set<std::string>(record.normaliser.begin(), record.normaliser.end());
+  }
+
   void normaliser_factor(const RecipeValue &statement, const RecipeValue &method, const std::string &x, const std::string &kind,
                          const UnnormalisedStatement &record, const std::string &sweep, const std::string &exact,
                          const std::string &potential_function)
   {
+    if ((kind_of(method) == "call") && (method["function"].as_string() == "estimate"))
+      return this->estimate_factor(statement, method, x, kind, record, sweep, potential_function);
     if ((kind_of(method) != "call") || (method["function"].as_string() != "sav"))
       this->error(method, "normaliser = sav(points = M, at = value, simulate = exact | sweeps(m)): the single (M = 1) or "
-                          "multiple auxiliary variable method.");
+                          "multiple auxiliary variable method; or normaliser = estimate(smc(…)), log Z estimated at each value.");
     if (record.normaliser.empty())
       this->error(method, "the normalising constant of " + x + "'s distribution depends on no parameter, so it cancels: "
                           "normaliser = … is not needed.");
-    if (record.normaliser.size() != 1)
-      this->error(method, "normaliser = sav(…): the normalising constant of " + x + "'s distribution depends on several parameters (" +
-                          joined(record.normaliser, ", ") + "); sav takes one for now.");
     Arguments arguments = this->split_arguments(method);
-    this->allow_only(method, arguments, {"points", "at", "simulate", "bridges", "bridge_sweeps", "normalise"}, 2);
+    this->allow_only(method, arguments, {"points", "at", "simulate", "bridges", "bridge_sweeps", "resampling", "normalise", "waste_free"}, 2);
     std::map<std::string, RecipeValue> given;
     std::vector<std::string> order = {"points", "at"};
     for (size_t k = 0; k < arguments.positional.size(); ++k)
       given[order[k]] = arguments.positional[k];
     for (const auto &kv : arguments.named)
       given[kv.first] = kv.second;
+    const std::string named_example = [&]() {
+      std::string text = "[";
+      for (size_t j = 0; j < record.normaliser.size(); ++j)
+        text += (j > 0 ? ", " : "") + record.normaliser[j] + " = …";
+      return text + "]";
+    }();
     if (!given.count("at"))
-      this->error(method, "sav(…): at = value, the value of " + record.normaliser[0] + " at which the auxiliary distribution of the "
-                          "draws is taken (a value near the posterior's, e.g. a pseudo-likelihood estimate), is needed.");
+      this->error(method, "sav(…): at = " + std::string(record.normaliser.size() == 1 ? "value" : named_example) + ", the value of " +
+                          joined(record.normaliser, ", ") + " at which the auxiliary distribution of the draws is taken (a value near the "
+                          "posterior's, e.g. a pseudo-likelihood estimate), is needed.");
+    // theta_hat: a number when the normalising constant depends on one
+    // parameter, otherwise one named value per parameter (any parameter
+    // vector: the paths move them together, dev/plan.md 3.22 C301)
     arma::mat number;
-    if (!this->numeric(given["at"], number) || (number.n_elem != 1))
-      this->error(given["at"], "sav(…): at is a number known when compiling.");
-    double at = number(0);
+    std::vector<double> at(record.normaliser.size());
+    const RecipeValue &at_node = given["at"];
+    if ((record.normaliser.size() == 1) && this->numeric(at_node, number) && (number.n_elem == 1) &&
+        !((kind_of(at_node) == "vector") && !at_node["elements"].names().empty() && !at_node["elements"].names()[0].empty()))
+      at[0] = number(0);
+    else
+    {
+      std::vector<std::string> names = (kind_of(at_node) == "vector") ? at_node["elements"].names() : std::vector<std::string>();
+      bool all_named = (kind_of(at_node) == "vector") && (names.size() == at_node["elements"].size());
+      for (const std::string &name : names)
+        if (name.empty())
+          all_named = false;
+      if (!all_named)
+        this->error(at_node, "sav(…): at gives the value of each parameter of the normalising constant by name, at = " + named_example +
+                             " (numbers known when compiling).");
+      std::set<std::string> seen;
+      for (size_t k = 0; k < names.size(); ++k)
+      {
+        auto where = std::find(record.normaliser.begin(), record.normaliser.end(), names[k]);
+        if (where == record.normaliser.end())
+          this->error(at_node, "sav(…, at = …): " + names[k] + " is not a parameter of the normalising constant of " + x + " (" +
+                               joined(record.normaliser, ", ") + ").");
+        if (!this->numeric(at_node["elements"][k], number) || (number.n_elem != 1))
+          this->error(at_node, "sav(…, at = …): the value of " + names[k] + " is a number known when compiling.");
+        at[where - record.normaliser.begin()] = number(0);
+        seen.insert(names[k]);
+      }
+      for (const std::string &name : record.normaliser)
+        if (!seen.count(name))
+          this->error(at_node, "sav(…, at = …): the value of " + name + " is missing (at = " + named_example + ").");
+    }
     double points = 1.0;
     if (given.count("points"))
     {
@@ -2128,49 +3341,60 @@ private:
       }
     if (given.count("bridge_sweeps") && (bridges == 0.0))
       this->error(given["bridge_sweeps"], "sav(…): bridge_sweeps is the number of sweeps at each bridge, so it goes with bridges = K (K ≥ 1).");
-    // the draws: exact (coupling from the past, ising) by default; sweeps(m)
-    // otherwise (approximate: the estimate is then biased, by an amount that
-    // falls as m grows)
-    bool use_exact = (kind == "ising");
-    double sweeps = 100.0;
-    if (given.count("simulate"))
-    {
-      const RecipeValue &simulate = given["simulate"];
-      if ((kind_of(simulate) == "name") && (simulate["name"].as_string() == "exact"))
-      {
-        if (kind != "ising")
-          this->error(simulate, "simulate = exact: exact simulation is available for ising(…) fields so far; use sweeps(m).");
-        use_exact = true;
-      }
-      else if ((kind_of(simulate) == "call") && (simulate["function"].as_string() == "sweeps") && (simulate["arguments"].size() == 1) &&
-               this->numeric(simulate["arguments"][0], number) && (number.n_elem == 1) && (number(0) >= 1.0))
-      {
-        use_exact = false;
-        sweeps = std::floor(number(0));
-      }
-      else
-        this->error(simulate, "simulate = exact, or simulate = sweeps(m) (m heat-bath sweeps from the base measure, approximate).");
-    }
+    // the draws: exact when the distribution has an exact draw (coupling from
+    // the past for ising); sweeps(m) otherwise (approximate: the estimate is
+    // then biased, by an amount that falls as m grows)
+    DrawMethod draws = this->draw_method(given.count("simulate") ? &given["simulate"] : NULL, this->unnormalised.back(), method);
+    bool use_exact = draws.exact;
+    double sweeps = draws.sweeps;
     if (!use_exact)
       this->notes.push_back("The draws of " + x + " for its normalising constant are made by " + number_text(sweeps) +
-                            " heat-bath sweeps, so they are approximate, and so is the posterior of " + record.normaliser[0] +
+                            (kind == "block" ? " sweeps of gibbs moves" : " heat-bath sweeps") +
+                            ", so they are approximate, and so is the posterior of " + joined(record.normaliser, ", ") +
                             " (more sweeps make it closer).");
     RecipeValue settings = RecipeValue::list();
     settings.push_back(RecipeValue(x), "variable");
-    settings.push_back(this->placeholder(potential_function, "unnormalised_potential"), "potential");
-    settings.push_back(this->placeholder(sweep, "unnormalised_sweep"), "sweep");
+    if (!potential_function.empty())
+      settings.push_back(this->placeholder(potential_function, "unnormalised_potential"), "potential");
+    if (kind == "block")
+    {
+      // (dev/plan.md 3.22 U4) the general engine: the package's SMC on x's
+      // inner model, for the draws, the paths and normalise
+      settings.push_back(RecipeValue(x), "engine");
+      if (given.count("waste_free"))
+      {
+        if (!this->numeric(given["waste_free"], number) || (number.n_elem != 1) || (number(0) < 1.0) || (number(0) != std::floor(number(0))))
+          this->error(given["waste_free"], "sav(…): waste_free is a whole number of chains of at least 1.");
+        settings.push_back(RecipeValue(number(0)), "waste_free");
+      }
+    }
+    else if (given.count("waste_free"))
+      this->error(given["waste_free"], "sav(…, waste_free = …) is for the general engine (a distribution written as a block, "
+                                       "x ~ unnormalised(…) { … }); the fast engine has no waste-free SMC.");
+    if (!sweep.empty())
+      settings.push_back(this->placeholder(sweep, "unnormalised_sweep"), "sweep");
+    else if ((kind != "block") && ((bridges > 0.0) || given.count("normalise")))
+      this->error(method, "sav(…, bridges = …) and normalise = … move fields by sweeps, and " + x + "'s distribution has none (give simulate = sweeps(cpp::sweep, m)).");
     if (use_exact)
       settings.push_back(this->placeholder(exact, "unnormalised_exact"), "exact");
     settings.push_back(RecipeValue(sweeps), "sweeps");
     settings.push_back(RecipeValue(points), "points");
     settings.push_back(RecipeValue(record.normaliser), "normaliser");
-    settings.push_back(RecipeValue(std::vector<double>(1, at)), "at");
+    settings.push_back(RecipeValue(at), "at");
     if (this->unnormalised.back().replicates > 1.0)
       settings.push_back(RecipeValue(this->unnormalised.back().replicates), "replicates");
     if (bridges > 0.0)
     {
       settings.push_back(RecipeValue(bridges), "bridges");
       settings.push_back(RecipeValue(bridge_sweeps), "bridge_sweeps");
+    }
+    // (dev/plan.md 3.22 U3c) resampling = ess(p), as for SMC: the annealed
+    // runs moved together, resampled when their ESS falls below p M
+    if (given.count("resampling"))
+    {
+      if ((bridges == 0.0) || (points < 2.0))
+        this->error(given["resampling"], "sav(…, resampling = ess(p)) resamples the annealed runs between bridges, so it needs bridges = K (K ≥ 1) and points = M (M ≥ 2).");
+      settings.push_back(RecipeValue(this->ess_threshold(given["resampling"], "sav(…)")), "resampling");
     }
     // (dev/plan.md 3.22 U3b) normalise = smc(particles = P, steps = T, sweeps = m):
     // log Z(at) estimated before the run and removed, so that evidence is reported
@@ -2180,8 +3404,11 @@ private:
       if ((kind_of(normalise) != "call") || (normalise["function"].as_string() != "smc"))
         this->error(normalise, "sav(…, normalise = smc(particles = P, steps = T, sweeps = m)): log Z(at), estimated by SMC from the field's base measure.");
       Arguments smc_arguments = this->split_arguments(normalise);
-      this->allow_only(normalise, smc_arguments, {"particles", "steps", "sweeps"}, 0);
+      this->allow_only(normalise, smc_arguments, {"particles", "steps", "sweeps", "resampling"}, 0);
       std::map<std::string, double> values = {{"particles", 200.0}, {"steps", 100.0}, {"sweeps", 1.0}};
+      double resampling = 1.0;
+      if (smc_arguments.has("resampling"))
+        resampling = this->ess_threshold(smc_arguments.named["resampling"], "smc(…)");
       for (auto &kv : values)
         if (smc_arguments.has(kv.first))
         {
@@ -2192,6 +3419,7 @@ private:
       RecipeValue entry = RecipeValue::list();
       for (const auto &kv : values)
         entry.push_back(RecipeValue(kv.second), kv.first);
+      entry.push_back(RecipeValue(resampling), "resampling");
       settings.push_back(entry, "normalise");
     }
     RecipeValue factor = RecipeValue::list();
@@ -5364,6 +6592,8 @@ inline double ilike_model_dabc_gaussian(const arma::mat &y, const arma::mat &s, 
 
     if (!this->integrations.empty())
       this->integrate_out(inner_prior_factor, inner_prior_reads, outer_prior.empty());
+    // (dev/plan.md 3.22 U4) the inner models of distributions written as blocks
+    this->build_block_engines();
 
     // a deterministic node defined but never used is harmless; a parameter
     // read by a likelihood but given no distribution may be given by another factor
@@ -7058,7 +8288,7 @@ inline double ilike_model_dabc_gaussian(const arma::mat &y, const arma::mat &s, 
   Move lower_exchange(const RecipeValue &statement, const std::string &name, const RecipeValue &call)
   {
     Arguments arguments = this->split_arguments(call);
-    this->allow_only(call, arguments, {"proposal", "simulate", "points", "noisy", "parallel", "factors", "cut_factors", "adapt", "transform"}, 1);
+    this->allow_only(call, arguments, {"proposal", "simulate", "points", "noisy", "parallel", "bridges", "bridge_sweeps", "factors", "cut_factors", "adapt", "transform"}, 1);
     RecipeValue proposal = !arguments.positional.empty() ? arguments.positional[0]
                          : (arguments.has("proposal") ? arguments.named["proposal"] : RecipeValue());
     if (proposal.is_null())
@@ -7081,26 +8311,9 @@ inline double ilike_model_dabc_gaussian(const arma::mat &y, const arma::mat &s, 
     if (changed.empty())
       this->error(call, "exchange(…): its proposal changes no parameter of the normalising constant of an unnormalised distribution "
                         "(x ~ ising(…) or potts(…)), so a metropolis move does the same.");
-    // the draws: exact for ising (coupling from the past), sweeps(m) otherwise
-    // (approximate: Everitt 2012 describes the approximation from simulating by MCMC)
-    bool exact_asked = false;
-    double sweeps = 100.0;
-    bool sweeps_asked = false;
-    if (arguments.has("simulate"))
-    {
-      const RecipeValue &simulate = arguments.named["simulate"];
-      arma::mat number;
-      if ((kind_of(simulate) == "name") && (simulate["name"].as_string() == "exact"))
-        exact_asked = true;
-      else if ((kind_of(simulate) == "call") && (simulate["function"].as_string() == "sweeps") && (simulate["arguments"].size() == 1) &&
-               this->numeric(simulate["arguments"][0], number) && (number.n_elem == 1) && (number(0) >= 1.0))
-      {
-        sweeps_asked = true;
-        sweeps = std::floor(number(0));
-      }
-      else
-        this->error(simulate, "simulate = exact, or simulate = sweeps(m) (m heat-bath sweeps, approximate).");
-    }
+    // (the draws, per distribution: draw_method below; exact where there is
+    // an exact draw, sweeps(m) otherwise, approximate: Everitt 2012 describes
+    // the approximation from simulating by MCMC)
     // a symmetric proposal: a Metropolis move; otherwise (e.g. langevin: the
     // MALA-exchange of Alquier et al. 2016) a Metropolis-Hastings move, whose
     // gradient-based proposals need the estimated gradient of log 1/Z
@@ -7113,27 +8326,61 @@ inline double ilike_model_dabc_gaussian(const arma::mat &y, const arma::mat &s, 
           this->error(proposal, "exchange(" + proposal_type + "(…)): the proposal uses the gradient in " + joined(record->normaliser, ", ") +
                                 ", which includes that of log 1/Z; ask for its estimate in " + record->variable + "'s statement, " +
                                 record->variable + " ~ " + record->kind + "(…, gradient = estimate(points = N)).");
+    double bridges = 0.0, bridge_sweeps = 1.0;
+    for (const char *setting : {"bridges", "bridge_sweeps"})
+      if (arguments.has(setting))
+      {
+        arma::mat number;
+        double lowest = (std::string(setting) == "bridges") ? 0.0 : 1.0;
+        if (!this->numeric(arguments.named[setting], number) || (number.n_elem != 1) || (number(0) < lowest) || (number(0) != std::floor(number(0))))
+          this->error(arguments.named[setting], std::string("exchange(…): ") + setting + " is a whole number of at least " + number_text(lowest) + ".");
+        (std::string(setting) == "bridges" ? bridges : bridge_sweeps) = number(0);
+      }
+    if (arguments.has("bridge_sweeps") && (bridges == 0.0))
+      this->error(arguments.named["bridge_sweeps"], "exchange(…): bridge_sweeps is the number of sweeps at each bridge, so it goes with bridges = K (K ≥ 1).");
     this->lowering_exchange = true;
     Move move = this->lower_move(statement, name, call_with(call, symmetric ? "metropolis" : "metropolis_hastings", outer));
     this->lowering_exchange = false;
     RecipeValue fields = RecipeValue::list();
     for (const UnnormalisedStatement *record : changed)
     {
-      bool use_exact = !sweeps_asked && !record->exact.empty();
-      if (exact_asked && record->exact.empty())
-        this->error(arguments.named["simulate"], "simulate = exact: exact simulation is available for ising(…) fields so far; use sweeps(m).");
+      DrawMethod draws = this->draw_method(arguments.has("simulate") ? &arguments.named["simulate"] : NULL, *record, call);
+      bool use_exact = draws.exact;
+      double sweeps = draws.sweeps;
+      if ((bridges > 0.0) && (record->kind == "block"))
+        this->error(call, "exchange(…, bridges = …) with " + record->variable + " written as a block needs reversible moves at each bridge "
+                          "(a symmetric or random scan), which the general engine does not make yet.");
+      if ((bridges > 0.0) && (record->sweep.empty() || record->reverse_sweep.empty()))
+        this->error(call, "exchange(…, bridges = …) moves " + record->variable + " by a sweep and a reverse sweep at each bridge (give simulate = sweeps(cpp::sweep, m) and reverse = cpp::reverse_sweep in its statement).");
       if (!use_exact)
         this->notes.push_back("The exchange move " + name + " draws " + record->variable + " by " + number_text(sweeps) +
-                              " heat-bath sweeps, so the draws are approximate, and so is the posterior of " + joined(record->normaliser, ", ") +
+                              (record->kind == "unnormalised" ? " sweeps (cpp::" + record->sweep + ")"
+                               : (record->kind == "block" ? std::string(" sweeps of gibbs moves") : std::string(" heat-bath sweeps"))) +
+                              ", so the draws are approximate, and so is the posterior of " + joined(record->normaliser, ", ") +
                               " (more sweeps make it closer).");
       RecipeValue field = RecipeValue::list();
       field.push_back(RecipeValue(record->variable), "variable");
-      field.push_back(this->placeholder(record->potential, "unnormalised_potential"), "potential");
-      field.push_back(this->placeholder(record->sweep, "unnormalised_sweep"), "sweep");
+      if (!record->potential.empty())
+        field.push_back(this->placeholder(record->potential, "unnormalised_potential"), "potential");
+      if (record->kind == "block")
+        field.push_back(RecipeValue(record->variable), "engine");
+      if (!record->sweep.empty())
+        field.push_back(this->placeholder(record->sweep, "unnormalised_sweep"), "sweep");
       if (use_exact)
         field.push_back(this->placeholder(record->exact, "unnormalised_exact"), "exact");
       field.push_back(RecipeValue(sweeps), "sweeps");
       field.push_back(RecipeValue(record->replicates), "replicates");
+      // bridges = K (dev/plan.md 3.22 U3): Murray, Ghahramani & MacKay's
+      // annealed exchange, through K distributions on the path from the
+      // proposed to the current parameters, with bridge_sweeps reversible
+      // (forward then reverse) sweeps at each
+      if (bridges > 0.0)
+      {
+        field.push_back(RecipeValue(bridges), "bridges");
+        field.push_back(RecipeValue(bridge_sweeps), "bridge_sweeps");
+        field.push_back(this->placeholder(record->reverse_sweep, "unnormalised_sweep"), "reverse_sweep");
+      }
+      field.push_back(RecipeValue(record->normaliser), "normaliser");
       fields.push_back(field, "");
     }
     move.entry.push_back(fields, "exchange");

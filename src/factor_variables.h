@@ -181,6 +181,10 @@ public:
   virtual bool repoint_to(const Factors* factors) { return false; }
 
   virtual bool has_compact_values() const { return false; }
+  // (dev/plan.md 3.22 U9 R2) whether a factor's estimate may be negative, and
+  // the product of the factors' signs
+  virtual bool may_be_negative() const { return false; }
+  virtual double sign() const { return 1.0; }
   virtual size_t number_of_compact_values() const { return 0; }
   virtual void compact_values(double *values) const {}
   virtual void write_compact_values(const std::string &directory_name,

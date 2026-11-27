@@ -73,6 +73,10 @@ public:
   // Per-iteration diagnostics of moves that record them (nuts; C212): one
   // row per stored point; and the divergences after warm-up; none by default.
   virtual size_t diagnostics_columns() const { return 0; }
+  // (dev/plan.md 3.22 U9 R2) the sign of each stored point, when a factor's
+  // estimate may be negative (signed pseudo-marginal); none otherwise
+  virtual bool records_signs() const { return false; }
+  virtual size_t fill_signs(std::vector<double> &destination) const { return 0; }
   virtual size_t fill_diagnostics_transposed(arma::mat &destination,
                                              size_t first_column) const { return 0; }
   virtual void diagnostics_names(std::vector<std::string> &names) const {}

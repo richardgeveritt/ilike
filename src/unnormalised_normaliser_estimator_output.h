@@ -44,6 +44,15 @@ public:
   bool simulation_pending() const { return this->pending; }
   void simulate_when_needed(const Parameters &parameters);
 
+  // (dev/plan.md 3.22 U9 R3a) block-Poisson with correlated refresh: a
+  // proposed particle's output keeps the current particle's block seeds, and
+  // replaces one block's at its first evaluation
+  bool carries_over() const;
+  void carry_over_from(const LikelihoodEstimatorOutput &previous,
+                       const Parameters &previous_parameters,
+                       const Parameters &new_parameters,
+                       const std::vector<std::string>* changed = NULL);
+
   void forget_you_were_already_written_to_file();
   void close_ofstreams();
   void write_to_file(const std::string &directory_name, const std::string &index = "");
@@ -56,12 +65,22 @@ protected:
   // one log estimate per replicate (dev/plan.md 3.22 U0, U3b), made from
   // fresh draws when first needed (NaN until then)
   std::vector<double> replicate_log_estimates;
+  std::vector<double> replicate_signs;   // (U9 R2: the signs of the replicates' estimates)
   bool pending;
   void draw_if_pending(const Parameters &parameters);
   // the sum of the log estimates of the replicates in the target, drawing
   // those not drawn yet
   double current_log_estimate(const Parameters &parameters);
   double log_likelihood_smcfixed_part;
+
+  // (U9 R3a) block-Poisson: u, the seeds of the blocks' generators (empty:
+  // not drawn yet, so drawn afresh at the first evaluation); whether one
+  // block's seed is to be replaced then (correlated refresh); and nu, the
+  // auxiliary variable, as log nu
+  std::vector<uint64_t> block_seeds;
+  bool refresh_one_block = false;
+  double log_nu = 0.0;
+  double block_poisson_log_estimate(const Parameters &parameters, double &sign);
 
   void make_copy(const UnnormalisedNormaliserEstimatorOutput &another);
 };

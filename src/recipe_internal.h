@@ -28,6 +28,7 @@
 #include "cancellation_plan.h"
 #include "unnormalised_normaliser_estimator.h"
 #include "unnormalised_gradient_estimator.h"
+#include "smc_path.h"
 #include "barker_dynamics_proposal_kernel.h"
 #include "cess_smc_criterion.h"
 #include "composite_independent_proposal_kernel.h"
@@ -229,5 +230,7 @@ KalmanFilter *get_kalman_filter(Data *the_data, const RecipeValue &model, const 
 EnsembleKalmanFilter *get_ensemble_kalman_filter( RandomNumberGenerator *rng, Data *the_data, const RecipeValue &model, const RecipeValue &parameters, const Parameters &algorithm_parameters, size_t number_of_ensemble_members, EnsembleShifter *shifter, size_t enk_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const std::string &results_name_in, size_t *seed, std::vector<Data> &data_created_in_get_measurement_covariance_estimators);
 ParticleFilter *get_particle_filter( RandomNumberGenerator *rng, Data *the_data, const RecipeValue &model, const RecipeValue &parameters, const Parameters &algorithm_parameters, size_t number_of_particles, size_t smc_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const std::string &results_name_in, size_t *seed, std::vector<Data> &data_created_in_get_likelihood_estimators, std::vector<Data> &data_created_in_get_measurement_covariance_estimators);
 void ilike_record_main_thread(DllInfo* dll);
+// (dev/plan.md 3.22 U4) the general engine of an unnormalised distribution written as a block
+SMCPath *make_smc_path(RandomNumberGenerator *rng, size_t *seed, Data *data, const RecipeValue &model, const RecipeValue &model_parameters, const std::string &x, const std::string &mode, size_t particles, size_t steps, size_t sweeps, double resampling, size_t waste_free);
 
 #endif

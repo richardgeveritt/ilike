@@ -32,6 +32,7 @@ void LikelihoodEstimatorOutput::operator=(const LikelihoodEstimatorOutput &anoth
 void LikelihoodEstimatorOutput::make_copy(const LikelihoodEstimatorOutput &another)
 {
   this->log_likelihood = another.log_likelihood;
+  this->sign = another.sign;
   this->write_to_file_flag = another.write_to_file_flag;
   this->subsample_log_likelihood = another.subsample_log_likelihood;
 }

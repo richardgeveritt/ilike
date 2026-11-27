@@ -339,3 +339,50 @@ test_that("EnKF agrees with the KF with two measurement factors and with a time-
     expect_lt(abs(z[["enkf"]] - z[["kf"]]), 0.15)
   }
 })
+
+# (C305, dev/plan.md 3.22 U9 R3b) correlated pseudo-marginal MCMC with the
+# EnKF likelihood: each member's random numbers from its own seed, and a
+# proposal keeping all members' but `refresh` of them
+correlated_enkf_files = function(n = 50)
+{
+  set.seed(4); x = numeric(n); x[1] = rnorm(1)
+  for (t in 2:n) x[t] = 0.7*x[t-1] + rnorm(1, 0, sqrt(0.5))
+  y = round(x + rnorm(n), 3)
+  d = tempfile(); dir.create(d)
+  writeLines(c("ilike 1.0", "model {", "  x ~ norm(0, 1)", "  transition x = linear_gaussian(matrix = cpp::transition_matrix, covariance = 0.5)",
+               "  factor obs = linear_gaussian(data = y, state = x, matrix = 1, covariance = 1)",
+               paste0("  time = ssm(index = i, first_index = 0, last_index = ", n - 1, ", time = t, initial_time = 0,"),
+               "             time_difference = dt, time_step = 1, predictions_per_update = 1)", "}", "cpp {",
+               "arma::mat transition_matrix(const Parameters &parameters) { arma::mat A(1, 1); A(0, 0) = parameters[\"a\"][0]; return A; }", "}",
+               "algorithm kalman {", "}"), file.path(d, "inner.ilike"))
+  list(d = d, outer = function(factor, iterations) {
+    f = file.path(d, "outer.ilike")
+    writeLines(c("ilike 1.0", "import \"inner.ilike\" as inner", paste0("data { y = [", paste(y, collapse = ", "), "] }"), "model {",
+                 "  a ~ unif(-1, 1)", paste0("  factor filter = ", factor), "}",
+                 "algorithm mcmc {", "  move m = metropolis(norm_rw(a, 0.1))", paste0("  termination = iterations(", iterations, ")"), "}"), f)
+    out = "correlated_enkf_output"; unlink(out, recursive = TRUE)
+    suppressMessages(ilike::MCMC(ilike::compile(f), results_name = out, seed = 1, initial_values = list(list(a = 0.5))))
+    o = ilike::load_mcmc_output(out); o$Value[o$ParameterName == "a"]
+  })
+}
+
+test_that("correlated EnKF estimates in MCMC: the default unchanged, and more proposals accepted", {
+  m = correlated_enkf_files()
+  on.exit(unlink(c(m$d, "correlated_enkf_output"), recursive = TRUE), add = TRUE)
+  enkf = function(extra = "") paste0("enkf(inner, ensemble_members = 10, shifter = \"stochastic\"", extra, ")")
+  expect_identical(m$outer(enkf(), 200), m$outer(enkf(", correlated = false"), 200))
+  fresh = m$outer(enkf(), 2000)
+  correlated = m$outer(enkf(", correlated = true"), 2000)
+  # (10 members, 50 observations: about 0.22 against 0.59)
+  expect_gt(mean(diff(correlated) != 0), mean(diff(fresh) != 0) + 0.15)
+})
+
+test_that("correlated EnKF estimates in MCMC: the posterior agrees with the Kalman filter's", {
+  skip_on_cran()
+  m = correlated_enkf_files()
+  on.exit(unlink(c(m$d, "correlated_enkf_output"), recursive = TRUE), add = TRUE)
+  kf = m$outer("kf(inner)", 10000)[-(1:500)]
+  enkf = m$outer("enkf(inner, ensemble_members = 10, shifter = \"stochastic\", correlated = true, refresh = 2)", 10000)[-(1:500)]
+  expect_equal(mean(enkf), mean(kf), tolerance = 0.03)
+  expect_equal(sd(enkf), sd(kf), tolerance = 0.15)
+})

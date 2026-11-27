@@ -22,6 +22,16 @@ struct ExchangeField
   UnnormalisedSweepFunctionPtr sweep = NULL;    // one heat-bath sweep, in place
   size_t sweeps = 100;
   size_t replicates = 1;   // (replicates = R: one field per replicate in the target)
+  // (dev/plan.md 3.22 U3) bridges = K: annealed exchange through K
+  // distributions on the straight path between the parameters, with
+  // bridge_sweeps reversible (sweep then reverse sweep) updates at each
+  size_t bridges = 0;
+  size_t bridge_sweeps = 1;
+  UnnormalisedSweepFunctionPtr reverse_sweep = NULL;
+  std::vector<std::string> normaliser;
+  // (dev/plan.md 3.22 U4) the general engine of a distribution written as a
+  // block: its draws (sweeps iterations of its kernel) and its path (one particle)
+  ClonePtr<SMCPath> engine;
 };
 
 // The exchange algorithm's auxiliary draw (Murray, Ghahramani & MacKay 2006;

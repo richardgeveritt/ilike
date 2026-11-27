@@ -96,6 +96,50 @@ namespace ilike
     this->find_scale = false;
   }
 
+  // (dev/plan.md 3.22 U4) every value of a schedule variable is set here, so
+  // that a path's parameters follow it
+  void Sequencer::set_schedule_value(const std::string &name, double value)
+  {
+    this->schedule_parameters[name] = value;
+    if (!this->path_names.empty() && (name == this->variable_names.back()))
+      this->apply_path();
+  }
+
+  // (dev/plan.md 3.22 U4) an annealed path between two values of some
+  // parameters, along the last schedule variable t (from 0 to 1): each is set
+  // to start + t (end - start), exactly start at t = 0 and end at t = 1, in
+  // the schedule parameters (whose matrices the particles share), so the
+  // factors read them as usual
+  void Sequencer::set_path(const std::vector<std::string> &names, const Parameters &start, const Parameters &end)
+  {
+    this->path_names = names;
+    this->path_start = start.deep_copy();
+    this->path_end = end.deep_copy();
+    for (const std::string &name : names)
+      if (this->schedule_parameters.find_vector(name) == NULL)
+        this->schedule_parameters[name] = this->path_start[name];
+    this->apply_path();
+  }
+
+  void Sequencer::apply_path()
+  {
+    if (this->variable_names.empty() || (this->schedule_parameters.find_vector(this->variable_names.back()) == NULL))
+      return;
+    double t = this->schedule_parameters[this->variable_names.back()][0];
+    for (const std::string &name : this->path_names)
+    {
+      arma::mat &value = this->schedule_parameters[name];
+      const arma::mat &a = this->path_start[name];
+      const arma::mat &b = this->path_end[name];
+      if (t == 0.0)
+        value = a;
+      else if (t == 1.0)
+        value = b;
+      else
+        value = a + t*(b - a);
+    }
+  }
+
   void Sequencer::set_initial_schedule_parameters()
   {
     this->mileometer.reset();
@@ -113,7 +157,7 @@ namespace ilike
       {
         value_to_use = this->schedules[i][this->mileometer[i]];
       }
-      this->schedule_parameters[this->variable_names[i]] = value_to_use;
+      this->set_schedule_value(this->variable_names[i], value_to_use);
 
       if (i == this->variable_names.size() - 1)
       {
@@ -136,7 +180,7 @@ namespace ilike
       {
         value_to_use = this->schedules[i][this->mileometer[i]];
       }
-      this->schedule_parameters[this->variable_names[i]] = value_to_use;
+      this->set_schedule_value(this->variable_names[i], value_to_use);
 
       this->mileometer.increment();
 
@@ -194,6 +238,9 @@ namespace ilike
     this->find_scale = another.find_scale;
     this->scale_variable = another.scale_variable;
     this->scale_variables = another.scale_variables;
+    this->path_names = another.path_names;
+    this->path_start = another.path_start.deep_copy();
+    this->path_end = another.path_end.deep_copy();
   }
 
   Sequencer::Sequencer(Sequencer &&another)
@@ -234,6 +281,9 @@ namespace ilike
     this->schedule_parameters = std::move(another.schedule_parameters);
     this->find_scale = std::move(another.find_scale);
     this->scale_variable = std::move(another.scale_variable);
+    this->path_names = std::move(another.path_names);
+    this->path_start = std::move(another.path_start);
+    this->path_end = std::move(another.path_end);
 
     another.schedules = std::vector<std::vector<double>>();
     another.variable_names = std::vector<std::string>();
@@ -272,7 +322,7 @@ namespace ilike
 
     // see if we need to do the bisection
 
-    this->schedule_parameters[this->variable_names.back()] = this->current_bisect_value;
+    this->set_schedule_value(this->variable_names.back(), this->current_bisect_value);
 
     // if we want to make this generic, need to hide the next two lines in a function that can have different choices
 
@@ -326,7 +376,7 @@ namespace ilike
         {
           new_bisect_value = 2.0 * this->current_bisect_value;
 
-          this->schedule_parameters[this->variable_names.back()] = new_bisect_value;
+          this->set_schedule_value(this->variable_names.back(), new_bisect_value);
 
           // Call SMC specific weight here (done for MCMC, just target for PMC).
           this->the_worker->the_smc->weight_for_adapting_sequence(index,
@@ -372,7 +422,7 @@ namespace ilike
 
       bisect_size = bisect_size / 2.0;
 
-      this->schedule_parameters[this->variable_names.back()] = new_bisect_value;
+      this->set_schedule_value(this->variable_names.back(), new_bisect_value);
 
       // Call SMC specific weight here (done for MCMC, just target for PMC).
       this->the_worker->the_smc->weight_for_adapting_sequence(index,
@@ -422,7 +472,7 @@ namespace ilike
 
     // see if we need to do the bisection
 
-    this->schedule_parameters[this->variable_names.back()] = this->current_bisect_value;
+    this->set_schedule_value(this->variable_names.back(), this->current_bisect_value);
 
     // if we want to make this generic, need to hide the next two lines in a function that can have different choices
 
@@ -474,7 +524,7 @@ namespace ilike
         {
           new_bisect_value = 2.0 * this->current_bisect_value;
 
-          this->schedule_parameters[this->variable_names.back()] = new_bisect_value;
+          this->set_schedule_value(this->variable_names.back(), new_bisect_value);
 
           // Call SMC specific weight here (done for MCMC, just target for PMC).
           this->the_worker->the_smc->subsample_weight_for_adapting_sequence(index,
@@ -520,7 +570,7 @@ namespace ilike
 
       bisect_size = bisect_size / 2.0;
 
-      this->schedule_parameters[this->variable_names.back()] = new_bisect_value;
+      this->set_schedule_value(this->variable_names.back(), new_bisect_value);
 
       // Call SMC specific weight here (done for MCMC, just target for PMC).
       this->the_worker->the_smc->subsample_weight_for_adapting_sequence(index,

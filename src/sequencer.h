@@ -80,7 +80,22 @@ namespace ilike
 
     void reset();
 
+    // (dev/plan.md 3.22 U4) parameters moved along the last schedule variable
+    // t in [0, 1], from start to end (an annealed path between two points)
+    void set_path(const std::vector<std::string> &names, const Parameters &start, const Parameters &end);
+    // the last schedule variable's current value, and its first point; and
+    // setting it (with a path's parameters following)
+    double last_value() const { return this->schedule_parameters[this->variable_names.back()][0]; }
+    double first_point() const { return this->schedules.back().front(); }
+    void set_last_value(double value) { this->set_schedule_value(this->variable_names.back(), value); }
+
   protected:
+    void set_schedule_value(const std::string &name, double value);
+    void apply_path();
+    std::vector<std::string> path_names;
+    Parameters path_start;
+    Parameters path_end;
+
     friend ImportanceSampler;
     friend SMCMCMCMove; // (dev/plan.md 3.21 (c4): the schedule, for early stopping)
 

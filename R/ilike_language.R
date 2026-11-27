@@ -258,6 +258,30 @@ compile_ilike_language <- function(filenames, texts, keep_temporary_recipe_code 
 # defaults it uses; the engine reads the methods from the factor
 resolve_integrations <- function(recipe)
 {
+  # (dev/plan.md 3.22 U4) the inner models of distributions written as blocks
+  # (x ~ unnormalised(...) { ... }): their moves prepared as for an algorithm,
+  # for the general engine
+  if (!is.null(recipe$unnormalised_engines))
+  {
+    for (x in names(recipe$unnormalised_engines))
+    {
+      engine = recipe$unnormalised_engines[[x]]
+      if (is.null(engine$inner))
+        next
+      inner = engine$inner
+      inner$constants = recipe$constants
+      inner$declared_constants = recipe$declared_constants
+      inner$compiled_constants = recipe$compiled_constants
+      inner$language = "ilike"
+      prepared = prepare_recipe(inner, "main", list())
+      p = prepared$recipe
+      p$language = NULL
+      mcmc_weights = get_method(p, "mcmc_weights")
+      recipe$unnormalised_engines[[x]] = list(model = p,
+                                              mcmc_weights = if (is.null(mcmc_weights)) list() else mcmc_weights,
+                                              normaliser = engine$normaliser)
+    }
+  }
   if (is.null(recipe$factor))
     return(recipe)
   for (k in seq_along(recipe$factor))

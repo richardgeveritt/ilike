@@ -115,6 +115,9 @@ public:
   virtual void print(std::ostream &os) const;
   
   double log_likelihood;
+  // (dev/plan.md 3.22 U9 R2) the sign of the estimate: log_likelihood is the
+  // log of its absolute value (signed pseudo-marginal MCMC targets |estimate|)
+  double sign = 1.0;
   
   double subsample_log_likelihood;
   

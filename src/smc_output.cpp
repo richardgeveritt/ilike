@@ -748,6 +748,27 @@ void SMCOutput::write_to_file(const std::string &dir_name,
         }
       }
 
+      // (dev/plan.md 3.22 U9 R2) the sign of each stored point (signed
+      // pseudo-marginal MCMC), aligned with vector_points
+      {
+        const auto &particles = this->all_particles[deque_index].particles;
+        bool any = false;
+        for (auto &p : particles)
+          if (p->records_signs())
+            any = true;
+        if (any && !this->all_particles[deque_index].is_flat())
+        {
+          std::vector<double> signs;
+          for (auto &p : particles)
+          {
+            size_t rows = p->fill_signs(signs);
+            if (rows != p->length())
+              Rcpp::stop("SMCOutput::write_to_file: a chain's signs do not match its stored points.");
+          }
+          h5_write_vec(iter_grp, "signs", arma::colvec(signs));
+        }
+      }
+
       // weights
       h5_write_vec(iter_grp, "normalised_log_weights",
                    this->all_particles[deque_index].normalised_log_weights);

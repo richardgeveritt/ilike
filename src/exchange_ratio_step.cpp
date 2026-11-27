@@ -41,7 +41,17 @@ double ExchangeRatioStep::draw(RandomNumberGenerator &rng,
     for (size_t r = 0; r < active; ++r)
     {
     arma::mat u;
-    if (field.exact != NULL)
+    if (field.engine)
+    {
+      // the general engine (a distribution written as a block): its kernel
+      // at `to`, from the latent field or from a draw from the base measure
+      Parameters state = to.deep_copy();
+      if (state.find_vector(field.variable) == NULL)
+        state[field.variable] = field.engine->draw_base(rng, to)[field.variable];
+      field.engine->draw(rng, state, to, std::max(field.sweeps, size_t(1)));
+      u = state[field.variable];
+    }
+    else if (field.exact != NULL)
     {
       Parameters drawn = field.exact(rng, to, *this->data);
       u = drawn[field.variable];
@@ -59,7 +69,21 @@ double ExchangeRatioStep::draw(RandomNumberGenerator &rng,
     // density 0 there)
     if (u.has_nan())
       return -arma::datum::inf;
-    total += field.potential(u, from, *this->data) - field.potential(u, to, *this->data);
+    // the exchange term as an annealed importance sampling estimate of
+    // Z(from)/Z(to) along the path from `to` (where u was drawn) to `from`
+    // (dev/plan.md 3.22 U3c): with no bridges, gamma(u | from)/gamma(u | to)
+    // (Murray, Ghahramani & MacKay 2006); with bridges, their section 5, with
+    // reversible updates (a sweep then a reverse sweep) at each bridge
+    Parameters state = to.deep_copy();
+    state[field.variable] = u;
+    if (field.engine)
+    {
+      total += field.engine->single(rng, state, to, from);
+      continue;
+    }
+    FieldPath path(field.variable, field.potential, field.sweep, field.reverse_sweep, field.normaliser,
+                   field.bridges, field.bridge_sweeps, field.bridges > 0, this->data);
+    total += path.single(rng, state, to, from);
     }
   }
   return total;
