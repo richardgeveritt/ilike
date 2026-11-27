@@ -202,6 +202,9 @@ remotes::install_github("richardgeveritt/ilike")
   : Gets a seed for random number generation by using the processor time
   stamp (calling rdtsc in C).
 
+- [`signed_mean()`](https://richardgeveritt.github.io/ilike/reference/signed_mean.md)
+  : Posterior expectations from a signed pseudo-marginal MCMC run.
+
 - [`toy_model_rwm_ggmcmc`](https://richardgeveritt.github.io/ilike/reference/toy_model_rwm_ggmcmc.md)
   : 100000 points simulated from a two-dimensional posterior using MCMC,
   in the format required by the ggmcmc package.
