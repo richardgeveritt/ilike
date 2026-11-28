@@ -56,6 +56,9 @@ public:
                                const std::string &prefix) const;
 
   bool adapts() const;
+  // (U5a) the moves in reverse order, each reversed; reversible parts when every move's are
+  void move_in_place_reversed(RandomNumberGenerator &rng, Particle &particle) const;
+  bool reversible_parts(std::string &why) const;
 
   // the moves' diagnostics (C226), each move's columns prefixed moveK.
   void diagnostic_names(std::vector<std::string> &names) const;

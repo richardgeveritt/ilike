@@ -184,3 +184,32 @@ test_that("SMC moves that reuse dropped generations' outputs give the same run",
   z = sapply(c(2, 100), function(k) suppressMessages(ilike::SMC_with_MCMC(r, number_of_particles = 200, smc_iterations_to_store = k, seed = 3)))
   expect_identical(z[1], z[2])
 })
+
+# (2026-11-27) annealing from an importance proposal adds q^(1 - p) after the
+# model's factors; a move on one of two independent parameters evaluates only
+# some of the factors, and its factor index must include q^(1 - p) too (before,
+# the particles followed (prior x likelihood)^p alone: at p = 0.5, theta had
+# mean 0.48 and variance 1.15 against 0.667 and 0.667, and the evidence was
+# -1.62 against -3.03)
+test_that("annealing from an importance proposal, with moves on some of the parameters", {
+  skip_on_cran()
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(c(f, "smc_proposal_moves"), recursive = TRUE), add = TRUE)
+  writeLines(c("ilike 1.0", "data { y = 1", "  w = 1 }", "model {", "  theta ~ norm(0, 1)", "  phi ~ norm(0, 1)",
+               "  y ~ norm(theta, 1)", "  w ~ norm(phi, 1)", "}", "algorithm smc {",
+               "  move a = metropolis(norm_rw(theta, 0.5))", "  move b = metropolis(norm_rw(phi, 0.5))", "  termination = iterations(20)",
+               "  sequence = annealing(power, [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1])",
+               "  proposal = density(simulate = cpp::draw, log = cpp::log_draw)", "  particles = 4000", "}", "cpp {",
+               "Parameters draw(RandomNumberGenerator &rng) { Parameters p; p[\"theta\"] = arma::mat(1, 1, arma::fill::value(rnorm(rng, 1.0, 1.0))); p[\"phi\"] = arma::mat(1, 1, arma::fill::value(rnorm(rng, 1.0, 1.0))); return p; }",
+               "double log_draw(const Parameters &p) { return dnorm(p[\"theta\"][0], 1.0, 1.0) + dnorm(p[\"phi\"][0], 1.0, 1.0); }", "}"), f)
+  z = suppressMessages(ilike::SMC_with_MCMC(suppressMessages(ilike::compile(f)), results_name = "smc_proposal_moves", seed = 1))
+  expect_equal(z, 2*dnorm(1, 0, sqrt(2), log = TRUE), tolerance = 0.02)
+  o = ilike::load_smc_output("smc_proposal_moves")
+  o = o[o$ParameterName == "theta", ]
+  half = o[o$TargetParameters == "power=0.5;", ]
+  w = exp(half$LogWeight - max(half$LogWeight)); w = w/sum(w)
+  m = sum(w*half$Value)
+  # the bridge q^(1/2) (prior x likelihood)^(1/2): N(2/3, 2/3)
+  expect_equal(m, 2/3, tolerance = 0.03)
+  expect_equal(sum(w*(half$Value - m)^2), 2/3, tolerance = 0.05)
+})

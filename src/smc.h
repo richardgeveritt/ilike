@@ -128,6 +128,15 @@ public:
   void setup_variables(const Parameters &parameters);
   
   void resample(SMCOutput* current_state);
+  // (dev/plan.md 3.22 U9 R3c, C307) correlated = crank_nicolson(sd) in a
+  // particle filter: its standard normals stored in the output and moved
+  // all at once by a proposal; resampling then systematic, at every step, on
+  // sorted particles (correlated_resample). 0: off (every other run).
+  double crank_nicolson_sd = 0.0;
+  virtual void correlated_resample(SMCOutput* current_state)
+  {
+    Rcpp::stop("correlated = crank_nicolson(…) is available only in a particle filter.");
+  }
   
   virtual MoveOutput* move(RandomNumberGenerator &rng,
                            const Particle &particle) const=0;

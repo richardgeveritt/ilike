@@ -1,6 +1,8 @@
 #include "vector_factors.h"
 #include <numeric>
 #include "particle_filter.h"
+#include "normal_source.h"
+#include "hilbert_sort.h"
 #include "caller_tempering.h"
 #include "factors.h"
 #include "chunk_parallel.h"
@@ -442,6 +444,11 @@ SMCOutput* ParticleFilter::specific_initialise_smc(const Parameters &conditioned
 void ParticleFilter::simulate_smc(SMCOutput* current_state,
                                   const Parameters &conditioned_on_parameters)
 {
+  if (this->crank_nicolson_sd > 0.0)
+  {
+    this->correlated_simulate_smc(current_state, conditioned_on_parameters);
+    return;
+  }
   if (current_state->number_of_smc_iterations()==0)
   {
     // Simulate from the proposal.
@@ -1271,6 +1278,188 @@ void ParticleFilter::follow_from_start(SMCOutput *current_state, const Parameter
   if (trial)
     current_state->set_latest_llhd(value);
   current_state->log_likelihood = value;
+}
+
+
+// (dev/plan.md 3.22 U9 R3c, C307) the correlated particle filter
+
+void ParticleFilter::set_crank_nicolson(double sd)
+{
+  if (this->follows_caller_target)
+    Rcpp::stop("pf(..., correlated = crank_nicolson(...)) is for MCMC moves on the parameters: not available when the caller's sequence takes in the filter's observations one at a time (SMC^2).");
+  if (!this->defers_simulation())
+    Rcpp::stop("pf(..., correlated = crank_nicolson(...)) needs the bootstrap filter (particles moved by the transition model, with no proposal of their own).");
+  this->crank_nicolson_sd = sd;
+}
+
+namespace
+{
+// particle slot i's standard normals at a step, from column i of the step's
+// store (installed on this thread while the slot is drawn). Every draw must
+// come from them: the slot is given a generator seeded from a constant, and
+// if anything draws from it the run stops.
+struct SlotNormals
+{
+  NormalSourcesInUse in_use; // (released after the destructor has uninstalled the source)
+  NormalSource source;
+  RandomNumberGenerator unused, unused_copy;
+  SlotNormals(arma::mat &store, size_t particles, RandomNumberGenerator* fresh)
+    : unused(*fresh), unused_copy(*fresh)
+  {
+    if (store.n_cols != particles)
+      store.set_size(0, particles);
+    this->source.store = &store;
+    this->source.fresh = fresh;
+  }
+  RandomNumberGenerator& slot(size_t i)
+  {
+    this->unused.seed(0x5bd1e995ULL);
+    this->unused_copy = this->unused;
+    this->source.column = arma::uword(i);
+    this->source.next = 0;
+    installed_normal_source = &this->source;
+    return this->unused;
+  }
+  void check()
+  {
+    installed_normal_source = NULL;
+    if (this->unused() != this->unused_copy())
+      Rcpp::stop("pf(..., correlated = crank_nicolson(...)) needs every draw of the particles to be a built-in Gaussian (a norm or mvnorm prior "
+                 "on the state, linear_gaussian or nonlinear_gaussian transitions): this model draws random numbers otherwise.");
+  }
+  ~SlotNormals() { installed_normal_source = NULL; }
+};
+}
+
+void ParticleFilter::correlated_simulate_smc(SMCOutput* current_state, const Parameters &conditioned_on_parameters)
+{
+  std::vector<arma::mat> &store = current_state->cn_normals;
+  const size_t N = this->number_of_particles;
+  if (current_state->number_of_smc_iterations() == 0)
+  {
+    // a proposal's u: u' = sqrt(1 - s^2) u + s e, e ~ N(0, I) (reversible
+    // with respect to N(0, I), so no term in the acceptance ratio)
+    if (current_state->cn_move_pending)
+    {
+      const double sd = this->crank_nicolson_sd, keep = std::sqrt(1.0 - sd * sd);
+      for (arma::mat &step : store)
+        for (double &z : step)
+          z = keep * z + sd * rnorm(*this->rng);
+      for (double &z : current_state->cn_resampling)
+        z = keep * z + sd * rnorm(*this->rng);
+      current_state->cn_move_pending = false;
+    }
+    if (store.empty())
+      store.resize(1);
+    Particles* next_particles = current_state->add_particles();
+    SlotNormals normals(store[0], N, this->rng);
+    for (size_t i = 0; i < N; ++i)
+    {
+      RandomNumberGenerator &g = normals.slot(i);
+      next_particles->push_back(this->particle_simulator->simulate(g, this->factors.get(), &this->proposals_to_transform_for,
+                                                                   &this->proposals_to_find_gradient_for, conditioned_on_parameters,
+                                                                   this->sequencer.schedule_parameters));
+      normals.check();
+    }
+    current_state->back().initialise_weights();
+    return;
+  }
+  this->transition_proposal->smc_adapt(current_state);
+  current_state->normalise_and_resample_weights();
+  Particles* current_particles = &current_state->back();
+  Particles* next_particles = current_state->add_particles(current_particles);
+  this->increment_time_index();
+  const size_t step = this->current_index - this->first_index;
+  if (store.size() <= step)
+    store.resize(step + 1);
+  SlotNormals normals(store[step], N, this->rng);
+  for (size_t i = 0; i < N; ++i)
+  {
+    const Particle &ancestor = (*current_particles)[current_particles->ancestor_variables[i]]->back();
+    RandomNumberGenerator &g = normals.slot(i);
+    MoveOutput* spare = next_particles->take_spare();
+    if (spare != NULL)
+      next_particles->push_back(this->move_reusing(g, ancestor, spare));
+    else
+      next_particles->push_back(this->move(g, ancestor));
+    next_particles->back()->back().previous_self = &ancestor;
+    normals.check();
+  }
+  current_state->increment_smc_iteration();
+}
+
+// At every step: the particles ordered along the Hilbert curve (by value for
+// a scalar state; the state is what differs between the particles), then
+// systematic resampling in that order with the uniform Phi(z), z the step's
+// stored resampling normal: ancestor of slot i the particle in whose share
+// of the cumulative weight (i + Phi(z))/N falls.
+void ParticleFilter::correlated_resample(SMCOutput* current_state)
+{
+  Particles &particles = current_state->back();
+  const size_t N = particles.size();
+  // the state: the variables that differ between the particles (found at
+  // the run's first resampling; the particles' variables stay the same
+  // through a run)
+  const Parameters &first = particles[0]->back().parameters;
+  const size_t step = this->current_index - this->first_index;
+  if ((step == 0) || this->correlated_state.empty())
+  {
+    this->correlated_state.clear();
+    std::vector<std::string> names = first.get_vector_variables();
+    for (const std::string &name : names)
+    {
+      const arma::mat &value = first[name];
+      for (size_t i = 1; i < N; ++i)
+      {
+        const Parameters &parameters_i = particles[i]->back().parameters;
+        const arma::mat &other = parameters_i[name];
+        if ((other.n_elem != value.n_elem) || arma::any(arma::vectorise(other != value)))
+        {
+          this->correlated_state.push_back(name);
+          break;
+        }
+      }
+    }
+  }
+  const std::vector<std::string> &state = this->correlated_state;
+  size_t k = 0;
+  for (const std::string &name : state)
+    k += first[name].n_elem;
+  arma::mat points(N, k);
+  for (size_t i = 0; i < N; ++i)
+  {
+    size_t c = 0;
+    for (const std::string &name : state)
+    {
+      const Parameters &parameters_i = particles[i]->back().parameters;
+      arma::rowvec v = arma::vectorise(parameters_i[name]).t();
+      points.row(i).subvec(c, c + v.n_elem - 1) = v;
+      c += v.n_elem;
+    }
+  }
+  std::vector<size_t> order = hilbert_order(points);
+  // the step's resampling normal
+  std::vector<double> &resampling = current_state->cn_resampling;
+  while (resampling.size() <= step)
+    resampling.push_back(rnorm(*this->rng));
+  const double u = R::pnorm(resampling[step], 0.0, 1.0, 1, 0);
+  // systematic resampling on the sorted particles
+  arma::colvec w = arma::exp(particles.normalised_log_weights - log_sum_exp(particles.normalised_log_weights));
+  std::vector<size_t> ancestors(N);
+  double cumulative = w(order[0]);
+  size_t j = 0;
+  for (size_t i = 0; i < N; ++i)
+  {
+    const double v = (double(i) + u) / double(N);
+    while ((cumulative < v) && (j + 1 < N))
+    {
+      j = j + 1;
+      cumulative += w(order[j]);
+    }
+    ancestors[i] = order[j];
+  }
+  particles.ancestor_variables = ancestors;
+  particles.resampled_flag = true;
 }
 
 }

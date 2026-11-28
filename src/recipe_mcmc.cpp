@@ -2,8 +2,12 @@
 #include "slice_mcmc.h"
 #include "ratio_estimating_mcmc.h"
 #include "ratio_estimating_mh_mcmc.h"
-#include "involutive_mcmc.h"
+#include "involution_proposal_kernel.h"
+#include "involution_step.h"
+#include "symmetric_scan_mcmc.h"
 #include "exchange_ratio_step.h"
+#include "annealed_latent_step.h"
+#include "averaged_latent_step.h"
 #include "slice_point_proposal_kernel.h"
 #include "choice_proposal_kernel.h"
 #include "esjd_adaptor.h"
@@ -470,7 +474,8 @@ static MoveFactors set_move_factor_indices(MCMC *mcmc, const RecipeValue &propos
                                            const std::string &prefix,
                                            const Index *full_index,
                                            bool check_factor_index,
-                                           size_t block_number) {
+                                           size_t block_number,
+                                           const std::vector<size_t> &appended) {
   MoveFactors move_factors;
   move_factors.label = prefix + "_proposal " + std::to_string(block_number);
   move_factors.unadjusted = (prefix == "unadjusted");
@@ -525,6 +530,15 @@ static MoveFactors set_move_factor_indices(MCMC *mcmc, const RecipeValue &propos
     if (std::find(used.begin(), used.end(), *i) != used.end())
       Rcpp::stop("Factor " + std::to_string(*i + 1) + " is in both " +
                  used_name + " and " + cut_name + ".");
+
+  // (2026-11-27) the factors the algorithm appended (q^(1 - p) in SMC's
+  // annealing from an importance proposal; annealed reversible jump's
+  // bridges) read the moved variables: a move that leaves them out is
+  // invariant for the wrong distribution
+  for (size_t a : appended)
+    if ((std::find(used.begin(), used.end(), a) == used.end()) &&
+        (std::find(cut.begin(), cut.end(), a) == cut.end()))
+      used.push_back(a);
 
   VectorIndex used_index(used); // the setters copy their arguments
   mcmc->set_index_if_null(&used_index);
@@ -682,6 +696,17 @@ void attach_smc_adaptor(ProposalKernel *proposal, const RecipeValue &proposal_in
   proposal->set_smc_adaptor(make_builtin_smc_adaptor(node, proposal, model_parameters));
 }
 
+// (dev/plan.md 3.22 U5b, C312) MHAAR-RB's step from its settings
+static AveragedLatentStep* read_averaged_step(const RecipeValue &averaged)
+{
+  std::vector<double> latent = averaged["latent_factors"], own = averaged["own_factors"];
+  std::vector<size_t> latent_factors, own_factors;
+  for (double f : latent) latent_factors.push_back(size_t(f) - 1);
+  for (double f : own) own_factors.push_back(size_t(f) - 1);
+  return new AveragedLatentStep(averaged["variable"].as_string(), size_t(averaged["points"].as_double()), averaged["refresh"].as_bool(),
+                                averaged["simulate"].function_pointer<SimulateIndependentProposalPtr>(), latent_factors, own_factors);
+}
+
 // (dev/plan.md 3.22 U1) the fields of an exchange move: one entry per
 // unnormalised distribution whose normaliser the move changes
 static std::vector<ExchangeField> read_exchange_fields(const RecipeValue &entries, const RecipeValue &model,
@@ -725,6 +750,91 @@ static std::vector<ExchangeField> read_exchange_fields(const RecipeValue &entrie
   return fields;
 }
 
+// (C316) the functions of a jump move
+InvolutionFunctions *read_involution_functions(const RecipeValue &settings, const std::string &kind, const Data *data)
+{
+  if (kind == "birth_death") {
+    std::vector<std::string> variables = settings["variables"];
+    return new BirthDeathFunctions(settings["indicator"].as_string(), size_t(settings["maximum"].as_double()), variables,
+                                   settings["simulate"].function_pointer<SimulateIndependentProposalPtr>(),
+                                   settings["log"].function_pointer<EvaluateLogIndependentProposalPtr>());
+  }
+  return new UserInvolutionFunctions(settings["auxiliary"].function_pointer<InvolutionAuxiliaryPtr>(),
+                                     settings["log_auxiliary"].function_pointer<InvolutionLogDensityPtr>(),
+                                     settings["map"].function_pointer<InvolutionMapPtr>(),
+                                     settings.contains("log_jacobian") ? settings["log_jacobian"].function_pointer<InvolutionLogDensityPtr>() : NULL,
+                                     data);
+}
+
+// (stage B) annealed reversible jump: the path (bridges = K, kernel = g) of
+// a jump move, if it has one
+static AnnealedPathKernel read_jump_path(const RecipeValue &info, const RecipeValue &settings, const std::string &kind,
+                                         const RecipeValue &model, const RecipeValue &model_parameters, Data *data,
+                                         const Index *full_index)
+{
+  if (!info.contains("path"))
+    return AnnealedPathKernel();
+  RecipeValue path = info["path"];
+  const size_t bridges = size_t(path["bridges"].as_double());
+  if (bridges == 0)
+    return AnnealedPathKernel();
+  std::vector<double> path_factors;
+  if (info.contains("mh_factor_index"))
+    path_factors = Rcpp::as<std::vector<double>>((info["mh_factor_index"]).function_pointer<NumericVectorPtr>()());
+  else
+    for (size_t k = 0; k < model["factor"].size(); ++k)
+      path_factors.push_back(double(k + 1));
+  if (full_index == NULL)
+    stop(kind + "(…, bridges = K): the index of the model's factors is not available.");
+  static RandomNumberGenerator placeholder_rng;
+  static size_t placeholder_seed = 0;
+  // (the path runs in the larger model's coordinates: from the new state's
+  // side for a jump up, from the current state's side for a jump down, so
+  // that a jump's reverse path is its path read backwards)
+  SMCPath *up = make_jump_path(&placeholder_rng, &placeholder_seed, data, model, model_parameters, path, path_factors, false);
+  SMCPath *down = make_jump_path(&placeholder_rng, &placeholder_seed, data, model, model_parameters, path, path_factors, true);
+  std::vector<size_t> kernel;
+  for (double position : static_cast<std::vector<double>>(path["kernel"]))
+    kernel.push_back(size_t(position));
+  AnnealedPathKernel annealing(bridges, up, full_index->duplicate(), kernel);
+  annealing.reverse_path.reset(down);
+  return annealing;
+}
+
+// (dev/plan.md 3.22 U5a; stage A) AIS MCMC's step: its path, the general
+// engine on the model with the kernel's moves (the lowering's "inner"
+// algorithm), changing the factors that read the move's parameters (its
+// factor index, or all the factors)
+static AnnealedLatentStep* read_annealed_step(const RecipeValue &info, const std::string &prefix,
+                                              const RecipeValue &model, const RecipeValue &model_parameters, Data *data,
+                                              const Index *full_index)
+{
+  RecipeValue annealed = info["annealed"];
+  const size_t bridges = size_t(annealed["bridges"].as_double());
+  if (bridges == 0)
+    return new AnnealedLatentStep(0, NULL, NULL);
+  std::vector<double> path_factors;
+  const std::string index_name = prefix + "_factor_index";
+  if (info.contains(index_name.c_str()))
+    path_factors = Rcpp::as<std::vector<double>>((info[index_name]).function_pointer<NumericVectorPtr>()());
+  else
+    for (size_t k = 0; k < model["factor"].size(); ++k)
+      path_factors.push_back(double(k + 1));
+  // (placeholders: the path's SMC is redirected to a stream of the move's own at each run)
+  static RandomNumberGenerator placeholder_rng;
+  static size_t placeholder_seed = 0;
+  SMCPath *path = make_annealed_path(&placeholder_rng, &placeholder_seed, data, model, model_parameters,
+                                     annealed["inner"], path_factors, bridges + 1,
+                                     size_t(annealed["sweeps"].as_double()));
+  if (full_index == NULL)
+    stop("annealed(…): the index of the model's factors is not available.");
+  std::vector<size_t> kernel;
+  if (annealed.contains("kernel"))
+    for (double position : static_cast<std::vector<double>>(annealed["kernel"]))
+      kernel.push_back(size_t(position));
+  return new AnnealedLatentStep(bridges, path, full_index->duplicate(), kernel);
+}
+
 MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, Data *data,
                 const RecipeValue &mcmc_termination_method,
                 const RecipeValue &mcmc_weights_method, Index *full_index) {
@@ -746,6 +856,18 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
 
   if (model.contains("order_of_mcmc")) {
     std::vector<double> order_of_mcmc = model["order_of_mcmc"];
+    // (2026-11-27) the positions of the factors the algorithm appended after
+    // the model's (with_appended_factors): every move's factor index includes them
+    std::vector<size_t> appended;
+    if (model.contains("ilike_appended_factors"))
+      for (double position : static_cast<std::vector<double>>(model["ilike_appended_factors"]))
+        appended.push_back(size_t(position));
+    // (dev/plan.md 3.22, stage A) the moves as a symmetric scan: in order and
+    // then reversed, each iteration a reversible kernel that does not adapt
+    // (the kernel of an annealed path inside a Metropolis-Hastings move)
+    const bool symmetric = model.contains("symmetric_scan") && model["symmetric_scan"].as_bool();
+    // (each move makes one iteration of a scan)
+    const bool several = (order_of_mcmc.size() > 1) || symmetric;
     std::vector<MCMC *> moves;
     moves.reserve(order_of_mcmc.size());
     std::vector<MoveFactors> move_factors;
@@ -768,19 +890,22 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
         InvolutionLogDensityPtr log_jacobian = NULL;
         if (settings.contains("log_jacobian"))
           log_jacobian = settings["log_jacobian"].function_pointer<InvolutionLogDensityPtr>();
-        InvolutionProposalKernel *kernel = new InvolutionProposalKernel(
-            state_variables,
-            settings["auxiliary"].function_pointer<InvolutionAuxiliaryPtr>(),
-            settings["log_auxiliary"].function_pointer<InvolutionLogDensityPtr>(),
-            settings["map"].function_pointer<InvolutionMapPtr>(),
-            log_jacobian, size_t(settings["check"].as_double()));
-        if (order_of_mcmc.size() > 1)
-          mcmc = new InvolutiveMCMC(1, kernel, data);
+        // (C316) a ratio-estimating MH move: its proposal changes nothing,
+        // and its state step draws the auxiliary variables and applies the map
+        InvolutionStep *step = new InvolutionStep(
+            new UserInvolutionFunctions(settings["auxiliary"].function_pointer<InvolutionAuxiliaryPtr>(),
+                                        settings["log_auxiliary"].function_pointer<InvolutionLogDensityPtr>(),
+                                        settings["map"].function_pointer<InvolutionMapPtr>(),
+                                        log_jacobian, data),
+            "", state_variables, size_t(settings["check"].as_double()));
+        InvolutionProposalKernel *kernel = new InvolutionProposalKernel();
+        if (several)
+          mcmc = new RatioEstimatingMHMCMC(1, kernel, step);
         else
-          mcmc = new InvolutiveMCMC(termination_method, kernel, data);
+          mcmc = new RatioEstimatingMHMCMC(termination_method, kernel, step);
         move_factors.push_back(set_move_factor_indices(
             mcmc, info, "mh", full_index,
-            check_factor_index, simulate_mh_proposal_index + 1));
+            check_factor_index, simulate_mh_proposal_index + 1, appended));
         simulate_mh_proposal_index = simulate_mh_proposal_index + 1;
       } else if ((*i) == 1) {
         ProposalKernel *proposal;
@@ -812,17 +937,55 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
             // slice sampling (dev/plan.md 3.21 (c3)): its own move, with the
             // settings held by its proposal
             SlicePointProposalKernel *settings = dynamic_cast<SlicePointProposalKernel*>(proposal);
-            if (order_of_mcmc.size() > 1)
+            if (several)
               mcmc = new SliceMCMC(1, settings);
             else
               mcmc = new SliceMCMC(termination_method, settings);
+          } else if (proposal_infos[simulate_mh_proposal_index].contains("rj")) {
+            // (dev/plan.md 3.22 U6, C315) reversible jump with the user's map
+            RecipeValue rj = proposal_infos[simulate_mh_proposal_index]["rj"];
+            std::vector<std::string> variables = rj["variables"];
+            InvolutionStep *step = new InvolutionStep(read_involution_functions(rj, "rj", data),
+                                                      rj["indicator"].as_string(), variables, size_t(rj["check"].as_double()),
+                                                      read_jump_path(proposal_infos[simulate_mh_proposal_index], rj, "rj",
+                                                                     model, model_parameters, data, full_index));
+            RatioEstimatingMHMCMC *rj_move = (several) ? new RatioEstimatingMHMCMC(1, proposal, step)
+                                                                       : new RatioEstimatingMHMCMC(termination_method, proposal, step);
+            rj_move->estimated_ratio().set_points(size_t(rj["points"].as_double()));
+            mcmc = rj_move;
+          } else if (proposal_infos[simulate_mh_proposal_index].contains("birth_death")) {
+            // (dev/plan.md 3.22 U6, C313) reversible jump: birth and death of
+            // entries, a state step of the ratio-estimating move, with the
+            // dimension_jump proposal on the indicator
+            RecipeValue bd = proposal_infos[simulate_mh_proposal_index]["birth_death"];
+            std::vector<std::string> variables = bd["variables"];
+            // (C316) the same step as rj(…), with built-in functions
+            InvolutionStep *step = new InvolutionStep(read_involution_functions(bd, "birth_death", data),
+                                                      bd["indicator"].as_string(), variables, 0,
+                                                      read_jump_path(proposal_infos[simulate_mh_proposal_index], bd, "birth_death",
+                                                                     model, model_parameters, data, full_index));
+            RatioEstimatingMHMCMC *bd_move = (several) ? new RatioEstimatingMHMCMC(1, proposal, step)
+                                                                       : new RatioEstimatingMHMCMC(termination_method, proposal, step);
+            bd_move->estimated_ratio().set_points(size_t(bd["points"].as_double()));
+            mcmc = bd_move;
+          } else if (proposal_infos[simulate_mh_proposal_index].contains("averaged")) {
+            // (U5b) MHAAR-RB with a proposal that is not symmetric
+            AveragedLatentStep *step = read_averaged_step(proposal_infos[simulate_mh_proposal_index]["averaged"]);
+            mcmc = (several) ? new RatioEstimatingMHMCMC(1, proposal, step)
+                                              : new RatioEstimatingMHMCMC(termination_method, proposal, step);
+          } else if (proposal_infos[simulate_mh_proposal_index].contains("annealed")) {
+            // (dev/plan.md 3.22 U5a, C311) AIS MCMC with a proposal that is not
+            // symmetric: the same state step, in the Metropolis-Hastings form
+            AnnealedLatentStep *step = read_annealed_step(proposal_infos[simulate_mh_proposal_index], "mh", model, model_parameters, data, full_index);
+            mcmc = (several) ? new RatioEstimatingMHMCMC(1, proposal, step)
+                             : new RatioEstimatingMHMCMC(termination_method, proposal, step);
           } else if (proposal_infos[simulate_mh_proposal_index].contains("exchange")) {
             // the exchange algorithm with a proposal that is not symmetric
             // (MALA-exchange, dev/plan.md 3.22 U1b)
             RecipeValue entries = proposal_infos[simulate_mh_proposal_index]["exchange"];
             std::vector<ExchangeField> fields = read_exchange_fields(entries, model, model_parameters, data);
             RatioEstimatingMHMCMC *ratio_move;
-            if (order_of_mcmc.size() > 1)
+            if (several)
               ratio_move = new RatioEstimatingMHMCMC(1, proposal, new ExchangeRatioStep(fields, data, model.contains("data_tempering_variable") ? model["data_tempering_variable"].as_string() : std::string()));
             else
               ratio_move = new RatioEstimatingMHMCMC(termination_method, proposal, new ExchangeRatioStep(fields, data, model.contains("data_tempering_variable") ? model["data_tempering_variable"].as_string() : std::string()));
@@ -837,11 +1000,11 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
             mcmc = ratio_move;
           } else if (nuts) {
             HMCProposalKernel *system = dynamic_cast<HMCProposalKernel*>(proposal);
-            if (order_of_mcmc.size() > 1)
+            if (several)
               mcmc = new NoUTurnMCMC(1, system);
             else
               mcmc = new NoUTurnMCMC(termination_method, system);
-          } else if (order_of_mcmc.size() > 1) {
+          } else if (several) {
             mcmc = new MetropolisHastingsMCMC(1, proposal);
           } else {
             mcmc = new MetropolisHastingsMCMC(termination_method, proposal);
@@ -852,7 +1015,7 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
           RecipeValue current_proposal_info = proposal_infos[simulate_mh_proposal_index];
           move_factors.push_back(set_move_factor_indices(
               mcmc, current_proposal_info, "mh", full_index,
-              check_factor_index, simulate_mh_proposal_index + 1));
+              check_factor_index, simulate_mh_proposal_index + 1, appended));
 
           simulate_mh_proposal_index = simulate_mh_proposal_index + 1;
         } else {
@@ -874,7 +1037,7 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
             stop("Error in mcmc proposals part of model file.");
           }
 
-          if (order_of_mcmc.size() > 1) {
+          if (several) {
             mcmc = new MetropolisHastingsMCMC(1, proposal);
           } else {
             mcmc = new MetropolisHastingsMCMC(termination_method, proposal);
@@ -885,7 +1048,7 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
           RecipeValue current_proposal_info = proposal_infos[simulate_imh_proposal_index];
           move_factors.push_back(set_move_factor_indices(
               mcmc, current_proposal_info, "imh", full_index,
-              check_factor_index, simulate_imh_proposal_index + 1));
+              check_factor_index, simulate_imh_proposal_index + 1, appended));
 
           simulate_imh_proposal_index = simulate_imh_proposal_index + 1;
         } else {
@@ -981,7 +1144,7 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
               MCMC *element_move = new MetropolisMCMC(1, element_kernel);
               MoveFactors factors = set_move_factor_indices(
                   element_move, current_proposal_info, "m", full_index,
-                  check_factor_index, simulate_m_proposal_index + 1);
+                  check_factor_index, simulate_m_proposal_index + 1, appended);
               if (e == 0)
                 first_factors = factors;
               element_moves.push_back(element_move);
@@ -989,7 +1152,7 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
             // in place (I4c-2), with the moves above for where that does not
             // apply; or (internal option, for tests) the moves above alone
             bool in_place = gibbs || !(model.contains("in_place_moves") && !model["in_place_moves"].as_bool());
-            MCMCTermination *scan_termination = (order_of_mcmc.size() > 1) ? NULL : termination_method;
+            MCMCTermination *scan_termination = (several) ? NULL : termination_method;
             if (in_place) {
               std::vector<size_t> element_rows, element_columns;
               for (size_t e = 0; e < rows.size(); ++e) {
@@ -1001,7 +1164,7 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
               scan->set_smc_constant(element_smc_constant);
               mcmc = scan;
               move_factors.push_back(set_move_factor_indices(mcmc, current_proposal_info, "m", full_index,
-                                                             check_factor_index, simulate_m_proposal_index + 1));
+                                                             check_factor_index, simulate_m_proposal_index + 1, appended));
             } else {
               move_factors.push_back(first_factors);
               if (scan_termination == NULL)
@@ -1026,13 +1189,25 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
             stop("Error in mcmc proposals part of model file.");
           }
 
-          if (proposal_infos[simulate_m_proposal_index].contains("exchange")) {
+          if (proposal_infos[simulate_m_proposal_index].contains("averaged")) {
+            // (dev/plan.md 3.22 U5b) MHAAR-RB: a state step of the ratio-estimating move
+            AveragedLatentStep *step = read_averaged_step(proposal_infos[simulate_m_proposal_index]["averaged"]);
+            mcmc = (several) ? new RatioEstimatingMCMC(1, proposal, step)
+                                              : new RatioEstimatingMCMC(termination_method, proposal, step);
+          } else if (proposal_infos[simulate_m_proposal_index].contains("annealed")) {
+            // (dev/plan.md 3.22 U5a) AIS MCMC: the kernel's moves, named by
+            // their positions in the cycle, are attached once the cycle is built
+            // (C311: a state step of the ratio-estimating move)
+            AnnealedLatentStep *step = read_annealed_step(proposal_infos[simulate_m_proposal_index], "m", model, model_parameters, data, full_index);
+            mcmc = (several) ? new RatioEstimatingMCMC(1, proposal, step)
+                             : new RatioEstimatingMCMC(termination_method, proposal, step);
+          } else if (proposal_infos[simulate_m_proposal_index].contains("exchange")) {
             // the exchange algorithm (dev/plan.md 3.22 U1): one entry per
             // unnormalised distribution whose normaliser the move changes
             RecipeValue entries = proposal_infos[simulate_m_proposal_index]["exchange"];
             std::vector<ExchangeField> fields = read_exchange_fields(entries, model, model_parameters, data);
             RatioEstimatingMCMC *ratio_move;
-            if (order_of_mcmc.size() > 1)
+            if (several)
               ratio_move = new RatioEstimatingMCMC(1, proposal, new ExchangeRatioStep(fields, data, model.contains("data_tempering_variable") ? model["data_tempering_variable"].as_string() : std::string()));
             else
               ratio_move = new RatioEstimatingMCMC(termination_method, proposal, new ExchangeRatioStep(fields, data, model.contains("data_tempering_variable") ? model["data_tempering_variable"].as_string() : std::string()));
@@ -1044,7 +1219,7 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
               ratio_move->estimated_ratio().set_parallel(proposal_infos[simulate_m_proposal_index]["exchange_parallel"].as_bool(),
                                        model.contains("number_of_threads") ? size_t(model["number_of_threads"].as_double()) : 1);
             mcmc = ratio_move;
-          } else if (order_of_mcmc.size() > 1) {
+          } else if (several) {
             mcmc = new MetropolisMCMC(1, proposal);
           } else {
             mcmc = new MetropolisMCMC(termination_method, proposal);
@@ -1055,7 +1230,7 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
           RecipeValue current_proposal_info = proposal_infos[simulate_m_proposal_index];
           move_factors.push_back(set_move_factor_indices(
               mcmc, current_proposal_info, "m", full_index,
-              check_factor_index, simulate_m_proposal_index + 1));
+              check_factor_index, simulate_m_proposal_index + 1, appended));
 
           simulate_m_proposal_index = simulate_m_proposal_index + 1;
         } else {
@@ -1078,7 +1253,7 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
             stop("Error in mcmc proposals part of model file.");
           }
 
-          if (order_of_mcmc.size() > 1) {
+          if (several) {
             mcmc = new UnadjustedMCMC(1, proposal);
           } else {
             mcmc = new UnadjustedMCMC(termination_method, proposal);
@@ -1089,7 +1264,7 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
           RecipeValue current_proposal_info = proposal_infos[simulate_unadjusted_proposal_index];
           move_factors.push_back(set_move_factor_indices(
               mcmc, current_proposal_info, "unadjusted", full_index,
-              check_factor_index, simulate_unadjusted_proposal_index + 1));
+              check_factor_index, simulate_unadjusted_proposal_index + 1, appended));
 
           simulate_unadjusted_proposal_index =
               simulate_unadjusted_proposal_index + 1;
@@ -1104,6 +1279,21 @@ MCMC *make_mcmc(const RecipeValue &model, const RecipeValue &model_parameters, D
     }
 
     check_unadjusted_compatibility(move_factors);
+
+    if (symmetric) {
+      if (mcmc_weights_method.contains("func"))
+        stop("The kernel of an annealed path is a symmetric scan of its moves, not a random choice among them.");
+      for (MCMC *move : moves) {
+        std::string why;
+        if (!move->reversible_parts(why))
+          stop("annealed(…, kernel = …): the kernel must be reversible, and one of its moves is not (" + why +
+               "). Its moves can be Metropolis or Metropolis-Hastings moves (any proposal) or gibbs moves, singly or in loops.");
+      }
+      MCMC *scan = new SymmetricScanMCMC(termination_method, moves);
+      scan->set_index_if_null(full_index);
+      scan->set_thin(mcmc_thin);
+      return scan;
+    }
 
     if (mcmc_weights_method.contains("func")) {
       std::vector<double> mcmc_weights;

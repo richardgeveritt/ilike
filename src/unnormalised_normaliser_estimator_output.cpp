@@ -192,6 +192,23 @@ void UnnormalisedNormaliserEstimatorOutput::draw_if_pending(const Parameters &pa
 double UnnormalisedNormaliserEstimatorOutput::current_log_estimate(const Parameters &parameters)
 {
   this->draw_if_pending(parameters);
+  // (R4) taylor(…, joint = true): one estimate of Z^-n for the n replicates
+  if (this->estimator->taylor && this->estimator->taylor_joint && (this->estimator->replicates > 1))
+  {
+    if (!this->estimator->tempering_variable.empty())
+      Rcpp::stop("debias = taylor(…, joint = true) under data tempering is not available: the replicates enter one at a time (use joint = false).");
+    if (std::isnan(this->replicate_log_estimates[0]))
+    {
+      this->replicate_log_estimates[0] = this->estimator->taylor_log_estimate(parameters, this->estimator->replicates, &this->replicate_signs[0]);
+      for (size_t r = 1; r < this->replicate_log_estimates.size(); ++r)
+      {
+        this->replicate_log_estimates[r] = 0.0;
+        this->replicate_signs[r] = 1.0;
+      }
+    }
+    this->sign = this->replicate_signs[0];
+    return this->replicate_log_estimates[0];
+  }
   size_t active = this->estimator->active_replicates(parameters);
   double total = 0.0, product_of_signs = 1.0;
   for (size_t r = 0; r < active; ++r)

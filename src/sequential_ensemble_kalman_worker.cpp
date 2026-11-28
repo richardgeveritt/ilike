@@ -11,6 +11,7 @@
 #include "ensemble_shifter.h"
 #include "factor_variables.h"
 #include "single_point_move_output.h"
+#include "normal_source.h"
 
 namespace ilike
 {
@@ -341,6 +342,55 @@ struct MemberStreams
   void draw_from(RandomNumberGenerator &g) { this->factors->redirect_random_numbers(&g, &this->local_seed); }
   ~MemberStreams() { this->factors->redirect_random_numbers(this->enk->get_rng_pointer(), this->enk->get_seed_pointer()); }
 };
+
+// (C306) Crank-Nicolson: member i's standard normals at this step from
+// column i of the step's store (installed on this thread while the member is
+// drawn). Every draw must come from them: the member is given a generator
+// seeded from a constant, and if anything draws from it (a user-written
+// simulator, or a built-in that is not Gaussian), the run stops.
+struct MemberNormals
+{
+  EnsembleKalman* enk;
+  EnsembleFactors* factors;
+  size_t local_seed = 0;
+  NormalSourcesInUse in_use; // (released after the destructor has uninstalled the source)
+  NormalSource source;
+  RandomNumberGenerator unused, unused_copy;
+  MemberNormals(EnsembleKalman* enk_in, EnsembleFactors* factors_in, size_t members)
+    : enk(enk_in), factors(factors_in), unused(*enk_in->get_rng_pointer()), unused_copy(*enk_in->get_rng_pointer())
+  {
+    std::vector<arma::mat> &store = *this->enk->cn_normals;
+    if (store.size() <= this->enk->member_step)
+      store.resize(this->enk->member_step + 1);
+    if (store[this->enk->member_step].n_cols != members)
+      store[this->enk->member_step].set_size(0, members);
+    this->source.store = &store[this->enk->member_step];
+    this->source.fresh = this->enk->get_rng_pointer();
+  }
+  RandomNumberGenerator& member(size_t i)
+  {
+    this->unused.seed(0x5bd1e995ULL);
+    this->unused_copy = this->unused;
+    this->source.column = arma::uword(i);
+    this->source.next = 0;
+    this->factors->redirect_random_numbers(&this->unused, &this->local_seed);
+    installed_normal_source = &this->source;
+    return this->unused;
+  }
+  void check()
+  {
+    installed_normal_source = NULL;
+    if (this->unused() != this->unused_copy())
+      Rcpp::stop("enkf(..., correlated = crank_nicolson(...)) needs every draw of the inner model to be a built-in Gaussian (a norm or mvnorm "
+                 "prior on the state, linear_gaussian or nonlinear_gaussian transitions, Gaussian measurements): this model draws random "
+                 "numbers otherwise. Use correlated = true (each member's random numbers from its own seed) instead.");
+  }
+  ~MemberNormals()
+  {
+    installed_normal_source = NULL;
+    this->factors->redirect_random_numbers(this->enk->get_rng_pointer(), this->enk->get_seed_pointer());
+  }
+};
 }
 
 void SequentialEnsembleKalmanWorker::specific_simulate(Ensemble* next_ensemble,
@@ -374,6 +424,27 @@ void SequentialEnsembleKalmanWorker::specific_simulate(Ensemble* next_ensemble,
 {
   RandomNumberGenerator local_rng(*this->get_rng());
   local_rng.seed(this->get_seed());
+  
+  if (this->the_enk->cn_normals != NULL)
+  {
+    // (C306) each member from its stored normals
+    this->the_enk->member_step = 0;
+    MemberNormals normals(this->the_enk, this->the_enk->ensemble_factors.get(), this->get_number_of_ensemble_members());
+    const bool compact = this->the_enk->uses_compact_members();
+    if (compact)
+      this->the_enk->start_compact_ensemble(next_ensemble, NULL, &conditioned_on_parameters);
+    for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
+    {
+      RandomNumberGenerator &g = normals.member(i);
+      if (compact)
+        this->the_enk->simulate_compact_member(g, next_ensemble, i, &conditioned_on_parameters);
+      else
+        this->the_enk->simulate_ensemble_member(g, next_ensemble->add_ensemble_member(),
+                                                this->the_enk->sequencer.schedule_parameters, conditioned_on_parameters);
+      normals.check();
+    }
+    return;
+  }
   
   if (this->the_enk->member_seeds != NULL)
   {
@@ -421,6 +492,31 @@ void SequentialEnsembleKalmanWorker::specific_move(Ensemble* next_particles,
 {
   RandomNumberGenerator local_rng(*this->get_rng());
   local_rng.seed(this->get_seed());
+  
+  if (this->the_enk->cn_normals != NULL)
+  {
+    // (C306) each member moved with its stored normals at this step
+    this->the_enk->member_step = this->the_enk->member_step + 1;
+    MemberNormals normals(this->the_enk, this->the_enk->ensemble_factors.get(), this->get_number_of_ensemble_members());
+    if (current_particles->compact)
+      this->the_enk->start_compact_ensemble(next_particles, current_particles, NULL);
+    for (size_t i = 0; i < this->get_number_of_ensemble_members(); ++i)
+    {
+      RandomNumberGenerator &g = normals.member(i);
+      if (current_particles->compact)
+        this->the_enk->move_compact_member(g, current_particles, i, next_particles);
+      else
+      {
+        MoveOutput* spare = next_particles->take_spare();
+        if (spare != NULL)
+          next_particles->push_back(this->the_enk->move_reusing(g, (*current_particles)[i]->back(), spare));
+        else
+          next_particles->push_back(this->the_enk->move(g, (*current_particles)[i]->back()));
+      }
+      normals.check();
+    }
+    return;
+  }
   
   if (this->the_enk->member_seeds != NULL)
   {

@@ -96,6 +96,8 @@ void EnsembleKalmanOutput::make_copy(const EnsembleKalmanOutput &another)
   this->subsample_log_likelihood_smcfixed_part = another.subsample_log_likelihood_smcfixed_part;
   this->all_ensembles = another.all_ensembles;
   this->member_seeds = another.member_seeds;
+  this->cn_normals = another.cn_normals;
+  this->cn_move_pending = another.cn_move_pending;
   this->members_to_refresh = another.members_to_refresh;
   this->pending = another.pending;
   // (C265) the copied ensembles' members point at this output's own copy of
@@ -264,6 +266,23 @@ void EnsembleKalmanOutput::prepare_member_seeds()
   if (!this->estimator->correlated)
     return;
   RandomNumberGenerator &rng = *this->estimator->get_rng_pointer();
+  if (this->estimator->crank_nicolson_sd > 0.0)
+  {
+    // (C306) u' = sqrt(1 - sd^2) u + sd e, e ~ N(0, I): leaves N(0, I)
+    // invariant and is reversible with respect to it, so the acceptance
+    // ratio has no term for it (Deligiannidis, Doucet & Pitt 2018)
+    if (this->cn_move_pending)
+    {
+      const double sd = this->estimator->crank_nicolson_sd;
+      const double keep = std::sqrt(1.0 - sd * sd);
+      for (arma::mat &step : this->cn_normals)
+        for (double &z : step)
+          z = keep * z + sd * rnorm(rng);
+    }
+    this->cn_move_pending = false;
+    this->estimator->cn_normals = &this->cn_normals;
+    return;
+  }
   const size_t N = this->estimator->number_of_ensemble_members;
   if (this->member_seeds.size() != N)
   {
@@ -311,6 +330,8 @@ void EnsembleKalmanOutput::simulate_when_needed(const Parameters &parameters)
   }
   this->member_seeds.clear();
   this->members_to_refresh = 0;
+  this->cn_normals.clear();
+  this->cn_move_pending = false;
   this->pending = true;
 }
 
@@ -327,7 +348,15 @@ void EnsembleKalmanOutput::carry_over_from(const LikelihoodEstimatorOutput &prev
   if (!this->carries_over())
     return;
   const EnsembleKalmanOutput* source = dynamic_cast<const EnsembleKalmanOutput*>(&previous);
-  if ((source == NULL) || (source->member_seeds.size() != this->estimator->number_of_ensemble_members))
+  if (source == NULL)
+    return;
+  if (this->estimator->crank_nicolson_sd > 0.0)
+  {
+    this->cn_normals = source->cn_normals;
+    this->cn_move_pending = true;
+    return;
+  }
+  if (source->member_seeds.size() != this->estimator->number_of_ensemble_members)
     return;
   this->member_seeds = source->member_seeds;
   this->members_to_refresh = this->estimator->refresh_members;
@@ -339,7 +368,12 @@ void EnsembleKalmanOutput::run_if_pending(const Parameters &parameters)
     this->simulate(parameters);
   // (a copied output's filter is a new copy: point it at these seeds again)
   if (this->estimator->correlated)
-    this->estimator->member_seeds = &this->member_seeds;
+  {
+    if (this->estimator->crank_nicolson_sd > 0.0)
+      this->estimator->cn_normals = &this->cn_normals;
+    else
+      this->estimator->member_seeds = &this->member_seeds;
+  }
 }
 
 void EnsembleKalmanOutput::evaluate_smcfixed_part(const Parameters &conditioned_on_parameters)

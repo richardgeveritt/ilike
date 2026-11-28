@@ -171,6 +171,7 @@ void Particles::clear_flat()
   this->flat_output_lengths.clear();
   this->flat_records_from_summaries = false;
   this->flat_incremental_log_weights.reset();
+  this->flat_signs.reset();
   this->flat_size = 0;
   this->flat = false;
   this->forget_adaptive_summaries();
@@ -385,6 +386,7 @@ void Particles::make_copy(const Particles &another)
   this->flat_output_lengths = another.flat_output_lengths;
   this->flat_records_from_summaries = another.flat_records_from_summaries;
   this->flat_incremental_log_weights = another.flat_incremental_log_weights;
+  this->flat_signs = another.flat_signs;
   this->flat_factor_variables.reserve(another.flat_factor_variables.size());
   for (auto i=another.flat_factor_variables.begin(); i!=another.flat_factor_variables.end(); ++i)
   {
@@ -454,6 +456,7 @@ void Particles::make_copy(Particles &&another)
   this->flat_output_lengths = std::move(another.flat_output_lengths);
   this->flat_records_from_summaries = another.flat_records_from_summaries;
   this->flat_incremental_log_weights = std::move(another.flat_incremental_log_weights);
+  this->flat_signs = std::move(another.flat_signs);
   this->flat_factor_variables = std::move(another.flat_factor_variables);
   this->flat_record_writer = std::move(another.flat_record_writer);
   another.flat_factor_variables.clear();

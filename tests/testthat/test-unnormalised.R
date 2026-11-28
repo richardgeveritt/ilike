@@ -1169,7 +1169,8 @@ test_that("signed pseudo-marginal MCMC: the Sign column, signed_mean, and the re
   expect_false("Sign" %in% names(ilike::load_mcmc_output("unnormalised_signed")))
   # importance sampling and SMC refuse it
   writeLines(c(roulette_model("particles = 20, steps = 5), debias = roulette()")[1:6], "algorithm is {", "  importance_points = 10", "}"), f)
-  expect_error(suppressMessages(ilike::IS(ilike::compile(f))), "which only MCMC uses", fixed = TRUE)
+  # (C309) importance sampling weights by the absolute values and returns the signed evidence
+  expect_false(is.null(attr(suppressMessages(ilike::IS(ilike::compile(f), seed = 1)), "mean_sign")))
   writeLines(roulette_model("particles = 20, steps = 5), debias = roulette(continue = 1.5)"), f)
   expect_error(ilike::compile(f), "between 0 and 1", fixed = TRUE)
 })
@@ -1230,7 +1231,8 @@ test_that("block-Poisson estimates: signs, correlated refresh, and the refusals"
   writeLines(roulette_model("particles = 5, steps = 3), debias = block_poisson(correlated = 1)"), f)
   expect_error(ilike::compile(f), "correlated = true | false", fixed = TRUE)
   writeLines(c(roulette_model("particles = 5, steps = 3), debias = block_poisson()")[1:6], "algorithm is {", "  importance_points = 10", "}"), f)
-  expect_error(suppressMessages(ilike::IS(ilike::compile(f))), "which only MCMC uses", fixed = TRUE)
+  # (C309) importance sampling weights by the absolute values and returns the signed evidence
+  expect_false(is.null(attr(suppressMessages(ilike::IS(ilike::compile(f), seed = 1)), "mean_sign")))
 })
 
 test_that("block-Poisson estimates with correlated refresh: the posterior of beta against enumeration", {
@@ -1248,4 +1250,97 @@ test_that("block-Poisson estimates with correlated refresh: the posterior of bet
   ilike::MCMC(suppressMessages(ilike::compile(f)), results_name = "unnormalised_bp", seed = 1, initial_values = list(list(beta = 0.3)))
   o = ilike::load_mcmc_output("unnormalised_bp")
   expect_equal(ilike::signed_mean(o, "beta", burn_in = 2000)$estimate, sum(p * grid), tolerance = 0.03)
+})
+
+# (C308, dev/plan.md 3.22 U9 R4) debias = taylor(…): the randomly truncated
+# Taylor-series estimate of Z^-n (Chopin et al., arXiv 2403.20313; jointly for
+# replicates, arXiv 2510.03587), tuned from pilot estimates at each value
+test_that("Taylor-series estimates: signs, and the refusals", {
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(c(f, "unnormalised_taylor"), recursive = TRUE), add = TRUE)
+  writeLines(roulette_model("particles = 10, steps = 3), debias = taylor()", iterations = 100), f)
+  ilike::MCMC(suppressMessages(ilike::compile(f)), results_name = "unnormalised_taylor", seed = 1, initial_values = list(list(beta = 0.3)))
+  expect_true(all(ilike::load_mcmc_output("unnormalised_taylor")$Sign %in% c(-1, 1)))
+  writeLines(roulette_model("particles = 10, steps = 3), debias = taylor(joint = true)"), f)
+  expect_error(ilike::compile(f), "has no replicates", fixed = TRUE)
+  writeLines(roulette_model("particles = 10, steps = 3), debias = taylor(tuning = scale(alpha = 3))"), f)
+  expect_error(ilike::compile(f), "between 0 and 2", fixed = TRUE)
+  writeLines(c(roulette_model("particles = 10, steps = 3), debias = taylor()")[1:6], "algorithm is {", "  importance_points = 10", "}"), f)
+  # (C309) importance sampling weights by the absolute values and returns the signed evidence
+  expect_false(is.null(attr(suppressMessages(ilike::IS(ilike::compile(f), seed = 1)), "mean_sign")))
+})
+
+test_that("Taylor-series estimates: the posterior of beta against enumeration, one field and three replicates", {
+  skip_on_cran()
+  g = lattice(4); e = unnormalised_edges(g)
+  x = c(1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0)
+  stat = function(z) { s = 2*z - 1; sum(s[e[, 1]] * s[e[, 2]]) }
+  S_all = apply(as.matrix(expand.grid(rep(list(0:1), 16))), 1, stat)
+  grid = seq(0.0005, 0.9995, by = 0.001)
+  lp = sapply(grid, function(b) { a = b * S_all; b * stat(x) - (max(a) + log(sum(exp(a - max(a))))) })
+  p = exp(lp - max(lp)); p = p / sum(p)
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(c(f, "unnormalised_taylor"), recursive = TRUE), add = TRUE)
+  run = function(lines) {
+    writeLines(lines, f)
+    unlink("unnormalised_taylor", recursive = TRUE)
+    ilike::MCMC(suppressMessages(ilike::compile(f)), results_name = "unnormalised_taylor", seed = 1, initial_values = list(list(beta = 0.3)))
+    ilike::load_mcmc_output("unnormalised_taylor")
+  }
+  # the cycling estimate with the bootstrap rule (the default)
+  o = run(sub("0.5)", "0.3)", roulette_model("particles = 20, steps = 5), debias = taylor()", iterations = 5000), fixed = TRUE))
+  expect_equal(ilike::signed_mean(o, "beta", burn_in = 500)$estimate, sum(p * grid), tolerance = 0.03)
+  # three replicates: one series for Z^-3, and (C308's fix) the plug-in of all three
+  z = replicated_fields()
+  mcmc = c("algorithm mcmc {", "  move b = metropolis(norm_rw(beta, 0.3))", "  termination = iterations(5000)", "}")
+  o = run(c(z$head(", normaliser = estimate(smc(particles = 20, steps = 5), debias = taylor(joint = true))"), mcmc))
+  expect_equal(ilike::signed_mean(o, "beta", burn_in = 500)$estimate, z$mean, tolerance = 0.03)
+  o = run(c(z$head(", normaliser = estimate(smc(particles = 20, steps = 5))"), mcmc))
+  expect_equal(mean(o$Value[o$ParameterName == "beta"][-(1:500)]), z$mean, tolerance = 0.03)
+})
+
+# (C309, dev/plan.md 3.22 U9 R5) importance sampling and SMC with factor
+# estimates that may be negative: weights by the absolute values, the signs
+# written with the points, and the evidence of the model with its sign
+test_that("signed importance sampling and SMC: the posterior of beta and the evidence against enumeration", {
+  skip_on_cran()
+  g = lattice(4); e = unnormalised_edges(g)
+  x = c(1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0)
+  stat = function(z) { s = 2*z - 1; sum(s[e[, 1]] * s[e[, 2]]) }
+  S_all = apply(as.matrix(expand.grid(rep(list(0:1), 16))), 1, stat)
+  exact = function(top) {
+    grid = seq(top/2000, top - top/2000, by = top/1000)
+    lp = sapply(grid, function(b) { a = b * S_all; b * stat(x) - (max(a) + log(sum(exp(a - max(a))))) })
+    p = exp(lp - max(lp)); p = p / sum(p)
+    list(mean = sum(p * grid), log_evidence = max(lp) + log(mean(exp(lp - max(lp)))))
+  }
+  f = tempfile(fileext = ".ilike")
+  on.exit(unlink(c(f, "unnormalised_signed_is"), recursive = TRUE), add = TRUE)
+  run = function(debias, algorithm, prior = "unif(0, 1)", smc = FALSE) {
+    writeLines(c(roulette_model(paste0("particles = 20, steps = 5), debias = ", debias), prior = prior)[1:6], algorithm), f)
+    unlink("unnormalised_signed_is", recursive = TRUE)
+    m = suppressMessages(ilike::compile(f))
+    z = if (smc) suppressMessages(ilike::SMC_with_MCMC(m, results_name = "unnormalised_signed_is", seed = 1))
+        else suppressMessages(ilike::IS(m, results_name = "unnormalised_signed_is", seed = 1))
+    o = ilike::load_smc_output("unnormalised_signed_is")
+    expect_true(all(o$Sign %in% c(-1, 1)))
+    list(z = z, mean = ilike::signed_mean(o, "beta")$estimate)
+  }
+  is = c("algorithm is {", "  importance_points = 3000", "}")
+  smc = c("algorithm smc {", "  move m = metropolis(norm_rw(beta, 0.2))", "  termination = iterations(5)",
+          "  sequence = annealing(power, [0, 0.1, 0.3, 0.6, 1])", "  particles = 1000", "}")
+  # block-Poisson over the whole prior (exact: mean 0.365, log evidence -10.008)
+  ex = exact(1)
+  r = run("block_poisson()", is)
+  expect_equal(r$mean, ex$mean, tolerance = 0.03)
+  expect_lt(abs(r$z - ex$log_evidence), 0.15)
+  expect_equal(attr(r$z, "sign"), 1)
+  r = run("block_poisson()", smc, smc = TRUE)
+  expect_equal(r$mean, ex$mean, tolerance = 0.03)
+  expect_lt(abs(r$z - ex$log_evidence), 0.15)
+  # the Taylor series where the SMC's estimates of Z are precise enough (beta below 0.6)
+  ex = exact(0.6)
+  r = run("taylor()", is, prior = "unif(0, 0.6)")
+  expect_equal(r$mean, ex$mean, tolerance = 0.03)
+  expect_lt(abs(r$z - ex$log_evidence), 0.15)
 })

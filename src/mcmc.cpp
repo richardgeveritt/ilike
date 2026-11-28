@@ -331,4 +331,16 @@ MCMCTermination* MCMC::get_duplicated_termination() const
   return this->termination->duplicate();
 }
 
+// (A2) give each move of a cycle the cycle's moves (MCMC::link_kernel)
+void link_cycle(const std::vector<std::unique_ptr<MCMC>> &moves)
+{
+  std::vector<const MCMC*> cycle;
+  cycle.reserve(moves.size());
+  for (const auto &m : moves)
+    cycle.push_back(m.get());
+  for (const auto &m : moves)
+    if (m != NULL)
+      m->link_kernel(cycle);
+}
+
 }

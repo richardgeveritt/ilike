@@ -1,4 +1,5 @@
 #include <iterator>
+#include "normal_source.h"
 #include "nonlinear_gaussian_noise_function_proposal_kernel.h"
 #include "likelihood_estimator_output.h"
 #include "likelihood_estimator.h"
@@ -105,7 +106,7 @@ void NonLinearGaussianNoiseFunctionProposalKernel::simulate_into(RandomNumberGen
        ++i)
   {
     double scale = i->second.get_double_scale();
-    target.matrix(i->first) = rmvnorm_using_chol(rng,
+    target.matrix(i->first) = source_rmvnorm_using_chol(rng,
                                                  transformed.get_colvec(i->first),
                                                  sqrt(scale)*i->second.get_chol(transformed));
   }
@@ -122,7 +123,7 @@ Parameters NonLinearGaussianNoiseFunctionProposalKernel::simulate(RandomNumberGe
        ++i)
   {
     double scale = i->second.get_double_scale();
-    output[i->first] = rmvnorm_using_chol(rng,
+    output[i->first] = source_rmvnorm_using_chol(rng,
                                           transformed.get_colvec(i->first),
                                           sqrt(scale)*i->second.get_chol(transformed));
   }
@@ -146,7 +147,7 @@ Parameters NonLinearGaussianNoiseFunctionProposalKernel::subsample_simulate(Rand
   Parameters transformed = this->transform->transform(particle.get_transformed_parameters(this));
   
   Parameters output;
-  output[variable] = rmvnorm_using_chol(rng,
+  output[variable] = source_rmvnorm_using_chol(rng,
                                         transformed.get_colvec(variable),
                                         sqrt(found->second.get_double_scale())*found->second.get_chol(transformed));
   return output;

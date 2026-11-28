@@ -39,6 +39,7 @@ StochasticScanMCMC::StochasticScanMCMC(const std::vector<MCMC*> &moves_in,
   for (auto i=moves_in.begin(); i!=moves_in.end(); ++i)
     this->moves.emplace_back(*i);
   this->probabilities = unnormalised_probabilities_in/sum(unnormalised_probabilities_in);
+  link_cycle(this->moves);
 }
 
 StochasticScanMCMC::StochasticScanMCMC(MCMCTermination* termination_in,
@@ -51,6 +52,7 @@ StochasticScanMCMC::StochasticScanMCMC(MCMCTermination* termination_in,
   for (auto i=moves_in.begin(); i!=moves_in.end(); ++i)
     this->moves.emplace_back(*i);
   this->probabilities = unnormalised_probabilities_in/sum(unnormalised_probabilities_in);
+  link_cycle(this->moves);
 }
 
 StochasticScanMCMC::~StochasticScanMCMC()
@@ -105,6 +107,7 @@ void StochasticScanMCMC::make_copy(const StochasticScanMCMC &another)
   }
   
   this->probabilities = another.probabilities;
+  link_cycle(this->moves); // (A2: an annealed move's kernel is this copy's moves)
 }
 
 Particle StochasticScanMCMC::move(RandomNumberGenerator &rng,

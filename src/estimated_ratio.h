@@ -43,6 +43,19 @@ public:
                   const Parameters &current,
                   const Parameters &proposed) const;
 
+  // (C311) a state step (RatioStep::changes_state): the log of the target
+  // part of the acceptance ratio, with `proposed` made the new state
+  bool changes_state() const { return (this->step != NULL) && this->step->changes_state(); }
+  double state_log_term(RandomNumberGenerator &rng, const Index* index, const Particle &current, Particle &proposed,
+                        Particle* refreshed = NULL, bool* refreshed_made = NULL) const;
+  bool refreshes() const { return (this->step != NULL) && this->step->changes_state() && this->step->refreshes(); }
+  RatioStep* get_step() const { return this->step.get(); }
+
+protected:
+  // (C313) points = N with a state step that averages (RmJ-MCMC)
+  double averaged_state_log_term(RandomNumberGenerator &rng, const Index* index, const Particle &current, Particle &proposed) const;
+public:
+
 protected:
 
   // owned

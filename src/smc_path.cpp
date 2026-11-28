@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "smc_path.h"
 #include "smc_mcmc_move.h"
 #include "smc_output.h"
@@ -24,6 +25,11 @@ SMCPath::SMCPath(SMCMCMCMove* smc_in,
   : smc(smc_in), draw_factors(draw_factors_in), draw_index(draw_index_in), draw_mcmc(draw_mcmc_in),
     variables(variables_in), normaliser(normaliser_in)
 {
+  if (this->smc != NULL)
+  {
+    this->smc->set_path_run(true);
+    this->pool_idle.push_back(this->smc.get());
+  }
 }
 
 SMCPath::~SMCPath()
@@ -32,8 +38,12 @@ SMCPath::~SMCPath()
 
 SMCPath::SMCPath(const SMCPath &another)
 {
+  // (the original only: a copy's pool starts with it)
   if (another.smc != NULL)
+  {
     this->smc.reset(static_cast<SMCMCMCMove*>(another.smc->smc_duplicate()));
+    this->pool_idle.push_back(this->smc.get());
+  }
   if (another.draw_factors != NULL)
     this->draw_factors.reset(another.draw_factors->duplicate());
   if (another.draw_index != NULL)
@@ -63,18 +73,61 @@ Parameters SMCPath::draw_base(RandomNumberGenerator &rng, const Parameters &give
   return output;
 }
 
+SMCMCMCMove* SMCPath::acquire() const
+{
+  std::unique_lock<std::mutex> lock(this->pool_mutex);
+  if (!this->pool_idle.empty())
+  {
+    SMCMCMCMove* idle = this->pool_idle.back();
+    this->pool_idle.pop_back();
+    return idle;
+  }
+  // every copy is in use: wait for one, and copy it for this run (the pool
+  // grows by one, so a thread waits only while the pool is growing)
+  this->pool_freed.wait(lock, [this] { return !this->pool_idle.empty(); });
+  SMCMCMCMove* idle = this->pool_idle.back();
+  this->pool_idle.pop_back();
+  lock.unlock();
+  SMCMCMCMove* copy = static_cast<SMCMCMCMove*>(idle->smc_duplicate());
+  lock.lock();
+  this->pool_copies.emplace_back(copy);
+  this->pool_idle.push_back(idle);
+  lock.unlock();
+  this->pool_freed.notify_one();
+  return copy;
+}
+
+void SMCPath::release(SMCMCMCMove* smc_in) const
+{
+  {
+    std::lock_guard<std::mutex> lock(this->pool_mutex);
+    this->pool_idle.push_back(smc_in);
+  }
+  this->pool_freed.notify_one();
+}
+
+void SMCPath::link_kernel(const std::vector<const MCMC*> &moves)
+{
+  std::lock_guard<std::mutex> lock(this->pool_mutex);
+  if (this->smc != NULL)
+    this->smc->link_kernel(moves);
+  for (auto &copy : this->pool_copies)
+    copy->link_kernel(moves);
+}
+
 double SMCPath::log_evidence(RandomNumberGenerator &rng, const Parameters &at) const
 {
   if (this->smc == NULL)
     Rcpp::stop("normalise = …: this distribution's inner SMC was not built.");
+  Lease lease(this);
   RandomNumberGenerator local_rng(rng);
   size_t local_seed = size_t(rng());
   local_rng.seed(local_seed);
-  this->smc->redirect_random_numbers(&local_rng, &local_seed);
+  lease.smc->redirect_random_numbers(&local_rng, &local_seed);
   Parameters conditioned;
   for (const std::string &name : this->normaliser)
     conditioned[name] = at[name];
-  std::unique_ptr<SMCOutput> output(this->smc->run(conditioned));
+  std::unique_ptr<SMCOutput> output(lease.smc->run(conditioned));
   return output->log_likelihood;
 }
 
@@ -93,26 +146,53 @@ double SMCPath::single(RandomNumberGenerator &rng, Parameters &state,
   return log_ratio;
 }
 
-double SMCPath::population(RandomNumberGenerator &rng, std::vector<Parameters> &states,
-                           const Parameters &start, const Parameters &end,
-                           double threshold) const
+// the path's run from the given points, with the parameters `names` moved
+// from their values in start to those in end; the points are made the last
+// generation's
+double SMCPath::run_from(RandomNumberGenerator &rng, std::vector<Parameters> &points,
+                         const std::vector<std::string> &names,
+                         const Parameters &start, const Parameters &end,
+                         const ParticleTuning* tuning) const
 {
   if (this->smc == NULL)
     Rcpp::stop("engine = smc(…): this distribution's inner SMC was not built.");
+  Lease lease(this);
+  SMCMCMCMove* run_smc = lease.smc;
+  run_smc->set_caller_tuning(tuning);
   // the run's random numbers: a stream of its own, seeded from rng (the SMC
   // seeds its generators from its seed counter)
   RandomNumberGenerator local_rng(rng);
   size_t local_seed = size_t(rng());
   local_rng.seed(local_seed);
-  this->smc->redirect_random_numbers(&local_rng, &local_seed);
+  run_smc->redirect_random_numbers(&local_rng, &local_seed);
 
   Parameters a, b;
-  for (const std::string &name : this->normaliser)
+  for (const std::string &name : names)
   {
     a[name] = start[name];
     b[name] = end[name];
   }
-  this->smc->set_path(this->normaliser, a, b);
+  run_smc->set_path(names, a, b);
+  run_smc->set_initial_particles(points, true);
+  // (the run given parameters resets the sequencer to the schedule's start)
+  std::unique_ptr<SMCOutput> output(run_smc->run(Parameters()));
+  double log_ratio = output->log_likelihood;
+  run_smc->set_caller_tuning(NULL);
+  // the states at the end of the path (the last generation's points)
+  Particles &last = output->back();
+  for (size_t i = 0; (i < points.size()) && (i < last.size()); ++i)
+  {
+    const Parameters &final_parameters = last[i]->back().parameters;
+    for (auto v = points[i].vector_begin(); v != points[i].vector_end(); ++v)
+      v->second.first = std::make_shared<arma::mat>(final_parameters[v->first]);
+  }
+  return log_ratio;
+}
+
+double SMCPath::population(RandomNumberGenerator &rng, std::vector<Parameters> &states,
+                           const Parameters &start, const Parameters &end,
+                           double threshold) const
+{
   std::vector<Parameters> points;
   points.reserve(states.size());
   for (const Parameters &state : states)
@@ -122,15 +202,30 @@ double SMCPath::population(RandomNumberGenerator &rng, std::vector<Parameters> &
       point[v] = state[v];
     points.push_back(point);
   }
-  this->smc->set_initial_particles(points, true);
-  // (the run given parameters resets the sequencer to the schedule's start)
-  std::unique_ptr<SMCOutput> output(this->smc->run(Parameters()));
-  double log_ratio = output->log_likelihood;
-  // the states at the end of the path (the last generation's points)
-  Particles &last = output->back();
-  for (size_t i = 0; (i < states.size()) && (i < last.size()); ++i)
+  double log_ratio = this->run_from(rng, points, this->normaliser, start, end);
+  for (size_t i = 0; i < states.size(); ++i)
     for (const std::string &v : this->variables)
-      states[i][v] = last[i]->back().parameters[v];
+      states[i][v] = points[i][v];
+  return log_ratio;
+}
+
+double SMCPath::single_state(RandomNumberGenerator &rng, Parameters &state,
+                             const std::vector<std::string> &names,
+                             const Parameters &start, const Parameters &end,
+                             const ParticleTuning* tuning) const
+{
+  // the state's variables other than the path's (and the fixed ones, which
+  // the SMC's own parameters supply)
+  Parameters point;
+  for (auto v = state.vector_begin(); v != state.vector_end(); ++v)
+    if (!v->second.second && (std::find(names.begin(), names.end(), v->first) == names.end()))
+      point[v->first] = *v->second.first;
+  std::vector<Parameters> points(1, point);
+  double log_ratio = this->run_from(rng, points, names, start, end, tuning);
+  for (auto v = points[0].vector_begin(); v != points[0].vector_end(); ++v)
+    state.overwrite_variable(v->first, *v->second.first);
+  for (const std::string &name : names)
+    state.overwrite_variable(name, end[name]);
   return log_ratio;
 }
 

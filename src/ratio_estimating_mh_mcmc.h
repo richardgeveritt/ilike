@@ -67,6 +67,7 @@ public:
   // points = N: the averaged acceptance ratio (above); parallel: the N draws
   // in RcppParallel's threads (the same results either way)
   EstimatedRatio& estimated_ratio() { return this->ratio; }
+  void link_kernel(const std::vector<const MCMC*> &cycle) { if (this->ratio.get_step() != NULL) this->ratio.get_step()->link_kernel(cycle); }
 
 protected:
 
@@ -79,7 +80,9 @@ protected:
               double log_u,
               const Particle &particle,
               Particle &proposed_particle,
-              double &acceptance_probability) const;
+              double &acceptance_probability,
+              Particle* refreshed = NULL,
+              bool* refreshed_made = NULL) const;
 
   void accept(Particle &proposed_particle) const;
 

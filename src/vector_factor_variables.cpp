@@ -542,6 +542,24 @@ bool VectorFactorVariables::recycle_all_outputs(const Factors* factors,
   return true;
 }
 
+void VectorFactorVariables::redo_carry_over(const FactorVariables* source_in,
+                                            const Parameters &new_parameters,
+                                            const Index* index)
+{
+  const VectorFactorVariables* source = dynamic_cast<const VectorFactorVariables*>(source_in);
+  if ((source == NULL) || (source->particle == NULL) ||
+      (source->likelihood_estimator_outputs.size() != this->likelihood_estimator_outputs.size()))
+    return;
+  for (auto i = index->begin(); i != index->end(); ++i)
+  {
+    LikelihoodEstimatorOutput* output = this->likelihood_estimator_outputs[*i].get();
+    const LikelihoodEstimatorOutput* previous = source->likelihood_estimator_outputs[*i].get();
+    // (every variable compared: which ones the step changed is not known here)
+    if ((output != NULL) && (previous != NULL) && output->carries_over())
+      output->carry_over_from(*previous, source->particle->parameters, new_parameters, NULL);
+  }
+}
+
 bool VectorFactorVariables::recycle_with_new_outputs(const FactorVariables* source_in,
                                                      const Parameters &new_parameters,
                                                      const Index* new_outputs_index)

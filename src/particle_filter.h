@@ -122,7 +122,14 @@ public:
   size_t get_number_of_inner_particles() const { return this->number_of_particles; }
   void set_number_of_inner_particles(size_t number_of_inner_particles_in) { this->set_number_of_particles(number_of_inner_particles_in); }
   void advance_at_caller_target_smc(SMCOutput *current_state, const Parameters &conditioned_on_parameters);
+  // (dev/plan.md 3.22 U9 R3c, C307) correlated = crank_nicolson(sd = s): the
+  // correlated pseudo-marginal particle filter of Deligiannidis, Doucet &
+  // Pitt (2018, Algorithm 2)
+  void set_crank_nicolson(double sd);
 protected:
+  void correlated_simulate_smc(SMCOutput* current_state, const Parameters &conditioned_on_parameters);
+  void correlated_resample(SMCOutput* current_state);
+  std::vector<std::string> correlated_state; // (the variables that differ between the particles, found at a run's first resampling)
   bool follows_caller_target = false;
   std::string followed_variable;
   bool followed_anneal = false; // (F1: shares of an observation allowed)

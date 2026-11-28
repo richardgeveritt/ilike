@@ -66,6 +66,8 @@ public:
                                const std::string &prefix) const;
 
   bool adapts() const;
+  // (U5a) a Metropolis move is reversible
+  bool reversible_parts(std::string &why) const { return true; }
 
   Particle subsample_move(RandomNumberGenerator &rng,
                           const Particle &particle) const;

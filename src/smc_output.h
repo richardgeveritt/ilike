@@ -129,6 +129,33 @@ public:
   std::deque<double> times;
   
   std::deque<double> llhds;
+
+  // (dev/plan.md 3.22 U9 R3c, C307) correlated = crank_nicolson(sd) in a
+  // particle filter: u, the run's standard normals: the propagation normals
+  // (one D x N matrix per step, a column per particle slot) and one
+  // resampling normal per resampling (empty: drawn as needed); and whether a
+  // Crank-Nicolson step on them is to be made when the run starts. A
+  // proposed output gets the current output's (carry_over_from).
+  // (dev/plan.md 3.22 U9 R5) a run whose factor estimates may be negative:
+  // false otherwise; else true, with mean_sign = sum_i W_i s_i over the final
+  // particles (W their normalised weights, s the signs of their estimates),
+  // so that the evidence of the true model is estimated by exp(log_likelihood)
+  // times mean_sign
+  bool weighted_mean_sign(double &mean_sign) const;
+  // (found by terminate(), before it drops the generations that are not
+  // stored: with nothing stored, the final particles are gone by the end)
+  bool mean_sign_found = false, mean_sign_signed = false;
+  double found_mean_sign = 1.0;
+  bool compute_weighted_mean_sign(double &mean_sign) const;
+
+  std::vector<arma::mat> cn_normals;
+  std::vector<double> cn_resampling;
+  bool cn_move_pending = false;
+  bool carries_over() const;
+  void carry_over_from(const LikelihoodEstimatorOutput &previous,
+                       const Parameters &previous_parameters,
+                       const Parameters &new_parameters,
+                       const std::vector<std::string>* changed = NULL);
   
 protected:
 

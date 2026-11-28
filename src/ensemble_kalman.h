@@ -43,11 +43,17 @@ public:
   // correlated output runs, member_seeds points at its seeds; NULL otherwise
   // (then the members draw as before). The output holds its own copy of the
   // estimator, so the pointer belongs to that copy.
-  void set_correlated(bool correlated_in, size_t refresh_members_in)
+  void set_correlated(bool correlated_in, size_t refresh_members_in, double crank_nicolson_sd_in = 0.0)
   {
     this->correlated = correlated_in;
     this->refresh_members = std::max(refresh_members_in, size_t(1));
+    this->crank_nicolson_sd = crank_nicolson_sd_in;
   }
+  // (C306) correlated = crank_nicolson(sd): u is the members' standard
+  // normals, one D x N matrix per step (while a correlated output runs,
+  // cn_normals points at its store), moved all at once by a proposal
+  double crank_nicolson_sd = 0.0;
+  std::vector<arma::mat>* cn_normals = NULL;
   bool correlated = false;
   size_t refresh_members = 1;
   const std::vector<uint64_t>* member_seeds = NULL;

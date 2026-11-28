@@ -153,6 +153,7 @@ void SMC::operator=(const SMC &another)
 void SMC::make_copy(const SMC &another)
 {
   this->write_factor_output = another.write_factor_output;
+  this->crank_nicolson_sd = another.crank_nicolson_sd;
   this->outputs_written = another.outputs_written;
   this->compact_stored_output = another.compact_stored_output;
   this->chunk_size = another.chunk_size;
@@ -397,6 +398,22 @@ void SMC::simulate_generation_in_chunks(SMCOutput *current_state,
     int summary_size = -1;
     std::once_flag store_setup;
     std::once_flag summary_setup;
+    std::once_flag sign_setup;
+    bool signed_points = false;
+    // (U9 R5) each point's sign, when its factor estimates may be negative
+    // (decided once per generation, from the first point to get here: the
+    // points share their factors, so other runs pay one check per generation)
+    auto record_sign = [&](size_t point, const Particle &slot)
+    {
+      std::call_once(sign_setup, [&]()
+      {
+        signed_points = (slot.factor_variables != NULL) && slot.factor_variables->may_be_negative();
+        if (signed_points)
+          generation->flat_signs.ones(N);
+      });
+      if (signed_points)
+        generation->flat_signs[point] = slot.factor_variables->sign();
+    };
 
     RandomNumberGenerator first_stream(*worker->get_rng());
     first_stream.seed(worker->get_seed());
@@ -512,6 +529,7 @@ void SMC::simulate_generation_in_chunks(SMCOutput *current_state,
           if (summary_size > 0)
             factor_variables->adaptive_summary(index, generation->adaptive_summaries.colptr(first + j));
           generation->adaptive_previous_targets[first + j] = slots[j].previous_target_evaluated;
+          record_sign(first + j, slots[j]);
         }
       }
       else
@@ -521,6 +539,7 @@ void SMC::simulate_generation_in_chunks(SMCOutput *current_state,
           double a = slots[j].evaluate_smcadaptive_part_given_smcfixed_likelihoods(index);
           double b = slots[j].previous_target_evaluated;
           generation->flat_incremental_log_weights[first + j] = (a == -arma::datum::inf) ? -arma::datum::inf : a - b;
+          record_sign(first + j, slots[j]);
         }
       }
 
@@ -837,6 +856,11 @@ void SMC::simulate_proposal(SMCOutput* current_state,
 
 void SMC::resample(SMCOutput* current_state)
 {
+  if (this->crank_nicolson_sd > 0.0)
+  {
+    this->correlated_resample(current_state);
+    return;
+  }
   auto current_particles_iterator = current_state->end()-1;
   
   // Check criterion to see if we resample.

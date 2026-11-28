@@ -79,6 +79,7 @@ void AnnealedLikelihoodEstimator::make_copy(const AnnealedLikelihoodEstimator &a
   this->power_variable = another.power_variable;
   this->constant_power = another.constant_power;
   this->use_constant = another.use_constant;
+  this->skip_at_zero = another.skip_at_zero;
 }
 
 // double AnnealedLikelihoodEstimator::estimate_log_likelihood(const List &inputs,

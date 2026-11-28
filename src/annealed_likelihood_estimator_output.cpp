@@ -67,8 +67,18 @@ void AnnealedLikelihoodEstimatorOutput::simulate(const Parameters &parameters)
   this->estimator_output->simulate(parameters);
 }
 
+// (stage B) a factor skipped where its power is 0: its zero gradient, from
+// the variable's shape
+static arma::mat zero_gradient(const std::string &variable, const Parameters &x)
+{
+  const arma::mat* value = x.find_vector(variable);
+  return (value != NULL) ? arma::mat(value->n_rows, value->n_cols, arma::fill::zeros) : arma::mat();
+}
+
 void AnnealedLikelihoodEstimatorOutput::evaluate_smcfixed_part(const Parameters &parameters)
 {
+  if (this->estimator->skip_at_zero && (this->power(parameters) == 0.0))
+    return;
   if (this->estimator->smcfixed_flag)
   {
     this->estimator_output->evaluate(parameters);
@@ -81,10 +91,18 @@ void AnnealedLikelihoodEstimatorOutput::evaluate_smcfixed_part(const Parameters 
 
 void AnnealedLikelihoodEstimatorOutput::evaluate_smcadaptive_part_given_smcfixed(const Parameters &parameters)
 {
+  if (this->estimator->skip_at_zero && (this->power(parameters) == 0.0))
+  {
+    this->sign = 1.0;
+    this->log_likelihood = 0.0;
+    return;
+  }
   if (!this->estimator->smcfixed_flag)
   {
     this->estimator_output->evaluate_smcadaptive_part_given_smcfixed(parameters);
   }
+  // (U9 R5) the inner estimate's sign (the target is its absolute value to the power)
+  this->sign = this->estimator_output->sign;
   
   if (this->estimator->use_constant)
   {
@@ -122,6 +140,7 @@ bool AnnealedLikelihoodEstimatorOutput::change_in_place(const Parameters &parame
     return false;
   // (as evaluate_smcadaptive_part_given_smcfixed: a zero power gives zero)
   this->undo_log_likelihood = this->log_likelihood;
+  this->sign = this->estimator_output->sign;
   double current_power = this->power(parameters);
   if (current_power != 0.0)
     this->log_likelihood = current_power * this->estimator_output->log_likelihood;
@@ -201,6 +220,8 @@ LikelihoodEstimator* AnnealedLikelihoodEstimatorOutput::get_likelihood_estimator
 arma::mat AnnealedLikelihoodEstimatorOutput::get_gradient_of_log(const std::string &variable,
                                                                  const Parameters &x)
 {
+  if (this->estimator->skip_at_zero && (this->power(x) == 0.0))
+    return zero_gradient(variable, x);
   arma::mat gradient;
   if (this->estimator->use_constant)
   {
@@ -245,6 +266,15 @@ bool AnnealedLikelihoodEstimatorOutput::evaluate_with_gradients(const Parameters
                                                                 double &value,
                                                                 std::vector<arma::mat> &gradients)
 {
+  if (this->estimator->skip_at_zero && (this->power(parameters) == 0.0))
+  {
+    gradients.clear();
+    for (const std::string &v : variables)
+      gradients.push_back(zero_gradient(v, parameters));
+    this->log_likelihood = 0.0;
+    value = 0.0;
+    return true;
+  }
   double inner;
   if (!this->estimator_output->evaluate_with_gradients(parameters, variables, inner, gradients))
     return false;
@@ -264,6 +294,13 @@ bool AnnealedLikelihoodEstimatorOutput::evaluate_with_gradients(const Parameters
 std::vector<arma::mat> AnnealedLikelihoodEstimatorOutput::get_gradients_of_log(const std::vector<std::string> &variables,
                                                                                const Parameters &x)
 {
+  if (this->estimator->skip_at_zero && (this->power(x) == 0.0))
+  {
+    std::vector<arma::mat> zeros;
+    for (const std::string &v : variables)
+      zeros.push_back(zero_gradient(v, x));
+    return zeros;
+  }
   double power = this->estimator->use_constant ? this->estimator->constant_power
                                                : this->estimator->function_power(x, this->estimator->power_variable);
   std::vector<arma::mat> gradients = this->estimator_output->get_gradients_of_log(variables, x);

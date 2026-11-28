@@ -105,6 +105,7 @@ public:
     return this->from_summary_function(values, parameters, *this->data);
   }
   bool supports_flat_generations() const { return this->smcfixed_flag || this->has_kernel_summary(); }
+  int terms_read_one_element(const std::string &variable) const; // (U5b)
   double log_maximum(const Parameters &parameters) const
   {
     if (this->maximum_function == NULL)

@@ -83,6 +83,9 @@ public:
   void write_to_file(const std::string &directory_name,
                      const std::string &index) const;
 
+  void redo_carry_over(const FactorVariables* source,
+                       const Parameters &new_parameters,
+                       const Index* index);
   bool recycle_with_new_outputs(const FactorVariables* source,
                                 const Parameters &new_parameters,
                                 const Index* new_outputs_index);

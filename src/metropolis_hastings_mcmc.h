@@ -69,6 +69,8 @@ public:
                                const std::string &prefix) const;
 
   bool adapts() const;
+  // (U5a) a Metropolis-Hastings move is reversible
+  bool reversible_parts(std::string &why) const { return true; }
 
   // diagnostics of an hmc proposal (C226): leapfrog_steps, accept_stat,
   // energy_error (H* - H, minus the log acceptance ratio) and divergent

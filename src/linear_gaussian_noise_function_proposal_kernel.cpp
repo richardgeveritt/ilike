@@ -1,4 +1,5 @@
 #include <iterator>
+#include "normal_source.h"
 #include "linear_gaussian_noise_function_proposal_kernel.h"
 #include "likelihood_estimator_output.h"
 #include "likelihood_estimator.h"
@@ -122,7 +123,7 @@ void LinearGaussianNoiseFunctionProposalKernel::simulate_into(RandomNumberGenera
        ++i)
   {
     double scale = i->second.get_double_scale();
-    target.matrix(i->first) = rmvnorm_using_chol(rng,
+    target.matrix(i->first) = source_rmvnorm_using_chol(rng,
                                                  i->second.get_A(current_parameters)*current_parameters.get_colvec(i->first),
                                                  sqrt(scale)*i->second.get_chol(current_parameters));
   }
@@ -138,7 +139,7 @@ Parameters LinearGaussianNoiseFunctionProposalKernel::simulate(RandomNumberGener
        ++i)
   {
     double scale = i->second.get_double_scale();
-    output[i->first] = rmvnorm_using_chol(rng,
+    output[i->first] = source_rmvnorm_using_chol(rng,
                                           i->second.get_A(current_parameters)*current_parameters.get_colvec(i->first),
                                           sqrt(scale)*i->second.get_chol(current_parameters));
   }
@@ -161,7 +162,7 @@ Parameters LinearGaussianNoiseFunctionProposalKernel::subsample_simulate(RandomN
   
   Parameters output;
   const Parameters &current_parameters = particle.get_transformed_parameters(this); // (a reference: P2)
-  output[variable] = rmvnorm_using_chol(rng,
+  output[variable] = source_rmvnorm_using_chol(rng,
                                         found->second.get_A(current_parameters)*current_parameters.get_colvec(variable),
                                         sqrt(found->second.get_double_scale())*found->second.get_chol(current_parameters));
   return output;

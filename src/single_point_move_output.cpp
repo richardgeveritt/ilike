@@ -191,5 +191,16 @@ bool SinglePointMoveOutput::repoint_to(const Factors* factors)
   return true;
 }
 
+
+bool SinglePointMoveOutput::records_signs() const
+{
+  return (this->output.factor_variables != NULL) && this->output.factor_variables->may_be_negative();
 }
 
+size_t SinglePointMoveOutput::fill_signs(std::vector<double> &destination) const
+{
+  destination.push_back((this->output.factor_variables != NULL) ? this->output.factor_variables->sign() : 1.0);
+  return 1;
+}
+
+}

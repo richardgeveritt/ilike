@@ -124,6 +124,9 @@ MCMC = function(recipe,
     stop("thin must be a positive whole number.")
   recipe$mcmc_thin = as.integer(thin)
 
+  # (dev/plan.md 3.22 U6, C314) the padded variables recorded in the results
+  on.exit(write_padded_variables(recipe, results_directory), add = TRUE)
+
   if (length(fixed_parameter_list)==0)
   {
     do_mcmc(recipe,

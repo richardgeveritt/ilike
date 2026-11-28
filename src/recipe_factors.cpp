@@ -1,5 +1,6 @@
 #include "recipe_internal.h"
 #include <set>
+#include <algorithm>
 #include "plate_likelihood_estimator.h"
 
 // The target of an algorithm, from the recipe's factors and its SMC sequence
@@ -114,7 +115,11 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
       importance_proposal);
   const std::string &annealing_variable = plan.annealing_variable;
 
-  PowerFunctionPtr power = annealing_power;
+  // (stage B) an annealed jump's path run from the larger model's side when
+  // the jump is to the smaller model: its own factors go from power 1 to 0
+  // (and the other side's, mapped, from 0 to 1) as t goes from 0 to 1
+  const bool reversed_path = model.contains("ilike_path_reversed") && model["ilike_path_reversed"].as_bool();
+  PowerFunctionPtr power = reversed_path ? annealing_one_minus_power : annealing_power;
   PowerFunctionPtr second_power = annealing_one_minus_power;
 
   std::vector<LikelihoodEstimator *> likelihood_estimators;
@@ -926,7 +931,13 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                   delete inner_enkf;
                   stop("enkf(..., correlated = true) is for MCMC moves on the parameters: not available when the caller's sequence takes in the filter's observations one at a time (SMC^2).");
                 }
-                inner_enkf->set_correlated(true, size_t(enkf_params[9]));
+                double crank_nicolson_sd = enkf_params[10];
+                if (crank_nicolson_sd >= 1.0)
+                {
+                  delete inner_enkf;
+                  stop("enkf(..., correlated = crank_nicolson(sd = s)): s is between 0 and 1 (each normal becomes sqrt(1 - s^2) times itself plus s times a new one).");
+                }
+                inner_enkf->set_correlated(true, size_t(enkf_params[9]), crank_nicolson_sd);
               }
               new_likelihood_estimator = inner_enkf;
             } else if (iequals(llhd_type, "pf")) {
@@ -976,6 +987,27 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
                 if (exchange_multiply <= 1.0)
                   stop("exchange(..., multiply = m): m must be more than 1.");
                 inner_pf->set_exchange(exchange_below, exchange_multiply, exchange_max);
+              }
+              // (dev/plan.md 3.22 U9 R3c, C307) the correlated particle filter
+              if (bool(pf_params[7]))
+              {
+                double crank_nicolson_sd = pf_params[8];
+                if (!(crank_nicolson_sd > 0.0))
+                {
+                  delete inner_pf;
+                  stop("pf(..., correlated = true) is not available (resampling would undo the correlation of members' own random numbers): use correlated = crank_nicolson(sd = s), the correlated particle filter of Deligiannidis, Doucet & Pitt, with sorted resampling.");
+                }
+                if (crank_nicolson_sd >= 1.0)
+                {
+                  delete inner_pf;
+                  stop("pf(..., correlated = crank_nicolson(sd = s)): s is between 0 and 1.");
+                }
+                if (parallel)
+                {
+                  delete inner_pf;
+                  stop("pf(..., correlated = crank_nicolson(...)) runs its particles in turn: parallel = TRUE is not available with it.");
+                }
+                inner_pf->set_crank_nicolson(crank_nicolson_sd);
               }
               // threads for an inner particle filter with parallel = TRUE
               if (model.contains("number_of_threads"))
@@ -1142,6 +1174,13 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
           if (entry.contains("roulette"))
             static_cast<UnnormalisedNormaliserEstimator*>(new_likelihood_estimator)->set_roulette(
               entry["roulette"]["continue"].as_double(), entry["roulette"]["scale"].as_double());
+          if (entry.contains("taylor"))
+          {
+            RecipeValue ty = entry["taylor"];
+            static_cast<UnnormalisedNormaliserEstimator*>(new_likelihood_estimator)->set_taylor(
+              ty["cycling"].as_bool(), size_t(ty["pilot"].as_double()), ty["level"].as_double(), ty["alpha"].as_double(),
+              ty["continue"].as_double(), ty["joint"].as_bool());
+          }
           if (entry.contains("block_poisson"))
             static_cast<UnnormalisedNormaliserEstimator*>(new_likelihood_estimator)->set_block_poisson(
               size_t(entry["block_poisson"]["blocks"].as_double()), entry["block_poisson"]["mean"].as_double(),
@@ -1205,7 +1244,66 @@ std::vector<LikelihoodEstimator *> get_likelihood_estimators(
   // path is (all factors)^p q^(1-p), starting at q. When only chosen factors
   // are annealed, the path is (other factors) (chosen factors)^p, with no q
   // term; the first weights are then (target / q) as usual.
+  // (stage B) annealed reversible jump's bridges: for each annealed jump of
+  // the algorithm, the start f0 (the model at k through the map, power
+  // 1 - t) and q(u' | x') (power t), t the jump's path variable. They are
+  // factors of the model too, where t is absent and their powers are 0 (not
+  // evaluated), so the moves' factor indices include them and the path can
+  // run the cycle's own moves; in the jump's path, the move's own factors
+  // are annealed with power t as well (the model at k')
+  if (model.contains("jump_paths") && !model["jump_paths"].is_null()) {
+    const RecipeValue &jumps = model["jump_paths"];
+    // the move's own factors, unannealed: their own instances, from the model
+    RecipeValue plain = model;
+    plain.set("jump_paths", RecipeValue());
+    for (size_t j = 0; j < jumps.size(); ++j) {
+      const RecipeValue &jump = jumps[j];
+      const std::string kind = jump["kind"].as_string();
+      const RecipeValue &settings = jump["settings"];
+      std::vector<double> numbers = jump["factors"];
+      VectorIndex *plain_without_cancelled = NULL, *plain_without_priors = NULL, *plain_full = NULL;
+      CancellationPlan plain_plan;
+      std::vector<std::string> no_types, no_variables;
+      std::vector<std::vector<double>> no_schedules;
+      std::vector<LikelihoodEstimator *> plain_estimators = get_likelihood_estimators(
+          rng_in, seed_in, data_in, plain, model_parameters, algorithm_parameters, KernelDeclaration(),
+          no_types, no_variables, no_schedules, NULL, plain_without_cancelled, plain_without_priors, plain_full,
+          plain_plan, std::vector<int>(), data_created_in_get_likelihood_estimators,
+          data_created_in_get_measurement_covariance_estimators);
+      delete plain_without_cancelled; delete plain_without_priors; delete plain_full;
+      std::vector<LikelihoodEstimator *> inner;
+      for (size_t i = 0; i < plain_estimators.size(); ++i) {
+        if (std::find(numbers.begin(), numbers.end(), double(i + 1)) != numbers.end())
+          inner.push_back(plain_estimators[i]);
+        else
+          delete plain_estimators[i];
+      }
+      std::vector<std::string> variables = settings["variables"];
+      const std::string t = jump_path_variable(j);
+      MappedBackFactor *start = new MappedBackFactor(read_involution_functions(settings, kind, data_in),
+                                                     settings["indicator"].as_string(), variables, inner, data_in);
+      ReverseAuxiliaryFactor *reverse = new ReverseAuxiliaryFactor(read_involution_functions(settings, kind, data_in), data_in);
+      // (the other side's, mapped: 1 - t; the side's own auxiliary density: t;
+      // swapped on a path run from the larger model's side to the smaller)
+      AnnealedLikelihoodEstimator *start_factor = new AnnealedLikelihoodEstimator(
+          rng_in, seed_in, data_in, new ExactLikelihoodEstimator(rng_in, seed_in, data_in, start, false),
+          reversed_path ? jump_end_power : jump_start_power, t, false);
+      AnnealedLikelihoodEstimator *end_factor = new AnnealedLikelihoodEstimator(
+          rng_in, seed_in, data_in, new ExactLikelihoodEstimator(rng_in, seed_in, data_in, reverse, false),
+          reversed_path ? jump_start_power : jump_end_power, t, false);
+      start_factor->set_skip_at_zero(true);
+      end_factor->set_skip_at_zero(true);
+      for (AnnealedLikelihoodEstimator *factor : {start_factor, end_factor}) {
+        plan.appended_factors.push_back(likelihood_estimators.size());
+        full_index_vector.push_back(likelihood_estimators.size());
+        without_cancelled_index_vector.push_back(likelihood_estimators.size());
+        likelihood_estimators.push_back(factor);
+      }
+    }
+  }
+
   if (plan.add_proposal_path_factor) {
+    plan.appended_factors.push_back(likelihood_estimators.size());
     full_index_vector.push_back(likelihood_estimators.size());
     without_cancelled_index_vector.push_back(likelihood_estimators.size());
 
@@ -1986,6 +2084,72 @@ get_measurement_covariance_estimators(
 // sweeps: iterations of the kernel at each step; resampling: the ESS
 // fraction below which the SMC resamples (1: at every step); waste_free:
 // waste-free chains (0: none).
+// (dev/plan.md 3.22 U4, "The engines"; stage A) the inner SMC of an annealed
+// path: the package's SMC with MCMC moves on run_model, one schedule variable
+// ilike_path_t from 0 to 1 at k/steps, k = 0, ..., steps (mode "path": a
+// parameter path, along which Sequencer::set_path moves the path's
+// parameters; mode "evidence": an annealing power), changing the factors
+// path_factors (numbered from 1), with `sweeps` iterations of the moves at
+// each step and resampling below the ESS fraction `resampling`. given_start:
+// the runs start from given particles (SMC::set_initial_particles), not from
+// draws from the prior, so no factor cancels with an importance proposal.
+// variable: the schedule variable (annealed jump j's own, so that only its
+// bridges' factors have powers that are not 0).
+static RecipeValue path_iterations(size_t k)
+{
+  RecipeValue values = RecipeValue::list();
+  values.push_back(RecipeValue(std::to_string(k)), "");
+  RecipeValue termination = RecipeValue::list();
+  termination.push_back(RecipeValue("iterations"), "method");
+  termination.push_back(values, "values");
+  return termination;
+}
+
+SMCMCMCMove *make_path_smc(RandomNumberGenerator *rng, size_t *seed, Data *data,
+                           const RecipeValue &run_model_in, const RecipeValue &model_parameters,
+                           const RecipeValue &weights, const std::string &mode,
+                           const std::vector<double> &path_factors, bool given_start,
+                           size_t particles, size_t steps, size_t sweeps,
+                           double resampling, size_t waste_free,
+                           std::vector<Data> &data_a, std::vector<Data> &data_b,
+                           const std::string &variable = "ilike_path_t")
+{
+  RecipeValue run_model = run_model_in;
+  // the SMC's resampling: an ESS fraction
+  {
+    RecipeValue parameters = RecipeValue::list();
+    parameters.push_back(RecipeValue(resampling), "");
+    RecipeValue criterion = RecipeValue::list();
+    criterion.push_back(RecipeValue("ess"), "type");
+    criterion.push_back(parameters, "parameters");
+    RecipeValue entry = RecipeValue::list();
+    entry.push_back(criterion, "adaptive_resampling");
+    RecipeValue methods = RecipeValue::list();
+    methods.push_back(entry, "");
+    run_model.set("method", methods);
+  }
+  const size_t T = std::max(steps, size_t(1));
+  std::vector<double> schedule(T + 1);
+  for (size_t k = 0; k <= T; ++k)
+    schedule[k] = (k == T) ? 1.0 : double(k)/double(T);
+  RecipeValue sequence = RecipeValue::list();
+  sequence.push_back(RecipeValue(mode == "path" ? std::string("parameter") : std::string("annealing")), "ilike_path_type");
+  sequence.push_back(RecipeValue(variable), "ilike_path_variable");
+  sequence.push_back(RecipeValue(schedule), "ilike_path_schedule");
+  sequence.push_back(RecipeValue(path_factors), "ilike_path_factors");
+  if (given_start)
+    sequence.push_back(RecipeValue(true), "ilike_path_given_start");
+  RecipeValue adaptive_target = RecipeValue::list();
+  adaptive_target.push_back(RecipeValue("positive"), "method");
+  NestedSequence nested; // (no message about the proposal)
+  SMCMCMCMove *smc = get_smc_mcmc_move(rng, data, run_model, model_parameters, Parameters(), std::max(particles, size_t(1)),
+                                       path_iterations(std::max(sweeps, size_t(1))), weights, sequence, adaptive_target,
+                                       RecipeValue::list(), 2, false, false, 1, "", seed, data_a, data_b, &nested);
+  if (waste_free > 0)
+    smc->set_waste_free_chains(waste_free);
+  return smc;
+}
+
 SMCPath *make_smc_path(RandomNumberGenerator *rng, size_t *seed, Data *data,
                        const RecipeValue &model, const RecipeValue &model_parameters,
                        const std::string &x, const std::string &mode,
@@ -2002,19 +2166,6 @@ SMCPath *make_smc_path(RandomNumberGenerator *rng, size_t *seed, Data *data,
   if (engine.contains("normaliser") && !engine["normaliser"].is_null())
     normaliser = static_cast<std::vector<std::string>>(engine["normaliser"]);
   RecipeValue weights = engine.contains("mcmc_weights") ? engine["mcmc_weights"] : RecipeValue::list();
-  // the SMC's resampling: an ESS fraction
-  {
-    RecipeValue parameters = RecipeValue::list();
-    parameters.push_back(RecipeValue(resampling), "");
-    RecipeValue criterion = RecipeValue::list();
-    criterion.push_back(RecipeValue("ess"), "type");
-    criterion.push_back(parameters, "parameters");
-    RecipeValue entry = RecipeValue::list();
-    entry.push_back(criterion, "adaptive_resampling");
-    RecipeValue methods = RecipeValue::list();
-    methods.push_back(entry, "");
-    inner.set("method", methods);
-  }
   auto iterations = [](size_t k) {
     RecipeValue values = RecipeValue::list();
     values.push_back(RecipeValue(std::to_string(k)), "");
@@ -2058,26 +2209,12 @@ SMCPath *make_smc_path(RandomNumberGenerator *rng, size_t *seed, Data *data,
       }
       run_model.set("factor", factors);
     }
-    const size_t T = std::max(steps, size_t(1));
-    std::vector<double> schedule(T + 1);
-    for (size_t k = 0; k <= T; ++k)
-      schedule[k] = (k == T) ? 1.0 : double(k)/double(T);
-    RecipeValue sequence = RecipeValue::list();
-    sequence.push_back(RecipeValue(mode == "path" ? std::string("parameter") : std::string("annealing")), "ilike_path_type");
-    sequence.push_back(RecipeValue(std::string("ilike_path_t")), "ilike_path_variable");
-    sequence.push_back(RecipeValue(schedule), "ilike_path_schedule");
-    // the factors the sequence changes: on a path, the base measure (whose
-    // parameters, if it reads any, are on the path: step 2b) and the terms;
-    // annealing raises only the terms to the power
-    sequence.push_back(RecipeValue(mode == "path" ? std::vector<double>{1.0, 2.0} : std::vector<double>{2.0}), "ilike_path_factors");
-    RecipeValue adaptive_target = RecipeValue::list();
-    adaptive_target.push_back(RecipeValue("positive"), "method");
-    NestedSequence nested; // (no message about the proposal)
-    smc = get_smc_mcmc_move(rng, data, run_model, model_parameters, Parameters(), std::max(particles, size_t(1)),
-                            iterations(std::max(sweeps, size_t(1))), weights, sequence, adaptive_target,
-                            RecipeValue::list(), 2, false, false, 1, "", seed, *data_a, *data_b, &nested);
-    if (waste_free > 0)
-      smc->set_waste_free_chains(waste_free);
+    smc = make_path_smc(rng, seed, data, run_model, model_parameters, weights, mode,
+                        // the factors the sequence changes: on a path, the base measure (whose
+                        // parameters, if it reads any, are on the path: step 2b) and the terms;
+                        // annealing raises only the terms to the power
+                        (mode == "path") ? std::vector<double>{1.0, 2.0} : std::vector<double>{2.0},
+                        false, particles, steps, sweeps, resampling, waste_free, *data_a, *data_b);
   }
 
   // draws by MCMC: the inner model's factors and its kernel, one iteration at a time
@@ -2106,3 +2243,76 @@ SMCPath *make_smc_path(RandomNumberGenerator *rng, size_t *seed, Data *data,
   return path;
 }
 
+
+// (dev/plan.md 3.22, "Every annealed path on the general engine", stage A)
+// AIS MCMC's path: the general engine (an SMC with one particle) on the outer
+// model, whose algorithm is the annealed move's kernel (inner: the kernel's
+// moves, made by the lowering) as a symmetric scan, along a parameter path
+// (the move's proposed parameters, from their current to their proposed
+// values, given on each run) with steps = bridges + 1 and `sweeps` scans at
+// each step, changing the factors path_factors (numbered from 1)
+SMCPath *make_annealed_path(RandomNumberGenerator *rng, size_t *seed, Data *data,
+                            const RecipeValue &model, const RecipeValue &model_parameters,
+                            const RecipeValue &inner, const std::vector<double> &path_factors,
+                            size_t steps, size_t sweeps)
+{
+  RecipeValue run_model = model;
+  std::vector<std::string> keys = inner.names();
+  for (size_t k = 0; k < inner.size(); ++k)
+    run_model.set(keys[k], inner[k]);
+  run_model.set("symmetric_scan", RecipeValue(true));
+  std::shared_ptr<std::vector<Data>> data_a = std::make_shared<std::vector<Data>>();
+  std::shared_ptr<std::vector<Data>> data_b = std::make_shared<std::vector<Data>>();
+  data_a->reserve(64); data_b->reserve(64);
+  SMCMCMCMove *smc = make_path_smc(rng, seed, data, run_model, model_parameters, RecipeValue::list(), "path",
+                                   path_factors, true, 1, steps, sweeps, 1.0, 0, *data_a, *data_b);
+  SMCPath *path = new SMCPath(smc, NULL, NULL, NULL, std::vector<std::string>(), std::vector<std::string>());
+  path->keep_data(data_a);
+  path->keep_data(data_b);
+  return path;
+}
+
+// (dev/plan.md 3.22, stage B) annealed reversible jump's path: the general
+// engine (one particle) on the model, its algorithm the path's kernel (inner:
+// the kernel's moves) as a symmetric scan, along an annealing sequence from
+// t = 0 to 1 at k/(bridges + 1): the move's factors (path_factors, numbered
+// from 1) with power t, the start f0 with power 1 - t and q(u' | x') with
+// power t (ilike_jump: added by get_likelihood_estimators)
+SMCPath *make_jump_path(RandomNumberGenerator *rng, size_t *seed, Data *data,
+                        const RecipeValue &model, const RecipeValue &model_parameters,
+                        const RecipeValue &path, const std::vector<double> &path_factors, bool reversed)
+{
+  RecipeValue run_model = model;
+  if (reversed)
+    run_model.set("ilike_path_reversed", RecipeValue(true));
+  const RecipeValue &inner = path["inner"];
+  std::vector<std::string> keys = inner.names();
+  for (size_t k = 0; k < inner.size(); ++k)
+    run_model.set(keys[k], inner[k]);
+  run_model.set("symmetric_scan", RecipeValue(true));
+  std::shared_ptr<std::vector<Data>> data_a = std::make_shared<std::vector<Data>>();
+  std::shared_ptr<std::vector<Data>> data_b = std::make_shared<std::vector<Data>>();
+  data_a->reserve(64); data_b->reserve(64);
+  SMCMCMCMove *smc = make_path_smc(rng, seed, data, run_model, model_parameters, RecipeValue::list(), "evidence",
+                                   path_factors, true, 1, size_t(path["bridges"].as_double()) + 1,
+                                   size_t(path["sweeps"].as_double()), 1.0, 0, *data_a, *data_b,
+                                   jump_path_variable(size_t(path["jump"].as_double())));
+  SMCPath *engine = new SMCPath(smc, NULL, NULL, NULL, std::vector<std::string>(), std::vector<std::string>());
+  engine->keep_data(data_a);
+  engine->keep_data(data_b);
+  return engine;
+}
+
+// (2026-11-27) the recipe given to make_mcmc, with the positions of the
+// factors the algorithm appended (they join every move's factor index)
+RecipeValue with_appended_factors(const RecipeValue &model, const CancellationPlan &plan)
+{
+  if (plan.appended_factors.empty())
+    return model;
+  RecipeValue output = model;
+  std::vector<double> positions;
+  for (size_t i : plan.appended_factors)
+    positions.push_back(double(i));
+  output.set("ilike_appended_factors", RecipeValue(positions));
+  return output;
+}

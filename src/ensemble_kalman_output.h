@@ -174,6 +174,11 @@ protected:
   // evaluation
   std::vector<uint64_t> member_seeds;
   size_t members_to_refresh = 0;
+  // (C306) correlated = crank_nicolson(sd): u, the members' standard normals
+  // (one D x N matrix per step; empty: drawn as needed), and whether a
+  // Crank-Nicolson step on them is to be made when the run starts
+  std::vector<arma::mat> cn_normals;
+  bool cn_move_pending = false;
   bool pending = false;
   void prepare_member_seeds();
   void run_if_pending(const Parameters &parameters);

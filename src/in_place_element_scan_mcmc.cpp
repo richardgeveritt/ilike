@@ -327,8 +327,10 @@ bool InPlaceElementScanMCMC::scan_in_place(RandomNumberGenerator &rng,
           tuned_row = &r;
   }
 
-  for (size_t e = 0; e < this->rows.size(); ++e)
+  for (size_t e_order = 0; e_order < this->rows.size(); ++e_order)
   {
+    // (U5a) move_in_place_reversed: the elements in reverse order
+    const size_t e = this->reversed_order ? (this->rows.size() - 1 - e_order) : e_order;
     row = this->rows[e];
     column = this->columns[e];
     if ((row >= x.n_rows) || (column >= x.n_cols))
@@ -648,6 +650,20 @@ bool InPlaceElementScanMCMC::scan_in_place(RandomNumberGenerator &rng,
     particle.simulate_proposal_variables(particle.proposals_to_transform_for_pointer,
                                          particle.proposals_to_find_gradient_for_pointer);
   return true;
+}
+
+
+void InPlaceElementScanMCMC::move_in_place_reversed(RandomNumberGenerator &rng, Particle &particle) const
+{
+  this->reversed_order = true;
+  bool done = this->scan_in_place(rng, particle);
+  this->reversed_order = false;
+  if (!done)
+  {
+    if (this->is_gibbs())
+      Rcpp::stop("gibbs moves need the model's factors held as a list of outputs (not available here).");
+    DeterministicScanMCMC::move_in_place_reversed(rng, particle);
+  }
 }
 
 }

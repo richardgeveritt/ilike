@@ -148,6 +148,8 @@ void EnsembleKalman::make_copy(const EnsembleKalman &another)
   this->correlated = another.correlated;
   this->refresh_members = another.refresh_members;
   this->member_seeds = NULL;
+  this->crank_nicolson_sd = another.crank_nicolson_sd;
+  this->cn_normals = NULL;
 }
 
 EnsembleKalmanOutput* EnsembleKalman::run()

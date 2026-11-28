@@ -102,7 +102,16 @@ public:
   // so that a Metropolis(-Hastings) move on theta is the paper's Algorithm 1
   // (UnnormalisedNormaliserEstimatorOutput::block_poisson_log_estimate).
   void set_block_poisson(size_t blocks_in, double mean_in, double lower_in, bool correlated_in);
-  bool may_be_negative() const { return this->roulette || this->block_poisson; }
+  // (dev/plan.md 3.22 U9 R4) debias = taylor(cycling, pilot, level, tuning,
+  // continue, joint): the randomly truncated Taylor-series ("sum") estimate
+  // of Z^-n (Chopin et al., arXiv 2403.20313; for n replicates jointly,
+  // arXiv 2510.03587), with its expansion point and truncation chosen from
+  // pilot estimates at each value of the parameters
+  // (taylor_log_estimate). alpha <= 0: 2403.20313's bootstrap rule;
+  // otherwise 2510.03587's x0 = mhat/alpha. continue_probability < 0: p from
+  // the rule.
+  void set_taylor(bool cycling_in, size_t pilot_in, double level_in, double alpha_in, double continue_in, bool joint_in);
+  bool may_be_negative() const { return this->roulette || this->block_poisson || this->taylor; }
 
   // (dev/plan.md 3.22 U3b) replicates = R: R independent estimates, one per
   // replicate; the value is the sum of their logs. Under data tempering
@@ -171,6 +180,13 @@ protected:
   size_t block_poisson_blocks = 10;
   double block_poisson_mean = 1.0, block_poisson_lower = -11.0;
   bool block_poisson_correlated = true;
+  bool taylor = false;
+  bool taylor_cycling = true;
+  size_t taylor_pilot = 10;
+  double taylor_level = 0.01, taylor_alpha = 0.0, taylor_continue = -1.0;
+  bool taylor_joint = false;
+  // (R4) the Taylor-series estimate of Z^-n (log of its absolute value; its sign in *sign)
+  double taylor_log_estimate(const Parameters &parameters, size_t n, double *sign) const;
   // (block-Poisson) one SMC estimate of log Z(theta) relative to the base
   // measure, from the generator given (the plug-in's SMC)
   double plugin_log_z(RandomNumberGenerator &rng, const Parameters &parameters) const;

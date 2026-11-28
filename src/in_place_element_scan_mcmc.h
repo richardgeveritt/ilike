@@ -84,6 +84,10 @@ public:
   void set_index(Index* index_in);
   void set_index_if_null(Index* index_in);
   void set_cut_index(const Index* cut_index_in);
+  // (U5a) the elements in reverse order; each element's update (a Metropolis
+  // move or a draw from its full conditional) is reversible
+  void move_in_place_reversed(RandomNumberGenerator &rng, Particle &particle) const;
+  bool reversible_parts(std::string &why) const { return true; }
 
   // adaptation (dev/plan.md, "adaptation of element moves"): along the chain
   // each element's kernel adapts its step from the element's acceptance
@@ -118,6 +122,7 @@ protected:
                       const std::vector<size_t> &offsets,
                       size_t number_of_rows);
   double smc_constant = 0.0; // > 0: smc_adapt = gaussian(c) on the elements
+  mutable bool reversed_order = false; // (U5a: move_in_place_reversed)
 
   std::string variable;
   std::vector<size_t> rows;

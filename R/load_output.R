@@ -433,6 +433,15 @@ load_smc_output = function(results_directory,
     else
     {
       index$Target = rep(as.integer(target), number_of_points)
+      # (dev/plan.md 3.22 U9 R5) IS and SMC with factor estimates that may be
+      # negative: each point's sign
+      if ("signs" %in% names(h5f[[iter_grp_path]]))
+      {
+        sign_raw = as.numeric(h5f[[iter_grp_path]][["signs"]]$read())
+        if (length(sign_raw) != number_of_points)
+          stop("load_smc_output: the output holds ", length(sign_raw), " signs for ", number_of_points, " points.")
+        index$Sign = sign_raw
+      }
       index$Time = time_val
       index$NormalisingConstant = llhd_val
       index$ISESS = ess_val
@@ -632,9 +641,89 @@ load_mcmc_output = function(results_directory,
   }
 
   output = load_smc_output(results_directory = results_directory,ggmcmc = ggmcmc,ggsmc = FALSE, ilike.output = ilike.output,as.mcmc=TRUE,wide=wide)
+  output = mask_padded_entries(output, results_directory, wide = wide, ggmcmc = ggmcmc)
   if (ggmcmc==TRUE)
     names(output)[names(output) == 'Value'] = "value"
   return(output)
+}
+
+# (dev/plan.md 3.22 U6, C314) A model with an indicator k ~ categorical(…)
+# and variables whose loops run to k stores those variables padded to k's
+# largest value. MCMC records which they are in the output file, and
+# load_mcmc_output marks the entries after k's value at each point as missing.
+padded_output_file <- function(results_directory)
+{
+  # (the results folder, or, inside MCMC, the prefix the writer appends "_smc" to)
+  for (path in c(file.path(results_directory, "ilike_smc", "output.h5"), file.path(paste0(results_directory, "_smc"), "output.h5"),
+                 file.path(results_directory, "output.h5")))
+    if (file.exists(path))
+      return(path)
+  ""
+}
+
+write_padded_variables <- function(recipe, results_directory)
+{
+  if ((results_directory == "") || (length(recipe$padded_variables) == 0))
+    return(invisible(NULL))
+  path = padded_output_file(results_directory)
+  if (path == "")
+    return(invisible(NULL))
+  h5f = hdf5r::H5File$new(path, mode = "r+")
+  on.exit(try(h5f$close_all(), silent = TRUE), add = TRUE)
+  hdf5r::h5attr(h5f, "padded_variables") = as.character(recipe$padded_variables)
+  hdf5r::h5attr(h5f, "padded_indicators") = as.character(recipe$padded_indicators)
+  invisible(NULL)
+}
+
+mask_padded_entries <- function(output, results_directory, wide = FALSE, ggmcmc = FALSE)
+{
+  path = padded_output_file(results_directory)
+  if (path == "")
+    return(output)
+  h5f = hdf5r::H5File$new(path, mode = "r")
+  on.exit(try(h5f$close_all(), silent = TRUE), add = TRUE)
+  if (!("padded_variables" %in% hdf5r::h5attr_names(h5f)))
+    return(output)
+  variables = h5f$attr_open("padded_variables")$read()
+  indicators = h5f$attr_open("padded_indicators")$read()
+  keys = intersect(c("ExternalIndex", "Chain", "Iteration"), names(output))
+  key_of = function(rows) do.call(paste, c(lapply(keys, function(k) output[[k]][rows]), sep = "_"))
+  for (j in seq_along(variables))
+  {
+    v = variables[j]; k = indicators[j]
+    if (wide)
+    {
+      k_column = intersect(c(paste0(k, "_1"), k), names(output))
+      if (length(k_column) == 0)
+        next
+      kk = output[[k_column[1]]]
+      columns = grep(paste0("^", v, "_[0-9]+$"), names(output), value = TRUE)
+      for (column in columns)
+      {
+        d = as.numeric(sub(paste0("^", v, "_"), "", column))
+        output[[column]][d > kk] = NA
+      }
+      next
+    }
+    if (ggmcmc)
+    {
+      k_rows = which(output$Parameter == paste0(k, "_1"))
+      v_rows = grep(paste0("^", v, "_[0-9]+$"), output$Parameter)
+      d = as.numeric(sub(paste0("^", v, "_"), "", output$Parameter[v_rows]))
+    }
+    else
+    {
+      k_rows = which(output$ParameterName == k)
+      v_rows = which(output$ParameterName == v)
+      d = output$Dimension[v_rows]
+    }
+    if ((length(k_rows) == 0) || (length(v_rows) == 0))
+      next
+    kk = output$Value[k_rows][match(key_of(v_rows), key_of(k_rows))]
+    inactive = !is.na(kk) & (d > kk)
+    output$Value[v_rows[inactive]] = NA
+  }
+  output
 }
 
 #' Loading ensemble Kalman output into R memory.
@@ -890,25 +979,43 @@ load_mcmc_diagnostics = function(results_directory,
   output
 }
 
-#' Posterior expectations from a signed pseudo-marginal MCMC run.
+#' Posterior expectations from a run with factor estimates that may be negative.
 #'
-#' A chain whose factor estimates may be negative (normaliser =
-#' estimate(..., debias = roulette(...) or block_poisson(...))) targets the absolute value of the
-#' estimated posterior and records each iteration's sign. The expectation of
-#' a function of the parameters under the posterior is then the mean of the
-#' function weighted by the signs (Lyne et al. 2015): sum(s_i f_i)/sum(s_i).
+#' A run whose factor estimates may be negative (normaliser = estimate(...,
+#' debias = roulette(...), block_poisson(...) or taylor(...))) targets the
+#' absolute value of the estimated posterior and records each point's sign.
+#' The expectation of a function of the parameters under the posterior is
+#' then the mean of the function weighted by the signs (Lyne et al. 2015):
+#' sum(s_i f_i)/sum(s_i) for MCMC, and sum(W_i s_i f_i)/sum(W_i s_i) for
+#' importance sampling and SMC, with W_i the points' normalised weights.
 #'
-#' @param output The output of load_mcmc_output, with its Sign column.
+#' @param output The output of load_mcmc_output, or of load_smc_output, with its Sign column.
 #' @param parameter The name of a parameter.
 #' @param dimension Its element (default 1).
 #' @param f A function of the parameter's values (default: the identity).
-#' @param burn_in The number of first iterations of each chain to leave out.
-#' @return A list: the estimate, and the mean sign (near 0 makes the estimate unreliable).
+#' @param burn_in MCMC: the number of first iterations of each chain to leave out.
+#' @param target IS and SMC: the target whose points are used (default: the last).
+#' @return A list: the estimate, and the (weighted) mean sign (near 0 makes the estimate unreliable).
 #' @export
-signed_mean <- function(output, parameter, dimension = 1, f = identity, burn_in = 0)
+signed_mean <- function(output, parameter, dimension = 1, f = identity, burn_in = 0, target = NULL)
 {
   if (!("Sign" %in% names(output)))
     stop("signed_mean: the output has no Sign column (no factor estimate of the run could be negative).")
+  if ("LogWeight" %in% names(output) && "Target" %in% names(output))
+  {
+    # importance sampling and SMC: the points of one target, weighted
+    if (is.null(target))
+      target = max(output$Target)
+    rows = output[(output$ParameterName == parameter) & (output$Dimension == dimension) & (output$Target == target), , drop = FALSE]
+    if (nrow(rows) == 0)
+      stop("signed_mean: no values of ", parameter, "[", dimension, "] at target ", target, ".")
+    w = exp(rows$LogWeight - max(rows$LogWeight))
+    w = w / sum(w)
+    s = rows$Sign
+    if (sum(w * s) == 0)
+      stop("signed_mean: the weighted signs sum to zero, so the estimate is not defined.")
+    return(list(estimate = sum(w * s * f(rows$Value)) / sum(w * s), mean_sign = sum(w * s)))
+  }
   rows = output[(output$ParameterName == parameter) & (output$Dimension == dimension) & (output$Iteration > burn_in), , drop = FALSE]
   if (nrow(rows) == 0)
     stop("signed_mean: no values of ", parameter, "[", dimension, "] after the burn-in.")

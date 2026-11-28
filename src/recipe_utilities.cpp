@@ -155,7 +155,8 @@ RecipeValue get_enkf_info(const RecipeValue &model_parameters, const RecipeValue
   return RecipeValue::list({size_t(a.integer("ensemble_members")), a.string("shifter"),
                             int(a.integer("iterations_to_store")), a.logical("parallel"),
                             size_t(a.integer("grain_size")), below, multiply, maximum,
-                            a.logical("correlated"), size_t(a.integer("refresh"))});
+                            a.logical("correlated"), size_t(a.integer("refresh")),
+                            a.given("crank_nicolson_sd") ? a.real("crank_nicolson_sd") : 0.0});
 }
 
 // integrate u with smc(particles = N, …) (dev/plan.md 3.21, (c1))
@@ -183,7 +184,8 @@ RecipeValue get_pf_info(const RecipeValue &model_parameters, const RecipeValue &
   size_t maximum = a.given("exchange_max") ? size_t(a.integer("exchange_max")) : size_t(0);
   return RecipeValue::list({size_t(a.integer("particles")), int(a.integer("iterations_to_store")),
                             a.logical("parallel"), size_t(a.integer("grain_size")),
-                            below, multiply, maximum});
+                            below, multiply, maximum, a.logical("correlated"),
+                            a.given("crank_nicolson_sd") ? a.real("crank_nicolson_sd") : 0.0});
 }
 
 std::vector<size_t> get_enk_likelihood_indices(const RecipeValue &model,

@@ -29,6 +29,7 @@
 #include "unnormalised_normaliser_estimator.h"
 #include "unnormalised_gradient_estimator.h"
 #include "smc_path.h"
+#include "jump_factors.h"
 #include "barker_dynamics_proposal_kernel.h"
 #include "cess_smc_criterion.h"
 #include "composite_independent_proposal_kernel.h"
@@ -231,6 +232,13 @@ EnsembleKalmanFilter *get_ensemble_kalman_filter( RandomNumberGenerator *rng, Da
 ParticleFilter *get_particle_filter( RandomNumberGenerator *rng, Data *the_data, const RecipeValue &model, const RecipeValue &parameters, const Parameters &algorithm_parameters, size_t number_of_particles, size_t smc_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const std::string &results_name_in, size_t *seed, std::vector<Data> &data_created_in_get_likelihood_estimators, std::vector<Data> &data_created_in_get_measurement_covariance_estimators);
 void ilike_record_main_thread(DllInfo* dll);
 // (dev/plan.md 3.22 U4) the general engine of an unnormalised distribution written as a block
+// (C316) the functions of a jump move: kind "rj" (the user's) or "birth_death" (built in)
+InvolutionFunctions *read_involution_functions(const RecipeValue &settings, const std::string &kind, const Data *data);
+// (stage B) annealed reversible jump's path: the general engine on the model
+// at k' annealed from the start f0 (the model at k, through the map)
+SMCPath *make_jump_path(RandomNumberGenerator *rng, size_t *seed, Data *data, const RecipeValue &model, const RecipeValue &model_parameters, const RecipeValue &path, const std::vector<double> &path_factors, bool reversed);
+RecipeValue with_appended_factors(const RecipeValue &model, const CancellationPlan &plan);
+SMCPath *make_annealed_path(RandomNumberGenerator *rng, size_t *seed, Data *data, const RecipeValue &model, const RecipeValue &model_parameters, const RecipeValue &inner, const std::vector<double> &path_factors, size_t steps, size_t sweeps);
 SMCPath *make_smc_path(RandomNumberGenerator *rng, size_t *seed, Data *data, const RecipeValue &model, const RecipeValue &model_parameters, const std::string &x, const std::string &mode, size_t particles, size_t steps, size_t sweeps, double resampling, size_t waste_free);
 
 #endif

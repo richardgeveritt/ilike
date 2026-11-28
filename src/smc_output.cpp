@@ -87,6 +87,12 @@ SMCOutput* SMCOutput::smc_duplicate() const
 void SMCOutput::make_copy(const SMCOutput &another)
 {
   this->pending = another.pending;
+  this->cn_normals = another.cn_normals;
+  this->cn_resampling = another.cn_resampling;
+  this->cn_move_pending = another.cn_move_pending;
+  this->mean_sign_found = another.mean_sign_found;
+  this->mean_sign_signed = another.mean_sign_signed;
+  this->found_mean_sign = another.found_mean_sign;
   this->caught_up = another.caught_up;
   this->committed_log_likelihood = another.committed_log_likelihood;
   this->followed_steps = another.followed_steps;
@@ -141,12 +147,95 @@ void SMCOutput::simulate(const Parameters &parameters)
 // the estimator allows it
 void SMCOutput::simulate_when_needed(const Parameters &parameters)
 {
+  if (this->estimator->crank_nicolson_sd > 0.0)
+  {
+    // (C307) a new u, unless carry_over_from gives the current one
+    this->cn_normals.clear();
+    this->cn_resampling.clear();
+    this->cn_move_pending = false;
+    this->pending = true;
+    return;
+  }
   if (this->estimator->defers_simulation())
   {
     this->pending = true;
     return;
   }
   this->estimator->simulate_smc(this, parameters);
+}
+
+bool SMCOutput::weighted_mean_sign(double &mean_sign) const
+{
+  if (this->mean_sign_found)
+  {
+    mean_sign = this->found_mean_sign;
+    return this->mean_sign_signed;
+  }
+  return this->compute_weighted_mean_sign(mean_sign);
+}
+
+bool SMCOutput::compute_weighted_mean_sign(double &mean_sign) const
+{
+  mean_sign = 1.0;
+  if (this->all_particles.empty())
+    return false;
+  const Particles &last = this->all_particles.back();
+  if (last.is_flat())
+  {
+    // (a generation made in chunks: the points' signs kept with it)
+    if (last.flat_signs.n_elem == 0)
+      return false;
+    arma::colvec w = last.unnormalised_log_weights;
+    if (w.n_elem != last.flat_signs.n_elem)
+      w = last.flat_incremental_log_weights;
+    if (w.n_elem != last.flat_signs.n_elem)
+      return false;
+    w = arma::exp(w - log_sum_exp(w));
+    mean_sign = arma::dot(w, last.flat_signs);
+    return true;
+  }
+  if ((last.particles.size() == 0) || !last.particles[0]->records_signs())
+    return false;
+  std::vector<double> signs;
+  for (auto &p : last.particles)
+  {
+    // (the sign of the particle's current estimate: a chain's last point)
+    std::vector<double> chain;
+    p->fill_signs(chain);
+    signs.push_back(chain.empty() ? 1.0 : chain.back());
+  }
+  // (the final target's weights: the unnormalised log weights, previous
+  // normalised weights plus increments, normalised here)
+  arma::colvec w = last.unnormalised_log_weights;
+  if (w.n_elem != signs.size())
+    w = last.normalised_log_weights;
+  if (w.n_elem != signs.size())
+    return false;
+  w = arma::exp(w - log_sum_exp(w));
+  mean_sign = 0.0;
+  for (size_t i = 0; i < signs.size(); ++i)
+    mean_sign += w(i) * signs[i];
+  return true;
+}
+
+bool SMCOutput::carries_over() const
+{
+  return (this->estimator != NULL) && (this->estimator->crank_nicolson_sd > 0.0);
+}
+
+void SMCOutput::carry_over_from(const LikelihoodEstimatorOutput &previous,
+                                const Parameters &previous_parameters,
+                                const Parameters &new_parameters,
+                                const std::vector<std::string>* changed)
+{
+  if (!this->carries_over())
+    return;
+  const SMCOutput* source = dynamic_cast<const SMCOutput*>(&previous);
+  if (source == NULL)
+    return;
+  this->cn_normals = source->cn_normals;
+  this->cn_resampling = source->cn_resampling;
+  this->cn_move_pending = true;
 }
 
 // (dev/plan.md 3.21 (c2)) the caller's move stage: the estimator takes the
@@ -428,6 +517,12 @@ void SMCOutput::count_divergences(size_t &divergent, size_t &iterations) const
 
 void SMCOutput::terminate()
 {
+  // (U9 R5) the signed runs' weighted mean sign, while the final particles are here
+  if (!this->mean_sign_found)
+  {
+    this->mean_sign_signed = this->compute_weighted_mean_sign(this->found_mean_sign);
+    this->mean_sign_found = true;
+  }
   // Keep the output_lag most recent generations. (These used to be removed
   // from the back, i.e. the newest ones: with one generation to store, the
   // final generation was dropped and the one before was written as if it
@@ -751,12 +846,14 @@ void SMCOutput::write_to_file(const std::string &dir_name,
       // (dev/plan.md 3.22 U9 R2) the sign of each stored point (signed
       // pseudo-marginal MCMC), aligned with vector_points
       {
+        // (decided from the first particle: all have the same factors, so
+        // that other runs pay one call per generation, not one per particle)
         const auto &particles = this->all_particles[deque_index].particles;
-        bool any = false;
-        for (auto &p : particles)
-          if (p->records_signs())
-            any = true;
-        if (any && !this->all_particles[deque_index].is_flat())
+        const Particles &generation = this->all_particles[deque_index];
+        if (generation.is_flat() && (generation.flat_signs.n_elem > 0))
+          h5_write_vec(iter_grp, "signs", generation.flat_signs);
+        bool any = !particles.empty() && particles[0]->records_signs();
+        if (any && !generation.is_flat())
         {
           std::vector<double> signs;
           for (auto &p : particles)

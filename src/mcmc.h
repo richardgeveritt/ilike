@@ -128,6 +128,24 @@ public:
   // Whether the move adapts its kernel as it runs (a proposal with an MCMC
   // adaptor). If not, the particles' outputs share one kernel.
   virtual bool adapts() const { return false; }
+
+  // (dev/plan.md 3.22 U5a, C310) the kernel of an annealed (AIS MCMC) move:
+  // move_in_place_reversed makes the move with its parts in reverse order
+  // (the move itself for a single move; a scan's moves, or elements,
+  // reversed), so that a move followed by its reverse is reversible when
+  // each part is (the symmetric scan); reversible_parts says whether each
+  // part is a reversible kernel for the target (why not, in why, if not)
+  virtual void move_in_place_reversed(RandomNumberGenerator &rng, Particle &particle) const { this->move_in_place(rng, particle); }
+  virtual bool reversible_parts(std::string &why) const
+  {
+    why = "this kind of move is not known to be reversible";
+    return false;
+  }
+
+  // (A2) a move whose step runs other moves of its cycle (an annealed move's
+  // kernel) points at them: called by the cycle when it is built and after
+  // each copy, with the cycle's moves in order
+  virtual void link_kernel(const std::vector<const MCMC*> &cycle) {}
   
   // could change to also have MoveOutput*
   // change when needed
@@ -223,6 +241,9 @@ protected:
   void make_copy(const MCMC &another);
   
 };
+// (A2) give each move of a cycle the cycle's moves (MCMC::link_kernel)
+void link_cycle(const std::vector<std::unique_ptr<MCMC>> &moves);
+
 }
 
 #endif

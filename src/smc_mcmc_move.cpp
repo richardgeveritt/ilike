@@ -1,6 +1,7 @@
 #include <numeric>
 #include <algorithm>
 #include "smc_mcmc_move.h"
+#include "symmetric_scan_mcmc.h"
 #include "single_point_move_output.h"
 #include "adaptive_iterations_mcmc_termination.h"
 #include "esjd_adaptor.h"
@@ -713,12 +714,42 @@ LikelihoodEstimator* SMCMCMCMove::duplicate() const
   return( new SMCMCMCMove(*this));
 }
 
+void SMCMCMCMove::take_proposals(bool transform)
+{
+  if (this->mcmc==NULL)
+    return;
+  std::vector<const ProposalKernel*> proposals = this->mcmc->get_proposals();
+  this->proposals_to_find_gradient_for = proposals;
+  if (transform)
+    this->proposals_to_transform_for = proposals;
+}
+
+void SMCMCMCMove::link_kernel(const std::vector<const MCMC*> &moves)
+{
+  SymmetricScanMCMC* scan = dynamic_cast<SymmetricScanMCMC*>(this->mcmc.get());
+  if (scan == NULL)
+    Rcpp::stop("SMCMCMCMove::link_kernel: an annealed path's moves are a symmetric scan.");
+  bool transform = !this->proposals_to_transform_for.empty();
+  scan->link(moves);
+  this->take_proposals(transform);
+}
+
+void SMCMCMCMove::set_caller_tuning(const ParticleTuning* tuning)
+{
+  if (SymmetricScanMCMC* scan = dynamic_cast<SymmetricScanMCMC*>(this->mcmc.get()))
+    scan->set_caller_tuning(tuning);
+}
+
 void SMCMCMCMove::make_copy(const SMCMCMCMove &another)
 {
   if (another.mcmc!=NULL)
     this->mcmc.reset(another.mcmc->mcmc_duplicate());
   else
     this->mcmc.reset();
+  // (stage A) the proposals whose stores the particles make (SMC's copy
+  // copied the pointers, which are into another's kernel): this copy's own
+  this->take_proposals(!another.proposals_to_transform_for.empty());
+  this->path_run = another.path_run;
   
   if (another.index!=NULL)
     this->index.reset(another.index->duplicate());
@@ -745,6 +776,9 @@ void SMCMCMCMove::make_copy(const SMCMCMCMove &another)
 // particle's rows; with a summary of the values in output.h5 (group tuning)
 void SMCMCMCMove::prepare_tuning(SMCOutput* current_state)
 {
+  // (A2) a path's SMC tunes nothing: its moves' tuning is the caller's
+  if (this->path_run)
+    return;
   if (!this->tuners_found)
   {
     this->tuners_found = true;

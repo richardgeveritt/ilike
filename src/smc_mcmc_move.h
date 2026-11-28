@@ -335,7 +335,16 @@ public:
   {
     this->move_only_after_resampling = move_only_after_resampling_in;
   }
+  // (A2) the SMC of an annealed path (SMCPath): its moves may be a cycle's
+  // own (linked into its symmetric scan), whose tuning is the caller's, so it
+  // tunes nothing itself; the particle carries the caller's tuning
+  void set_path_run(bool path_run_in) { this->path_run = path_run_in; }
+  void link_kernel(const std::vector<const MCMC*> &moves);
+  void set_caller_tuning(const ParticleTuning* tuning);
 protected:
+  bool path_run = false;
+  // the proposals whose stores the particles make, from this SMC's MCMC
+  void take_proposals(bool transform);
   bool chains_only = false;
   bool move_only_after_resampling = false;
   void carry_generation(SMCOutput* current_state);

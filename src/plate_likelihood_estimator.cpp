@@ -1,3 +1,4 @@
+#include <unordered_set>
 #include "plate_likelihood_estimator.h"
 #include "plate_likelihood_estimator_output.h"
 
@@ -240,6 +241,28 @@ void PlateLikelihoodEstimator::build_structure()
     }
   this->structure_built = true;
   this->structure_version = this->structure_version + 1;
+}
+
+
+// (dev/plan.md 3.22 U5b, C312) from the records of what each term reads
+int PlateLikelihoodEstimator::terms_read_one_element(const std::string &variable) const
+{
+  if (!this->structure_built)
+    return -1;
+  auto found = this->read_index.find(variable);
+  if (found == this->read_index.end())
+    return 1;
+  const size_t v = found->second;
+  if ((v < this->whole_readers.size()) && !this->whole_readers[v].empty())
+    return 0;
+  if (v >= this->element_readers.size())
+    return 1;
+  std::unordered_set<uint32_t> seen;
+  for (const auto &element : this->element_readers[v])
+    for (uint32_t term : element.second)
+      if (!seen.insert(term).second)
+        return 0;
+  return 1;
 }
 
 }

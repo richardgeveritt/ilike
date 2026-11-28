@@ -94,6 +94,13 @@ void UnnormalisedNormaliserEstimator::make_copy(const UnnormalisedNormaliserEsti
   this->block_poisson_mean = another.block_poisson_mean;
   this->block_poisson_lower = another.block_poisson_lower;
   this->block_poisson_correlated = another.block_poisson_correlated;
+  this->taylor = another.taylor;
+  this->taylor_cycling = another.taylor_cycling;
+  this->taylor_pilot = another.taylor_pilot;
+  this->taylor_level = another.taylor_level;
+  this->taylor_alpha = another.taylor_alpha;
+  this->taylor_continue = another.taylor_continue;
+  this->taylor_joint = another.taylor_joint;
 }
 
 double UnnormalisedNormaliserEstimator::draw_replicate_log_estimate(const Parameters &parameters, double *sign) const
@@ -106,6 +113,8 @@ double UnnormalisedNormaliserEstimator::draw_replicate_log_estimate(const Parame
     Parameters end;
     for (const std::string &name : this->normaliser)
       end[name] = parameters[name];
+    if (this->taylor)
+      return this->taylor_log_estimate(parameters, 1, sign);
     if (!this->roulette)
       return -this->base_log_evidence(*this->rng, end, this->plugin_particles, this->plugin_steps, this->plugin_sweeps,
                                       this->plugin_resampling);
@@ -194,6 +203,122 @@ void UnnormalisedNormaliserEstimator::set_block_poisson(size_t blocks_in, double
   this->block_poisson_mean = mean_in;
   this->block_poisson_lower = lower_in;
   this->block_poisson_correlated = correlated_in;
+}
+
+void UnnormalisedNormaliserEstimator::set_taylor(bool cycling_in, size_t pilot_in, double level_in, double alpha_in,
+                                                 double continue_in, bool joint_in)
+{
+  this->taylor = true;
+  this->taylor_cycling = cycling_in;
+  this->taylor_pilot = std::max(pilot_in, size_t(2));
+  this->taylor_level = level_in;
+  this->taylor_alpha = alpha_in;
+  this->taylor_continue = continue_in;
+  this->taylor_joint = joint_in;
+}
+
+// (dev/plan.md 3.22 U9 R4) The sum estimate of f(m) = m^-n, m = Z(theta),
+// from independent SMC estimates X_i of m (2403.20313, eq. (def_sumest) and
+// Algorithm 1; 2510.03587, section 3):
+//   sum_{k=0}^R gamma_k U_{R,k} / P(R >= k),  gamma_k = (-1)^k C(n+k-1, k) x0^-n,
+// R ~ Geometric(p) on {0, 1, ...} (P(R >= k) = (1 - p)^k), U_{R,k} unbiased
+// for (m/x0 - 1)^k: simple, prod_{i <= k} (X_i/x0 - 1); cycling, the average
+// of that product over the R circular shifts of X_1, ..., X_R. x0 and p are
+// chosen from n0 pilot estimates, independent of the X_i, so that the
+// estimate is unbiased given them, hence unbiased. The arithmetic is on
+// X_i/mhat (mhat the pilot mean): x0 and the U's scale with mhat, and the
+// estimate is mhat^-n times that of the scaled problem.
+double UnnormalisedNormaliserEstimator::taylor_log_estimate(const Parameters &parameters, size_t n, double *sign) const
+{
+  if (sign != NULL)
+    *sign = 1.0;
+  RandomNumberGenerator &rng = *this->rng;
+  const size_t n0 = this->taylor_pilot;
+  // the pilot, scaled to mean 1
+  std::vector<double> pilot(n0);
+  for (size_t i = 0; i < n0; ++i)
+    pilot[i] = this->plugin_log_z(rng, parameters);
+  const double log_mhat = ilike::log_mean_exp(pilot);
+  if (!std::isfinite(log_mhat))
+    return -arma::datum::inf;
+  arma::colvec y(n0);
+  for (size_t i = 0; i < n0; ++i)
+    y(i) = std::exp(pilot[i] - log_mhat);
+  const double s2 = arma::var(y);
+  double x0, p;
+  if (this->taylor_alpha > 0.0)
+  {
+    // 2510.03587: x0 = mhat/alpha (here 1/alpha), so that m/x0 is near alpha
+    x0 = 1.0 / this->taylor_alpha;
+    p = (this->taylor_continue > 0.0) ? 1.0 - this->taylor_continue : 1.0 / double(n0 + 1);
+  }
+  else
+  {
+    // 2403.20313 Algorithm 1: x0* = (m^2 + s^2)/m, and the (1 - level)
+    // quantile of 200 bootstrap replicates of x0min = m/2 + s^2/(2m), the
+    // smallest x0 with beta^2 = s^2/x0^2 + (m/x0 - 1)^2 below 1
+    const double x0_star = 1.0 + s2;
+    const size_t B = 200;
+    std::vector<double> x0_min(B);
+    for (size_t b = 0; b < B; ++b)
+    {
+      arma::colvec yb(n0);
+      for (size_t i = 0; i < n0; ++i)
+        yb(i) = y(std::min(size_t(runif(rng) * double(n0)), n0 - 1));
+      const double mb = arma::mean(yb), s2b = arma::var(yb);
+      x0_min[b] = mb / 2.0 + s2b / (2.0 * mb);
+    }
+    std::sort(x0_min.begin(), x0_min.end());
+    const size_t q = std::min(size_t(std::ceil((1.0 - this->taylor_level) * double(B))), B) - 1;
+    x0 = std::max(x0_min[q], x0_star);
+    const double beta2 = s2 / (x0 * x0) + (1.0 / x0 - 1.0) * (1.0 / x0 - 1.0);
+    p = std::min(1.0 - beta2, 1.0 / double(n0 + 1));
+    if (this->taylor_continue > 0.0)
+      p = 1.0 - this->taylor_continue;
+  }
+  if (!(p > 0.0) || !(p < 1.0))
+    p = 1.0 / double(n0 + 1);
+  // R ~ Geometric(p): the number of failures before the first success
+  size_t R = 0;
+  {
+    double u = runif(rng);
+    double r = std::floor(std::log(u) / std::log(1.0 - p));
+    R = (std::isfinite(r) && (r < 100000.0)) ? size_t(r) : size_t(100000);
+  }
+  std::vector<double> d(R);
+  for (size_t i = 0; i < R; ++i)
+    d[i] = std::exp(this->plugin_log_z(rng, parameters) - log_mhat) / x0 - 1.0;
+  // the series: sum_k (-1)^k C(n+k-1, k) U_k / (1 - p)^k
+  double total = 1.0, coefficient = 1.0, survival = 1.0;
+  std::vector<double> windows(this->taylor_cycling ? R : 0, 1.0);
+  double simple_product = 1.0;
+  for (size_t k = 1; k <= R; ++k)
+  {
+    coefficient = coefficient * double(n + k - 1) / double(k);
+    survival = survival * (1.0 - p);
+    double U;
+    if (this->taylor_cycling)
+    {
+      // the products of the windows of length k starting at each s (circular)
+      double sum = 0.0;
+      for (size_t s0 = 0; s0 < R; ++s0)
+      {
+        windows[s0] = windows[s0] * d[(s0 + k - 1) % R];
+        sum += windows[s0];
+      }
+      U = sum / double(R);
+    }
+    else
+    {
+      simple_product = simple_product * d[k - 1];
+      U = simple_product;
+    }
+    const double term = ((k % 2 == 1) ? -1.0 : 1.0) * coefficient * U / survival;
+    total = total + term;
+  }
+  if (sign != NULL)
+    *sign = (total < 0.0) ? -1.0 : 1.0;
+  return -double(n) * (std::log(x0) + log_mhat) + std::log(std::abs(total));
 }
 
 double UnnormalisedNormaliserEstimator::plugin_log_z(RandomNumberGenerator &rng, const Parameters &parameters) const

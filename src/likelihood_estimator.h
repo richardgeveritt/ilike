@@ -95,6 +95,10 @@ public:
   // (dev/plan.md 3.22 U9 R2) its estimates may be negative (signed
   // pseudo-marginal): only MCMC uses it, writing each iteration's sign
   virtual bool may_be_negative() const { return false; }
+  // (dev/plan.md 3.22 U5b, C312) whether every term of this factor reads at
+  // most one element of the variable, and none reads it whole (1), not (0),
+  // or not known (-1: a factor not made of terms)
+  virtual int terms_read_one_element(const std::string &variable) const { return -1; }
   // (dev/plan.md 3.21 (c5)) whether this estimator's outputs will be written
   // (an SMC's moves then store their chains' iterations, which are written;
   // otherwise only the final states, which are all that is used)

@@ -29,6 +29,7 @@
 #include "truncated_normal_distribution_factor.h"
 #include "truncated_normal_independent_proposal_kernel.h"
 #include "truncated_normal_random_walk_proposal_kernel.h"
+#include "dimension_jump_proposal_kernel.h"
 #include "pcn_proposal_kernel.h"
 #include "pcn_langevin_proposal_kernel.h"
 #include "slice_point_proposal_kernel.h"
@@ -292,6 +293,17 @@ static std::vector<Builtin> make_registry()
     b.roles = {R::MHProposal};
     b.proposal = [](const BuiltinArguments &a) -> ProposalKernel* {
       return new TruncatedNormalRandomWalkProposalKernel(a.variable("variable"), a.real("sd"), a.real("lower"), a.real("upper")); };
+    table.push_back(b);
+  }
+  {
+    Builtin b;
+    b.name = "dimension_jump";
+    b.description = "a model indicator to k + 1 or k - 1 (forced at the bounds): the proposal of a reversible-jump move (birth_death; C313)";
+    b.arguments = {the_variable(), required("minimum", T::Real, "the smallest value of the indicator"),
+                   required("maximum", T::Real, "the largest value of the indicator")};
+    b.roles = {R::MHProposal};
+    b.proposal = [](const BuiltinArguments &a) -> ProposalKernel* {
+      return new DimensionJumpProposalKernel(a.variable("variable"), a.real("minimum"), a.real("maximum")); };
     table.push_back(b);
   }
   {
@@ -1035,7 +1047,9 @@ static std::vector<Builtin> make_registry()
                    // (dev/plan.md 3.22 U9 R3b) correlated pseudo-marginal MCMC
                    optional("correlated", T::Logical, RecipeValue(false),
                             "MCMC: each member's random numbers from its own seed, and a proposal keeping all but refresh members' (correlated estimates)"),
-                   optional("refresh", T::Integer, RecipeValue(1.0), "MCMC with correlated = true: the number of members whose random numbers a proposal replaces").at_least(1.0)};
+                   optional("refresh", T::Integer, RecipeValue(1.0), "MCMC with correlated = true: the number of members whose random numbers a proposal replaces").at_least(1.0),
+                   // (C306) set by correlated = crank_nicolson(sd = s)
+                   optional("crank_nicolson_sd", T::Real, RecipeValue(), "MCMC: the Crank-Nicolson step on the members' standard normals").at_least(0.0)};
     table.push_back(b);
 
     b.name = "pf";
@@ -1049,7 +1063,10 @@ static std::vector<Builtin> make_registry()
                    optional("exchange_below", T::Real, RecipeValue(),
                             "SMC^2: exchange for more particles when the acceptance rate is below this").at_least(0.0),
                    optional("exchange_multiply", T::Real, RecipeValue(2.0), "SMC^2: the factor by which an exchange multiplies the particles").at_least(1.0),
-                   optional("exchange_max", T::Integer, RecipeValue(), "SMC^2: the largest number of particles after an exchange").at_least(1.0)};
+                   optional("exchange_max", T::Integer, RecipeValue(), "SMC^2: the largest number of particles after an exchange").at_least(1.0),
+                   // (dev/plan.md 3.22 U9 R3c, C307) set by correlated = crank_nicolson(sd = s)
+                   optional("correlated", T::Logical, RecipeValue(false), "MCMC: correlated estimates (correlated = crank_nicolson(sd = s))"),
+                   optional("crank_nicolson_sd", T::Real, RecipeValue(), "MCMC: the Crank-Nicolson step on the filter's standard normals").at_least(0.0)};
     table.push_back(b);
 
     // integrate u with is(points = N) (dev/plan.md 3.21, step (b)): the

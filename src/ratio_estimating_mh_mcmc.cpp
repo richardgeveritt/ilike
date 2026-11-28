@@ -79,9 +79,27 @@ bool RatioEstimatingMHMCMC::decide(RandomNumberGenerator &rng,
                           double log_u,
                           const Particle &particle,
                           Particle &proposed_particle,
-                          double &acceptance_probability) const
+                          double &acceptance_probability,
+                          Particle* refreshed,
+                          bool* refreshed_made) const
 {
   acceptance_probability = 0.0;
+  if (this->ratio.changes_state())
+  {
+    // (C311) a state step: it makes the new state and gives the target part
+    // of the ratio; the proposal's densities added, the reverse one read
+    // from the new state
+    double target = this->ratio.state_log_term(rng, this->index.get(), particle, proposed_particle, refreshed, refreshed_made);
+    if ((target == -arma::datum::inf) || std::isnan(target))
+      return false;
+    double log_ratio = target + this->proposal->evaluate_kernel(particle, proposed_particle) -
+      this->proposal->evaluate_kernel(proposed_particle, particle);
+    if (log_ratio >= 0.0)
+      acceptance_probability = 1.0;
+    else if (!std::isnan(log_ratio))
+      acceptance_probability = exp(log_ratio);
+    return log_u < log_ratio;
+  }
   double numerator = proposed_particle.evaluate_likelihoods(this->index.get());
   double denominator = particle.get_cached_likelihoods(this->index.get());
   if ( (numerator==-arma::datum::inf) || (denominator==-arma::datum::inf) )
@@ -112,7 +130,10 @@ Particle RatioEstimatingMHMCMC::move(RandomNumberGenerator &rng,
                                                     this->get_new_outputs_index(this->index.get()));
   double log_u = log(runif(rng));
   double acceptance_probability;
-  bool accepted = this->decide(rng, log_u, particle, proposed_particle, acceptance_probability);
+  Particle refreshed;
+  bool refreshed_made = false;
+  bool accepted = this->decide(rng, log_u, particle, proposed_particle, acceptance_probability,
+                               this->ratio.refreshes() ? &refreshed : NULL, &refreshed_made);
   if (particle.tuning != NULL)
     observe_tuned_proposal(particle, proposed_particle, this->proposal.get(), acceptance_probability);
   if (accepted)
@@ -120,6 +141,9 @@ Particle RatioEstimatingMHMCMC::move(RandomNumberGenerator &rng,
     this->accept(proposed_particle);
     return proposed_particle;
   }
+  // (C312) a rejection with a refreshed current state (MHAAR-RB)
+  if (refreshed_made)
+    return refreshed;
   return particle;
 }
 
@@ -131,7 +155,10 @@ void RatioEstimatingMHMCMC::move_in_place(RandomNumberGenerator &rng,
                                                     this->get_new_outputs_index(this->index.get()));
   double log_u = log(runif(rng));
   double acceptance_probability;
-  bool accepted = this->decide(rng, log_u, particle, proposed_particle, acceptance_probability);
+  Particle refreshed;
+  bool refreshed_made = false;
+  bool accepted = this->decide(rng, log_u, particle, proposed_particle, acceptance_probability,
+                               this->ratio.refreshes() ? &refreshed : NULL, &refreshed_made);
   if (particle.tuning != NULL)
     observe_tuned_proposal(particle, proposed_particle, this->proposal.get(), acceptance_probability);
   if (accepted)
@@ -139,6 +166,8 @@ void RatioEstimatingMHMCMC::move_in_place(RandomNumberGenerator &rng,
     this->accept(proposed_particle);
     particle = std::move(proposed_particle);
   }
+  else if (refreshed_made)
+    particle = std::move(refreshed); // (C312)
 }
 
 void RatioEstimatingMHMCMC::move_in_place(RandomNumberGenerator &rng,
@@ -151,7 +180,10 @@ void RatioEstimatingMHMCMC::move_in_place(RandomNumberGenerator &rng,
                             scratch);
   double log_u = log(runif(rng));
   double acceptance_probability;
-  bool accepted = this->decide(rng, log_u, particle, scratch, acceptance_probability);
+  Particle refreshed;
+  bool refreshed_made = false;
+  bool accepted = this->decide(rng, log_u, particle, scratch, acceptance_probability,
+                               this->ratio.refreshes() ? &refreshed : NULL, &refreshed_made);
   if (particle.tuning != NULL)
     observe_tuned_proposal(particle, scratch, this->proposal.get(), acceptance_probability);
   if (accepted)
@@ -159,6 +191,8 @@ void RatioEstimatingMHMCMC::move_in_place(RandomNumberGenerator &rng,
     this->accept(scratch);
     particle.swap(scratch);
   }
+  else if (refreshed_made)
+    particle = std::move(refreshed); // (C312)
 }
 
 void RatioEstimatingMHMCMC::adaptive_move_in_place(RandomNumberGenerator &rng,
@@ -173,7 +207,10 @@ void RatioEstimatingMHMCMC::adaptive_move_in_place(RandomNumberGenerator &rng,
                             scratch);
   double log_u = log(runif(rng));
   double acceptance_probability;
-  bool accepted = this->decide(rng, log_u, particle, scratch, acceptance_probability);
+  Particle refreshed;
+  bool refreshed_made = false;
+  bool accepted = this->decide(rng, log_u, particle, scratch, acceptance_probability,
+                               this->ratio.refreshes() ? &refreshed : NULL, &refreshed_made);
   if (particle.tuning != NULL)
     observe_tuned_proposal(particle, scratch, this->proposal.get(), acceptance_probability);
   if (accepted)
@@ -181,6 +218,8 @@ void RatioEstimatingMHMCMC::adaptive_move_in_place(RandomNumberGenerator &rng,
     this->accept(scratch);
     particle.swap(scratch);
   }
+  else if (refreshed_made)
+    particle = std::move(refreshed); // (C312)
   // after an acceptance the previous state is in scratch
   AdaptationStep step;
   step.previous = accepted ? &scratch : &particle;

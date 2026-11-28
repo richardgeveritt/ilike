@@ -163,6 +163,8 @@ public:
   std::vector<std::unique_ptr<FactorVariables>> flat_factor_variables;
   std::unique_ptr<FactorVariables> flat_record_writer;
   arma::colvec flat_incremental_log_weights;
+  // (dev/plan.md 3.22 U9 R5) each point's sign, when the factor estimates may be negative (empty otherwise)
+  arma::colvec flat_signs;
   //  - for a generation made by MCMC moves (dev/plan.md 2.6a, G3):
   //    flat_points holds every stored chain state, particle by particle,
   //    flat_output_lengths the number stored for each particle, and

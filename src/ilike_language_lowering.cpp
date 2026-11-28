@@ -212,6 +212,30 @@ public:
       if (!names.empty())
         this->recipe.push_back(RecipeValue(names), "unnormalised_parameters");
     }
+    {
+      // (dev/plan.md 3.22 U6, C314) the variables whose loops run to a model
+      // indicator, padded to its largest value, with their indicators: the
+      // results mark their entries after the indicator's value as missing
+      std::vector<std::string> padded, indicators;
+      for (const ModelStatement &st : this->model_statements)
+      {
+        if ((st.op != "~") || st.observed || (std::find(padded.begin(), padded.end(), st.variable) != padded.end()))
+          continue;
+        for (const ModelLoop &loop : st.loops)
+          if ((kind_of(loop.to) == "name") && loop.to["namespace"].as_string().empty() &&
+              (this->dimension_maximum(loop.to["name"].as_string()) > 0))
+          {
+            padded.push_back(st.variable);
+            indicators.push_back(loop.to["name"].as_string());
+            break;
+          }
+      }
+      if (!padded.empty())
+      {
+        this->recipe.push_back(RecipeValue(padded), "padded_variables");
+        this->recipe.push_back(RecipeValue(indicators), "padded_indicators");
+      }
+    }
 
     RecipeValue output = RecipeValue::list();
     output.push_back(this->recipe, "recipe");
@@ -2868,6 +2892,10 @@ private:
     this->unnormalised.back().potential = potential_function;
     this->unnormalised.back().estimated = !normaliser_method.is_null();
     this->unnormalised.back().replicates = replicates;
+    // (C308) and in the record given to normaliser_factor: estimate(…) read
+    // the replicates from it, which until now held the default (1), so that
+    // a replicated built-in field's estimate(…) estimated one 1/Z, not Z^-n
+    record.replicates = replicates;
 
     if (!gradient_method.is_null())
       this->gradient_factor(statement, gradient_method, x, kind, given["beta"], sweep, exact, statistic_function);
@@ -3121,6 +3149,8 @@ private:
     double roulette_continue = -1.0, roulette_scale = 1.0;
     double bp_blocks = -1.0, bp_mean = 1.0, bp_lower = 0.0;
     bool bp_correlated = true;
+    bool use_taylor = false, taylor_cycling = true, taylor_joint = false;
+    double taylor_pilot = 10.0, taylor_level = 0.01, taylor_alpha = 0.0, taylor_continue = -1.0;
     if (arguments.has("debias"))
     {
       const RecipeValue &debias = arguments.named["debias"];
@@ -3179,10 +3209,70 @@ private:
         if (record.replicates > 1.0)
           this->error(debias, "debias = block_poisson(…) with replicates is not available yet.");
       }
+      else if ((kind_of(debias) == "call") && (debias["function"].as_string() == "taylor"))
+      {
+        // (U9 R4) taylor(cycling = true, pilot = n0, level = a, tuning = bootstrap | scale(alpha = a), continue = q, joint = false)
+        use_taylor = true;
+        Arguments ty = this->split_arguments(debias);
+        this->allow_only(debias, ty, {"cycling", "pilot", "level", "tuning", "continue", "joint"}, 0);
+        auto logical = [&](const char *name, bool &value) {
+          if (!ty.has(name))
+            return;
+          const RecipeValue &v = ty.named[name];
+          if (kind_of(v) != "logical")
+            this->error(v, std::string("taylor(") + name + " = true | false).");
+          value = v["value"].as_bool();
+        };
+        logical("cycling", taylor_cycling);
+        logical("joint", taylor_joint);
+        arma::mat number;
+        if (ty.has("pilot"))
+        {
+          if (!this->numeric(ty.named["pilot"], number) || (number.n_elem != 1) || (number(0) < 2.0) || (number(0) != std::floor(number(0))))
+            this->error(ty.named["pilot"], "taylor(pilot = n0): n0, the number of pilot estimates of Z at each value, is a whole number of at least 2.");
+          taylor_pilot = number(0);
+        }
+        if (ty.has("level"))
+        {
+          if (!this->numeric(ty.named["level"], number) || (number.n_elem != 1) || !(number(0) > 0.0) || !(number(0) < 1.0))
+            this->error(ty.named["level"], "taylor(level = a): a, the level of the bootstrap bound for the expansion point, is between 0 and 1.");
+          taylor_level = number(0);
+        }
+        if (ty.has("continue"))
+        {
+          if (!this->numeric(ty.named["continue"], number) || (number.n_elem != 1) || !(number(0) > 0.0) || !(number(0) < 1.0))
+            this->error(ty.named["continue"], "taylor(continue = q): q, the probability of continuing the series, is between 0 and 1.");
+          taylor_continue = number(0);
+        }
+        if (ty.has("tuning"))
+        {
+          const RecipeValue &t = ty.named["tuning"];
+          if ((kind_of(t) == "name") && (t["name"].as_string() == "bootstrap"))
+            taylor_alpha = 0.0;
+          else if ((kind_of(t) == "call") && (t["function"].as_string() == "scale"))
+          {
+            Arguments sc = this->split_arguments(t);
+            this->allow_only(t, sc, {"alpha"}, 0);
+            taylor_alpha = 1.0;
+            if (sc.has("alpha"))
+            {
+              if (!this->numeric(sc.named["alpha"], number) || (number.n_elem != 1) || !(number(0) > 0.0) || !(number(0) < 2.0))
+                this->error(sc.named["alpha"], "scale(alpha = a): the expansion point is the pilot mean over a, with a between 0 and 2.");
+              taylor_alpha = number(0);
+            }
+          }
+          else
+            this->error(t, "taylor(tuning = bootstrap | scale(alpha = a)): Chopin et al.'s bootstrap rule for the expansion point and the truncation "
+                           "(the default), or the expansion point at the pilot mean over a.");
+        }
+        if (taylor_joint && !(record.replicates > 1.0))
+          this->error(debias, "taylor(joint = true) estimates Z^-n for n replicates at once: " + x + " has no replicates.");
+      }
       else if (!((kind_of(debias) == "name") && (debias["name"].as_string() == "none")))
         this->error(debias, "estimate(…, debias = none | roulette(continue = q, scale = k) | block_poisson(blocks = lambda, mean = m, lower = a, "
-                            "correlated = true)): the estimate of log Z plugged in (approximate), or an unbiased estimate, which may be "
-                            "negative (signed pseudo-marginal MCMC): Lyne et al.'s Russian roulette, or the block-Poisson estimate.");
+                            "correlated = true) | taylor(cycling = true, pilot = n0, …)): the estimate of log Z plugged in (approximate), or an "
+                            "unbiased estimate, which may be negative (signed pseudo-marginal MCMC): Lyne et al.'s Russian roulette, the "
+                            "block-Poisson estimate, or the randomly truncated Taylor series.");
     }
     if ((kind != "block") && sweep.empty())
       this->error(method, "normaliser = estimate(smc(…)) moves fields by sweeps, and " + x + "'s distribution has none (give simulate = sweeps(cpp::sweep, m)).");
@@ -3201,18 +3291,25 @@ private:
     double resampling = 1.0;
     if (smc_arguments.has("resampling"))
       resampling = this->ess_threshold(smc_arguments.named["resampling"], "smc(…)");
-    if (bp_blocks > 0.0)
+    if (use_taylor)
+      this->notes.push_back("normaliser = estimate(…, debias = taylor(…)): the randomly truncated Taylor-series estimate of 1/Z" +
+                            std::string(taylor_joint ? "^n for the replicates jointly" : "") + " of " + x + "'s distribution (" +
+                            (taylor_cycling ? "cycling" : "simple") + "), with " + std::to_string(int(taylor_pilot)) + " pilot estimates of Z at each value " +
+                            (taylor_alpha > 0.0 ? "giving the expansion point" : "choosing the expansion point and the truncation by Chopin et al.'s bootstrap rule") +
+                            ", is unbiased but may be negative, so MCMC targets its absolute value and records each iteration's sign: estimate posterior "
+                            "expectations with signed_mean(…). Importance sampling and SMC weight by its absolute value and record the signs too (signed_mean; the evidence they return is that of the model, with its sign as an attribute).");
+    else if (bp_blocks > 0.0)
       this->notes.push_back("normaliser = estimate(…, debias = block_poisson(…)): the block-Poisson estimate of exp(-nu Z) of " + x +
                             "'s distribution, with nu an auxiliary variable, is unbiased but may be negative, so MCMC targets its absolute value "
                             "and records each iteration's sign: estimate posterior expectations with signed_mean(…) (the Sign column of "
-                            "load_mcmc_output). Importance sampling and SMC refuse it.");
+                            "load_mcmc_output). Importance sampling and SMC weight by its absolute value and record the signs too (signed_mean; the evidence they return is that of the model, with its sign as an attribute).");
     else if (roulette_continue < 0.0)
       this->notes.push_back("normaliser = estimate(…): log Z of " + x + "'s distribution is estimated by SMC at each value of " +
                             joined(record.normaliser, ", ") + " and plugged in, so the posterior is approximate (more particles and steps make it closer).");
     else
       this->notes.push_back("normaliser = estimate(…, debias = roulette(…)): the estimate of 1/Z of " + x + "'s distribution is unbiased but may be "
                             "negative, so MCMC targets its absolute value and records each iteration's sign: estimate posterior expectations with "
-                            "signed_mean(…) (the Sign column of load_mcmc_output). Importance sampling and SMC refuse it.");
+                            "signed_mean(…) (the Sign column of load_mcmc_output). Importance sampling and SMC weight by its absolute value and record the signs too (signed_mean; the evidence they return is that of the model, with its sign as an attribute).");
     RecipeValue settings = RecipeValue::list();
     settings.push_back(RecipeValue(x), "variable");
     if (!potential_function.empty())
@@ -3232,6 +3329,17 @@ private:
       plugin.push_back(RecipeValue(kv.second), kv.first);
     plugin.push_back(RecipeValue(resampling), "resampling");
     settings.push_back(plugin, "plugin");
+    if (use_taylor)
+    {
+      RecipeValue ty = RecipeValue::list();
+      ty.push_back(RecipeValue(taylor_cycling), "cycling");
+      ty.push_back(RecipeValue(taylor_pilot), "pilot");
+      ty.push_back(RecipeValue(taylor_level), "level");
+      ty.push_back(RecipeValue(taylor_alpha), "alpha");
+      ty.push_back(RecipeValue(taylor_continue), "continue");
+      ty.push_back(RecipeValue(taylor_joint), "joint");
+      settings.push_back(ty, "taylor");
+    }
     if (bp_blocks > 0.0)
     {
       RecipeValue bp = RecipeValue::list();
@@ -5562,6 +5670,26 @@ private:
 
   // the size of a variable with "~" statements (a parameter, or data when
   // simulating it): the largest index of its statements, as C++ expressions
+  // (dev/plan.md 3.22 U6) the largest value of a model indicator k, from its
+  // statement k ~ categorical([p1, …, pK]) (K); 0 if k is not one
+  size_t dimension_maximum(const std::string &k) const
+  {
+    for (const ModelStatement &st : this->model_statements)
+    {
+      if ((st.variable != k) || (st.op != "~") || st.observed || !st.loops.empty() || (kind_of(st.value) != "call") ||
+          (st.value["function"].as_string() != "categorical"))
+        continue;
+      const RecipeValue &arguments = st.value["arguments"];
+      if (arguments.size() < 1)
+        return 0;
+      arma::mat probabilities;
+      if (!this->numeric(arguments[0], probabilities))
+        return 0;
+      return size_t(probabilities.n_elem);
+    }
+    return 0;
+  }
+
   void variable_extent(const std::string &variable, std::string &rows, std::string &cols)
   {
     rows = "1";
@@ -5581,7 +5709,13 @@ private:
           std::string name = index["name"].as_string();
           for (const ModelLoop &loop : other.loops)
             if (loop.index == name)
-              extent = "(int)" + this->scalar_code(loop.to, size_context);
+            {
+              // (dev/plan.md 3.22 U6) a loop running to a model indicator k:
+              // the variable padded to k's largest value
+              size_t padded = ((kind_of(loop.to) == "name") && loop.to["namespace"].as_string().empty())
+                              ? this->dimension_maximum(loop.to["name"].as_string()) : 0;
+              extent = (padded > 0) ? std::to_string(padded) : "(int)" + this->scalar_code(loop.to, size_context);
+            }
         }
         if (extent.empty())
         {
@@ -7012,6 +7146,28 @@ inline double ilike_model_dabc_gaussian(const arma::mat &y, const arma::mat &s, 
         algorithm = kind_of(arguments[k]) == "string" ? arguments[k]["value"].as_string() : arguments[k]["name"].as_string();
         continue;
       }
+      if ((key == "correlated") && (kind_of(arguments[k]) == "call"))
+      {
+        // (dev/plan.md 3.22 U9 R3b, C306) correlated = crank_nicolson(sd = s):
+        // lowered to correlated = true and the setting crank_nicolson_sd
+        const RecipeValue &cn = arguments[k];
+        if (((type != "enkf") && (type != "pf")) || (cn["function"].as_string() != "crank_nicolson"))
+          this->error(cn, "correlated = true | false | crank_nicolson(sd = s) is a setting of enkf(…) or pf(…).");
+        const RecipeValue &settings = cn["arguments"];
+        std::vector<std::string> names = settings.names();
+        double sd = 0.1;
+        for (size_t j = 0; j < settings.size(); ++j)
+        {
+          std::string name = (j < names.size()) ? names[j] : "";
+          arma::mat number;
+          if ((name != "sd") || !this->numeric(settings[j], number) || (number.n_elem != 1) || !(number(0) > 0.0) || !(number(0) < 1.0))
+            this->error(settings[j], "crank_nicolson(sd = s): s, between 0 and 1, is the size of the step on the filter's standard normals (0.1 by default).");
+          sd = number(0);
+        }
+        parameters.push_back(RecipeValue(true), "correlated");
+        parameters.push_back(RecipeValue(sd), "crank_nicolson_sd");
+        continue;
+      }
       if (key == "increase")
       {
         // (dev/plan.md 3.21 (c2''), F2) SMC^2's exchange step: increase =
@@ -7102,6 +7258,20 @@ inline double ilike_model_dabc_gaussian(const arma::mat &y, const arma::mat &s, 
     std::string prefix;  // m, mh, imh, unadjusted
     int code;            // in order_of_mcmc: mh 1, imh 2, m 3, unadjusted 4
     RecipeValue entry;
+    // (dev/plan.md 3.22 U5a) an annealed move: its settings (bridges, sweeps)
+    // and its kernel's moves by name, made into cycle positions by
+    // build_algorithm
+    RecipeValue annealed;
+    std::vector<std::string> kernel_names;
+    // (stage A) the variables the move changes, where known (the parameters
+    // of an annealed move's proposal, for the check that its kernel leaves them alone)
+    std::set<std::string> moved;
+    // (stage B) the key of the entry under which the path's settings, its
+    // kernel's algorithm and positions go: "annealed", or "path" for a jump
+    std::string path_key = "annealed";
+    // (stage B) a jump move's factors (numbered from 1): those reading the
+    // indicator or the jump's variables
+    std::vector<size_t> factor_numbers;
   };
 
   // a copy of an expression with the loop indices replaced by their values
@@ -8547,6 +8717,414 @@ inline double ilike_model_dabc_gaussian(const arma::mat &y, const arma::mat &s, 
     return move;
   }
 
+  // (dev/plan.md 3.22 U5b) a function drawing the latent z from its own
+  // statements, given the other parameters (MHAAR-RB's candidates): the
+  // statements of z in the file's order, as the prior's simulation writes
+  // them; z's elements must not depend on each other
+  std::set<std::string> latent_simulators;
+  std::string latent_simulator(const RecipeValue &where, const std::string &z)
+  {
+    std::string name = "ilike_latent_simulate_" + z;
+    if (this->latent_simulators.count(z))
+      return name;
+    std::string body = "Parameters parameters = ilike_given;\n";
+    bool any = false, allocated = false;
+    for (const ModelStatement &st : this->model_statements)
+    {
+      if ((st.variable != z) || st.observed || (st.op != "~"))
+        continue;
+      // (what the distribution reads, not its target)
+      std::set<std::string> found;
+      this->read_parameters(st.value, found);
+      for (const ModelLoop &loop : st.loops)
+        found.erase(loop.index);
+      if (found.count(z))
+        this->error(where, "averaged(…, latent = " + z + "): the distribution of " + z + " reads " + z +
+                           " itself, so its elements are not independent given the other variables.");
+      any = true;
+      CodeContext loop_context;
+      loop_context.prior = true;
+      for (const ModelLoop &loop : st.loops)
+        loop_context.indices.insert(loop.index);
+      const bool whole = whole_target(st.value["function"].as_string());
+      if (!allocated && !whole)
+      {
+        std::string rows, cols;
+        this->variable_extent(st.variable, rows, cols);
+        body += "parameters[" + quoted(z) + "] = arma::mat(" + rows + ", " + cols + ", arma::fill::zeros);\n";
+      }
+      allocated = true;
+      std::string assign = whole ? "parameters[" + quoted(z) + "] = " + this->random_code(st, loop_context) + ";\n"
+                                 : this->target_code(st, loop_context, true) + " = " + this->random_code(st, loop_context) + ";\n";
+      CodeContext fresh;
+      fresh.prior = true;
+      body += this->loops_code(st, fresh, assign, "");
+    }
+    if (!any)
+      this->error(where, "averaged(…, latent = " + z + "): " + z + " has no distribution in the model statements (" + z + " ~ …).");
+    body += "Parameters ilike_own;\nilike_own[" + quoted(z) + "] = parameters[" + quoted(z) + "];\nreturn ilike_own;\n";
+    this->deferred_function_code += "Parameters " + name + "(RandomNumberGenerator &rng, const Parameters &ilike_given)\n{\n" + body + "}\n\n";
+    this->latent_simulators.insert(z);
+    return name;
+  }
+
+  // (dev/plan.md 3.22 U6) the Metropolis-Hastings move of a reversible jump on
+  // the indicator k: the proposal dimension_jump(k, 1, K), and the factors
+  // reading k or the listed variables
+  Move jump_move(const RecipeValue &statement, const std::string &name, const RecipeValue &call, const RecipeValue &k_node,
+                 const std::string &k, size_t maximum, const std::vector<std::string> &variables)
+  {
+    // the move: dimension_jump(k, 1, K) in the Metropolis-Hastings form
+    auto number = [](double value) {
+      RecipeValue node = RecipeValue::list();
+      node.push_back(RecipeValue("number"), "expression");
+      node.push_back(RecipeValue(value), "value");
+      return node;
+    };
+    RecipeValue jump_arguments = RecipeValue::list();
+    jump_arguments.push_back(k_node, "");
+    jump_arguments.push_back(number(1.0), "minimum");
+    jump_arguments.push_back(number(double(maximum)), "maximum");
+    RecipeValue outer = RecipeValue::list();
+    outer.push_back(call_with(call, "dimension_jump", jump_arguments), "");
+    Move move = this->lower_move(statement, name, call_with(call, "metropolis_hastings", outer));
+    // the factors reading k or the variables
+    std::vector<size_t> numbers;
+    {
+      size_t total = this->factor_entries.size();
+      for (size_t n = 1; n <= total; ++n)
+      {
+        auto found = this->generated_factor_reads.find(n);
+        bool include = (found == this->generated_factor_reads.end()) || found->second.count(k);
+        for (const std::string &v : variables)
+          if ((found != this->generated_factor_reads.end()) && found->second.count(v))
+            include = true;
+        if (include)
+          numbers.push_back(n);
+      }
+    }
+    move.entry.set("mh_factor_index", this->placeholder(this->generate_factor_index_numbers(numbers), "mh_factor_index"));
+    move.factor_numbers = numbers;
+    // (stage B) a path's kernel may move the jump's variables, not the indicator
+    move.moved.clear();
+    move.moved.insert(k);
+    return move;
+  }
+
+  // (dev/plan.md 3.22 U6, C315) move s = rj(k, [mu, tau], auxiliary = cpp::f,
+  // log_auxiliary = cpp::g, map = cpp::h, log_jacobian = cpp::j, check = 10,
+  // points = N): reversible jump with the user's dimension-matching map; the
+  // functions see the parameters with the proposed indicator as <k>_proposed
+  Move lower_rj(const RecipeValue &statement, const std::string &name, const RecipeValue &call)
+  {
+    Arguments arguments = this->split_arguments(call);
+    this->allow_only(call, arguments, {"auxiliary", "log_auxiliary", "map", "log_jacobian", "check", "points", "bridges", "kernel", "sweeps"}, 2);
+    if ((arguments.positional.size() != 2) || (kind_of(arguments.positional[0]) != "name"))
+      this->error(call, "rj(k, [x, y], auxiliary = cpp::…, log_auxiliary = cpp::…, map = cpp::…): the model indicator, and the variables the map changes.");
+    const RecipeValue &k_node = arguments.positional[0];
+    const std::string k = k_node["name"].as_string();
+    const size_t maximum = this->dimension_maximum(k);
+    if (maximum < 2)
+      this->error(k_node, "rj(" + k + ", …): " + k + " is a model indicator with a distribution k ~ categorical([p1, …, pK]) (K ≥ 2) in the model statements.");
+    std::vector<std::string> variables;
+    const RecipeValue &list = arguments.positional[1];
+    std::vector<RecipeValue> items;
+    if (kind_of(list) == "vector")
+      for (size_t j = 0; j < list["elements"].size(); ++j)
+        items.push_back(list["elements"][j]);
+    else
+      items.push_back(list);
+    for (const RecipeValue &item : items)
+    {
+      if ((kind_of(item) != "name") || !item["namespace"].as_string().empty())
+        this->error(item, "rj(k, [x, y]): the variables are names of the model's variables.");
+      variables.push_back(item["name"].as_string());
+    }
+    RecipeValue functions = RecipeValue::list();
+    static const std::vector<std::pair<std::string, std::string>> roles = {
+      {"auxiliary", "involution_auxiliary"}, {"log_auxiliary", "involution_log_auxiliary"},
+      {"map", "involution_map"}, {"log_jacobian", "involution_log_jacobian"}};
+    for (const auto &f : roles)
+    {
+      if (!arguments.has(f.first))
+      {
+        if (f.first == "log_jacobian")
+          continue; // (a map with Jacobian 1)
+        this->error(call, "rj(…): " + f.first + " = cpp::… is needed (the auxiliary variables' draw and log density, and the map).");
+      }
+      const RecipeValue &value = arguments.named[f.first];
+      if (!this->is_function_reference(value) || this->is_foreign(value))
+        this->error(value, "rj(…): " + f.first + " is a function written in C++ (cpp::name).");
+      functions.push_back(this->function_placeholder(value, f.second, f.first), f.first);
+    }
+    double check = 10.0, points = 1.0;
+    for (const char *setting : {"check", "points"})
+      if (arguments.has(setting))
+      {
+        arma::mat number;
+        double lowest = (std::string(setting) == "check") ? 0.0 : 1.0;
+        if (!this->numeric(arguments.named[setting], number) || (number.n_elem != 1) || (number(0) < lowest) || (number(0) != std::floor(number(0))))
+          this->error(arguments.named[setting], std::string("rj(…): ") + setting + " is a whole number of at least " + number_text(lowest) + ".");
+        (std::string(setting) == "check" ? check : points) = number(0);
+      }
+    Move move = this->jump_move(statement, name, call, k_node, k, maximum, variables);
+    RecipeValue settings = RecipeValue::list();
+    settings.push_back(RecipeValue(k), "indicator");
+    settings.push_back(RecipeValue(variables), "variables");
+    settings.push_back(RecipeValue(check), "check");
+    settings.push_back(RecipeValue(points), "points");
+    std::vector<std::string> names = functions.names();
+    for (size_t j = 0; j < functions.size(); ++j)
+      settings.push_back(functions[j], names[j]);
+    move.entry.push_back(settings, "rj");
+    this->jump_path(call, arguments, move, "rj");
+    return move;
+  }
+
+  // (dev/plan.md 3.22 U6) move bd = birth_death(k, [mu, tau], points = N):
+  // reversible jump on the model indicator k (k ~ categorical(…)), whose
+  // variables mu, tau (loops running to k) gain or lose an entry; the new
+  // entries drawn from their statements (generated functions)
+  Move lower_birth_death(const RecipeValue &statement, const std::string &name, const RecipeValue &call)
+  {
+    Arguments arguments = this->split_arguments(call);
+    this->allow_only(call, arguments, {"points", "bridges", "kernel", "sweeps"}, 2);
+    if ((arguments.positional.size() != 2) || (kind_of(arguments.positional[0]) != "name"))
+      this->error(call, "birth_death(k, [x, y], points = N): the model indicator, and the variables whose loops run to it.");
+    const RecipeValue &k_node = arguments.positional[0];
+    const std::string k = k_node["name"].as_string();
+    const size_t maximum = this->dimension_maximum(k);
+    if (maximum < 2)
+      this->error(k_node, "birth_death(" + k + ", …): " + k + " is a model indicator with a distribution k ~ categorical([p1, …, pK]) (K ≥ 2) in the model statements.");
+    std::vector<std::string> variables;
+    const RecipeValue &list = arguments.positional[1];
+    auto add_variable = [&](const RecipeValue &item) {
+      if ((kind_of(item) != "name") || !item["namespace"].as_string().empty())
+        this->error(item, "birth_death(k, [x, y]): the variables are names of the model's variables.");
+      variables.push_back(item["name"].as_string());
+    };
+    if (kind_of(list) == "vector")
+    {
+      const RecipeValue &elements = list["elements"];
+      for (size_t j = 0; j < elements.size(); ++j)
+        add_variable(elements[j]);
+    }
+    else
+      add_variable(list);
+    double points = 1.0;
+    if (arguments.has("points"))
+    {
+      arma::mat number;
+      if (!this->numeric(arguments.named["points"], number) || (number.n_elem != 1) || (number(0) < 1.0) || (number(0) != std::floor(number(0))))
+        this->error(arguments.named["points"], "birth_death(…, points = N): N, the number of births averaged over (RmJ-MCMC), is a whole number of at least 1.");
+      points = number(0);
+    }
+    // the new entries' draws and their log density, from each variable's
+    // statement for (j in 1:k) x[j] ~ dist(…), whose distribution must not
+    // read the entry's position or the variable itself
+    std::string simulate = "Parameters ilike_birth_simulate_" + k + "(RandomNumberGenerator &rng, const Parameters &parameters)\n{\n  Parameters ilike_values;\n";
+    std::string log_density = "double ilike_birth_log_" + k + "(const Parameters &ilike_values, const Parameters &parameters)\n{\n  double ilike_log = 0.0;\n";
+    for (const std::string &v : variables)
+    {
+      const ModelStatement* found = NULL;
+      for (const ModelStatement &st : this->model_statements)
+        if ((st.variable == v) && (st.op == "~") && !st.observed)
+        {
+          if (found != NULL)
+            this->error(call, "birth_death(…): " + v + " has more than one statement; its entries need one statement for (j in 1:" + k + ") " + v + "[j] ~ ….");
+          found = &st;
+        }
+      if ((found == NULL) || (found->loops.size() != 1) || (kind_of(found->loops[0].to) != "name") || (found->loops[0].to["name"].as_string() != k))
+        this->error(call, "birth_death(…): " + v + " needs one statement for (j in 1:" + k + ") " + v + "[j] ~ … (a loop running to " + k + ").");
+      std::set<std::string> reads;
+      this->read_parameters(found->value, reads);
+      if (reads.count(v) || reads.count(found->loops[0].index))
+        this->error(found->node, "birth_death(…): the distribution of " + v + "'s entries reads " +
+                                 (reads.count(v) ? v : "the entry's position") + ", so a new entry cannot be drawn on its own (its entries must be exchangeable).");
+      CodeContext context;
+      context.prior = true;
+      context.indices.insert(found->loops[0].index);
+      simulate += "  ilike_values[" + quoted(v) + "] = arma::mat(1, 1, arma::fill::value(" + this->random_code(*found, context) + "));\n";
+      log_density += "  ilike_log += " + this->density_code(*found, "ilike_values[" + quoted(v) + "](0)", context) + ";\n";
+    }
+    simulate += "  return ilike_values;\n}\n\n";
+    log_density += "  return ilike_log;\n}\n\n";
+    this->deferred_function_code += simulate + log_density;
+    Move move = this->jump_move(statement, name, call, k_node, k, maximum, variables);
+    RecipeValue settings = RecipeValue::list();
+    settings.push_back(RecipeValue(k), "indicator");
+    settings.push_back(RecipeValue(double(maximum)), "maximum");
+    settings.push_back(RecipeValue(variables), "variables");
+    settings.push_back(RecipeValue(points), "points");
+    settings.push_back(this->placeholder("ilike_birth_simulate_" + k, "birth_simulate"), "simulate");
+    settings.push_back(this->placeholder("ilike_birth_log_" + k, "birth_log"), "log");
+    move.entry.push_back(settings, "birth_death");
+    this->jump_path(call, arguments, move, "birth_death");
+    return move;
+  }
+
+  // (dev/plan.md 3.22 U5b) move m = averaged(proposal, latent = z, points = M,
+  // refresh = true): MHAAR-RB-0, a move on the proposal's variables that takes
+  // the latent z along, choosing each new z_t among z_t and M - 1 draws from
+  // its own distribution
+  Move lower_averaged(const RecipeValue &statement, const std::string &name, const RecipeValue &call)
+  {
+    Arguments arguments = this->split_arguments(call);
+    this->allow_only(call, arguments, {"proposal", "latent", "points", "refresh", "factors", "cut_factors", "adapt", "transform"}, 1);
+    RecipeValue proposal = !arguments.positional.empty() ? arguments.positional[0]
+                         : (arguments.has("proposal") ? arguments.named["proposal"] : RecipeValue());
+    if (proposal.is_null())
+      this->error(call, "averaged(proposal, latent = z, points = M): the proposal is missing.");
+    if (!arguments.has("latent") || (kind_of(arguments.named["latent"]) != "name") || !arguments.named["latent"]["namespace"].as_string().empty())
+      this->error(call, "averaged(…, latent = z): the latent variable whose elements the move chooses among candidates.");
+    const std::string z = arguments.named["latent"]["name"].as_string();
+    std::set<std::string> moved;
+    this->moved_variables(proposal, moved);
+    if (moved.count(z))
+      this->error(proposal, "averaged(…, latent = " + z + "): the proposal changes " + z + ", which the move takes along itself; propose the other parameters.");
+    double points = 2.0;
+    if (arguments.has("points"))
+    {
+      arma::mat number;
+      if (!this->numeric(arguments.named["points"], number) || (number.n_elem != 1) || (number(0) < 2.0) || (number(0) != std::floor(number(0))))
+        this->error(arguments.named["points"], "averaged(…, points = M): M, the number of candidates for each element (the current one and M - 1 draws), is a whole number of at least 2.");
+      points = number(0);
+    }
+    bool refresh = true;
+    if (arguments.has("refresh"))
+    {
+      const RecipeValue &r = arguments.named["refresh"];
+      if (kind_of(r) != "logical")
+        this->error(r, "averaged(…, refresh = true | false): whether a rejection refreshes the latent variable among the candidates.");
+      refresh = r["value"].as_bool();
+    }
+    // the factors reading z, and the one holding its statement
+    std::vector<double> latent_factors, own_factors;
+    {
+      size_t total = this->factor_entries.size();
+      for (size_t n = 1; n <= total; ++n)
+      {
+        auto found = this->generated_factor_reads.find(n);
+        if ((found == this->generated_factor_reads.end()) || found->second.count(z))
+          latent_factors.push_back(double(n));
+      }
+      if (!this->factor_numbers.count("model_prior"))
+        this->error(call, "averaged(…, latent = " + z + "): " + z + " has no distribution in the model statements.");
+      own_factors.push_back(double(this->factor_numbers.at("model_prior")));
+    }
+    std::string simulator = this->latent_simulator(call, z);
+    std::string proposal_type = ((kind_of(proposal) == "call") && !this->is_function_value(proposal)) ? this->builtin_name(proposal) : "";
+    bool symmetric = !proposal_type.empty() && role_exists(proposal_type, BuiltinRole::MProposal);
+    RecipeValue outer = RecipeValue::list();
+    outer.push_back(proposal, "");
+    for (const char *key : {"factors", "cut_factors", "adapt", "transform"})
+      if (arguments.has(key))
+        outer.push_back(arguments.named[key], key);
+    Move move = this->lower_move(statement, name, call_with(call, symmetric ? "metropolis" : "metropolis_hastings", outer));
+    RecipeValue settings = RecipeValue::list();
+    settings.push_back(RecipeValue(z), "variable");
+    settings.push_back(RecipeValue(points), "points");
+    settings.push_back(RecipeValue(refresh), "refresh");
+    settings.push_back(RecipeValue(latent_factors), "latent_factors");
+    settings.push_back(RecipeValue(own_factors), "own_factors");
+    settings.push_back(this->placeholder(simulator, "simulate_prior_given"), "simulate");
+    move.entry.push_back(settings, "averaged");
+    return move;
+  }
+
+  // (dev/plan.md 3.22 U5a) move m = annealed(proposal, bridges = K, kernel = g,
+  // sweeps = 1): AIS MCMC, a Metropolis move on the proposal's variables that
+  // takes the latent variables along by the moves named g (which also run as
+  // moves of their own) at K values between the current and proposed ones
+  // a path's kernel, kernel = g or [g, h]: the names of moves of the algorithm
+  std::vector<std::string> kernel_names_of(const RecipeValue &kernel, const std::string &function)
+  {
+    std::vector<std::string> kernel_names;
+    auto add_name = [&](const RecipeValue &item) {
+      if ((kind_of(item) != "name") || !item["namespace"].as_string().empty())
+        this->error(item, function + "(…, kernel = g or [g, h]): the names of moves of the algorithm.");
+      kernel_names.push_back(item["name"].as_string());
+    };
+    if (kind_of(kernel) == "vector")
+    {
+      const RecipeValue &elements = kernel["elements"];
+      for (size_t j = 0; j < elements.size(); ++j)
+        add_name(elements[j]);
+    }
+    else
+      add_name(kernel);
+    return kernel_names;
+  }
+
+  // (stage B) annealed reversible jump: bridges = K, kernel = g, sweeps = 1
+  // on rj(…) and birth_death(…), a path between the two models' extended
+  // targets with the named moves as its kernel (as annealed(…)'s)
+  void jump_path(const RecipeValue &call, Arguments &arguments, Move &move, const std::string &function)
+  {
+    double bridges = 0.0, sweeps = 1.0;
+    for (const char *setting : {"bridges", "sweeps"})
+      if (arguments.has(setting))
+      {
+        arma::mat number;
+        double lowest = (std::string(setting) == "bridges") ? 0.0 : 1.0;
+        if (!this->numeric(arguments.named[setting], number) || (number.n_elem != 1) || (number(0) < lowest) || (number(0) != std::floor(number(0))))
+          this->error(arguments.named[setting], function + "(…): " + setting + " is a whole number of at least " + number_text(lowest) + ".");
+        (std::string(setting) == "bridges" ? bridges : sweeps) = number(0);
+      }
+    if (bridges == 0.0)
+      return;
+    if (!arguments.has("kernel"))
+      this->error(call, function + "(…, bridges = K, kernel = g): the moves run at each bridge, by name (moves of the algorithm, which also run on their own).");
+    RecipeValue settings = RecipeValue::list();
+    settings.push_back(RecipeValue(bridges), "bridges");
+    settings.push_back(RecipeValue(sweeps), "sweeps");
+    move.annealed = settings;
+    move.kernel_names = this->kernel_names_of(arguments.named["kernel"], function);
+    move.path_key = "path";
+  }
+
+  Move lower_annealed(const RecipeValue &statement, const std::string &name, const RecipeValue &call)
+  {
+    Arguments arguments = this->split_arguments(call);
+    this->allow_only(call, arguments, {"proposal", "bridges", "kernel", "sweeps", "factors", "cut_factors", "adapt", "transform"}, 1);
+    RecipeValue proposal = !arguments.positional.empty() ? arguments.positional[0]
+                         : (arguments.has("proposal") ? arguments.named["proposal"] : RecipeValue());
+    if (proposal.is_null())
+      this->error(call, "annealed(proposal, bridges = K, kernel = moves): the proposal is missing.");
+    // a symmetric proposal: the Metropolis form; otherwise (e.g. langevin)
+    // the Metropolis-Hastings form, the reverse density read at the new state
+    // (C311)
+    std::string proposal_type = ((kind_of(proposal) == "call") && !this->is_function_value(proposal)) ? this->builtin_name(proposal) : "";
+    bool symmetric = !proposal_type.empty() && role_exists(proposal_type, BuiltinRole::MProposal);
+    if (!arguments.has("kernel"))
+      this->error(call, "annealed(…, kernel = g): the moves on the latent variables, by name (moves of the algorithm, which also run on their own).");
+    std::vector<std::string> kernel_names = this->kernel_names_of(arguments.named["kernel"], "annealed");
+    double bridges = 0.0, sweeps = 1.0;
+    for (const char *setting : {"bridges", "sweeps"})
+      if (arguments.has(setting))
+      {
+        arma::mat number;
+        double lowest = (std::string(setting) == "bridges") ? 0.0 : 1.0;
+        if (!this->numeric(arguments.named[setting], number) || (number.n_elem != 1) || (number(0) < lowest) || (number(0) != std::floor(number(0))))
+          this->error(arguments.named[setting], std::string("annealed(…): ") + setting + " is a whole number of at least " + number_text(lowest) + ".");
+        (std::string(setting) == "bridges" ? bridges : sweeps) = number(0);
+      }
+    RecipeValue outer = RecipeValue::list();
+    outer.push_back(proposal, "");
+    for (const char *key : {"factors", "cut_factors", "adapt", "transform"})
+      if (arguments.has(key))
+        outer.push_back(arguments.named[key], key);
+    Move move = this->lower_move(statement, name, call_with(call, symmetric ? "metropolis" : "metropolis_hastings", outer));
+    RecipeValue settings = RecipeValue::list();
+    settings.push_back(RecipeValue(bridges), "bridges");
+    settings.push_back(RecipeValue(sweeps), "sweeps");
+    move.annealed = settings;
+    move.kernel_names = kernel_names;
+    move.moved.clear();
+    this->moved_variables(proposal, move.moved);
+    return move;
+  }
+
   Move lower_move(const RecipeValue &statement, const std::string &name, const RecipeValue &call)
   {
     // (dev/plan.md 3.21, step (b)) a variable integrated out is not a
@@ -8564,6 +9142,14 @@ inline double ilike_model_dabc_gaussian(const arma::mat &y, const arma::mat &s, 
       return this->lower_exchange(statement, name, call);
     if ((kind_of(call) == "call") && (call["function"].as_string() == "involution") && call["namespace"].as_string().empty())
       return this->lower_involution(statement, name, call);
+    if ((kind_of(call) == "call") && (call["function"].as_string() == "annealed") && call["namespace"].as_string().empty())
+      return this->lower_annealed(statement, name, call);
+    if ((kind_of(call) == "call") && (call["function"].as_string() == "averaged") && call["namespace"].as_string().empty())
+      return this->lower_averaged(statement, name, call);
+    if ((kind_of(call) == "call") && (call["function"].as_string() == "birth_death") && call["namespace"].as_string().empty())
+      return this->lower_birth_death(statement, name, call);
+    if ((kind_of(call) == "call") && (call["function"].as_string() == "rj") && call["namespace"].as_string().empty())
+      return this->lower_rj(statement, name, call);
     // (dev/plan.md 3.20, S3) a move that changes a parameter of an
     // unnormalised distribution's normaliser would need Z at the proposed value
     if (!this->normaliser_parameters.empty() && !this->lowering_exchange)
@@ -9103,6 +9689,14 @@ inline double ilike_model_dabc_gaussian(const arma::mat &y, const arma::mat &s, 
         for (const Move &m : moves)
           if (m.name == move.name)
             this->error(statement, "move " + move.name + " is defined more than once.");
+        {
+          // (the one move the loops hold)
+          const RecipeValue *inside = &statement;
+          while (inside->contains("keyword") && ((*inside)["keyword"].as_string() == "for") && ((*inside)["body"].size() == 1))
+            inside = &(*inside)["body"][0];
+          if (inside->contains("value"))
+            this->moved_variables((*inside)["value"], move.moved);
+        }
         moves.push_back(move);
         continue;
       }
@@ -9123,6 +9717,8 @@ inline double ilike_model_dabc_gaussian(const arma::mat &y, const arma::mat &s, 
           moves.push_back(this->element_move_loop(statement));
         else
           moves.push_back(this->lower_move(statement, move_name, value));
+        if (moves.back().moved.empty())
+          this->moved_variables(value, moves.back().moved);
         continue;
       }
       if (!keyword.empty())
@@ -9271,15 +9867,84 @@ inline double ilike_model_dabc_gaussian(const arma::mat &y, const arma::mat &s, 
     RecipeValue algorithm = RecipeValue::list();
     std::vector<double> order;
     std::map<std::string, RecipeValue> by_kind;
+    // (stage B) the algorithm's annealed jumps: the bridges' factors of each
+    // are appended after the model's, in this order, both in the model and in
+    // each jump's path (so the factors are numbered alike in both)
+    RecipeValue jump_paths = RecipeValue::list();
     for (const Move *m : ordered)
     {
       order.push_back(m->code);
       std::string key = m->prefix + "_proposal";
       if (!by_kind.count(key))
         by_kind[key] = RecipeValue::list();
-      by_kind[key].push_back(m->entry);
+      RecipeValue entry = m->entry;
+      if (!m->annealed.is_null())
+      {
+        // (U5a) the kernel's moves as positions in the cycle
+        std::vector<double> positions;
+        for (const std::string &kernel_name : m->kernel_names)
+        {
+          size_t position = ordered.size();
+          for (size_t j = 0; j < ordered.size(); ++j)
+            if (ordered[j]->name == kernel_name)
+              position = j;
+          if (position == ordered.size())
+            this->error(section, "annealed(…, kernel = " + kernel_name + "): there is no move called " + kernel_name + " in the algorithm.");
+          if (kernel_name == m->name)
+            this->error(section, "annealed(…, kernel = " + kernel_name + "): the kernel is made of other moves (on the latent variables).");
+          if (!ordered[position]->annealed.is_null())
+            this->error(section, "annealed(…, kernel = " + kernel_name + "): an annealed move cannot be part of another's kernel.");
+          positions.push_back(double(position));
+        }
+        // (stage A) the kernel's own algorithm, for the path's SMC: its moves'
+        // entries, in order (the SMC runs them as a symmetric scan); a kernel
+        // move may not change the parameters the path moves
+        std::vector<double> inner_order;
+        std::map<std::string, RecipeValue> inner_by_kind;
+        for (double position : positions)
+        {
+          const Move *k = ordered[size_t(position)];
+          for (const std::string &v : k->moved)
+            if (m->moved.count(v))
+              this->error(section, (m->path_key == "path")
+                ? "kernel = " + k->name + ": move " + k->name + " changes " + v + ", the model indicator the jump changes; "
+                  "the kernel's moves must be on other variables (the jump's variables, or others)."
+                : "annealed(…, kernel = " + k->name + "): move " + k->name + " changes " + v +
+                  ", which the annealed move's proposal changes; the kernel's moves must be on other variables (the latent ones).");
+          inner_order.push_back(k->code);
+          std::string inner_key = k->prefix + "_proposal";
+          if (!inner_by_kind.count(inner_key))
+            inner_by_kind[inner_key] = RecipeValue::list();
+          inner_by_kind[inner_key].push_back(k->entry);
+        }
+        RecipeValue inner = RecipeValue::list();
+        inner.push_back(RecipeValue(inner_order), "order_of_mcmc");
+        for (const auto &kv : inner_by_kind)
+          inner.push_back(kv.second, kv.first);
+        RecipeValue annealed = m->annealed;
+        annealed.push_back(inner, "inner");
+        // (A2) and their positions in the cycle: the path runs the cycle's own moves
+        annealed.push_back(RecipeValue(positions), "kernel");
+        if (m->path_key == "path")
+        {
+          const std::string kind = m->entry.contains("rj") ? "rj" : "birth_death";
+          std::vector<double> numbers;
+          for (size_t n : m->factor_numbers)
+            numbers.push_back(double(n));
+          RecipeValue spec = RecipeValue::list();
+          spec.push_back(RecipeValue(kind), "kind");
+          spec.push_back(m->entry[kind], "settings");
+          spec.push_back(RecipeValue(numbers), "factors");
+          annealed.push_back(RecipeValue(double(jump_paths.size())), "jump");
+          jump_paths.push_back(spec);
+        }
+        entry.push_back(annealed, m->path_key);
+      }
+      by_kind[key].push_back(entry);
     }
     algorithm.push_back(order.empty() ? RecipeValue() : RecipeValue(order), "order_of_mcmc");
+    if (jump_paths.size() > 0)
+      algorithm.push_back(jump_paths, "jump_paths");
     for (const auto &kv : by_kind)
       algorithm.push_back(kv.second, kv.first);
     if (is_proposals.size() > 0)

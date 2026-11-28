@@ -375,6 +375,36 @@ test_that("correlated EnKF estimates in MCMC: the default unchanged, and more pr
   correlated = m$outer(enkf(", correlated = true"), 2000)
   # (10 members, 50 observations: about 0.22 against 0.59)
   expect_gt(mean(diff(correlated) != 0), mean(diff(fresh) != 0) + 0.15)
+  # (C306) Crank-Nicolson on the members' standard normals (about 0.66)
+  cn = m$outer(enkf(", correlated = crank_nicolson(sd = 0.2)"), 2000)
+  expect_gt(mean(diff(cn) != 0), mean(diff(fresh) != 0) + 0.15)
+  expect_error(m$outer(enkf(", correlated = crank_nicolson(sd = 1.5)"), 10), "between 0 and 1", fixed = TRUE)
+})
+
+test_that("Crank-Nicolson EnKF estimates refuse a model with draws other than built-in Gaussians", {
+  n = 10; set.seed(4); y = round(rnorm(n), 3)
+  d = tempfile(); dir.create(d)
+  on.exit(unlink(c(d, "correlated_enkf_output"), recursive = TRUE), add = TRUE)
+  writeLines(c("ilike 1.0", "model {", "  x ~ norm(0, 1)", "  transition x = density(simulate = cpp::sim, log = cpp::lt)",
+               "  factor obs = linear_gaussian(data = y, state = x, matrix = 1, covariance = 1)",
+               paste0("  time = ssm(index = i, first_index = 0, last_index = ", n - 1, ", time = t, initial_time = 0,"),
+               "             time_difference = dt, time_step = 1, predictions_per_update = 1)", "}", "cpp {",
+               "Parameters sim(RandomNumberGenerator &rng, const Parameters &p) { Parameters o; o[\"x\"] = p[\"a\"][0]*p[\"x\"][0] + rnorm(rng, 0.0, std::sqrt(0.5)); return o; }",
+               "double lt(const Parameters &p0, const Parameters &p1) { return dnorm(p1[\"x\"][0], p0[\"a\"][0]*p0[\"x\"][0], std::sqrt(0.5)); }", "}",
+               "algorithm kalman {", "}"), file.path(d, "inner.ilike"))
+  outer = function(correlated, filter = "enkf(inner, ensemble_members = 10, shifter = \"stochastic\"") {
+    writeLines(c("ilike 1.0", "import \"inner.ilike\" as inner", paste0("data { y = [", paste(y, collapse = ", "), "] }"), "model {",
+                 "  a ~ unif(-1, 1)", paste0("  factor filter = ", filter, ", correlated = ", correlated, ")"), "}",
+                 "algorithm mcmc {", "  move m = metropolis(norm_rw(a, 0.1))", "  termination = iterations(20)", "}"), file.path(d, "outer.ilike"))
+    unlink("correlated_enkf_output", recursive = TRUE)
+    suppressMessages(ilike::MCMC(ilike::compile(file.path(d, "outer.ilike")), results_name = "correlated_enkf_output", seed = 1,
+                                 initial_values = list(list(a = 0.5))))
+  }
+  # member refresh works with any model; Crank-Nicolson needs stored normals
+  expect_no_error(outer("true"))
+  expect_error(outer("crank_nicolson(sd = 0.2)"), "needs every draw of the inner model to be a built-in Gaussian", fixed = TRUE)
+  # (C307) and so does the correlated particle filter
+  expect_error(outer("crank_nicolson(sd = 0.2)", "pf(inner, particles = 10"), "needs every draw of the particles to be a built-in Gaussian", fixed = TRUE)
 })
 
 test_that("correlated EnKF estimates in MCMC: the posterior agrees with the Kalman filter's", {
@@ -385,4 +415,59 @@ test_that("correlated EnKF estimates in MCMC: the posterior agrees with the Kalm
   enkf = m$outer("enkf(inner, ensemble_members = 10, shifter = \"stochastic\", correlated = true, refresh = 2)", 10000)[-(1:500)]
   expect_equal(mean(enkf), mean(kf), tolerance = 0.03)
   expect_equal(sd(enkf), sd(kf), tolerance = 0.15)
+  cn = m$outer("enkf(inner, ensemble_members = 10, shifter = \"stochastic\", correlated = crank_nicolson(sd = 0.2))", 10000)[-(1:500)]
+  expect_equal(mean(cn), mean(kf), tolerance = 0.03)
+  expect_equal(sd(cn), sd(kf), tolerance = 0.15)
+})
+
+# (C307, dev/plan.md 3.22 U9 R3c) the correlated particle filter of
+# Deligiannidis, Doucet & Pitt: the filter's standard normals moved by
+# Crank-Nicolson, and systematic resampling of sorted particles
+test_that("the correlated particle filter in MCMC: more proposals accepted, and the refusals", {
+  m = correlated_enkf_files()
+  on.exit(unlink(c(m$d, "correlated_enkf_output"), recursive = TRUE), add = TRUE)
+  fresh = m$outer("pf(inner, particles = 20)", 2000)
+  cpf = m$outer("pf(inner, particles = 20, correlated = crank_nicolson(sd = 0.05))", 2000)
+  # (20 particles, 50 observations: about 0.32 against 0.68)
+  expect_gt(mean(diff(cpf) != 0), mean(diff(fresh) != 0) + 0.2)
+  expect_error(m$outer("pf(inner, particles = 20, correlated = true)", 10), "use correlated = crank_nicolson(sd = s)", fixed = TRUE)
+  expect_error(m$outer("pf(inner, particles = 20, correlated = crank_nicolson(sd = 0.1), parallel = TRUE)", 10),
+               "parallel = TRUE is not available", fixed = TRUE)
+})
+
+test_that("the correlated particle filter in MCMC: the posterior is the Kalman filter's, for a scalar and a 2-d state", {
+  skip_on_cran()
+  m = correlated_enkf_files()
+  on.exit(unlink(c(m$d, "correlated_enkf_output"), recursive = TRUE), add = TRUE)
+  kf = m$outer("kf(inner)", 10000)[-(1:500)]
+  # (s = 0.2: with only 50 observations a smaller step leaves the stored
+  # normals nearly fixed, and the chain mixes slowly over them)
+  cpf = m$outer("pf(inner, particles = 20, correlated = crank_nicolson(sd = 0.2))", 10000)[-(1:500)]
+  expect_equal(mean(cpf), mean(kf), tolerance = 0.03)
+  expect_equal(sd(cpf), sd(kf), tolerance = 0.15)
+  # a 2-d state: the particles are sorted along the Hilbert curve
+  n = 50; set.seed(7); x = rnorm(2); Y = matrix(0, n, 2)
+  for (j in 1:n) { if (j > 1) x = 0.7*x + rnorm(2, 0, sqrt(0.5)); Y[j, ] = round(x + rnorm(2), 3) }
+  d = tempfile(); dir.create(d); on.exit(unlink(d, recursive = TRUE), add = TRUE)
+  mat = function(M) paste0("[", paste(apply(M, 1, function(r) paste0("[", paste(r, collapse = ", "), "]")), collapse = ", "), "]")
+  writeLines(c("ilike 1.0", "model {", "  x ~ mvnorm([0, 0], [[1, 0], [0, 1]])",
+               "  transition x = linear_gaussian(matrix = cpp::A, covariance = [[0.5, 0], [0, 0.5]])",
+               "  factor obs = linear_gaussian(data = y, state = x, matrix = [[1, 0], [0, 1]], covariance = [[1, 0], [0, 1]])",
+               paste0("  time = ssm(index = i, first_index = 0, last_index = ", n - 1, ", time = t, initial_time = 0,"),
+               "             time_difference = dt, time_step = 1, predictions_per_update = 1)", "}", "cpp {",
+               "arma::mat A(const Parameters &parameters) { return parameters[\"a\"][0]*arma::eye(2, 2); }", "}",
+               "algorithm kalman {", "}"), file.path(d, "inner.ilike"))
+  run = function(factor) {
+    writeLines(c("ilike 1.0", "import \"inner.ilike\" as inner", "data {", paste0("  y = ", mat(Y)), "}", "model {",
+                 "  a ~ unif(-1, 1)", paste0("  factor filter = ", factor), "}",
+                 "algorithm mcmc {", "  move m = metropolis(norm_rw(a, 0.1))", "  termination = iterations(10000)", "}"), file.path(d, "outer.ilike"))
+    unlink("correlated_enkf_output", recursive = TRUE)
+    suppressMessages(ilike::MCMC(ilike::compile(file.path(d, "outer.ilike")), results_name = "correlated_enkf_output", seed = 1,
+                                 initial_values = list(list(a = 0.5))))
+    o = ilike::load_mcmc_output("correlated_enkf_output"); o$Value[o$ParameterName == "a"][-(1:500)]
+  }
+  kf2 = run("kf(inner)")
+  cpf2 = run("pf(inner, particles = 30, correlated = crank_nicolson(sd = 0.2))")
+  expect_equal(mean(cpf2), mean(kf2), tolerance = 0.03)
+  expect_equal(sd(cpf2), sd(kf2), tolerance = 0.15)
 })

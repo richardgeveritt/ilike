@@ -37,6 +37,8 @@ bool StandardMCMCOutput::reset_for_new_chain(const MCMC* mcmc_in, Particle &scra
   if (this->storage_decided)
     this->store = SampleStore(); // (a fresh store: its layout and extra columns are decided again by the new chain)
   this->output.clear();
+  this->signs.clear(); // (U9 R5: as the points; SMC reuses chain objects between generations)
+  this->signs_recorded = false;
   this->storage_decided = false;
   this->rich_storage = false;
   this->number_of_iterations_seen = 0;

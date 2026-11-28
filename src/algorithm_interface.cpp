@@ -74,21 +74,6 @@ static void refuse_unknown_normaliser(const RecipeValue &model, const std::strin
        "or use MCMC with moves that do not change them; doubly intractable methods are planned (dev/plan.md 3.20).");
 }
 
-// (dev/plan.md 3.22 U9 R2) factor estimates that may be negative (debias =
-// roulette(…)) are for MCMC only: importance sampling and SMC would need signed
-// weights (planned, U9 R5)
-static void refuse_signed_factors(const RecipeValue &model, const std::string &algorithm)
-{
-  if (!model.contains("factor"))
-    return;
-  const RecipeValue &factors = model["factor"];
-  for (size_t i = 0; i < factors.size(); ++i)
-    if (factors[i].is_list() && factors[i].contains("unnormalised_normaliser") &&
-        (factors[i]["unnormalised_normaliser"].contains("roulette") || factors[i]["unnormalised_normaliser"].contains("block_poisson")))
-      stop(algorithm + ": factor " + std::to_string(i + 1) + " is an estimate that may be negative (debias = roulette(…) or block_poisson(…)), "
-           "which only MCMC uses (signed pseudo-marginal); importance sampling and SMC with signed weights are planned.");
-}
-
 ImportanceSampler *get_importance_sampler(
     RandomNumberGenerator *rng, Data *the_data, const RecipeValue &model,
     const RecipeValue &parameters, const Parameters &algorithm_parameters,
@@ -101,7 +86,8 @@ ImportanceSampler *get_importance_sampler(
   // dev/plan.md 3.21 step (b): no message, no stored points, and the outer
   // sequences that change the factor in place of the inner model's own)
   refuse_unknown_normaliser(model, "Importance sampling");
-  refuse_signed_factors(model, "Importance sampling");
+  // (U9 R5: factors that may be negative are weighted by their absolute
+  // values and the signs written with the points; evidence_result)
   // May need to alter for cases where the likelihood needs to be tuned
   // automatically (e.g. in ABC).
 
@@ -228,8 +214,32 @@ static void warn_if_divergent(const SMCOutput *output) {
                   "See load_mcmc_diagnostics().");
 }
 
+// (dev/plan.md 3.22 U9 R5) the value IS and SMC return: the log evidence, as
+// before; for a run whose factor estimates may be negative, log |Zhat| with
+// Zhat = exp(log_likelihood) * mean_sign the estimate of the true model's
+// evidence (log_likelihood is that of the absolute-value target), with
+// attributes sign and mean_sign
+static Rcpp::NumericVector evidence_result(const SMCOutput* output)
+{
+  Rcpp::NumericVector result(1);
+  double mean_sign = 1.0;
+  if (!output->weighted_mean_sign(mean_sign))
+  {
+    result[0] = output->log_likelihood;
+    return result;
+  }
+  result[0] = output->log_likelihood + std::log(std::abs(mean_sign));
+  double sign = (mean_sign > 0.0) ? 1.0 : ((mean_sign < 0.0) ? -1.0 : 0.0);
+  result.attr("sign") = sign;
+  result.attr("mean_sign") = mean_sign;
+  if (!(mean_sign > 0.0))
+    Rcpp::warning("The signed estimate of the evidence is not positive (weighted mean sign " + std::to_string(mean_sign) +
+                  "): its log absolute value is returned, with attribute sign. More particles or a more precise estimate of 1/Z keep the signs positive.");
+  return result;
+}
+
 // [[Rcpp::export]]
-double do_importance_sampler(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
+Rcpp::NumericVector do_importance_sampler(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
                              const Rcpp::List &algorithm_parameter_list_R,
                              size_t number_of_importance_points,
                              bool parallel_in, size_t grain_size_in,
@@ -264,13 +274,11 @@ double do_importance_sampler(const Rcpp::List &model_R, const Rcpp::List &parame
   if (strcmp(results_name_in.c_str(), "") != 0)
     output->write(results_name_in.c_str());
 
-  double log_likelihood = output->log_likelihood;
-
-  return log_likelihood;
+  return evidence_result(output);
 }
 
 // [[Rcpp::export]]
-double do_importance_sampler_with_fixed_params(
+Rcpp::NumericVector do_importance_sampler_with_fixed_params(
     const Rcpp::List &model_R, const Rcpp::List &parameters_R,
     const Rcpp::List &algorithm_parameter_list_R, const Rcpp::List &fixed_parameter_list,
     size_t number_of_importance_points, bool parallel_in, size_t grain_size_in,
@@ -302,9 +310,7 @@ double do_importance_sampler_with_fixed_params(
   if (strcmp(results_name_in.c_str(), "") != 0)
     output->write(results_name_in.c_str());
 
-  double log_likelihood = output->log_likelihood;
-
-  return log_likelihood;
+  return evidence_result(output);
 }
 
 // [[Rcpp::export]]
@@ -367,7 +373,7 @@ void do_mcmc(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
       data_created_in_get_measurement_covariance_estimators);
 
   MCMC *the_mcmc =
-      make_mcmc(model, parameters, &the_data, mcmc_termination_method,
+      make_mcmc(with_appended_factors(model, plan), parameters, &the_data, mcmc_termination_method,
                 mcmc_weights_method, full_index);
 
   SMCMCMCMove *alg;
@@ -475,7 +481,7 @@ void do_mcmc_with_fixed_params(
       data_created_in_get_measurement_covariance_estimators);
 
   MCMC *the_mcmc =
-      make_mcmc(model, parameters, &the_data, mcmc_termination_method,
+      make_mcmc(with_appended_factors(model, plan), parameters, &the_data, mcmc_termination_method,
                 mcmc_weights_method, full_index);
 
   SMCMCMCMove *alg;
@@ -538,12 +544,12 @@ SMCMCMCMove *get_smc_mcmc_move(
   // no message; with outer sequences, (c2): it follows the outer target, its
   // sequence variable the outer one, its factors changing with it)
   refuse_unknown_normaliser(model, "SMC");
-  if (nested == NULL)
-    refuse_signed_factors(model, "SMC");
   std::vector<LikelihoodEstimator *> likelihood_estimators;
   IndependentProposalKernel *proposal_in;
   bool proposal_is_evaluated_in;
   const bool follows = (nested != NULL) && !nested->types.empty();
+  const bool given_start = smc_sequencer_method.contains("ilike_path_given_start") &&
+                           smc_sequencer_method["ilike_path_given_start"].as_bool();
 
   RecipeValue sequencer_info;
   if (follows) {
@@ -612,7 +618,11 @@ SMCMCMCMove *get_smc_mcmc_move(
     proposal_in = get_prior_as_simulate_only_proposal(model, parameters);
 
     likelihood_estimators = get_likelihood_estimators(
-        rng, seed, the_data, model, parameters, algorithm_parameters, prior_as_proposal(),
+        rng, seed, the_data, model, parameters, algorithm_parameters,
+        // (stage A) a path whose runs start from given particles: the prior
+        // is not their proposal, so it does not cancel (the priors that read
+        // the path's parameters change along it)
+        given_start ? KernelDeclaration() : prior_as_proposal(),
         sequencer_types, sequencer_variables, sequencer_schedules, proposal_in,
         without_cancelled_index, without_priors_index, full_index,
         plan, factors_affected_by_smc_sequence,
@@ -633,7 +643,7 @@ SMCMCMCMove *get_smc_mcmc_move(
     if (sequencer_types[k] == "data")
       moves_model.push_back(RecipeValue(sequencer_variables[k]), "data_tempering_variable");
   MCMC *the_mcmc =
-      make_mcmc(moves_model, parameters, the_data, mcmc_termination_method,
+      make_mcmc(with_appended_factors(moves_model, plan), parameters, the_data, mcmc_termination_method,
                 mcmc_weights_method, full_index);
 
   SMCCriterion *resampling_criterion =
@@ -728,7 +738,7 @@ SMCMCMCMove *get_smc_mcmc_move(
 }
 
 // [[Rcpp::export]]
-double do_smc_mcmc_move(
+Rcpp::NumericVector do_smc_mcmc_move(
     const Rcpp::List &model_R, const Rcpp::List &parameters_R,
     const Rcpp::List &algorithm_parameter_list_R, size_t number_of_particles,
     const Rcpp::List &mcmc_termination_method_R, const Rcpp::List &mcmc_weights_method_R,
@@ -775,13 +785,11 @@ double do_smc_mcmc_move(
       output->write(results_name_in.c_str());
   }
 
-  double log_likelihood = output->log_likelihood;
-
-  return log_likelihood;
+  return evidence_result(output);
 }
 
 // [[Rcpp::export]]
-double do_smc_mcmc_move_with_fixed_params(
+Rcpp::NumericVector do_smc_mcmc_move_with_fixed_params(
                         const Rcpp::List &model_R, const Rcpp::List &parameters_R,
                         const Rcpp::List &algorithm_parameter_list_R, const Rcpp::List &fixed_parameter_list, size_t number_of_particles,
                         const Rcpp::List &mcmc_termination_method_R, const Rcpp::List &mcmc_weights_method_R,
@@ -828,9 +836,7 @@ double do_smc_mcmc_move_with_fixed_params(
       output->write(results_name_in.c_str());
   }
 
-  double log_likelihood = output->log_likelihood;
-
-  return log_likelihood;
+  return evidence_result(output);
 }
 
 EnsembleKalmanInversion *get_enki(
@@ -895,7 +901,7 @@ EnsembleKalmanInversion *get_enki(
   // SMC algorithm (not smcfixed)
 
   MCMC *the_mcmc =
-      make_mcmc(model, parameters, the_data, mcmc_termination_method,
+      make_mcmc(with_appended_factors(model, plan), parameters, the_data, mcmc_termination_method,
                 mcmc_weights_method, full_index);
 
   SMCCriterion *adaptive_target_criterion = get_adaptive_target_method(
@@ -2025,7 +2031,7 @@ Rcpp::List copy_audit(const Rcpp::List &model_R, const Rcpp::List &parameters_R,
   VectorFactors *factors = new VectorFactors(likelihood_estimators);
   if (mcmc_termination_method.size() > 0) {
     try {
-      MCMC *the_mcmc = make_mcmc(model, parameters, &the_data, mcmc_termination_method,
+      MCMC *the_mcmc = make_mcmc(with_appended_factors(model, plan), parameters, &the_data, mcmc_termination_method,
                                  mcmc_weights_method, full_index);
       // the kernels that need transforms or gradients of the particle (as
       // the algorithms pass them)

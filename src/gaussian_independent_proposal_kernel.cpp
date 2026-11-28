@@ -1,4 +1,5 @@
 #include <iterator>
+#include "normal_source.h"
 #include "gaussian_independent_proposal_kernel.h"
 #include "smc_adaptor.h"
 #include "likelihood_estimator_output.h"
@@ -222,7 +223,7 @@ Parameters GaussianIndependentProposalKernel::independent_simulate(RandomNumberG
        i!=this->proposal_info.end();
        ++i)
   {
-    output[i->first] = rmvnorm_using_lower_chol(rng,
+    output[i->first] = source_rmvnorm_using_lower_chol(rng,
                                           i->second.get_mean(),
                                           i->second.get_chol_lower(), sqrt(i->second.get_double_scale()));
   }
@@ -242,14 +243,14 @@ Parameters GaussianIndependentProposalKernel::independent_simulate_like(RandomNu
     double sd = sqrt(i->second.get_double_scale());
     if (n == mean.n_elem)
     {
-      output[i->first] = rmvnorm_using_lower_chol(rng, mean, i->second.get_chol_lower(), sd);
+      output[i->first] = source_rmvnorm_using_lower_chol(rng, mean, i->second.get_chol_lower(), sd);
     }
     else
     {
       // a scalar proposal on a block: each element independently (C205)
       if (mean.n_elem != 1)
         check_proposal_size(i->first, n, mean.n_elem, "mean value(s)", false);
-      arma::colvec z = mean[0] + (sd*i->second.get_chol_lower()(0, 0))*arma::vectorise(rnorm(rng, std::pair<size_t, size_t>(n, 1)));
+      arma::colvec z = mean[0] + (sd*i->second.get_chol_lower()(0, 0))*arma::vectorise(source_rnorm(rng, std::pair<size_t, size_t>(n, 1)));
       output[i->first] = (z);
     }
   }
@@ -282,7 +283,7 @@ Parameters GaussianIndependentProposalKernel::subsample_independent_simulate(Ran
   auto found = this->proposal_info.find(variable);
   
   Parameters output;
-  output[variable] = rmvnorm_using_lower_chol(rng,
+  output[variable] = source_rmvnorm_using_lower_chol(rng,
                                         found->second.get_mean(),
                                         found->second.get_chol_lower(), sqrt(found->second.get_double_scale()));
   return output;
@@ -296,7 +297,7 @@ Parameters GaussianIndependentProposalKernel::subsample_independent_simulate(Ran
   auto found = this->proposal_info.find(variable);
   
   Parameters output;
-  output[variable] = rmvnorm_using_lower_chol(rng,
+  output[variable] = source_rmvnorm_using_lower_chol(rng,
                                         found->second.get_mean(),
                                         found->second.get_chol_lower(), sqrt(found->second.get_double_scale()));
   return output;

@@ -52,11 +52,15 @@ public:
   // restorable when the inner estimator is (dev/plan.md 2.6a, G3)
   bool supports_restore_from_summary() const;
   bool supports_flat_generations() const;
+  // (U9 R5) the inner estimate's (an annealed factor's sign is the inner estimate's)
+  bool may_be_negative() const { return (this->estimator != NULL) && this->estimator->may_be_negative(); }
+  int terms_read_one_element(const std::string &variable) const { return (this->estimator != NULL) ? this->estimator->terms_read_one_element(variable) : -1; }
   bool supports_parallel_chunks() const;
   bool supports_parallel_copies() const;
   void redirect_random_numbers(RandomNumberGenerator* rng_in,
                                size_t* seed_in);
 
+  void set_skip_at_zero(bool skip_in) { this->skip_at_zero = skip_in; }
   LikelihoodEstimatorOutput* initialise();
   LikelihoodEstimatorOutput* initialise(const Parameters &parameters);
   
@@ -73,6 +77,10 @@ protected:
   std::string power_variable;
   double constant_power;
   bool use_constant;
+  // (stage B) a factor that is evaluated only where its power is not 0 (the
+  // bridges' factors of annealed reversible jump, which read variables that
+  // exist only on the path): at power 0 its value is 0 without evaluating it
+  bool skip_at_zero = false;
   
   // Stored here.
   // owned (dev/plan.md 3.5, CH3)

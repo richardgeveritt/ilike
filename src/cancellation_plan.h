@@ -88,6 +88,10 @@ struct CancellationPlan
   bool annealing = false;
   std::string annealing_variable;
   bool add_proposal_path_factor = false; // the q^(1 - p) factor that starts an annealing path at q
+  // (2026-11-27) the positions of the factors the algorithm appends after the
+  // model's (q^(1 - p); annealed reversible jump's bridges): they read the
+  // moved variables, so they join every move's factor index
+  std::vector<size_t> appended_factors;
   std::string data_variable;             // (S2) the variable of data tempering
   bool proposal_is_evaluated = true;     // the importance proposal's density enters the first weights
   std::vector<size_t> followed_observations; // (3.21 (c2'')) the observations of each filter following data tempering

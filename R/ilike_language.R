@@ -41,6 +41,9 @@ internal_roles <- list(
   involution_log_jacobian = c("double", "const Parameters &parameters, const Data &data"),
   # the prior of a variable integrated out, given the outer parameters (dev/plan.md 3.21, step (b))
   simulate_prior_given = c("Parameters", "RandomNumberGenerator &rng, const Parameters &ilike_given"),
+  # a birth-death move's new entries, and their log density (dev/plan.md 3.22 U6)
+  birth_simulate = c("Parameters", "RandomNumberGenerator &rng, const Parameters &parameters"),
+  birth_log = c("double", "const Parameters &ilike_values, const Parameters &parameters"),
   # an ABC kernel factor's points' summaries, and the kernel from them (dev/plan.md 3.21 (c5))
   abc_summary = c("void", "const Parameters &parameters, const Data &data, double *values"),
   abc_from_summary = c("double", "const double *values, const Parameters &parameters, const Data &data"))

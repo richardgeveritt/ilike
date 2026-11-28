@@ -66,6 +66,10 @@ public:
   
   size_t length() const;
   bool repoint_to(const Factors* factors);
+  // (dev/plan.md 3.22 U9 R5) an IS point or SMC particle whose factor
+  // estimates may be negative: its sign, written with the points
+  bool records_signs() const;
+  size_t fill_signs(std::vector<double> &destination) const;
   
   void close_ofstreams();
   

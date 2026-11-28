@@ -4,7 +4,9 @@
 #include <RcppArmadillo.h>
 using namespace Rcpp;
 
+#include <condition_variable>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 #include "annealed_path.h"
@@ -17,6 +19,7 @@ class Factors;
 class Index;
 class MCMC;
 class IndependentProposalKernel;
+struct ParticleTuning;
 
 // The general engine for annealed paths (dev/plan.md 3.22 U4, "The engines"):
 // the package's own SMC with MCMC moves, run on the inner model of an
@@ -57,6 +60,20 @@ public:
                     const Parameters &start, const Parameters &end,
                     double threshold = 1.0) const;
 
+  // (stage A) one particle started from the whole state (its variables other
+  // than names, which the path moves from start to end) and returned at the
+  // end of the path (names at end): AIS MCMC's path
+  // tuning: the caller's particle's (esjd in SMC), carried by the path's
+  // particle during its moves (A2)
+  double single_state(RandomNumberGenerator &rng, Parameters &state,
+                      const std::vector<std::string> &names,
+                      const Parameters &start, const Parameters &end,
+                      const ParticleTuning* tuning = NULL) const;
+
+  // (A2) the path's moves are these moves of the caller's cycle (an annealed
+  // move's kernel), not its own
+  void link_kernel(const std::vector<const MCMC*> &moves);
+
   // the field variables of state after `sweeps` iterations of the kernel at
   // the parameters `at`, from their values in state
   void draw(RandomNumberGenerator &rng, Parameters &state, const Parameters &at, size_t sweeps) const;
@@ -79,6 +96,30 @@ public:
   bool can_draw() const { return this->draw_mcmc != NULL; }
 
 protected:
+  double run_from(RandomNumberGenerator &rng, std::vector<Parameters> &points,
+                  const std::vector<std::string> &names,
+                  const Parameters &start, const Parameters &end,
+                  const ParticleTuning* tuning = NULL) const;
+
+  // (A2) A run writes to its SMC (its path, starting particles, generator
+  // and sequencer), so runs on several threads at once each take their own
+  // copy: a pool, the original first, with a copy made only when every
+  // copy is in use (one per thread at most). Each run sets everything a
+  // run reads, so which copy it gets does not change its result.
+  SMCMCMCMove* acquire() const;
+  void release(SMCMCMCMove* smc_in) const;
+  struct Lease
+  {
+    const SMCPath* path;
+    SMCMCMCMove* smc;
+    Lease(const SMCPath* path_in) : path(path_in), smc(path_in->acquire()) {}
+    ~Lease() { this->path->release(this->smc); }
+  };
+  mutable std::mutex pool_mutex;
+  mutable std::condition_variable pool_freed;
+  mutable std::vector<std::unique_ptr<SMCMCMCMove>> pool_copies; // (besides the original)
+  mutable std::vector<SMCMCMCMove*> pool_idle;
+
   mutable std::unique_ptr<SMCMCMCMove> smc;
   mutable std::unique_ptr<Factors> draw_factors;
   std::unique_ptr<Index> draw_index;

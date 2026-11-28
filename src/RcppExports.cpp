@@ -13,7 +13,7 @@ Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
 // do_importance_sampler
-double do_importance_sampler(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, size_t number_of_importance_points, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
+Rcpp::NumericVector do_importance_sampler(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, size_t number_of_importance_points, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
 RcppExport SEXP _ilike_do_importance_sampler(SEXP model_RSEXP, SEXP parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP number_of_importance_pointsSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -31,7 +31,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // do_importance_sampler_with_fixed_params
-double do_importance_sampler_with_fixed_params(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, const Rcpp::List& fixed_parameter_list, size_t number_of_importance_points, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
+Rcpp::NumericVector do_importance_sampler_with_fixed_params(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, const Rcpp::List& fixed_parameter_list, size_t number_of_importance_points, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
 RcppExport SEXP _ilike_do_importance_sampler_with_fixed_params(SEXP model_RSEXP, SEXP parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP fixed_parameter_listSEXP, SEXP number_of_importance_pointsSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -91,7 +91,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // do_smc_mcmc_move
-double do_smc_mcmc_move(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, size_t number_of_particles, const Rcpp::List& mcmc_termination_method_R, const Rcpp::List& mcmc_weights_method_R, const Rcpp::List& smc_sequencer_method_R, const Rcpp::List& adaptive_target_method_R, const Rcpp::List& smc_termination_method_R, size_t smc_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
+Rcpp::NumericVector do_smc_mcmc_move(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, size_t number_of_particles, const Rcpp::List& mcmc_termination_method_R, const Rcpp::List& mcmc_weights_method_R, const Rcpp::List& smc_sequencer_method_R, const Rcpp::List& adaptive_target_method_R, const Rcpp::List& smc_termination_method_R, size_t smc_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
 RcppExport SEXP _ilike_do_smc_mcmc_move(SEXP model_RSEXP, SEXP parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP number_of_particlesSEXP, SEXP mcmc_termination_method_RSEXP, SEXP mcmc_weights_method_RSEXP, SEXP smc_sequencer_method_RSEXP, SEXP adaptive_target_method_RSEXP, SEXP smc_termination_method_RSEXP, SEXP smc_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
@@ -116,7 +116,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // do_smc_mcmc_move_with_fixed_params
-double do_smc_mcmc_move_with_fixed_params(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, const Rcpp::List& fixed_parameter_list, size_t number_of_particles, const Rcpp::List& mcmc_termination_method_R, const Rcpp::List& mcmc_weights_method_R, const Rcpp::List& smc_sequencer_method_R, const Rcpp::List& adaptive_target_method_R, const Rcpp::List& smc_termination_method_R, size_t smc_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
+Rcpp::NumericVector do_smc_mcmc_move_with_fixed_params(const Rcpp::List& model_R, const Rcpp::List& parameters_R, const Rcpp::List& algorithm_parameter_list_R, const Rcpp::List& fixed_parameter_list, size_t number_of_particles, const Rcpp::List& mcmc_termination_method_R, const Rcpp::List& mcmc_weights_method_R, const Rcpp::List& smc_sequencer_method_R, const Rcpp::List& adaptive_target_method_R, const Rcpp::List& smc_termination_method_R, size_t smc_iterations_to_store, bool write_to_file_at_each_iteration, bool parallel_in, size_t grain_size_in, const std::string& results_name_in, size_t seed);
 RcppExport SEXP _ilike_do_smc_mcmc_move_with_fixed_params(SEXP model_RSEXP, SEXP parameters_RSEXP, SEXP algorithm_parameter_list_RSEXP, SEXP fixed_parameter_listSEXP, SEXP number_of_particlesSEXP, SEXP mcmc_termination_method_RSEXP, SEXP mcmc_weights_method_RSEXP, SEXP smc_sequencer_method_RSEXP, SEXP adaptive_target_method_RSEXP, SEXP smc_termination_method_RSEXP, SEXP smc_iterations_to_storeSEXP, SEXP write_to_file_at_each_iterationSEXP, SEXP parallel_inSEXP, SEXP grain_size_inSEXP, SEXP results_name_inSEXP, SEXP seedSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;

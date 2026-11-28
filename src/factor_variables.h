@@ -142,6 +142,15 @@ public:
                                         const Parameters &new_parameters,
                                         const Index* new_outputs_index) { return false; }
 
+  // (C316) For a particle whose parameters were changed after its outputs
+  // were made from source's (a state step of a ratio-estimating move changes
+  // the state after the proposal): what the outputs of index carry over from
+  // source's (a plate's terms that read no changed element) is found again,
+  // against the parameters as they now are. Default: nothing carried.
+  virtual void redo_carry_over(const FactorVariables* source,
+                               const Parameters &new_parameters,
+                               const Index* index) {}
+
   // Adaptive summaries over the factors of an index (dev/plan.md 2.6a, G2):
   // smcadaptive_from_summary returns exactly what
   // evaluate_smcadaptive_part_given_smcfixed_likelihoods(index) would (the

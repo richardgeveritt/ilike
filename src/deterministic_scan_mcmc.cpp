@@ -42,6 +42,7 @@ DeterministicScanMCMC::DeterministicScanMCMC(const std::vector<MCMC*> &moves_in)
   {
     this->order.push_back(i);
   }
+  link_cycle(this->moves);
 }
 
 DeterministicScanMCMC::DeterministicScanMCMC(MCMCTermination* termination_in,
@@ -58,6 +59,7 @@ DeterministicScanMCMC::DeterministicScanMCMC(MCMCTermination* termination_in,
   {
     this->order.push_back(i);
   }
+  link_cycle(this->moves);
 }
 
 DeterministicScanMCMC::~DeterministicScanMCMC()
@@ -113,6 +115,7 @@ void DeterministicScanMCMC::make_copy(const DeterministicScanMCMC &another)
   }
   
   this->order = another.order;
+  link_cycle(this->moves); // (A2: an annealed move's kernel is this copy's moves)
 }
 
 Particle DeterministicScanMCMC::move(RandomNumberGenerator &rng,
@@ -351,6 +354,21 @@ void DeterministicScanMCMC::diagnostic_move_in_place(RandomNumberGenerator &rng,
     else
       move->move_in_place(rng, particle, scratch);
   }
+}
+
+
+void DeterministicScanMCMC::move_in_place_reversed(RandomNumberGenerator &rng, Particle &particle) const
+{
+  for (auto i = this->order.rbegin(); i != this->order.rend(); ++i)
+    this->moves[*i]->move_in_place_reversed(rng, particle);
+}
+
+bool DeterministicScanMCMC::reversible_parts(std::string &why) const
+{
+  for (auto i = this->order.begin(); i != this->order.end(); ++i)
+    if (!this->moves[*i]->reversible_parts(why))
+      return false;
+  return true;
 }
 
 }
